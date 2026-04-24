@@ -70,6 +70,7 @@ type SearchCandidate = RetrievedDocument & {
 
 type GraphSearchResult = {
   hit: boolean;
+  score: number | null;
   context: string;
   relevantContextRaw: string | null;
   sourcesCount: number;
@@ -341,6 +342,7 @@ export class SqliteWorkspaceRetrieval {
 
     return {
       hit: true,
+      score: topNodes[0]?.[1] ?? null,
       context: relevantContext,
       relevantContextRaw: relevantContext,
       sourcesCount: sources.length,
@@ -787,6 +789,7 @@ function keywordRankToScore(rank: number) {
 function emptyGraphResult(): GraphSearchResult {
   return {
     hit: false,
+    score: null,
     context: '',
     relevantContextRaw: null,
     sourcesCount: 0,

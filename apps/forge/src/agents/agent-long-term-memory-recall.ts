@@ -33,6 +33,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   searchMode: 'hybrid' | 'vector' | 'bm25';
   graphTopK: number;
   graphThreshold: number;
+  graphScore: number | null;
   graphRandomWalkSteps: number;
   lastInitAt: string | null;
   workspaceCanBm25: boolean;
@@ -283,6 +284,7 @@ export class AgentLongTermMemoryRecall {
       });
       const recallText = buildRecallSystemMessage({
         graphHit: graph.hit,
+        graphScore: graph.score,
         graphContext: graph.context,
         query: queryText,
         results,
@@ -309,8 +311,8 @@ export class AgentLongTermMemoryRecall {
         lastInitAt: this.lastInitAt,
         searchMode: recallConfig.searchMode,
         topK: recallConfig.documentCount,
-        graphTopK: recallConfig.graphTopK,
-        graphThreshold: recallConfig.graphThreshold,
+        graphTopK: recallSearch.effectiveGraphTopK,
+        graphThreshold: recallSearch.effectiveGraphThreshold,
         graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
         indexPaths: [...RECALL_AUTO_INDEX_PATHS],
         workspaceFileCount: indexStats.workspaceFileCount,
@@ -421,8 +423,9 @@ export class AgentLongTermMemoryRecall {
         query: '',
         topK: recallConfig.workspaceTopK,
         searchMode: recallConfig.searchMode,
-        graphTopK: recallConfig.graphTopK,
-        graphThreshold: recallConfig.graphThreshold,
+        graphTopK: Math.max(1, Math.min(recallConfig.graphTopK, recallConfig.documentCount)),
+        graphThreshold: Math.max(recallConfig.graphThreshold, recallConfig.scoreThreshold),
+        graphScore: null,
         graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
         lastInitAt: this.lastInitAt,
         workspaceCanBm25: true,
@@ -457,6 +460,8 @@ export class AgentLongTermMemoryRecall {
       results,
       rawWorkspaceResults,
       graph: graphSearch,
+      effectiveGraphTopK,
+      effectiveGraphThreshold,
     } = recallSearch;
     const vectorResults = await this.queryVectorIndex(
       queryEmbedding,
@@ -471,8 +476,9 @@ export class AgentLongTermMemoryRecall {
       query,
       topK: recallConfig.workspaceTopK,
       searchMode: recallConfig.searchMode,
-      graphTopK: recallConfig.graphTopK,
-      graphThreshold: recallConfig.graphThreshold,
+      graphTopK: effectiveGraphTopK,
+      graphThreshold: effectiveGraphThreshold,
+      graphScore: graphSearch.score,
       graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
       lastInitAt: this.lastInitAt,
       workspaceCanBm25: true,
@@ -518,6 +524,7 @@ export class AgentLongTermMemoryRecall {
       graphError: graphSearch.error,
       injectedSystemMessage: buildRecallSystemMessage({
         graphHit: graphSearch.hit,
+        graphScore: graphSearch.score,
         graphContext: graphSearch.context,
         query,
         results,
@@ -526,6 +533,8 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async runRecallSearch(queryText: string, config: RecallConfig) {
+    const effectiveGraphTopK = Math.max(1, Math.min(config.graphTopK, config.documentCount));
+    const effectiveGraphThreshold = Math.max(config.graphThreshold, config.scoreThreshold);
     const workspaceSearch = await this.searchWorkspace(queryText, {
       topK: config.workspaceTopK,
       scoreThreshold: config.scoreThreshold,
@@ -533,8 +542,8 @@ export class AgentLongTermMemoryRecall {
       mode: config.searchMode,
     });
     const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
-      topK: config.graphTopK,
-      threshold: config.graphThreshold,
+      topK: effectiveGraphTopK,
+      threshold: effectiveGraphThreshold,
       randomWalkSteps: config.graphRandomWalkSteps,
       includeSources: config.graphIncludeSources,
       contextResults: workspaceSearch.results,
@@ -548,6 +557,8 @@ export class AgentLongTermMemoryRecall {
       results: workspaceSearch.results,
       rawWorkspaceResults: workspaceSearch.results,
       graph: graphSearch,
+      effectiveGraphTopK,
+      effectiveGraphThreshold,
     };
   }
 
@@ -666,6 +677,7 @@ export class AgentLongTermMemoryRecall {
     dimension: number;
     includeSources: boolean;
     hit: boolean;
+    score: number | null;
     context: string;
     relevantContextRaw: string | null;
     sourcesCount: number;
@@ -710,6 +722,7 @@ export class AgentLongTermMemoryRecall {
         dimension: graphDimension,
         includeSources: options.includeSources,
         hit: result.hit,
+        score: result.score,
         context: result.context,
         relevantContextRaw: result.relevantContextRaw,
         sourcesCount: result.sourcesCount,
@@ -729,6 +742,7 @@ export class AgentLongTermMemoryRecall {
         dimension: graphDimension,
         includeSources: options.includeSources,
         hit: false,
+        score: null,
         context: '',
         relevantContextRaw: null,
         sourcesCount: 0,
@@ -987,6 +1001,7 @@ export class AgentLongTermMemoryRecall {
   private dedupeRecallResults(input: {
     graph: {
       hit: boolean;
+      score: number | null;
       context: string;
       queryText: string;
       dimension: number;
@@ -1098,6 +1113,7 @@ function escapeXml(value: string) {
 function buildRecallSystemMessage(input: {
   query: string;
   graphHit: boolean;
+  graphScore: number | null;
   graphContext: string;
   results: SearchResult[];
 }) {
@@ -1105,7 +1121,7 @@ function buildRecallSystemMessage(input: {
     ? (
         input.graphContext.trim()
           ? [
-              `  <item source="graph" query="${escapeXml(input.query)}">${escapeXml(input.graphContext.trim())}</item>`,
+              `  <item source="graph" query="${escapeXml(input.query)}"${typeof input.graphScore === 'number' ? ` score="${input.graphScore.toFixed(4)}"` : ''}>${escapeXml(input.graphContext.trim())}</item>`,
             ]
           : []
       )
