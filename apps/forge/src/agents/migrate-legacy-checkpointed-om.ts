@@ -1,4 +1,5 @@
 import type { ConversationStore } from '@forge-runtime/core';
+import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database';
 import { agentCheckpointedOmStates } from '../database/schema';
@@ -26,7 +27,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
   conversationStore: ConversationStore;
 }) {
   const legacyRow = await input.db.query.agentCheckpointedOmStates.findFirst({
-    where: (fields, { eq }) => eq(fields.agentId, input.agentId),
+    where: eq(agentCheckpointedOmStates.agentId, input.agentId),
   });
 
   if (!legacyRow) {
@@ -141,5 +142,5 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
   }
 
-  await input.db.delete(agentCheckpointedOmStates).where((fields, { eq }) => eq(fields.agentId, input.agentId));
+  await input.db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, input.agentId));
 }
