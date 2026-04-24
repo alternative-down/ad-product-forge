@@ -1020,6 +1020,59 @@ export function createAdminReadModel(input: {
     }
   }
 
+  async function getAgentOmDebugExport(agentId: string) {
+    const agent = await db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+    });
+
+    if (!agent) {
+      return null;
+    }
+
+    const mastraAgentId = toMastraSafeIdentifier(agentId);
+    const agentDatabasePath = path.resolve(input.workspaceBasePath, agentId, 'database.db');
+    const client: ClosableLibsqlClient = createClient({
+      url: `file:${agentDatabasePath}`,
+    });
+    const conversationStore = new LibsqlConversationStore({
+      client,
+      tablePrefix: mastraAgentId,
+    });
+
+    try {
+      const [messages, checkpointedConversationState, checkpointedOmState, settings] = await Promise.all([
+        conversationStore.listMessages({
+          threadId: mastraAgentId,
+          order: 'asc',
+        }),
+        conversationStore.load(mastraAgentId),
+        readCheckpointedOmState(db, agentId),
+        systemSettings.getSettings(),
+      ]);
+
+      return {
+        agentId,
+        threadId: mastraAgentId,
+        tablePrefix: mastraAgentId,
+        databasePath: agentDatabasePath,
+        settings: {
+          checkpointedOmTotalContextTokens: settings.checkpointedOmTotalContextTokens,
+          checkpointedOmRecentRawTokens: settings.checkpointedOmRecentRawTokens,
+          checkpointedOmRawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
+          checkpointedOmObservationReflectionBatchTokens: settings.checkpointedOmObservationReflectionBatchTokens,
+        },
+        checkpointedConversationState,
+        checkpointedOmState,
+        thread: {
+          messageCount: messages.length,
+          messages,
+        },
+      };
+    } finally {
+      await closeLibsqlClient(client);
+    }
+  }
+
   async function debugAgentLongTermMemoryRecallSearch(
     agentId: string,
     input: AgentLongTermMemoryRecallDebugSearchInput,
@@ -1255,6 +1308,7 @@ export function createAdminReadModel(input: {
     listAgentThreadMessages,
     listAgentLongTermMemoryThreadMessages,
     getAgentRuntimeMemory,
+    getAgentOmDebugExport,
     debugAgentLongTermMemoryRecallSearch,
     listAgentConversationMessages,
     listRoles,

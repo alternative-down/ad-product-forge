@@ -757,6 +757,23 @@ export function registerAdminRoutes(input: {
   });
 
   input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/agent/om-debug-export',
+    handler: async (request) => {
+      const { agentId } = agentIdQuerySchema.parse({
+        agentId: request.query.get('agentId'),
+      });
+      const snapshot = await readModel.getAgentOmDebugExport(agentId);
+
+      if (!snapshot) {
+        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      }
+
+      return jsonResponse(snapshot);
+    },
+  });
+
+  input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/ltm-recall-search',
     handler: async (request) => {
