@@ -574,7 +574,7 @@ export function createAdminReadModel(input: {
                 overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
                 overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
                 observationTokenCount: runtimeMemory.metrics.observationTokenCount,
-                observationTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
+                reflectionTriggerTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
                 reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
                 reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
                 checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,

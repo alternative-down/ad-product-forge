@@ -11,6 +11,7 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import { createAssistantConversationPersistencePlugin } from './assistant-conversation-persistence-plugin.js';
+import { buildCheckpointedOmModelMessages } from './checkpointed-om-rendering.js';
 import type { CheckpointedOmStateStore } from './checkpointed-om.js';
 
 const AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT =
@@ -119,55 +120,7 @@ async function loadOmModelMessages(input: {
     return [];
   }
 
-  const messages: ModelMessage[] = [];
-  const checkpointText = normalizeOmText(state.checkpointSummary?.text);
-
-  if (checkpointText) {
-    messages.push({
-      role: 'system',
-      content: ['Checkpoint summary:', checkpointText].join('\n'),
-    });
-  }
-
-  for (const reflection of state.activeReflectionBlocks) {
-    const text = normalizeOmText(reflection.text);
-
-    if (!text) {
-      continue;
-    }
-
-    messages.push({
-      role: 'system',
-      content: ['Active reflection:', text].join('\n'),
-    });
-  }
-
-  for (const observation of state.observationBlocks) {
-    if (observation.reflectedGeneration !== null) {
-      continue;
-    }
-
-    const text = normalizeOmText(observation.text);
-
-    if (!text) {
-      continue;
-    }
-
-    messages.push({
-      role: 'system',
-      content: ['Active observation:', text].join('\n'),
-    });
-  }
-
-  return messages;
-}
-
-function normalizeOmText(value: string | null | undefined) {
-  if (typeof value !== 'string') {
-    return '';
-  }
-
-  return value.trim();
+  return buildCheckpointedOmModelMessages(state);
 }
 
 function createRawModelMessages(messages: Array<{

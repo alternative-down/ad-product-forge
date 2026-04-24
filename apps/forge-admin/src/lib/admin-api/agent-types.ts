@@ -53,7 +53,7 @@ export type AgentListItem = {
       overflowTokenCount: number;
       overflowTokenLimit: number;
       observationTokenCount: number;
-      observationTokenLimit: number;
+      reflectionTriggerTokenLimit: number;
       reflectionTokenCount: number;
       reflectionTokenLimit: number;
       checkpointTokenCount: number;

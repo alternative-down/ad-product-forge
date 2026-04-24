@@ -3,6 +3,7 @@ import {
   type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
+import { buildCheckpointedOmSystemTexts } from './checkpointed-om-rendering.js';
 import type { CheckpointedOmStateStore } from './checkpointed-om.js';
 
 export function createCheckpointedOmContextPlugin(input: {
@@ -72,64 +73,4 @@ export async function loadCheckpointedOmSystemTexts(input: {
   }
 
   return buildCheckpointedOmSystemTexts(state).filter(Boolean);
-}
-
-function buildCheckpointedOmSystemTexts(state: {
-  checkpointSummary: { text?: string | null } | null;
-  activeReflectionBlocks: Array<{ text?: string | null }>;
-  observationBlocks: Array<{ reflectedGeneration: number | null; text?: string | null }>;
-}) {
-  const checkpointText = renderCheckpointText(state.checkpointSummary?.text ?? null);
-  const reflectionsText = renderReflectionsText(state.activeReflectionBlocks.map((block) => block.text ?? null));
-  const observationsText = renderObservationsText(
-    state.observationBlocks
-      .filter((block) => block.reflectedGeneration === null)
-      .map((block) => block.text ?? null),
-  );
-
-  return [checkpointText, reflectionsText, observationsText] as const;
-}
-
-function renderCheckpointText(text: string | null) {
-  const content = normalizeOmText(text);
-
-  if (!content) {
-    return '';
-  }
-
-  return ['Checkpoint summary:', content].join('\n');
-}
-
-function renderReflectionsText(reflections: Array<string | null>) {
-  const content = reflections
-    .map(normalizeOmText)
-    .filter(Boolean)
-    .join('\n\n');
-
-  if (!content) {
-    return '';
-  }
-
-  return ['Active reflections:', content].join('\n');
-}
-
-function renderObservationsText(observations: Array<string | null>) {
-  const content = observations
-    .map(normalizeOmText)
-    .filter(Boolean)
-    .join('\n\n');
-
-  if (!content) {
-    return '';
-  }
-
-  return ['Active observations:', content].join('\n');
-}
-
-function normalizeOmText(value: string | null | undefined) {
-  if (typeof value !== 'string') {
-    return '';
-  }
-
-  return value.trim();
 }

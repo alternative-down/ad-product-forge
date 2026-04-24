@@ -109,7 +109,7 @@ function HomeIndexRoute() {
                     <OmMetricBar
                       label="Obs"
                       current={agent.overview.om.observationTokenCount}
-                      limit={agent.overview.om.observationTokenLimit}
+                      limit={agent.overview.om.reflectionTriggerTokenLimit}
                     />
                     <OmMetricBar
                       label="Ref"
