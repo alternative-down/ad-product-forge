@@ -1070,8 +1070,8 @@ export class AgentLongTermMemoryRecall {
     return {
       recentFingerprints,
       windowSize:
-        typeof recentRawMessageCount === 'number' && recentRawMessageCount > 0
-          ? Math.max(1, Math.floor(recentRawMessageCount * 0.25))
+        rawWindowMessageCount > 0
+          ? Math.max(1, Math.floor(rawWindowMessageCount * 0.25))
           : 20,
       rawWindowMessageCount,
     };
