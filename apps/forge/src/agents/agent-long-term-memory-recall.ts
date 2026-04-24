@@ -83,6 +83,7 @@ const RECALL_SCORE_THRESHOLD = 0.7;
 const RECALL_GRAPH_TOP_K = 3;
 const RECALL_GRAPH_RANDOM_WALK_STEPS = 100;
 const RECALL_GRAPH_INCLUDE_SOURCES = false;
+const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
 type RecallConfig = {
   searchMode: 'hybrid' | 'vector' | 'bm25';
@@ -169,6 +170,7 @@ export class AgentLongTermMemoryRecall {
     readState(): Promise<{
       latestMetrics?: {
         recentRawMessageCount?: number;
+        overflowMessageCount?: number;
       } | null;
     }>;
   };
@@ -201,6 +203,7 @@ export class AgentLongTermMemoryRecall {
       readState(): Promise<{
         latestMetrics?: {
           recentRawMessageCount?: number;
+          overflowMessageCount?: number;
         } | null;
       }>;
     };
@@ -282,6 +285,16 @@ export class AgentLongTermMemoryRecall {
         results: recallSearch.results,
         recentFingerprints: recallThreadState.recentFingerprints,
       });
+
+      if (this.shouldSkipRecallInjection({
+        graph,
+        results,
+        rawWindowMessageCount: recallThreadState.rawWindowMessageCount,
+      })) {
+        await this.clearPersistedRecallState();
+        return null;
+      }
+
       const recallText = buildRecallSystemMessage({
         graphHit: graph.hit,
         graphScore: graph.score,
@@ -1074,6 +1087,10 @@ export class AgentLongTermMemoryRecall {
       : [];
     const checkpointedOmState = await this.checkpointedOmStateStore.readState();
     const recentRawMessageCount = checkpointedOmState.latestMetrics?.recentRawMessageCount;
+    const overflowMessageCount = checkpointedOmState.latestMetrics?.overflowMessageCount;
+    const rawWindowMessageCount =
+      (typeof recentRawMessageCount === 'number' ? recentRawMessageCount : 0)
+      + (typeof overflowMessageCount === 'number' ? overflowMessageCount : 0);
 
     return {
       recentFingerprints,
@@ -1081,7 +1098,32 @@ export class AgentLongTermMemoryRecall {
         typeof recentRawMessageCount === 'number' && recentRawMessageCount > 0
           ? Math.max(1, Math.floor(recentRawMessageCount * 0.25))
           : 20,
+      rawWindowMessageCount,
     };
+  }
+
+  private shouldSkipRecallInjection(input: {
+    graph: {
+      hit: boolean;
+      sourcesCount: number;
+    };
+    results: SearchResult[];
+    rawWindowMessageCount: number;
+  }) {
+    if (input.rawWindowMessageCount <= 0) {
+      return false;
+    }
+
+    const recallItemCount = input.graph.hit
+      ? input.graph.sourcesCount
+      : input.results.length;
+
+    if (recallItemCount <= 0) {
+      return false;
+    }
+
+    const limit = Math.max(1, Math.floor(input.rawWindowMessageCount * RECALL_INJECTION_RAW_WINDOW_RATIO));
+    return recallItemCount >= limit;
   }
 }
 

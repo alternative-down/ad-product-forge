@@ -38,6 +38,7 @@ describe('AgentLongTermMemoryRecall', () => {
       readState: vi.fn(async () => ({
         latestMetrics: {
           recentRawMessageCount: 4,
+          overflowMessageCount: 0,
         },
       })),
       loadState: vi.fn(async () => null),
@@ -112,5 +113,106 @@ describe('AgentLongTermMemoryRecall', () => {
     expect(checkpointedOmStateStore.readState).not.toHaveBeenCalled();
     expect(persistenceStore.clearRecallState).toHaveBeenCalledTimes(1);
     expect(persistenceStore.readRecallState).not.toHaveBeenCalled();
+  });
+
+  it('skips recall injection when recall volume already occupies a relevant share of raw and overflow context', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-recall-threshold-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+    const checkpointedOmStateStore = {
+      readState: vi.fn(async () => ({
+        latestMetrics: {
+          recentRawMessageCount: 4,
+          overflowMessageCount: 4,
+        },
+      })),
+      loadState: vi.fn(async () => null),
+      saveState: vi.fn(),
+    };
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const,
+        packages: [],
+        lastWrittenPackageId: null,
+        lastWrittenAt: null,
+        lastRunAt: null,
+        lastRunError: null,
+        lastRunErrorAt: null,
+        updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => null),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => ({
+        threadId: 'thread-1',
+        resourceId: 'resource-1',
+        snapshot: null,
+        history: {
+          recentFingerprints: [],
+          updatedAt: new Date().toISOString(),
+        },
+      })),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    const recall = new AgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      checkpointedOmStateStore,
+      persistenceStore,
+    });
+
+    vi.spyOn(recall as never, 'runRecallSearch').mockResolvedValue({
+      formatted: '',
+      results: [
+        { id: 'memory/a.md', content: 'alpha', score: 0.91 },
+        { id: 'memory/b.md', content: 'beta', score: 0.9 },
+      ],
+      rawWorkspaceResults: [
+        { id: 'memory/a.md', content: 'alpha', score: 0.91 },
+        { id: 'memory/b.md', content: 'beta', score: 0.9 },
+      ],
+      graph: {
+        queryText: 'query',
+        dimension: 3,
+        includeSources: false,
+        hit: false,
+        score: null,
+        context: '',
+        relevantContextRaw: null,
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
+        error: null,
+      },
+      effectiveGraphTopK: 1,
+      effectiveGraphThreshold: 0.85,
+    });
+    vi.spyOn(recall as never, 'readRecallThreadState').mockResolvedValue({
+      recentFingerprints: [],
+      windowSize: 1,
+      rawWindowMessageCount: 8,
+    });
+
+    const result = await recall.recallFromStep({
+      step: {
+        text: 'current step',
+      },
+      steps: [],
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+    });
+
+    expect(result).toBeNull();
+    expect(persistenceStore.clearRecallState).toHaveBeenCalledTimes(1);
+    expect(persistenceStore.writeRecallState).not.toHaveBeenCalled();
   });
 });

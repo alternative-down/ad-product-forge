@@ -235,24 +235,9 @@ function diffTrackedFiles(before: Map<string, string>, after: Map<string, string
 }
 
 function renderCheckpointPackageReadme(input: {
-  agentId: string;
-  threadId: string;
-  packageId: string;
   payload: CheckpointedOmCheckpointPackageInput;
 }) {
   return [
-    '---',
-    `agentId: ${input.agentId}`,
-    `threadId: ${input.threadId}`,
-    `packageId: ${input.packageId}`,
-    `checkpointGeneration: ${input.payload.toGeneration}`,
-    `fromGeneration: ${input.payload.fromGeneration ?? 'null'}`,
-    `toGeneration: ${input.payload.toGeneration}`,
-    `createdAt: ${input.payload.checkpointSummary.updatedAt}`,
-    `reflectionCount: ${input.payload.reflections.length}`,
-    `observationCount: ${input.payload.observations.length}`,
-    '---',
-    '',
     input.payload.checkpointSummary.text.trim(),
     '',
   ].join('\n');
@@ -494,9 +479,6 @@ export function createAgentLongTermMemory(input: {
     await fs.writeFile(
       path.resolve(tempPackagePath, 'README.md'),
       renderCheckpointPackageReadme({
-        agentId: input.agentId,
-        threadId: payload.threadId,
-        packageId,
         payload,
       }),
     );
