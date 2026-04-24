@@ -1047,6 +1047,7 @@ export function createAgentRunner(
                 };
               }
 
+              const producedVisibleAssistantText = didIterationProduceVisibleAssistantText(iteration);
               const feedbackMessages: Array<{
                 role: 'assistant' | 'user';
                 content: string;
@@ -1064,6 +1065,7 @@ export function createAgentRunner(
 
               if (
                 iteration.toolCalls.length === 0 &&
+                producedVisibleAssistantText &&
                 !stopRequested &&
                 !suppressNoToolCallReminderForRun
               ) {
@@ -1685,6 +1687,59 @@ function buildRecallStepFromIteration(iteration: {
   };
 }
 
+function didIterationProduceVisibleAssistantText(iteration: {
+  text: string;
+  messages: unknown[];
+}) {
+  if (iteration.text.trim()) {
+    return true;
+  }
+
+  for (const message of iteration.messages) {
+    if (!message || typeof message !== 'object') {
+      continue;
+    }
+
+    if (!('role' in message) || message.role !== 'assistant') {
+      continue;
+    }
+
+    if (!('content' in message)) {
+      continue;
+    }
+
+    if (typeof message.content === 'string') {
+      if (message.content.trim()) {
+        return true;
+      }
+
+      continue;
+    }
+
+    if (!Array.isArray(message.content)) {
+      continue;
+    }
+
+    for (const part of message.content) {
+      if (!part || typeof part !== 'object') {
+        continue;
+      }
+
+      if (
+        'type' in part &&
+        part.type === 'text' &&
+        'text' in part &&
+        typeof part.text === 'string' &&
+        part.text.trim()
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function collectStepTextParts(steps: Array<{
   response?: {
     uiMessages?: Array<{
@@ -1702,11 +1757,6 @@ function collectStepTextParts(steps: Array<{
         }
 
         if ('type' in part && part.type === 'text' && 'text' in part && typeof part.text === 'string') {
-          texts.push(part.text);
-          continue;
-        }
-
-        if ('text' in part && typeof part.text === 'string') {
           texts.push(part.text);
         }
       }
