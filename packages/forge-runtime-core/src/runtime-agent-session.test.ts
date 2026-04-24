@@ -4,7 +4,6 @@ import type { LanguageModelV3CallOptions } from '@ai-sdk/provider-v6';
 import { z } from 'zod';
 
 import {
-  InMemoryCheckpointedConversationStateStore,
   InMemoryConversationStore,
 } from 'agent-runtime-core/integrations';
 
@@ -20,7 +19,6 @@ import type {
 describe('createRuntimeAgentSession', () => {
   it('persists continued iteration feedback into the conversation thread before the next step', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
@@ -108,7 +106,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      checkpointedStateStore,
       workingMemoryStore,
     });
     const iterations: RuntimeAgentSessionIteration[] = [];
@@ -142,7 +139,6 @@ describe('createRuntimeAgentSession', () => {
       const messages = await conversationStore.listMessages({
         threadId: 'thread-1',
       });
-      const checkpointedState = await checkpointedStateStore.load('thread-1');
 
       expect(result.text).toBe('Second step response.');
       expect(iterations).toHaveLength(2);
@@ -170,8 +166,6 @@ describe('createRuntimeAgentSession', () => {
           text: 'Second step response.',
         },
       ]);
-      expect(checkpointedState?.metrics.recentMessageCount).toBe(4);
-      expect(checkpointedState?.recentMessageIds).toEqual(messages.map((message) => message.id));
     } finally {
       await session.dispose();
     }
@@ -179,7 +173,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('adds the autonomous bootstrap user message before active raw messages', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const assistantMessageId = 'assistant-tool-call';
     const toolMessageId = 'tool-result';
@@ -240,7 +233,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      checkpointedStateStore,
       workingMemoryStore,
     });
 
@@ -292,23 +284,6 @@ describe('createRuntimeAgentSession', () => {
       }],
       createdAt: '2026-04-22T20:00:03.000Z',
     });
-    await checkpointedStateStore.save({
-      threadId: 'thread-1',
-      checkpointMessageId: null,
-      recentMessageIds: [toolMessageId, userMessageId],
-      overflowMessageIds: [assistantMessageId],
-      observations: [],
-      metrics: {
-        recentMessageCount: 2,
-        recentTokenCount: 10,
-        overflowMessageCount: 1,
-        overflowTokenCount: 4,
-        observationCount: 0,
-        totalActiveMessageCount: 3,
-      },
-      updatedAt: '2026-04-22T20:00:03.000Z',
-    });
-
     try {
       const result = await session.generate([]);
 
@@ -320,7 +295,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('keeps the autonomous bootstrap user message ahead of regular user raw messages', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const toolCallId = 'call_function_orphan_1';
     const model = new MockLanguageModelV3({
@@ -377,7 +351,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      checkpointedStateStore,
       workingMemoryStore,
     });
 
@@ -413,23 +386,6 @@ describe('createRuntimeAgentSession', () => {
       }],
       createdAt: '2026-04-23T00:00:02.000Z',
     });
-    await checkpointedStateStore.save({
-      threadId: 'thread-1',
-      checkpointMessageId: null,
-      recentMessageIds: ['orphan-tool-result', 'user-follow-up'],
-      overflowMessageIds: [],
-      observations: [],
-      metrics: {
-        recentMessageCount: 2,
-        recentTokenCount: 10,
-        overflowMessageCount: 0,
-        overflowTokenCount: 0,
-        observationCount: 0,
-        totalActiveMessageCount: 2,
-      },
-      updatedAt: '2026-04-23T00:00:02.000Z',
-    });
-
     try {
       const result = await session.generate([]);
 
@@ -441,52 +397,42 @@ describe('createRuntimeAgentSession', () => {
 
   it('renders checkpoint summary, reflections, and observations as individual model messages', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
-    const checkpointedOmStateStore = {
-      async loadState() {
-        return {
-          version: 1 as const,
-          checkpointGeneration: 2,
-          checkpointSummary: {
-            text: 'checkpoint text',
-            tokenCount: 3,
-            upToGeneration: 2,
-            updatedAt: '2026-04-24T00:00:00.000Z',
-          },
-          activeReflectionBlocks: [
-            {
-              recordId: 'reflection-1',
-              generationCount: 3,
-              tokenCount: 2,
-              createdAt: '2026-04-24T00:00:01.000Z',
-              text: 'reflection one',
-            },
-            {
-              recordId: 'reflection-2',
-              generationCount: 4,
-              tokenCount: 2,
-              createdAt: '2026-04-24T00:00:02.000Z',
-              text: 'reflection two',
-            },
-          ],
-          observationBlocks: [
-            {
-              id: 'observation-1',
-              tokenCount: 2,
-              createdAt: '2026-04-24T00:00:03.000Z',
-              lastObservedAt: '2026-04-24T00:00:03.000Z',
-              reflectedGeneration: null,
-              text: 'observation one',
-              sourceMessageIds: ['message-1'],
-            },
-          ],
-          latestMetrics: null,
-        };
-      },
-      async saveState() {
-      },
-    };
+    await conversationStore.appendMessage({
+      id: 'checkpoint-summary-1',
+      threadId: 'thread-1',
+      role: 'system',
+      parts: [{ type: 'text', text: 'Checkpoint summary:\ncheckpoint text' }],
+      operationalMemoryType: 'checkpoint-summary',
+      operationalMemoryGeneration: 2,
+      createdAt: '2026-04-24T00:00:00.000Z',
+    });
+    await conversationStore.appendMessage({
+      id: 'reflection-1',
+      threadId: 'thread-1',
+      role: 'system',
+      parts: [{ type: 'text', text: 'Active reflection:\nreflection one' }],
+      operationalMemoryType: 'reflection',
+      operationalMemoryGeneration: 3,
+      createdAt: '2026-04-24T00:00:01.000Z',
+    });
+    await conversationStore.appendMessage({
+      id: 'reflection-2',
+      threadId: 'thread-1',
+      role: 'system',
+      parts: [{ type: 'text', text: 'Active reflection:\nreflection two' }],
+      operationalMemoryType: 'reflection',
+      operationalMemoryGeneration: 4,
+      createdAt: '2026-04-24T00:00:02.000Z',
+    });
+    await conversationStore.appendMessage({
+      id: 'observation-1',
+      threadId: 'thread-1',
+      role: 'system',
+      parts: [{ type: 'text', text: 'Active observation:\nobservation one' }],
+      operationalMemoryType: 'observation',
+      createdAt: '2026-04-24T00:00:03.000Z',
+    });
     const model = new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         expect(options.prompt).toEqual([
@@ -497,22 +443,7 @@ describe('createRuntimeAgentSession', () => {
           {
             role: 'system',
             content: 'Step system.',
-          },
-          {
-            role: 'system',
-            content: 'Checkpoint summary:\ncheckpoint text',
-          },
-          {
-            role: 'system',
-            content: 'Active reflection:\nreflection one',
-          },
-          {
-            role: 'system',
-            content: 'Active reflection:\nreflection two',
-          },
-          {
-            role: 'system',
-            content: 'Active observation:\nobservation one',
+            providerOptions: undefined,
           },
           {
             role: 'user',
@@ -521,6 +452,26 @@ describe('createRuntimeAgentSession', () => {
               text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
               providerOptions: undefined,
             }],
+            providerOptions: undefined,
+          },
+          {
+            role: 'system',
+            content: 'Checkpoint summary:\ncheckpoint text',
+            providerOptions: undefined,
+          },
+          {
+            role: 'system',
+            content: 'Active reflection:\nreflection one',
+            providerOptions: undefined,
+          },
+          {
+            role: 'system',
+            content: 'Active reflection:\nreflection two',
+            providerOptions: undefined,
+          },
+          {
+            role: 'system',
+            content: 'Active observation:\nobservation one',
             providerOptions: undefined,
           },
           {
@@ -563,8 +514,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      checkpointedStateStore,
-      checkpointedOmStateStore,
       workingMemoryStore,
     });
 
@@ -598,7 +547,6 @@ describe('createRuntimeAgentSession', () => {
 
   it('loads dynamic runtime actions on each iteration without rebuilding the session', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const checkpointedStateStore = new InMemoryCheckpointedConversationStateStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
     const loadedActionNames: string[][] = [];
     let loadCount = 0;
@@ -638,7 +586,6 @@ describe('createRuntimeAgentSession', () => {
       model,
       system: 'Base system.',
       conversationStore,
-      checkpointedStateStore,
       workingMemoryStore,
       loadRuntimeActions: async () => {
         const actions = loadCount === 0

@@ -4,15 +4,12 @@ import {
   CheckpointedConversationMemory,
   createCheckpointedConversationPlugin,
   type CheckpointedConversationObserver,
-  type CheckpointedConversationStateStore,
   type ConversationStore,
   type RuntimeObserver,
   type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
 import { createAssistantConversationPersistencePlugin } from './assistant-conversation-persistence-plugin.js';
-import { buildCheckpointedOmModelMessages } from './checkpointed-om-rendering.js';
-import type { CheckpointedOmStateStore } from './checkpointed-om.js';
 
 const AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT =
   'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.';
@@ -20,7 +17,7 @@ const AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT =
 export type ForgeConversationMemoryOptions = {
   threadId: string;
   conversationStore: ConversationStore;
-  stateStore: CheckpointedConversationStateStore;
+  stateStore?: unknown;
   assistantAuthorId?: string;
   observer?: CheckpointedConversationObserver;
   recentTokenLimit?: number;
@@ -31,8 +28,6 @@ export type ForgeConversationMemoryOptions = {
 export type ForgeConversationMemory = {
   memory: CheckpointedConversationMemory;
   renderModelMessages(input: {
-    resourceId: string;
-    checkpointedOmStateStore?: CheckpointedOmStateStore;
     stepSystem?: string;
   }): Promise<ModelMessage[]>;
   plugins: RuntimePlugin[];
@@ -43,7 +38,6 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
   const memory = new CheckpointedConversationMemory({
     threadId: input.threadId,
     store: input.conversationStore,
-    stateStore: input.stateStore,
     observer: input.observer,
     recentTokenLimit: input.recentTokenLimit,
     overflowObservationTokenLimit: input.overflowObservationTokenLimit,
@@ -52,15 +46,12 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
   return {
     memory,
     async renderModelMessages(renderInput) {
-      const activeMessages = await memory.renderActiveMessages();
+      const activeMessages = await input.conversationStore.listOperationalMemoryMessages({
+        threadId: input.threadId,
+      });
 
       return [
         ...buildStepSystemMessages(renderInput.stepSystem),
-        ...await loadOmModelMessages({
-          threadId: input.threadId,
-          resourceId: renderInput.resourceId,
-          stateStore: renderInput.checkpointedOmStateStore,
-        }),
         {
           role: 'user',
           content: [{
@@ -100,27 +91,6 @@ function buildStepSystemMessages(stepSystem: string | undefined): ModelMessage[]
     role: 'system',
     content,
   } satisfies ModelMessage];
-}
-
-async function loadOmModelMessages(input: {
-  threadId: string;
-  resourceId: string;
-  stateStore?: CheckpointedOmStateStore;
-}): Promise<ModelMessage[]> {
-  if (!input.stateStore) {
-    return [];
-  }
-
-  const state = await input.stateStore.loadState({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-  });
-
-  if (!state) {
-    return [];
-  }
-
-  return buildCheckpointedOmModelMessages(state);
 }
 
 function createRawModelMessages(messages: Array<{

@@ -77,8 +77,6 @@ export async function runRuntimeAgentSessionGenerate(input: {
       workingMemoryStore: input.runtime.workingMemoryStore,
     });
     const messages = await input.runtime.conversationMemory.renderModelMessages({
-      resourceId: input.session.resourceId,
-      checkpointedOmStateStore: input.runtime.checkpointedOmStateStore,
       stepSystem: iterationNumber === 1 ? input.options.system : undefined,
     });
     const runtimeActions = await input.runtime.getRuntimeActions();

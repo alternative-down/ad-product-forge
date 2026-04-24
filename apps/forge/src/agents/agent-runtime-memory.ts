@@ -1,5 +1,5 @@
 import {
-  type CheckpointedOmStateStore,
+  type ConversationStore,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 
@@ -19,36 +19,13 @@ export async function createAgentRuntimeMemory(input: {
   tokenCountFilterEnabled?: boolean;
   tokenCountFilterLimit?: number;
   checkpointedOmEnabled?: boolean;
-  checkpointedOmTotalContextTokens?: number;
   checkpointedOmRecentRawTokens?: number;
-  checkpointedOmRawObservationBatchTokens?: number;
-  checkpointedOmObservationReflectionBatchTokens?: number;
-  checkpointedOmObservationSupportTokens?: number;
-  checkpointedOmReflectionSupportTokens?: number;
   ltmRecallScoreThreshold?: number;
   ltmRecallDocumentCount?: number;
   workspaceEmbedder?: WorkspaceEmbedderId;
-  checkpointedOmStateStore?: CheckpointedOmStateStore & {
-    readState(): Promise<{
-      checkpointGeneration: number | null;
-      checkpointSummary: {
-        text: string;
-        tokenCount: number;
-        upToGeneration: number;
-        updatedAt: string;
-      } | null;
-      observationBlocks: Array<{
-        id: string;
-        text: string;
-        tokenCount: number;
-        createdAt: string;
-        lastObservedAt: string;
-        reflectedGeneration: number | null;
-      }>;
-      latestMetrics: {
-        recentRawMessageCount?: number;
-      } | null;
-    }>;
+  conversationStore: ConversationStore;
+  checkpointedOmLimits: {
+    recentRawTokens?: number;
   };
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   readRuntimeMemorySettings?: () => Promise<{
@@ -62,7 +39,6 @@ export async function createAgentRuntimeMemory(input: {
     ltmRecallDocumentCount: number;
   }>;
 }) {
-  const checkpointedOmStateStore = input.checkpointedOmStateStore;
   const longTermMemoryRecall = input.longTermMemory
     ? createAgentLongTermMemoryRecall({
         agentId: input.agentId,
@@ -72,11 +48,8 @@ export async function createAgentRuntimeMemory(input: {
         mastraId: input.mastraId,
         scoreThreshold: input.ltmRecallScoreThreshold,
         documentCount: input.ltmRecallDocumentCount,
-        checkpointedOmStateStore:
-          checkpointedOmStateStore
-          ?? (() => {
-            throw new Error('LTM recall requires a checkpointed OM state store');
-          })(),
+        conversationStore: input.conversationStore,
+        recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
         persistenceStore: input.persistenceStore,
         readRuntimeMemorySettings: input.readRuntimeMemorySettings,
       })

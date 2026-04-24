@@ -166,8 +166,11 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             author_id,
             parts_json,
             metadata_json,
+            replaced_by_message_id,
+            om_type,
+            om_generation,
             created_at
-          ) values (?, ?, ?, ?, ?, ?, ?)
+          ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           message.id,
@@ -176,6 +179,9 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
           message.authorId ?? null,
           serializeJson(message.parts),
           serializeJson(message.metadata ?? null),
+          message.replacedByMessageId ?? null,
+          message.operationalMemoryType ?? null,
+          message.operationalMemoryGeneration ?? null,
           message.createdAt,
         ],
       },
@@ -204,6 +210,26 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       `,
       args: [
         serializeJson(input.metadata ?? null),
+        input.threadId,
+        input.messageId,
+      ],
+    });
+  }
+
+  async updateMessageReplacement(input: {
+    threadId: string;
+    messageId: string;
+    replacedByMessageId: string | null;
+  }): Promise<void> {
+    await this.ensureSchema();
+    await this.client.execute({
+      sql: `
+        update ${escapeIdentifier(this.messageTableName)}
+        set replaced_by_message_id = ?
+        where thread_id = ? and id = ?
+      `,
+      args: [
+        input.replacedByMessageId,
         input.threadId,
         input.messageId,
       ],
@@ -260,6 +286,9 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
           author_id,
           parts_json,
           metadata_json,
+          replaced_by_message_id,
+          om_type,
+          om_generation,
           created_at
         from ${escapeIdentifier(this.messageTableName)}
         where ${conditions.join(' and ')}
@@ -276,6 +305,112 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       authorId: row.author_id ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
+      replacedByMessageId: row.replaced_by_message_id ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType: row.om_type
+        ? row.om_type as ConversationMessage['operationalMemoryType']
+        : undefined,
+      operationalMemoryGeneration:
+        typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
+      createdAt: String(row.created_at),
+    }));
+  }
+
+  async listOperationalMemoryMessages(input: {
+    threadId: string;
+  }): Promise<ConversationMessage[]> {
+    await this.ensureSchema();
+    const result = await this.client.execute({
+      sql: `
+        with checkpoint as (
+          select rowid as checkpoint_rowid
+          from ${escapeIdentifier(this.messageTableName)}
+          where thread_id = ?
+            and om_type = 'checkpoint-summary'
+            and replaced_by_message_id is null
+          order by created_at desc, rowid desc
+          limit 1
+        ),
+        seed as (
+          select
+            rowid,
+            id,
+            thread_id,
+            role,
+            author_id,
+            parts_json,
+            metadata_json,
+            replaced_by_message_id,
+            om_type,
+            om_generation,
+            created_at
+          from ${escapeIdentifier(this.messageTableName)}
+          where thread_id = ?
+            and (
+              (select checkpoint_rowid from checkpoint) is null
+              or rowid >= (select checkpoint_rowid from checkpoint)
+            )
+        ),
+        recursive replacement_chain(root_id, current_id) as (
+          select id, id
+          from seed
+          union all
+          select replacement_chain.root_id, messages.replaced_by_message_id
+          from replacement_chain
+          join ${escapeIdentifier(this.messageTableName)} as messages
+            on messages.id = replacement_chain.current_id
+          where messages.replaced_by_message_id is not null
+        ),
+        terminal_messages as (
+          select
+            replacement_chain.root_id,
+            replacement_chain.current_id as terminal_id,
+            seed.rowid as source_rowid
+          from replacement_chain
+          join seed
+            on seed.id = replacement_chain.root_id
+          join ${escapeIdentifier(this.messageTableName)} as messages
+            on messages.id = replacement_chain.current_id
+          where messages.replaced_by_message_id is null
+        ),
+        deduped_terminal_messages as (
+          select
+            terminal_id,
+            min(source_rowid) as source_rowid
+          from terminal_messages
+          group by terminal_id
+        )
+        select
+          messages.id,
+          messages.thread_id,
+          messages.role,
+          messages.author_id,
+          messages.parts_json,
+          messages.metadata_json,
+          messages.replaced_by_message_id,
+          messages.om_type,
+          messages.om_generation,
+          messages.created_at
+        from deduped_terminal_messages
+        join ${escapeIdentifier(this.messageTableName)} as messages
+          on messages.id = deduped_terminal_messages.terminal_id
+        order by deduped_terminal_messages.source_rowid asc
+      `,
+      args: [input.threadId, input.threadId],
+    });
+
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      threadId: String(row.thread_id),
+      role: row.role as ConversationMessage['role'],
+      authorId: row.author_id ? String(row.author_id) : undefined,
+      parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
+      metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
+      replacedByMessageId: row.replaced_by_message_id ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType: row.om_type
+        ? row.om_type as ConversationMessage['operationalMemoryType']
+        : undefined,
+      operationalMemoryGeneration:
+        typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
       createdAt: String(row.created_at),
     }));
   }
@@ -438,6 +573,9 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
             author_id text,
             parts_json text not null,
             metadata_json text,
+            replaced_by_message_id text,
+            om_type text,
+            om_generation integer,
             created_at text not null
           )
         `,
@@ -469,6 +607,25 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
         `,
       },
     ], 'write');
+    await ensureColumn(this.client, this.messageTableName, 'replaced_by_message_id', 'text');
+    await ensureColumn(this.client, this.messageTableName, 'om_type', 'text');
+    await ensureColumn(this.client, this.messageTableName, 'om_generation', 'integer');
     this.schemaReady = true;
   }
+}
+
+async function ensureColumn(
+  client: Client,
+  tableName: string,
+  columnName: string,
+  columnDefinition: string,
+) {
+  const result = await client.execute(`pragma table_info(${escapeIdentifier(tableName)})`);
+  const hasColumn = result.rows.some((row) => String(row.name) === columnName);
+
+  if (hasColumn) {
+    return;
+  }
+
+  await client.execute(`alter table ${escapeIdentifier(tableName)} add column ${escapeIdentifier(columnName)} ${columnDefinition}`);
 }

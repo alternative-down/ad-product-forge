@@ -4,7 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import {
+  estimateMessageUnits,
   LibsqlConversationStore,
+  readOperationalMemoryState,
   toMastraSafeIdentifier,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
@@ -35,13 +37,13 @@ import type { GitHubAppManager } from '../github/manager';
 import { createSystemSettingsStore } from '../system-settings/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { listAgentWorkspaceSkills } from '../agents/workspace-skills';
-import { createAgentCheckpointedOmStateStore } from '../agents/checkpointed-om-state-store';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/agent-long-term-memory-recall';
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryRecallSnapshot,
   type LongTermMemoryState,
 } from '../agents/agent-long-term-memory-store';
+import { migrateLegacyCheckpointedOmState } from '../agents/migrate-legacy-checkpointed-om';
 
 const RECENT_STEP_LIMIT = 10;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
@@ -299,17 +301,6 @@ async function readLongTermMemoryState(db: Database, agentId: string) {
   }).readState();
 
   return state satisfies LongTermMemoryState;
-}
-
-async function readCheckpointedOmState(db: Database, agentId: string) {
-  try {
-    return await createAgentCheckpointedOmStateStore(db, {
-      agentId,
-    }).readState();
-  } catch (error) {
-    console.error(`[AdminReadModel] Failed to load checkpointed OM state for agent ${agentId}:`, error);
-    return null;
-  }
 }
 
 export function createAdminReadModel(input: {
@@ -862,6 +853,12 @@ export function createAdminReadModel(input: {
     });
 
     try {
+      await migrateLegacyCheckpointedOmState({
+        db,
+        agentId,
+        threadId: mastraAgentId,
+        conversationStore,
+      });
       const agentWorkspaceRoot = path.resolve(input.workspaceBasePath, agentId);
       const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
         ? path.resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
@@ -874,41 +871,46 @@ export function createAdminReadModel(input: {
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
       }))?.workingMemory ?? null;
-      const checkpointedConversationState = await conversationStore.load(mastraAgentId);
-      const customState = await readCheckpointedOmState(db, agentId);
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
-      const reflection = customState
-        ? customState.activeReflectionBlocks
-          .map((block) => typeof block.text === 'string' ? block.text.trim() : '')
-          .filter(Boolean)
-          .join('\n')
-        || customState.observationBlocks
-          .filter((block) => block.reflectedGeneration !== null)
-          .map((block) => block.text.trim())
-          .filter(Boolean)
-          .join('\n')
-        : '';
-      const observations = customState
-        ? customState.observationBlocks
-          .filter((block) => block.reflectedGeneration === null)
-          .map((block) => block.text.trim())
-          .filter(Boolean)
-          .join('\n')
-        : '';
       const settings = await systemSettings.getSettings();
-      const metricsSnapshot = customState?.latestMetrics;
-      const generationCount = customState?.checkpointGeneration ?? 0;
-      const updatedAt = checkpointedConversationState?.updatedAt
-        ? Date.parse(checkpointedConversationState.updatedAt)
-        : metricsSnapshot?.updatedAt
-        ? Date.parse(metricsSnapshot.updatedAt)
+      const operationalMemoryState = await readOperationalMemoryState({
+        threadId: mastraAgentId,
+        store: conversationStore,
+        recentTokenLimit: settings.checkpointedOmRecentRawTokens,
+      });
+      const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
+      const checkpointSummaryText = checkpointSummaryMessage?.parts
+        .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+          part.type === 'text' || part.type === 'reasoning')
+        .map((part) => part.text.trim())
+        .filter(Boolean)
+        .join('\n') ?? null;
+      const reflection = operationalMemoryState.reflectionMessages
+        .map((message) =>
+          message.parts
+            .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+              part.type === 'text' || part.type === 'reasoning')
+            .map((part) => part.text.trim())
+            .filter(Boolean)
+            .join('\n'))
+        .filter(Boolean)
+        .join('\n');
+      const observations = operationalMemoryState.observationMessages
+        .map((message) =>
+          message.parts
+            .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+              part.type === 'text' || part.type === 'reasoning')
+            .map((part) => part.text.trim())
+            .filter(Boolean)
+            .join('\n'))
+        .filter(Boolean)
+        .join('\n');
+      const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
+      const updatedAt = operationalMemoryState.metrics.latestThreadMessageAt
+        ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt)
         : null;
-      const lastObservedAt = customState?.observationBlocks.length
-        ? Date.parse(
-          [...customState.observationBlocks]
-            .sort((left, right) => right.lastObservedAt.localeCompare(left.lastObservedAt))[0]?.lastObservedAt
-            ?? '',
-        ) || null
+      const lastObservedAt = operationalMemoryState.observationMessages.length
+        ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
         : null;
       const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
         ? await withTimeout(
@@ -952,11 +954,11 @@ export function createAdminReadModel(input: {
         generationCount,
         updatedAt,
         lastObservedAt,
-        checkpointMessageId: checkpointedConversationState?.checkpointMessageId ?? null,
-        checkpointGeneration: customState?.checkpointGeneration ?? null,
-        checkpointSummary: customState?.checkpointSummary?.text ?? null,
-        checkpointUpdatedAt: customState?.checkpointSummary?.updatedAt
-          ? Date.parse(customState.checkpointSummary.updatedAt)
+        checkpointMessageId: checkpointSummaryMessage?.id ?? null,
+        checkpointGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
+        checkpointSummary: checkpointSummaryText,
+        checkpointUpdatedAt: checkpointSummaryMessage?.createdAt
+          ? Date.parse(checkpointSummaryMessage.createdAt)
           : null,
         ltmRecall: ltmRecall
           ? {
@@ -983,27 +985,18 @@ export function createAdminReadModel(input: {
         : null,
       ltm,
       metrics: {
-        rawMessageCount: checkpointedConversationState?.metrics.totalActiveMessageCount ?? metricsSnapshot?.rawMessageCount ?? 0,
-        recentRawMessageCount: checkpointedConversationState?.metrics.recentMessageCount ?? metricsSnapshot?.recentRawMessageCount ?? 0,
-        recentRawTokenCount: checkpointedConversationState?.metrics.recentTokenCount ?? metricsSnapshot?.recentRawTokenCount ?? 0,
+        rawMessageCount: operationalMemoryState.metrics.rawMessageCount,
+        recentRawMessageCount: operationalMemoryState.metrics.recentRawMessageCount,
+        recentRawTokenCount: operationalMemoryState.metrics.recentRawTokenCount,
         recentRawTokenLimit: settings.checkpointedOmRecentRawTokens,
-        overflowMessageCount: checkpointedConversationState?.metrics.overflowMessageCount ?? metricsSnapshot?.overflowMessageCount ?? 0,
-        overflowTokenCount: checkpointedConversationState?.metrics.overflowTokenCount ?? metricsSnapshot?.overflowTokenCount ?? 0,
+        overflowMessageCount: operationalMemoryState.metrics.overflowMessageCount,
+        overflowTokenCount: operationalMemoryState.metrics.overflowTokenCount,
         observationTriggerTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
-        activeObservationBlockCount: metricsSnapshot?.activeObservationBlockCount
-          ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null).length
-          ?? 0,
-        observationTokenCount: metricsSnapshot?.observationTokenCount
-          ?? customState?.observationBlocks.filter((block) => block.reflectedGeneration === null)
-            .reduce((total, block) => total + block.tokenCount, 0)
-          ?? 0,
+        activeObservationBlockCount: operationalMemoryState.observationMessages.length,
+        observationTokenCount: operationalMemoryState.metrics.observationTokenCount,
         reflectionTriggerTokenLimit: settings.checkpointedOmObservationReflectionBatchTokens,
-        activeReflectionBlockCount: metricsSnapshot?.activeReflectionBlockCount
-          ?? customState?.activeReflectionBlocks.length
-          ?? 0,
-        reflectionTokenCount: metricsSnapshot?.reflectionTokenCount
-          ?? customState?.activeReflectionBlocks.reduce((total, block) => total + block.tokenCount, 0)
-          ?? 0,
+        activeReflectionBlockCount: operationalMemoryState.reflectionMessages.length,
+        reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
         reflectionBudget: Math.max(
           0,
           settings.checkpointedOmTotalContextTokens
@@ -1011,12 +1004,10 @@ export function createAdminReadModel(input: {
             - settings.checkpointedOmRawObservationBatchTokens
             - settings.checkpointedOmObservationReflectionBatchTokens,
         ),
-        checkpointTokenCount: metricsSnapshot?.checkpointTokenCount ?? customState?.checkpointSummary?.tokenCount ?? 0,
-        checkpointSummaryUpToGeneration: metricsSnapshot?.checkpointSummaryUpToGeneration
-          ?? customState?.checkpointSummary?.upToGeneration
-          ?? null,
-        latestThreadMessageAt: metricsSnapshot?.latestThreadMessageAt
-          ? Date.parse(metricsSnapshot.latestThreadMessageAt)
+        checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
+        checkpointSummaryUpToGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
+        latestThreadMessageAt: operationalMemoryState.metrics.latestThreadMessageAt
+          ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt)
           : null,
       },
       };
@@ -1045,15 +1036,24 @@ export function createAdminReadModel(input: {
     });
 
     try {
-      const [messages, checkpointedConversationState, checkpointedOmState, settings] = await Promise.all([
+      await migrateLegacyCheckpointedOmState({
+        db,
+        agentId,
+        threadId: mastraAgentId,
+        conversationStore,
+      });
+      const [messages, settings] = await Promise.all([
         conversationStore.listMessages({
           threadId: mastraAgentId,
           order: 'asc',
         }),
-        conversationStore.load(mastraAgentId),
-        readCheckpointedOmState(db, agentId),
         systemSettings.getSettings(),
       ]);
+      const operationalMemoryState = await readOperationalMemoryState({
+        threadId: mastraAgentId,
+        store: conversationStore,
+        recentTokenLimit: settings.checkpointedOmRecentRawTokens,
+      });
 
       return {
         agentId,
@@ -1066,8 +1066,49 @@ export function createAdminReadModel(input: {
           checkpointedOmRawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
           checkpointedOmObservationReflectionBatchTokens: settings.checkpointedOmObservationReflectionBatchTokens,
         },
-        checkpointedConversationState,
-        checkpointedOmState,
+        checkpointedConversationState: null,
+        checkpointedOmState: {
+          checkpointGeneration: operationalMemoryState.checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
+          checkpointSummary: operationalMemoryState.checkpointSummaryMessage
+            ? {
+                text: operationalMemoryState.checkpointSummaryMessage.parts
+                  .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+                    part.type === 'text' || part.type === 'reasoning')
+                  .map((part) => part.text.trim())
+                  .filter(Boolean)
+                  .join('\n'),
+                tokenCount: operationalMemoryState.metrics.checkpointTokenCount,
+                upToGeneration: operationalMemoryState.checkpointSummaryMessage.operationalMemoryGeneration ?? 0,
+                updatedAt: operationalMemoryState.checkpointSummaryMessage.createdAt,
+              }
+            : null,
+          observationBlocks: operationalMemoryState.observationMessages.map((message) => ({
+            id: message.id,
+            tokenCount: estimateMessageUnits(message),
+            createdAt: message.createdAt,
+            lastObservedAt: message.createdAt,
+            reflectedGeneration: null,
+            text: message.parts
+              .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+                part.type === 'text' || part.type === 'reasoning')
+              .map((part) => part.text.trim())
+              .filter(Boolean)
+              .join('\n'),
+          })),
+          activeReflectionBlocks: operationalMemoryState.reflectionMessages.map((message) => ({
+            recordId: message.id,
+            generationCount: message.operationalMemoryGeneration ?? 0,
+            tokenCount: estimateMessageUnits(message),
+            createdAt: message.createdAt,
+            text: message.parts
+              .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+                part.type === 'text' || part.type === 'reasoning')
+              .map((part) => part.text.trim())
+              .filter(Boolean)
+              .join('\n'),
+          })),
+          latestMetrics: null,
+        },
         thread: {
           messageCount: messages.length,
           messages,

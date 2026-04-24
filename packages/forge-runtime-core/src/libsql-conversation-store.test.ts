@@ -122,6 +122,9 @@ describe('LibsqlConversationStore', () => {
           metadata: {
             kind: 'chat',
           },
+          replacedByMessageId: null,
+          operationalMemoryType: undefined,
+          operationalMemoryGeneration: null,
           createdAt: '2026-04-21T00:00:01.000Z',
         },
         {
@@ -136,6 +139,9 @@ describe('LibsqlConversationStore', () => {
             },
           ],
           metadata: undefined,
+          replacedByMessageId: null,
+          operationalMemoryType: undefined,
+          operationalMemoryGeneration: null,
           createdAt: '2026-04-21T00:00:02.000Z',
         },
       ]);

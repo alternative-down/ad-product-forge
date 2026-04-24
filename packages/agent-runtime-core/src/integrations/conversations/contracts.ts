@@ -34,6 +34,11 @@ export type ConversationThread = {
   updatedAt: string;
 };
 
+export type ConversationOperationalMemoryType =
+  | 'observation'
+  | 'reflection'
+  | 'checkpoint-summary';
+
 export type ConversationMessage = {
   id: string;
   threadId: string;
@@ -41,6 +46,9 @@ export type ConversationMessage = {
   authorId?: string;
   parts: ConversationMessagePart[];
   metadata?: Record<string, unknown>;
+  replacedByMessageId?: string | null;
+  operationalMemoryType?: ConversationOperationalMemoryType;
+  operationalMemoryGeneration?: number | null;
   createdAt: string;
 };
 
@@ -62,5 +70,13 @@ export interface ConversationStore {
     messageId: string;
     metadata: Record<string, unknown> | undefined;
   }): Promise<void>;
+  updateMessageReplacement(input: {
+    threadId: string;
+    messageId: string;
+    replacedByMessageId: string | null;
+  }): Promise<void>;
   listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]>;
+  listOperationalMemoryMessages(input: {
+    threadId: string;
+  }): Promise<ConversationMessage[]>;
 }

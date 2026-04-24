@@ -6,13 +6,13 @@ import {
   toolsToRuntimeActions,
 } from '@forge-runtime/core';
 import { getDatabase } from '../database';
-import { createAgentCheckpointedOmStateStore } from './checkpointed-om-state-store';
 import { createAgentLongTermMemoryStore } from './agent-long-term-memory-store';
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
 import { createAgentRuntimeMemory } from './agent-runtime-memory';
 import { buildAgentSystemPrompt } from './agent-runtime-prompt';
 import { createAgentMcpRuntimeActionSource } from './mcp/client-manager';
+import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import type {
   CreateAgentConfig,
   CreateAgentOptions,
@@ -95,8 +95,11 @@ export async function createInternalAgentRuntime<
     ...configuredTools,
   };
   const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
-  const checkpointedOmStateStore = createAgentCheckpointedOmStateStore(getDatabase(), {
+  await migrateLegacyCheckpointedOmState({
+    db: getDatabase(),
     agentId: config.id,
+    threadId: platform.mastraId,
+    conversationStore: platform.conversationStore,
   });
   const longTermMemoryStore = createAgentLongTermMemoryStore(getDatabase(), {
     agentId: config.id,
@@ -131,7 +134,6 @@ export async function createInternalAgentRuntime<
         conversationStore: platform.conversationStore,
         workspaceActions: platform.workspaceActions,
         workspaceEmbedder: config.workspaceEmbedder,
-        checkpointedOmStateStore,
         persistenceStore: longTermMemoryStore,
       })
     : null;
@@ -149,7 +151,10 @@ export async function createInternalAgentRuntime<
     ltmRecallScoreThreshold: config.ltmRecallScoreThreshold,
     ltmRecallDocumentCount: config.ltmRecallDocumentCount,
     workspaceEmbedder: config.workspaceEmbedder,
-    checkpointedOmStateStore,
+    conversationStore: platform.conversationStore,
+    checkpointedOmLimits: {
+      recentRawTokens: config.checkpointedOmRecentRawTokens,
+    },
     persistenceStore: longTermMemoryStore,
     readRuntimeMemorySettings: options.readRuntimeMemorySettings,
   });
@@ -172,9 +177,7 @@ export async function createInternalAgentRuntime<
     model: config.model as never,
     system: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     conversationStore: platform.conversationStore,
-    checkpointedStateStore: platform.conversationStore,
     workingMemoryStore: platform.conversationStore,
-    checkpointedOmStateStore,
     checkpointedOmLimits,
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,

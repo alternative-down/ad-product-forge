@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import {
   type CheckpointedOmCheckpointPackageInput,
-  CheckpointedOmStateStore,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
   forgeDebug,
@@ -28,22 +27,6 @@ const GENERATE_TIMEOUT_MS = 5 * 60_000;
 const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-
-type CustomCheckpointSummary = {
-  text: string;
-  tokenCount: number;
-  upToGeneration: number;
-  updatedAt: string;
-};
-
-type CustomObservationBlock = {
-  id: string;
-  text: string;
-  tokenCount: number;
-  createdAt: string;
-  lastObservedAt: string;
-  reflectedGeneration: number | null;
-};
 
 type LtmUsage = {
   inputTokens: number;
@@ -282,13 +265,6 @@ export function createAgentLongTermMemory(input: {
   conversationStore: ConversationStore;
   workspaceActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   workspaceEmbedder?: WorkspaceEmbedderId;
-  checkpointedOmStateStore: CheckpointedOmStateStore & {
-    readState(): Promise<{
-      checkpointGeneration: number | null;
-      checkpointSummary: CustomCheckpointSummary | null;
-      observationBlocks: CustomObservationBlock[];
-    }>;
-  };
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
 }) {
   const checkpointsPath = path.resolve(input.agentMemoryPath, CHECKPOINTS_DIR);
@@ -346,7 +322,6 @@ export function createAgentLongTermMemory(input: {
         instructions: input.instructions,
       }),
       conversationStore: input.conversationStore,
-      checkpointedStateStore: input.conversationStore,
       workingMemoryStore: input.conversationStore,
       runtimeActions: input.workspaceActions,
       consolidateConversationOverflow: false,

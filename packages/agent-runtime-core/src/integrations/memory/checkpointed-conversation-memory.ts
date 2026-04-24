@@ -4,11 +4,7 @@ import type { StepContextEntry } from '../../core/types.js';
 import { createConversationMessageContextEntry } from '../conversations/context-entries.js';
 import type { ConversationMessage, ConversationStore } from '../conversations/contracts.js';
 
-import type {
-  CheckpointedConversationObservation,
-  CheckpointedConversationState,
-  CheckpointedConversationStateStore,
-} from './checkpointed-conversation-state-store.js';
+import type { CheckpointedConversationObservation, CheckpointedConversationState } from './checkpointed-conversation-state-store.js';
 
 export type CheckpointedConversationObserverRequest = {
   threadId: string;
@@ -28,7 +24,6 @@ export interface CheckpointedConversationObserver {
 export type CheckpointedConversationMemoryOptions = {
   threadId: string;
   store: ConversationStore;
-  stateStore: CheckpointedConversationStateStore;
   recentTokenLimit?: number;
   overflowObservationTokenLimit?: number;
   observer?: CheckpointedConversationObserver;
@@ -50,7 +45,6 @@ type NormalizedCheckpointedConversationState = CheckpointedConversationState & {
 export class CheckpointedConversationMemory {
   private readonly threadId: string;
   private readonly store: ConversationStore;
-  private readonly stateStore: CheckpointedConversationStateStore;
   private readonly recentTokenLimit: number | null;
   private readonly overflowObservationTokenLimit: number | null;
   private readonly observer: CheckpointedConversationObserver | null;
@@ -58,56 +52,19 @@ export class CheckpointedConversationMemory {
   constructor(options: CheckpointedConversationMemoryOptions) {
     this.threadId = options.threadId;
     this.store = options.store;
-    this.stateStore = options.stateStore;
     this.recentTokenLimit = options.recentTokenLimit ?? null;
     this.overflowObservationTokenLimit = options.overflowObservationTokenLimit ?? null;
     this.observer = options.observer ?? null;
   }
 
   async sync(): Promise<CheckpointedConversationState> {
-    const previousState = await this.loadState();
-    const rawMessages = await this.listVisibleRawMessages(previousState);
-    const rawBands = splitRawMessagesByRecentReserve({
-      messages: rawMessages,
-      recentTokenLimit: this.recentTokenLimit,
-    });
-    const nextState = createNextState({
-      previousState,
-      rawBands,
-    });
+    const state = await this.loadState();
 
-    await this.stateStore.save(nextState);
-    return nextState;
-  }
-
-  async advanceCheckpoint(messageId: string): Promise<CheckpointedConversationState> {
-    const currentState = await this.loadState();
-    const messagesAfterCheckpoint = await this.listMessagesAfterCheckpoint(messageId);
-    const activeMessageIds = new Set(messagesAfterCheckpoint.map((message) => message.id));
-    const nextState: NormalizedCheckpointedConversationState = {
-      ...currentState,
-      checkpointMessageId: messageId,
-      recentMessageIds: [],
-      overflowMessageIds: [],
-      observations: currentState.observations.filter((observation) =>
-        observation.sourceMessageIds.some((sourceMessageId) => activeMessageIds.has(sourceMessageId))),
-      updatedAt: new Date().toISOString(),
-      metrics: {
-        recentMessageCount: 0,
-        recentTokenCount: 0,
-        overflowMessageCount: 0,
-        overflowTokenCount: 0,
-        observationCount: 0,
-        totalActiveMessageCount: 0,
-      },
-    };
-
-    await this.stateStore.save(nextState);
-    return this.sync();
+    return state;
   }
 
   async stabilize(): Promise<CheckpointedConversationState> {
-    let state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
+    let state = await this.loadState();
     let previousLoopSignature: string | null = null;
 
     if (!this.observer) {
@@ -122,7 +79,6 @@ export class CheckpointedConversationMemory {
         checkpointMessageId: state.checkpointMessageId,
         overflowMessageIds: state.overflowMessageIds,
         overflowTokenCount: state.metrics.overflowTokenCount,
-        observationCount: state.observations.length,
       });
 
       if (previousLoopSignature === loopSignature) {
@@ -132,7 +88,7 @@ export class CheckpointedConversationMemory {
       previousLoopSignature = loopSignature;
 
       try {
-        const observation = await this.consolidateOneOverflowBatch();
+        const observation = await this.consolidateOneOverflowBatch(state);
 
         if (!observation) {
           return state;
@@ -142,10 +98,10 @@ export class CheckpointedConversationMemory {
           '[CheckpointedConversationMemory] Observation batch failed; preserving prior progress and stopping OM drain for this cycle.',
           error,
         );
-        return normalizeCheckpointedConversationState(this.threadId, await this.sync());
+        return this.loadState();
       }
 
-      state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
+      state = await this.loadState();
     }
 
     return state;
@@ -158,43 +114,43 @@ export class CheckpointedConversationMemory {
   }
 
   async renderActiveMessages(): Promise<ConversationMessage[]> {
-    return this.renderMessagesByIds((state) => [
+    const state = await this.loadState();
+    const visibleMessages = await this.store.listOperationalMemoryMessages({
+      threadId: this.threadId,
+    });
+    const visibleMessageMap = new Map(visibleMessages.map((message) => [message.id, message]));
+
+    return [
       ...state.overflowMessageIds,
       ...state.recentMessageIds,
-    ]);
-  }
-
-  async getState(): Promise<CheckpointedConversationState> {
-    return this.sync();
-  }
-
-  private async renderMessagesByIds(
-    selectMessageIds: (state: NormalizedCheckpointedConversationState) => string[],
-  ): Promise<ConversationMessage[]> {
-    const state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
-    const visibleMessages = await this.listVisibleRawMessages(state);
-    const visibleMessageMap = new Map(visibleMessages.map((message) => [message.id, message.message]));
-
-    return selectMessageIds(state)
+    ]
       .map((messageId) => visibleMessageMap.get(messageId))
       .filter((message): message is ConversationMessage => Boolean(message));
   }
 
-  private async consolidateOneOverflowBatch(): Promise<CheckpointedConversationObservation | null> {
+  async getState(): Promise<CheckpointedConversationState> {
+    return this.loadState();
+  }
+
+  private async consolidateOneOverflowBatch(
+    state: NormalizedCheckpointedConversationState,
+  ): Promise<CheckpointedConversationObservation | null> {
     if (!this.observer) {
-      await this.sync();
       return null;
     }
-
-    const state = normalizeCheckpointedConversationState(this.threadId, await this.sync());
 
     if (state.overflowMessageIds.length === 0) {
       return null;
     }
 
-    const visibleMessages = await this.listVisibleRawMessages(state);
+    const visibleMessages = await this.store.listOperationalMemoryMessages({
+      threadId: this.threadId,
+    });
     const overflowMessageIdSet = new Set(state.overflowMessageIds);
-    const overflowMessages = visibleMessages.filter((message) => overflowMessageIdSet.has(message.id));
+    const overflowMessages = buildRawConversationMessages(
+      visibleMessages.filter((message) =>
+        !message.operationalMemoryType && overflowMessageIdSet.has(message.id)),
+    );
     const observationBatch = takeRawMessageBatch({
       messages: overflowMessages,
       tokenLimit: this.overflowObservationTokenLimit,
@@ -208,143 +164,82 @@ export class CheckpointedConversationMemory {
       threadId: this.threadId,
       messages: observationBatch.messages.map((entry) => entry.message),
     });
+    const observationId = `observation:${randomUUID()}`;
+    const observationText = renderObservationText(response.text);
     const observation: CheckpointedConversationObservation = {
-      id: `observation:${randomUUID()}`,
+      id: observationId,
       text: response.text,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
       createdAt: new Date().toISOString(),
-      units: estimateTextUnits(response.text),
-    };
-    const nextState: NormalizedCheckpointedConversationState = {
-      ...state,
-      observations: [...state.observations, observation],
-      updatedAt: new Date().toISOString(),
+      units: estimateTextUnits(observationText),
     };
 
-    await this.stateStore.save(nextState);
+    await this.store.appendMessage({
+      id: observationId,
+      threadId: this.threadId,
+      role: 'system',
+      parts: [{
+        type: 'text',
+        text: observationText,
+      }],
+      operationalMemoryType: 'observation',
+      createdAt: observation.createdAt,
+    });
     await Promise.all(observation.sourceMessageIds.map((messageId) =>
-      this.store.updateMessageMetadata({
+      this.store.updateMessageReplacement({
         threadId: this.threadId,
         messageId,
-        metadata: mergeMessageMetadata(
-          observationBatch.messages.find((entry) => entry.id === messageId)?.message.metadata,
-          observation.id,
-        ),
+        replacedByMessageId: observationId,
       })));
-    await this.sync();
+
     return observation;
   }
 
-  private async listVisibleRawMessages(
-    state: NormalizedCheckpointedConversationState,
-  ): Promise<RawConversationMessage[]> {
-    const messages = await this.listMessagesAfterCheckpoint(state.checkpointMessageId);
-
-    return buildRawConversationMessages(
-      messages.filter((message) => !isMessageReplacedByObservation(message, state.observations)),
-    );
-  }
-
-  private async listMessagesAfterCheckpoint(checkpointMessageId: string | null) {
-    return this.store.listMessages({
-      threadId: this.threadId,
-      order: 'asc',
-      ...(checkpointMessageId ? { afterMessageId: checkpointMessageId } : {}),
-    });
-  }
-
   private async loadState(): Promise<NormalizedCheckpointedConversationState> {
-    return normalizeCheckpointedConversationState(
-      this.threadId,
-      await this.stateStore.load(this.threadId),
+    const messages = await this.store.listOperationalMemoryMessages({
+      threadId: this.threadId,
+    });
+    const checkpointMessage = [...messages].reverse().find((message) =>
+      message.operationalMemoryType === 'checkpoint-summary') ?? null;
+    const rawMessages = buildRawConversationMessages(
+      messages.filter((message) => !message.operationalMemoryType),
     );
+    const rawBands = splitRawMessagesByRecentReserve({
+      messages: rawMessages,
+      recentTokenLimit: this.recentTokenLimit,
+    });
+    const observationMessages = messages.filter((message) => message.operationalMemoryType === 'observation');
+
+    return {
+      threadId: this.threadId,
+      checkpointMessageId: checkpointMessage?.id ?? null,
+      recentMessageIds: rawBands.recentMessages.map((message) => message.id),
+      overflowMessageIds: rawBands.overflowMessages.map((message) => message.id),
+      observations: observationMessages.map((message) => ({
+        id: message.id,
+        text: getMessageText(message),
+        sourceMessageIds: [],
+        createdAt: message.createdAt,
+        units: estimateMessageUnits(message),
+      })),
+      metrics: {
+        recentMessageCount: rawBands.recentMessages.length,
+        recentTokenCount: rawBands.recentTokenCount,
+        overflowMessageCount: rawBands.overflowMessages.length,
+        overflowTokenCount: rawBands.overflowTokenCount,
+        observationCount: observationMessages.length,
+        totalActiveMessageCount: rawMessages.length,
+      },
+      updatedAt: messages.at(-1)?.createdAt ?? new Date().toISOString(),
+    };
   }
 }
 
-function mergeMessageMetadata(
-  metadata: Record<string, unknown> | undefined,
-  observationId: string,
-): Record<string, unknown> {
-  const operationalMemory = (
-    metadata
-    && typeof metadata === 'object'
-    && metadata.operationalMemory
-    && typeof metadata.operationalMemory === 'object'
-  )
-    ? metadata.operationalMemory as Record<string, unknown>
-    : {};
-
-  return {
-    ...(metadata ?? {}),
-    operationalMemory: {
-      ...operationalMemory,
-      replacedBy: observationId,
-    },
-  };
-}
-
-function isMessageReplacedByObservation(
-  message: ConversationMessage,
-  observations: CheckpointedConversationObservation[],
-) {
-  const replacedBy = getMessageReplacedBy(message);
-
-  if (replacedBy) {
-    return true;
-  }
-
-  return observations.some((observation) => observation.sourceMessageIds.includes(message.id));
-}
-
-function getMessageReplacedBy(message: ConversationMessage) {
-  if (!message.metadata || typeof message.metadata !== 'object') {
-    return null;
-  }
-
-  const operationalMemory = 'operationalMemory' in message.metadata
-    ? message.metadata.operationalMemory
-    : null;
-
-  if (!operationalMemory || typeof operationalMemory !== 'object') {
-    return null;
-  }
-
-  return 'replacedBy' in operationalMemory && typeof operationalMemory.replacedBy === 'string'
-    ? operationalMemory.replacedBy
-    : null;
-}
-
-function normalizeCheckpointedConversationState(
-  threadId: string,
-  state: CheckpointedConversationState | null,
-): NormalizedCheckpointedConversationState {
-  return {
-    threadId,
-    checkpointMessageId: state?.checkpointMessageId ?? null,
-    recentMessageIds: sanitizeMessageIds(state?.recentMessageIds),
-    overflowMessageIds: sanitizeMessageIds(state?.overflowMessageIds),
-    observations: state?.observations ?? [],
-    metrics: state?.metrics ?? {
-      recentMessageCount: 0,
-      recentTokenCount: 0,
-      overflowMessageCount: 0,
-      overflowTokenCount: 0,
-      observationCount: 0,
-      totalActiveMessageCount: 0,
-    },
-    updatedAt: state?.updatedAt ?? new Date(0).toISOString(),
-  };
-}
-
-function sanitizeMessageIds(value: string[] | undefined) {
-  return (value ?? []).filter((item) => typeof item === 'string' && item.length > 0);
-}
-
-function estimateTextUnits(text: string) {
+export function estimateTextUnits(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
-function estimateMessageUnits(message: ConversationMessage) {
+export function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
   if (text) {
@@ -352,6 +247,10 @@ function estimateMessageUnits(message: ConversationMessage) {
   }
 
   return 1;
+}
+
+function renderObservationText(text: string) {
+  return ['Active observation:', text.trim()].join('\n');
 }
 
 function getMessageText(message: ConversationMessage) {
@@ -574,34 +473,6 @@ function takeRawMessageBatch(input: {
   return {
     messages: selected,
     tokenCount,
-  };
-}
-
-function createNextState(input: {
-  previousState: NormalizedCheckpointedConversationState;
-  rawBands: {
-    recentMessages: RawConversationMessage[];
-    recentTokenCount: number;
-    overflowMessages: RawConversationMessage[];
-    overflowTokenCount: number;
-  };
-}): NormalizedCheckpointedConversationState {
-  const recentMessageIds = input.rawBands.recentMessages.map((message) => message.id);
-  const overflowMessageIds = input.rawBands.overflowMessages.map((message) => message.id);
-
-  return {
-    ...input.previousState,
-    recentMessageIds,
-    overflowMessageIds,
-    metrics: {
-      recentMessageCount: recentMessageIds.length,
-      recentTokenCount: input.rawBands.recentTokenCount,
-      overflowMessageCount: overflowMessageIds.length,
-      overflowTokenCount: input.rawBands.overflowTokenCount,
-      observationCount: input.previousState.observations.length,
-      totalActiveMessageCount: recentMessageIds.length + overflowMessageIds.length,
-    },
-    updatedAt: new Date().toISOString(),
   };
 }
 

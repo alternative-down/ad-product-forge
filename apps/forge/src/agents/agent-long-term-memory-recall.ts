@@ -3,10 +3,11 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 
 import {
-  type CheckpointedOmStateStore,
+  type ConversationStore,
   embedTextWithWorkspaceEmbedder,
   FilesystemDocumentSource,
   forgeDebug,
+  readOperationalMemoryState,
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
@@ -156,14 +157,8 @@ export class AgentLongTermMemoryRecall {
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
   }>;
-  private readonly checkpointedOmStateStore: CheckpointedOmStateStore & {
-    readState(): Promise<{
-      latestMetrics?: {
-        recentRawMessageCount?: number;
-        overflowMessageCount?: number;
-      } | null;
-    }>;
-  };
+  private readonly conversationStore: ConversationStore;
+  private readonly recentRawTokens: number;
   private readonly persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   private workspaceInitialized = false;
   private lastIndexedStamp: string | null = null;
@@ -189,14 +184,8 @@ export class AgentLongTermMemoryRecall {
       ltmRecallScoreThreshold: number;
       ltmRecallDocumentCount: number;
     }>;
-    checkpointedOmStateStore: CheckpointedOmStateStore & {
-      readState(): Promise<{
-        latestMetrics?: {
-          recentRawMessageCount?: number;
-          overflowMessageCount?: number;
-        } | null;
-      }>;
-    };
+    conversationStore: ConversationStore;
+    recentRawTokens?: number;
     persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
     model?: unknown;
   }) {
@@ -205,7 +194,8 @@ export class AgentLongTermMemoryRecall {
     this.agentWorkspacePath = input.agentWorkspacePath;
     this.workspaceEmbedder = input.workspaceEmbedder ?? 'fastembed';
     this.readRuntimeMemorySettings = input.readRuntimeMemorySettings;
-    this.checkpointedOmStateStore = input.checkpointedOmStateStore;
+    this.conversationStore = input.conversationStore;
+    this.recentRawTokens = input.recentRawTokens ?? 0;
     this.persistenceStore = input.persistenceStore;
     this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
       databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
@@ -1155,12 +1145,16 @@ export class AgentLongTermMemoryRecall {
         (value): value is string => typeof value === 'string' && value.length > 0,
       )
       : [];
-    const checkpointedOmState = await this.checkpointedOmStateStore.readState();
-    const recentRawMessageCount = checkpointedOmState.latestMetrics?.recentRawMessageCount;
-    const overflowMessageCount = checkpointedOmState.latestMetrics?.overflowMessageCount;
-    const rawWindowMessageCount =
-      (typeof recentRawMessageCount === 'number' ? recentRawMessageCount : 0)
-      + (typeof overflowMessageCount === 'number' ? overflowMessageCount : 0);
+    const operationalMemoryState = threadId
+      ? await readOperationalMemoryState({
+          threadId,
+          store: this.conversationStore,
+          recentTokenLimit: this.recentRawTokens,
+        })
+      : null;
+    const rawWindowMessageCount = operationalMemoryState
+      ? operationalMemoryState.metrics.rawMessageCount
+      : 0;
 
     return {
       recentFingerprints,
@@ -1271,13 +1265,8 @@ export function createAgentLongTermMemoryRecall(input: {
     ltmRecallScoreThreshold: number;
     ltmRecallDocumentCount: number;
   }>;
-  checkpointedOmStateStore: CheckpointedOmStateStore & {
-    readState(): Promise<{
-      latestMetrics?: {
-        recentRawMessageCount?: number;
-      } | null;
-    }>;
-  };
+  conversationStore: ConversationStore;
+  recentRawTokens?: number;
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
   model?: unknown;
 }) {

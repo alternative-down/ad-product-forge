@@ -5,7 +5,6 @@ import type {
   RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import type { CheckpointedOmStateStore } from './checkpointed-om.js';
 import type { CreateForgeAgentRuntimeOptions } from './runtime.js';
 import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
 import { runRuntimeAgentSessionGenerate } from './runtime-agent-session-generate.js';
@@ -122,9 +121,9 @@ export type CreateRuntimeAgentSessionOptions = {
   model: LanguageModel;
   system?: string;
   conversationStore: ConversationStore;
-  checkpointedStateStore: CreateForgeAgentRuntimeOptions['memory']['stateStore'];
+  checkpointedStateStore?: CreateForgeAgentRuntimeOptions['memory']['stateStore'];
   workingMemoryStore: RuntimeWorkingMemoryStore;
-  checkpointedOmStateStore?: CheckpointedOmStateStore;
+  checkpointedOmStateStore?: unknown;
   checkpointedOmLimits?: {
     totalContextTokens: number;
     recentRawTokens: number;

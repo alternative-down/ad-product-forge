@@ -51,6 +51,27 @@ export class InMemoryConversationStore implements ConversationStore {
     this.messagesByThread.set(input.threadId, currentMessages);
   }
 
+  async updateMessageReplacement(input: {
+    threadId: string;
+    messageId: string;
+    replacedByMessageId: string | null;
+  }): Promise<void> {
+    const currentMessages = this.messagesByThread.get(input.threadId) ?? [];
+    const messageIndex = currentMessages.findIndex((message) => message.id === input.messageId);
+
+    if (messageIndex < 0) {
+      return;
+    }
+
+    const currentMessage = currentMessages[messageIndex];
+
+    currentMessages[messageIndex] = {
+      ...currentMessage,
+      replacedByMessageId: input.replacedByMessageId,
+    };
+    this.messagesByThread.set(input.threadId, currentMessages);
+  }
+
   async listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]> {
     const currentMessages = this.messagesByThread.get(query.threadId) ?? [];
     const startIndex = query.afterMessageId
@@ -72,4 +93,59 @@ export class InMemoryConversationStore implements ConversationStore {
 
     return selectedMessages.slice(-query.limit);
   }
+
+  async listOperationalMemoryMessages(input: {
+    threadId: string;
+  }): Promise<ConversationMessage[]> {
+    const threadMessages = this.messagesByThread.get(input.threadId) ?? [];
+    const checkpointIndex = findOperationalMemoryCheckpointIndex(threadMessages);
+    const seedMessages = checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
+    const messageMap = new Map(threadMessages.map((message) => [message.id, message]));
+    const visibleMessages: ConversationMessage[] = [];
+    const seenTerminalIds = new Set<string>();
+
+    for (const seedMessage of seedMessages) {
+      const terminalMessage = resolveTerminalOperationalMemoryMessage(seedMessage, messageMap);
+
+      if (!terminalMessage || seenTerminalIds.has(terminalMessage.id)) {
+        continue;
+      }
+
+      seenTerminalIds.add(terminalMessage.id);
+      visibleMessages.push(terminalMessage);
+    }
+
+    return visibleMessages;
+  }
+}
+
+function findOperationalMemoryCheckpointIndex(messages: ConversationMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+
+    if (message.operationalMemoryType === 'checkpoint-summary' && !message.replacedByMessageId) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function resolveTerminalOperationalMemoryMessage(
+  message: ConversationMessage,
+  messageMap: Map<string, ConversationMessage>,
+) {
+  let currentMessage: ConversationMessage | undefined = message;
+  const visitedIds = new Set<string>();
+
+  while (currentMessage?.replacedByMessageId) {
+    if (visitedIds.has(currentMessage.id)) {
+      return currentMessage;
+    }
+
+    visitedIds.add(currentMessage.id);
+    currentMessage = messageMap.get(currentMessage.replacedByMessageId);
+  }
+
+  return currentMessage ?? null;
 }

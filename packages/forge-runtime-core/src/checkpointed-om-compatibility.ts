@@ -1,38 +1,23 @@
 import { generateText, type LanguageModel } from 'ai';
 import type {
-  CheckpointedConversationMemory,
-  CheckpointedConversationState,
+  ConversationMessage,
   ConversationStore,
   RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import type {
-  CheckpointedOmCheckpointPackageInput,
-  CheckpointedOmState,
-  CheckpointedOmStateStore,
-} from './checkpointed-om.js';
+import type { CheckpointedOmCheckpointPackageInput } from './checkpointed-om.js';
+import { estimateMessageUnits, readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
 
 function estimateTokenCount(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
-}
-
-function createEmptyCheckpointedOmState(): CheckpointedOmState {
-  return {
-    version: 1,
-    checkpointGeneration: null,
-    checkpointSummary: null,
-    observationBlocks: [],
-    activeReflectionBlocks: [],
-    latestMetrics: null,
-  };
 }
 
 export type CheckpointedOmCompatibilityObserverOptions = {
   threadId: string;
   resourceId: string;
   conversationStore: ConversationStore;
-  conversationMemory: CheckpointedConversationMemory;
-  stateStore: CheckpointedOmStateStore;
+  conversationMemory?: unknown;
+  stateStore?: unknown;
   limits: {
     totalContextTokens: number;
     recentRawTokens: number;
@@ -60,54 +45,10 @@ export function createCheckpointedOmCompatibilityObserver(
 export async function syncCheckpointedOmCompatibility(
   input: CheckpointedOmCompatibilityObserverOptions,
 ) {
-  const conversationState = await input.conversationMemory.getState();
-  const previousState = await input.stateStore.loadState({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-  }) ?? createEmptyCheckpointedOmState();
-  const latestMessages = await input.conversationStore.listMessages({
-    threadId: input.threadId,
-    order: 'desc',
-    limit: 1,
-  });
-  const result = await buildCompatibleState({
-    previousState,
-    conversationState,
-    latestThreadMessageAt: latestMessages[0]?.createdAt ?? null,
-    limits: input.limits,
-    reflectionModel: input.reflectionModel,
-    agentSystemPrompt: input.agentSystemPrompt,
-  });
-
-  await input.stateStore.saveState({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    state: result.state,
-  });
-
-  if (result.checkpointPayload && result.checkpointMessageId) {
-    await input.conversationMemory.advanceCheckpoint(result.checkpointMessageId);
-  }
-
-  if (!input.onCheckpointAdvanced || !result.checkpointPayload) {
+  if (!input.reflectionModel) {
     return;
   }
 
-  await input.onCheckpointAdvanced({
-    ...result.checkpointPayload,
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-  });
-}
-
-async function buildCompatibleState(input: {
-  previousState: CheckpointedOmState;
-  conversationState: CheckpointedConversationState;
-  latestThreadMessageAt: string | null;
-  limits: CheckpointedOmCompatibilityObserverOptions['limits'];
-  reflectionModel?: LanguageModel;
-  agentSystemPrompt?: string;
-}) {
   const reflectionBudget = Math.max(
     0,
     input.limits.totalContextTokens
@@ -115,234 +56,158 @@ async function buildCompatibleState(input: {
       - input.limits.rawObservationBatchTokens
       - input.limits.observationReflectionBatchTokens,
   );
-  const observationBlocks = reconcileObservationBlocks({
-    previousBlocks: input.previousState.observationBlocks,
-    observations: input.conversationState.observations,
-  });
-  const activeReflectionBlocks = [...input.previousState.activeReflectionBlocks];
-  const previousCheckpointGeneration = input.previousState.checkpointGeneration;
-  let checkpointGeneration = input.previousState.checkpointGeneration;
-  let checkpointSummary = input.previousState.checkpointSummary;
-  let checkpointMessageId: string | null = null;
+  const checkpointSummaryMessage = await getCheckpointSummaryMessage(input.conversationStore, input.threadId);
+  let checkpointGeneration = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
+  let checkpointSummaryText = checkpointSummaryMessage ? extractMessageText(checkpointSummaryMessage) : null;
 
-  if (input.reflectionModel) {
-    while (sumActiveObservationTokens(observationBlocks) >= input.limits.observationReflectionBatchTokens) {
-      const activeObservationTexts = observationBlocks
-        .filter((block) => block.reflectedGeneration === null)
-        .map((block) => block.text);
-      const batch = takeActiveObservationBatch({
-        observationBlocks,
+  while (true) {
+    const state = await readOperationalMemoryState({
+      threadId: input.threadId,
+      store: input.conversationStore,
+      recentTokenLimit: input.limits.recentRawTokens,
+    });
+
+    if (state.metrics.observationTokenCount >= input.limits.observationReflectionBatchTokens) {
+      const reflectionBatch = takeOperationalMemoryBatch({
+        messages: state.observationMessages,
         tokenLimit: input.limits.observationReflectionBatchTokens,
       });
+      const supportText = takeSupportText(
+        state.observationMessages
+          .slice(reflectionBatch.messages.length)
+          .map((message) => extractMessageText(message)),
+        input.limits.reflectionSupportTokens,
+      );
+      const reflectionText = await generateReflectionText({
+        model: input.reflectionModel,
+        agentSystemPrompt: input.agentSystemPrompt,
+        supportText,
+        observations: reflectionBatch.messages.map((message) => extractMessageText(message)),
+      });
+      const generationCount = checkpointGeneration + state.reflectionMessages.length + 1;
+      const reflectionId = `reflection:${generationCount}`;
+      const createdAt = new Date().toISOString();
 
-      if (batch.length > 0) {
-        const reflectionText = await generateReflectionText({
-          model: input.reflectionModel,
-          agentSystemPrompt: input.agentSystemPrompt,
-          supportText: takeSupportText(
-            activeObservationTexts.slice(0, Math.max(0, activeObservationTexts.length - batch.length)),
-            input.limits.reflectionSupportTokens,
-          ),
-          observations: batch.map((block) => block.text),
-        });
-        const generationCount = (activeReflectionBlocks.at(-1)?.generationCount ?? checkpointGeneration ?? 0) + 1;
-        const createdAt = new Date().toISOString();
-
-        activeReflectionBlocks.push({
-          recordId: `reflection:${generationCount}`,
-          generationCount,
-          tokenCount: estimateTokenCount(reflectionText),
-          createdAt,
-          text: reflectionText,
-        });
-
-        for (const observation of batch) {
-          observation.reflectedGeneration = generationCount;
-        }
-      }
-    }
-  }
-
-  const archivedReflections: typeof activeReflectionBlocks = [];
-  let archivedObservations = checkpointGeneration === null
-    ? []
-    : observationBlocks.filter((block) =>
-      block.reflectedGeneration !== null
-      && block.reflectedGeneration <= (checkpointGeneration ?? 0)
-      && (
-        previousCheckpointGeneration === null
-        || block.reflectedGeneration > previousCheckpointGeneration
-      ),
-    );
-
-  if (input.reflectionModel) {
-    while (sumReflectionTokens(activeReflectionBlocks) >= reflectionBudget && activeReflectionBlocks.length > 0) {
-      const removed = activeReflectionBlocks.shift();
-
-      if (!removed) {
-        break;
-      }
-
-      archivedReflections.push(removed);
-    }
-
-    if (archivedReflections.length > 0) {
-      checkpointGeneration = archivedReflections[archivedReflections.length - 1]?.generationCount ?? checkpointGeneration;
-      checkpointSummary = {
-        text: await generateCheckpointSummaryText({
-          model: input.reflectionModel,
-          agentSystemPrompt: input.agentSystemPrompt,
-          previousSummary: checkpointSummary?.text ?? null,
-          archivedReflections: archivedReflections.map((reflection) => reflection.text),
-        }),
-        tokenCount: 0,
-        upToGeneration: checkpointGeneration ?? 0,
-        updatedAt: new Date().toISOString(),
-      };
-      checkpointSummary.tokenCount = estimateTokenCount(checkpointSummary.text);
-      archivedObservations = checkpointGeneration === null
-        ? []
-        : observationBlocks.filter((block) =>
-          block.reflectedGeneration !== null
-          && block.reflectedGeneration <= (checkpointGeneration ?? 0)
-          && (
-            previousCheckpointGeneration === null
-            || block.reflectedGeneration > previousCheckpointGeneration
-          ),
-        );
-      checkpointMessageId = getLatestArchivedObservationMessageId(archivedObservations);
-    }
-  }
-
-  const visibleObservationBlocks = checkpointGeneration === null
-    ? observationBlocks
-    : observationBlocks.filter((block) =>
-      block.reflectedGeneration === null
-      || block.reflectedGeneration > checkpointGeneration,
-    );
-  const state: CheckpointedOmState = {
-    version: 1,
-    checkpointGeneration,
-    checkpointSummary,
-    observationBlocks: visibleObservationBlocks,
-    activeReflectionBlocks,
-    latestMetrics: {
-      rawMessageCount: input.conversationState.metrics.totalActiveMessageCount,
-      recentRawMessageCount: input.conversationState.metrics.recentMessageCount,
-      recentRawTokenCount: input.conversationState.metrics.recentTokenCount,
-      recentRawTokenLimit: input.limits.recentRawTokens,
-      overflowMessageCount: input.conversationState.metrics.overflowMessageCount,
-      overflowTokenCount: input.conversationState.metrics.overflowTokenCount,
-      observationTriggerTokenLimit: input.limits.rawObservationBatchTokens,
-      activeObservationBlockCount: visibleObservationBlocks.filter((block) => block.reflectedGeneration === null).length,
-      observationTokenCount: visibleObservationBlocks
-        .filter((block) => block.reflectedGeneration === null)
-        .reduce((total, block) => total + block.tokenCount, 0),
-      reflectionTriggerTokenLimit: input.limits.observationReflectionBatchTokens,
-      activeReflectionBlockCount: activeReflectionBlocks.length,
-      reflectionTokenCount: sumReflectionTokens(activeReflectionBlocks),
-      reflectionBudget,
-      checkpointTokenCount: checkpointSummary?.tokenCount ?? 0,
-      checkpointSummaryUpToGeneration: checkpointSummary?.upToGeneration ?? null,
-      latestThreadMessageAt: input.latestThreadMessageAt,
-      updatedAt: input.conversationState.updatedAt,
-    },
-  };
-
-  return {
-    state,
-    checkpointMessageId,
-    checkpointPayload:
-      checkpointGeneration !== null
-      && checkpointGeneration !== previousCheckpointGeneration
-      && checkpointSummary
-        ? {
-            fromGeneration: previousCheckpointGeneration,
-            toGeneration: checkpointGeneration,
-            checkpointSummary,
-            reflections: archivedReflections.map((reflection) => ({
-              recordId: reflection.recordId,
-              generationCount: reflection.generationCount,
-              tokenCount: reflection.tokenCount,
-              createdAt: reflection.createdAt,
-              text: reflection.text,
-            })),
-            observations: archivedObservations.map((observation) => ({
-              blockId: observation.id,
-              tokenCount: observation.tokenCount,
-              createdAt: observation.createdAt,
-              lastObservedAt: observation.lastObservedAt,
-              reflectedGeneration: observation.reflectedGeneration ?? checkpointGeneration,
-              text: observation.text,
-            })),
-          }
-        : null,
-  };
-}
-
-function reconcileObservationBlocks(input: {
-  previousBlocks: CheckpointedOmState['observationBlocks'];
-  observations: CheckpointedConversationState['observations'];
-}) {
-  const previousBlockMap = new Map(input.previousBlocks.map((block) => [block.id, block]));
-
-  return input.observations.map((observation) => ({
-    id: observation.id,
-    tokenCount: observation.units,
-    createdAt: observation.createdAt,
-    lastObservedAt: observation.createdAt,
-    reflectedGeneration: previousBlockMap.get(observation.id)?.reflectedGeneration ?? null,
-    text: observation.text,
-    sourceMessageIds: observation.sourceMessageIds,
-  }));
-}
-
-function getLatestArchivedObservationMessageId(
-  archivedObservations: Array<{ sourceMessageIds: string[] }>,
-) {
-  for (let index = archivedObservations.length - 1; index >= 0; index -= 1) {
-    const sourceMessageIds = archivedObservations[index]?.sourceMessageIds ?? [];
-    const latestMessageId = sourceMessageIds[sourceMessageIds.length - 1];
-
-    if (typeof latestMessageId === 'string' && latestMessageId.length > 0) {
-      return latestMessageId;
-    }
-  }
-
-  return null;
-}
-
-function takeActiveObservationBatch(input: {
-  observationBlocks: CheckpointedOmState['observationBlocks'];
-  tokenLimit: number;
-}) {
-  const selected: CheckpointedOmState['observationBlocks'] = [];
-  let tokenCount = 0;
-
-  for (const block of input.observationBlocks) {
-    if (block.reflectedGeneration !== null) {
+      await input.conversationStore.appendMessage({
+        id: reflectionId,
+        threadId: input.threadId,
+        role: 'system',
+        parts: [{
+          type: 'text',
+          text: renderReflectionText(reflectionText),
+        }],
+        operationalMemoryType: 'reflection',
+        operationalMemoryGeneration: generationCount,
+        createdAt,
+      });
+      await Promise.all(reflectionBatch.messages.map((message) =>
+        input.conversationStore.updateMessageReplacement({
+          threadId: input.threadId,
+          messageId: message.id,
+          replacedByMessageId: reflectionId,
+        })));
       continue;
     }
 
-    if (selected.length > 0 && tokenCount + block.tokenCount > input.tokenLimit) {
-      break;
+    if (state.metrics.reflectionTokenCount >= reflectionBudget) {
+      const checkpointBatch = takeOperationalMemoryBatch({
+        messages: state.reflectionMessages,
+        tokenLimit: reflectionBudget,
+      });
+      const checkpointText = await generateCheckpointSummaryText({
+        model: input.reflectionModel,
+        agentSystemPrompt: input.agentSystemPrompt,
+        previousSummary: checkpointSummaryText,
+        archivedReflections: checkpointBatch.messages.map((message) => extractMessageText(message)),
+      });
+      checkpointGeneration = checkpointBatch.messages
+        .map((message) => message.operationalMemoryGeneration ?? 0)
+        .reduce((maxGeneration, generation) => Math.max(maxGeneration, generation), checkpointGeneration);
+      checkpointSummaryText = checkpointText;
+      const checkpointId = `checkpoint-summary:${checkpointGeneration}`;
+      const createdAt = new Date().toISOString();
+
+      await input.conversationStore.appendMessage({
+        id: checkpointId,
+        threadId: input.threadId,
+        role: 'system',
+        parts: [{
+          type: 'text',
+          text: renderCheckpointSummaryText(checkpointText),
+        }],
+        operationalMemoryType: 'checkpoint-summary',
+        operationalMemoryGeneration: checkpointGeneration,
+        createdAt,
+      });
+      await Promise.all([
+        ...checkpointBatch.messages.map((message) =>
+          input.conversationStore.updateMessageReplacement({
+            threadId: input.threadId,
+            messageId: message.id,
+            replacedByMessageId: checkpointId,
+          })),
+        ...(checkpointSummaryMessage
+          ? [input.conversationStore.updateMessageReplacement({
+              threadId: input.threadId,
+              messageId: checkpointSummaryMessage.id,
+              replacedByMessageId: checkpointId,
+            })]
+          : []),
+      ]);
+
+      if (input.onCheckpointAdvanced) {
+        await input.onCheckpointAdvanced({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+          fromGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
+          toGeneration: checkpointGeneration,
+          checkpointSummary: {
+            text: checkpointText,
+            tokenCount: estimateTokenCount(renderCheckpointSummaryText(checkpointText)),
+            upToGeneration: checkpointGeneration,
+            updatedAt: createdAt,
+          },
+          reflections: checkpointBatch.messages.map((message) => ({
+            recordId: message.id,
+            generationCount: message.operationalMemoryGeneration ?? checkpointGeneration,
+            tokenCount: estimateMessageUnits(message),
+            createdAt: message.createdAt,
+            text: extractMessageText(message),
+          })),
+          observations: [],
+        });
+      }
+
+      continue;
     }
 
-    selected.push(block);
-    tokenCount += block.tokenCount;
+    return;
   }
-
-  return selected;
 }
 
-function sumActiveObservationTokens(observationBlocks: CheckpointedOmState['observationBlocks']) {
-  return observationBlocks
-    .filter((block) => block.reflectedGeneration === null)
-    .reduce((total, block) => total + block.tokenCount, 0);
+async function getCheckpointSummaryMessage(store: ConversationStore, threadId: string) {
+  const messages = await store.listOperationalMemoryMessages({
+    threadId,
+  });
+
+  return [...messages].reverse().find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
 }
 
-function sumReflectionTokens(reflectionBlocks: CheckpointedOmState['activeReflectionBlocks']) {
-  return reflectionBlocks.reduce((total, block) => total + block.tokenCount, 0);
+function extractMessageText(message: ConversationMessage) {
+  return message.parts
+    .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+      part.type === 'text' || part.type === 'reasoning')
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function renderReflectionText(text: string) {
+  return ['Active reflection:', text.trim()].join('\n');
+}
+
+function renderCheckpointSummaryText(text: string) {
+  return ['Checkpoint summary:', text.trim()].join('\n');
 }
 
 async function generateReflectionText(input: {

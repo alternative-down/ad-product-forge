@@ -140,6 +140,12 @@ export {
   type CheckpointedOmCompatibilityObserverOptions,
 } from './checkpointed-om-compatibility.js';
 export { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
+export {
+  readOperationalMemoryState,
+  takeOperationalMemoryBatch,
+  estimateMessageUnits,
+  type OperationalMemoryState,
+} from './operational-memory-state.js';
 export type {
   CommunicationAttachmentView,
   CommunicationContactView,
