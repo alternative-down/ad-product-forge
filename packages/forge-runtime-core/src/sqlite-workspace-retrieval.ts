@@ -215,6 +215,11 @@ export class SqliteWorkspaceRetrieval {
       for (const row of this.searchKeywordRows(db, queryText, options.topK, scoreThreshold)) {
         const score = keywordRankToScore(row.rank ?? 0);
         const candidate = candidates.get(row.rowid);
+
+        if (options.mode === 'hybrid' && !candidate && scoreThreshold > 0) {
+          continue;
+        }
+
         const mergedScore = candidate
           ? Math.max(candidate.score, (candidate.score * 0.45) + (score * 0.55))
           : score;
@@ -740,7 +745,7 @@ export class SqliteWorkspaceRetrieval {
       from retrieval_documents_fts
       join retrieval_documents on retrieval_documents.rowid = retrieval_documents_fts.rowid
       where retrieval_documents_fts match ?
-        and (1.0 / (1.0 + abs(bm25(retrieval_documents_fts)))) >= ?
+        and (1.0 / (2.0 + abs(bm25(retrieval_documents_fts)))) >= ?
       order by rank asc
       limit ?
     `).all(keywordQuery, scoreThreshold > 0 ? scoreThreshold : 0, topK) as SearchResultRow[];
@@ -803,7 +808,7 @@ function buildKeywordMatchQuery(queryText: string) {
 }
 
 function keywordRankToScore(rank: number) {
-  return 1 / (1 + Math.abs(rank));
+  return 1 / (2 + Math.abs(rank));
 }
 
 function emptyGraphResult(): GraphSearchResult {
