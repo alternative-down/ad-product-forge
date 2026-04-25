@@ -212,16 +212,91 @@ export function buildObserverPrompt(existingObservations: string | undefined, me
 }
 
 export function parseObserverOutput(output: string) {
-  const observationsMatch = output.match(/<observations>([\s\S]*?)<\/observations>/i);
-  const currentTaskMatch = output.match(/<current-task>([\s\S]*?)<\/current-task>/i);
-  const suggestedResponseMatch = output.match(/<suggested-response>([\s\S]*?)<\/suggested-response>/i);
+  if (detectDegenerateRepetition(output)) {
+    return {
+      observations: '',
+      currentTask: undefined,
+      suggestedContinuation: undefined,
+      rawOutput: output,
+      degenerate: true,
+    };
+  }
+
+  const observationsMatches = [...output.matchAll(/^[ \t]*<observations>([\s\S]*?)^[ \t]*<\/observations>/gim)];
+  const currentTaskMatch = output.match(/^[ \t]*<current-task>([\s\S]*?)^[ \t]*<\/current-task>/im);
+  const suggestedResponseMatch = output.match(/^[ \t]*<suggested-response>([\s\S]*?)^[ \t]*<\/suggested-response>/im);
+  const observations = observationsMatches.length > 0
+    ? observationsMatches
+      .map((match) => match[1]?.trim() ?? '')
+      .filter(Boolean)
+      .join('\n')
+    : extractListItemsOnly(output);
 
   return {
-    observations: (observationsMatch?.[1] ?? '').trim(),
+    observations: sanitizeObservationLines(observations),
     currentTask: currentTaskMatch?.[1]?.trim() || undefined,
     suggestedContinuation: suggestedResponseMatch?.[1]?.trim() || undefined,
     rawOutput: output,
   };
+}
+
+function extractListItemsOnly(content: string) {
+  return content
+    .split('\n')
+    .filter((line) => /^\s*[-*]\s/.test(line) || /^\s*\d+\.\s/.test(line))
+    .join('\n')
+    .trim();
+}
+
+function sanitizeObservationLines(observations: string) {
+  if (!observations) {
+    return observations;
+  }
+
+  const maxObservationLineChars = 10_000;
+  const lines = observations.split('\n');
+  let changed = false;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].length <= maxObservationLineChars) {
+      continue;
+    }
+
+    lines[index] = `${lines[index].slice(0, maxObservationLineChars)} ... [truncated]`;
+    changed = true;
+  }
+
+  return changed ? lines.join('\n') : observations;
+}
+
+function detectDegenerateRepetition(text: string) {
+  if (!text || text.length < 2_000) {
+    return false;
+  }
+
+  const windowSize = 200;
+  const step = Math.max(1, Math.floor(text.length / 50));
+  const seen = new Map<string, number>();
+  let duplicateWindows = 0;
+  let totalWindows = 0;
+
+  for (let index = 0; index + windowSize <= text.length; index += step) {
+    const window = text.slice(index, index + windowSize);
+
+    totalWindows += 1;
+    const count = (seen.get(window) ?? 0) + 1;
+    seen.set(window, count);
+
+    if (count > 1) {
+      duplicateWindows += 1;
+    }
+  }
+
+  if (totalWindows > 5 && duplicateWindows / totalWindows > 0.4) {
+    return true;
+  }
+
+  return text.split('\n').some((line) => line.length > 50_000);
 }
 
 export function buildReflectorSystemPrompt() {

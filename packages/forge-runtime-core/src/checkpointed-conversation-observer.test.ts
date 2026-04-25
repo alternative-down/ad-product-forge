@@ -1,46 +1,25 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const {
-  buildObserverPromptMock,
-  buildObserverSystemPromptMock,
-  generateTextMock,
-  parseObserverOutputMock,
-} = vi.hoisted(() => ({
-  buildObserverPromptMock: vi.fn(),
-  buildObserverSystemPromptMock: vi.fn(() => 'observer-system'),
+const { generateTextMock } = vi.hoisted(() => ({
   generateTextMock: vi.fn(),
-  parseObserverOutputMock: vi.fn(),
 }));
 
 vi.mock('ai', () => ({
   generateText: generateTextMock,
 }));
 
-vi.mock('@mastra/memory/processors', () => ({
-  buildObserverPrompt: buildObserverPromptMock,
-  buildObserverSystemPrompt: buildObserverSystemPromptMock,
-  parseObserverOutput: parseObserverOutputMock,
-}));
-
 import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
 
 describe('createCheckpointedConversationObserver', () => {
-  beforeEach(() => {
-    buildObserverPromptMock.mockReset();
-    buildObserverSystemPromptMock.mockClear();
-    generateTextMock.mockReset();
-    parseObserverOutputMock.mockReset();
-
-    buildObserverPromptMock.mockReturnValue('observer-prompt');
+  it('includes tool calls and tool results in the serialized prompt', async () => {
     generateTextMock.mockResolvedValue({
-      text: '<observations>Observed tool output.</observations>',
+      text: [
+        '<observations>',
+        '* Tool output was observed.',
+        '</observations>',
+      ].join('\n'),
     });
-    parseObserverOutputMock.mockReturnValue({
-      observations: 'Observed tool output.',
-    });
-  });
 
-  it('includes tool calls and tool results in observer prompt messages', async () => {
     const observer = createCheckpointedConversationObserver({
       model: {} as never,
     });
@@ -80,25 +59,10 @@ describe('createCheckpointedConversationObserver', () => {
       }],
     });
 
-    expect(buildObserverPromptMock).toHaveBeenCalledTimes(1);
-
-    const promptMessages = buildObserverPromptMock.mock.calls[0]?.[1];
-
-    expect(promptMessages).toEqual([
-      expect.objectContaining({
-        role: 'assistant',
-        content: expect.objectContaining({
-          content: expect.stringContaining('Tool call: workspace_execute_command'),
-        }),
-      }),
-      expect.objectContaining({
-        role: 'user',
-        content: expect.objectContaining({
-          content: expect.stringContaining('Tool result: workspace_execute_command'),
-        }),
-      }),
-    ]);
-    expect(promptMessages?.[0]?.content?.content).toContain('grep -n foo README.md');
-    expect(promptMessages?.[1]?.content?.content).toContain('"stdout":"foo:1"');
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
+    expect(generateTextMock.mock.calls[0]?.[0]?.prompt).toContain('Tool Call workspace_execute_command');
+    expect(generateTextMock.mock.calls[0]?.[0]?.prompt).toContain('grep -n foo README.md');
+    expect(generateTextMock.mock.calls[0]?.[0]?.prompt).toContain('Tool Result workspace_execute_command');
+    expect(generateTextMock.mock.calls[0]?.[0]?.prompt).toContain('"stdout": "foo:1"');
   });
 });
