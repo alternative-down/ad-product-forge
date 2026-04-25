@@ -550,6 +550,93 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
+  it('starts a run with the last configured history messages and keeps new run messages afterward', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const workingMemoryStore = createInMemoryWorkingMemoryStore();
+    const model = new MockLanguageModelV3({
+      doGenerate: async (options: LanguageModelV3CallOptions) => {
+        const visibleUserTexts = options.prompt
+          .filter((message) => message.role === 'user')
+          .map((message) => {
+            if (!Array.isArray(message.content)) {
+              return '';
+            }
+
+            return message.content
+              .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
+              .map((part) => part.text)
+              .join('\n');
+          });
+
+        expect(visibleUserTexts).toEqual([
+          'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
+          'Historical message 4',
+          'Historical message 5',
+          'Run prompt',
+        ]);
+
+        return {
+          content: [{ type: 'text', text: 'Done.' }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: {
+              total: 12,
+              noCache: 12,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 4,
+              text: 4,
+              reasoning: 0,
+            },
+          },
+          warnings: [],
+        };
+      },
+    });
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      workingMemoryStore,
+    });
+
+    for (let index = 1; index <= 5; index += 1) {
+      await conversationStore.appendMessage({
+        id: `history-${index}`,
+        threadId: 'thread-1',
+        role: 'user',
+        parts: [{
+          type: 'text',
+          text: `Historical message ${index}`,
+        }],
+        createdAt: `2026-04-25T00:00:0${index}.000Z`,
+      });
+    }
+
+    try {
+      const result = await session.generate('Run prompt', {
+        memory: {
+          thread: 'thread-1',
+          resource: 'resource-1',
+          options: {
+            lastMessages: 2,
+          },
+        },
+      });
+
+      expect(result.text).toBe('Done.');
+    } finally {
+      await session.dispose();
+    }
+  });
+
   it('persists and replays anthropic reasoning metadata across iterations', async () => {
     const conversationStore = new InMemoryConversationStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();

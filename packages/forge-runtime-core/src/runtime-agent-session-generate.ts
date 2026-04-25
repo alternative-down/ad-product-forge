@@ -44,6 +44,11 @@ export async function runRuntimeAgentSessionGenerate(input: {
       content: input.prompt,
     }]
     : input.prompt;
+  const runHistoryWindow = input.options.memory?.options.lastMessages && input.options.memory.options.lastMessages > 0
+    ? await input.runtime.conversationMemory.captureRunHistoryWindow({
+      lastMessages: input.options.memory.options.lastMessages,
+    })
+    : undefined;
 
   await ensureRuntimeSessionThread({
     store: input.runtime.conversationStore,
@@ -85,7 +90,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
       resourceId: input.session.resourceId,
       workingMemoryStore: input.runtime.workingMemoryStore,
     });
-    const messages = await input.runtime.conversationMemory.renderModelMessages();
+    const messages = await input.runtime.conversationMemory.renderModelMessages({
+      historyWindow: runHistoryWindow,
+    });
     const runtimeActions = await input.runtime.getRuntimeActions();
     const stepId = randomUUID();
     const tools = buildAiSdkToolSet({

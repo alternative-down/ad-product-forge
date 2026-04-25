@@ -4,6 +4,7 @@ import {
   CheckpointedConversationMemory,
   createCheckpointedConversationPlugin,
   type CheckpointedConversationObserver,
+  type ConversationMessage,
   type ConversationStore,
   type RuntimeObserver,
   type RuntimePlugin,
@@ -28,7 +29,18 @@ export type ForgeConversationMemoryOptions = {
 
 export type ForgeConversationMemory = {
   memory: CheckpointedConversationMemory;
-  renderModelMessages(): Promise<ModelMessage[]>;
+  captureRunHistoryWindow(input: {
+    lastMessages: number;
+  }): Promise<{
+    historyStartMessageId: string | null;
+    historyEndMessageId: string | null;
+  }>;
+  renderModelMessages(input?: {
+    historyWindow?: {
+      historyStartMessageId: string | null;
+      historyEndMessageId: string | null;
+    };
+  }): Promise<ModelMessage[]>;
   plugins: RuntimePlugin[];
   observers: RuntimeObserver[];
 };
@@ -44,10 +56,27 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
 
   return {
     memory,
-    async renderModelMessages() {
+    async captureRunHistoryWindow(options) {
       const activeMessages = await input.conversationStore.listOperationalMemoryMessages({
         threadId: input.threadId,
       });
+      const visibleHistory = options.lastMessages > 0
+        ? activeMessages.slice(-options.lastMessages)
+        : [];
+
+      return {
+        historyStartMessageId: visibleHistory[0]?.id ?? null,
+        historyEndMessageId: activeMessages.at(-1)?.id ?? null,
+      };
+    },
+    async renderModelMessages(options) {
+      const activeMessages = await input.conversationStore.listOperationalMemoryMessages({
+        threadId: input.threadId,
+      });
+      const historyWindow = options?.historyWindow;
+      const scopedMessages = historyWindow
+        ? selectRunScopedMessages(activeMessages, historyWindow)
+        : activeMessages;
 
       return [
         {
@@ -57,7 +86,7 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
             text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
           }],
         } as ModelMessage,
-        ...createConversationModelMessages(activeMessages),
+        ...createConversationModelMessages(scopedMessages),
       ];
     },
     plugins: [
@@ -76,4 +105,34 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
     ],
     observers: [] as RuntimeObserver[],
   };
+}
+
+function selectRunScopedMessages(
+  activeMessages: ConversationMessage[],
+  historyWindow: {
+    historyStartMessageId: string | null;
+    historyEndMessageId: string | null;
+  },
+) {
+  if (!historyWindow.historyStartMessageId) {
+    return activeMessages;
+  }
+
+  if (!historyWindow.historyEndMessageId) {
+    const startIndex = activeMessages.findIndex((message) => message.id === historyWindow.historyStartMessageId);
+
+    return startIndex >= 0 ? activeMessages.slice(startIndex) : activeMessages;
+  }
+
+  const historyStartIndex = activeMessages.findIndex((message) => message.id === historyWindow.historyStartMessageId);
+  const historyEndIndex = activeMessages.findIndex((message) => message.id === historyWindow.historyEndMessageId);
+
+  if (historyStartIndex < 0 || historyEndIndex < historyStartIndex) {
+    return activeMessages;
+  }
+
+  return [
+    ...activeMessages.slice(historyStartIndex, historyEndIndex + 1),
+    ...activeMessages.slice(historyEndIndex + 1),
+  ];
 }
