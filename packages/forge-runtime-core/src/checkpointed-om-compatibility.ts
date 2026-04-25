@@ -7,10 +7,14 @@ import type {
 
 import type { CheckpointedOmCheckpointPackageInput } from './checkpointed-om.js';
 import {
-  createConversationModelMessages,
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
 import { estimateMessageUnits, readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
+import {
+  buildReflectorPrompt,
+  buildReflectorSystemPrompt,
+  parseReflectorOutput,
+} from './operational-memory-prompting.js';
 
 function estimateTokenCount(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
@@ -232,34 +236,22 @@ async function generateReflectionText(input: {
   supportText: string;
   observationMessages: ConversationMessage[];
 }) {
+  const selectedText = input.observationMessages
+    .map((message) => extractMessageText(message))
+    .filter(Boolean)
+    .join('\n');
   const result = await generateText({
     model: input.model,
     system: buildAlignedOmInstructions(
       buildReflectorSystemPrompt(),
       input.agentSystemPrompt,
     ),
-    messages: [
-      {
-        role: 'user',
-        content: 'Condense the following observation messages into one new reflection message.',
-      },
-      ...(input.supportText.trim()
-        ? [{
-            role: 'user' as const,
-            content: `Additional alignment context:\n${input.supportText.trim()}`,
-          }]
-        : []),
-      ...createConversationModelMessages(input.observationMessages),
-      {
-        role: 'user',
-        content: [
-          'Return only the reflection text.',
-          'Do not add labels, XML, headings, or explanations.',
-        ].join('\n'),
-      },
-    ],
+    prompt: buildReflectorPrompt(
+      [input.supportText.trim(), selectedText].filter(Boolean).join('\n'),
+    ),
   });
-  const text = normalizeOperationalMemoryText(result.text);
+  const parsed = parseReflectorOutput(result.text);
+  const text = normalizeOperationalMemoryText(parsed.observations);
 
   if (!text) {
     throw new Error('Checkpointed OM reflector returned no observations');
@@ -274,48 +266,28 @@ async function generateCheckpointSummaryText(input: {
   previousSummary: string | null;
   reflectionMessages: ConversationMessage[];
 }) {
+  const reflectionText = input.reflectionMessages
+    .map((message) => extractMessageText(message))
+    .filter(Boolean)
+    .join('\n');
   const result = await generateText({
     model: input.model,
     system: buildAlignedOmInstructions(
       buildReflectorSystemPrompt(),
       input.agentSystemPrompt,
     ),
-    messages: [
-      {
-        role: 'user',
-        content: 'Condense the following checkpoint context into one new checkpoint summary message.',
-      },
-      ...(input.previousSummary?.trim()
-        ? [{
-            role: 'assistant' as const,
-            content: input.previousSummary.trim(),
-          }]
-        : []),
-      ...createConversationModelMessages(input.reflectionMessages),
-      {
-        role: 'user',
-        content: [
-          'Return only the checkpoint summary text.',
-          'Do not add labels, XML, headings, or explanations.',
-        ].join('\n'),
-      },
-    ],
+    prompt: buildReflectorPrompt(
+      [input.previousSummary?.trim(), reflectionText].filter(Boolean).join('\n\n'),
+    ),
   });
-  const text = normalizeOperationalMemoryText(result.text);
+  const parsed = parseReflectorOutput(result.text);
+  const text = normalizeOperationalMemoryText(parsed.observations);
 
   if (!text) {
     throw new Error('Checkpointed OM checkpoint summarizer returned no observations');
   }
 
   return text;
-}
-
-function buildReflectorSystemPrompt() {
-  return [
-    'You compress operational memory messages into smaller durable memory messages.',
-    'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
-    'Do not drop operational detail that would still matter for continuity.',
-  ].join('\n');
 }
 
 function buildAlignedOmInstructions(baseInstructions: string, agentSystemPrompt?: string) {
