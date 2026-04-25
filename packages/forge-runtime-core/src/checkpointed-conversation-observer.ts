@@ -2,11 +2,12 @@ import { generateText, type LanguageModel } from 'ai';
 import type { CheckpointedConversationObserver } from 'agent-runtime-core/integrations';
 
 import {
+  createConversationModelMessages,
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
 import {
-  buildObserverPrompt,
   buildObserverSystemPrompt,
+  buildObserverTaskUserMessage,
   parseObserverOutput,
 } from './operational-memory-prompting.js';
 
@@ -22,14 +23,20 @@ export function createCheckpointedConversationObserver(
   return {
     async observe(request) {
       const supportText = await input.loadSupportText?.();
-      const prompt = buildObserverPrompt(
-        supportText?.trim() || undefined,
-        request.messages,
-      );
       const result = await generateText({
         model: input.model,
         system: buildAlignedObserverSystemPrompt(input.agentSystemPrompt),
-        prompt,
+        messages: [
+          {
+            role: 'user',
+            content: 'Analyze the following persisted conversation messages in order.',
+          },
+          ...createConversationModelMessages(request.messages),
+          {
+            role: 'user',
+            content: buildObserverTaskUserMessage(supportText?.trim() || undefined),
+          },
+        ],
       });
       const parsed = parseObserverOutput(result.text);
       const text = normalizeOperationalMemoryText(parsed.observations);

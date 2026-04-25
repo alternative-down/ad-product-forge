@@ -195,6 +195,10 @@ function buildObserverTaskPrompt(existingObservations?: string) {
   return prompt;
 }
 
+export function buildObserverTaskUserMessage(existingObservations?: string) {
+  return buildObserverTaskPrompt(existingObservations);
+}
+
 export function buildObserverPrompt(existingObservations: string | undefined, messagesToObserve: ConversationMessage[]) {
   return [
     '## New Message History to Observe',
@@ -237,6 +241,14 @@ export function buildReflectorPrompt(observations: string) {
     '<observations>',
     observations,
     '</observations>',
+  ].join('\n');
+}
+
+export function buildReflectorTaskUserMessage() {
+  return [
+    'Compress the observations below into a tighter reflection.',
+    'Preserve the important details while removing redundancy.',
+    'Return XML with a single <observations>...</observations> block.',
   ].join('\n');
 }
 
