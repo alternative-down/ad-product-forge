@@ -31,7 +31,6 @@ export type CheckpointedConversationMemoryOptions = {
 
 type RawConversationMessage = {
   id: string;
-  groupId: string;
   createdAt: Date;
   tokenCount: number;
   message: ConversationMessage;
@@ -327,21 +326,10 @@ function serializeBudgetValue(value: unknown) {
 function buildRawConversationMessages(messages: ConversationMessage[]) {
   return messages.map((message) => ({
     id: message.id,
-    groupId: getMessageGroupId(message),
     createdAt: new Date(message.createdAt),
     tokenCount: estimateMessageUnits(message),
     message,
   }));
-}
-
-function getMessageGroupId(message: ConversationMessage) {
-  const toolCallIds = getMessageToolCallIds(message);
-
-  if (toolCallIds.length === 1) {
-    return `tool-call:${toolCallIds[0]}`;
-  }
-
-  return `message:${message.id}`;
 }
 
 function getMessageToolCallIds(message: ConversationMessage) {
@@ -373,12 +361,12 @@ function splitRawMessagesByRecentReserve(input: {
   recentTokenLimit: number | null;
 }) {
   const groups = groupRawConversationMessages(input.messages);
-  const recentGroupIds = new Set<string>();
+  const recentGroups: typeof groups = [];
   let recentTokenCount = 0;
 
   if (input.recentTokenLimit === null) {
     for (const group of groups) {
-      recentGroupIds.add(group.groupId);
+      recentGroups.push(group);
       recentTokenCount += group.tokenCount;
     }
   } else {
@@ -389,24 +377,14 @@ function splitRawMessagesByRecentReserve(input: {
         break;
       }
 
-      recentGroupIds.add(group.groupId);
+      recentGroups.unshift(group);
       recentTokenCount += group.tokenCount;
     }
   }
-
-  const recentMessages: RawConversationMessage[] = [];
-  const overflowMessages: RawConversationMessage[] = [];
-  let overflowTokenCount = 0;
-
-  for (const message of input.messages) {
-    if (recentGroupIds.has(message.groupId)) {
-      recentMessages.push(message);
-      continue;
-    }
-
-    overflowMessages.push(message);
-    overflowTokenCount += message.tokenCount;
-  }
+  const overflowGroups = groups.slice(0, groups.length - recentGroups.length);
+  const recentMessages = recentGroups.flatMap((group) => group.messages);
+  const overflowMessages = overflowGroups.flatMap((group) => group.messages);
+  const overflowTokenCount = overflowGroups.reduce((total, group) => total + group.tokenCount, 0);
 
   return {
     recentMessages,
@@ -418,36 +396,50 @@ function splitRawMessagesByRecentReserve(input: {
 
 function groupRawConversationMessages(messages: RawConversationMessage[]) {
   const orderedGroups: Array<{
-    groupId: string;
     tokenCount: number;
     messages: RawConversationMessage[];
+    toolCallIds: Set<string>;
   }> = [];
-  const groupMap = new Map<string, {
-    groupId: string;
-    tokenCount: number;
-    messages: RawConversationMessage[];
-  }>();
 
   for (const message of messages) {
-    const existingGroup = groupMap.get(message.groupId);
+    const toolCallIds = new Set(getMessageToolCallIds(message.message));
+    const previousGroup = orderedGroups.at(-1);
 
-    if (existingGroup) {
-      existingGroup.messages.push(message);
-      existingGroup.tokenCount += message.tokenCount;
+    if (
+      previousGroup
+      && toolCallIds.size > 0
+      && hasToolCallIdOverlap(previousGroup.toolCallIds, toolCallIds)
+    ) {
+      previousGroup.messages.push(message);
+      previousGroup.tokenCount += message.tokenCount;
+
+      for (const toolCallId of toolCallIds) {
+        previousGroup.toolCallIds.add(toolCallId);
+      }
+
       continue;
     }
 
     const nextGroup = {
-      groupId: message.groupId,
       tokenCount: message.tokenCount,
       messages: [message],
+      toolCallIds,
     };
 
-    groupMap.set(message.groupId, nextGroup);
     orderedGroups.push(nextGroup);
   }
 
   return orderedGroups;
+}
+
+function hasToolCallIdOverlap(left: Set<string>, right: Set<string>) {
+  for (const toolCallId of right) {
+    if (left.has(toolCallId)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function takeRawMessageBatch(input: {

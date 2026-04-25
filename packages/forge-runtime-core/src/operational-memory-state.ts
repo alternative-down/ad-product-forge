@@ -21,9 +21,9 @@ export type OperationalMemoryState = {
 };
 
 type GroupedRawMessages = {
-  groupId: string;
   tokenCount: number;
   messages: ConversationMessage[];
+  toolCallIds: Set<string>;
 };
 
 export async function readOperationalMemoryState(input: {
@@ -101,7 +101,7 @@ function splitRawMessagesByRecentReserve(input: {
   recentTokenLimit: number;
 }) {
   const groups = groupRawConversationMessages(input.messages);
-  const recentGroupIds = new Set<string>();
+  const recentGroups: GroupedRawMessages[] = [];
   let recentTokenCount = 0;
 
   for (let index = groups.length - 1; index >= 0; index -= 1) {
@@ -111,23 +111,13 @@ function splitRawMessagesByRecentReserve(input: {
       break;
     }
 
-    recentGroupIds.add(group.groupId);
+    recentGroups.unshift(group);
     recentTokenCount += group.tokenCount;
   }
-
-  const recentMessages: ConversationMessage[] = [];
-  const overflowMessages: ConversationMessage[] = [];
-  let overflowTokenCount = 0;
-
-  for (const message of input.messages) {
-    if (recentGroupIds.has(getMessageGroupId(message))) {
-      recentMessages.push(message);
-      continue;
-    }
-
-    overflowMessages.push(message);
-    overflowTokenCount += estimateMessageUnits(message);
-  }
+  const overflowGroups = groups.slice(0, groups.length - recentGroups.length);
+  const recentMessages = recentGroups.flatMap((group) => group.messages);
+  const overflowMessages = overflowGroups.flatMap((group) => group.messages);
+  const overflowTokenCount = overflowGroups.reduce((total, group) => total + group.tokenCount, 0);
 
   return {
     recentMessages,
@@ -139,39 +129,46 @@ function splitRawMessagesByRecentReserve(input: {
 
 function groupRawConversationMessages(messages: ConversationMessage[]) {
   const orderedGroups: GroupedRawMessages[] = [];
-  const groupMap = new Map<string, GroupedRawMessages>();
 
   for (const message of messages) {
-    const groupId = getMessageGroupId(message);
-    const existingGroup = groupMap.get(groupId);
+    const toolCallIds = new Set(getMessageToolCallIds(message));
+    const previousGroup = orderedGroups.at(-1);
 
-    if (existingGroup) {
-      existingGroup.messages.push(message);
-      existingGroup.tokenCount += estimateMessageUnits(message);
+    if (
+      previousGroup
+      && toolCallIds.size > 0
+      && hasToolCallIdOverlap(previousGroup.toolCallIds, toolCallIds)
+    ) {
+      previousGroup.messages.push(message);
+      previousGroup.tokenCount += estimateMessageUnits(message);
+
+      for (const toolCallId of toolCallIds) {
+        previousGroup.toolCallIds.add(toolCallId);
+      }
+
       continue;
     }
 
     const nextGroup = {
-      groupId,
       tokenCount: estimateMessageUnits(message),
       messages: [message],
+      toolCallIds,
     };
 
-    groupMap.set(groupId, nextGroup);
     orderedGroups.push(nextGroup);
   }
 
   return orderedGroups;
 }
 
-function getMessageGroupId(message: ConversationMessage) {
-  const toolCallIds = getMessageToolCallIds(message);
-
-  if (toolCallIds.length === 1) {
-    return `tool-call:${toolCallIds[0]}`;
+function hasToolCallIdOverlap(left: Set<string>, right: Set<string>) {
+  for (const toolCallId of right) {
+    if (left.has(toolCallId)) {
+      return true;
+    }
   }
 
-  return `message:${message.id}`;
+  return false;
 }
 
 function getMessageToolCallIds(message: ConversationMessage) {
