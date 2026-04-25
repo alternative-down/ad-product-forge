@@ -120,19 +120,27 @@ function createAssistantContentParts(
     }
 
     if (part.type === 'reasoning') {
+      const anthropicReasoningOptions = part.providerMetadata?.anthropic
+        ? {
+            ...(typeof part.providerMetadata.anthropic.signature === 'string'
+              ? { signature: part.providerMetadata.anthropic.signature }
+              : {}),
+            ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
+              ? { redactedData: part.providerMetadata.anthropic.redactedData }
+              : {}),
+          }
+        : null;
+
       parts.push({
         type: 'reasoning',
         text: part.text,
-        ...(part.providerMetadata?.anthropic
+        ...(anthropicReasoningOptions
+          && (typeof anthropicReasoningOptions.signature === 'string'
+            || typeof anthropicReasoningOptions.redactedData === 'string')
           ? {
               providerOptions: {
                 anthropic: {
-                  ...(typeof part.providerMetadata.anthropic.signature === 'string'
-                    ? { signature: part.providerMetadata.anthropic.signature }
-                    : {}),
-                  ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
-                    ? { redactedData: part.providerMetadata.anthropic.redactedData }
-                    : {}),
+                  ...anthropicReasoningOptions,
                 },
               },
             }

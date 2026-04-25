@@ -161,18 +161,26 @@ function toConversationMessage(input: {
       }
 
       if (part.type === 'reasoning') {
+        const anthropicReasoningMetadata = part.providerMetadata?.anthropic
+          ? {
+              ...(typeof part.providerMetadata.anthropic.signature === 'string'
+                ? { signature: part.providerMetadata.anthropic.signature }
+                : {}),
+              ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
+                ? { redactedData: part.providerMetadata.anthropic.redactedData }
+                : {}),
+            }
+          : null;
+
         parts.push({
           type: 'reasoning' as const,
           text: part.text,
-          providerMetadata: part.providerMetadata?.anthropic
+          providerMetadata: anthropicReasoningMetadata
+            && (typeof anthropicReasoningMetadata.signature === 'string'
+              || typeof anthropicReasoningMetadata.redactedData === 'string')
             ? {
                 anthropic: {
-                  ...(typeof part.providerMetadata.anthropic.signature === 'string'
-                    ? { signature: part.providerMetadata.anthropic.signature }
-                    : {}),
-                  ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
-                    ? { redactedData: part.providerMetadata.anthropic.redactedData }
-                    : {}),
+                  ...anthropicReasoningMetadata,
                 },
               }
             : undefined,
