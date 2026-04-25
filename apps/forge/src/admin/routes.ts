@@ -2541,6 +2541,7 @@ async function buildSystemHealthcheck(
   registry: ReturnType<typeof getInternalAgentRegistry>,
   readModel: ReturnType<typeof createAdminReadModel>,
 ) {
+  const HEALTHCHECK_SNAPSHOT_LIMIT = 100;
   const processWithDiagnostics = process as NodeJS.Process & {
     _getActiveHandles?: () => unknown[];
     _getActiveRequests?: () => unknown[];
@@ -2570,9 +2571,9 @@ async function buildSystemHealthcheck(
     readModel.listAgents(),
   ]);
   const homeAgentMap = new Map(agents.map((agent) => [agent.agentId, agent]));
-  const recentThreadsByAgentId = new Map(await Promise.all(
+  const recentActivityByAgentId = new Map(await Promise.all(
     agentSnapshots.map(async (agentSnapshot) => {
-      const [agentThread, ltmThread] = await Promise.all([
+      const [agentThread, ltmThread, homeMetricSnapshots] = await Promise.all([
         readModel.listAgentThreadMessages({
           agentId: agentSnapshot.agentId,
           page: 0,
@@ -2583,6 +2584,10 @@ async function buildSystemHealthcheck(
           page: 0,
           perPage: 1,
         }),
+        readModel.listRecentAgentHomeMetricSnapshots({
+          agentId: agentSnapshot.agentId,
+          limit: HEALTHCHECK_SNAPSHOT_LIMIT,
+        }),
       ]);
 
       return [
@@ -2590,6 +2595,7 @@ async function buildSystemHealthcheck(
         {
           agentThread: agentThread.items.map(summarizeHealthcheckThreadMessage),
           ltmThread: ltmThread.items.map(summarizeHealthcheckThreadMessage),
+          homeMetricSnapshots,
         },
       ] as const;
     }),
@@ -2632,9 +2638,10 @@ async function buildSystemHealthcheck(
 
         return {
           ...agentSnapshot,
-          recentExecution: recentThreadsByAgentId.get(agentSnapshot.agentId) ?? {
+          recentExecution: recentActivityByAgentId.get(agentSnapshot.agentId) ?? {
             agentThread: [],
             ltmThread: [],
+            homeMetricSnapshots: [],
           },
           homeAgent: homeAgent
             ? {

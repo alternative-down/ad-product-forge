@@ -15,6 +15,7 @@ import {
 import type { Database } from '../database/index';
 import {
   agents,
+  agentHomeMetricSnapshots,
   agentExecutionContracts,
   agentExecutionSteps,
   agentMcpConfigs,
@@ -1016,6 +1017,26 @@ export function createAdminReadModel(input: {
     }
   }
 
+  async function listRecentAgentHomeMetricSnapshots(input: {
+    agentId: string;
+    limit: number;
+  }) {
+    const rows = await db.query.agentHomeMetricSnapshots.findMany({
+      where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
+      orderBy: [desc(agentHomeMetricSnapshots.createdAt)],
+      limit: input.limit,
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      agentId: row.agentId,
+      stepId: row.stepId,
+      stepCreatedAt: row.stepCreatedAt,
+      createdAt: row.createdAt,
+      snapshot: row.snapshot,
+    }));
+  }
+
   async function getAgentOmDebugExport(agentId: string) {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
@@ -1353,6 +1374,7 @@ export function createAdminReadModel(input: {
     listAgentExecutionSteps,
     listAgentThreadMessages,
     listAgentLongTermMemoryThreadMessages,
+    listRecentAgentHomeMetricSnapshots,
     getAgentRuntimeMemory,
     getAgentOmDebugExport,
     debugAgentLongTermMemoryRecallSearch,
