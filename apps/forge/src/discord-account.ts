@@ -211,14 +211,19 @@ export function createDiscordProvider(config: {
   }
 
   async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
+    console.log('[discord] DEBUG: MessageCreate event - author:', message.author.id, 'bot:', botUserId, 'channelType:', message.channel.type, 'DM:', ChannelType.DM, 'channelId:', message.channelId);
+    console.log('[discord] DEBUG: configuredChannels.size:', configuredChannels.size, 'hasChannel:', configuredChannels.has(message.channelId));
+
     // Ignore messages from the bot itself
     if (message.author.id === botUserId) {
+      console.log('[discord] DEBUG: filtering - message from bot itself');
       return null;
     }
 
     // Allow DMs through regardless of configured guild channels
     if (message.channel.type !== ChannelType.DM) {
       if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
+        console.log('[discord] DEBUG: filtering - guild channel not in configuredChannels');
         return null;
       }
     }
@@ -228,6 +233,7 @@ export function createDiscordProvider(config: {
       configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
+      console.log('[discord] DEBUG: filtering - guild channel requires mention but no mention');
       return null;
     }
 
@@ -235,12 +241,16 @@ export function createDiscordProvider(config: {
     const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
+      console.log('[discord] DEBUG: filtering - empty content and no attachments');
       return null;
     }
 
     if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
+      console.log('[discord] DEBUG: filtering - recent outbound echo');
       return null;
     }
+
+    console.log('[discord] DEBUG: message accepted, returning inbound message');
 
     return {
       targetKey: message.channelId,
@@ -259,8 +269,10 @@ export function createDiscordProvider(config: {
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
+    console.log('[discord] DEBUG: deliverMessage called, onInboundMessage:', onInboundMessage ? 'set' : 'null, pendingMessages:', pendingMessages.length);
     if (!onInboundMessage) {
       pendingMessages.push(message);
+      console.log('[discord] DEBUG: pushed to pendingMessages, total:', pendingMessages.length);
       return;
     }
 
@@ -293,14 +305,19 @@ export function createDiscordProvider(config: {
         return;
       }
 
+      console.log('[discord] DEBUG: MessageCreate event received - author:', message.author.username, 'channel:', message.channelId);
+
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
         if (!inboundMessage) {
+          console.log('[discord] DEBUG: toInboundMessage returned null');
           return;
         }
 
+        console.log('[discord] DEBUG: calling deliverMessage');
         await deliverMessage(inboundMessage);
+        console.log('[discord] DEBUG: deliverMessage completed');
       } catch (error) {
         console.error('[discord] Error handling MessageCreate event:', error);
       }
