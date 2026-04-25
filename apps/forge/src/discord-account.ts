@@ -216,8 +216,11 @@ export function createDiscordProvider(config: {
       return null;
     }
 
-    if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
-      return null;
+    // Allow DMs through regardless of configured guild channels
+    if (message.channel.type !== ChannelType.DM) {
+      if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
+        return null;
+      }
     }
 
     if (
@@ -287,12 +290,6 @@ export function createDiscordProvider(config: {
 
     client.on(Events.MessageCreate, async (message) => {
       if (disposed) {
-        return;
-      }
-
-      const callback = onInboundMessage;
-
-      if (!callback) {
         return;
       }
 
