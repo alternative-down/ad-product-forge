@@ -52,6 +52,15 @@ export function createCheckpointedOmCompatibilityObserver(
 
 export async function syncCheckpointedOmCompatibility(
   input: CheckpointedOmCompatibilityObserverOptions,
+  diagnostics?: {
+    record(event: {
+      at: number;
+      scope: string;
+      phase: string;
+      metrics?: Record<string, number | string | null>;
+      detail?: Record<string, unknown> | null;
+    }): void;
+  },
 ) {
   if (!input.reflectionModel) {
     return;
@@ -79,6 +88,20 @@ export async function syncCheckpointedOmCompatibility(
       recentTokenLimit: input.limits.recentRawTokens,
     });
 
+    diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-om-compat',
+      phase: 'state-loaded',
+      metrics: {
+        checkpointGeneration,
+        recentRawTokenCount: state.metrics.recentRawTokenCount,
+        overflowTokenCount: state.metrics.overflowTokenCount,
+        observationTokenCount: state.metrics.observationTokenCount,
+        reflectionTokenCount: state.metrics.reflectionTokenCount,
+        checkpointTokenCount: state.metrics.checkpointTokenCount,
+      },
+    });
+
     if (state.metrics.observationTokenCount >= input.limits.observationReflectionBatchTokens) {
       const reflectionBatch = takeOperationalMemoryBatch({
         messages: state.observationMessages,
@@ -95,6 +118,17 @@ export async function syncCheckpointedOmCompatibility(
         agentSystemPrompt: input.agentSystemPrompt,
         supportText,
         observationMessages: reflectionBatch.messages,
+      });
+      diagnostics?.record({
+        at: Date.now(),
+        scope: 'checkpointed-om-compat',
+        phase: 'reflection-created',
+        detail: {
+          sourceMessageCount: reflectionBatch.messages.length,
+          batchTokenCount: reflectionBatch.tokenCount,
+          supportTextLength: supportText.length,
+          reflectionTextLength: reflectionText.length,
+        },
       });
       const generationCount = latestPersistedGeneration + 1;
       const reflectionId = `reflection:${generationCount}`;
@@ -119,6 +153,17 @@ export async function syncCheckpointedOmCompatibility(
           messageId: message.id,
           replacedByMessageId: reflectionId,
         })));
+      diagnostics?.record({
+        at: Date.now(),
+        scope: 'checkpointed-om-compat',
+        phase: 'reflection-persisted',
+        metrics: {
+          reflectionGeneration: generationCount,
+        },
+        detail: {
+          reflectionId,
+        },
+      });
       continue;
     }
 
@@ -132,6 +177,17 @@ export async function syncCheckpointedOmCompatibility(
         agentSystemPrompt: input.agentSystemPrompt,
         previousSummary: checkpointSummaryText,
         reflectionMessages: checkpointBatch.messages,
+      });
+      diagnostics?.record({
+        at: Date.now(),
+        scope: 'checkpointed-om-compat',
+        phase: 'checkpoint-created',
+        detail: {
+          sourceMessageCount: checkpointBatch.messages.length,
+          batchTokenCount: checkpointBatch.tokenCount,
+          previousSummaryLength: checkpointSummaryText?.length ?? 0,
+          checkpointTextLength: checkpointText.length,
+        },
       });
       checkpointGeneration = checkpointBatch.messages
         .map((message) => message.operationalMemoryGeneration ?? 0)
@@ -167,6 +223,17 @@ export async function syncCheckpointedOmCompatibility(
             })]
           : []),
       ]);
+      diagnostics?.record({
+        at: Date.now(),
+        scope: 'checkpointed-om-compat',
+        phase: 'checkpoint-persisted',
+        metrics: {
+          checkpointGeneration,
+        },
+        detail: {
+          checkpointId,
+        },
+      });
 
       if (input.onCheckpointAdvanced) {
         await input.onCheckpointAdvanced({
@@ -194,6 +261,15 @@ export async function syncCheckpointedOmCompatibility(
       continue;
     }
 
+    diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-om-compat',
+      phase: 'idle',
+      metrics: {
+        checkpointGeneration,
+        reflectionBudget,
+      },
+    });
     return;
   }
 }

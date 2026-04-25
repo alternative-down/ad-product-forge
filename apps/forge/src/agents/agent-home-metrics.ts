@@ -86,6 +86,13 @@ export type AgentHomeMetricSnapshot = {
   };
   createdAt: number;
   updatedAt: number;
+  omTrace?: Array<{
+    at: number;
+    scope: string;
+    phase: string;
+    metrics?: Record<string, number | string | null>;
+    detail?: Record<string, unknown> | null;
+  }>;
 };
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {

@@ -987,7 +987,10 @@ export function createAgentRunner(
                       agentId: currentRuntime.id,
                       stepId: recordedStep.stepId,
                       stepCreatedAt: recordedStep.createdAt,
-                      snapshot,
+                      snapshot: {
+                        ...snapshot,
+                        omTrace: stepResult.omTrace ?? [],
+                      },
                     });
                   })(),
                   RUNNER_AWAIT_TIMEOUT_MS,

@@ -19,7 +19,17 @@ export type RuntimeAgentSessionRuntime = {
   conversationMemory: ForgeConversationMemory;
   workingMemoryStore: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
-  syncState(): Promise<void>;
+  syncState(input?: {
+    diagnostics?: {
+      record(event: {
+        at: number;
+        scope: string;
+        phase: string;
+        metrics?: Record<string, number | string | null>;
+        detail?: Record<string, unknown> | null;
+      }): void;
+    };
+  }): Promise<void>;
 };
 
 function requireCheckpointedOmLimits(
@@ -105,14 +115,35 @@ export async function createRuntimeAgentSessionRuntime(
         ...dynamicRuntimeActions,
       ];
     },
-    async syncState() {
+    async syncState(options) {
+      options?.diagnostics?.record({
+        at: Date.now(),
+        scope: 'om',
+        phase: 'sync-state-start',
+      });
+
       if (checkpointedOmEnabled) {
-        await conversationMemory.memory.stabilize();
+        await conversationMemory.memory.stabilize({
+          diagnostics: options?.diagnostics,
+        });
       } else {
-        await conversationMemory.memory.sync();
+        await conversationMemory.memory.sync({
+          diagnostics: options?.diagnostics,
+        });
       }
 
+      options?.diagnostics?.record({
+        at: Date.now(),
+        scope: 'om',
+        phase: 'sync-state-after-conversation-memory',
+      });
+
       if (!checkpointedOmLimits) {
+        options?.diagnostics?.record({
+          at: Date.now(),
+          scope: 'om',
+          phase: 'sync-state-finished',
+        });
         return;
       }
 
@@ -124,6 +155,12 @@ export async function createRuntimeAgentSessionRuntime(
         reflectionModel: input.checkpointedOmModel ?? input.model,
         agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
         onCheckpointAdvanced: input.onCheckpointAdvanced,
+      }, options?.diagnostics);
+
+      options?.diagnostics?.record({
+        at: Date.now(),
+        scope: 'om',
+        phase: 'sync-state-finished',
       });
     },
   };

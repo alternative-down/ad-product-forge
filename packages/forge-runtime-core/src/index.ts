@@ -48,6 +48,7 @@ export {
   type RuntimeAgentSessionGenerateMessage,
   type RuntimeAgentSessionGenerateOptions,
   type RuntimeAgentSessionIteration,
+  type RuntimeAgentSessionOmTraceEvent,
   type RuntimeAgentSessionStepResult,
 } from './runtime-agent-session.js';
 export {

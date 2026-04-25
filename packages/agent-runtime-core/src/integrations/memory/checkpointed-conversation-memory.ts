@@ -41,6 +41,16 @@ type NormalizedCheckpointedConversationState = CheckpointedConversationState & {
   overflowMessageIds: string[];
 };
 
+type CheckpointedConversationDiagnostics = {
+  record(event: {
+    at: number;
+    scope: string;
+    phase: string;
+    metrics?: Record<string, number | string | null>;
+    detail?: Record<string, unknown> | null;
+  }): void;
+};
+
 export class CheckpointedConversationMemory {
   private readonly threadId: string;
   private readonly store: ConversationStore;
@@ -56,15 +66,33 @@ export class CheckpointedConversationMemory {
     this.observer = options.observer ?? null;
   }
 
-  async sync(): Promise<CheckpointedConversationState> {
+  async sync(input?: {
+    diagnostics?: CheckpointedConversationDiagnostics;
+  }): Promise<CheckpointedConversationState> {
     const state = await this.loadState();
+
+    input?.diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-conversation',
+      phase: 'sync-loaded-state',
+      metrics: summarizeCheckpointedConversationMetrics(state),
+    });
 
     return state;
   }
 
-  async stabilize(): Promise<CheckpointedConversationState> {
+  async stabilize(input?: {
+    diagnostics?: CheckpointedConversationDiagnostics;
+  }): Promise<CheckpointedConversationState> {
     let state = await this.loadState();
     let previousLoopSignature: string | null = null;
+
+    input?.diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-conversation',
+      phase: 'stabilize-start',
+      metrics: summarizeCheckpointedConversationMetrics(state),
+    });
 
     if (!this.observer) {
       return state;
@@ -86,13 +114,40 @@ export class CheckpointedConversationMemory {
 
       previousLoopSignature = loopSignature;
 
+      input?.diagnostics?.record({
+        at: Date.now(),
+        scope: 'checkpointed-conversation',
+        phase: 'overflow-batch-start',
+        metrics: summarizeCheckpointedConversationMetrics(state),
+      });
+
       try {
-        const observation = await this.consolidateOneOverflowBatch(state);
+        const observation = await this.consolidateOneOverflowBatch(state, input?.diagnostics);
 
         if (!observation) {
           return state;
         }
+
+        input?.diagnostics?.record({
+          at: Date.now(),
+          scope: 'checkpointed-conversation',
+          phase: 'overflow-batch-applied',
+          detail: {
+            observationId: observation.id,
+            observationUnits: observation.units,
+            sourceMessageCount: observation.sourceMessageIds.length,
+          },
+        });
       } catch (error) {
+        input?.diagnostics?.record({
+          at: Date.now(),
+          scope: 'checkpointed-conversation',
+          phase: 'overflow-batch-failed',
+          metrics: summarizeCheckpointedConversationMetrics(state),
+          detail: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
         console.warn(
           '[CheckpointedConversationMemory] Observation batch failed; preserving prior progress and stopping OM drain for this cycle.',
           error,
@@ -102,6 +157,13 @@ export class CheckpointedConversationMemory {
 
       state = await this.loadState();
     }
+
+    input?.diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-conversation',
+      phase: 'stabilize-finished',
+      metrics: summarizeCheckpointedConversationMetrics(state),
+    });
 
     return state;
   }
@@ -133,6 +195,7 @@ export class CheckpointedConversationMemory {
 
   private async consolidateOneOverflowBatch(
     state: NormalizedCheckpointedConversationState,
+    diagnostics?: CheckpointedConversationDiagnostics,
   ): Promise<CheckpointedConversationObservation | null> {
     if (!this.observer) {
       return null;
@@ -158,6 +221,17 @@ export class CheckpointedConversationMemory {
     if (observationBatch.messages.length === 0) {
       return null;
     }
+
+    diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-conversation',
+      phase: 'overflow-batch-selected',
+      detail: {
+        batchTokenCount: observationBatch.tokenCount,
+        batchMessageCount: observationBatch.messages.length,
+        sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
+      },
+    });
 
     const response = await this.observer.observe({
       threadId: this.threadId,
@@ -190,6 +264,17 @@ export class CheckpointedConversationMemory {
         messageId,
         replacedByMessageId: observationId,
       })));
+
+    diagnostics?.record({
+      at: Date.now(),
+      scope: 'checkpointed-conversation',
+      phase: 'overflow-batch-persisted',
+      detail: {
+        observationId,
+        observationTextLength: observationText.length,
+        observationUnits: observation.units,
+      },
+    });
 
     return observation;
   }
@@ -477,4 +562,16 @@ function shouldObserveOverflow(input: {
   }
 
   return input.state.metrics.overflowTokenCount >= input.overflowObservationTokenLimit;
+}
+
+function summarizeCheckpointedConversationMetrics(state: NormalizedCheckpointedConversationState) {
+  return {
+    checkpointMessageId: state.checkpointMessageId,
+    recentMessageCount: state.metrics.recentMessageCount,
+    recentTokenCount: state.metrics.recentTokenCount,
+    overflowMessageCount: state.metrics.overflowMessageCount,
+    overflowTokenCount: state.metrics.overflowTokenCount,
+    observationCount: state.metrics.observationCount,
+    totalActiveMessageCount: state.metrics.totalActiveMessageCount,
+  };
 }

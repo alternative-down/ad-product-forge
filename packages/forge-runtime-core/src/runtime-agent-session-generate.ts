@@ -22,6 +22,7 @@ import type {
   CreateRuntimeAgentSessionOptions,
   RuntimeAgentSessionGenerateOptions,
   RuntimeAgentSessionGenerateMessage,
+  RuntimeAgentSessionOmTraceEvent,
   RuntimeAgentSessionStepResult,
 } from './runtime-agent-session.js';
 import type { RuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
@@ -62,6 +63,13 @@ export async function runRuntimeAgentSessionGenerate(input: {
   const maxSteps = input.options.maxSteps ?? 10_000;
 
   for (let iterationNumber = 1; iterationNumber <= maxSteps; iterationNumber += 1) {
+    const omTrace: RuntimeAgentSessionOmTraceEvent[] = [];
+    const omDiagnostics = {
+      record(event: RuntimeAgentSessionOmTraceEvent) {
+        omTrace.push(event);
+      },
+    };
+
     if (input.options.abortSignal?.aborted) {
       break;
     }
@@ -114,7 +122,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
       assistantAuthorId: input.runtime.assistantAuthorId,
       messages: result.response.messages as RuntimeSessionModelMessage[],
     });
-    await input.runtime.syncState();
+    await input.runtime.syncState({
+      diagnostics: omDiagnostics,
+    });
 
     finalText = result.text;
     finalUsage = {
@@ -127,6 +137,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
 
     await input.options.onStepFinish?.({
       usage: finalUsage,
+      omTrace,
     });
 
     const runtimeIteration = createRuntimeAgentSessionIteration({
@@ -165,7 +176,9 @@ export async function runRuntimeAgentSessionGenerate(input: {
         agentId: input.session.agentId,
         messages: continuationMessages,
       });
-      await input.runtime.syncState();
+      await input.runtime.syncState({
+        diagnostics: omDiagnostics,
+      });
     }
 
     if (!continuation.continue) {

@@ -26,6 +26,15 @@ export type RuntimeAgentSessionStepResult = {
     cachedInputTokens?: number;
     reasoningTokens?: number;
   };
+  omTrace?: RuntimeAgentSessionOmTraceEvent[];
+};
+
+export type RuntimeAgentSessionOmTraceEvent = {
+  at: number;
+  scope: string;
+  phase: string;
+  metrics?: Record<string, number | string | null>;
+  detail?: Record<string, unknown> | null;
 };
 
 export type RuntimeAgentSessionIteration = {
