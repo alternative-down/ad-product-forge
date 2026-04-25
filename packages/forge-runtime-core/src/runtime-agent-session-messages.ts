@@ -13,6 +13,12 @@ export type RuntimeSessionModelMessage =
         | {
             type: 'reasoning';
             text: string;
+            providerOptions?: {
+              anthropic?: {
+                signature?: string;
+                redactedData?: string;
+              };
+            };
             providerMetadata?: {
               anthropic?: {
                 signature?: string;
@@ -161,23 +167,12 @@ function toConversationMessage(input: {
       }
 
       if (part.type === 'reasoning') {
-        const anthropicReasoningMetadata = part.providerMetadata?.anthropic
-          ? {
-              ...(typeof part.providerMetadata.anthropic.signature === 'string'
-                ? { signature: part.providerMetadata.anthropic.signature }
-                : {}),
-              ...(typeof part.providerMetadata.anthropic.redactedData === 'string'
-                ? { redactedData: part.providerMetadata.anthropic.redactedData }
-                : {}),
-            }
-          : null;
+        const anthropicReasoningMetadata = part.providerOptions?.anthropic ?? part.providerMetadata?.anthropic;
 
         parts.push({
           type: 'reasoning' as const,
           text: part.text,
           providerMetadata: anthropicReasoningMetadata
-            && (typeof anthropicReasoningMetadata.signature === 'string'
-              || typeof anthropicReasoningMetadata.redactedData === 'string')
             ? {
                 anthropic: {
                   ...anthropicReasoningMetadata,

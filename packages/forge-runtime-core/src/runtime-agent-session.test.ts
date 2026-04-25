@@ -550,6 +550,122 @@ describe('createRuntimeAgentSession', () => {
     }
   });
 
+  it('persists and replays anthropic reasoning metadata across iterations', async () => {
+    const conversationStore = new InMemoryConversationStore();
+    const workingMemoryStore = createInMemoryWorkingMemoryStore();
+    let callCount = 0;
+    const model = new MockLanguageModelV3({
+      doGenerate: async (options: LanguageModelV3CallOptions) => {
+        callCount += 1;
+
+        if (callCount === 1) {
+          return {
+            content: [
+              {
+                type: 'reasoning',
+                text: 'First thinking block.',
+                providerMetadata: {
+                  anthropic: {
+                    signature: 'sig-1',
+                  },
+                },
+              },
+              {
+                type: 'text',
+                text: 'First answer.',
+              },
+            ],
+            finishReason: { raw: 'stop', unified: 'stop' },
+            usage: {
+              inputTokens: {
+                total: 12,
+                noCache: 12,
+                cacheRead: 0,
+                cacheWrite: 0,
+              },
+              outputTokens: {
+                total: 6,
+                text: 3,
+                reasoning: 3,
+              },
+            },
+            warnings: [],
+          };
+        }
+
+        expect(options.prompt).toContainEqual({
+          role: 'assistant',
+          content: [
+            {
+              type: 'reasoning',
+              text: 'First thinking block.',
+              providerOptions: {
+                anthropic: {
+                  signature: 'sig-1',
+                },
+              },
+            },
+            {
+              type: 'text',
+              text: 'First answer.',
+            },
+          ],
+        });
+
+        return {
+          content: [{ type: 'text', text: 'Second answer.' }],
+          finishReason: { raw: 'stop', unified: 'stop' },
+          usage: {
+            inputTokens: {
+              total: 14,
+              noCache: 14,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 4,
+              text: 4,
+              reasoning: 0,
+            },
+          },
+          warnings: [],
+        };
+      },
+    });
+    const session = await createRuntimeAgentSession({
+      agentId: 'agent-1',
+      agentName: 'Forge Agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      assistantAuthorId: 'agent-1',
+      model,
+      system: 'Base system.',
+      conversationStore,
+      workingMemoryStore,
+    });
+
+    try {
+      const result = await session.generate('Initial prompt.', {
+        onIterationComplete(iteration) {
+          if (iteration.iteration === 1) {
+            return {
+              continue: true,
+              feedback: 'Continue.',
+            };
+          }
+
+          return {
+            continue: false,
+          };
+        },
+      });
+
+      expect(result.text).toBe('Second answer.');
+    } finally {
+      await session.dispose();
+    }
+  });
+
   it('loads dynamic runtime actions on each iteration without rebuilding the session', async () => {
     const conversationStore = new InMemoryConversationStore();
     const workingMemoryStore = createInMemoryWorkingMemoryStore();
