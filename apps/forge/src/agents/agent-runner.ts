@@ -7,6 +7,8 @@ import type { Database } from '../database/index';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage } from './agent-runner-usage';
+import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
+import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const ONE_MINUTE_MS = 60_000;
@@ -36,11 +38,13 @@ export function createAgentRunner(
   options: {
     reloadRuntime?: () => Promise<InternalAgentRuntime>;
     onRuntimeReloaded?: (runtime: InternalAgentRuntime) => void;
+    workspaceBasePath?: string;
   } = {},
 ) {
   const store = createAgentContractStore(db);
   const systemSettings = createSystemSettingsStore(db);
   const notifications = createAgentNotificationStore(db);
+  const homeMetricSnapshots = createAgentHomeMetricSnapshotStore(db);
   let currentRuntime = runtime;
   let usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
   const wakeQueue = createAgentWakeQueue({
@@ -958,11 +962,40 @@ export function createAgentRunner(
               const { inputTokens, cachedInputTokens, outputTokens } =
                 usage.getUsageFromResult(stepResult);
 
-              await withTimeout(
+              const recordedStep = await withTimeout(
                 usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
                 RUNNER_AWAIT_TIMEOUT_MS,
                 `Agent usage recording timed out for ${runtime.id}`,
               );
+
+              if (options.workspaceBasePath && recordedStep) {
+                await withTimeout(
+                  (async () => {
+                    const snapshot = await readAgentHomeMetricSnapshot({
+                      db,
+                      workspaceBasePath: options.workspaceBasePath as string,
+                      agentId: currentRuntime.id,
+                      runtime: currentRuntime,
+                      runnerSnapshot: getSnapshot(),
+                    });
+
+                    if (!snapshot) {
+                      return;
+                    }
+
+                    await homeMetricSnapshots.recordSnapshot({
+                      agentId: currentRuntime.id,
+                      stepId: recordedStep.stepId,
+                      stepCreatedAt: recordedStep.createdAt,
+                      snapshot,
+                    });
+                  })(),
+                  RUNNER_AWAIT_TIMEOUT_MS,
+                  `Agent home metric snapshot timed out for ${runtime.id}`,
+                ).catch((error) => {
+                  console.error(`[AgentRunner] Failed to persist home metric snapshot for ${runtime.id}:`, error);
+                });
+              }
             },
             onIterationComplete: async (iteration) => {
               markGenerateProgress(timeout, controller, {

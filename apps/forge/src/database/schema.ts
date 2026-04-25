@@ -195,6 +195,26 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
 export type AgentExecutionStep = typeof agentExecutionSteps.$inferSelect;
 export type NewAgentExecutionStep = typeof agentExecutionSteps.$inferInsert;
 
+export const agentHomeMetricSnapshots = sqliteTable('agent_home_metric_snapshots', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  stepId: text('step_id')
+    .notNull()
+    .references(() => agentExecutionSteps.id, { onDelete: 'cascade' }),
+  stepCreatedAt: integer('step_created_at').notNull(),
+  snapshot: text('snapshot', { mode: 'json' }).$type<unknown>().notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  agentHomeMetricSnapshotsAgentIdIdx: index('agent_home_metric_snapshots_agent_id_idx').on(table.agentId),
+  agentHomeMetricSnapshotsCreatedAtIdx: index('agent_home_metric_snapshots_created_at_idx').on(table.createdAt),
+  agentHomeMetricSnapshotsStepIdIdx: uniqueIndex('agent_home_metric_snapshots_step_id_idx').on(table.stepId),
+}));
+
+export type AgentHomeMetricSnapshot = typeof agentHomeMetricSnapshots.$inferSelect;
+export type NewAgentHomeMetricSnapshot = typeof agentHomeMetricSnapshots.$inferInsert;
+
 export const agentCheckpointedOmStates = sqliteTable('agent_checkpointed_om_states', {
   agentId: text('agent_id')
     .primaryKey()
@@ -558,6 +578,7 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   providers: many(agentProviders),
   executionContracts: many(agentExecutionContracts),
   executionSteps: many(agentExecutionSteps),
+  homeMetricSnapshots: many(agentHomeMetricSnapshots),
   notifications: many(agentNotifications),
   schedules: many(agentSchedules),
   internalChatAccount: one(internalChatAccounts, {
@@ -620,6 +641,17 @@ export const agentExecutionStepsRelations = relations(agentExecutionSteps, ({ on
   contract: one(agentExecutionContracts, {
     fields: [agentExecutionSteps.contractId],
     references: [agentExecutionContracts.id],
+  }),
+}));
+
+export const agentHomeMetricSnapshotsRelations = relations(agentHomeMetricSnapshots, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentHomeMetricSnapshots.agentId],
+    references: [agents.id],
+  }),
+  step: one(agentExecutionSteps, {
+    fields: [agentHomeMetricSnapshots.stepId],
+    references: [agentExecutionSteps.id],
   }),
 }));
 

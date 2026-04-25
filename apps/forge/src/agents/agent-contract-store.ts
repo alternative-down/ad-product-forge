@@ -136,8 +136,11 @@ export function createAgentContractStore(db: Database) {
     contractCostMultiplier: number;
     costUsd: number;
   }) {
+    const id = createId();
+    const createdAt = Date.now();
+
     await db.insert(agentExecutionSteps).values({
-      id: createId(),
+      id,
       agentId: input.agentId,
       contractId: input.contractId,
       llmProfileId: input.llmProfileId,
@@ -151,8 +154,13 @@ export function createAgentContractStore(db: Database) {
       outputPerMillionUsd: input.outputPerMillionUsd,
       contractCostMultiplier: input.contractCostMultiplier,
       costUsd: input.costUsd,
-      createdAt: Date.now(),
+      createdAt,
     });
+
+    return {
+      stepId: id,
+      createdAt,
+    };
   }
 
   async function renewContract(agentId: string) {

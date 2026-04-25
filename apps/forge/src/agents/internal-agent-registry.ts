@@ -44,6 +44,7 @@ function createInternalAgentRegistry() {
       runner: null as InternalAgentRunner | null,
     };
     const runner = createAgentRunner(db, runtime, {
+      workspaceBasePath: loaderConfig?.workspaceBasePath,
       reloadRuntime: async () => {
         if (!loaderConfig) {
           throw new Error('Agent loader config is not available for runtime reload');

@@ -80,7 +80,7 @@ export function createAgentRunnerUsage(input: {
         pricing.contractCostMultiplier;
     }
 
-    await input.store.recordAgentStep({
+    return input.store.recordAgentStep({
       agentId: input.runtime.id,
       contractId,
       llmProfileId: input.runtime.modelProfileId,
