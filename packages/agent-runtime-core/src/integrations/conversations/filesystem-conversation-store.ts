@@ -86,6 +86,41 @@ export class FilesystemConversationStore implements ConversationStore {
     await this.writeStoreFile(storeFile);
   }
 
+  async updateMessage(input: {
+    threadId: string;
+    messageId: string;
+    role?: ConversationMessage['role'];
+    parts?: ConversationMessage['parts'];
+    metadata?: Record<string, unknown> | undefined;
+    operationalMemoryType?: ConversationMessage['operationalMemoryType'];
+    operationalMemoryGeneration?: number | null | undefined;
+  }): Promise<void> {
+    const storeFile = await this.readStoreFile();
+    const messageIndex = storeFile.messages.findIndex((message) =>
+      message.threadId === input.threadId && message.id === input.messageId);
+
+    if (messageIndex < 0) {
+      return;
+    }
+
+    const currentMessage = storeFile.messages[messageIndex];
+    const nextMessage: ConversationMessage = {
+      ...deserializeMessage(currentMessage),
+      ...(input.role ? { role: input.role } : {}),
+      ...(input.parts ? { parts: input.parts } : {}),
+      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+      ...(input.operationalMemoryType !== undefined
+        ? { operationalMemoryType: input.operationalMemoryType }
+        : {}),
+      ...(input.operationalMemoryGeneration !== undefined
+        ? { operationalMemoryGeneration: input.operationalMemoryGeneration }
+        : {}),
+    };
+
+    storeFile.messages[messageIndex] = serializeMessage(nextMessage);
+    await this.writeStoreFile(storeFile);
+  }
+
   async updateMessageMetadata(input: {
     threadId: string;
     messageId: string;

@@ -65,6 +65,15 @@ export interface ConversationStore {
   getThread(threadId: string): Promise<ConversationThread | null>;
   listThreads(): Promise<ConversationThread[]>;
   appendMessage(message: ConversationMessage): Promise<void>;
+  updateMessage(input: {
+    threadId: string;
+    messageId: string;
+    role?: ConversationMessage['role'];
+    parts?: ConversationMessagePart[];
+    metadata?: Record<string, unknown> | undefined;
+    operationalMemoryType?: ConversationOperationalMemoryType | undefined;
+    operationalMemoryGeneration?: number | null | undefined;
+  }): Promise<void>;
   updateMessageMetadata(input: {
     threadId: string;
     messageId: string;

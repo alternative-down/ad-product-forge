@@ -30,6 +30,39 @@ export class InMemoryConversationStore implements ConversationStore {
     this.messagesByThread.set(message.threadId, currentMessages);
   }
 
+  async updateMessage(input: {
+    threadId: string;
+    messageId: string;
+    role?: ConversationMessage['role'];
+    parts?: ConversationMessage['parts'];
+    metadata?: Record<string, unknown> | undefined;
+    operationalMemoryType?: ConversationMessage['operationalMemoryType'];
+    operationalMemoryGeneration?: number | null | undefined;
+  }): Promise<void> {
+    const currentMessages = this.messagesByThread.get(input.threadId) ?? [];
+    const messageIndex = currentMessages.findIndex((message) => message.id === input.messageId);
+
+    if (messageIndex < 0) {
+      return;
+    }
+
+    const currentMessage = currentMessages[messageIndex];
+
+    currentMessages[messageIndex] = {
+      ...currentMessage,
+      ...(input.role ? { role: input.role } : {}),
+      ...(input.parts ? { parts: input.parts } : {}),
+      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+      ...(input.operationalMemoryType !== undefined
+        ? { operationalMemoryType: input.operationalMemoryType }
+        : {}),
+      ...(input.operationalMemoryGeneration !== undefined
+        ? { operationalMemoryGeneration: input.operationalMemoryGeneration }
+        : {}),
+    };
+    this.messagesByThread.set(input.threadId, currentMessages);
+  }
+
   async updateMessageMetadata(input: {
     threadId: string;
     messageId: string;

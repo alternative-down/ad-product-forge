@@ -196,6 +196,39 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     ], 'write');
   }
 
+  async updateMessage(input: {
+    threadId: string;
+    messageId: string;
+    role?: ConversationMessage['role'];
+    parts?: ConversationMessage['parts'];
+    metadata?: Record<string, unknown> | undefined;
+    operationalMemoryType?: ConversationMessage['operationalMemoryType'];
+    operationalMemoryGeneration?: number | null | undefined;
+  }): Promise<void> {
+    await this.ensureSchema();
+    await this.client.execute({
+      sql: `
+        update ${escapeIdentifier(this.messageTableName)}
+        set
+          role = coalesce(?, role),
+          parts_json = coalesce(?, parts_json),
+          metadata_json = coalesce(?, metadata_json),
+          om_type = coalesce(?, om_type),
+          om_generation = coalesce(?, om_generation)
+        where thread_id = ? and id = ?
+      `,
+      args: [
+        input.role ?? null,
+        input.parts ? serializeJson(input.parts) : null,
+        input.metadata !== undefined ? serializeJson(input.metadata ?? null) : null,
+        input.operationalMemoryType ?? null,
+        input.operationalMemoryGeneration ?? null,
+        input.threadId,
+        input.messageId,
+      ],
+    });
+  }
+
   async updateMessageMetadata(input: {
     threadId: string;
     messageId: string;

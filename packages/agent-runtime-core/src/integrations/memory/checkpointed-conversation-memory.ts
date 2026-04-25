@@ -165,10 +165,10 @@ export class CheckpointedConversationMemory {
       messages: observationBatch.messages.map((entry) => entry.message),
     });
     const observationId = `observation:${randomUUID()}`;
-    const observationText = renderObservationText(response.text);
+    const observationText = response.text.trim();
     const observation: CheckpointedConversationObservation = {
       id: observationId,
-      text: response.text,
+      text: observationText,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
       createdAt: new Date().toISOString(),
       units: estimateTextUnits(observationText),
@@ -177,7 +177,7 @@ export class CheckpointedConversationMemory {
     await this.store.appendMessage({
       id: observationId,
       threadId: this.threadId,
-      role: 'system',
+      role: 'assistant',
       parts: [{
         type: 'text',
         text: observationText,
@@ -247,10 +247,6 @@ export function estimateMessageUnits(message: ConversationMessage) {
   }
 
   return 1;
-}
-
-function renderObservationText(text: string) {
-  return ['Active observation:', text.trim()].join('\n');
 }
 
 function getMessageText(message: ConversationMessage) {

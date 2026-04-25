@@ -8,18 +8,6 @@ function extractText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function renderCheckpointSummaryText(text: string) {
-  return ['Checkpoint summary:', text.trim()].join('\n');
-}
-
-function renderReflectionText(text: string) {
-  return ['Active reflection:', text.trim()].join('\n');
-}
-
-function renderObservationText(text: string) {
-  return ['Active observation:', text.trim()].join('\n');
-}
-
 export async function migrateLegacyCheckpointedOmState(input: {
   db: Database;
   agentId: string;
@@ -49,10 +37,10 @@ export async function migrateLegacyCheckpointedOmState(input: {
     await input.conversationStore.appendMessage({
       id: checkpointSummaryId,
       threadId: input.threadId,
-      role: 'system',
+      role: 'assistant',
       parts: [{
         type: 'text',
-        text: renderCheckpointSummaryText(checkpointSummary.text),
+        text: checkpointSummary.text.trim(),
       }],
       operationalMemoryType: 'checkpoint-summary',
       operationalMemoryGeneration: checkpointSummary.upToGeneration,
@@ -68,10 +56,10 @@ export async function migrateLegacyCheckpointedOmState(input: {
     await input.conversationStore.appendMessage({
       id: reflection.recordId,
       threadId: input.threadId,
-      role: 'system',
+      role: 'assistant',
       parts: [{
         type: 'text',
-        text: renderReflectionText(reflection.text),
+        text: reflection.text.trim(),
       }],
       operationalMemoryType: 'reflection',
       operationalMemoryGeneration: reflection.generationCount,
@@ -84,10 +72,10 @@ export async function migrateLegacyCheckpointedOmState(input: {
       await input.conversationStore.appendMessage({
         id: observation.id,
         threadId: input.threadId,
-        role: 'system',
+        role: 'assistant',
         parts: [{
           type: 'text',
-          text: renderObservationText(observation.text),
+          text: observation.text.trim(),
         }],
         operationalMemoryType: 'observation',
         createdAt: observation.createdAt,

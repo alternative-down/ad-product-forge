@@ -6,6 +6,10 @@ import type {
 } from 'agent-runtime-core/integrations';
 
 import type { CheckpointedOmCheckpointPackageInput } from './checkpointed-om.js';
+import {
+  createConversationModelMessages,
+  normalizeOperationalMemoryText,
+} from './conversation-model-messages.js';
 import { estimateMessageUnits, readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
 
 function estimateTokenCount(text: string) {
@@ -82,7 +86,7 @@ export async function syncCheckpointedOmCompatibility(
         model: input.reflectionModel,
         agentSystemPrompt: input.agentSystemPrompt,
         supportText,
-        observations: reflectionBatch.messages.map((message) => extractMessageText(message)),
+        observationMessages: reflectionBatch.messages,
       });
       const generationCount = checkpointGeneration + state.reflectionMessages.length + 1;
       const reflectionId = `reflection:${generationCount}`;
@@ -91,10 +95,10 @@ export async function syncCheckpointedOmCompatibility(
       await input.conversationStore.appendMessage({
         id: reflectionId,
         threadId: input.threadId,
-        role: 'system',
+        role: 'assistant',
         parts: [{
           type: 'text',
-          text: renderReflectionText(reflectionText),
+          text: reflectionText,
         }],
         operationalMemoryType: 'reflection',
         operationalMemoryGeneration: generationCount,
@@ -118,7 +122,7 @@ export async function syncCheckpointedOmCompatibility(
         model: input.reflectionModel,
         agentSystemPrompt: input.agentSystemPrompt,
         previousSummary: checkpointSummaryText,
-        archivedReflections: checkpointBatch.messages.map((message) => extractMessageText(message)),
+        reflectionMessages: checkpointBatch.messages,
       });
       checkpointGeneration = checkpointBatch.messages
         .map((message) => message.operationalMemoryGeneration ?? 0)
@@ -130,10 +134,10 @@ export async function syncCheckpointedOmCompatibility(
       await input.conversationStore.appendMessage({
         id: checkpointId,
         threadId: input.threadId,
-        role: 'system',
+        role: 'assistant',
         parts: [{
           type: 'text',
-          text: renderCheckpointSummaryText(checkpointText),
+          text: checkpointText,
         }],
         operationalMemoryType: 'checkpoint-summary',
         operationalMemoryGeneration: checkpointGeneration,
@@ -163,7 +167,7 @@ export async function syncCheckpointedOmCompatibility(
           toGeneration: checkpointGeneration,
           checkpointSummary: {
             text: checkpointText,
-            tokenCount: estimateTokenCount(renderCheckpointSummaryText(checkpointText)),
+            tokenCount: estimateTokenCount(checkpointText),
             upToGeneration: checkpointGeneration,
             updatedAt: createdAt,
           },
@@ -202,19 +206,11 @@ function extractMessageText(message: ConversationMessage) {
     .join('\n');
 }
 
-function renderReflectionText(text: string) {
-  return ['Active reflection:', text.trim()].join('\n');
-}
-
-function renderCheckpointSummaryText(text: string) {
-  return ['Checkpoint summary:', text.trim()].join('\n');
-}
-
 async function generateReflectionText(input: {
   model: LanguageModel;
   agentSystemPrompt?: string;
   supportText: string;
-  observations: string[];
+  observationMessages: ConversationMessage[];
 }) {
   const result = await generateText({
     model: input.model,
@@ -222,9 +218,28 @@ async function generateReflectionText(input: {
       buildReflectorSystemPrompt(),
       input.agentSystemPrompt,
     ),
-    prompt: buildReflectorPrompt([input.supportText, input.observations.join('\n')].filter(Boolean).join('\n')),
+    messages: [
+      {
+        role: 'user',
+        content: 'Condense the following observation messages into one new reflection message.',
+      },
+      ...(input.supportText.trim()
+        ? [{
+            role: 'user' as const,
+            content: `Additional alignment context:\n${input.supportText.trim()}`,
+          }]
+        : []),
+      ...createConversationModelMessages(input.observationMessages),
+      {
+        role: 'user',
+        content: [
+          'Return only the reflection text.',
+          'Do not add labels, XML, headings, or explanations.',
+        ].join('\n'),
+      },
+    ],
   });
-  const text = parseReflectorOutput(result.text).observations.trim();
+  const text = normalizeOperationalMemoryText(result.text);
 
   if (!text) {
     throw new Error('Checkpointed OM reflector returned no observations');
@@ -237,7 +252,7 @@ async function generateCheckpointSummaryText(input: {
   model: LanguageModel;
   agentSystemPrompt?: string;
   previousSummary: string | null;
-  archivedReflections: string[];
+  reflectionMessages: ConversationMessage[];
 }) {
   const result = await generateText({
     model: input.model,
@@ -245,11 +260,28 @@ async function generateCheckpointSummaryText(input: {
       buildReflectorSystemPrompt(),
       input.agentSystemPrompt,
     ),
-    prompt: buildReflectorPrompt(
-      [input.previousSummary, input.archivedReflections.join('\n\n')].filter(Boolean).join('\n\n'),
-    ),
+    messages: [
+      {
+        role: 'user',
+        content: 'Condense the following checkpoint context into one new checkpoint summary message.',
+      },
+      ...(input.previousSummary?.trim()
+        ? [{
+            role: 'assistant' as const,
+            content: input.previousSummary.trim(),
+          }]
+        : []),
+      ...createConversationModelMessages(input.reflectionMessages),
+      {
+        role: 'user',
+        content: [
+          'Return only the checkpoint summary text.',
+          'Do not add labels, XML, headings, or explanations.',
+        ].join('\n'),
+      },
+    ],
   });
-  const text = parseReflectorOutput(result.text).observations.trim();
+  const text = normalizeOperationalMemoryText(result.text);
 
   if (!text) {
     throw new Error('Checkpointed OM checkpoint summarizer returned no observations');
@@ -260,10 +292,9 @@ async function generateCheckpointSummaryText(input: {
 
 function buildReflectorSystemPrompt() {
   return [
-    'You compress batches of observations into a smaller durable reflection.',
+    'You compress operational memory messages into smaller durable memory messages.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
     'Do not drop operational detail that would still matter for continuity.',
-    'Return XML with a single <observations>...</observations> block.',
   ].join('\n');
 }
 
@@ -281,24 +312,6 @@ function buildAlignedOmInstructions(baseInstructions: string, agentSystemPrompt?
     prompt,
     '</main_agent_system_prompt>',
   ].join('\n\n');
-}
-
-function buildReflectorPrompt(observations: string) {
-  return [
-    'Compress the observations below into a tighter reflection.',
-    'Preserve the important details while removing redundancy.',
-    '',
-    '<observations>',
-    observations,
-    '</observations>',
-  ].join('\n');
-}
-
-function parseReflectorOutput(output: string) {
-  const match = output.match(/<observations>([\s\S]*?)<\/observations>/i);
-  return {
-    observations: (match?.[1] ?? output).trim(),
-  };
 }
 
 function takeSupportText(observations: string[], tokenLimit: number) {

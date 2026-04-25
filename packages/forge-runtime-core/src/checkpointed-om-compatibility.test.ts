@@ -30,16 +30,16 @@ describe('syncCheckpointedOmCompatibility', () => {
       {
         id: 'observation-1',
         threadId: 'thread-1',
-        role: 'system',
-        parts: [{ type: 'text', text: 'Active observation:\nfirst observation' }],
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'first observation' }],
         operationalMemoryType: 'observation',
         createdAt: '2026-04-24T00:00:00.000Z',
       },
       {
         id: 'observation-2',
         threadId: 'thread-1',
-        role: 'system',
-        parts: [{ type: 'text', text: 'Active observation:\nsecond observation' }],
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'second observation' }],
         operationalMemoryType: 'observation',
         createdAt: '2026-04-24T00:00:01.000Z',
       },
@@ -68,7 +68,7 @@ describe('syncCheckpointedOmCompatibility', () => {
 
     expect(reflectionMessage?.parts).toEqual([{
       type: 'text',
-      text: 'Active reflection:\ncondensed reflection',
+      text: 'condensed reflection',
     }]);
     expect(messages.filter((message) => message.replacedByMessageId === reflectionMessage?.id)).toHaveLength(1);
   });
@@ -91,8 +91,8 @@ describe('syncCheckpointedOmCompatibility', () => {
       {
         id: 'reflection-1',
         threadId: 'thread-1',
-        role: 'system',
-        parts: [{ type: 'text', text: 'Active reflection:\nfirst reflection' }],
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'first reflection' }],
         operationalMemoryType: 'reflection',
         operationalMemoryGeneration: 1,
         createdAt: '2026-04-24T00:00:00.000Z',
@@ -100,8 +100,8 @@ describe('syncCheckpointedOmCompatibility', () => {
       {
         id: 'reflection-2',
         threadId: 'thread-1',
-        role: 'system',
-        parts: [{ type: 'text', text: 'Active reflection:\nsecond reflection' }],
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'second reflection' }],
         operationalMemoryType: 'reflection',
         operationalMemoryGeneration: 2,
         createdAt: '2026-04-24T00:00:01.000Z',
@@ -131,7 +131,7 @@ describe('syncCheckpointedOmCompatibility', () => {
 
     expect(checkpointMessage?.parts).toEqual([{
       type: 'text',
-      text: 'Checkpoint summary:\ncheckpoint summary',
+      text: 'checkpoint summary',
     }]);
     expect(messages.filter((message) => message.replacedByMessageId === checkpointMessage?.id)).toHaveLength(1);
   });

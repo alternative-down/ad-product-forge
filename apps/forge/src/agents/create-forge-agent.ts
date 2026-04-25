@@ -13,6 +13,7 @@ import { createAgentRuntimeMemory } from './agent-runtime-memory';
 import { buildAgentSystemPrompt } from './agent-runtime-prompt';
 import { createAgentMcpRuntimeActionSource } from './mcp/client-manager';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
+import { normalizeOperationalMemoryMessages } from './normalize-operational-memory-messages';
 import type {
   CreateAgentConfig,
   CreateAgentOptions,
@@ -98,6 +99,10 @@ export async function createInternalAgentRuntime<
   await migrateLegacyCheckpointedOmState({
     db: getDatabase(),
     agentId: config.id,
+    threadId: platform.mastraId,
+    conversationStore: platform.conversationStore,
+  });
+  await normalizeOperationalMemoryMessages({
     threadId: platform.mastraId,
     conversationStore: platform.conversationStore,
   });

@@ -33,6 +33,8 @@ export interface RuntimeWorkingMemoryStore {
   }): Promise<void>;
 }
 
+const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
+
 const updateWorkingMemoryInputSchema = z.object({
   workingMemory: WORKING_MEMORY_UPDATE_SCHEMA,
 });
@@ -123,7 +125,21 @@ export async function loadWorkingMemoryContextText(input: {
     return null;
   }
 
-  return record.workingMemory;
+  const workingMemory = record.workingMemory.trim();
+
+  if (workingMemory.length <= WORKING_MEMORY_WARNING_CHAR_LIMIT) {
+    return workingMemory;
+  }
+
+  return [
+    'Working memory pressure warning:',
+    `- Working memory is getting large (${workingMemory.length} chars).`,
+    '- Working memory is for intrinsic identity, stable rules, domain boundaries, and mission-level direction.',
+    '- Do not keep notebook detail, long task logs, timelines, or operational dumps there.',
+    '- Move recoverable detail into workspace files and keep only intrinsic guidance in working memory.',
+    '',
+    workingMemory,
+  ].join('\n');
 }
 
 function parseWorkingMemoryRecord(workingMemory: string | null | undefined) {

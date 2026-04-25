@@ -72,13 +72,12 @@ export async function runRuntimeAgentSessionGenerate(input: {
 
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
+      agentContext: iterationNumber === 1 ? input.options.system : undefined,
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
       workingMemoryStore: input.runtime.workingMemoryStore,
     });
-    const messages = await input.runtime.conversationMemory.renderModelMessages({
-      stepSystem: iterationNumber === 1 ? input.options.system : undefined,
-    });
+    const messages = await input.runtime.conversationMemory.renderModelMessages();
     const runtimeActions = await input.runtime.getRuntimeActions();
     const stepId = randomUUID();
     const tools = buildAiSdkToolSet({
@@ -185,6 +184,7 @@ function summarizeGenerateRequest(input: {
   systemSegments: {
     baseSystem: string;
     workingMemory: string;
+    agentContext: string;
   };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
@@ -211,6 +211,7 @@ function summarizeGenerateRequest(input: {
     systemSegmentChars: {
       baseSystem: input.systemSegments.baseSystem.length,
       workingMemory: input.systemSegments.workingMemory.length,
+      agentContext: input.systemSegments.agentContext.length,
     },
     messageCount: input.messages.length,
     messageChars: messageBreakdown.textChars + messageBreakdown.toolCallChars + messageBreakdown.toolResultChars,
@@ -336,6 +337,7 @@ function appendGenerateDiagnostics(error: unknown, diagnostics: {
 
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
+  agentContext?: string;
   threadId: string;
   resourceId: string;
   workingMemoryStore: RuntimeAgentSessionRuntime['workingMemoryStore'];
@@ -348,12 +350,14 @@ async function buildRuntimeSessionSystemPrompt(input: {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
     workingMemory: workingMemoryText?.trim() || '',
+    agentContext: input.agentContext?.trim() || '',
   };
 
   return {
     text: [
       segments.baseSystem,
       segments.workingMemory,
+      segments.agentContext,
     ]
       .filter((value): value is string => Boolean(value))
       .join('\n\n')

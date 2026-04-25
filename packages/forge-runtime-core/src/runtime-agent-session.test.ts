@@ -34,16 +34,10 @@ describe('createRuntimeAgentSession', () => {
         const assistantMessages = options.prompt.filter((message) => message.role === 'assistant');
 
         if (assistantMessages.length === 0) {
-          expect(systemMessages).toEqual([
-            {
-              role: 'system',
-              content: 'Base system.',
-            },
-            {
-              role: 'system',
-              content: 'Step system.',
-            },
-          ]);
+          expect(systemMessages).toEqual([{
+            role: 'system',
+            content: 'Base system.\n\nStep system.',
+          }]);
 
           return {
             content: [{ type: 'text', text: 'First step response.' }],
@@ -401,8 +395,8 @@ describe('createRuntimeAgentSession', () => {
     await conversationStore.appendMessage({
       id: 'checkpoint-summary-1',
       threadId: 'thread-1',
-      role: 'system',
-      parts: [{ type: 'text', text: 'Checkpoint summary:\ncheckpoint text' }],
+      role: 'assistant',
+      parts: [{ type: 'text', text: 'checkpoint text' }],
       operationalMemoryType: 'checkpoint-summary',
       operationalMemoryGeneration: 2,
       createdAt: '2026-04-24T00:00:00.000Z',
@@ -410,8 +404,8 @@ describe('createRuntimeAgentSession', () => {
     await conversationStore.appendMessage({
       id: 'reflection-1',
       threadId: 'thread-1',
-      role: 'system',
-      parts: [{ type: 'text', text: 'Active reflection:\nreflection one' }],
+      role: 'assistant',
+      parts: [{ type: 'text', text: 'reflection one' }],
       operationalMemoryType: 'reflection',
       operationalMemoryGeneration: 3,
       createdAt: '2026-04-24T00:00:01.000Z',
@@ -419,8 +413,8 @@ describe('createRuntimeAgentSession', () => {
     await conversationStore.appendMessage({
       id: 'reflection-2',
       threadId: 'thread-1',
-      role: 'system',
-      parts: [{ type: 'text', text: 'Active reflection:\nreflection two' }],
+      role: 'assistant',
+      parts: [{ type: 'text', text: 'reflection two' }],
       operationalMemoryType: 'reflection',
       operationalMemoryGeneration: 4,
       createdAt: '2026-04-24T00:00:02.000Z',
@@ -428,8 +422,8 @@ describe('createRuntimeAgentSession', () => {
     await conversationStore.appendMessage({
       id: 'observation-1',
       threadId: 'thread-1',
-      role: 'system',
-      parts: [{ type: 'text', text: 'Active observation:\nobservation one' }],
+      role: 'assistant',
+      parts: [{ type: 'text', text: 'observation one' }],
       operationalMemoryType: 'observation',
       createdAt: '2026-04-24T00:00:03.000Z',
     });
@@ -438,12 +432,7 @@ describe('createRuntimeAgentSession', () => {
         expect(options.prompt).toEqual([
           {
             role: 'system',
-            content: 'Base system.',
-          },
-          {
-            role: 'system',
-            content: 'Step system.',
-            providerOptions: undefined,
+            content: 'Base system.\n\nStep system.',
           },
           {
             role: 'user',
@@ -455,23 +444,39 @@ describe('createRuntimeAgentSession', () => {
             providerOptions: undefined,
           },
           {
-            role: 'system',
-            content: 'Checkpoint summary:\ncheckpoint text',
+            role: 'assistant',
+            content: [{
+              type: 'text',
+              text: 'checkpoint text',
+              providerOptions: undefined,
+            }],
             providerOptions: undefined,
           },
           {
-            role: 'system',
-            content: 'Active reflection:\nreflection one',
+            role: 'assistant',
+            content: [{
+              type: 'text',
+              text: 'reflection one',
+              providerOptions: undefined,
+            }],
             providerOptions: undefined,
           },
           {
-            role: 'system',
-            content: 'Active reflection:\nreflection two',
+            role: 'assistant',
+            content: [{
+              type: 'text',
+              text: 'reflection two',
+              providerOptions: undefined,
+            }],
             providerOptions: undefined,
           },
           {
-            role: 'system',
-            content: 'Active observation:\nobservation one',
+            role: 'assistant',
+            content: [{
+              type: 'text',
+              text: 'observation one',
+              providerOptions: undefined,
+            }],
             providerOptions: undefined,
           },
           {

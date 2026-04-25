@@ -1127,19 +1127,13 @@ export function createAgentRunner(
 
   async function loadAgentContextInstructions() {
     const filesystem = currentRuntime.workspace.filesystem;
-    const agentContextContentPromise = loadAgentContextContent(filesystem);
-    const pressureSignalsPromise = loadContextPressureSignals(agentContextContentPromise);
-    const [agentContextContent, pressureSignals] = await Promise.all([
-      agentContextContentPromise,
-      pressureSignalsPromise,
-    ]);
+    const agentContextContent = await loadAgentContextContent(filesystem);
 
     if (!agentContextContent) {
-      return pressureSignals || undefined;
+      return undefined;
     }
 
     return [
-      pressureSignals,
       'Automatically loaded workspace context file.',
       `File: ${AGENT_CONTEXT_FILE_PATH}`,
       'This file should be treated as additional runtime instructions and context.',
@@ -1178,62 +1172,23 @@ export function createAgentRunner(
 
     const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
     const trimmedContent = content.trim();
-    return trimmedContent || null;
-  }
+    if (!trimmedContent) {
+      return null;
+    }
 
-  async function loadContextPressureSignals(agentContextContentPromise: Promise<string | null>) {
-    const warnings: string[] = [];
-    const [agentContextContent, workingMemory] = await Promise.all([
-      agentContextContentPromise.catch(() => null),
-      loadWorkingMemoryForPressureSignals().catch(() => null),
-    ]);
-
-    if (agentContextContent && agentContextContent.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
-      warnings.push([
+    if (trimmedContent.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
+      return [
         'Context pressure warning:',
-        `- \`${AGENT_CONTEXT_FILE_PATH}\` is getting large (${agentContextContent.length} chars).`,
+        `- \`${AGENT_CONTEXT_FILE_PATH}\` is getting large (${trimmedContent.length} chars).`,
         '- Keep only high-signal summary context there.',
         '- Move detailed notes, logs, and long task detail into separate workspace files.',
         '- Leave short retrieval hints and file references in `AGENT_CONTEXT.md`.',
-      ].join('\n'));
+        '',
+        trimmedContent,
+      ].join('\n');
     }
 
-    if (workingMemory && workingMemory.trim().length > WORKING_MEMORY_WARNING_CHAR_LIMIT) {
-      warnings.push([
-        'Working memory pressure warning:',
-        `- Working memory is getting large (${workingMemory.trim().length} chars).`,
-        '- Working memory is for intrinsic identity, stable rules, domain boundaries, and mission-level direction.',
-        '- Do not keep notebook detail, long task logs, timelines, or operational dumps there.',
-        '- Move recoverable detail into workspace files and keep only intrinsic guidance in working memory.',
-      ].join('\n'));
-    }
-
-    return warnings.join('\n\n');
-  }
-
-  async function loadWorkingMemoryForPressureSignals() {
-    if (!currentRuntime.agent.hasOwnMemory()) {
-      return null;
-    }
-
-    const memory = await withTimeout(
-      currentRuntime.agent.getMemory(),
-      CONTEXT_DECORATION_TIMEOUT_MS,
-      `Agent memory lookup timed out for ${runtime.id}`,
-    );
-
-    if (!memory) {
-      return null;
-    }
-
-    return withTimeout(
-      memory.getWorkingMemory({
-        threadId: currentRuntime.mastraId,
-        resourceId: currentRuntime.mastraId,
-      }),
-      CONTEXT_DECORATION_TIMEOUT_MS,
-      `Working memory lookup timed out for ${runtime.id}`,
-    );
+    return trimmedContent;
   }
 
   function notifyExternalEvent(event: AgentWakeEvent) {
