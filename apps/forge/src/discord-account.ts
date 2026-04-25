@@ -35,7 +35,7 @@ export function createDiscordProvider(config: {
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.MessageContent,
     ],
-    partials: [Partials.Channel],
+    partials: [Partials.Channel, Partials.Message],
   });
 
   // Debug: log all events
