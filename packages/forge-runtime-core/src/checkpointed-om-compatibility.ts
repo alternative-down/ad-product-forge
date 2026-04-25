@@ -7,12 +7,11 @@ import type {
 
 import type { CheckpointedOmCheckpointPackageInput } from './checkpointed-om.js';
 import {
-  createConversationModelMessages,
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
 import { estimateMessageUnits, readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
 import {
-  buildReflectorTaskUserMessage,
+  buildReflectorPrompt,
   buildReflectorSystemPrompt,
   parseReflectorOutput,
 } from './operational-memory-prompting.js';
@@ -243,23 +242,12 @@ async function generateReflectionText(input: {
       buildReflectorSystemPrompt(),
       input.agentSystemPrompt,
     ),
-    messages: [
-      ...(input.supportText.trim()
-        ? [{
-            role: 'user' as const,
-            content: input.supportText.trim(),
-          }]
-        : []),
-      {
-        role: 'user',
-        content: 'The following observation messages should be condensed into one new reflection.',
-      },
-      ...createConversationModelMessages(input.observationMessages),
-      {
-        role: 'user',
-        content: buildReflectorTaskUserMessage(),
-      },
-    ],
+    prompt: buildReflectorPrompt(
+      [
+        input.supportText.trim(),
+        ...input.observationMessages.map((message) => extractMessageText(message)),
+      ].filter(Boolean).join('\n'),
+    ),
   });
   const parsed = parseReflectorOutput(result.text);
   const text = normalizeOperationalMemoryText(parsed.observations);
@@ -283,23 +271,12 @@ async function generateCheckpointSummaryText(input: {
       buildReflectorSystemPrompt(),
       input.agentSystemPrompt,
     ),
-    messages: [
-      ...(input.previousSummary?.trim()
-        ? [{
-            role: 'assistant' as const,
-            content: input.previousSummary.trim(),
-          }]
-        : []),
-      {
-        role: 'user',
-        content: 'The following reflection messages should be condensed into one new checkpoint summary.',
-      },
-      ...createConversationModelMessages(input.reflectionMessages),
-      {
-        role: 'user',
-        content: buildReflectorTaskUserMessage(),
-      },
-    ],
+    prompt: buildReflectorPrompt(
+      [
+        input.previousSummary?.trim() ?? '',
+        ...input.reflectionMessages.map((message) => extractMessageText(message)),
+      ].filter(Boolean).join('\n\n'),
+    ),
   });
   const parsed = parseReflectorOutput(result.text);
   const text = normalizeOperationalMemoryText(parsed.observations);

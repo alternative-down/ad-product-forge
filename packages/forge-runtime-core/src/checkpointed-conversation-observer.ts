@@ -2,12 +2,11 @@ import { generateText, type LanguageModel } from 'ai';
 import type { CheckpointedConversationObserver } from 'agent-runtime-core/integrations';
 
 import {
-  createConversationModelMessages,
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
 import {
+  buildObserverPrompt,
   buildObserverSystemPrompt,
-  buildObserverTaskUserMessage,
   parseObserverOutput,
 } from './operational-memory-prompting.js';
 
@@ -26,17 +25,7 @@ export function createCheckpointedConversationObserver(
       const result = await generateText({
         model: input.model,
         system: buildAlignedObserverSystemPrompt(input.agentSystemPrompt),
-        messages: [
-          {
-            role: 'user',
-            content: 'Analyze the following persisted conversation messages in order.',
-          },
-          ...createConversationModelMessages(request.messages),
-          {
-            role: 'user',
-            content: buildObserverTaskUserMessage(supportText?.trim() || undefined),
-          },
-        ],
+        prompt: buildObserverPrompt(supportText?.trim() || undefined, request.messages),
       });
       const parsed = parseObserverOutput(result.text);
       const text = normalizeOperationalMemoryText(parsed.observations);
