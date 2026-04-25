@@ -37,6 +37,14 @@ export function createDiscordProvider(config: {
     ],
     partials: [Partials.Channel],
   });
+
+  // Debug: log all events
+  client.on('debug', (info) => {
+    console.log('[discord] DEBUG client debug:', info);
+  });
+  client.on('error', (error) => {
+    console.error('[discord] DEBUG client error:', error);
+  });
   const configuredChannels = new Map(
     (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
   );
@@ -295,7 +303,11 @@ export function createDiscordProvider(config: {
     }
   }
 
-  const ready = client.login(config.token).then(() => {
+  console.log('[discord] DEBUG: Starting login...');
+  
+  const ready = client.login(config.token)
+    .then(() => {
+    console.log('[discord] DEBUG: Login succeeded!');
     if (!client.user) {
       throw new Error('Discord client did not become ready after login');
     }
