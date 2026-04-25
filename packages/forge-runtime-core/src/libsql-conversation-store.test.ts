@@ -312,4 +312,88 @@ describe('LibsqlConversationStore', () => {
       await client.close();
     }
   });
+
+  it('deduplicates replacement chains to the visible terminal message', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({
+      url: `file:${databasePath}`,
+    });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_replacements',
+    });
+
+    try {
+      await store.appendMessage({
+        id: 'raw-1',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'raw one' }],
+        createdAt: '2026-04-21T00:00:01.000Z',
+      });
+      await store.appendMessage({
+        id: 'raw-2',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'raw two' }],
+        createdAt: '2026-04-21T00:00:02.000Z',
+      });
+      await store.appendMessage({
+        id: 'observation-1',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'observation' }],
+        operationalMemoryType: 'observation',
+        createdAt: '2026-04-21T00:00:03.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-1',
+        messageId: 'raw-1',
+        replacedByMessageId: 'observation-1',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-1',
+        messageId: 'raw-2',
+        replacedByMessageId: 'observation-1',
+      });
+      await store.appendMessage({
+        id: 'reflection-1',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'reflection' }],
+        operationalMemoryType: 'reflection',
+        operationalMemoryGeneration: 1,
+        createdAt: '2026-04-21T00:00:04.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-1',
+        messageId: 'observation-1',
+        replacedByMessageId: 'reflection-1',
+      });
+      await store.appendMessage({
+        id: 'checkpoint-1',
+        threadId: 'thread-1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'checkpoint' }],
+        operationalMemoryType: 'checkpoint-summary',
+        operationalMemoryGeneration: 1,
+        createdAt: '2026-04-21T00:00:05.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-1',
+        messageId: 'reflection-1',
+        replacedByMessageId: 'checkpoint-1',
+      });
+
+      await expect(store.listOperationalMemoryMessages({
+        threadId: 'thread-1',
+      })).resolves.toMatchObject([
+        { id: 'checkpoint-1' },
+      ]);
+    } finally {
+      await client.close();
+    }
+  });
 });
