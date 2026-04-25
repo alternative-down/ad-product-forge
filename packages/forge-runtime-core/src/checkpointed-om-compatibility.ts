@@ -61,6 +61,10 @@ export async function syncCheckpointedOmCompatibility(
       - input.limits.observationReflectionBatchTokens,
   );
   const checkpointSummaryMessage = await getCheckpointSummaryMessage(input.conversationStore, input.threadId);
+  let latestPersistedGeneration = await getLatestOperationalMemoryGeneration(
+    input.conversationStore,
+    input.threadId,
+  );
   let checkpointGeneration = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
   let checkpointSummaryText = checkpointSummaryMessage ? extractMessageText(checkpointSummaryMessage) : null;
 
@@ -88,7 +92,7 @@ export async function syncCheckpointedOmCompatibility(
         supportText,
         observationMessages: reflectionBatch.messages,
       });
-      const generationCount = checkpointGeneration + state.reflectionMessages.length + 1;
+      const generationCount = latestPersistedGeneration + 1;
       const reflectionId = `reflection:${generationCount}`;
       const createdAt = new Date().toISOString();
 
@@ -104,6 +108,7 @@ export async function syncCheckpointedOmCompatibility(
         operationalMemoryGeneration: generationCount,
         createdAt,
       });
+      latestPersistedGeneration = generationCount;
       await Promise.all(reflectionBatch.messages.map((message) =>
         input.conversationStore.updateMessageReplacement({
           threadId: input.threadId,
@@ -195,6 +200,21 @@ async function getCheckpointSummaryMessage(store: ConversationStore, threadId: s
   });
 
   return [...messages].reverse().find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
+}
+
+async function getLatestOperationalMemoryGeneration(store: ConversationStore, threadId: string) {
+  const messages = await store.listMessages({
+    threadId,
+    order: 'asc',
+  });
+
+  return messages.reduce((maxGeneration, message) => {
+    if (typeof message.operationalMemoryGeneration !== 'number') {
+      return maxGeneration;
+    }
+
+    return Math.max(maxGeneration, message.operationalMemoryGeneration);
+  }, 0);
 }
 
 function extractMessageText(message: ConversationMessage) {
