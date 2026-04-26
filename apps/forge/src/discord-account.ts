@@ -35,7 +35,7 @@ export function createDiscordProvider(config: {
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.MessageContent,
     ],
-    partials: [Partials.Channel],
+    partials: [Partials.Channel, Partials.Message],
   });
   const configuredChannels = new Map(
     (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
@@ -292,6 +292,8 @@ export function createDiscordProvider(config: {
       if (disposed) {
         return;
       }
+
+      console.log('[discord] MessageCreate - author:', message.author.username, 'channelType:', message.channel.type, 'guild:', message.guildId);
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
