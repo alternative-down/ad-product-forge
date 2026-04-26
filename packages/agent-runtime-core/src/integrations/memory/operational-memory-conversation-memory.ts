@@ -5,7 +5,7 @@ import type { StepContextEntry } from '../../core/types.js';
 import { createConversationMessageContextEntry } from '../conversations/context-entries.js';
 import type { ConversationMessage, ConversationStore } from '../conversations/contracts.js';
 
-import type { OperationalMemoryConversationObservation, OperationalMemoryConversationState } from './operational-memory-state-store.js';
+import type { OperationalMemoryConversationObservation, OperationalMemoryConversationState } from './operational-memory-conversation-state-store.js';
 
 export type OperationalMemoryConversationObserverRequest = {
   threadId: string;

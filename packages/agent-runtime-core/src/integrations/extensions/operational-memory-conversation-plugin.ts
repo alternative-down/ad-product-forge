@@ -1,20 +1,20 @@
 import type { RuntimePlugin } from '../../core/plugins.js';
 import type { RuntimeInput } from '../../core/types.js';
-import type { CheckpointedConversationMemory } from '../memory/checkpointed-conversation-memory.js';
+import type { OperationalMemoryConversationMemory } from '../memory/operational-memory-conversation-memory.js';
 
 import { isConversationRuntimeInputPayload } from '../conversations/runtime-input.js';
 
-export type CheckpointedConversationPluginOptions = {
-  memory: CheckpointedConversationMemory;
+export type OperationalConversationPluginOptions = {
+  memory: OperationalMemoryConversationMemory;
   consolidateAfterStep?: boolean;
   selectThreadId?(pendingInputs: RuntimeInput[]): string | null;
 };
 
-export function createCheckpointedConversationPlugin(
-  options: CheckpointedConversationPluginOptions,
+export function createOperationalConversationPlugin(
+  options: OperationalConversationPluginOptions,
 ): RuntimePlugin {
   return {
-    name: 'checkpointed-conversation',
+    name: 'operational-memory',
     async provideContext(context) {
       const threadId = options.selectThreadId?.(context.pendingInputs) ?? selectLatestConversationThreadId(context.pendingInputs);
 
