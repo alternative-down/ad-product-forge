@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import type {
   RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
@@ -107,7 +108,7 @@ export async function createRuntimeAgentSessionRuntime(
         try {
           dynamicRuntimeActions = await input.loadRuntimeActions();
         } catch (error) {
-          console.warn('[RuntimeAgentSession] Failed to load dynamic runtime actions:', error);
+          logger.warn('runtime', 'Failed to load dynamic runtime actions', { error });
         }
       }
 

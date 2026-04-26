@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import path from 'node:path';
 
 import { z } from 'zod';
@@ -90,7 +91,7 @@ export async function createCommunicationModule(config: {
       try {
         await dispatchMessage(pending.providerId, pending.message);
       } catch (error) {
-        console.error('[CommunicationModule] Failed to dispatch pending message:', error);
+        logger.error('communication', 'Failed to dispatch pending message', { error });
         // Continue processing remaining messages
       }
     }
@@ -110,7 +111,7 @@ export async function createCommunicationModule(config: {
       try {
         await dispatchMessage(provider.id, message);
       } catch (error) {
-        console.error('[CommunicationModule] Failed to dispatch message:', error);
+        logger.error('communication', 'Failed to dispatch message', { error });
       }
     });
   }

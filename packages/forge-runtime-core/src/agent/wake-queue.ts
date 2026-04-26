@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 const DEFAULT_WAKE_DEBOUNCE_MS = 3000;
 const DEFAULT_WAKE_MAX_ACCUMULATION_MS = 10000;
 const GROUP_MESSAGE_WAKE_DEBOUNCE_MS = 8000;
@@ -112,7 +113,7 @@ export function createAgentWakeQueue(config: {
       pending = readyEvents.size > 0;
       firstPendingAt ??= Date.now();
 
-      console.error(`[AgentWakeQueue] ${config.label ?? 'agent'} failed to execute:`, error);
+      logger.error('wake-queue', `${config.label ?? 'agent'} failed to execute`, { error });
 
       if (!pending) {
         return;
