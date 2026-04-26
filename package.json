@@ -19,7 +19,9 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish",
-    "lint-staged": "lint-staged"
+    "lint-staged": "lint-staged",
+    "verify-deps": "node scripts/verify-deps-versions.js",
+    "verify-deps:fix": "node scripts/verify-deps-versions.js --fix"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
@@ -44,5 +46,13 @@
   },
   "dependencies": {
     "ai": "^6.0.154"
+  },
+  "overrides": {
+    "zod": "^3.25.76",
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@types/node": "^25.5.2",
+    "typescript": "^6.0.3",
+    "ai": "^6.0.168",
+    "@libsql/client": "^0.15.15"
   }
 }
