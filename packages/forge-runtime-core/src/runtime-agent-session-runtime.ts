@@ -6,6 +6,7 @@ import { createCheckpointedConversationObserver } from './checkpointed-conversat
 import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
+import { countTokens } from './token-counter.js';
 import {
   createUpdateWorkingMemoryTool,
 } from './runtime-working-memory.js';
@@ -195,5 +196,5 @@ function takeSupportText(observations: string[], tokenLimit: number) {
 }
 
 function estimateTokenCount(text: string) {
-  return Math.max(1, Math.ceil(text.length / 4));
+  return Math.max(1, countTokens(text));
 }

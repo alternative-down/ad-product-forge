@@ -10,6 +10,7 @@ import {
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
 import { estimateMessageUnits, readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
+import { countTokens } from './token-counter.js';
 import {
   buildReflectorPrompt,
   buildReflectorSystemPrompt,
@@ -17,7 +18,7 @@ import {
 } from './operational-memory-prompting.js';
 
 function estimateTokenCount(text: string) {
-  return Math.max(1, Math.ceil(text.length / 4));
+  return Math.max(1, countTokens(text));
 }
 
 export type CheckpointedOmCompatibilityObserverOptions = {
