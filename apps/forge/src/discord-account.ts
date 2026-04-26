@@ -331,9 +331,6 @@ export function createDiscordProvider(config: {
 
     forgeDebug('discord', 'logged in', { tag: client.user.tag });
 
-    });
-
-    });
     return client.user;
   });
 
