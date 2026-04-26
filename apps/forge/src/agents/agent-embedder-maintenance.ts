@@ -52,7 +52,7 @@ async function resetVectorDatabase(input: {
   const exists = await fs
     .access(input.databasePath)
     .then(() => true)
-    .catch(() => false);
+    .catch((err) => { console.error("[safe-catch]", err); return false; });
 
   if (!exists) {
     return;

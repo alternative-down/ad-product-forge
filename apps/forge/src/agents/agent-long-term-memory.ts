@@ -155,7 +155,7 @@ async function withTimeout<T>(
 
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);
-  const exists = await fs.access(absoluteRoot).then(() => true).catch(() => false);
+  const exists = await fs.access(absoluteRoot).then(() => true).catch((err) => { console.error("[safe-catch]", err); return false; });
 
   if (!exists) {
     return [];

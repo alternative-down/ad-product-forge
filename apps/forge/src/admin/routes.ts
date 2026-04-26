@@ -2554,7 +2554,7 @@ async function buildSystemHealthcheck(
     Promise.all(
       registry.list().map(async (entry) => {
         const longTermMemory = entry.runtime.longTermMemory
-          ? await entry.runtime.longTermMemory.readSnapshot().catch(() => null)
+          ? await entry.runtime.longTermMemory.readSnapshot().catch((err) => { console.error("[safe-catch]", err); return null; })
           : null;
 
         return {
@@ -2743,7 +2743,7 @@ async function readProcessFileDescriptorSummary() {
   const targetCounts = new Map<string, number>();
 
   await Promise.all(entries.map(async (entry) => {
-    const target = await fsPromises.readlink(`${fdRoot}/${entry}`).catch(() => null);
+    const target = await fsPromises.readlink(`${fdRoot}/${entry}`).catch((err) => { console.error("[safe-catch]", err); return null; });
 
     if (!target) {
       return;

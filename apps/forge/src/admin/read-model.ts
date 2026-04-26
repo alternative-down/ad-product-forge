@@ -867,7 +867,7 @@ export function createAdminReadModel(input: {
       const agentContextPath = path.resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
       const agentContext = await readFile(agentContextPath, 'utf8')
         .then((content) => content.trim() || null)
-        .catch(() => null);
+        .catch((err) => { console.error("[safe-catch]", err); return null; });
       const workingMemory = (await conversationStore.read({
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
@@ -918,13 +918,13 @@ export function createAdminReadModel(input: {
           loadedAgent.runtime.longTermMemory.readSnapshot(),
           ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
           `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-        ).catch(() => null)
+        ).catch((err) => { console.error("[safe-catch]", err); return null; })
         : null;
       const persistedLtmState = await withTimeout(
         readLongTermMemoryState(db, agentId),
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
-      ).catch(() => null);
+      ).catch((err) => { console.error("[safe-catch]", err); return null; });
       const ltm = (runtimeLtmSnapshot
         ? {
             ...runtimeLtmSnapshot,

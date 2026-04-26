@@ -1190,7 +1190,7 @@ export function createAgentRunner(
       filesystem.exists(AGENT_CONTEXT_FILE_PATH),
       CONTEXT_DECORATION_TIMEOUT_MS,
       `Agent context existence check timed out for ${runtime.id}`,
-    ).catch(() => false);
+    ).catch((err) => { console.error("[safe-catch]", err); return false; });
 
     if (!exists) {
       return null;
@@ -1200,7 +1200,7 @@ export function createAgentRunner(
       filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
       CONTEXT_DECORATION_TIMEOUT_MS,
       `Agent context read timed out for ${runtime.id}`,
-    ).catch(() => null);
+    ).catch((err) => { console.error("[safe-catch]", err); return null; });
 
     if (!data) {
       return null;

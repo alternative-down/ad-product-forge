@@ -90,7 +90,7 @@ type RecallConfig = {
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
   const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
-  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch(() => null);
+  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => { console.error("[safe-catch]", err); return null; });
 
   if (!entries) {
     return 0;
