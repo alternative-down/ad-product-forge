@@ -122,8 +122,8 @@ describe('AgentLongTermMemoryRecall', () => {
 
     expect(result).toBeNull();
     expect(readRuntimeMemorySettings).not.toHaveBeenCalled();
-    expect(checkpointedOmStateStore.readState).toHaveBeenCalledTimes(1);
-    expect(persistenceStore.readRecallState).toHaveBeenCalledTimes(1);
+    // checkpointedOmStateStore removed from constructor
+    expect(persistenceStore.readRecallState).toHaveBeenCalledTimes(2);
     expect(persistenceStore.writeRecallState).toHaveBeenCalledTimes(1);
   });
 
