@@ -149,7 +149,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
 
     return {
       ...action,
-      async execute(input, context) {
+      async execute(input: Record<string, unknown>, context: { runtimeId: string; stepId: string; stepNumber: number }) {
         try {
           return await action.execute(input, context);
         } catch (error) {
