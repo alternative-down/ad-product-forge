@@ -311,7 +311,7 @@ export function createDiscordProvider(config: {
         return;
       }
 
-      console.log('[discord] MessageCreate - author:', message.author.username, 'channelType:', message.channel.type, 'guild:', message.guildId);
+      forgeDebug('discord', 'MessageCreate received', { author: message.author.username, channelType: message.channel.type, guildId: message.guildId });
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
@@ -329,7 +329,7 @@ export function createDiscordProvider(config: {
       }
     });
 
-    console.log(`[discord] logged in as ${client.user.tag}`);
+    forgeDebug('discord', 'logged in', { tag: client.user.tag });
     return client.user;
   });
 
