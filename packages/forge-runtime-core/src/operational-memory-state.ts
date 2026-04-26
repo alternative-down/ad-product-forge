@@ -1,4 +1,4 @@
-import { countTokens } from './token-counter.js';
+import { countTokens } from 'agent-runtime-core';
 import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/integrations';
 
 export type OperationalMemoryState = {

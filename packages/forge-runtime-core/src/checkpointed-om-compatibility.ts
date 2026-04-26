@@ -10,7 +10,7 @@ import {
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
 import { estimateMessageUnits, readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
-import { countTokens } from './token-counter.js';
+import { countTokens } from 'agent-runtime-core';
 import {
   buildReflectorPrompt,
   buildReflectorSystemPrompt,

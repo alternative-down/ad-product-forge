@@ -6,7 +6,7 @@ import { createCheckpointedConversationObserver } from './checkpointed-conversat
 import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
-import { countTokens } from './token-counter.js';
+import { countTokens } from 'agent-runtime-core';
 import {
   createUpdateWorkingMemoryTool,
 } from './runtime-working-memory.js';
