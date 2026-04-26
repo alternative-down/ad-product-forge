@@ -881,17 +881,17 @@ export function createAdminReadModel(input: {
       });
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
       const checkpointSummaryText = checkpointSummaryMessage?.parts
-        .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+        .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
           part.type === 'text' || part.type === 'reasoning')
-        .map((part) => part.text.trim())
+        .map((part: { text?: string }) => part.text?.trim() ?? "")
         .filter(Boolean)
         .join('\n') ?? null;
       const reflection = operationalMemoryState.reflectionMessages
         .map((message) =>
           message.parts
-            .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+            .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
               part.type === 'text' || part.type === 'reasoning')
-            .map((part) => part.text.trim())
+            .map((part: { text?: string }) => part.text?.trim() ?? "")
             .filter(Boolean)
             .join('\n'))
         .filter(Boolean)
@@ -899,9 +899,9 @@ export function createAdminReadModel(input: {
       const observations = operationalMemoryState.observationMessages
         .map((message) =>
           message.parts
-            .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+            .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
               part.type === 'text' || part.type === 'reasoning')
-            .map((part) => part.text.trim())
+            .map((part: { text?: string }) => part.text?.trim() ?? "")
             .filter(Boolean)
             .join('\n'))
         .filter(Boolean)
@@ -1093,9 +1093,9 @@ export function createAdminReadModel(input: {
           checkpointSummary: operationalMemoryState.checkpointSummaryMessage
             ? {
                 text: operationalMemoryState.checkpointSummaryMessage.parts
-                  .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+                  .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
                     part.type === 'text' || part.type === 'reasoning')
-                  .map((part) => part.text.trim())
+                  .map((part: { text?: string }) => part.text?.trim() ?? "")
                   .filter(Boolean)
                   .join('\n'),
                 tokenCount: operationalMemoryState.metrics.checkpointTokenCount,
@@ -1110,9 +1110,9 @@ export function createAdminReadModel(input: {
             lastObservedAt: message.createdAt,
             reflectedGeneration: null,
             text: message.parts
-              .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+              .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
                 part.type === 'text' || part.type === 'reasoning')
-              .map((part) => part.text.trim())
+              .map((part: { text?: string }) => part.text?.trim() ?? "")
               .filter(Boolean)
               .join('\n'),
           })),
@@ -1122,9 +1122,9 @@ export function createAdminReadModel(input: {
             tokenCount: estimateMessageUnits(message),
             createdAt: message.createdAt,
             text: message.parts
-              .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+              .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
                 part.type === 'text' || part.type === 'reasoning')
-              .map((part) => part.text.trim())
+              .map((part: { text?: string }) => part.text?.trim() ?? "")
               .filter(Boolean)
               .join('\n'),
           })),
