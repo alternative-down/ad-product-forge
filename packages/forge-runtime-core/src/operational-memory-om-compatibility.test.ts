@@ -3,7 +3,7 @@ import { MockLanguageModelV3 } from 'ai/test';
 
 import { InMemoryConversationStore, type ConversationMessage } from 'agent-runtime-core/integrations';
 
-import { syncCheckpointedOmCompatibility } from './operational-memory-om-compatibility.js';
+import { syncOperationalMemoryOmCompatibility } from './operational-memory-om-compatibility.js';
 
 async function appendMessages(store: InMemoryConversationStore, messages: ConversationMessage[]) {
   for (const message of messages) {
@@ -11,7 +11,7 @@ async function appendMessages(store: InMemoryConversationStore, messages: Conver
   }
 }
 
-describe('syncCheckpointedOmCompatibility', () => {
+describe('syncOperationalMemoryOmCompatibility', () => {
   it('creates a reflection message from active observation messages and replaces the source observations', async () => {
     const store = new InMemoryConversationStore();
     const model = new MockLanguageModelV3({
@@ -45,7 +45,7 @@ describe('syncCheckpointedOmCompatibility', () => {
       },
     ]);
 
-    await syncCheckpointedOmCompatibility({
+    await syncOperationalMemoryOmCompatibility({
       threadId: 'thread-1',
       resourceId: 'resource-1',
       conversationStore: store,
@@ -108,7 +108,7 @@ describe('syncCheckpointedOmCompatibility', () => {
       },
     ]);
 
-    await syncCheckpointedOmCompatibility({
+    await syncOperationalMemoryOmCompatibility({
       threadId: 'thread-1',
       resourceId: 'resource-1',
       conversationStore: store,
@@ -187,7 +187,7 @@ describe('syncCheckpointedOmCompatibility', () => {
       },
     ]);
 
-    await syncCheckpointedOmCompatibility({
+    await syncOperationalMemoryOmCompatibility({
       threadId: 'thread-1',
       resourceId: 'resource-1',
       conversationStore: store,

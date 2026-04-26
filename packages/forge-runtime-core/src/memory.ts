@@ -1,9 +1,9 @@
 import type { ModelMessage } from 'ai';
 
 import {
-  CheckpointedConversationMemory,
-  createCheckpointedConversationPlugin,
-  type CheckpointedConversationObserver,
+  OperationalMemoryConversationMemory,
+  createOperationalConversationPlugin,
+  type OperationalConversationObserver,
   type ConversationMessage,
   type ConversationStore,
   type RuntimeObserver,
@@ -21,14 +21,14 @@ export type ForgeConversationMemoryOptions = {
   conversationStore: ConversationStore;
   stateStore?: unknown;
   assistantAuthorId?: string;
-  observer?: CheckpointedConversationObserver;
+  observer?: OperationalConversationObserver;
   recentTokenLimit?: number;
   overflowObservationTokenLimit?: number;
   consolidateOverflow?: boolean;
 };
 
 export type ForgeConversationMemory = {
-  memory: CheckpointedConversationMemory;
+  memory: OperationalMemoryConversationMemory;
   captureRunHistoryWindow(input: {
     lastMessages: number;
   }): Promise<{
@@ -46,7 +46,7 @@ export type ForgeConversationMemory = {
 };
 
 export function createForgeConversationMemory(input: ForgeConversationMemoryOptions): ForgeConversationMemory {
-  const memory = new CheckpointedConversationMemory({
+  const memory = new OperationalMemoryConversationMemory({
     threadId: input.threadId,
     store: input.conversationStore,
     observer: input.observer,
@@ -95,7 +95,7 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
         authorId: input.assistantAuthorId,
         threadId: input.threadId,
       }),
-      createCheckpointedConversationPlugin({
+      createOperationalConversationPlugin({
         memory,
         consolidateAfterStep: input.consolidateOverflow,
         selectThreadId() {

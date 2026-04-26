@@ -5,7 +5,7 @@ import type {
   RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import type { CheckpointedOmCheckpointPackageInput } from './operational-memory-om.js';
+import type { OperationalMemoryOmCheckpointPackageInput } from './operational-memory-om.js';
 import {
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
@@ -21,7 +21,7 @@ function estimateTokenCount(text: string) {
   return Math.max(1, countTokens(text));
 }
 
-export type CheckpointedOmCompatibilityObserverOptions = {
+export type OperationalMemoryOmCompatibilityObserverOptions = {
   threadId: string;
   resourceId: string;
   conversationStore: ConversationStore;
@@ -37,22 +37,22 @@ export type CheckpointedOmCompatibilityObserverOptions = {
   };
   reflectionModel?: LanguageModel;
   agentSystemPrompt?: string;
-  onCheckpointAdvanced?: (input: CheckpointedOmCheckpointPackageInput) => Promise<void>;
+  onCheckpointAdvanced?: (input: OperationalMemoryOmCheckpointPackageInput) => Promise<void>;
 };
 
-export function createCheckpointedOmCompatibilityObserver(
-  input: CheckpointedOmCompatibilityObserverOptions,
+export function createOperationalMemoryOmCompatibilityObserver(
+  input: OperationalMemoryOmCompatibilityObserverOptions,
 ): RuntimeObserver {
   return {
     name: 'forge-operational-memory-om-compatibility',
     async onAfterStep() {
-      await syncCheckpointedOmCompatibility(input);
+      await syncOperationalMemoryOmCompatibility(input);
     },
   };
 }
 
-export async function syncCheckpointedOmCompatibility(
-  input: CheckpointedOmCompatibilityObserverOptions,
+export async function syncOperationalMemoryOmCompatibility(
+  input: OperationalMemoryOmCompatibilityObserverOptions,
   diagnostics?: {
     record(event: {
       at: number;
@@ -330,7 +330,7 @@ async function generateReflectionText(input: {
   const text = normalizeOperationalMemoryText(parsed.observations);
 
   if (!text) {
-    throw new Error('Checkpointed OM reflector returned no observations');
+    throw new Error('Operational OM reflector returned no observations');
   }
 
   return text;
@@ -359,7 +359,7 @@ async function generateCheckpointSummaryText(input: {
   const text = normalizeOperationalMemoryText(parsed.observations);
 
   if (!text) {
-    throw new Error('Checkpointed OM checkpoint summarizer returned no observations');
+    throw new Error('Operational OM checkpoint summarizer returned no observations');
   }
 
   return text;

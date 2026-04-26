@@ -2,8 +2,8 @@ import type {
   RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 
-import { createCheckpointedConversationObserver } from './operational-memory-conversation-observer.js';
-import { syncCheckpointedOmCompatibility } from './operational-memory-om-compatibility.js';
+import { createOperationalConversationObserver } from './operational-memory-conversation-observer.js';
+import { syncOperationalMemoryOmCompatibility } from './operational-memory-om-compatibility.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';
@@ -33,11 +33,11 @@ export type RuntimeAgentSessionRuntime = {
   }): Promise<void>;
 };
 
-function requireCheckpointedOmLimits(
+function requireOperationalMemoryOmLimits(
   input: CreateRuntimeAgentSessionOptions,
 ) {
   if (!input.checkpointedOmLimits) {
-    throw new Error('Checkpointed OM limits are required when conversation overflow consolidation is enabled.');
+    throw new Error('Operational OM limits are required when conversation overflow consolidation is enabled.');
   }
 
   return input.checkpointedOmLimits;
@@ -52,14 +52,14 @@ export async function createRuntimeAgentSessionRuntime(
     store: input.workingMemoryStore,
   });
   const checkpointedOmEnabled = input.consolidateConversationOverflow === true;
-  const checkpointedOmLimits = checkpointedOmEnabled ? requireCheckpointedOmLimits(input) : undefined;
+  const checkpointedOmLimits = checkpointedOmEnabled ? requireOperationalMemoryOmLimits(input) : undefined;
 
   const conversationMemory = createForgeConversationMemory({
     threadId: input.threadId,
     conversationStore: input.conversationStore,
     assistantAuthorId: input.assistantAuthorId,
     observer: checkpointedOmEnabled
-      ? createCheckpointedConversationObserver({
+      ? createOperationalConversationObserver({
         model: input.checkpointedOmModel ?? input.model,
         agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
         loadSupportText: checkpointedOmEnabled
@@ -148,7 +148,7 @@ export async function createRuntimeAgentSessionRuntime(
         return;
       }
 
-      await syncCheckpointedOmCompatibility({
+      await syncOperationalMemoryOmCompatibility({
         threadId: input.threadId,
         resourceId: input.resourceId,
         conversationStore: input.conversationStore,

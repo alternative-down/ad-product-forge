@@ -127,20 +127,20 @@ export {
   toForgeSafeIdentifier as toMastraSafeIdentifier,
 } from './safe-identifier.js';
 export type {
-  CheckpointedOmArchivedObservation,
-  CheckpointedOmArchivedReflection,
-  CheckpointedOmCheckpointPackageInput,
-  CheckpointedOmCheckpointSummary,
-  CheckpointedOmMetricsSnapshot,
-  CheckpointedOmObservationBlock,
-  CheckpointedOmState,
-  CheckpointedOmStateStore,
+  OperationalMemoryOmArchivedObservation,
+  OperationalMemoryOmArchivedReflection,
+  OperationalMemoryOmCheckpointPackageInput,
+  OperationalMemoryOmCheckpointSummary,
+  OperationalMemoryOmMetricsSnapshot,
+  OperationalMemoryOmObservationBlock,
+  OperationalMemoryOmState,
+  OperationalMemoryOmStateStore,
 } from './operational-memory-om.js';
 export {
-  createCheckpointedOmCompatibilityObserver,
-  type CheckpointedOmCompatibilityObserverOptions,
+  createOperationalMemoryOmCompatibilityObserver,
+  type OperationalMemoryOmCompatibilityObserverOptions,
 } from './operational-memory-om-compatibility.js';
-export { createCheckpointedOmContextPlugin } from './operational-memory-om-context-plugin.js';
+export { createOperationalMemoryOmContextPlugin } from './operational-memory-om-context-plugin.js';
 export {
   readOperationalMemoryState,
   takeOperationalMemoryBatch,
