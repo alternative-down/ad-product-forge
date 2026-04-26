@@ -50,6 +50,51 @@ export async function createCommunicationModule(config: {
   const activeFilesystem = workspaceFilesystem;
 
   let receiveMessageHandler: ((event: AgentWakeEvent) => void) | null = null;
+  const pendingMessages: Array<{ providerId: string; message: CommunicationInboundMessage }> = [];
+
+  async function dispatchMessage(providerId: string, message: CommunicationInboundMessage) {
+    const messageView = await toAgentMessageView(activeFilesystem, {
+      messageId: message.messageId,
+      provider: providerId,
+      authorId: message.authorId,
+      targetKey: message.targetKey,
+      content: message.content.trim(),
+      attachments: message.attachments ?? [],
+      unread: true,
+      createdAt: message.createdAt,
+      authorDisplayName: message.authorDisplayName,
+    });
+
+    receiveMessageHandler!({
+      type: `message:${providerId}`,
+      groupKey: `message:${providerId}:${message.targetKey}`,
+      groupMetadata: buildGroupMetadata(providerId, message),
+      idempotencyKey: `${providerId}:${message.messageId}`,
+      itemMetadata: buildItemMetadata(messageView, message),
+      text: message.content.trim(),
+      timestamp: Date.parse(message.createdAt) || Date.now(),
+    });
+  }
+
+  async function flushPendingMessages() {
+    if (!receiveMessageHandler || pendingMessages.length === 0) {
+      return;
+    }
+
+    while (pendingMessages.length > 0) {
+      const pending = pendingMessages.shift();
+      if (!pending) {
+        continue;
+      }
+
+      try {
+        await dispatchMessage(pending.providerId, pending.message);
+      } catch (error) {
+        console.error('[CommunicationModule] Failed to dispatch pending message:', error);
+        // Continue processing remaining messages
+      }
+    }
+  }
 
   for (const provider of providers.values()) {
     if (!provider.onMessage) {
@@ -58,30 +103,11 @@ export async function createCommunicationModule(config: {
 
     await provider.onMessage(async (message) => {
       if (!receiveMessageHandler) {
+        pendingMessages.push({ providerId: provider.id, message });
         return;
       }
 
-      const messageView = await toAgentMessageView(activeFilesystem, {
-        messageId: message.messageId,
-        provider: provider.id,
-        authorId: message.authorId,
-        targetKey: message.targetKey,
-        content: message.content.trim(),
-        attachments: message.attachments ?? [],
-        unread: true,
-        createdAt: message.createdAt,
-        authorDisplayName: message.authorDisplayName,
-      });
-
-      receiveMessageHandler({
-        type: `message:${provider.id}`,
-        groupKey: `message:${provider.id}:${message.targetKey}`,
-        groupMetadata: buildGroupMetadata(provider.id, message),
-        idempotencyKey: `${provider.id}:${message.messageId}`,
-        itemMetadata: buildItemMetadata(messageView, message),
-        text: message.content.trim(),
-        timestamp: Date.parse(message.createdAt) || Date.now(),
-      });
+      await dispatchMessage(provider.id, message);
     });
   }
 
@@ -233,9 +259,11 @@ export async function createCommunicationModule(config: {
     sendMessage,
     onReceiveMessage(handler) {
       receiveMessageHandler = handler;
+      void flushPendingMessages();
     },
     async dispose() {
       receiveMessageHandler = null;
+      pendingMessages.length = 0;
 
       for (const provider of providers.values()) {
         await provider.dispose?.();
