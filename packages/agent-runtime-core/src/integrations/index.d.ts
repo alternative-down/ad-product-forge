@@ -37,7 +37,7 @@ export { createSkillContextPlugin, type SkillContextPluginOptions, } from './ext
 export { createLongTermRecallPlugin, type LongTermRecallPluginOptions, } from './extensions/long-term-recall.js';
 export { createUsageMeterPlugin, type UsageMeterPluginOptions, } from './extensions/usage-meter.js';
 export { createOperationalMemoryPlugin, type OperationalMemoryPluginOptions, } from './extensions/operational-memory.js';
-export { createCheckpointedConversationPlugin, type CheckpointedConversationPluginOptions, } from './extensions/checkpointed-conversation.js';
+export { createOperationalMemoryConversationPlugin, type OperationalMemoryConversationPluginOptions, } from './extensions/operational-memory-conversation.js';
 export { createJournalInputHistoryPlugin, type JournalInputHistoryPluginOptions, } from './extensions/journal-input-history.js';
 export { createJournalHistoryPlugin, type JournalHistoryPluginOptions, } from './extensions/journal-history.js';
 export { createInMemoryRecallPlugin, type InMemoryRecallPluginOptions, type RecallDocument, } from './extensions/in-memory-recall.js';
@@ -88,11 +88,11 @@ export { createWorkspaceActionDefinitions, type WorkspaceActionPackOptions, } fr
 export { FilesystemOperationalMemory, type FilesystemOperationalMemoryOptions, } from './memory/filesystem-operational-memory.js';
 export { FilesystemLongTermMemory, type FilesystemLongTermMemoryOptions, } from './memory/filesystem-long-term-memory.js';
 export { InMemoryLongTermMemory, type InMemoryLongTermMemoryOptions, } from './memory/in-memory-long-term-memory.js';
-export { CheckpointedConversationMemory, type CheckpointedConversationMemoryOptions, type CheckpointedConversationObserver, type CheckpointedConversationObserverRequest, type CheckpointedConversationObserverResponse, } from './memory/checkpointed-conversation-memory.js';
-export { InMemoryCheckpointedConversationStateStore, } from './memory/checkpointed-conversation-state-store.js';
+export { OperationalMemoryConversationMemory, type OperationalMemoryConversationMemoryOptions, type OperationalMemoryConversationObserver, type OperationalMemoryConversationObserverRequest, type OperationalMemoryConversationObserverResponse, } from './memory/operational-memory-conversation-memory.js';
+export { InMemoryOperationalMemoryConversationStateStore, } from './memory/operational-memory-conversation-state-store.js';
 export { RefreshableLongTermMemoryRecall, SourceBackedLongTermMemory, } from './memory/refreshable-long-term-memory.js';
 export { InMemoryOperationalMemory, type InMemoryOperationalMemoryOptions, } from './memory/in-memory-operational-memory.js';
-export type { CheckpointedConversationMetrics, CheckpointedConversationObservation, CheckpointedConversationState, CheckpointedConversationStateStore, } from './memory/checkpointed-conversation-state-store.js';
+export type { OperationalMemoryConversationMetrics, OperationalMemoryConversationObservation, OperationalMemoryConversationState, OperationalMemoryConversationStateStore, } from './memory/operational-memory-conversation-state-store.js';
 export type { LongTermMemoryDocument, LongTermMemoryRecall, LongTermMemoryRecallRequest, LongTermMemoryStore, } from './memory/long-term-memory.js';
 export type { OperationalMemory, OperationalMemoryObservation, OperationalMemoryObservationRequest, OperationalMemoryObservationResponse, OperationalMemoryObserver, OperationalMemoryRawEntry, OperationalMemorySnapshot, OperationalMemorySource, } from './memory/operational-memory.js';
 export { MiniMaxImageGenerationGateway, type MiniMaxImageGenerationGatewayOptions, } from './providers/minimax-image.js';
@@ -119,7 +119,7 @@ export { FilesystemBlobStore, type FilesystemBlobStoreOptions, } from './persist
 export { FilesystemLongTermMemoryStore, type FilesystemLongTermMemoryStoreOptions, } from './persistence/filesystem-long-term-memory.js';
 export { FilesystemRuntimeJournal, type FilesystemRuntimeJournalOptions, } from './persistence/filesystem-runtime-journal.js';
 export { FilesystemRuntimeSnapshotStore, type FilesystemRuntimeSnapshotStoreOptions, } from './persistence/filesystem-runtime-snapshot-store.js';
-export { FilesystemCheckpointedConversationStateStore, type FilesystemCheckpointedConversationStateStoreOptions, } from './persistence/filesystem-checkpointed-conversation-state-store.js';
+export { FilesystemOperationalMemoryConversationStateStore, type FilesystemOperationalMemoryConversationStateStoreOptions, } from './persistence/filesystem-operational-memory-conversation-state-store.js';
 export { FilesystemWorkspaceCommandRecorder, type FilesystemWorkspaceCommandRecorderOptions, } from './persistence/filesystem-workspace-command-recorder.js';
 export type { RuntimeSnapshotStore, } from './persistence/runtime-snapshot-store.js';
 export { FilesystemSkillRegistry, type FilesystemSkillRegistryOptions, } from './persistence/filesystem-skill-registry.js';
