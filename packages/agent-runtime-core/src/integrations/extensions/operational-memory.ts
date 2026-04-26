@@ -19,7 +19,7 @@ export function createOperationalMemoryPlugin(
         source: 'input',
         text: renderInput(context.input),
         createdAt: context.input.receivedAt,
-        units: estimateTextUnits(stringifyValue(context.input.payload)),
+        units: Math.max(1, countTokens(stringifyValue(context.input.payload))),
       });
       await options.memory.consolidate();
     },
@@ -41,7 +41,7 @@ export function createOperationalMemoryPlugin(
           source: 'response',
           text: responseText,
           createdAt: context.record.finishedAt,
-          units: estimateTextUnits(responseText),
+          units: Math.max(1, countTokens(responseText)),
         });
       }
 
@@ -53,7 +53,7 @@ export function createOperationalMemoryPlugin(
           source: 'action-result',
           text: renderedAction,
           createdAt: context.record.finishedAt,
-          units: estimateTextUnits(renderedAction),
+          units: Math.max(1, countTokens(renderedAction)),
         });
       }
 
@@ -83,9 +83,6 @@ function isCurrentInputEcho(entry: StepContextEntry, pendingInputs: RuntimeInput
   return pendingInputs.some((input) => entry.id === `input:${input.id}`);
 }
 
-function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
-}
 
 function stringifyValue(value: unknown) {
   const rendered = JSON.stringify(value, null, 2);

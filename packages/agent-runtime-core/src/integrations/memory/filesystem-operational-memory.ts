@@ -79,7 +79,7 @@ export class FilesystemOperationalMemory implements OperationalMemory {
       text: response.text,
       sourceEntryIds: observedEntries.map((entry) => entry.id),
       createdAt: new Date().toISOString(),
-      units: estimateTextUnits(response.text),
+      units: Math.max(1, countTokens(response.text)),
     };
 
     state.rawEntries.splice(0, observedEntries.length);
@@ -173,6 +173,3 @@ function buildSnapshot(
   };
 }
 
-function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
-}

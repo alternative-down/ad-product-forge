@@ -48,7 +48,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
       text: response.text,
       sourceEntryIds: observedEntries.map((entry) => entry.id),
       createdAt: new Date().toISOString(),
-      units: estimateTextUnits(response.text),
+      units: Math.max(1, countTokens(response.text)),
     };
 
     this.rawEntries.splice(0, observedEntries.length);
@@ -111,6 +111,3 @@ export class InMemoryOperationalMemory implements OperationalMemory {
   }
 }
 
-function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
-}

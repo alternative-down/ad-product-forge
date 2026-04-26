@@ -245,7 +245,7 @@ export class CheckpointedConversationMemory {
       text: observationText,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
       createdAt: observationBatch.messages[0].createdAt.toISOString(),
-      units: estimateTextUnits(observationText),
+      units: Math.max(1, countTokens(observationText)),
     };
 
     await this.store.appendMessage({
@@ -320,15 +320,11 @@ export class CheckpointedConversationMemory {
   }
 }
 
-export function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
-}
 
 export function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
   if (text) {
-    return estimateTextUnits(text);
   }
 
   return 1;
