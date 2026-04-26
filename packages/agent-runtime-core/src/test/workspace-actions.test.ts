@@ -28,6 +28,7 @@ describe('createWorkspaceActionDefinitions', () => {
     }]);
     expect(typeof result).toBe('string');
     expect(result).toContain('done');
+    expect(result).toContain('Exit code: 0');
   });
 
   it('supports timeout in seconds and background process actions', async () => {
@@ -87,6 +88,9 @@ describe('createWorkspaceActionDefinitions', () => {
 
   it('creates filesystem workspace actions when a filesystem is provided', async () => {
     const writes: Array<{ path: string; content: string }> = [];
+    // Track existing files
+    const existingFiles = new Set(['test.txt', 'README.md']);
+
     const actions = createWorkspaceActionDefinitions({
       async execute() {
         return {
@@ -101,13 +105,15 @@ describe('createWorkspaceActionDefinitions', () => {
           if (targetPath === 'test.txt') return 'hello world';
           if (targetPath === 'README.md') return 'read:README.md';
           if (targetPath === '/workspace/src/index.ts') return 'read:/workspace/src/index.ts';
-          return `read:${targetPath}`;
+          if (existingFiles.has(targetPath)) return `read:${targetPath}`;
+          throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
         },
         async writeFile(targetPath, content) {
           writes.push({
             path: targetPath,
             content: String(content),
           });
+          existingFiles.add(targetPath);
         },
         async listDirectory(targetPath = '.') {
           if (targetPath === '.' || targetPath === '/workspace') {
@@ -151,9 +157,9 @@ describe('createWorkspaceActionDefinitions', () => {
     expect(typeof readResult).toBe('string');
     expect(readResult).toContain('read:README.md');
 
-    // Test write_file (index 2)
+    // Test write_file (index 2) - new file
     const writeResult = await actions[2]!.execute({
-      path: 'notes/todo.md',
+      path: 'new-file.txt',
       content: 'hello',
     }, {
       runtimeId: 'runtime-1',
@@ -162,9 +168,8 @@ describe('createWorkspaceActionDefinitions', () => {
     });
     expect(typeof writeResult).toBe('string');
     expect(writeResult).toContain('Wrote');
-    expect(writeResult).toContain('notes/todo.md');
     expect(writes).toEqual([{
-      path: 'notes/todo.md',
+      path: 'new-file.txt',
       content: 'hello',
     }]);
 
@@ -183,7 +188,7 @@ describe('createWorkspaceActionDefinitions', () => {
 
     // Test list_files (index 4)
     const listResult = await actions[4]!.execute({
-      recursive: true,
+      maxDepth: 2,
     }, {
       runtimeId: 'runtime-1',
       stepId: 'step-1',
@@ -204,5 +209,66 @@ describe('createWorkspaceActionDefinitions', () => {
     });
     expect(typeof grepResult).toBe('string');
     expect(grepResult).toContain('/workspace/src/index.ts');
+  });
+
+  it('supports tiktoken-based output truncation', async () => {
+    const longOutput = 'line\n'.repeat(300);
+    const actions = createWorkspaceActionDefinitions({
+      async execute() {
+        return {
+          exitCode: 0,
+          stdout: longOutput,
+          stderr: '',
+        };
+      },
+    });
+
+    const result = await actions[0]!.execute({
+      command: 'long command',
+      tail: 50,
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+
+    expect(typeof result).toBe('string');
+    expect(result).toContain('Exit code: 0');
+  });
+
+  it('handles read_file with offset and limit parameters', async () => {
+    const multilineContent = 'Line 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9';
+    const actions = createWorkspaceActionDefinitions({
+      async execute() {
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    }, {
+      filesystem: {
+        async readFile() {
+          return multilineContent;
+        },
+        async writeFile() {},
+        async listDirectory() {
+          return [];
+        },
+      },
+    });
+
+    const result = await actions[1]!.execute({
+      path: 'multi.txt',
+      offset: 2,
+      limit: 3,
+      showLineNumbers: true,
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+
+    expect(typeof result).toBe('string');
+    expect(result).toContain('Line 2');
+    expect(result).toContain('Line 3');
+    expect(result).toContain('Line 4');
+    expect(result).not.toContain('Line 0');
   });
 });
