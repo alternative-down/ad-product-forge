@@ -8,10 +8,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
-    "allowSyntheticDefaultImports": true,
-    "paths": {
-      "@mastra-engine/core": ["../../packages/mastra-engine/dist/index.d.ts"]
-    }
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", ".turbo", "dist"]
