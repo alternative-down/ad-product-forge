@@ -107,7 +107,11 @@ export async function createCommunicationModule(config: {
         return;
       }
 
-      await dispatchMessage(provider.id, message);
+      try {
+        await dispatchMessage(provider.id, message);
+      } catch (error) {
+        console.error('[CommunicationModule] Failed to dispatch message:', error);
+      }
     });
   }
 
