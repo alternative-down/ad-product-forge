@@ -11,7 +11,7 @@ describe('wrapAnthropicPromptCacheModel', () => {
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         const prompt = options.prompt;
 
-        // First system message should be cached
+        // First system message (string content) - cache at message level
         expect(prompt[0]).toMatchObject({
           role: 'system',
           providerOptions: {
@@ -21,30 +21,38 @@ describe('wrapAnthropicPromptCacheModel', () => {
           },
         });
 
-        // Second message (assistant from previous step) should be cached
+        // Second message (array content) - cache at last part level
         expect(prompt[1]).toMatchObject({
           role: 'assistant',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
-            },
-          },
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              providerOptions: {
+                anthropic: {
+                  cacheControl: { type: 'ephemeral', ttl: '1h' },
+                },
+              },
+            }),
+          ]),
         });
 
-        // Third message (user) should be cached
+        // Third message (array content) - cache at last part level
         expect(prompt[2]).toMatchObject({
           role: 'user',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
-            },
-          },
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              providerOptions: {
+                anthropic: {
+                  cacheControl: { type: 'ephemeral', ttl: '1h' },
+                },
+              },
+            }),
+          ]),
         });
 
-        // Last message (latest assistant output) should NOT be cached
+        // Last message - should NOT be cached
         expect(prompt[3]).toMatchObject({
           role: 'assistant',
-          providerOptions: undefined,
+          content: [{ type: 'text', text: 'Latest assistant output.' }],
         });
 
         return {
@@ -88,13 +96,25 @@ describe('wrapAnthropicPromptCacheModel', () => {
     });
   });
 
-  it('does not modify prompt with single message', async () => {
+  it('caches only the system message when there are two messages total', async () => {
     const model = wrapAnthropicPromptCacheModel(new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
-        // Single message should not have cache control added
-        expect(options.prompt[0]).toMatchObject({
+        const prompt = options.prompt;
+
+        // System message (string content) - should be cached
+        expect(prompt[0]).toMatchObject({
           role: 'system',
-          providerOptions: undefined,
+          providerOptions: {
+            anthropic: {
+              cacheControl: { type: 'ephemeral', ttl: '1h' },
+            },
+          },
+        });
+
+        // User message (last) - should NOT be cached
+        expect(prompt[1]).toMatchObject({
+          role: 'user',
+          content: [{ type: 'text', text: 'Hello' }],
         });
 
         return {
@@ -112,32 +132,48 @@ describe('wrapAnthropicPromptCacheModel', () => {
     await generateText({
       model,
       system: 'Single system message.',
+      messages: [
+        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
+      ],
     });
   });
 
-  it('skips messages that already have cache control', async () => {
+  it('preserves existing cache control and adds to messages without it', async () => {
+    // System has existing cache at message level - should be preserved
+    // Assistant at index 1 has array content - should get cache at part level
+    // Assistant at index 2 is last - should NOT get cache
     const model = wrapAnthropicPromptCacheModel(new MockLanguageModelV3({
       doGenerate: async (options: LanguageModelV3CallOptions) => {
         const prompt = options.prompt;
 
-        // First message with existing cache control should keep its original ttl
+        // System message should keep its original ttl (30m) at message level
         expect(prompt[0]).toMatchObject({
           role: 'system',
           providerOptions: {
             anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '30m' }, // Original ttl
+              cacheControl: { type: 'ephemeral', ttl: '30m' },
             },
           },
         });
 
-        // Second message should get the new cache control
+        // Assistant at index 1 (array content) should get cache at part level
         expect(prompt[1]).toMatchObject({
           role: 'assistant',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' }, // New ttl
-            },
-          },
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              providerOptions: {
+                anthropic: {
+                  cacheControl: { type: 'ephemeral', ttl: '1h' },
+                },
+              },
+            }),
+          ]),
+        });
+
+        // Assistant at index 2 is LAST - should NOT be cached
+        expect(prompt[2]).toMatchObject({
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Latest output.' }],
         });
 
         return {
@@ -169,6 +205,10 @@ describe('wrapAnthropicPromptCacheModel', () => {
         {
           role: 'assistant',
           content: [{ type: 'text', text: 'Previous step.' }],
+        },
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Latest output.' }],
         },
       ],
     });

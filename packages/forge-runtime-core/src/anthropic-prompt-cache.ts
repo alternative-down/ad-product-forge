@@ -20,12 +20,13 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
         role?: string;
       };
 
-      // Skip if already has cache control
+      // Skip if already has cache control at message level
       if (message.providerOptions?.anthropic?.cacheControl) {
         continue;
       }
 
       if (typeof message.content === 'string') {
+        // For string content: add providerOptions at message level
         prompt[index] = {
           ...message,
           providerOptions: {
@@ -40,6 +41,7 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
         continue;
       }
 
+      // For array content: add providerOptions at the LAST PART level
       const content = [...message.content];
       const lastPart = content[content.length - 1];
 
@@ -47,11 +49,19 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
         continue;
       }
 
+      // Skip if last part already has cache control
+      if ((lastPart as Record<string, unknown>).providerOptions?.anthropic?.cacheControl) {
+        continue;
+      }
+
       content[content.length - 1] = {
         ...lastPart,
         providerOptions: {
-          ...lastPart.providerOptions,
-          anthropic: { ...lastPart.providerOptions?.anthropic, cacheControl },
+          ...(lastPart as Record<string, unknown>).providerOptions,
+          anthropic: {
+            ...((lastPart as Record<string, unknown>).providerOptions as Record<string, unknown>)?.anthropic,
+            cacheControl,
+          },
         },
       };
 
@@ -61,9 +71,10 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
       };
     }
 
-    // Mutate params.prompt to point to our modified shallow copy
-    params.prompt = prompt as typeof params.prompt;
-    return params;
+    return {
+      ...params,
+      prompt: prompt as typeof params.prompt,
+    };
   },
 };
 
