@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { InMemoryConversationStore, type ConversationMessage } from '../integrations/conversations/in-memory-conversation-store.js';
+import { InMemoryConversationStore } from '../integrations/conversations/in-memory-conversation-store.js';
+import type { ConversationMessage, ConversationMessagePart } from '../integrations/conversations/contracts.js';
 import { CheckpointedConversationMemory } from '../integrations/memory/checkpointed-conversation-memory.js';
 import { FilesystemCheckpointedConversationStateStore } from '../integrations/persistence/filesystem-checkpointed-conversation-state-store.js';
 
@@ -16,8 +17,8 @@ afterEach(async () => {
 
 function getText(message: ConversationMessage) {
   return message.parts
-    .filter((part) => part.type === 'text' || part.type === 'reasoning')
-    .map((part) => part.text.trim())
+    .filter((part: ConversationMessagePart) => part.type === 'text' || part.type === 'reasoning')
+    .map((part: ConversationMessagePart) => part.type === 'text' ? part.text.trim() : '')
     .filter(Boolean)
     .join('\n');
 }
@@ -63,8 +64,8 @@ describe('CheckpointedConversationMemory', () => {
 
       const state = await memory.getState();
       expect(state.checkpointMessageId).toBeNull();
-      expect(state.recentMessageIds).toHaveLength(2);
-      expect(state.overflowMessageIds).toHaveLength(0);
+      expect(state.recentMessageIds ?? []).toHaveLength(2);
+      expect(state.overflowMessageIds ?? []).toHaveLength(0);
     });
 
     it('derives recent and overflow message IDs after checkpoint', async () => {
@@ -119,10 +120,10 @@ describe('CheckpointedConversationMemory', () => {
 
       expect(state.checkpointMessageId).toBe('checkpoint-1');
       // 2 most recent messages (message-2, message-3) fit in recent
-      expect(state.recentMessageIds).toContain('message-3');
-      expect(state.recentMessageIds).toContain('message-2');
+      expect(state.recentMessageIds ?? []).toContain('message-3');
+      expect(state.recentMessageIds ?? []).toContain('message-2');
       // 1 message overflows (message-1)
-      expect(state.overflowMessageIds).toContain('message-1');
+      expect(state.overflowMessageIds ?? []).toContain('message-1');
     });
 
     it('tool result is included in overflow when its paired assistant message overflows', async () => {
@@ -173,8 +174,8 @@ describe('CheckpointedConversationMemory', () => {
 
       const state = await memory.getState();
       // Tool result should be included somewhere (in recent or overflow)
-      const toolResultIncluded = state.recentMessageIds.includes('tool-result')
-        || state.overflowMessageIds.includes('tool-result');
+      const toolResultIncluded = (state.recentMessageIds ?? []).includes('tool-result')
+        || (state.overflowMessageIds ?? []).includes('tool-result');
       expect(toolResultIncluded).toBe(true);
     });
 
@@ -346,8 +347,8 @@ describe('CheckpointedConversationMemory', () => {
 
       const state = await memory.getState();
       // Tool metadata should not double count - only 1 message
-      expect(state.recentMessageIds).toContain('tool-call');
-      expect(state.overflowMessageIds).toHaveLength(0);
+      expect(state.recentMessageIds ?? []).toContain('tool-call');
+      expect(state.overflowMessageIds ?? []).toHaveLength(0);
       // Token count should not be inflated
       expect(state.metrics.recentTokenCount).toBe(1);
     });
