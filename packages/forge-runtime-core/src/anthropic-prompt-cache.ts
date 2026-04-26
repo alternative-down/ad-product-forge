@@ -1,10 +1,25 @@
 import { wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
 
+type AnthropicProviderOptions = {
+  cacheControl?: { type: string; ttl: string };
+};
+
+type ProviderOptions = {
+  anthropic?: AnthropicProviderOptions;
+  [key: string]: unknown;
+};
+
+type MessageLike = {
+  role?: string;
+  content?: string | unknown[];
+  providerOptions?: ProviderOptions;
+};
+
 const promptCacheMiddleware: LanguageModelMiddleware = {
   specificationVersion: 'v3',
   transformParams: async ({ params }) => {
     const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
-    const prompt = [...params.prompt] as Array<Record<string, unknown>>;
+    const prompt = [...params.prompt] as MessageLike[];
 
     if (prompt.length <= 1) {
       return params;
@@ -14,11 +29,7 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
     const lastIndex = prompt.length - 1;
 
     for (let index = 0; index < lastIndex; index++) {
-      const message = prompt[index] as {
-        content?: unknown;
-        providerOptions?: Record<string, Record<string, unknown>>;
-        role?: string;
-      };
+      const message = prompt[index];
 
       // Skip if already has cache control at message level
       if (message.providerOptions?.anthropic?.cacheControl) {
@@ -49,17 +60,21 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
         continue;
       }
 
-      // Skip if last part already has cache control
-      if ((lastPart as Record<string, unknown>).providerOptions?.anthropic?.cacheControl) {
+      // Cast lastPart to properly typed object
+      const part = lastPart as MessageLike;
+      if (part.providerOptions?.anthropic?.cacheControl) {
         continue;
       }
 
+      const existingProviderOptions = part.providerOptions ?? {};
+      const existingAnthropic = existingProviderOptions.anthropic ?? {};
+
       content[content.length - 1] = {
-        ...lastPart,
+        ...part,
         providerOptions: {
-          ...(lastPart as Record<string, unknown>).providerOptions,
+          ...existingProviderOptions,
           anthropic: {
-            ...((lastPart as Record<string, unknown>).providerOptions as Record<string, unknown>)?.anthropic,
+            ...existingAnthropic,
             cacheControl,
           },
         },
