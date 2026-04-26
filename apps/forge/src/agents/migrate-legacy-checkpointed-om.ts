@@ -27,7 +27,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
     threadId: input.threadId,
     order: 'asc',
   });
-  const existingMessageIds = new Set(existingMessages.map((message) => message.id));
+  const existingMessageIds = new Set(existingMessages.map((message: { id: string }) => message.id));
   const checkpointSummary = state.checkpointSummary;
   const checkpointSummaryId = checkpointSummary
     ? `checkpoint-summary:${input.agentId}:${checkpointSummary.upToGeneration}`
@@ -107,7 +107,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       continue;
     }
 
-    if (checkpointSummaryId && observation.reflectedGeneration <= checkpointSummary.upToGeneration) {
+    if (checkpointSummary && checkpointSummaryId && observation.reflectedGeneration <= checkpointSummary.upToGeneration) {
       await input.conversationStore.updateMessageReplacement({
         threadId: input.threadId,
         messageId: observation.id,

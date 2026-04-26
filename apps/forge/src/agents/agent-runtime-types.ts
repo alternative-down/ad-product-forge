@@ -96,6 +96,13 @@ export type RuntimeStepUsage = {
 };
 
 export type RuntimeGenerateStepResult = {
+  omTrace?: Array<{
+    at: number;
+    scope: string;
+    phase: string;
+    metrics?: Record<string, number | string | null>;
+    detail?: Record<string, unknown> | null;
+  }>;
   usage?: RuntimeStepUsage;
 };
 

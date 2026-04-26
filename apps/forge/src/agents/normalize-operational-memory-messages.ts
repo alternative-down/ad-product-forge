@@ -22,7 +22,7 @@ export async function normalizeOperationalMemoryMessages(input: {
       continue;
     }
 
-    const normalizedParts = message.parts.map((part) => {
+    const normalizedParts = message.parts.map((part: { type?: string; text?: string }) => {
       if ((part.type !== 'text' && part.type !== 'reasoning') || typeof part.text !== 'string') {
         return part;
       }
