@@ -5,29 +5,29 @@ import type { StepContextEntry } from '../../core/types.js';
 import { createConversationMessageContextEntry } from '../conversations/context-entries.js';
 import type { ConversationMessage, ConversationStore } from '../conversations/contracts.js';
 
-import type { CheckpointedConversationObservation, CheckpointedConversationState } from './checkpointed-conversation-state-store.js';
+import type { OperationalMemoryConversationObservation, OperationalMemoryConversationState } from './operational-memory-state-store.js';
 
-export type CheckpointedConversationObserverRequest = {
+export type OperationalMemoryConversationObserverRequest = {
   threadId: string;
   messages: ConversationMessage[];
 };
 
-export type CheckpointedConversationObserverResponse = {
+export type OperationalMemoryConversationObserverResponse = {
   text: string;
 };
 
-export interface CheckpointedConversationObserver {
+export interface OperationalMemoryConversationObserver {
   observe(
-    request: CheckpointedConversationObserverRequest,
-  ): Promise<CheckpointedConversationObserverResponse>;
+    request: OperationalMemoryConversationObserverRequest,
+  ): Promise<OperationalMemoryConversationObserverResponse>;
 }
 
-export type CheckpointedConversationMemoryOptions = {
+export type OperationalMemoryConversationMemoryOptions = {
   threadId: string;
   store: ConversationStore;
   recentTokenLimit?: number;
   overflowObservationTokenLimit?: number;
-  observer?: CheckpointedConversationObserver;
+  observer?: OperationalMemoryConversationObserver;
 };
 
 type RawConversationMessage = {
@@ -37,12 +37,12 @@ type RawConversationMessage = {
   message: ConversationMessage;
 };
 
-type NormalizedCheckpointedConversationState = CheckpointedConversationState & {
+type NormalizedOperationalMemoryConversationState = OperationalMemoryConversationState & {
   recentMessageIds: string[];
   overflowMessageIds: string[];
 };
 
-type CheckpointedConversationDiagnostics = {
+type OperationalMemoryConversationDiagnostics = {
   record(event: {
     at: number;
     scope: string;
@@ -52,14 +52,14 @@ type CheckpointedConversationDiagnostics = {
   }): void;
 };
 
-export class CheckpointedConversationMemory {
+export class OperationalMemoryConversationMemory {
   private readonly threadId: string;
   private readonly store: ConversationStore;
   private readonly recentTokenLimit: number | null;
   private readonly overflowObservationTokenLimit: number | null;
-  private readonly observer: CheckpointedConversationObserver | null;
+  private readonly observer: OperationalMemoryConversationObserver | null;
 
-  constructor(options: CheckpointedConversationMemoryOptions) {
+  constructor(options: OperationalMemoryConversationMemoryOptions) {
     this.threadId = options.threadId;
     this.store = options.store;
     this.recentTokenLimit = options.recentTokenLimit ?? null;
@@ -68,31 +68,31 @@ export class CheckpointedConversationMemory {
   }
 
   async sync(input?: {
-    diagnostics?: CheckpointedConversationDiagnostics;
-  }): Promise<CheckpointedConversationState> {
+    diagnostics?: OperationalMemoryConversationDiagnostics;
+  }): Promise<OperationalMemoryConversationState> {
     const state = await this.loadState();
 
     input?.diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-conversation',
+      scope: 'operational-memory',
       phase: 'sync-loaded-state',
-      metrics: summarizeCheckpointedConversationMetrics(state),
+      metrics: summarizeOperationalMemoryConversationMetrics(state),
     });
 
     return state;
   }
 
   async stabilize(input?: {
-    diagnostics?: CheckpointedConversationDiagnostics;
-  }): Promise<CheckpointedConversationState> {
+    diagnostics?: OperationalMemoryConversationDiagnostics;
+  }): Promise<OperationalMemoryConversationState> {
     let state = await this.loadState();
     let previousLoopSignature: string | null = null;
 
     input?.diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-conversation',
+      scope: 'operational-memory',
       phase: 'stabilize-start',
-      metrics: summarizeCheckpointedConversationMetrics(state),
+      metrics: summarizeOperationalMemoryConversationMetrics(state),
     });
 
     if (!this.observer) {
@@ -117,9 +117,9 @@ export class CheckpointedConversationMemory {
 
       input?.diagnostics?.record({
         at: Date.now(),
-        scope: 'checkpointed-conversation',
+        scope: 'operational-memory',
         phase: 'overflow-batch-start',
-        metrics: summarizeCheckpointedConversationMetrics(state),
+        metrics: summarizeOperationalMemoryConversationMetrics(state),
       });
 
       try {
@@ -131,7 +131,7 @@ export class CheckpointedConversationMemory {
 
         input?.diagnostics?.record({
           at: Date.now(),
-          scope: 'checkpointed-conversation',
+          scope: 'operational-memory',
           phase: 'overflow-batch-applied',
           detail: {
             observationId: observation.id,
@@ -142,15 +142,15 @@ export class CheckpointedConversationMemory {
       } catch (error) {
         input?.diagnostics?.record({
           at: Date.now(),
-          scope: 'checkpointed-conversation',
+          scope: 'operational-memory',
           phase: 'overflow-batch-failed',
-          metrics: summarizeCheckpointedConversationMetrics(state),
+          metrics: summarizeOperationalMemoryConversationMetrics(state),
           detail: {
             error: error instanceof Error ? error.message : String(error),
           },
         });
         console.warn(
-          '[CheckpointedConversationMemory] Observation batch failed; preserving prior progress and stopping OM drain for this cycle.',
+          '[OperationalMemoryConversationMemory] Observation batch failed; preserving prior progress and stopping OM drain for this cycle.',
           error,
         );
         return this.loadState();
@@ -161,9 +161,9 @@ export class CheckpointedConversationMemory {
 
     input?.diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-conversation',
+      scope: 'operational-memory',
       phase: 'stabilize-finished',
-      metrics: summarizeCheckpointedConversationMetrics(state),
+      metrics: summarizeOperationalMemoryConversationMetrics(state),
     });
 
     return state;
@@ -190,14 +190,14 @@ export class CheckpointedConversationMemory {
       .filter((message): message is ConversationMessage => Boolean(message));
   }
 
-  async getState(): Promise<CheckpointedConversationState> {
+  async getState(): Promise<OperationalMemoryConversationState> {
     return this.loadState();
   }
 
   private async consolidateOneOverflowBatch(
-    state: NormalizedCheckpointedConversationState,
-    diagnostics?: CheckpointedConversationDiagnostics,
-  ): Promise<CheckpointedConversationObservation | null> {
+    state: NormalizedOperationalMemoryConversationState,
+    diagnostics?: OperationalMemoryConversationDiagnostics,
+  ): Promise<OperationalMemoryConversationObservation | null> {
     if (!this.observer) {
       return null;
     }
@@ -225,7 +225,7 @@ export class CheckpointedConversationMemory {
 
     diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-conversation',
+      scope: 'operational-memory',
       phase: 'overflow-batch-selected',
       detail: {
         batchTokenCount: observationBatch.tokenCount,
@@ -240,7 +240,7 @@ export class CheckpointedConversationMemory {
     });
     const observationId = `observation:${randomUUID()}`;
     const observationText = response.text.trim();
-    const observation: CheckpointedConversationObservation = {
+    const observation: OperationalMemoryConversationObservation = {
       id: observationId,
       text: observationText,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
@@ -268,7 +268,7 @@ export class CheckpointedConversationMemory {
 
     diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-conversation',
+      scope: 'operational-memory',
       phase: 'overflow-batch-persisted',
       detail: {
         observationId,
@@ -280,7 +280,7 @@ export class CheckpointedConversationMemory {
     return observation;
   }
 
-  private async loadState(): Promise<NormalizedCheckpointedConversationState> {
+  private async loadState(): Promise<NormalizedOperationalMemoryConversationState> {
     const messages = await this.store.listOperationalMemoryMessages({
       threadId: this.threadId,
     });
@@ -547,7 +547,7 @@ function takeRawMessageBatch(input: {
 }
 
 function shouldObserveOverflow(input: {
-  state: NormalizedCheckpointedConversationState;
+  state: NormalizedOperationalMemoryConversationState;
   overflowObservationTokenLimit: number | null;
 }) {
   if (input.state.overflowMessageIds.length === 0) {
@@ -561,7 +561,7 @@ function shouldObserveOverflow(input: {
   return input.state.metrics.overflowTokenCount >= input.overflowObservationTokenLimit;
 }
 
-function summarizeCheckpointedConversationMetrics(state: NormalizedCheckpointedConversationState) {
+function summarizeOperationalMemoryConversationMetrics(state: NormalizedOperationalMemoryConversationState) {
   return {
     checkpointMessageId: state.checkpointMessageId,
     recentMessageCount: state.metrics.recentMessageCount,

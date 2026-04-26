@@ -135,12 +135,12 @@ export type {
   CheckpointedOmObservationBlock,
   CheckpointedOmState,
   CheckpointedOmStateStore,
-} from './checkpointed-om.js';
+} from './operational-memory-om.js';
 export {
   createCheckpointedOmCompatibilityObserver,
   type CheckpointedOmCompatibilityObserverOptions,
-} from './checkpointed-om-compatibility.js';
-export { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
+} from './operational-memory-om-compatibility.js';
+export { createCheckpointedOmContextPlugin } from './operational-memory-om-context-plugin.js';
 export {
   readOperationalMemoryState,
   takeOperationalMemoryBatch,

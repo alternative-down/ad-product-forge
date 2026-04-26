@@ -5,7 +5,7 @@ import type {
   RuntimeObserver,
 } from 'agent-runtime-core/integrations';
 
-import type { CheckpointedOmCheckpointPackageInput } from './checkpointed-om.js';
+import type { CheckpointedOmCheckpointPackageInput } from './operational-memory-om.js';
 import {
   normalizeOperationalMemoryText,
 } from './conversation-model-messages.js';
@@ -44,7 +44,7 @@ export function createCheckpointedOmCompatibilityObserver(
   input: CheckpointedOmCompatibilityObserverOptions,
 ): RuntimeObserver {
   return {
-    name: 'forge-checkpointed-om-compatibility',
+    name: 'forge-operational-memory-om-compatibility',
     async onAfterStep() {
       await syncCheckpointedOmCompatibility(input);
     },
@@ -91,7 +91,7 @@ export async function syncCheckpointedOmCompatibility(
 
     diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-om-compat',
+      scope: 'operational-memory-om-compat',
       phase: 'state-loaded',
       metrics: {
         checkpointGeneration,
@@ -122,7 +122,7 @@ export async function syncCheckpointedOmCompatibility(
       });
       diagnostics?.record({
         at: Date.now(),
-        scope: 'checkpointed-om-compat',
+        scope: 'operational-memory-om-compat',
         phase: 'reflection-created',
         detail: {
           sourceMessageCount: reflectionBatch.messages.length,
@@ -156,7 +156,7 @@ export async function syncCheckpointedOmCompatibility(
         })));
       diagnostics?.record({
         at: Date.now(),
-        scope: 'checkpointed-om-compat',
+        scope: 'operational-memory-om-compat',
         phase: 'reflection-persisted',
         metrics: {
           reflectionGeneration: generationCount,
@@ -181,7 +181,7 @@ export async function syncCheckpointedOmCompatibility(
       });
       diagnostics?.record({
         at: Date.now(),
-        scope: 'checkpointed-om-compat',
+        scope: 'operational-memory-om-compat',
         phase: 'checkpoint-created',
         detail: {
           sourceMessageCount: checkpointBatch.messages.length,
@@ -226,7 +226,7 @@ export async function syncCheckpointedOmCompatibility(
       ]);
       diagnostics?.record({
         at: Date.now(),
-        scope: 'checkpointed-om-compat',
+        scope: 'operational-memory-om-compat',
         phase: 'checkpoint-persisted',
         metrics: {
           checkpointGeneration,
@@ -264,7 +264,7 @@ export async function syncCheckpointedOmCompatibility(
 
     diagnostics?.record({
       at: Date.now(),
-      scope: 'checkpointed-om-compat',
+      scope: 'operational-memory-om-compat',
       phase: 'idle',
       metrics: {
         checkpointGeneration,

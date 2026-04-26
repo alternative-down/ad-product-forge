@@ -8,7 +8,7 @@ vi.mock('ai', () => ({
   generateText: generateTextMock,
 }));
 
-import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
+import { createCheckpointedConversationObserver } from './operational-memory-conversation-observer.js';
 
 describe('createCheckpointedConversationObserver', () => {
   it('includes tool calls and tool results in the serialized prompt', async () => {

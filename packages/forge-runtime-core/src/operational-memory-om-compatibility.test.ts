@@ -3,7 +3,7 @@ import { MockLanguageModelV3 } from 'ai/test';
 
 import { InMemoryConversationStore, type ConversationMessage } from 'agent-runtime-core/integrations';
 
-import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
+import { syncCheckpointedOmCompatibility } from './operational-memory-om-compatibility.js';
 
 async function appendMessages(store: InMemoryConversationStore, messages: ConversationMessage[]) {
   for (const message of messages) {
