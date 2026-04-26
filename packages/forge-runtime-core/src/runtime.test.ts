@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   FakeStepModelAdapter,
-  InMemoryCheckpointedConversationStateStore,
   InMemoryConversationStore,
 } from 'agent-runtime-core/integrations';
 import { z } from 'zod';
@@ -14,7 +13,6 @@ import { createForgeAgentRuntime } from './runtime.js';
 describe('createForgeAgentRuntime', () => {
   it('persists conversation messages through the runtime bridge and observer flow', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const stateStore = new InMemoryCheckpointedConversationStateStore();
     const runtime = await createForgeAgentRuntime({
       config: {
         agentId: 'agent-1',
@@ -33,7 +31,6 @@ describe('createForgeAgentRuntime', () => {
       })),
       conversationStore,
       memory: {
-        stateStore,
       },
     });
 
@@ -77,7 +74,7 @@ describe('createForgeAgentRuntime', () => {
         },
       ]);
 
-      const checkpointedState = await stateStore.load('thread-1');
+      const checkpointedState = await runtime.memory.getState();
 
       expect(checkpointedState?.recentMessageIds).toEqual([
         messages[0]?.id,
@@ -91,7 +88,6 @@ describe('createForgeAgentRuntime', () => {
 
   it('persists tool-only assistant steps in the conversation log', async () => {
     const conversationStore = new InMemoryConversationStore();
-    const stateStore = new InMemoryCheckpointedConversationStateStore();
     const runtime = await createForgeAgentRuntime({
       config: {
         agentId: 'agent-1',
@@ -124,7 +120,6 @@ describe('createForgeAgentRuntime', () => {
       }),
       conversationStore,
       memory: {
-        stateStore,
       },
       runtimeActions: [{
         name: 'sum',

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { countTokens } from 'agent-runtime-core';
 import { InMemoryConversationStore, type ConversationMessage } from 'agent-runtime-core/integrations';
 
 import { readOperationalMemoryState, takeOperationalMemoryBatch } from './operational-memory-state.js';
@@ -10,9 +11,44 @@ async function appendMessages(store: InMemoryConversationStore, messages: Conver
   }
 }
 
+// Generates content that will produce tokens close to target
+function generateContentNearTokens(targetTokens: number): { content: string; tokens: number } {
+  const baseLine = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. ';
+  let content = baseLine;
+  let tokens = countTokens(content);
+
+  // Keep adding lines until we exceed target
+  while (tokens < targetTokens) {
+    content += baseLine;
+    tokens = countTokens(content);
+  }
+
+  // Binary search for exact token count
+  let low = 0;
+  let high = content.length;
+
+  while (low < high) {
+    const mid = Math.floor((low + high + 1) / 2);
+    const testTokens = countTokens(content.substring(0, mid));
+
+    if (testTokens <= targetTokens) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return { content: content.substring(0, low), tokens: countTokens(content.substring(0, low)) };
+}
+
 describe('operational memory grouping', () => {
   it('keeps multi-call tool invocations and tool results together across raw reserve and batch selection', async () => {
     const store = new InMemoryConversationStore();
+
+    // Generate content with tokens close to 2490 to test grouping behavior
+    // The tool messages (~8 tokens) combined with large-tail must exceed 2_500
+    // so that tool messages go to overflow while large-tail stays in recent
+    const { content: largeTailContent } = generateContentNearTokens(2490);
 
     await appendMessages(store, [{
       id: 'checkpoint-1',
@@ -75,7 +111,7 @@ describe('operational memory grouping', () => {
       role: 'assistant',
       parts: [{
         type: 'text',
-        text: 'x'.repeat(10_000),
+        text: largeTailContent,
       }],
       createdAt: '2026-01-01T00:00:03.000Z',
     }]);
@@ -86,6 +122,7 @@ describe('operational memory grouping', () => {
       recentTokenLimit: 2_500,
     });
 
+    // Tool messages should go to overflow since large-tail fills the recent budget
     expect(state.overflowRawMessages.map((message) => message.id)).toEqual([
       'assistant-tool-call',
       'tool-result',
