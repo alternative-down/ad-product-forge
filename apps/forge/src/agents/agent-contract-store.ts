@@ -6,7 +6,7 @@ import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, l
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+import { WEEK_MS } from '../shared/constants.js';
 
 export function createAgentContractStore(db: Database) {
   const companyCash = createCompanyCashLedger(db);

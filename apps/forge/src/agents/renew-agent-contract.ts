@@ -7,7 +7,7 @@ import { createCompanyCashOperations } from '../finance/company-cash-operations'
 import { createAgentContractStore } from './agent-contract-store';
 import { createId } from '../utils/id';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+import { WEEK_MS } from '../shared/constants.js';
 
 export async function renewAgentContract(
   db: Database,

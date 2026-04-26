@@ -23,7 +23,7 @@ import { loadAgent } from './agent-loader';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+import { WEEK_MS } from '../shared/constants.js';
 
 export type HireInternalAgentInput = {
   agentId?: string;
