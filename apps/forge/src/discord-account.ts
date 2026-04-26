@@ -331,15 +331,6 @@ export function createDiscordProvider(config: {
 
     forgeDebug('discord', 'logged in', { tag: client.user.tag });
 
-    // Debug: detect DM channel opens
-    client.on(Events.ChannelCreate, (channel) => {
-      forgeDebug('discord', 'ChannelCreate', { channelType: channel.type, channelId: channel.id });
-    });
-
-    // Debug: detect raw events
-    client.on(Events.Raw, (packet) => {
-      forgeDebug('discord', 'Raw event', { type: packet.t, channelId: packet.d.channel_id });
-    });
     return client.user;
   });
 
