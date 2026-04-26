@@ -5,22 +5,25 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
   transformParams: async ({ params }) => {
     const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
     const prompt = [...params.prompt] as Array<Record<string, unknown>>;
-    const firstSystemIndex = prompt.findIndex((message) => message.role === 'system');
-    const indicesToCache = [
-      firstSystemIndex,
-    ].filter((value, index, list) =>
-      value >= 0 && list.indexOf(value) === index,
-    );
 
-    for (const index of indicesToCache) {
-      if (index < 0) {
-        continue;
-      }
+    if (prompt.length <= 1) {
+      return params;
+    }
 
+    // Cache ALL messages except the last one (latest step output)
+    const lastIndex = prompt.length - 1;
+
+    for (let index = 0; index < lastIndex; index++) {
       const message = prompt[index] as {
         content?: unknown;
         providerOptions?: Record<string, Record<string, unknown>>;
+        role?: string;
       };
+
+      // Skip if already has cache control
+      if (message.providerOptions?.anthropic?.cacheControl) {
+        continue;
+      }
 
       if (typeof message.content === 'string') {
         prompt[index] = {
@@ -58,10 +61,9 @@ const promptCacheMiddleware: LanguageModelMiddleware = {
       };
     }
 
-    return {
-      ...params,
-      prompt: prompt as typeof params.prompt,
-    };
+    // Mutate params.prompt to point to our modified shallow copy
+    params.prompt = prompt as typeof params.prompt;
+    return params;
   },
 };
 
