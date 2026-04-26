@@ -3,13 +3,13 @@ import {
   type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
-import { buildCheckpointedOmSystemTexts } from './operational-memory-om-rendering.js';
-import type { CheckpointedOmStateStore } from './operational-memory-om.js';
+import { buildOperationalMemoryOmSystemTexts } from './operational-memory-om-rendering.js';
+import type { OperationalMemoryOmStateStore } from './operational-memory-om.js';
 
-export function createCheckpointedOmContextPlugin(input: {
+export function createOperationalMemoryOmContextPlugin(input: {
   threadId: string;
   resourceId: string;
-  stateStore: CheckpointedOmStateStore;
+  stateStore: OperationalMemoryOmStateStore;
 }): RuntimePlugin {
   return {
     name: 'forge-operational-memory-om-context',
@@ -24,7 +24,7 @@ export function createCheckpointedOmContextPlugin(input: {
       }
 
       const entries = [];
-      const [checkpointText, reflectionsText, observationsText] = buildCheckpointedOmSystemTexts(state);
+      const [checkpointText, reflectionsText, observationsText] = buildOperationalMemoryOmSystemTexts(state);
 
       if (checkpointText) {
         entries.push(createTextStepContextEntry({
@@ -58,10 +58,10 @@ export function createCheckpointedOmContextPlugin(input: {
   };
 }
 
-export async function loadCheckpointedOmSystemTexts(input: {
+export async function loadOperationalMemoryOmSystemTexts(input: {
   threadId: string;
   resourceId: string;
-  stateStore: CheckpointedOmStateStore;
+  stateStore: OperationalMemoryOmStateStore;
 }) {
   const state = await input.stateStore.loadState({
     threadId: input.threadId,
@@ -72,5 +72,5 @@ export async function loadCheckpointedOmSystemTexts(input: {
     return [];
   }
 
-  return buildCheckpointedOmSystemTexts(state).filter(Boolean);
+  return buildOperationalMemoryOmSystemTexts(state).filter(Boolean);
 }

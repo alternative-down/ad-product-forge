@@ -1,15 +1,15 @@
 import type { ModelMessage } from 'ai';
 
-type CheckpointedOmRenderableState = {
+type OperationalMemoryOmRenderableState = {
   checkpointSummary: { text?: string | null } | null;
   activeReflectionBlocks: Array<{ text?: string | null }>;
   observationBlocks: Array<{ reflectedGeneration: number | null; text?: string | null }>;
 };
 
-export function buildCheckpointedOmModelMessages(
-  state: CheckpointedOmRenderableState,
+export function buildOperationalMemoryOmModelMessages(
+  state: OperationalMemoryOmRenderableState,
 ): ModelMessage[] {
-  const blocks = getCheckpointedOmBlocks(state);
+  const blocks = getOperationalMemoryOmBlocks(state);
 
   return [
     ...blocks.checkpointSummary.map((text) => ({
@@ -27,8 +27,8 @@ export function buildCheckpointedOmModelMessages(
   ];
 }
 
-export function buildCheckpointedOmSystemTexts(state: CheckpointedOmRenderableState) {
-  const blocks = getCheckpointedOmBlocks(state);
+export function buildOperationalMemoryOmSystemTexts(state: OperationalMemoryOmRenderableState) {
+  const blocks = getOperationalMemoryOmBlocks(state);
 
   return [
     blocks.checkpointSummary[0] ? renderCheckpointText(blocks.checkpointSummary[0]) : '',
@@ -41,7 +41,7 @@ export function buildCheckpointedOmSystemTexts(state: CheckpointedOmRenderableSt
   ] as const;
 }
 
-function getCheckpointedOmBlocks(state: CheckpointedOmRenderableState) {
+function getOperationalMemoryOmBlocks(state: OperationalMemoryOmRenderableState) {
   return {
     checkpointSummary: normalizeOmTexts([state.checkpointSummary?.text ?? null]),
     reflections: normalizeOmTexts(state.activeReflectionBlocks.map((block) => block.text ?? null)),

@@ -1,11 +1,11 @@
-export type CheckpointedOmCheckpointSummary = {
+export type OperationalMemoryOmCheckpointSummary = {
   text: string;
   tokenCount: number;
   upToGeneration: number;
   updatedAt: string;
 };
 
-export type CheckpointedOmArchivedObservation = {
+export type OperationalMemoryOmArchivedObservation = {
   blockId: string;
   tokenCount: number;
   createdAt: string;
@@ -14,7 +14,7 @@ export type CheckpointedOmArchivedObservation = {
   text: string;
 };
 
-export type CheckpointedOmArchivedReflection = {
+export type OperationalMemoryOmArchivedReflection = {
   recordId: string;
   generationCount: number;
   tokenCount: number;
@@ -22,17 +22,17 @@ export type CheckpointedOmArchivedReflection = {
   text: string;
 };
 
-export type CheckpointedOmCheckpointPackageInput = {
+export type OperationalMemoryOmCheckpointPackageInput = {
   threadId: string;
   resourceId: string;
   fromGeneration: number | null;
   toGeneration: number;
-  checkpointSummary: CheckpointedOmCheckpointSummary;
-  reflections: CheckpointedOmArchivedReflection[];
-  observations: CheckpointedOmArchivedObservation[];
+  checkpointSummary: OperationalMemoryOmCheckpointSummary;
+  reflections: OperationalMemoryOmArchivedReflection[];
+  observations: OperationalMemoryOmArchivedObservation[];
 };
 
-export type CheckpointedOmObservationBlock = {
+export type OperationalMemoryOmObservationBlock = {
   id: string;
   tokenCount: number;
   createdAt: string;
@@ -42,7 +42,7 @@ export type CheckpointedOmObservationBlock = {
   sourceMessageIds: string[];
 };
 
-export type CheckpointedOmMetricsSnapshot = {
+export type OperationalMemoryOmMetricsSnapshot = {
   rawMessageCount: number;
   recentRawMessageCount: number;
   recentRawTokenCount: number;
@@ -62,11 +62,11 @@ export type CheckpointedOmMetricsSnapshot = {
   updatedAt: string;
 };
 
-export type CheckpointedOmState = {
+export type OperationalMemoryOmState = {
   version: 1;
   checkpointGeneration: number | null;
-  checkpointSummary: CheckpointedOmCheckpointSummary | null;
-  observationBlocks: CheckpointedOmObservationBlock[];
+  checkpointSummary: OperationalMemoryOmCheckpointSummary | null;
+  observationBlocks: OperationalMemoryOmObservationBlock[];
   activeReflectionBlocks: Array<{
     recordId: string;
     generationCount: number;
@@ -74,17 +74,17 @@ export type CheckpointedOmState = {
     createdAt: string;
     text: string;
   }>;
-  latestMetrics: CheckpointedOmMetricsSnapshot | null;
+  latestMetrics: OperationalMemoryOmMetricsSnapshot | null;
 };
 
-export type CheckpointedOmStateStore = {
+export type OperationalMemoryOmStateStore = {
   loadState(input: {
     threadId: string;
     resourceId: string;
-  }): Promise<CheckpointedOmState | null>;
+  }): Promise<OperationalMemoryOmState | null>;
   saveState(input: {
     threadId: string;
     resourceId: string;
-    state: CheckpointedOmState;
+    state: OperationalMemoryOmState;
   }): Promise<void>;
 };

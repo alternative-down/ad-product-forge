@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCheckpointedOmContextPlugin } from './operational-memory-om-context-plugin.js';
+import { createOperationalMemoryOmContextPlugin } from './operational-memory-om-context-plugin.js';
 
-describe('createCheckpointedOmContextPlugin', () => {
+describe('createOperationalMemoryOmContextPlugin', () => {
   it('renders checkpoint summary, reflections, and active observations into system context entries', async () => {
-    const plugin = createCheckpointedOmContextPlugin({
+    const plugin = createOperationalMemoryOmContextPlugin({
       threadId: 'thread-1',
       resourceId: 'resource-1',
       stateStore: {
@@ -72,7 +72,7 @@ describe('createCheckpointedOmContextPlugin', () => {
   });
 
   it('skips malformed om blocks without text', async () => {
-    const plugin = createCheckpointedOmContextPlugin({
+    const plugin = createOperationalMemoryOmContextPlugin({
       threadId: 'thread-1',
       resourceId: 'resource-1',
       stateStore: {

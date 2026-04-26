@@ -5,8 +5,8 @@ import type {
   ConversationThread,
 } from 'agent-runtime-core/integrations';
 import type {
-  CheckpointedConversationState,
-  CheckpointedConversationStateStore,
+  OperationalConversationState,
+  OperationalConversationStateStore,
 } from 'agent-runtime-core/integrations';
 import type {
   RuntimeWorkingMemoryStore,
@@ -37,7 +37,7 @@ export type LibsqlConversationStoreOptions = {
 };
 
 export class LibsqlConversationStore
-implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorkingMemoryStore {
+implements ConversationStore, OperationalConversationStateStore, RuntimeWorkingMemoryStore {
   private readonly client: Client;
   private readonly threadTableName: string;
   private readonly messageTableName: string;
@@ -482,7 +482,7 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
     ], 'write');
   }
 
-  async load(threadId: string): Promise<CheckpointedConversationState | null> {
+  async load(threadId: string): Promise<OperationalConversationState | null> {
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
@@ -499,10 +499,10 @@ implements ConversationStore, CheckpointedConversationStateStore, RuntimeWorking
       return null;
     }
 
-    return parseJson<CheckpointedConversationState>(row.state_json);
+    return parseJson<OperationalConversationState>(row.state_json);
   }
 
-  async save(state: CheckpointedConversationState): Promise<void> {
+  async save(state: OperationalConversationState): Promise<void> {
     await this.ensureSchema();
     await this.client.execute({
       sql: `
