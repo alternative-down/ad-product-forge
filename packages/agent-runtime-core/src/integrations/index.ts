@@ -174,8 +174,8 @@ export {
   type OperationalMemoryPluginOptions,
 } from './extensions/operational-memory.js';
 export {
-  createOperationalConversationPlugin,
-  type OperationalConversationPluginOptions,
+  createOperationalMemoryConversationPlugin,
+  type OperationalMemoryConversationPluginOptions,
 } from './extensions/operational-memory-conversation-plugin.js';
 export {
   createJournalInputHistoryPlugin,

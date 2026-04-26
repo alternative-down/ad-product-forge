@@ -4,14 +4,14 @@ import type { OperationalMemoryConversationMemory } from '../memory/operational-
 
 import { isConversationRuntimeInputPayload } from '../conversations/runtime-input.js';
 
-export type OperationalConversationPluginOptions = {
+export type OperationalMemoryConversationPluginOptions = {
   memory: OperationalMemoryConversationMemory;
   consolidateAfterStep?: boolean;
   selectThreadId?(pendingInputs: RuntimeInput[]): string | null;
 };
 
-export function createOperationalConversationPlugin(
-  options: OperationalConversationPluginOptions,
+export function createOperationalMemoryConversationPlugin(
+  options: OperationalMemoryConversationPluginOptions,
 ): RuntimePlugin {
   return {
     name: 'operational-memory',
