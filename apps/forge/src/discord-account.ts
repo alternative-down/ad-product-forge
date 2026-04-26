@@ -1,5 +1,7 @@
 import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
 
+import { forgeDebug } from '@forge-runtime/core';
+
 import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
 type DiscordSendableChannel = {
@@ -211,19 +213,19 @@ export function createDiscordProvider(config: {
   }
 
   async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
-    console.log('[discord] DEBUG: MessageCreate event - author:', message.author.id, 'bot:', botUserId, 'channelType:', message.channel.type, 'DM:', ChannelType.DM, 'channelId:', message.channelId);
-    console.log('[discord] DEBUG: configuredChannels.size:', configuredChannels.size, 'hasChannel:', configuredChannels.has(message.channelId));
+    forgeDebug('discord', 'MessageCreate received', { authorId: message.author.id, botUserId, channelType: message.channel.type, channelId: message.channelId });
+    forgeDebug('discord', 'configuredChannels check', { size: configuredChannels.size, hasChannel: configuredChannels.has(message.channelId) });
 
     // Ignore messages from the bot itself
     if (message.author.id === botUserId) {
-      console.log('[discord] DEBUG: filtering - message from bot itself');
+      forgeDebug('discord', 'filtered: message from bot');
       return null;
     }
 
     // Allow DMs through regardless of configured guild channels
     if (message.channel.type !== ChannelType.DM) {
       if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
-        console.log('[discord] DEBUG: filtering - guild channel not in configuredChannels');
+        forgeDebug('discord', 'filtered: guild channel not in configuredChannels');
         return null;
       }
     }
@@ -233,7 +235,7 @@ export function createDiscordProvider(config: {
       configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
-      console.log('[discord] DEBUG: filtering - guild channel requires mention but no mention');
+      forgeDebug('discord', 'filtered: guild channel requires mention but no mention');
       return null;
     }
 
@@ -241,16 +243,16 @@ export function createDiscordProvider(config: {
     const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
-      console.log('[discord] DEBUG: filtering - empty content and no attachments');
+      forgeDebug('discord', 'filtered: empty content and no attachments');
       return null;
     }
 
     if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
-      console.log('[discord] DEBUG: filtering - recent outbound echo');
+      forgeDebug('discord', 'filtered: recent outbound echo');
       return null;
     }
 
-    console.log('[discord] DEBUG: message accepted, returning inbound message');
+    forgeDebug('discord', 'message accepted');
 
     return {
       targetKey: message.channelId,
@@ -269,10 +271,10 @@ export function createDiscordProvider(config: {
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
-    console.log('[discord] DEBUG: deliverMessage called, onInboundMessage:', onInboundMessage ? 'set' : 'null, pendingMessages:', pendingMessages.length);
+    forgeDebug('discord', 'deliverMessage called', { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length });
     if (!onInboundMessage) {
       pendingMessages.push(message);
-      console.log('[discord] DEBUG: pushed to pendingMessages, total:', pendingMessages.length);
+      forgeDebug('discord', 'pushed to pendingMessages', { total: pendingMessages.length });
       return;
     }
 
@@ -295,11 +297,11 @@ export function createDiscordProvider(config: {
     }
   }
 
-  console.log('[discord] DEBUG: Starting login...');
+  forgeDebug('discord', 'Starting login');
   
   const ready = client.login(config.token)
     .then(() => {
-    console.log('[discord] DEBUG: Login succeeded!');
+    forgeDebug('discord', 'Login succeeded');
     if (!client.user) {
       throw new Error('Discord client did not become ready after login');
     }
@@ -315,13 +317,13 @@ export function createDiscordProvider(config: {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
         if (!inboundMessage) {
-          console.log('[discord] DEBUG: toInboundMessage returned null');
+          forgeDebug('discord', 'toInboundMessage returned null');
           return;
         }
 
-        console.log('[discord] DEBUG: calling deliverMessage');
+        forgeDebug('discord', 'calling deliverMessage');
         await deliverMessage(inboundMessage);
-        console.log('[discord] DEBUG: deliverMessage completed');
+        forgeDebug('discord', 'deliverMessage completed');
       } catch (error) {
         console.error('[discord] Error handling MessageCreate event:', error);
       }
