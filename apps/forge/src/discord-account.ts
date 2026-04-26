@@ -29,6 +29,7 @@ export function createDiscordProvider(config: {
   }>;
 }): CommunicationProvider {
   const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
+  const TYPING_INDICATOR_INTERVAL_MS = 8_000;
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -203,7 +204,7 @@ export function createDiscordProvider(config: {
 
     const typingTimer = setInterval(() => {
       void channel.sendTyping();
-    }, 8_000);
+    }, TYPING_INDICATOR_INTERVAL_MS);
 
     try {
       return await run();
