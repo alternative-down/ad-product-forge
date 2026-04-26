@@ -37,14 +37,6 @@ export function createDiscordProvider(config: {
     ],
     partials: [Partials.Channel, Partials.Message],
   });
-
-  // Debug: log all events
-  client.on('debug', (info) => {
-    console.log('[discord] DEBUG client debug:', info);
-  });
-  client.on('error', (error) => {
-    console.error('[discord] DEBUG client error:', error);
-  });
   const configuredChannels = new Map(
     (config.channels ?? []).map((channel) => [channel.channelId, channel.respondToMentionsOnly]),
   );
@@ -317,7 +309,7 @@ export function createDiscordProvider(config: {
         return;
       }
 
-      console.log('[discord] DEBUG: MessageCreate event received - author:', message.author.username, 'channel:', message.channelId);
+      console.log('[discord] MessageCreate - author:', message.author.username, 'channelType:', message.channel.type, 'guild:', message.guildId);
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
