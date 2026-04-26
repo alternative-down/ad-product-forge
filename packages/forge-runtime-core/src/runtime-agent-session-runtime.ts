@@ -2,7 +2,7 @@ import type {
   RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 
-import { createOperationalConversationObserver } from './operational-memory-conversation-observer.js';
+import { createOperationalMemoryConversationObserver } from './operational-memory-conversation-observer.js';
 import { syncOperationalMemoryOmCompatibility } from './operational-memory-om-compatibility.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
@@ -59,7 +59,7 @@ export async function createRuntimeAgentSessionRuntime(
     conversationStore: input.conversationStore,
     assistantAuthorId: input.assistantAuthorId,
     observer: checkpointedOmEnabled
-      ? createOperationalConversationObserver({
+      ? createOperationalMemoryConversationObserver({
         model: input.checkpointedOmModel ?? input.model,
         agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
         loadSupportText: checkpointedOmEnabled

@@ -8,9 +8,9 @@ vi.mock('ai', () => ({
   generateText: generateTextMock,
 }));
 
-import { createOperationalConversationObserver } from './operational-memory-conversation-observer.js';
+import { createOperationalMemoryConversationObserver } from './operational-memory-conversation-observer.js';
 
-describe('createOperationalConversationObserver', () => {
+describe('createOperationalMemoryConversationObserver', () => {
   it('includes tool calls and tool results in the serialized prompt', async () => {
     generateTextMock.mockResolvedValue({
       text: [
@@ -20,7 +20,7 @@ describe('createOperationalConversationObserver', () => {
       ].join('\n'),
     });
 
-    const observer = createOperationalConversationObserver({
+    const observer = createOperationalMemoryConversationObserver({
       model: {} as never,
     });
 

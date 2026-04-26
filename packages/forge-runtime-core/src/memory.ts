@@ -2,8 +2,8 @@ import type { ModelMessage } from 'ai';
 
 import {
   OperationalMemoryConversationMemory,
-  createOperationalConversationPlugin,
-  type OperationalConversationObserver,
+  createOperationalMemoryConversationPlugin,
+  type OperationalMemoryConversationObserver,
   type ConversationMessage,
   type ConversationStore,
   type RuntimeObserver,
@@ -21,7 +21,7 @@ export type ForgeConversationMemoryOptions = {
   conversationStore: ConversationStore;
   stateStore?: unknown;
   assistantAuthorId?: string;
-  observer?: OperationalConversationObserver;
+  observer?: OperationalMemoryConversationObserver;
   recentTokenLimit?: number;
   overflowObservationTokenLimit?: number;
   consolidateOverflow?: boolean;
@@ -95,7 +95,7 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
         authorId: input.assistantAuthorId,
         threadId: input.threadId,
       }),
-      createOperationalConversationPlugin({
+      createOperationalMemoryConversationPlugin({
         memory,
         consolidateAfterStep: input.consolidateOverflow,
         selectThreadId() {

@@ -1,5 +1,5 @@
 import { generateText, type LanguageModel } from 'ai';
-import type { OperationalConversationObserver } from 'agent-runtime-core/integrations';
+import type { OperationalMemoryConversationObserver } from 'agent-runtime-core/integrations';
 
 import {
   normalizeOperationalMemoryText,
@@ -10,15 +10,15 @@ import {
   parseObserverOutput,
 } from './operational-memory-prompting.js';
 
-type CreateOperationalConversationObserverOptions = {
+type CreateOperationalMemoryConversationObserverOptions = {
   model: LanguageModel;
   agentSystemPrompt?: string;
   loadSupportText?: () => Promise<string | null>;
 };
 
-export function createOperationalConversationObserver(
-  input: CreateOperationalConversationObserverOptions,
-): OperationalConversationObserver {
+export function createOperationalMemoryConversationObserver(
+  input: CreateOperationalMemoryConversationObserverOptions,
+): OperationalMemoryConversationObserver {
   return {
     async observe(request) {
       const supportText = await input.loadSupportText?.();
