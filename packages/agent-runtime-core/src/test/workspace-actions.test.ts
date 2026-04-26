@@ -26,11 +26,8 @@ describe('createWorkspaceActionDefinitions', () => {
     expect(calls).toEqual([{
       command: 'pwd',
     }]);
-    expect(result).toEqual({
-      exitCode: 0,
-      stdout: 'done',
-      stderr: '',
-    });
+    expect(typeof result).toBe('string');
+    expect(result).toContain('done');
   });
 
   it('supports timeout in seconds and background process actions', async () => {
@@ -84,9 +81,8 @@ describe('createWorkspaceActionDefinitions', () => {
       stepNumber: 1,
     });
 
-    expect(backgroundResult).toEqual({
-      pid: '123',
-    });
+    expect(typeof backgroundResult).toBe('string');
+    expect(backgroundResult).toContain('Started background process with PID: 123');
   });
 
   it('creates filesystem workspace actions when a filesystem is provided', async () => {
@@ -102,6 +98,9 @@ describe('createWorkspaceActionDefinitions', () => {
     }, {
       filesystem: {
         async readFile(targetPath) {
+          if (targetPath === 'test.txt') return 'hello world';
+          if (targetPath === 'README.md') return 'read:README.md';
+          if (targetPath === '/workspace/src/index.ts') return 'read:/workspace/src/index.ts';
           return `read:${targetPath}`;
         },
         async writeFile(targetPath, content) {
@@ -111,7 +110,7 @@ describe('createWorkspaceActionDefinitions', () => {
           });
         },
         async listDirectory(targetPath = '.') {
-          if (targetPath === '.') {
+          if (targetPath === '.' || targetPath === '/workspace') {
             return [{
               name: 'src',
               path: '/workspace/src',
@@ -119,13 +118,15 @@ describe('createWorkspaceActionDefinitions', () => {
               size: 0,
             }];
           }
-
-          return [{
-            name: 'index.ts',
-            path: '/workspace/src/index.ts',
-            isDirectory: false,
-            size: 12,
-          }];
+          if (targetPath === '/workspace/src') {
+            return [{
+              name: 'index.ts',
+              path: '/workspace/src/index.ts',
+              isDirectory: false,
+              size: 12,
+            }];
+          }
+          return [];
         },
       },
     });
@@ -134,10 +135,12 @@ describe('createWorkspaceActionDefinitions', () => {
       'workspace_execute_command',
       'workspace_read_file',
       'workspace_write_file',
+      'workspace_edit_file',
       'workspace_list_files',
-      'workspace_grep_files',
+      'workspace_grep',
     ]);
 
+    // Test read_file (index 1)
     const readResult = await actions[1]!.execute({
       path: 'README.md',
     }, {
@@ -145,6 +148,10 @@ describe('createWorkspaceActionDefinitions', () => {
       stepId: 'step-1',
       stepNumber: 1,
     });
+    expect(typeof readResult).toBe('string');
+    expect(readResult).toContain('read:README.md');
+
+    // Test write_file (index 2)
     const writeResult = await actions[2]!.execute({
       path: 'notes/todo.md',
       content: 'hello',
@@ -153,56 +160,49 @@ describe('createWorkspaceActionDefinitions', () => {
       stepId: 'step-1',
       stepNumber: 1,
     });
-    const listResult = await actions[3]!.execute({
+    expect(typeof writeResult).toBe('string');
+    expect(writeResult).toContain('Wrote');
+    expect(writeResult).toContain('notes/todo.md');
+    expect(writes).toEqual([{
+      path: 'notes/todo.md',
+      content: 'hello',
+    }]);
+
+    // Test edit_file (index 3)
+    const editResult = await actions[3]!.execute({
+      path: 'test.txt',
+      old_string: 'hello',
+      new_string: 'world',
+    }, {
+      runtimeId: 'runtime-1',
+      stepId: 'step-1',
+      stepNumber: 1,
+    });
+    expect(typeof editResult).toBe('string');
+    expect(editResult).toContain('Replaced');
+
+    // Test list_files (index 4)
+    const listResult = await actions[4]!.execute({
       recursive: true,
     }, {
       runtimeId: 'runtime-1',
       stepId: 'step-1',
       stepNumber: 1,
     });
-    const grepResult = await actions[4]!.execute({
+    expect(typeof listResult).toBe('string');
+    expect(listResult).toContain('src');
+    expect(listResult).toContain('index.ts');
+
+    // Test grep (index 5)
+    const grepResult = await actions[5]!.execute({
       pattern: 'read',
-      maxResults: 5,
+      maxCount: 5,
     }, {
       runtimeId: 'runtime-1',
       stepId: 'step-1',
       stepNumber: 1,
     });
-
-    expect(readResult).toEqual({
-      path: 'README.md',
-      content: 'read:README.md',
-    });
-    expect(writeResult).toEqual({
-      path: 'notes/todo.md',
-      written: true,
-    });
-    expect(writes).toEqual([{
-      path: 'notes/todo.md',
-      content: 'hello',
-    }]);
-    expect(listResult).toEqual({
-      entries: [
-        {
-          name: 'src',
-          path: '/workspace/src',
-          isDirectory: true,
-          size: 0,
-        },
-        {
-          name: 'index.ts',
-          path: '/workspace/src/index.ts',
-          isDirectory: false,
-          size: 12,
-        },
-      ],
-    });
-    expect(grepResult).toEqual({
-      matches: [{
-        path: '/workspace/src/index.ts',
-        line: 1,
-        text: 'read:/workspace/src/index.ts',
-      }],
-    });
+    expect(typeof grepResult).toBe('string');
+    expect(grepResult).toContain('/workspace/src/index.ts');
   });
 });
