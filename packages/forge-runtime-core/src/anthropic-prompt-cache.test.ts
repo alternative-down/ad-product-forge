@@ -193,9 +193,7 @@ describe('wrapAnthropicPromptCacheModel', () => {
       system: [
         {
           role: 'system',
-          content: [
-            { type: 'text', text: 'System with existing cache.' },
-          ],
+          content: 'System with existing cache.',
           providerOptions: {
             anthropic: { cacheControl: { type: 'ephemeral', ttl: '30m' } },
           },
