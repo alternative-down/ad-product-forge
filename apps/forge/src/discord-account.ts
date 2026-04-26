@@ -1,24 +1,11 @@
+
 import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
 
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
-type DiscordSendableChannel = {
-  id: string;
-  name?: string | null;
-  sendTyping(): Promise<unknown>;
-  send(input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> }): Promise<Message>;
-  messages: {
-    fetch(messageId: string): Promise<Message>;
-    fetch(options: { limit: number; before?: string }): Promise<Collection<string, Message>>;
-  };
-};
-
-type DiscordOutboundFile = {
-  attachment: Buffer;
-  name: string;
-};
+import type { DiscordSendableChannel, DiscordOutboundFile } from './discord-types';
 
 export function createDiscordProvider(config: {
   token: string;
