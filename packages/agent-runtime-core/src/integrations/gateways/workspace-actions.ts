@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { getEncoding } from 'js-tiktoken';
 
 import type { RuntimeActionDefinition } from '../../core/actions.js';
 
@@ -36,17 +37,38 @@ const MAX_PATTERN_LENGTH = 1000;
 // HELPERS
 // =============================================================================
 
-function toString(content: Uint8Array | Buffer | string): string {
+/**
+ * Count tokens using tiktoken (cl100k_base encoding)
+ */
+function countTokens(text: string): number {
+  try {
+    const encoder = getEncoding('cl100k_base');
+    const tokens = encoder.encode(text);
+    return tokens.length;
+  } catch {
+    // Fallback: approximate 4 chars per token
+    return Math.ceil(text.length / 4);
+  }
+}
+
+/**
+ * Convert content to string
+ */
+function toString(content: Uint8Array | Buffer | string, encoding?: string): string {
   if (typeof content === 'string') return content;
+  if (encoding === 'base64') return Buffer.from(content).toString('base64');
+  if (encoding === 'hex') return Buffer.from(content).toString('hex');
   return Buffer.from(content).toString('utf8');
 }
 
+/**
+ * Truncate output based on token limit using tiktoken
+ */
 function truncateOutput(
   output: string,
   tail: number | undefined,
   tokenLimit: number | undefined
 ): string {
-  const charLimit = (tokenLimit ?? DEFAULT_MAX_OUTPUT_TOKENS) * 4;
   let result = output;
 
   // Apply tail first
@@ -57,19 +79,56 @@ function truncateOutput(
     }
   }
 
-  // Apply token limit
-  if (result.length > charLimit) {
-    result = `[output truncated: showing last ~${tokenLimit ?? DEFAULT_MAX_OUTPUT_TOKENS} of ~${Math.ceil(output.length / 4)} tokens]\n${result.slice(-charLimit)}`;
+  // Apply token limit using tiktoken
+  const currentTokens = countTokens(result);
+  const limit = tokenLimit ?? DEFAULT_MAX_OUTPUT_TOKENS;
+
+  if (currentTokens > limit) {
+    try {
+      const encoder = getEncoding('cl100k_base');
+      const allTokens = encoder.encode(result);
+      const truncatedTokens = allTokens.slice(-limit);
+      result = `[output truncated: showing last ~${limit} of ~${allTokens.length} tokens]\n${encoder.decode(truncatedTokens)}`;
+    } catch {
+      // Fallback to char-based truncation
+      const charLimit = limit * 4;
+      result = `[output truncated: showing last ~${limit} tokens]\n${result.slice(-charLimit)}`;
+    }
   }
 
   return result;
 }
 
+/**
+ * Format content with line numbers
+ */
 function formatWithLineNumbers(content: string, startLine: number = 1): string {
   return content
     .split('\n')
     .map((line, i) => `${String(startLine + i).padStart(6)}  ${line}`)
     .join('\n');
+}
+
+/**
+ * Read a slice of content by line range
+ */
+function sliceContent(content: string, offset: number, limit?: number): string {
+  const lines = content.split('\n');
+  const startLine = Math.min(offset, lines.length);
+  const endLine = limit ? Math.min(offset + limit, lines.length) : lines.length;
+  return lines.slice(startLine, endLine).join('\n');
+}
+
+/**
+ * Check if filename matches pattern
+ */
+function matchesPattern(name: string, pattern: string): boolean {
+  try {
+    const regex = new RegExp(pattern);
+    return regex.test(name);
+  } catch {
+    return name.includes(pattern);
+  }
 }
 
 // =============================================================================
@@ -92,8 +151,6 @@ export function createWorkspaceActionDefinitions(
     ),
     timeout: z.number().optional().describe('Maximum execution time in seconds. Example: 60 for 1 minute.'),
     cwd: z.string().optional().describe('Working directory for the command'),
-    env: z.record(z.string(), z.string()).optional().describe('Extra environment variables.'),
-    headers: z.record(z.string(), z.string()).optional().describe('Optional gateway headers.'),
     tail: z.number().optional().describe(
       `Limit output to the last N lines. Defaults to ${DEFAULT_TAIL_LINES}. Use 0 for no limit.`,
     ),
@@ -125,8 +182,6 @@ Use cwd instead of "cd ... &&". Examples:
         const result = await gateway.startBackground({
           command: request.command,
           cwd: request.cwd,
-          env: request.env,
-          headers: request.headers,
           timeoutMs: request.timeout ? request.timeout * 1000 : undefined,
         } satisfies WorkspaceBackgroundCommandRequest);
 
@@ -136,8 +191,6 @@ Use cwd instead of "cd ... &&". Examples:
       const result = await gateway.execute({
         command: request.command,
         cwd: request.cwd,
-        env: request.env,
-        headers: request.headers,
         timeoutMs: request.timeout ? request.timeout * 1000 : undefined,
       } satisfies WorkspaceCommandRequest);
 
@@ -225,6 +278,15 @@ Use this to stop a long-running background process that was started with execute
     // workspace_read_file
     const readFileSchema = z.object({
       path: z.string().describe('The path to the file to read (e.g., "/data/config.json")'),
+      encoding: z.enum(['utf-8', 'utf8', 'base64', 'hex']).optional().default('utf-8').describe(
+        'File encoding (default: utf-8)',
+      ),
+      offset: z.number().optional().default(0).describe(
+        'Starting line number (0-based index, default: 0)',
+      ),
+      limit: z.number().optional().describe(
+        'Maximum number of lines to read. If not provided, reads all lines from offset to end.',
+      ),
       showLineNumbers: z.boolean().optional().default(true).describe(
         'Whether to prefix each line with its line number (default: true)',
       ),
@@ -234,17 +296,28 @@ Use this to stop a long-running background process that was started with execute
       name: 'workspace_read_file',
       description: `Read the contents of a file from the workspace filesystem.
 
+Supports reading specific line ranges with offset/limit and different encodings.
+
 Examples:
 - Basic: { path: "/data/config.json" }
-- Without line numbers: { path: "/data/config.json", showLineNumbers: false }`,
+- Without line numbers: { path: "/data/config.json", showLineNumbers: false }
+- With offset/limit: { path: "/data/config.json", offset: 10, limit: 50 }
+- Base64: { path: "/data/binary.bin", encoding: "base64" }`,
       inputSchema: readFileSchema,
       async execute(input) {
         const request = readFileSchema.parse(input);
 
         try {
           const content = await options.filesystem!.readFile(request.path);
-          const strContent = toString(content);
-          const formatted = request.showLineNumbers ? formatWithLineNumbers(strContent) : strContent;
+          const strContent = toString(content, request.encoding);
+
+          // Apply offset/limit for text encodings
+          let finalContent = strContent;
+          if ((request.encoding === 'utf-8' || request.encoding === 'utf8' || !request.encoding) && (request.offset || request.limit)) {
+            finalContent = sliceContent(strContent, request.offset ?? 0, request.limit);
+          }
+
+          const formatted = request.showLineNumbers ? formatWithLineNumbers(finalContent, (request.offset ?? 0) + 1) : finalContent;
 
           return formatted;
         } catch (error) {
@@ -261,19 +334,37 @@ Examples:
     const writeFileSchema = z.object({
       path: z.string().describe('The path where to write the file (e.g., "/data/output.txt")'),
       content: z.string().describe('The content to write to the file'),
+      overwrite: z.boolean().optional().default(false).describe(
+        'If false (default), writing to an existing file will fail. If true, will overwrite.',
+      ),
     });
 
     actions.push({
       name: 'workspace_write_file',
       description: `Write content to a file in the workspace filesystem.
 
+If the file already exists, the write will fail by default unless overwrite is set to true.
+
 Examples:
-- Basic: { path: "/data/output.txt", content: "Hello world" }`,
+- Basic: { path: "/data/output.txt", content: "Hello world" }
+- Overwrite: { path: "/data/output.txt", content: "New content", overwrite: true }`,
       inputSchema: writeFileSchema,
       async execute(input) {
         const request = writeFileSchema.parse(input);
 
         try {
+          // Check if file exists (only if not overwriting)
+          if (!request.overwrite) {
+            try {
+              await options.filesystem!.readFile(request.path);
+              return `Error: File ${request.path} already exists. Use overwrite: true to replace it.`;
+            } catch (readError) {
+              if ((readError as NodeJS.ErrnoException).code !== 'ENOENT') {
+                return `Error: File ${request.path} already exists. Use overwrite: true to replace it.`;
+              }
+            }
+          }
+
           await options.filesystem!.writeFile(request.path, request.content);
           const size = Buffer.byteLength(request.content, 'utf-8');
           return `Wrote ${size} bytes to ${request.path}`;
@@ -350,11 +441,23 @@ Examples:
     // workspace_list_files
     const listFilesSchema = z.object({
       path: z.string().optional().default('.').describe('Directory path to list'),
-      recursive: z.boolean().optional().default(false).describe(
-        'List recursively (default: false)',
+      maxDepth: z.number().optional().default(1).describe(
+        'Maximum depth for recursive listing. 1 = current directory only, 2 = one level deep, etc.',
       ),
-      includeHidden: z.boolean().optional().default(false).describe(
-        'Include hidden files starting with "." (default: false)',
+      showHidden: z.boolean().optional().default(false).describe(
+        'Include hidden files (files starting with ".")',
+      ),
+      dirsOnly: z.boolean().optional().default(false).describe(
+        'Only list directories, not files',
+      ),
+      exclude: z.array(z.string()).optional().describe(
+        'Array of patterns to exclude from results (e.g., ["node_modules", "*.log"])',
+      ),
+      extension: z.string().optional().describe(
+        'Only list files with this extension (e.g., "ts", "js", "json")',
+      ),
+      pattern: z.string().optional().describe(
+        'Filter files by regex pattern in their name',
       ),
     });
 
@@ -364,13 +467,19 @@ Examples:
 
 Options:
 - path: Directory to list (default: ".")
-- recursive: List recursively (default: false)
-- includeHidden: Include hidden files (default: false)
+- maxDepth: Maximum depth for recursive listing (default: 1)
+- showHidden: Include hidden files (default: false)
+- dirsOnly: Only list directories (default: false)
+- exclude: Patterns to exclude
+- extension: Filter by file extension
+- pattern: Regex pattern to filter file names
 
 Examples:
 - Basic: { path: "/src" }
-- Recursive: { path: "/src", recursive: true }
-- With hidden: { path: "/", includeHidden: true }`,
+- Recursive with depth: { path: "/src", maxDepth: 3 }
+- Only directories: { path: "/src", dirsOnly: true }
+- TypeScript files: { path: "/src", extension: "ts" }
+- Filter by pattern: { path: "/src", pattern: "^test" }`,
       inputSchema: listFilesSchema,
       async execute(input) {
         const request = listFilesSchema.parse(input);
@@ -379,8 +488,12 @@ Examples:
           const entries = await listWorkspaceEntries({
             filesystem: options.filesystem!,
             rootPath: request.path ?? '.',
-            recursive: request.recursive ?? false,
-            includeHidden: request.includeHidden ?? false,
+            maxDepth: request.maxDepth ?? 1,
+            showHidden: request.showHidden ?? false,
+            dirsOnly: request.dirsOnly ?? false,
+            exclude: request.exclude ?? [],
+            extension: request.extension,
+            pattern: request.pattern,
           });
 
           if (entries.length === 0) {
@@ -410,7 +523,7 @@ Examples:
       contextLines: z.number().optional().default(0).describe(
         'Number of lines of context to include before and after each match (default: 0)',
       ),
-      maxCount: z.number().optional().describe('Maximum matches per file. Similar to grep -m flag.'),
+      maxCount: z.number().optional().describe('Maximum total matches to return'),
       caseSensitive: z.boolean().optional().default(true).describe(
         'Whether the search is case-sensitive (default: true)',
       ),
@@ -529,36 +642,65 @@ Usage:
 }
 
 // =============================================================================
-// HELPERS - Moved to end of file
+// HELPERS
 // =============================================================================
 
 async function listWorkspaceEntries(input: {
   filesystem: NonNullable<WorkspaceActionPackOptions['filesystem']>;
   rootPath: string;
-  recursive: boolean;
-  includeHidden: boolean;
-}): Promise<Array<{ name: string; path: string; isDirectory: boolean; size: number }>> {
+  maxDepth: number;
+  showHidden: boolean;
+  dirsOnly: boolean;
+  exclude: string[];
+  extension?: string;
+  pattern?: string;
+}, currentDepth: number = 0): Promise<Array<{ name: string; path: string; isDirectory: boolean; size: number }>> {
   const entries = await input.filesystem.listDirectory(input.rootPath);
-  const filteredEntries = entries.filter((entry) => input.includeHidden || !entry.name.startsWith('.'));
-  const normalizedEntries = filteredEntries.map((entry) => ({
-    name: entry.name,
-    path: entry.path,
-    isDirectory: entry.isDirectory,
-    size: entry.size,
-  }));
+  const filteredEntries = entries.filter((entry) => {
+    // Filter hidden
+    if (!input.showHidden && entry.name.startsWith('.')) return false;
 
-  if (!input.recursive) {
-    return normalizedEntries;
-  }
+    // Filter dirs only
+    if (input.dirsOnly && !entry.isDirectory) return false;
 
-  const nestedEntries = await Promise.all(
-    filteredEntries
-      .filter((entry) => entry.isDirectory)
-      .map((entry) => listWorkspaceEntries({
+    // Filter by extension
+    if (input.extension) {
+      const ext = entry.name.split('.').pop();
+      if (ext !== input.extension) return false;
+    }
+
+    // Filter by pattern
+    if (input.pattern && !matchesPattern(entry.name, input.pattern)) return false;
+
+    // Filter by exclude patterns
+    for (const excludePattern of input.exclude) {
+      if (entry.name === excludePattern || matchesPattern(entry.name, excludePattern)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const result: Array<{ name: string; path: string; isDirectory: boolean; size: number }> = [];
+
+  for (const entry of filteredEntries) {
+    result.push({
+      name: entry.name,
+      path: entry.path,
+      isDirectory: entry.isDirectory,
+      size: entry.size,
+    });
+
+    // Recurse if needed
+    if (entry.isDirectory && currentDepth < input.maxDepth - 1) {
+      const nestedEntries = await listWorkspaceEntries({
         ...input,
         rootPath: entry.path,
-      }))
-  );
+      }, currentDepth + 1);
+      result.push(...nestedEntries);
+    }
+  }
 
-  return [...normalizedEntries, ...nestedEntries.flat()];
+  return result;
 }
