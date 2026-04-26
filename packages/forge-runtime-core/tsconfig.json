@@ -17,6 +17,6 @@
     "rootDir": "./src",
     "declaration": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", ".turbo", "dist"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", ".turbo", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }
