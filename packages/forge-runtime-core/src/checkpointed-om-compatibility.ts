@@ -133,7 +133,7 @@ export async function syncCheckpointedOmCompatibility(
       });
       const generationCount = latestPersistedGeneration + 1;
       const reflectionId = `reflection:${generationCount}`;
-      const createdAt = new Date().toISOString();
+      const createdAt = reflectionBatch.messages[0].createdAt;
 
       await input.conversationStore.appendMessage({
         id: reflectionId,
@@ -195,7 +195,7 @@ export async function syncCheckpointedOmCompatibility(
         .reduce((maxGeneration, generation) => Math.max(maxGeneration, generation), checkpointGeneration);
       checkpointSummaryText = checkpointText;
       const checkpointId = `checkpoint-summary:${checkpointGeneration}`;
-      const createdAt = new Date().toISOString();
+      const createdAt = checkpointBatch.messages[0].createdAt;
 
       await input.conversationStore.appendMessage({
         id: checkpointId,
