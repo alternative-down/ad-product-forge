@@ -19,7 +19,7 @@ export function createOperationalMemoryPlugin(
         source: 'input',
         text: renderInput(context.input),
         createdAt: context.input.receivedAt,
-        units: Math.max(1, countTokens(stringifyValue(context.input.payload))),
+        units: countTokens(stringifyValue(context.input.payload)),
       });
       await options.memory.consolidate();
     },
@@ -41,7 +41,7 @@ export function createOperationalMemoryPlugin(
           source: 'response',
           text: responseText,
           createdAt: context.record.finishedAt,
-          units: Math.max(1, countTokens(responseText)),
+          units: countTokens(responseText),
         });
       }
 
@@ -53,7 +53,7 @@ export function createOperationalMemoryPlugin(
           source: 'action-result',
           text: renderedAction,
           createdAt: context.record.finishedAt,
-          units: Math.max(1, countTokens(renderedAction)),
+          units: countTokens(renderedAction),
         });
       }
 

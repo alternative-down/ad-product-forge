@@ -245,7 +245,7 @@ export class CheckpointedConversationMemory {
       text: observationText,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
       createdAt: observationBatch.messages[0].createdAt.toISOString(),
-      units: Math.max(1, countTokens(observationText)),
+      units: countTokens(observationText),
     };
 
     await this.store.appendMessage({

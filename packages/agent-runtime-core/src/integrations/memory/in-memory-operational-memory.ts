@@ -48,7 +48,7 @@ export class InMemoryOperationalMemory implements OperationalMemory {
       text: response.text,
       sourceEntryIds: observedEntries.map((entry) => entry.id),
       createdAt: new Date().toISOString(),
-      units: Math.max(1, countTokens(response.text)),
+      units: countTokens(response.text),
     };
 
     this.rawEntries.splice(0, observedEntries.length);
