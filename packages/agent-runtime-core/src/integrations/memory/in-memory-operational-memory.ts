@@ -1,3 +1,4 @@
+import { countTokens } from '../../token-counter.js';
 import { createTextStepContextEntry } from '../../core/step-context.js';
 import type { StepContextEntry } from '../../core/types.js';
 import type {
@@ -111,5 +112,5 @@ export class InMemoryOperationalMemory implements OperationalMemory {
 }
 
 function estimateTextUnits(text: string) {
-  return Math.max(1, Math.ceil(text.length / 4));
+  return Math.max(1, countTokens(text));
 }

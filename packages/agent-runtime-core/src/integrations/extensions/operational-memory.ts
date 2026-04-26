@@ -1,3 +1,4 @@
+import { countTokens } from '../../token-counter.js';
 import type { RuntimePlugin } from '../../core/plugins.js';
 import type { ActionResult, RuntimeInput, StepContextEntry, StepRecord } from '../../core/types.js';
 import type { OperationalMemory } from '../memory/operational-memory.js';
@@ -83,7 +84,7 @@ function isCurrentInputEcho(entry: StepContextEntry, pendingInputs: RuntimeInput
 }
 
 function estimateTextUnits(text: string) {
-  return Math.max(1, Math.ceil(text.length / 4));
+  return Math.max(1, countTokens(text));
 }
 
 function stringifyValue(value: unknown) {
