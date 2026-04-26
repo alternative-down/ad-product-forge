@@ -1,3 +1,4 @@
+import { countTokens } from './token-counter.js';
 import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/integrations';
 
 export type OperationalMemoryState = {
@@ -68,7 +69,7 @@ export function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
   if (text) {
-    return Math.max(1, Math.ceil(text.length / 4));
+    return Math.max(1, countTokens(text));
   }
 
   return 1;

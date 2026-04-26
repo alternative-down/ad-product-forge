@@ -22,6 +22,7 @@
     "agent-runtime-core": "file:../agent-runtime-core",
     "ai": "^6.0.168",
     "fastembed": "^2.1.0",
+    "js-tiktoken": "^1.0.21",
     "sqlite-vec": "^0.1.9",
     "zod": "^4.3.6"
   },
