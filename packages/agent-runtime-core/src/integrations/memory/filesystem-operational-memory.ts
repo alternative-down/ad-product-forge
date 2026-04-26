@@ -1,4 +1,4 @@
-import { countTokens } from '../../token-counter.js';
+import { estimateTextUnits } from '../../token-counter.js';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -173,6 +173,3 @@ function buildSnapshot(
   };
 }
 
-function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
-}

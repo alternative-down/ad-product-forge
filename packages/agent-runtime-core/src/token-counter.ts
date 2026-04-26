@@ -16,3 +16,7 @@ export function countTokens(text: string): number {
   const tokens = enc.encode(text);
   return tokens.length;
 }
+
+export function estimateTextUnits(text: string): number {
+  return Math.max(1, countTokens(text));
+}

@@ -76,4 +76,4 @@ export type {
 export {
   runtimeSnapshotSchema,
 } from './core/snapshot-schema.js';
-export { countTokens } from './token-counter.js';
+export { countTokens, estimateTextUnits } from './token-counter.js';

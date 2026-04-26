@@ -1,4 +1,4 @@
-import { countTokens } from '../../token-counter.js';
+import { countTokens, estimateTextUnits } from '../../token-counter.js';
 import { randomUUID } from 'node:crypto';
 
 import type { StepContextEntry } from '../../core/types.js';
@@ -320,9 +320,6 @@ export class CheckpointedConversationMemory {
   }
 }
 
-export function estimateTextUnits(text: string) {
-  return Math.max(1, countTokens(text));
-}
 
 export function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
