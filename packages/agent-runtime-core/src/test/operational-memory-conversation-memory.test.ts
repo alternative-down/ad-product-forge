@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { InMemoryConversationStore } from '../integrations/conversations/in-memory-conversation-store.js';
 import type { ConversationMessage, ConversationMessagePart } from '../integrations/conversations/contracts.js';
-import { CheckpointedConversationMemory } from '../integrations/memory/checkpointed-conversation-memory.js';
-import { FilesystemCheckpointedConversationStateStore } from '../integrations/persistence/filesystem-checkpointed-conversation-state-store.js';
+import { OperationalMemoryConversationMemory } from '../integrations/memory/operational-memory-conversation-memory.js';
+import { FilesystemOperationalMemoryConversationStateStore } from '../integrations/persistence/filesystem-operational-memory-conversation-state-store.js';
 
 const tempPaths: string[] = [];
 
@@ -30,7 +30,7 @@ function generateContentNearTokens(count: number): string {
   return `msg content padding here ${padding}`;
 }
 
-describe('CheckpointedConversationMemory', () => {
+describe('OperationalMemoryConversationMemory', () => {
   describe('state derivation from conversationStore', () => {
     it('derives empty state when no checkpoint exists', async () => {
       const store = new InMemoryConversationStore();
@@ -50,7 +50,7 @@ describe('CheckpointedConversationMemory', () => {
         createdAt: '2026-01-01T00:00:02Z',
       });
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 10,
@@ -104,7 +104,7 @@ describe('CheckpointedConversationMemory', () => {
         createdAt: '2026-01-01T00:00:03Z',
       });
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 2, // Fits 2 messages
@@ -160,7 +160,7 @@ describe('CheckpointedConversationMemory', () => {
         createdAt: '2026-01-01T00:00:02Z',
       });
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 1,
@@ -202,7 +202,7 @@ describe('CheckpointedConversationMemory', () => {
         });
       }
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 2, // Only 2 tokens fit in recent
@@ -243,7 +243,7 @@ describe('CheckpointedConversationMemory', () => {
         });
       }
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 2,
@@ -287,7 +287,7 @@ describe('CheckpointedConversationMemory', () => {
 
       let observerCalled = false;
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 2,
@@ -333,7 +333,7 @@ describe('CheckpointedConversationMemory', () => {
         createdAt: '2026-01-01T00:00:01Z',
       });
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 1,
@@ -359,7 +359,7 @@ describe('CheckpointedConversationMemory', () => {
       const tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-runtime-core-checkpointed-conversation-'));
       tempPaths.push(tempDir);
 
-      const stateStore = new FilesystemCheckpointedConversationStateStore({
+      const stateStore = new FilesystemOperationalMemoryConversationStateStore({
         rootDir: tempDir,
       });
 
@@ -391,7 +391,7 @@ describe('CheckpointedConversationMemory', () => {
       const tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-runtime-core-checkpointed-conversation-'));
       tempPaths.push(tempDir);
 
-      const stateStore = new FilesystemCheckpointedConversationStateStore({
+      const stateStore = new FilesystemOperationalMemoryConversationStateStore({
         rootDir: tempDir,
       });
 
@@ -427,7 +427,7 @@ describe('CheckpointedConversationMemory', () => {
       let observerCalled = false;
       let observedMessages: string[] = [];
 
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 2,
@@ -471,7 +471,7 @@ describe('CheckpointedConversationMemory', () => {
       }
 
       let callCount = 0;
-      const memory = new CheckpointedConversationMemory({
+      const memory = new OperationalMemoryConversationMemory({
         threadId: 'thread-1',
         store,
         recentTokenLimit: 2,

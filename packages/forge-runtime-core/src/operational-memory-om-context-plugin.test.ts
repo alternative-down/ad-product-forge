@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCheckpointedOmContextPlugin } from './checkpointed-om-context-plugin.js';
+import { createCheckpointedOmContextPlugin } from './operational-memory-om-context-plugin.js';
 
 describe('createCheckpointedOmContextPlugin', () => {
   it('renders checkpoint summary, reflections, and active observations into system context entries', async () => {

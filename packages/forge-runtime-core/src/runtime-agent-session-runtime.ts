@@ -2,8 +2,8 @@ import type {
   RuntimeActionDefinition,
 } from 'agent-runtime-core/integrations';
 
-import { createCheckpointedConversationObserver } from './checkpointed-conversation-observer.js';
-import { syncCheckpointedOmCompatibility } from './checkpointed-om-compatibility.js';
+import { createCheckpointedConversationObserver } from './operational-memory-conversation-observer.js';
+import { syncCheckpointedOmCompatibility } from './operational-memory-om-compatibility.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';

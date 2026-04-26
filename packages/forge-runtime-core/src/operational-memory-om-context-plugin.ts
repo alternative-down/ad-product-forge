@@ -3,8 +3,8 @@ import {
   type RuntimePlugin,
 } from 'agent-runtime-core/integrations';
 
-import { buildCheckpointedOmSystemTexts } from './checkpointed-om-rendering.js';
-import type { CheckpointedOmStateStore } from './checkpointed-om.js';
+import { buildCheckpointedOmSystemTexts } from './operational-memory-om-rendering.js';
+import type { CheckpointedOmStateStore } from './operational-memory-om.js';
 
 export function createCheckpointedOmContextPlugin(input: {
   threadId: string;
@@ -12,7 +12,7 @@ export function createCheckpointedOmContextPlugin(input: {
   stateStore: CheckpointedOmStateStore;
 }): RuntimePlugin {
   return {
-    name: 'forge-checkpointed-om-context',
+    name: 'forge-operational-memory-om-context',
     async provideContext() {
       const state = await input.stateStore.loadState({
         threadId: input.threadId,
@@ -28,7 +28,7 @@ export function createCheckpointedOmContextPlugin(input: {
 
       if (checkpointText) {
         entries.push(createTextStepContextEntry({
-          id: 'checkpointed-om:checkpoint',
+          id: 'operational-memory-om:checkpoint',
           kind: 'system-instruction',
           title: 'Checkpoint Summary',
           text: checkpointText,
@@ -37,7 +37,7 @@ export function createCheckpointedOmContextPlugin(input: {
 
       if (reflectionsText) {
         entries.push(createTextStepContextEntry({
-          id: 'checkpointed-om:reflections',
+          id: 'operational-memory-om:reflections',
           kind: 'system-instruction',
           title: 'Active Reflections',
           text: reflectionsText,
@@ -46,7 +46,7 @@ export function createCheckpointedOmContextPlugin(input: {
 
       if (observationsText) {
         entries.push(createTextStepContextEntry({
-          id: 'checkpointed-om:observations',
+          id: 'operational-memory-om:observations',
           kind: 'system-instruction',
           title: 'Active Observations',
           text: observationsText,

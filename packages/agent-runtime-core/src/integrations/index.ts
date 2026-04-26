@@ -436,10 +436,10 @@ export {
   type CheckpointedConversationObserver,
   type CheckpointedConversationObserverRequest,
   type CheckpointedConversationObserverResponse,
-} from './memory/checkpointed-conversation-memory.js';
+} from './memory/operational-memory-conversation-memory.js';
 export {
   InMemoryCheckpointedConversationStateStore,
-} from './memory/checkpointed-conversation-state-store.js';
+} from './memory/operational-memory-conversation-state-store.js';
 export {
   RefreshableLongTermMemoryRecall,
   SourceBackedLongTermMemory,
@@ -453,7 +453,7 @@ export type {
   CheckpointedConversationObservation,
   CheckpointedConversationState,
   CheckpointedConversationStateStore,
-} from './memory/checkpointed-conversation-state-store.js';
+} from './memory/operational-memory-conversation-state-store.js';
 export type {
   LongTermMemoryDocument,
   LongTermMemoryRecall,
@@ -584,7 +584,7 @@ export {
 export {
   FilesystemCheckpointedConversationStateStore,
   type FilesystemCheckpointedConversationStateStoreOptions,
-} from './persistence/filesystem-checkpointed-conversation-state-store.js';
+} from './persistence/filesystem-operational-memory-conversation-state-store.js';
 export {
   FilesystemWorkspaceCommandRecorder,
   type FilesystemWorkspaceCommandRecorderOptions,

@@ -2,22 +2,22 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type {
-  CheckpointedConversationState,
-  CheckpointedConversationStateStore,
-} from '../memory/checkpointed-conversation-state-store.js';
+  OperationalMemoryConversationState,
+  OperationalMemoryConversationStateStore,
+} from '../memory/operational-memory-conversation-state-store.js';
 
-export type FilesystemCheckpointedConversationStateStoreOptions = {
+export type FilesystemOperationalMemoryConversationStateStoreOptions = {
   rootDir: string;
 };
 
-export class FilesystemCheckpointedConversationStateStore implements CheckpointedConversationStateStore {
+export class FilesystemOperationalMemoryConversationStateStore implements OperationalMemoryConversationStateStore {
   private readonly rootDir: string;
 
-  constructor(options: FilesystemCheckpointedConversationStateStoreOptions) {
+  constructor(options: FilesystemOperationalMemoryConversationStateStoreOptions) {
     this.rootDir = options.rootDir;
   }
 
-  async load(threadId: string): Promise<CheckpointedConversationState | null> {
+  async load(threadId: string): Promise<OperationalMemoryConversationState | null> {
     const filePath = this.getFilePath(threadId);
     const content = await readFile(filePath, 'utf8').catch(() => null);
 
@@ -25,10 +25,10 @@ export class FilesystemCheckpointedConversationStateStore implements Checkpointe
       return null;
     }
 
-    return JSON.parse(content) as CheckpointedConversationState;
+    return JSON.parse(content) as OperationalMemoryConversationState;
   }
 
-  async save(state: CheckpointedConversationState): Promise<void> {
+  async save(state: OperationalMemoryConversationState): Promise<void> {
     const filePath = this.getFilePath(state.threadId);
 
     await mkdir(path.dirname(filePath), { recursive: true });
