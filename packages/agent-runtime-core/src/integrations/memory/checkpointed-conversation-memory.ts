@@ -244,7 +244,7 @@ export class CheckpointedConversationMemory {
       id: observationId,
       text: observationText,
       sourceMessageIds: observationBatch.messages.map((entry) => entry.id),
-      createdAt: new Date().toISOString(),
+      createdAt: observationBatch.messages[0].createdAt.toISOString(),
       units: estimateTextUnits(observationText),
     };
 
