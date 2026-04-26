@@ -11,6 +11,7 @@ const MAX_RETURNED_MESSAGES_PER_CONVERSATION = 3;
 const MAX_MESSAGE_CONTENT_CHARS = 280;
 const MAX_PARTICIPANTS = 8;
 
+// Input Schemas
 const listContactsInputSchema = z.object({
   filter: z
     .enum(['self', 'others', 'all'])
@@ -102,15 +103,26 @@ const sendMessageInputSchema = z.object({
     .describe('Optional attachment file paths.'),
 });
 
+// Error output schema used by all tools
+const errorOutputSchema = z.object({
+  valid: z.literal(false),
+  error: z.string().describe('Error message describing what went wrong.'),
+  hint: z.string().optional().describe('Suggestion for how to fix the error.'),
+});
+
 export function createExternalAccountTools(communication: CommunicationModule): ToolsInput {
   return {
     list_contacts: createTool({
       id: 'list_contacts',
-      description: 'List available contacts and their target keys.',
+      description:
+        "List your contacts. Each contact includes the targetKey you should use with send_message, plus a slug in metadata when the provider also exposes a human-friendly identifier. Returns an array of contacts or an error object.",
       inputSchema: listContactsInputSchema,
       execute: async (input) => {
         try {
-          return await communication.listContacts(input.filter ?? 'others');
+          return {
+            valid: true as const,
+            contacts: await communication.listContacts(input.filter ?? 'others'),
+          };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           return {
@@ -121,9 +133,11 @@ export function createExternalAccountTools(communication: CommunicationModule): 
         }
       },
     }),
+
     upsert_contact: createTool({
       id: 'upsert_contact',
-      description: 'Create or update one contact.',
+      description:
+        'Register or update a contact so you can send them messages later. On success, returns the created or updated contact with its slug, displayName, and description.',
       inputSchema: upsertContactInputSchema,
       execute: async (input) => {
         try {
@@ -134,7 +148,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
           });
 
           return {
-            valid: true,
+            valid: true as const,
             slug: contact.slug,
             displayName: contact.displayName,
             description: contact.description,
@@ -156,9 +170,11 @@ export function createExternalAccountTools(communication: CommunicationModule): 
         }
       },
     }),
+
     list_conversations: createTool({
       id: 'list_conversations',
-      description: 'List conversations you can read or reply to.',
+      description:
+        'List your recent conversations across all providers, or filter by provider. Each conversation shows participants and a preview of the most recent messages. Returns a summary of conversations with message previews.',
       inputSchema: listConversationsInputSchema,
       execute: async (input) => {
         try {
@@ -173,32 +189,28 @@ export function createExternalAccountTools(communication: CommunicationModule): 
             returnedConversationCount: conversations.length,
             messagePreviewLimit: MAX_RETURNED_MESSAGES_PER_CONVERSATION,
             messageContentCharLimit: MAX_MESSAGE_CONTENT_CHARS,
-            note:
-              'This tool returns a lightweight conversation preview. If you need more detail for one conversation, call get_messages for that specific provider and targetKey.',
+            note: 'This tool returns a lightweight conversation preview. If you need more detail for one conversation, call get_messages for that specific provider and targetKey.',
           };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          const hint = message.includes('Provider does not support listing conversations')
-            ? 'This provider does not support listing conversations through the communication module.'
-            : message.includes('Provider not available')
-              ? 'Use a provider configured for this agent.'
-              : 'Try again in a moment. If the problem persists, verify the selected provider is available.';
-
           return {
             valid: false,
             error: message,
-            hint,
+            hint: 'Try again in a moment. If the problem persists, verify the selected provider is available.',
           };
         }
       },
     }),
+
     get_messages: createTool({
       id: 'get_messages',
-      description: 'Read recent messages from one conversation.',
+      description:
+        'Read recent messages from one conversation. Returns messages ordered by creation time, each with messageId, content, author, and timestamp. Use provider and targetKey from list_conversations.',
       inputSchema: getMessagesInputSchema,
       execute: async (input) => {
         try {
           return {
+            valid: true as const,
             messages: await communication.getMessages({
               provider: input.provider,
               targetKey: input.targetKey,
@@ -223,7 +235,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
               return {
                 valid: false,
                 error: error.message,
-                hint: 'This provider does not support reading conversation history through the communication module.',
+                hint: 'This provider does not support reading conversation history.',
               };
             }
 
@@ -231,14 +243,14 @@ export function createExternalAccountTools(communication: CommunicationModule): 
               return {
                 valid: false,
                 error: error.message,
-                hint: 'The targetKey may not exist for this provider. Use list_conversations when supported or verify the provider-specific key.',
+                hint: 'The targetKey may not exist for this provider. Use list_conversations to find valid conversations.',
               };
             }
 
             return {
               valid: false,
               error: error.message,
-              hint: 'Verify the provider and targetKey are valid for that provider.',
+              hint: 'Verify the provider and targetKey are valid.',
             };
           }
 
@@ -250,9 +262,11 @@ export function createExternalAccountTools(communication: CommunicationModule): 
         }
       },
     }),
+
     send_message: createTool({
       id: 'send_message',
-      description: 'Send a message through one provider.',
+      description:
+        'Send a message through a provider. The message is only delivered when this tool is called successfully and returns a messageId. Writing plain text in your response does not send anything.',
       inputSchema: sendMessageInputSchema,
       execute: async (input) => {
         try {
@@ -299,14 +313,14 @@ export function createExternalAccountTools(communication: CommunicationModule): 
             return {
               valid: false,
               error: error.message,
-              hint: 'Verify the provider and targetKey. The targetKey must be valid for that specific provider.',
+              hint: 'Verify the provider and targetKey are correct.',
             };
           }
 
           return {
             valid: false,
             error: 'An unknown error occurred while sending the message',
-            hint: 'Verify the provider and targetKey are correct for the selected provider.',
+            hint: 'Verify the provider and targetKey are correct.',
           };
         }
       },
@@ -314,7 +328,28 @@ export function createExternalAccountTools(communication: CommunicationModule): 
   };
 }
 
-function summarizeConversation(conversation: CommunicationConversationView) {
+function summarizeConversation(
+  conversation: CommunicationConversationView,
+): {
+  provider: string;
+  targetKey: string;
+  name?: string;
+  participants: string[];
+  latestMessageAt: string;
+  unreadCount: number;
+  messages: Array<{
+    messageId: string;
+    createdAt: string;
+    unread: boolean;
+    authorDisplayName?: string;
+    content: string;
+    attachmentCount: number;
+  }>;
+  returnedMessageCount: number;
+  totalMessageCount: number;
+  hasMoreMessages: boolean;
+  hasMoreParticipants: boolean;
+} {
   const recentMessages = conversation.messages.slice(-MAX_RETURNED_MESSAGES_PER_CONVERSATION).map((message) => ({
     messageId: message.messageId,
     createdAt: message.createdAt,
@@ -327,11 +362,10 @@ function summarizeConversation(conversation: CommunicationConversationView) {
   return {
     provider: conversation.provider,
     targetKey: conversation.targetKey,
-    latestMessageAt: conversation.latestMessageAt,
-    unreadCount: conversation.unreadCount,
     name: conversation.name,
     participants: conversation.participants?.slice(0, MAX_PARTICIPANTS) ?? [],
-    participantCount: conversation.participants?.length ?? 0,
+    latestMessageAt: conversation.latestMessageAt,
+    unreadCount: conversation.unreadCount,
     messages: recentMessages,
     returnedMessageCount: recentMessages.length,
     totalMessageCount: conversation.messages.length,
