@@ -27,6 +27,7 @@ describe('AgentLongTermMemoryRecall', () => {
     await mkdir(agentMemoryPath, { recursive: true });
     const readRuntimeMemorySettings = vi.fn(async () => ({
       ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
       ltmRecallGraphTopK: 3,
       ltmRecallGraphThreshold: 0.7,
       ltmRecallGraphRandomWalkSteps: 100,
@@ -88,6 +89,20 @@ describe('AgentLongTermMemoryRecall', () => {
         },
       })),
       writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(),
+      getThread: vi.fn(),
+      listThreads: vi.fn(),
+      appendMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(),
+      listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
     };
 
     const recall = new AgentLongTermMemoryRecall({
@@ -95,8 +110,8 @@ describe('AgentLongTermMemoryRecall', () => {
       agentWorkspacePath,
       agentMemoryPath,
       mastraId: 'agent_1',
+      conversationStore: mockConversationStore,
       readRuntimeMemorySettings,
-      checkpointedOmStateStore,
       persistenceStore,
     });
 
@@ -109,8 +124,7 @@ describe('AgentLongTermMemoryRecall', () => {
 
     expect(result).toBeNull();
     expect(readRuntimeMemorySettings).not.toHaveBeenCalled();
-    expect(checkpointedOmStateStore.readState).toHaveBeenCalledTimes(1);
-    expect(persistenceStore.readRecallState).toHaveBeenCalledTimes(1);
+    expect(persistenceStore.readRecallState).toHaveBeenCalledTimes(2);
     expect(persistenceStore.writeRecallState).toHaveBeenCalledTimes(1);
   });
 
@@ -167,6 +181,20 @@ describe('AgentLongTermMemoryRecall', () => {
         },
       })),
       writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(),
+      getThread: vi.fn(),
+      listThreads: vi.fn(),
+      appendMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(),
+      listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
     };
 
     const recall = new AgentLongTermMemoryRecall({
@@ -174,12 +202,12 @@ describe('AgentLongTermMemoryRecall', () => {
       agentWorkspacePath,
       agentMemoryPath,
       mastraId: 'agent_1',
+      conversationStore: mockConversationStore,
       readRuntimeMemorySettings,
-      checkpointedOmStateStore,
       persistenceStore,
     });
 
-    vi.spyOn(recall as never, 'runRecallSearch').mockResolvedValue({
+    vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue({
       formatted: '',
       results: [
         { id: 'memory/a.md', content: 'alpha', score: 0.91 },
@@ -205,7 +233,7 @@ describe('AgentLongTermMemoryRecall', () => {
       effectiveGraphTopK: 1,
       effectiveGraphThreshold: 0.85,
     });
-    vi.spyOn(recall as never, 'readRecallThreadState').mockResolvedValue({
+    vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
       recentFingerprints: [],
       windowSize: 1,
       rawWindowMessageCount: 8,
