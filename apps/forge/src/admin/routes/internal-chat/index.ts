@@ -1,0 +1,381 @@
+/**
+ * Internal Chat Admin Routes - Phase 2 of #689
+ * Routes for internal chat management extracted from routes.ts
+ */
+
+import { z } from 'zod';
+import type { InternalChatService } from '../../communication/internal-chat-service';
+import {
+  createExternalInternalChatAccountSchema,
+  updateExternalInternalChatAccountSchema,
+  deleteExternalInternalChatAccountSchema,
+  createInternalChatConversationSchema,
+  sendInternalChatConversationMessageSchema,
+  updateInternalChatConversationSchema,
+  archiveInternalChatConversationSchema,
+  addInternalChatGroupMemberSchema,
+  updateInternalChatGroupMemberRoleSchema,
+  removeInternalChatGroupMemberSchema,
+} from '../schemas';
+import { jsonResponse, parseJsonBody } from '../index';
+
+interface Request {
+  query: Map<string, string>;
+  bodyText: string;
+}
+
+/**
+ * Register routes for internal chat management
+ */
+export function registerInternalChatRoutes(
+  httpServer: { registerRoute: (route: unknown) => void },
+  internalChat: InternalChatService
+) {
+  // GET /admin/internal-chat/accounts
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/accounts',
+    handler: async () => {
+      const accounts = await internalChat.listAccounts();
+      return jsonResponse(
+        accounts
+          .filter((account) => account.agentId === null)
+          .map((account) => ({
+            accountId: account.id,
+            slug: account.slug,
+            displayName: account.displayName,
+            description: account.description ?? '',
+          })),
+      );
+    },
+  });
+
+  // GET /admin/internal-chat/contacts
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/contacts',
+    handler: async () => {
+      const accounts = await internalChat.listAccounts();
+      return jsonResponse(
+        accounts.map((account) => ({
+          accountId: account.id,
+          agentId: account.agentId,
+          slug: account.slug,
+          displayName: account.displayName,
+          description: account.description ?? '',
+          isAgent: Boolean(account.agentId),
+        })),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/account/create
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/create',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
+      return jsonResponse(
+        await internalChat.registerExternalAccount({
+          slug: body.slug,
+          displayName: body.displayName,
+          description: body.description,
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/account/update
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/update',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
+      return jsonResponse(
+        await internalChat.updateExternalAccount({
+          accountId: body.accountId,
+          slug: body.slug,
+          displayName: body.displayName,
+          description: body.description,
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/account/delete
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/delete',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
+      return jsonResponse(await internalChat.deleteExternalAccount(body));
+    },
+  });
+
+  // GET /admin/internal-chat/conversations
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/conversations',
+    handler: async (request: Request) => {
+      const accountId = request.query.get('accountId');
+      if (!accountId) {
+        return { status: 400, body: { error: 'accountId required' } };
+      }
+      const items = await internalChat.listConversationsByAccount({
+        accountId,
+        limit: 100,
+      });
+
+      return jsonResponse(
+        items.map((conversation) => ({
+          conversationId: conversation.targetKey,
+          conversationKey: conversation.targetKey,
+          provider: 'internal-chat',
+          type: (conversation.participants ?? []).length > 1 ? 'group' : 'dm',
+          name: conversation.name ?? conversation.targetKey,
+          participants: conversation.participants ?? [],
+          updatedAt: Date.parse(conversation.latestMessageAt),
+          messages: conversation.messages.map((message) => ({
+            messageId: message.messageId,
+            content: message.content,
+            unread: message.unread,
+            authorDisplayName: message.authorDisplayName,
+            createdAt: Date.parse(message.createdAt),
+          })),
+        })),
+      );
+    },
+  });
+
+  // GET /admin/internal-chat/messages
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/messages',
+    handler: async (request: Request) => {
+      const accountId = request.query.get('accountId');
+      const conversationId = request.query.get('conversationId');
+      const limit = request.query.get('limit');
+      const offset = request.query.get('offset');
+
+      if (!accountId || !conversationId) {
+        return { status: 400, body: { error: 'accountId and conversationId required' } };
+      }
+
+      const items = await internalChat.getMessagesByAccount({
+        accountId,
+        conversationKey: conversationId,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
+
+      return jsonResponse({
+        items: items.map((message) => ({
+          messageId: message.messageId,
+          authorAccountId: message.authorId,
+          authorDisplayName: message.authorDisplayName,
+          content: message.content,
+          createdAt: Date.parse(message.createdAt),
+          attachments: message.attachments?.map((attachment) => ({
+            name: attachment.name,
+            contentType: attachment.contentType,
+            sizeBytes: attachment.sizeBytes,
+          })) ?? [],
+        })),
+        hasMore: items.length === (limit ? parseInt(limit, 10) : 20),
+      });
+    },
+  });
+
+  // GET /admin/internal-chat/message-attachment
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/message-attachment',
+    handler: async (request: Request) => {
+      const accountId = request.query.get('accountId');
+      const conversationId = request.query.get('conversationId');
+      const messageId = request.query.get('messageId');
+      const attachmentName = request.query.get('attachmentName');
+
+      if (!accountId || !conversationId || !messageId || !attachmentName) {
+        return { status: 400, body: { error: 'Missing required query params' } };
+      }
+
+      const attachment = await internalChat.getMessageAttachmentByAccount({
+        accountId,
+        conversationId,
+        messageId,
+        attachmentName,
+      });
+
+      return {
+        status: 200,
+        headers: {
+          'content-type': attachment.contentType ?? 'application/octet-stream',
+          'content-disposition': `inline; filename="${encodeURIComponent(attachment.name)}"`,
+          'cache-control': 'no-store',
+        },
+        body: Buffer.from(attachment.data),
+      };
+    },
+  });
+
+  // POST /admin/internal-chat/conversation/create
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/create',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
+
+      if (body.type === 'dm') {
+        const conversation = await internalChat.ensureDirectConversationByAccount({
+          accountId: body.accountId,
+          participantAccountId: body.memberKeys[0] as string,
+        });
+
+        return jsonResponse({
+          conversationId: conversation.conversationId,
+          conversationKey: conversation.conversationKey,
+        });
+      }
+
+      const conversationKey = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      await internalChat.createExternalChatGroup({
+        accountId: body.accountId,
+        conversationKey,
+        name: body.name?.trim() || 'Novo grupo',
+      });
+
+      for (const participantAccountId of body.memberKeys) {
+        await internalChat.addMemberToGroupByAccount({
+          accountId: body.accountId,
+          groupId: conversationKey,
+          participantAccountId,
+          role: 'normal',
+        });
+      }
+
+      return jsonResponse({
+        conversationId: conversationKey,
+        conversationKey,
+      });
+    },
+  });
+
+  // POST /admin/internal-chat/conversation/send
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/send',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
+      return jsonResponse(
+        await internalChat.sendMessage({
+          accountId: body.accountId,
+          targetKey: body.conversationId,
+          content: body.content,
+          attachments: body.attachments.map((attachment) => ({
+            name: attachment.name,
+            contentType: attachment.contentType,
+            data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
+          })),
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/conversation/update
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/update',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
+      return jsonResponse(
+        await internalChat.updateGroupByAccount({
+          accountId: body.accountId,
+          groupId: body.conversationId,
+          name: body.name,
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/conversation/archive
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/conversation/archive',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
+      return jsonResponse(await internalChat.archiveConversationByAccount(body));
+    },
+  });
+
+  // GET /admin/internal-chat/group-members
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/group-members',
+    handler: async (request: Request) => {
+      const accountId = request.query.get('accountId');
+      const conversationId = request.query.get('conversationId');
+
+      if (!accountId || !conversationId) {
+        return { status: 400, body: { error: 'accountId and conversationId required' } };
+      }
+
+      return jsonResponse(
+        await internalChat.listGroupMembersByAccount({
+          accountId,
+          groupId: conversationId,
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/group-member/add
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/group-member/add',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, addInternalChatGroupMemberSchema);
+      return jsonResponse(
+        await internalChat.addMemberToGroupByAccount({
+          accountId: body.accountId,
+          groupId: body.conversationId,
+          participantAccountId: body.participantAccountId,
+          role: body.role,
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/group-member/update-role
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/group-member/update-role',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, updateInternalChatGroupMemberRoleSchema);
+      return jsonResponse(
+        await internalChat.updateMemberRoleByAccount({
+          accountId: body.accountId,
+          groupId: body.conversationId,
+          participantAccountId: body.participantAccountId,
+          role: body.role,
+        }),
+      );
+    },
+  });
+
+  // POST /admin/internal-chat/group-member/remove
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/group-member/remove',
+    handler: async (request: Request) => {
+      const body = parseJsonBody(request.bodyText, removeInternalChatGroupMemberSchema);
+      return jsonResponse(
+        await internalChat.removeMemberFromGroupByAccount({
+          accountId: body.accountId,
+          groupId: body.conversationId,
+          participantAccountId: body.participantAccountId,
+        }),
+      );
+    },
+  });
+}
