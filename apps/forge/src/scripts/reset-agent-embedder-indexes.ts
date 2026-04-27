@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
@@ -21,12 +22,12 @@ async function main() {
 }
 
 async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
-  console.log(`[Reset] Agent: ${agentId}`);
+  forgeDebug({ scope: 'reset-embedder', level: 'info', message: 'Processing agent', context: { agentId } });
   await resetAgentEmbedderIndexes(workspaceBasePath, agentId);
-  console.log('  - indexes reset');
+  // Indexes reset logged above
 }
 
 main().catch((error) => {
-  console.error('[Reset] Failed to reset embedder indexes:', error);
+  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { agentId, error } });
   process.exit(1);
 });

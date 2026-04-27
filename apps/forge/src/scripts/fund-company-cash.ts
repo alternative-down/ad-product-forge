@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
@@ -29,11 +30,11 @@ async function fundCompanyCash() {
 
   const balanceUsd = await companyCash.getCurrentBalanceUsd();
 
-  console.log(`[Cash] Added USD ${input.amountUsd.toFixed(2)}`);
-  console.log(`[Cash] Current balance: USD ${balanceUsd.toFixed(2)}`);
+  forgeDebug({ scope: 'fund-cash', level: 'info', message: 'Added company cash', context: { amountUsd: input.amountUsd, balanceUsd } });
+  // Balance logged above via forgeDebug
 }
 
 fundCompanyCash().catch((error) => {
-  console.error('[Cash] Failed to fund company cash:', error);
+  forgeDebug({ scope: 'fund-cash', level: 'error', message: 'Failed to fund company cash', context: { amountUsd: input.amountUsd, error } });
   process.exit(1);
 });
