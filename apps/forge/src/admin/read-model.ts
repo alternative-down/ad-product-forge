@@ -23,6 +23,7 @@ import {
   listThreadMessages,
   withTimeout,
 } from './read-model/conversation-helpers';
+import { createAgentReadModel } from './read-model/agent';
 
 import {
   readLongTermMemoryRecallSnapshot,
@@ -100,6 +101,11 @@ export function createAdminReadModel(input: {
   const llmSettings = createLlmSettingsStore(db);
   const llmModelPrices = createLlmModelPriceStore(db);
   const systemSettings = createSystemSettingsStore(db);
+  const agentReadModel = createAgentReadModel({
+    db,
+    workspaceBasePath: input.workspaceBasePath,
+    internalChat: input.internalChat,
+  });
 
   async function getDashboard() {
     const [agentRows, balance, summary, activeContracts, cashMovements, roles] =
@@ -532,88 +538,6 @@ export function createAdminReadModel(input: {
     };
   }
 
-  async function listAgentRecentConversations(agentId: string) {
-    const agent = await db.query.agents.findFirst({
-      where: eq(agents.id, agentId),
-      columns: {
-        id: true,
-        name: true,
-      },
-    });
-
-    if (!agent) {
-      return null;
-    }
-
-    return listRecentConversations(input.workspaceBasePath, input.internalChat, agentId, agent.name);
-  }
-
-  async function listAgentExecutionSteps(input: {
-    agentId: string;
-    limit: number;
-    offset: number;
-  }) {
-    const now = Date.now();
-    const activeContract = await db.query.agentExecutionContracts.findFirst({
-      where: and(
-        eq(agentExecutionContracts.agentId, input.agentId),
-        lte(agentExecutionContracts.startsAt, now),
-        gte(agentExecutionContracts.endsAt, now),
-      ),
-      orderBy: [desc(agentExecutionContracts.endsAt)],
-    });
-
-    if (!activeContract) {
-      return {
-        items: [],
-        hasMore: false,
-      };
-    }
-
-    const rows = await db.query.agentExecutionSteps.findMany({
-      where: eq(agentExecutionSteps.contractId, activeContract.id),
-      orderBy: [desc(agentExecutionSteps.createdAt)],
-      limit: input.limit,
-      offset: input.offset,
-    });
-
-    return {
-      items: rows.map((step) => {
-        const { id, ...rest } = step;
-
-        return {
-          ...rest,
-          stepId: id,
-        };
-      }),
-      hasMore: rows.length === input.limit,
-    };
-  }
-
-  async function listAgentThreadMessages(params: {
-    agentId: string;
-    page: number;
-    perPage: number;
-  }) {
-    return listThreadMessages(input.workspaceBasePath, params.agentId, {
-      page: params.page,
-      perPage: params.perPage,
-    });
-  }
-
-  async function listAgentLongTermMemoryThreadMessages(params: {
-    agentId: string;
-    page: number;
-    perPage: number;
-  }) {
-    return listThreadMessages(input.workspaceBasePath, params.agentId, {
-      page: params.page,
-      perPage: params.perPage,
-      threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
-      tablePrefix: toMastraSafeIdentifier(params.agentId),
-    });
-  }
-
   async function getAgentRuntimeMemory(agentId: string) {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
@@ -798,26 +722,6 @@ export function createAdminReadModel(input: {
     }
   }
 
-  async function listRecentAgentHomeMetricSnapshots(input: {
-    agentId: string;
-    limit: number;
-  }) {
-    const rows = await db.query.agentHomeMetricSnapshots.findMany({
-      where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
-      orderBy: [desc(agentHomeMetricSnapshots.createdAt)],
-      limit: input.limit,
-    });
-
-    return rows.map((row) => ({
-      id: row.id,
-      agentId: row.agentId,
-      stepId: row.stepId,
-      stepCreatedAt: row.stepCreatedAt,
-      createdAt: row.createdAt,
-      snapshot: row.snapshot,
-    }));
-  }
-
   async function getAgentOmDebugExport(agentId: string) {
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
@@ -919,79 +823,6 @@ export function createAdminReadModel(input: {
     } finally {
       await closeLibsqlClient(client);
     }
-  }
-
-  async function debugAgentLongTermMemoryRecallSearch(
-    agentId: string,
-    input: AgentLongTermMemoryRecallDebugSearchInput,
-  ) {
-    const loadedAgent = getInternalAgentRegistry().get(agentId);
-
-    if (!loadedAgent) {
-      throw new Error(`Agent is not loaded: ${agentId}`);
-    }
-
-    if (!loadedAgent.runtime.longTermMemoryRecall) {
-      throw new Error(`Long-term memory recall is not available for agent: ${agentId}`);
-    }
-
-    const result = await loadedAgent.runtime.longTermMemoryRecall.debugSearch(input);
-
-    return {
-      ...result,
-      lastInitAt: result.lastInitAt ? new Date(result.lastInitAt).getTime() : null,
-    };
-  }
-
-  async function listAgentConversationMessages(params: {
-    agentId: string;
-    provider: string;
-    targetKey: string;
-    limit: number;
-    offset: number;
-  }) {
-    if (params.provider === 'internal-chat') {
-      const messages = await input.internalChat.getMessages({
-        agentId: params.agentId,
-        conversationKey: params.targetKey,
-        limit: params.limit,
-        offset: params.offset,
-      });
-      const accounts = await input.internalChat.listAccounts();
-      const agentIdByAccountId = new Map(accounts.map((account) => [account.id, account.agentId ?? null]));
-
-      return {
-        items: messages.map((message: CommunicationProviderMessage) => ({
-          ...message,
-          authorAgentId: message.authorId ? (agentIdByAccountId.get(message.authorId) ?? null) : null,
-        })),
-        hasMore: messages.length === params.limit,
-      };
-    }
-
-    const runtime = getInternalAgentRegistry().get(params.agentId)?.runtime;
-
-    if (!runtime) {
-      return {
-        items: [],
-        hasMore: false,
-      };
-    }
-
-    const messages = await runtime.communication.getMessages({
-      provider: params.provider,
-      targetKey: params.targetKey,
-      limit: params.limit,
-      offset: params.offset,
-    });
-
-    return {
-      items: messages.map((message) => ({
-        ...message,
-        authorAgentId: null,
-      })),
-      hasMore: messages.length === params.limit,
-    };
   }
 
   async function listRoles() {
@@ -1151,15 +982,15 @@ export function createAdminReadModel(input: {
     getDashboard,
     listAgents,
     getAgent,
-    listAgentRecentConversations,
-    listAgentExecutionSteps,
-    listAgentThreadMessages,
-    listAgentLongTermMemoryThreadMessages,
-    listRecentAgentHomeMetricSnapshots,
+    listAgentRecentConversations: agentReadModel.listAgentRecentConversations,
+    listAgentExecutionSteps: agentReadModel.listAgentExecutionSteps,
+    listAgentThreadMessages: agentReadModel.listAgentThreadMessages,
+    listAgentLongTermMemoryThreadMessages: agentReadModel.listAgentLongTermMemoryThreadMessages,
+    listRecentAgentHomeMetricSnapshots: agentReadModel.listRecentAgentHomeMetricSnapshots,
     getAgentRuntimeMemory,
     getAgentOmDebugExport,
-    debugAgentLongTermMemoryRecallSearch,
-    listAgentConversationMessages,
+    debugAgentLongTermMemoryRecallSearch: agentReadModel.debugAgentLongTermMemoryRecallSearch,
+    listAgentConversationMessages: agentReadModel.listAgentConversationMessages,
     listRoles,
     listSystemIntegrations,
     getSystemSettings,
