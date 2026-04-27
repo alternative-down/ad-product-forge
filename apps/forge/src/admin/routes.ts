@@ -13,6 +13,7 @@ import {
   oauthStore,
   syncAnthropicCredential,
   syncOpenAICodexCredential,
+  forgeDebug,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
@@ -1239,7 +1240,7 @@ input.httpServer.registerRoute({
         const body = parseJsonBody(request.bodyText, createRoleSchema);
       return jsonResponse(await capabilities.createRole(body), 201);
       } catch (error) {
-        console.error('[Admin] Failed to create role:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to create role', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1253,11 +1254,11 @@ input.httpServer.registerRoute({
         const body = parseJsonBody(request.bodyText, updateRoleSchema);
         const result = await capabilities.updateRole(body);
         void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          console.error('[Admin] Failed to reload agents for role ' + body.roleId + ':', error);
+          forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to reload agents for role', context: { roleId: body.roleId, error } });
         });
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to update role:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to update role', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1271,7 +1272,7 @@ input.httpServer.registerRoute({
         const body = parseJsonBody(request.bodyText, deleteRoleSchema);
         return jsonResponse(await capabilities.deleteRole(body.roleId));
       } catch (error) {
-        console.error('[Admin] Failed to delete role:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to delete role', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1291,7 +1292,7 @@ input.httpServer.registerRoute({
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to add role capability:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role capability', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1311,7 +1312,7 @@ input.httpServer.registerRoute({
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to remove role capability:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role capability', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1327,7 +1328,7 @@ input.httpServer.registerRoute({
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to add role tool permission:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role tool permission', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1343,7 +1344,7 @@ input.httpServer.registerRoute({
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to add role workflow permission:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role workflow permission', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1359,7 +1360,7 @@ input.httpServer.registerRoute({
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to remove role workflow permission:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role workflow permission', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1375,7 +1376,7 @@ input.httpServer.registerRoute({
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
-        console.error('[Admin] Failed to remove role tool permission:', error);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role tool permission', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -1729,7 +1730,7 @@ async function buildSystemHealthcheck(
     Promise.all(
       registry.list().map(async (entry) => {
         const longTermMemory = entry.runtime.longTermMemory
-          ? await entry.runtime.longTermMemory.readSnapshot().catch((err) => { console.error("[safe-catch]", err); return null; })
+          ? await entry.runtime.longTermMemory.readSnapshot().catch((err) => { forgeDebug({ scope: 'admin', level: 'error', message: 'Safe catch error', context: { err } }); return null; })
           : null;
 
         return {
@@ -1918,7 +1919,7 @@ async function readProcessFileDescriptorSummary() {
   const targetCounts = new Map<string, number>();
 
   await Promise.all(entries.map(async (entry) => {
-    const target = await fsPromises.readlink(`${fdRoot}/${entry}`).catch((err) => { console.error("[safe-catch]", err); return null; });
+    const target = await fsPromises.readlink(`${fdRoot}/${entry}`).catch((err) => { forgeDebug({ scope: 'admin', level: 'error', message: 'safe-catch readlink', context: { err } }); return null; });
 
     if (!target) {
       return;
