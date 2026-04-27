@@ -1774,5 +1774,5 @@ function hasExactControlDirective(text: string, directive: string) {
   return text
     .split('\n')
     .map((line) => line.trim())
-    .some((line) => line === directive);
+    .some((line) => line.includes(directive));
 }
