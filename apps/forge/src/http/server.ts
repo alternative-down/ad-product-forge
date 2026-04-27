@@ -1,4 +1,5 @@
 import http, { type IncomingHttpHeaders } from 'node:http';
+import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
 
 export type HttpRequest = {
@@ -99,7 +100,7 @@ export function createForgeHttpServer(config: { port: number; adminApiKey?: stri
         return;
       }
 
-      console.error(`[ForgeHttpServer] ${req.method} ${url.pathname} failed:`, error);
+      forgeDebug({ scope: 'http-server', level: 'error', message: 'HTTP request failed', context: { method: req.method, pathname: url.pathname, error } });
       res.writeHead(500, {
         ...CORS_HEADERS,
         'content-type': 'application/json; charset=utf-8',
