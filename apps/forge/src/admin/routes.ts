@@ -81,6 +81,7 @@ import {
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
 } from './routes/helpers.js';
+import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
 
 export function registerAdminRoutes(input: {
   db: Database;
@@ -531,17 +532,8 @@ export function registerAdminRoutes(input: {
     handler: async () => jsonResponse(await readOauthState()),
   });
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/finance',
-    handler: async () => jsonResponse(await readModel.getFinance()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/finance/contracts',
-    handler: async () => jsonResponse(await readModel.getFinanceContracts()),
-  });
+  // Finance GET routes (extracted to ./routes/finance/read.ts)
+  registerFinanceReadRoutes(input.httpServer, readModel);
 
   input.httpServer.registerRoute({
     method: 'POST',
@@ -1481,108 +1473,11 @@ input.httpServer.registerRoute({
     },
   });
 
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/finance/investment/create',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createInvestmentSchema);
-      const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : Date.now();
-
-      await companyCash.recordCashIn({
-        type: 'owner-investment',
-        amountUsd: body.amountUsd,
-        description: body.description ?? 'Manual owner investment',
-        effectiveAt,
-      });
-
-      return jsonResponse({ success: true });
-    },
+  // Finance POST routes (extracted to ./routes/finance/write.ts)
+  registerFinanceWriteRoutes(input.httpServer, {
+    companyCash,
+    companyPayables,
   });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/finance/payable/create',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createPayableSchema);
-      const dueAt = new Date(body.dueAt).getTime();
-
-      if (!Number.isFinite(dueAt)) {
-        throw new Error('Invalid payable dueAt');
-      }
-
-      if (body.kind === 'single') {
-        const result = await companyCash.scheduleCashOut({
-          type: 'manual-payable',
-          amountUsd: body.amountUsd,
-          description: body.description ?? body.name,
-          referenceType: 'manual-payable',
-          referenceId: createId(),
-          dueAt,
-        });
-
-        return jsonResponse({
-          kind: body.kind,
-          entryId: result.entryId,
-        }, 201);
-      }
-
-      const result = await companyPayables.createRecurringPayable({
-        name: body.name,
-        description: body.description,
-        amountUsd: body.amountUsd,
-        recurrencePeriod: body.recurrencePeriod,
-        dueAt,
-      });
-
-      return jsonResponse({
-        kind: body.kind,
-        payableId: result.payableId,
-        entryId: result.entryId,
-      }, 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/finance/ledger/post',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-      const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : undefined;
-      const result = await companyCash.postPlannedEntry(body.entryId, { effectiveAt });
-
-      await companyPayables.syncRecurringPayableOccurrence({
-        entryId: body.entryId,
-      });
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/finance/ledger/cancel',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-      const result = await companyCash.cancelPlannedEntry(body.entryId);
-
-      await companyPayables.syncRecurringPayableOccurrence({
-        entryId: body.entryId,
-      });
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/finance/recurring-payable/set-active',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
-      const result = await companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
-      return jsonResponse(result);
-    },
-  });
-
 }
 
 async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
