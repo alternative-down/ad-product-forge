@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { createSystemIntegrationStore } from '../system-integrations/store';
@@ -694,7 +695,8 @@ function removeUndefined(record: Record<string, unknown>) {
 function safeJsonParse(text: string) {
   try {
     return JSON.parse(text);
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'coolify/manager', level: 'warn', message: 'Failed to parse JSON', context: { error, text: text.substring(0, 100) } });
     return text;
   }
 }

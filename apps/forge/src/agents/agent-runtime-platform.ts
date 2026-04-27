@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { createClient } from '@libsql/client';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -37,7 +38,8 @@ async function pathExists(targetPath: string) {
   try {
     await fs.stat(targetPath);
     return true;
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'agent-runtime-platform', level: 'warn', message: 'Path does not exist', context: { error, path: targetPath } });
     return false;
   }
 }

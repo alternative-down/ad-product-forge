@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -82,7 +83,8 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
     try {
       await fs.access(skillFilePath);
       return path.resolve(candidateRoot, sourceDirectoryName);
-    } catch {
+    } catch (error) {
+      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error, skillFilePath } });
       continue;
     }
   }
