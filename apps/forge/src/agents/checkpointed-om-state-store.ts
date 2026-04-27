@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { CheckpointedOmState, CheckpointedOmStateStore } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { Database } from '../database';

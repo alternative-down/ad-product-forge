@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
@@ -47,10 +48,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       const credentials = JSON.parse(decrypted);
       providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
     } catch (error) {
-      console.warn(
-        `[AgentLoader] Failed to decrypt/parse credentials for provider ${providerConfig.providerType}:`,
-        error,
-      );
+      forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'Failed to decrypt/parse credentials', context: { provider: providerConfig.providerType, error } });
     }
   }
 

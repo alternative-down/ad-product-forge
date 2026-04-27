@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import { LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier } from '@forge-runtime/core';
+import { LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier, forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database';
 import {

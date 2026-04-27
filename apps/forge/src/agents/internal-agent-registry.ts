@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/index';
 import { loadAgents, type AgentLoaderConfig } from './agent-loader';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
@@ -79,7 +80,7 @@ function createInternalAgentRegistry() {
     } catch (error) {
       runner.stop();
       await runtime.dispose().catch((disposeError) => {
-        console.error(`[AgentRegistry] Failed to dispose replacement runtime ${runtime.id}:`, disposeError);
+        forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose replacement runtime', context: { runtimeId: runtime.id, error: disposeError } });
       });
       throw error;
     }
@@ -94,7 +95,7 @@ function createInternalAgentRegistry() {
 
     agent.runner.stop();
     void agent.runtime.dispose().catch((error) => {
-      console.error(`[AgentRegistry] Failed to dispose runtime ${agentId}:`, error);
+      forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
     });
     agents.delete(agentId);
   }
