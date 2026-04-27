@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
@@ -65,11 +66,11 @@ export async function main() {
       const entry = registry.get(input.agentId);
 
       if (!entry) {
-        console.warn(`[Forge] Schedule wake requested for unloaded agent ${input.agentId}`);
+        forgeDebug({ scope: 'forge-main', level: 'warn', message: 'Schedule wake requested for unloaded agent', context: { agentId: input.agentId, scheduleId: input.scheduleId } });
         return;
       }
 
-      console.log(`[Forge] Schedule wake requested for agent ${input.agentId}`);
+      forgeDebug({ scope: 'forge-main', level: 'info', message: 'Schedule wake requested for agent', context: { agentId: input.agentId, scheduleId: input.scheduleId } });
       entry.runner.notifyExternalEvent({
         type: 'schedule',
         groupKey: `schedule:${input.scheduleId}`,
@@ -124,11 +125,11 @@ export async function main() {
   await schedules.loadAll();
 
   await httpServer.start();
-  console.log(`[Forge] HTTP server listening on ${publicBaseUrl}`);
+  forgeDebug({ scope: 'forge-main', level: 'info', message: 'HTTP server listening', context: { publicBaseUrl } });
 
   // Graceful shutdown handlers
   const handleShutdown = (signal: string) => {
-    console.log(`\n[${signal}] Shutting down gracefully...`);
+    forgeDebug({ scope: 'forge-main', level: 'info', message: 'Shutting down gracefully', context: { signal } });
     void schedules
       .stop()
       .finally(() => httpServer.stop())
@@ -143,6 +144,6 @@ export async function main() {
 
 main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(message);
+  forgeDebug({ scope: 'forge-main', level: 'error', message: 'Fatal error', context: { error: message } });
   process.exitCode = 1;
 });
