@@ -269,14 +269,14 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       client = nextClient;
       reconnectDelayMs = 1000;
-      console.log('[email] Connected to IMAP server');
+      forgeDebug({ scope: 'email-account', level: 'info', message: 'Connected to IMAP server' });
 
       nextClient.on('close', () => {
         if (client === nextClient) {
           client = null;
         }
 
-        console.log('[email] Connection closed');
+        forgeDebug({ scope: 'email-account', level: 'info', message: 'IMAP connection closed' });
         if (!disposed) {
           scheduleReconnect();
         }
@@ -387,13 +387,13 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         markMessageSeen(currentClient, uid);
       }
     } catch (error) {
-      console.error('[email] Error processing message:', error);
+      forgeDebug({ scope: 'email-account', level: 'error', message: 'Error processing message', context: { error } });
     }
   }
 
   function markMessageSeen(currentClient: ImapFlow, uid: number) {
     void currentClient.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((error) => {
-      console.error('[email] Failed to mark message as seen:', error);
+      forgeDebug({ scope: 'email-account', level: 'error', message: 'Failed to mark message as seen', context: { error } });
     });
   }
 
@@ -409,7 +409,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await processMessage(uid, currentClient);
       }
     } catch (error) {
-      console.error('[email] Error fetching unseen messages:', error);
+      forgeDebug({ scope: 'email-account', level: 'error', message: 'Error fetching unseen messages', context: { error } });
     }
   }
 
@@ -491,7 +491,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await currentClient.idle();
       }
     } catch (error) {
-      console.error('[email] Listener error:', error);
+      forgeDebug({ scope: 'email-account', level: 'error', message: 'Listener error', context: { error } });
       if (!client) {
         scheduleReconnect();
       }
