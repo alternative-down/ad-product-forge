@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { join } from 'node:path';
 
 import { sql } from 'drizzle-orm';
@@ -10,21 +11,21 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
   const databasePath = getAppDatabasePath();
 
   try {
-    console.log('[Migrations] Running pending migrations for application database...');
-    console.log('[Migrations] Application database path:', databasePath);
-    console.log('[Migrations] Working directory:', process.cwd());
-    console.log('[Migrations] Migrations folder:', migrationsFolder);
-    console.log('[Migrations] Applied rows before migrate:', await getAppliedMigrationRows(db));
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Running pending migrations for application database' });
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Application database path', context: { databasePath } });
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Working directory', context: { cwd: process.cwd() } });
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Migrations folder', context: { migrationsFolder } });
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Applied rows before migrate', context: { appliedRows: await getAppliedMigrationRows(db) } });
 
     await migrate(db, {
       migrationsFolder,
     });
 
-    console.log('[Migrations] Applied rows after migrate:', await getAppliedMigrationRows(db));
-    console.log('[Migrations] Migrations completed successfully');
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Applied rows after migrate', context: { appliedRows: await getAppliedMigrationRows(db) } });
+    forgeDebug({ scope: 'migrations', level: 'info', message: 'Migrations completed successfully' });
   } catch (error) {
-    console.error('[Migrations] Failed to run migrations:', error);
-    console.error('[Migrations] Applied rows at failure:', await getAppliedMigrationRows(db));
+    forgeDebug({ scope: 'migrations', level: 'error', message: 'Failed to run migrations', context: { error } });
+    forgeDebug({ scope: 'migrations', level: 'error', message: 'Applied rows at failure', context: { appliedRows: await getAppliedMigrationRows(db) } });
     throw error;
   }
 }
