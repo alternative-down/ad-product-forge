@@ -33,6 +33,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     unread: boolean;
     authorId: string;
     authorDisplayName: string;
+    threadKey?: string;
   }>>();
 
   function toUint8Array(value: ArrayBuffer | Uint8Array | string) {
@@ -168,6 +169,23 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
 
     return null;
+  }
+
+  /**
+   * Resolves the stable thread key for an email.
+   * Uses inReplyTo[0], then references[0], then messageId as fallback.
+   * Messages sharing the same thread key belong to the same conversation thread.
+   */
+  function resolveEmailThreadKey(parsed: Email): string {
+    const inReplyTo = parsed.inReplyTo;
+    if (inReplyTo && inReplyTo.length > 0 && inReplyTo[0]) {
+      return inReplyTo[0];
+    }
+    const references = parsed.references;
+    if (references && references.length > 0 && references[0]) {
+      return references[0];
+    }
+    return parsed.messageId ?? `orphan-${Date.now()}`;
   }
 
   function resolveCreatedAt(email: Email) {
@@ -372,8 +390,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         }
 
         const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
+        const threadKey = resolveEmailThreadKey(parsed);
         await deliverMessage({
           messageId: providerMessageId,
+          metadata: { threadKey },
           targetKey: participant.targetKey,
           conversationName: parsed.subject ?? undefined,
           authorId: participant.authorId,
@@ -434,6 +454,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         unread: boolean;
         conversationName?: string;
         attachments: CommunicationFile[];
+        threadKey: string;
       }> = [];
 
       for await (const message of queryClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
@@ -450,6 +471,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         }
 
         const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
+        const threadKey = resolveEmailThreadKey(parsed);
         items.push({
           messageId: providerMessageId,
           targetKey: participant.targetKey,
@@ -459,6 +481,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           createdAt: resolveCreatedAt(parsed),
           unread: !(message.flags?.has?.('\\Seen') ?? false),
           conversationName: parsed.subject ?? undefined,
+          threadKey,
           attachments: toCommunicationAttachments(parsed, providerMessageId),
         });
       }
@@ -549,24 +572,23 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       return [...contacts.values()].sort((left, right) => left.displayName.localeCompare(right.displayName));
     },
     async listConversations() {
-      // TODO: Resolve email conversations by real thread metadata (message-id, in-reply-to, references)
-      // instead of grouping only by participant address.
+      // Group by threadKey so emails sharing the same reply chain appear together.
       const inboxEmails = await listRecentInboxEmails(50);
       const grouped = new Map<string, typeof inboxEmails>();
 
       for (const email of inboxEmails) {
-        const existing = grouped.get(email.targetKey) ?? [];
+        const key = email.threadKey || email.targetKey;
+        const existing = grouped.get(key) ?? [];
         existing.push(email);
-        grouped.set(email.targetKey, existing);
+        grouped.set(key, existing);
       }
 
       for (const [targetKey, messages] of recentOutboundMessages.entries()) {
-        const existing = grouped.get(targetKey) ?? [];
-        existing.push(...messages.map((message) => ({
-          ...message,
-          targetKey,
-        })));
-        grouped.set(targetKey, existing);
+        const threadKey = messages[0]?.threadKey;
+        const key = threadKey || targetKey;
+        const existing = grouped.get(key) ?? [];
+        existing.push(...messages.map((message) => ({ ...message, targetKey, threadKey: message.threadKey || targetKey })));
+        grouped.set(key, existing);
       }
 
       return Array.from(grouped.entries())
@@ -597,13 +619,16 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt));
     },
     async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
-      // TODO: Read email history by thread instead of only by the normalized target address.
+      // thread-aware: when targetKey is a threadKey, filter by it
       const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
       const parsedDateTo = parseFilterDate(dateTo, 'dateTo');
       const inboxEmails = await listRecentInboxEmails(Math.max((limit + offset) * 4, 50));
       const outboundMessages = recentOutboundMessages.get(targetKey) ?? [];
 
-      return [...inboxEmails.filter((email) => email.targetKey === targetKey), ...outboundMessages.map((message) => ({
+      return [...inboxEmails.filter((email) => {
+          if (email.threadKey && email.threadKey === targetKey) return true;
+          return email.targetKey === targetKey;
+        }), ...outboundMessages.map((message) => ({
         ...message,
         targetKey,
       }))]
