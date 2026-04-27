@@ -145,6 +145,7 @@ export async function fsPathExists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch {
+    // Safe: path does not exist — return false to signal absence
     return false;
   }
 }

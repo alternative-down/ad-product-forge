@@ -162,6 +162,7 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
 
     return entries.join('\n');
   } catch {
+    // Safe: malformed JSON from external source — return null to signal no valid content
     return null;
   }
 }
