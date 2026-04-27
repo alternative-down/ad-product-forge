@@ -13,6 +13,7 @@ import {
   mergeToolLogMessages,
   buildThreadToolInvocationParts,
   collectConversationParticipants,
+  isTextPart,
 } from './helpers';
 
 // Helper types for test data
@@ -442,3 +443,34 @@ describe('collectConversationParticipants', () => {
     expect(result).toEqual(['Bob']);
   });
 });
+
+describe('isTextPart', () => {
+  it('returns true for text part', () => {
+    expect(isTextPart({ type: 'text', text: 'hello' })).toBe(true);
+  });
+
+  it('returns true for reasoning part', () => {
+    expect(isTextPart({ type: 'reasoning', text: 'thinking...' })).toBe(true);
+  });
+
+  it('returns false for other part types', () => {
+    expect(isTextPart({ type: 'tool-call', text: 'hello' })).toBe(false);
+    expect(isTextPart({ type: 'tool-result', text: 'hello' })).toBe(false);
+    expect(isTextPart({ type: 'image', text: 'hello' })).toBe(false);
+  });
+
+  it('returns false when text is missing', () => {
+    expect(isTextPart({ type: 'text' })).toBe(false);
+    expect(isTextPart({ type: 'reasoning' })).toBe(false);
+  });
+
+  it('returns false when text is empty string', () => {
+    expect(isTextPart({ type: 'text', text: '' })).toBe(false);
+  });
+
+  it('returns false for null/undefined type', () => {
+    expect(isTextPart({ text: 'hello' })).toBe(false);
+    expect(isTextPart({ type: undefined, text: 'hello' })).toBe(false);
+  });
+});
+
