@@ -1,16 +1,16 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from 'drizzle-orm';
-import path from 'node:path';
-import { customAlphabet } from 'nanoid';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from "drizzle-orm";
+import path from "node:path";
+import { customAlphabet } from "nanoid";
 
 import type {
   CommunicationFile,
   CommunicationInboundMessage,
   CommunicationProviderConversation,
   CommunicationProviderMessage,
-} from '@forge-runtime/core';
-import { forgeDebug } from '@forge-runtime/core';
+} from "@forge-runtime/core";
+import { forgeDebug } from "@forge-runtime/core";
 
-import type { Database } from '../database/index';
+import type { Database } from "../database/index";
 import {
   internalChatAccounts,
   internalChatConversationMembers,
@@ -18,93 +18,15 @@ import {
   internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
-} from '../database/schema';
-import { createId } from '../utils/id';
-
-type InternalChatHandler = (message: CommunicationInboundMessage) => Promise<void> | void;
-
-const createSlugSuffix = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
-
-function parseFilterDate(value: string | undefined, fieldName: string) {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Date.parse(value);
-
-  if (Number.isNaN(parsed)) {
-    throw new Error(`Invalid ${fieldName}: ${value}`);
-  }
-
-  return parsed;
-}
-
-type InternalChatGroupMember = {
-  groupId: string;
-  participantId: string;
-  participantKey: string;
-  participantSlug: string;
-  participantName: string;
-  role: string;
-  createdAt: string;
-};
-
-function createInternalChatSlug(displayName: string) {
-  const baseSlug = displayName
-    .trim()
-    .split(/\s+/)[0]
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    || 'agent';
-
-  return `${baseSlug}-${createSlugSuffix()}`;
-}
-
-function sanitizeAttachmentName(fileName: string) {
-  const value = fileName
-    .replace(/[/\\?%*:|"<>]/g, '-')
-    .trim();
-
-  return value || 'attachment';
-}
-
-function resolveContentType(fileName: string) {
-  const extension = path.extname(fileName).toLowerCase();
-
-  if (extension === '.png') return 'image/png';
-  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
-  if (extension === '.gif') return 'image/gif';
-  if (extension === '.webp') return 'image/webp';
-  if (extension === '.pdf') return 'application/pdf';
-  if (extension === '.json') return 'application/json';
-  if (extension === '.txt' || extension === '.md') return 'text/plain';
-  if (extension === '.csv') return 'text/csv';
-  if (extension === '.mp3') return 'audio/mpeg';
-  if (extension === '.wav') return 'audio/wav';
-  if (extension === '.mp4') return 'video/mp4';
-
-  return undefined;
-}
-
-function buildAgentAccountDescription(input: {
-  agentId: string;
-  agentName: string;
-  agentDescription?: string;
-  roleName?: string;
-  roleDescription?: string;
-}) {
-  return [
-    `Agent id: ${input.agentId}`,
-    `Agent name: ${input.agentName}`,
-    input.agentDescription?.trim() ? `Agent description: ${input.agentDescription.trim()}` : null,
-    input.roleName?.trim() ? `Role name: ${input.roleName.trim()}` : null,
-    input.roleDescription?.trim() ? `Role description: ${input.roleDescription.trim()}` : null,
-  ].filter(Boolean).join('\n');
-}
-
+} from "../database/schema";
+import { createId } from "../utils/id";
+import {
+  buildAgentAccountDescription,
+  createInternalChatSlug,
+  parseFilterDate,
+  resolveContentType,
+  sanitizeAttachmentName,
+} from "./internal-chat-helpers";
 export function createInternalChatService(
   db: Database,
 ) {
