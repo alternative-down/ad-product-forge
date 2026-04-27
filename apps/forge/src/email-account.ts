@@ -269,14 +269,14 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       client = nextClient;
       reconnectDelayMs = 1000;
-      forgeDebug({ scope: 'email-account', level: 'info', message: 'Connected to IMAP server' });
+      forgeDebug('email-account', 'Connected to IMAP server');
 
       nextClient.on('close', () => {
         if (client === nextClient) {
           client = null;
         }
 
-        forgeDebug({ scope: 'email-account', level: 'info', message: 'IMAP connection closed' });
+        forgeDebug('email-account', 'IMAP connection closed');
         if (!disposed) {
           scheduleReconnect();
         }
@@ -318,7 +318,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       try {
         await queryClient.logout();
       } catch (error) {
-        forgeDebug({ scope: 'email-account', level: 'debug', message: 'Logout failed (best-effort)', context: { error } });
+        forgeDebug('email-account', 'Logout failed (best-effort)', { error });
       }
     }
   }
@@ -387,13 +387,13 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         markMessageSeen(currentClient, uid);
       }
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'error', message: 'Error processing message', context: { error } });
+      forgeDebug('email-account', 'Error processing message', { error });
     }
   }
 
   function markMessageSeen(currentClient: ImapFlow, uid: number) {
     void currentClient.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((error) => {
-      forgeDebug({ scope: 'email-account', level: 'error', message: 'Failed to mark message as seen', context: { error } });
+      forgeDebug('email-account', 'Failed to mark message as seen', { error });
     });
   }
 
@@ -409,7 +409,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await processMessage(uid, currentClient);
       }
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'error', message: 'Error fetching unseen messages', context: { error } });
+      forgeDebug('email-account', 'Error fetching unseen messages', { error });
     }
   }
 
@@ -491,7 +491,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await currentClient.idle();
       }
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'error', message: 'Listener error', context: { error } });
+      forgeDebug('email-account', 'Listener error', { error });
       if (!client) {
         scheduleReconnect();
       }
@@ -523,7 +523,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         try {
           await currentClient.logout();
         } catch (error) {
-          forgeDebug({ scope: 'email-account', level: 'debug', message: 'Logout failed during disposal', context: { error } });
+          forgeDebug('email-account', 'Logout failed during disposal', { error });
         }
       }
     },
