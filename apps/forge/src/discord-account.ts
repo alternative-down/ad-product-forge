@@ -316,7 +316,7 @@ export function createDiscordProvider(config: {
         await deliverMessage(inboundMessage);
         forgeDebug('discord', 'deliverMessage completed');
       } catch (error) {
-        console.error('[discord] Error handling MessageCreate event:', error);
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Error handling MessageCreate event', context: { error } });
       }
     });
 
@@ -374,7 +374,7 @@ export function createDiscordProvider(config: {
           rememberUser(member.user);
         }
       } catch (error) {
-        console.warn(`[discord] Failed to fetch members for guild ${guild.id}:`, error);
+        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch members for guild', context: { guildId: guild.id, error } });
       }
     }
 
