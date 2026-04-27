@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { forgeDebug } from '@forge-runtime/core';
 import { createClient } from '@libsql/client';
 import {
   buildThreadToolInvocationParts,
@@ -116,7 +117,7 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
         };
       });
   } catch (error) {
-    console.error(`[AdminReadModel] Failed to load external conversations for agent ${_agentId}:`, error);
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load external conversations', context: { agentId: _agentId, error } });
     return [];
   }
 }
@@ -158,7 +159,7 @@ async function listRecentInternalChatConversations(
       };
     }));
   } catch (error) {
-    console.error(`[AdminReadModel] Failed to load internal chat conversations for agent ${agentId}:`, error);
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load internal chat conversations', context: { agentId, error } });
     return [];
   }
 }
@@ -177,7 +178,7 @@ async function listInternalChatGroupParticipants(
 
     return conversation.participants.map((participant: { displayName?: string }) => participant.displayName ?? 'Unknown participant');
   } catch (error) {
-    console.error(`[AdminReadModel] Failed to load group participants for ${conversationKey}:`, error);
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, error } });
     return [];
   }
 }
@@ -249,7 +250,7 @@ async function listThreadMessages(
       await closeLibsqlClient(client);
     }
   } catch (error) {
-    console.error(`[AdminReadModel] Failed to load recent thread messages for agent ${agentId}:`, error);
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load recent thread messages', context: { agentId, error } });
     return {
       items: [],
       hasMore: false,
