@@ -5,6 +5,7 @@ import {
   truncatePreview,
   toToolBadge,
   humanizeMemoryKey,
+  isTextPart,
   formatWorkingMemoryValue,
   renderWorkingMemoryMarkdown,
   toScheduleSummary,
@@ -664,29 +665,26 @@ export function createAdminReadModel(input: {
       });
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
       const checkpointSummaryText = checkpointSummaryMessage?.parts
-        .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
-          part.type === 'text' || part.type === 'reasoning')
-        .map((part: { text?: string }) => part.text?.trim() ?? "")
-        .filter(Boolean)
-        .join('\n') ?? null;
+                  .filter(isTextPart)
+                  .map((part) => part.text!.trim())
+                  .filter(Boolean)
+                  .join('\n') ?? null;
       const reflection = operationalMemoryState.reflectionMessages
         .map((message) =>
           message.parts
-            .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
-              part.type === 'text' || part.type === 'reasoning')
-            .map((part: { text?: string }) => part.text?.trim() ?? "")
-            .filter(Boolean)
-            .join('\n'))
+                  .filter(isTextPart)
+                  .map((part) => part.text!.trim())
+                  .filter(Boolean)
+                  .join('\n'))
         .filter(Boolean)
         .join('\n');
       const observations = operationalMemoryState.observationMessages
         .map((message) =>
           message.parts
-            .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
-              part.type === 'text' || part.type === 'reasoning')
-            .map((part: { text?: string }) => part.text?.trim() ?? "")
-            .filter(Boolean)
-            .join('\n'))
+                  .filter(isTextPart)
+                  .map((part) => part.text!.trim())
+                  .filter(Boolean)
+                  .join('\n'))
         .filter(Boolean)
         .join('\n');
       const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
@@ -876,9 +874,8 @@ export function createAdminReadModel(input: {
           checkpointSummary: operationalMemoryState.checkpointSummaryMessage
             ? {
                 text: operationalMemoryState.checkpointSummaryMessage.parts
-                  .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
-                    part.type === 'text' || part.type === 'reasoning')
-                  .map((part: { text?: string }) => part.text?.trim() ?? "")
+                  .filter(isTextPart)
+                  .map((part) => part.text!.trim())
                   .filter(Boolean)
                   .join('\n'),
                 tokenCount: operationalMemoryState.metrics.checkpointTokenCount,
@@ -893,11 +890,10 @@ export function createAdminReadModel(input: {
             lastObservedAt: message.createdAt,
             reflectedGeneration: null,
             text: message.parts
-              .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
-                part.type === 'text' || part.type === 'reasoning')
-              .map((part: { text?: string }) => part.text?.trim() ?? "")
-              .filter(Boolean)
-              .join('\n'),
+                  .filter(isTextPart)
+                  .map((part) => part.text!.trim())
+                  .filter(Boolean)
+                  .join('\n'),
           })),
           activeReflectionBlocks: operationalMemoryState.reflectionMessages.map((message) => ({
             recordId: message.id,
@@ -905,11 +901,10 @@ export function createAdminReadModel(input: {
             tokenCount: estimateMessageUnits(message),
             createdAt: message.createdAt,
             text: message.parts
-              .filter((part: { type?: string; text?: string }): part is Extract<{ type?: string; text?: string }, { type: 'text' | 'reasoning' }> =>
-                part.type === 'text' || part.type === 'reasoning')
-              .map((part: { text?: string }) => part.text?.trim() ?? "")
-              .filter(Boolean)
-              .join('\n'),
+                  .filter(isTextPart)
+                  .map((part) => part.text!.trim())
+                  .filter(Boolean)
+                  .join('\n'),
           })),
           latestMetrics: null,
         },
