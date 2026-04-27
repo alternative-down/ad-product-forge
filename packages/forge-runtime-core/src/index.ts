@@ -199,3 +199,4 @@ export {
   type RuntimeWorkingMemoryStore,
   type WorkingMemoryRecord,
 } from './runtime-working-memory.js';
+export { logger } from './logger.js';
