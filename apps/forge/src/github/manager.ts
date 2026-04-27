@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
@@ -1304,10 +1305,7 @@ export function createGitHubAppManager(config: {
         break;
       } catch (error) {
         lastError = error;
-        console.warn(
-          `[GitHubAppManager] Installation ${installationId} for agent ${agentId} is not ready yet (attempt ${attempt}/${INSTALLATION_READY_ATTEMPTS})`,
-          error,
-        );
+        forgeDebug({ scope: 'github-manager', level: 'warn', message: 'Installation not ready yet', context: { installationId, agentId, attempt, INSTALLATION_READY_ATTEMPTS, error } });
 
         if (attempt < INSTALLATION_READY_ATTEMPTS) {
           await new Promise((resolve) => setTimeout(resolve, INSTALLATION_READY_DELAY_MS));
@@ -1373,7 +1371,7 @@ export function createGitHubAppManager(config: {
       return { status: 400, body: 'Missing GitHub webhook headers' };
     }
 
-    console.log(`[GitHubWebhook] Received ${eventName} for agent ${agentId} delivery ${deliveryId}`);
+    forgeDebug({ scope: 'github-manager', level: 'info', message: 'GitHub webhook received', context: { eventName, agentId, deliveryId } });
 
     const app = createGitHubApp(credentials);
     app.webhooks.onAny(async ({ name, payload }) => {
@@ -1408,7 +1406,7 @@ export function createGitHubAppManager(config: {
       });
 
       if (isSelfEvent) {
-        console.log(`[GitHubWebhook] Ignoring self event for agent ${agentId}: ${name}`);
+        forgeDebug({ scope: 'github-manager', level: 'debug', message: 'Ignoring self event', context: { agentId, eventName: name } });
         return;
       }
 
@@ -1416,8 +1414,8 @@ export function createGitHubAppManager(config: {
         agentId,
         content,
       });
-      console.log(`[GitHubWebhook] Created notification for agent ${agentId}: ${content}`);
-      console.log(`[GitHubWebhook] Stored notification without wake for agent ${agentId}: ${name}`);
+      forgeDebug({ scope: 'github-manager', level: 'info', message: 'GitHub webhook notification created', context: { agentId, content } });
+      forgeDebug({ scope: 'github-manager', level: 'info', message: 'Stored notification without wake', context: { agentId, eventName: name } });
     });
 
     await app.webhooks.verifyAndReceive({
@@ -1482,7 +1480,7 @@ export function createGitHubAppManager(config: {
       const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
       return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
     } catch (error) {
-      console.warn('[GitHubAppManager] Failed to parse GitHub credentials:', error);
+      forgeDebug({ scope: 'github-manager', level: 'warn', message: 'Failed to parse GitHub credentials', context: { error } });
       return null;
     }
   }
