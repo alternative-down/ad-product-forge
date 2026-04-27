@@ -58,6 +58,8 @@ import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCapabilityIds } from '../capabilities/catalog';
+import { getFinanceOverview } from './read-model/finance-overview';
+import { getRecurringPayables } from './read-model/payables-overview';
 import { decryptSecret } from '../encryption/crypto';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createSystemIntegrationStore } from '../system-integrations/store';
@@ -1038,17 +1040,13 @@ export function createAdminReadModel(input: {
   }
 
   async function getFinance() {
-    const [balance, summary, movements, recurringPayables] = await Promise.all([
-      finance.getCompanyCashBalance(),
-      finance.getCompanyCashSummary(),
-      finance.listCompanyCashMovements({ limit: 50 }),
-      payables.listRecurringPayables(),
+    const [overview, recurringPayables] = await Promise.all([
+      getFinanceOverview(finance),
+      getRecurringPayables(payables),
     ]);
 
     return {
-      balanceUsd: balance.balanceUsd,
-      summary,
-      movements,
+      ...overview,
       recurringPayables,
     };
   }
