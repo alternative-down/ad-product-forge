@@ -469,3 +469,64 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
 
   return parts;
 }
+
+
+/**
+ * Extracts participant names from conversation data.
+ * Used for displaying conversation participants in the admin UI.
+ */
+export function collectConversationParticipants(input: {
+  name?: string;
+  participants?: string[];
+  messages: Array<{
+    authorDisplayName?: string;
+  }>;
+}) {
+  const participants = new Set<string>();
+
+  for (const participant of input.participants ?? []) {
+    if (participant && participant !== input.name) {
+      participants.add(participant);
+    }
+  }
+
+  for (const message of input.messages) {
+    if (message.authorDisplayName && message.authorDisplayName !== input.name) {
+      participants.add(message.authorDisplayName);
+    }
+  }
+
+  return [...participants];
+}
+
+import type { Database } from '../../database/index';
+import {
+  createAgentLongTermMemoryStore,
+  type LongTermMemoryState,
+} from '../../agents/agent-long-term-memory-store';
+
+export type LongTermMemoryRecallSnapshot = Awaited<
+  ReturnType<ReturnType<typeof createAgentLongTermMemoryStore>['readRecallState']>
+>['snapshot'];
+
+export async function readLongTermMemoryRecallSnapshot(
+  db: Database,
+  agentId: string,
+) {
+  const state = await createAgentLongTermMemoryStore(db, {
+    agentId,
+  }).readRecallState();
+
+  return state.snapshot;
+}
+
+export async function readLongTermMemoryState(
+  db: Database,
+  agentId: string,
+): Promise<LongTermMemoryState> {
+  const state = await createAgentLongTermMemoryStore(db, {
+    agentId,
+  }).readState();
+
+  return state satisfies LongTermMemoryState;
+}
