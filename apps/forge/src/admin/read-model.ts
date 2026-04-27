@@ -198,7 +198,7 @@ export function createAdminReadModel(input: {
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin runtime memory read timed out for ${agent.id}`,
           ).catch((error) => {
-            console.error(`[AdminReadModel] Failed to load runtime memory for agent ${agent.id}:`, error);
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load runtime memory', context: { agentId: agent.id, error } });
             return null;
           }),
         ] as const),
@@ -215,7 +215,7 @@ export function createAdminReadModel(input: {
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin latest thread details read timed out for ${agent.id}`,
           ).catch((error) => {
-            console.error(`[AdminReadModel] Failed to load latest thread details for agent ${agent.id}:`, error);
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load latest thread details', context: { agentId: agent.id, error } });
             return {
               items: [],
               hasMore: false,
@@ -257,7 +257,7 @@ export function createAdminReadModel(input: {
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin LTM state read timed out for ${agent.id}`,
           ).catch((error) => {
-            console.error(`[AdminReadModel] Failed to load LTM state for agent ${agent.id}:`, error);
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load LTM state', context: { agentId: agent.id, error } });
             return null;
           }),
         ] as const),
@@ -273,7 +273,7 @@ export function createAdminReadModel(input: {
               ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
               `Admin runtime LTM snapshot timed out for ${agent.id}`,
             ).catch((error) => {
-              console.error(`[AdminReadModel] Failed to load runtime LTM snapshot for agent ${agent.id}:`, error);
+              forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load runtime LTM snapshot', context: { agentId: agent.id, error } });
               return null;
             })
             : null;
@@ -648,7 +648,7 @@ export function createAdminReadModel(input: {
       const agentContextPath = path.resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
       const agentContext = await readFile(agentContextPath, 'utf8')
         .then((content) => content.trim() || null)
-        .catch((err) => { console.error("[safe-catch]", err); return null; });
+        .catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { error: err } }); return null; });
       const workingMemory = (await conversationStore.read({
         threadId: mastraAgentId,
         resourceId: mastraAgentId,
@@ -699,13 +699,13 @@ export function createAdminReadModel(input: {
           loadedAgent.runtime.longTermMemory.readSnapshot(),
           ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
           `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-        ).catch((err) => { console.error("[safe-catch]", err); return null; })
+        ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { error: err } }); return null; })
         : null;
       const persistedLtmState = await withTimeout(
         readLongTermMemoryState(db, agentId),
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
-      ).catch((err) => { console.error("[safe-catch]", err); return null; });
+      ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { error: err } }); return null; });
       const ltm = (runtimeLtmSnapshot
         ? {
             ...runtimeLtmSnapshot,
