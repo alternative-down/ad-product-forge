@@ -469,3 +469,32 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
 
   return parts;
 }
+
+
+/**
+ * Extracts participant names from conversation data.
+ * Used for displaying conversation participants in the admin UI.
+ */
+export function collectConversationParticipants(input: {
+  name?: string;
+  participants?: string[];
+  messages: Array<{
+    authorDisplayName?: string;
+  }>;
+}) {
+  const participants = new Set<string>();
+
+  for (const participant of input.participants ?? []) {
+    if (participant && participant !== input.name) {
+      participants.add(participant);
+    }
+  }
+
+  for (const message of input.messages) {
+    if (message.authorDisplayName && message.authorDisplayName !== input.name) {
+      participants.add(message.authorDisplayName);
+    }
+  }
+
+  return [...participants];
+}

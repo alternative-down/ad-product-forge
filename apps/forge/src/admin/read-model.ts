@@ -13,6 +13,7 @@ import {
   parseProviderCredentials,
   mergeToolLogMessages,
   buildThreadToolInvocationParts,
+  collectConversationParticipants,
 } from './read-model/helpers';
 
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
@@ -1314,29 +1315,6 @@ async function listRecentInternalChatConversations(
   }
 }
 
-function collectConversationParticipants(input: {
-  name?: string;
-  participants?: string[];
-  messages: Array<{
-    authorDisplayName?: string;
-  }>;
-}) {
-  const participants = new Set<string>();
-
-  for (const participant of input.participants ?? []) {
-    if (participant && participant !== input.name) {
-      participants.add(participant);
-    }
-  }
-
-  for (const message of input.messages) {
-    if (message.authorDisplayName && message.authorDisplayName !== input.name) {
-      participants.add(message.authorDisplayName);
-    }
-  }
-
-  return [...participants];
-}
 
 async function listInternalChatGroupParticipants(
   internalChat: InternalChatService,
