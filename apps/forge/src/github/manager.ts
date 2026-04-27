@@ -21,115 +21,44 @@ import {
   type GitHubAppManifestConfig,
 } from './types';
 
+import {
+  buildManifestEvents,
+  buildManifestPermissions,
+  createAppName,
+  createGitHubInstallWakeContent,
+  createGitHubWebhookWakeContent,
+  isGitHubSelfEvent,
+  isRecord,
+  normalizeAssignees,
+  normalizeGitHubAppCredentials,
+  normalizeManifestConfig,
+  summarizeGitHubEvent,
+  toIssueDetails,
+  toIssueSummary,
+  getHeader,
+  getManifestCallbackPath,
+  getRegisterPath,
+  getSetupPath,
+  getWebhookPath,
+  escapeHtml,
+  DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
+} from './helpers';
+
 const GITHUB_PROVIDER_TYPE = 'github-app';
 const INSTALLATION_READY_ATTEMPTS = 10;
 const INSTALLATION_READY_DELAY_MS = 1500;
-const GITHUB_APP_NAME_SUFFIX_LENGTH = 6;
-const GITHUB_APP_NAME_MAX_LENGTH = 32;
 
-/**
- * Normalizes GitHub usernames for assignees.
- * - Accounts already ending with [bot] are used as-is
- * - GitHub App bot accounts (kebab-case like "architectron-the-scalabil-sykutp") 
- *   need [bot] suffix appended
- * - Regular accounts are used as-is
- */
-function normalizeAssignees(assignees?: string[]): string[] | undefined {
-  if (!assignees || assignees.length === 0) {
-    return undefined;
-  }
-
-  // GitHub App bot accounts follow the pattern: app-name-appId
-  // They have at least 2 kebab-case segments and end with an alphanumeric ID
-  // Examples: architectron-the-scalabil-sykutp, wireframe-wizard-pixelia-l85akb
-  const gitHubAppPattern = /^[a-z0-9]+(-[a-z0-9]+)+$/;
-
-  return assignees.map((assignee) => {
-    // Already has [bot] suffix - use as-is
-    if (assignee.endsWith('[bot]')) {
-      return assignee;
-    }
-
-    // GitHub App bot accounts (kebab-case): add [bot] suffix
-    if (gitHubAppPattern.test(assignee)) {
-      return `${assignee}[bot]`;
-    }
-
-    // Regular accounts: use as-is
-    return assignee;
-  });
-}
-
-function buildManifestPermissions(manifestConfig: GitHubAppManifestConfig) {
-  return {
-    administration: manifestConfig.permissions.administration ? 'write' : 'read',
-    contents: manifestConfig.permissions.contents ? 'write' : 'read',
-    issues: manifestConfig.permissions.issues ? 'write' : 'read',
-    metadata: 'read',
-    organization_projects: manifestConfig.permissions.organization_projects ? 'write' : 'read',
-    pull_requests: manifestConfig.permissions.pull_requests ? 'write' : 'read',
-    repository_projects: manifestConfig.permissions.repository_projects ? 'write' : 'read',
-    workflows: manifestConfig.permissions.workflows ? 'write' : 'read',
-  };
-}
-
-function buildManifestEvents(manifestConfig: GitHubAppManifestConfig) {
-  return Object.entries(manifestConfig.events)
-    .filter(([, enabled]) => enabled)
-    .map(([event]) => event);
-}
-
-function normalizeManifestConfig(value: unknown) {
-  const parsed = githubAppManifestConfigSchema.safeParse(value);
-  if (parsed.success) {
-    return parsed.data;
-  }
-
-  return DEFAULT_GITHUB_APP_MANIFEST_CONFIG;
-}
-
-function normalizeGitHubAppCredentials(credentials: Omit<GitHubAppCredentials, 'manifestConfig'> & {
-  manifestConfig?: unknown;
-}): GitHubAppCredentials {
-  return {
-    ...credentials,
-    manifestConfig: normalizeManifestConfig(credentials.manifestConfig),
-  } as GitHubAppCredentials;
-}
 const manifestConversionSchema = z.object({
   id: z.number().int(),
   pem: z.string(),
   webhook_secret: z.string(),
 });
-
 export type GitHubAppProvisioning = {
   agentId: string;
   status: GitHubAppCredentials['status'];
   registrationUrl: string;
   installUrl?: string;
   manifestConfig: GitHubAppManifestConfig;
-};
-
-const DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig = {
-  permissions: {
-    administration: true,
-    contents: true,
-    issues: true,
-    metadata: true,
-    organization_projects: true,
-    pull_requests: true,
-    repository_projects: true,
-    workflows: false,
-  },
-  events: {
-    push: true,
-    pull_request: true,
-    pull_request_review: true,
-    issues: true,
-    issue_comment: true,
-    repository: true,
-    workflow_run: false,
-  },
 };
 
 export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
@@ -603,7 +532,7 @@ export function createGitHubAppManager(config: {
 
     return response.data
       .filter((issue) => !('pull_request' in issue))
-      .map((issue) => toIssueSummary(issue));
+      .map((issue) => toIssueSummary(issue as unknown as Parameters<typeof toIssueSummary>[0]));
   }
 
   async function getIssue(agentId: string, input: {
@@ -619,7 +548,7 @@ export function createGitHubAppManager(config: {
       issue_number: input.issueNumber,
     });
 
-    return toIssueDetails(response.data);
+    return toIssueDetails(response.data as unknown as Parameters<typeof toIssueDetails>[0]);
   }
 
   async function createIssue(agentId: string, input: {
@@ -643,7 +572,7 @@ export function createGitHubAppManager(config: {
       milestone: input.milestone,
     });
 
-    return toIssueDetails(response.data);
+    return toIssueDetails(response.data as unknown as Parameters<typeof toIssueDetails>[0]);
   }
 
   async function updateIssue(agentId: string, input: {
@@ -671,7 +600,7 @@ export function createGitHubAppManager(config: {
       milestone: input.milestone,
     });
 
-    return toIssueDetails(response.data);
+    return toIssueDetails(response.data as unknown as Parameters<typeof toIssueDetails>[0]);
   }
 
   async function closeIssue(agentId: string, input: {
@@ -1305,7 +1234,7 @@ export function createGitHubAppManager(config: {
         break;
       } catch (error) {
         lastError = error;
-        forgeDebug({ scope: 'github-manager', level: 'warn', message: 'Installation not ready yet', context: { installationId, agentId, attempt, INSTALLATION_READY_ATTEMPTS, error } });
+        forgeDebug('github-manager', 'Installation not ready yet', { installationId, agentId, attempt, INSTALLATION_READY_ATTEMPTS, error });
 
         if (attempt < INSTALLATION_READY_ATTEMPTS) {
           await new Promise((resolve) => setTimeout(resolve, INSTALLATION_READY_DELAY_MS));
@@ -1371,7 +1300,7 @@ export function createGitHubAppManager(config: {
       return { status: 400, body: 'Missing GitHub webhook headers' };
     }
 
-    forgeDebug({ scope: 'github-manager', level: 'info', message: 'GitHub webhook received', context: { eventName, agentId, deliveryId } });
+    forgeDebug('github-manager', 'GitHub webhook received', { eventName, agentId, deliveryId });
 
     const app = createGitHubApp(credentials);
     app.webhooks.onAny(async ({ name, payload }) => {
@@ -1406,7 +1335,7 @@ export function createGitHubAppManager(config: {
       });
 
       if (isSelfEvent) {
-        forgeDebug({ scope: 'github-manager', level: 'debug', message: 'Ignoring self event', context: { agentId, eventName: name } });
+        forgeDebug('github-manager', 'Ignoring self event', { agentId, eventName: name });
         return;
       }
 
@@ -1414,8 +1343,8 @@ export function createGitHubAppManager(config: {
         agentId,
         content,
       });
-      forgeDebug({ scope: 'github-manager', level: 'info', message: 'GitHub webhook notification created', context: { agentId, content } });
-      forgeDebug({ scope: 'github-manager', level: 'info', message: 'Stored notification without wake', context: { agentId, eventName: name } });
+      forgeDebug('github-manager', 'GitHub webhook notification created', { agentId, content });
+      forgeDebug('github-manager', 'Stored notification without wake', { agentId, eventName: name });
     });
 
     await app.webhooks.verifyAndReceive({
@@ -1480,7 +1409,7 @@ export function createGitHubAppManager(config: {
       const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
       return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
     } catch (error) {
-      forgeDebug({ scope: 'github-manager', level: 'warn', message: 'Failed to parse GitHub credentials', context: { error } });
+      forgeDebug('github-manager', 'Failed to parse GitHub credentials', { error });
       return null;
     }
   }
@@ -1537,213 +1466,6 @@ type GitHubIssueLike = {
   created_at: string;
   updated_at: string;
 };
-
-function toIssueSummary(issue: GitHubIssueLike) {
-  return {
-    number: issue.number,
-    title: issue.title,
-    state: issue.state,
-    url: issue.html_url,
-    labels: issue.labels.map((label) => typeof label === 'string' ? label : label.name),
-    assignees: issue.assignees?.map((assignee) => assignee.login) ?? [],
-    milestone: issue.milestone?.title ?? null,
-    createdAt: issue.created_at,
-    updatedAt: issue.updated_at,
-  };
-}
-
-function toIssueDetails(issue: GitHubIssueLike) {
-  return {
-    number: issue.number,
-    title: issue.title,
-    body: issue.body ?? '',
-    state: issue.state,
-    url: issue.html_url,
-    labels: issue.labels.map((label) => typeof label === 'string' ? label : label.name),
-    assignees: issue.assignees?.map((assignee) => assignee.login) ?? [],
-    milestone: issue.milestone
-      ? {
-        number: issue.milestone.number,
-        title: issue.milestone.title,
-      }
-      : null,
-    comments: 'comments' in issue ? issue.comments : 0,
-    createdAt: issue.created_at,
-    updatedAt: issue.updated_at,
-  };
-}
-
-function summarizeGitHubEvent(input: {
-  event: string;
-  action?: string;
-  repository?: string;
-  sender?: string;
-  payload: unknown;
-}) {
-  const payloadRecord = isRecord(input.payload) ? input.payload : {};
-  const issue = isRecord(payloadRecord.issue) ? payloadRecord.issue : null;
-  const pullRequest = isRecord(payloadRecord.pull_request) ? payloadRecord.pull_request : null;
-  const review = isRecord(payloadRecord.review) ? payloadRecord.review : null;
-  const actionText = input.action ? ` ${input.action}` : '';
-  const repositoryText = input.repository ? ` in ${input.repository}` : '';
-  const senderText = input.sender ? ` by ${input.sender}` : '';
-
-  if (input.event === 'issues' && issue) {
-    const number = typeof issue.number === 'number' ? issue.number : null;
-    const title = typeof issue.title === 'string' ? issue.title : null;
-    return `Issue${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'issue_comment' && issue) {
-    const number = typeof issue.number === 'number' ? issue.number : null;
-    const title = typeof issue.title === 'string' ? issue.title : null;
-    return `Issue comment${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'pull_request' && pullRequest) {
-    const number = typeof pullRequest.number === 'number' ? pullRequest.number : null;
-    const title = typeof pullRequest.title === 'string' ? pullRequest.title : null;
-    return `Pull request${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'pull_request_review' && pullRequest) {
-    const number = typeof pullRequest.number === 'number' ? pullRequest.number : null;
-    const title = typeof pullRequest.title === 'string' ? pullRequest.title : null;
-    const reviewState = review && typeof review.state === 'string' ? ` (${review.state.toLowerCase()})` : '';
-    return `Pull request review${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${reviewState}${senderText}`.trim();
-  }
-
-  if (input.event === 'push') {
-    const ref = typeof payloadRecord.ref === 'string' ? payloadRecord.ref.replace('refs/heads/', '') : null;
-    return `Push${repositoryText}${ref ? ` on ${ref}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'repository') {
-    return `Repository event${actionText}${repositoryText}${senderText}`.trim();
-  }
-
-  return `GitHub event ${input.event}${actionText}${repositoryText}${senderText}`.trim();
-}
-
-function createGitHubInstallWakeContent(input: {
-  agentId: string;
-  installationId: number;
-  organization: string;
-  appName: string;
-  appSlug: string;
-  timestamp: number;
-}) {
-  return [
-    'GitHub App installation completed.',
-    `Agent id: ${input.agentId}`,
-    `Installation id: ${input.installationId}`,
-    `Organization: ${input.organization}`,
-    `App name: ${input.appName}`,
-    `App slug: ${input.appSlug}`,
-    `Timestamp: ${new Date(input.timestamp).toISOString()}`,
-  ].join('\n');
-}
-
-function createGitHubWebhookWakeContent(input: {
-  agentId: string;
-  deliveryId: string;
-  event: string;
-  action?: string;
-  repository?: string;
-  sender?: string;
-  summary: string;
-  timestamp: number;
-}) {
-  const lines = [
-    'GitHub webhook received.',
-    `Agent id: ${input.agentId}`,
-    `Delivery id: ${input.deliveryId}`,
-    `Event: ${input.event}`,
-    `Timestamp: ${new Date(input.timestamp).toISOString()}`,
-  ];
-
-  if (input.action) {
-    lines.push(`Action: ${input.action}`);
-  }
-
-  if (input.repository) {
-    lines.push(`Repository: ${input.repository}`);
-  }
-
-  if (input.sender) {
-    lines.push(`Sender: ${input.sender}`);
-  }
-
-  lines.push('', 'Summary:', input.summary);
-
-  return lines.join('\n');
-}
-
-function isGitHubSelfEvent(
-  sender: string | undefined,
-  credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
-) {
-  if (!sender) {
-    return false;
-  }
-
-  return sender === credentials.appSlug || sender === `${credentials.appSlug}[bot]`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function createAppName(agentName: string, agentId: string) {
-  const suffix = nanoid(GITHUB_APP_NAME_SUFFIX_LENGTH).toLowerCase();
-  const fallbackBaseName = `agent-${agentId.slice(0, 8)}`;
-  const normalizedBaseName = agentName
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    || fallbackBaseName;
-  const maxBaseLength = GITHUB_APP_NAME_MAX_LENGTH - suffix.length - 1;
-  const baseName = normalizedBaseName.slice(0, maxBaseLength).replace(/-+$/g, '') || fallbackBaseName;
-
-  return `${baseName}-${suffix}`;
-}
-
-function getRegisterPath(agentId: string) {
-  return `/github/apps/${encodeURIComponent(agentId)}/register`;
-}
-
-function getManifestCallbackPath(agentId: string) {
-  return `/github/apps/${encodeURIComponent(agentId)}/manifest/callback`;
-}
-
-function getSetupPath(agentId: string) {
-  return `/github/apps/${encodeURIComponent(agentId)}/setup`;
-}
-
-function getWebhookPath(agentId: string) {
-  return `/webhooks/github/${encodeURIComponent(agentId)}`;
-}
-
-function getHeader(headers: Record<string, string | string[] | undefined>, name: string) {
-  const value = headers[name];
-
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return value;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 function html(status: number, body: string): HttpResponse {
   return {
