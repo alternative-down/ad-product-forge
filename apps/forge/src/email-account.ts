@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
 import PostalMime, { type Email } from 'postal-mime';
@@ -316,8 +317,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     } finally {
       try {
         await queryClient.logout();
-      } catch {
-        // Ignore logout failures on best-effort query connections.
+      } catch (error) {
+        forgeDebug({ scope: 'email-account', level: 'debug', message: 'Logout failed (best-effort)', context: { error } });
       }
     }
   }
@@ -521,8 +522,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       if (currentClient) {
         try {
           await currentClient.logout();
-        } catch {
-          // Ignore logout failures during provider disposal.
+        } catch (error) {
+          forgeDebug({ scope: 'email-account', level: 'debug', message: 'Logout failed during disposal', context: { error } });
         }
       }
     },

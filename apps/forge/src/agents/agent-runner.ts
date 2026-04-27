@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
@@ -1589,7 +1590,8 @@ function formatAbsentErrorDetailValue(value: unknown): string | null {
   try {
     const text = JSON.stringify(value);
     return text && text !== '{}' ? text.slice(0, 2_000) : null;
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'agent-runner', level: 'warn', message: 'Failed to serialize value', context: { error } });
     return String(value).slice(0, 2_000);
   }
 }
