@@ -127,6 +127,7 @@ import {
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
 
 import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/system/index.js';
+import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
 
 
 export function registerAdminRoutes(input: {
@@ -1239,25 +1240,5 @@ async function clearAgentHistory(opts: {
 }
 
 
-async function reloadAgentMcp(db: Database, loaderConfig: AgentLoaderConfig, agentId: string) {
-  await reloadAgentIfLoaded(db, loaderConfig, agentId);
-}
-
-async function reloadLinkedAgentsForMcpServer(
-  db: Database,
-  loaderConfig: AgentLoaderConfig,
-  serverId: string,
-) {
-  const linkedConfigs = await db.query.agentMcpConfigs.findMany({
-    where: eq(agentMcpConfigs.serverId, serverId),
-    columns: {
-      agentId: true,
-    },
-  });
-
-  for (const linkedConfig of linkedConfigs) {
-    await reloadAgentMcp(db, loaderConfig, linkedConfig.agentId);
-  }
-}
 
 
