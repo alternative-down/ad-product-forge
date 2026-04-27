@@ -1,0 +1,325 @@
+import type { agentSchedules } from '../../database/schema';
+
+// Tool name patterns for badge extraction
+const TOOL_NAME_BADGES: Array<{ pattern: RegExp; icon: string; label: string }> = [
+  { pattern: /workspace_execute_command|shell|bash|run_command/i, icon: '💻', label: 'Terminal' },
+  { pattern: /workspace_read_file|read_file|file_read/i, icon: '📄', label: 'File' },
+  { pattern: /workspace_write_file|write_file|file_write/i, icon: '✏️', label: 'Write' },
+  { pattern: /workspace_edit_file|edit_file|file_edit/i, icon: '🔧', label: 'Edit' },
+  { pattern: /list_files|workspace_list_files|file_list/i, icon: '📁', label: 'Files' },
+  { pattern: /grep|search|find/i, icon: '🔎', label: 'Search' },
+  { pattern: /http|fetch|request|curl/i, icon: '🌐', label: 'HTTP' },
+  { pattern: /email|mail|send/i, icon: '📧', label: 'Email' },
+  { pattern: /memory|recall|remember/i, icon: '🧠', label: 'Memory' },
+  { pattern: /git|github|commit|push/i, icon: '🐙', label: 'GitHub' },
+  { pattern: /schedule|cron|job/i, icon: '⏰', label: 'Schedule' },
+  { pattern: /discord|slack|chat/i, icon: '💬', label: 'Chat' },
+  { pattern: /mcp|tool/i, icon: '🔌', label: 'MCP' },
+];
+
+// Direct tool name to icon mappings
+const TOOL_ICONS: Record<string, string> = {
+  workspace_execute_command: '💻',
+  workspace_read_file: '📄',
+  workspace_write_file: '✏️',
+  workspace_edit_file: '🔧',
+  workspace_list_files: '📁',
+  workspace_grep: '🔎',
+  send_http_request: '🌐',
+  send_email: '📧',
+  memory_recall: '🧠',
+  search: '🔎',
+};
+
+/**
+ * Check if a string contains a memory-recall XML-like tag
+ */
+export function isMemoryRecallText(value: string) {
+  return /^\s*<memory-recall\b[\s\S]*<\/memory-recall>\s*$/u.test(value);
+}
+
+/**
+ * Split text into segments of regular text and memory-recall blocks
+ */
+export function splitMemoryRecallSegments(value: string) {
+  const segments: Array<{
+    kind: 'text' | 'memory-recall';
+    value: string;
+  }> = [];
+  const pattern = /<memory-recall\b[\s\S]*?<\/memory-recall>/gu;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(pattern)) {
+    const matchStart = match.index ?? 0;
+    const matchText = match[0];
+    const before = value.slice(lastIndex, matchStart).trim();
+
+    if (before) {
+      segments.push({
+        kind: 'text',
+        value: before,
+      });
+    }
+
+    segments.push({
+      kind: 'memory-recall',
+      value: matchText,
+    });
+    lastIndex = matchStart + matchText.length;
+  }
+
+  const remaining = value.slice(lastIndex).trim();
+
+  if (remaining) {
+    segments.push({
+      kind: 'text',
+      value: remaining,
+    });
+  }
+
+  return segments;
+}
+
+/**
+ * Truncate a string to a maximum length, adding ellipsis if needed
+ */
+export function truncatePreview(value: string) {
+  const maxLength = 200;
+  const ellipsis = '…';
+
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return value.slice(0, maxLength - ellipsis.length) + ellipsis;
+}
+
+/**
+ * Get tool badge (icon and label) for a given tool name
+ */
+export function toToolBadge(toolName: string) {
+  const normalizedToolName = toolName.toLowerCase();
+
+  for (const { pattern, icon, label } of TOOL_NAME_BADGES) {
+    if (pattern.test(normalizedToolName)) {
+      return { icon, label };
+    }
+  }
+
+  const directIcon = TOOL_ICONS[normalizedToolName];
+
+  if (directIcon) {
+    return { icon: directIcon, label: toolName };
+  }
+
+  return { icon: '⚙️', label: toolName };
+}
+
+/**
+ * Humanize a memory key by replacing underscores and capitalizing
+ */
+export function humanizeMemoryKey(value: string) {
+  return value
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (str) => str.toUpperCase())
+    .replace(/_/g, ' ')
+    .trim();
+}
+
+/**
+ * Format a working memory value (JSON string) to markdown bullet points
+ */
+export function formatWorkingMemoryValue(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    const entries = Object.entries(parsed)
+      .filter(([, item]) => item !== null && item !== undefined)
+      .map(([fieldKey, item]) => `- **${humanizeMemoryKey(fieldKey)}**: ${String(item).trim()}`);
+
+    if (entries.length === 0) {
+      return null;
+    }
+
+    return entries.join('\n');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Render working memory value as markdown sections
+ */
+export function renderWorkingMemoryMarkdown(value: unknown) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const sections = new Map<string, string[]>();
+
+  for (const [key, item] of Object.entries(record)) {
+    const sectionKey = key.replace(/^working_memory_/, '');
+    const formattedValue = formatWorkingMemoryValue(String(item));
+
+    if (formattedValue) {
+      const existing = sections.get(sectionKey) ?? [];
+      existing.push(formattedValue);
+      sections.set(sectionKey, existing);
+    }
+  }
+
+  if (sections.size === 0) {
+    return null;
+  }
+
+  return Array.from(sections.entries())
+    .map(([sectionKey, entries]) => {
+      return [`## ${humanizeMemoryKey(sectionKey)}`, ...entries].join('\n');
+    })
+    .join('\n\n');
+}
+
+/**
+ * Convert agent schedule row to summary object
+ */
+export function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
+  return {
+    id: row.id,
+    kind: row.kind,
+    expression: row.expression,
+    input: row.input ?? null,
+    isActive: row.isActive ?? false,
+    lastRunAt: row.lastRunAt ?? null,
+    nextRunAt: row.nextRunAt ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * Extract preview text from message content (text, reasoning, or parts)
+ */
+export function extractLatestMessagePreview(content: unknown) {
+  if (!content || typeof content !== 'object') {
+    return null;
+  }
+
+  const record = content as {
+    content?: unknown;
+    reasoning?: unknown;
+    parts?: unknown;
+  };
+  const parts = Array.isArray(record.parts) ? record.parts : [];
+
+  for (const part of [...parts].reverse()) {
+    if (!part || typeof part !== 'object') {
+      continue;
+    }
+
+    if (
+      'type' in part &&
+      (part.type === 'text' || part.type === 'reasoning') &&
+      'text' in part &&
+      typeof part.text === 'string'
+    ) {
+      const text = splitMemoryRecallSegments(part.text)
+        .filter((segment) => segment.kind === 'text')
+        .map((segment) => segment.value)
+        .join('\n')
+        .trim();
+
+      if (text && !isMemoryRecallText(text)) {
+        return truncatePreview(text);
+      }
+    }
+  }
+
+  if (typeof record.content === 'string' && record.content.trim()) {
+    const text = splitMemoryRecallSegments(record.content)
+      .filter((segment) => segment.kind === 'text')
+      .map((segment) => segment.value)
+      .join('\n')
+      .trim();
+
+    if (text && !isMemoryRecallText(text)) {
+      return truncatePreview(text);
+    }
+  }
+
+  if (typeof record.reasoning === 'string' && record.reasoning.trim()) {
+    return truncatePreview(record.reasoning.trim());
+  }
+
+  return null;
+}
+
+/**
+ * Extract tool badge from message content (memory-recall or tool invocations)
+ */
+export function extractLatestMessageToolBadge(content: unknown) {
+  if (!content || typeof content !== 'object') {
+    return null;
+  }
+
+  const record = content as {
+    parts?: unknown;
+    toolInvocations?: unknown;
+    content?: unknown;
+  };
+  const parts = Array.isArray(record.parts) ? record.parts : [];
+  const topLevelToolInvocations = Array.isArray(record.toolInvocations) ? record.toolInvocations : [];
+
+  for (const part of [...parts].reverse()) {
+    if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'text' || typeof part.text !== 'string') {
+      continue;
+    }
+
+    if (splitMemoryRecallSegments(part.text).some((segment) => segment.kind === 'memory-recall')) {
+      return { icon: '🧠', label: 'Recall' };
+    }
+  }
+
+  if (
+    typeof record.content === 'string'
+    && splitMemoryRecallSegments(record.content).some((segment) => segment.kind === 'memory-recall')
+  ) {
+    return { icon: '🧠', label: 'Recall' };
+  }
+
+  for (const part of [...parts].reverse()) {
+    if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'tool-invocation') {
+      continue;
+    }
+
+    if (!('toolInvocation' in part) || !part.toolInvocation || typeof part.toolInvocation !== 'object') {
+      continue;
+    }
+
+    const toolName = 'toolName' in part.toolInvocation && typeof part.toolInvocation.toolName === 'string'
+      ? part.toolInvocation.toolName
+      : null;
+
+    if (toolName) {
+      return toToolBadge(toolName);
+    }
+  }
+
+  for (const invocation of [...topLevelToolInvocations].reverse()) {
+    if (!invocation || typeof invocation !== 'object' || !('toolName' in invocation) || typeof invocation.toolName !== 'string') {
+      continue;
+    }
+
+    return toToolBadge(invocation.toolName);
+  }
+
+  return null;
+}
