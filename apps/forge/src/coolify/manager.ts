@@ -436,34 +436,42 @@ export function createCoolifyManager(config: {
   };
 
   async function loadDefaultDeploymentContext() {
-    const project = await getOrCreateDefaultProject();
-    const environment = await getOrCreateDefaultEnvironment(project.uuid);
-    const server = await getDefaultServer();
-    const providerConfig = await getProviderConfig();
+    try {
+      const project = await getOrCreateDefaultProject();
+      const environment = await getOrCreateDefaultEnvironment(project.uuid);
+      const server = await getDefaultServer();
+      const providerConfig = await getProviderConfig();
 
-    return {
-      projectUuid: project.uuid,
-      environmentUuid: environment.uuid,
-      environmentName: environment.name ?? 'production',
-      serverUuid: server.uuid,
-      destinationUuid: providerConfig.destinationId,
-    };
+      return {
+        projectUuid: project.uuid,
+        environmentUuid: environment.uuid,
+        environmentName: environment.name ?? 'production',
+        serverUuid: server.uuid,
+        destinationUuid: providerConfig.destinationId,
+      };
+    } catch (error) {
+      throw new Error(`Failed to load default deployment context from Coolify: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async function getOrCreateDefaultProject() {
-    const data = await requestJson('GET', '/projects');
-    const projects = extractCollection(data, ProjectSchema);
+    try {
+      const data = await requestJson('GET', '/projects');
+      const projects = extractCollection(data, ProjectSchema);
 
-    if (projects.length > 0) {
-      return projects[0];
+      if (projects.length > 0) {
+        return projects[0];
+      }
+
+      const created = await requestJson('POST', '/projects', {
+        name: 'Forge',
+        description: 'Default project created by Forge for Coolify deployments.',
+      });
+
+      return extractItem(created, ProjectSchema);
+    } catch (error) {
+      throw new Error(`Failed to load default Coolify project: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    const created = await requestJson('POST', '/projects', {
-      name: 'Forge',
-      description: 'Default project created by Forge for Coolify deployments.',
-    });
-
-    return extractItem(created, ProjectSchema);
   }
 
   async function getOrCreateDefaultEnvironment(projectUuid: string) {
@@ -487,11 +495,15 @@ export function createCoolifyManager(config: {
   }
 
   async function getDefaultServer() {
-    const providerConfig = await getProviderConfig();
-    return extractItem(
-      await requestJson('GET', `/servers/${encodeURIComponent(providerConfig.serverId)}`),
-      ServerSchema,
-    );
+    try {
+      const providerConfig = await getProviderConfig();
+      return extractItem(
+        await requestJson('GET', `/servers/${encodeURIComponent(providerConfig.serverId)}`),
+        ServerSchema,
+      );
+    } catch (error) {
+      throw new Error(`Failed to load default Coolify server: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async function findApplicationEnv(applicationUuid: string, key: string) {
@@ -559,18 +571,22 @@ export function createCoolifyManager(config: {
   }
 
   async function getApplicationsBaseDomain(serverUuid?: string) {
-    const server = serverUuid
-      ? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema)
-      : await getDefaultServer();
-    const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
+    try {
+      const server = serverUuid
+        ? extractItem(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`), ServerSchema)
+        : await getDefaultServer();
+      const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
-    if (!wildcardDomain) {
-      throw new Error(
-        'Coolify integration could not determine a wildcard domain from the server configuration',
-      );
+      if (!wildcardDomain) {
+        throw new Error(
+          'Coolify integration could not determine a wildcard domain from the server configuration',
+        );
+      }
+
+      return wildcardDomain;
+    } catch (error) {
+      throw new Error(`Failed to resolve Coolify applications base domain: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    return wildcardDomain;
   }
 }
 
