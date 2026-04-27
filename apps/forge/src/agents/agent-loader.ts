@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/index';
 import { createInternalAgentRuntime } from './create-forge-agent';
 import type { InternalAgentRuntime } from './agent-runtime-types';
@@ -23,11 +24,8 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const runtimeData = await loadAgentRuntimeData(db, config);
   const allowedToolIds = new Set(runtimeData.capabilitySet.toolIds);
 
-  console.log(`[AgentLoader] Loading agent: ${runtimeData.agent.id} (${runtimeData.agent.name})`);
-  console.log(`[AgentLoader] Allowed tool IDs for ${runtimeData.agent.id}:`, {
-    count: allowedToolIds.size,
-    toolIds: Array.from(allowedToolIds),
-  });
+  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, agentName: runtimeData.agent.name, message: 'Loading agent' });
+  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, message: 'Allowed tool IDs', context: { toolIdCount: allowedToolIds.size } });
   await config.internalChat.registerAgentAccount({
     agentId: runtimeData.agent.id,
     displayName: runtimeData.providerCredentials['internal-chat']?.displayName ?? runtimeData.agent.name,
@@ -44,7 +42,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     allowedToolIds,
   });
 
-  console.log(`[AgentLoader] Tools loaded for ${runtimeData.agent.id}:`, toolset.breakdown);
+  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, message: 'Tools loaded', context: toolset.breakdown });
 
   const runtime = await createInternalAgentRuntime(buildAgentRuntimeConfig(config, runtimeData, toolset), {
     longTermMemory: true,
@@ -72,7 +70,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     },
   });
 
-  console.log(`[AgentLoader] Agent loaded successfully: ${runtimeData.agent.id}`);
+  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, message: 'Agent loaded successfully' });
   return runtime;
 }
 
@@ -88,11 +86,11 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
   const agentConfigs = await db.query.agents.findMany();
 
   if (agentConfigs.length === 0) {
-    console.log('[AgentLoader] No agents found in registry');
+    forgeDebug({ scope: 'agent-loader', level: 'info', message: 'No agents found in registry' });
     return new Map<string, InternalAgentRuntime>();
   }
 
-  console.log(`[AgentLoader] Loading ${agentConfigs.length} agents from registry...`);
+  forgeDebug({ scope: 'agent-loader', level: 'info', message: 'Loading agents from registry', context: { agentCount: agentConfigs.length } });
 
   const agents = new Map<string, InternalAgentRuntime>();
 
@@ -110,11 +108,11 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       });
       agents.set(agentConfig.id, runtime);
     } catch (error) {
-      console.error(`[AgentLoader] Failed to load agent ${agentConfig.id}:`, error);
+      forgeDebug({ scope: 'agent-loader', level: 'error', agentId: agentConfig.id, message: 'Failed to load agent', context: { error } });
       // Continue loading other agents even if one fails
     }
   }
 
-  console.log(`[AgentLoader] Successfully loaded ${agents.size} agents`);
+  forgeDebug({ scope: 'agent-loader', level: 'info', message: 'Successfully loaded agents', context: { agentCount: agents.size } });
   return agents;
 }

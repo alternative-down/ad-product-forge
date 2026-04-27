@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 const MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
 
 export interface MiniMaxConfig {

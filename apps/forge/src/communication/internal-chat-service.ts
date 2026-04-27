@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, like, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from 'drizzle-orm';
 import path from 'node:path';
 import { customAlphabet } from 'nanoid';
 
@@ -8,6 +8,7 @@ import type {
   CommunicationProviderConversation,
   CommunicationProviderMessage,
 } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import {
@@ -199,6 +200,18 @@ export function createInternalChatService(
       updatedAt: now,
     });
 
+    // Create DM conversations with all existing agent accounts
+    const existingAgentAccounts = await db.query.internalChatAccounts.findMany({
+      where: and(
+        isNotNull(internalChatAccounts.agentId),
+        ne(internalChatAccounts.agentId, input.agentId),
+      ),
+    });
+
+    for (const existing of existingAgentAccounts) {
+      await ensureDirectConversation(accountId, existing.id);
+    }
+
     return {
       accountId,
       agentId: input.agentId,
@@ -326,7 +339,7 @@ export function createInternalChatService(
     }
 
     void replayUnreadMessages(agentId, handler).catch((error) => {
-      console.error(`[InternalChat] Failed to replay unread messages for agent ${agentId}:`, error);
+      forgeDebug({ scope: 'internal-chat', level: 'error', agentId, message: 'Failed to replay unread messages', context: { error } });
     });
   }
 
@@ -1471,7 +1484,7 @@ export function createInternalChatService(
           continue;
         }
 
-        console.error('[InternalChat] Failed to deliver live message to handler:', result.reason);
+        forgeDebug({ scope: 'internal-chat', level: 'warn', message: 'Failed to deliver live message to handler', context: { reason: result.reason } });
       }
 
       if (liveDeliveredAgentIds.length > 0) {

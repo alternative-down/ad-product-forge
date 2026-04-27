@@ -2,7 +2,7 @@ import {
   ForgeMcpToolset,
   type ForgeMcpServerConfig,
   type RuntimeActionDefinition,
-} from '@forge-runtime/core';
+forgeDebug } from '@forge-runtime/core';
 
 import { getAgentMcpServers } from './store';
 
@@ -114,7 +114,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         await previous?.toolset?.dispose();
       } catch (error) {
         hasConnectionFailure = true;
-        console.warn(`[MCP] Failed to refresh server ${serverConfig.name} for agent ${this.agentId}:`, error);
+        forgeDebug({ scope: 'mcp-client', level: 'warn', message: 'Failed to refresh server', context: { serverName: serverConfig.name, agentId: this.agentId, error } });
       }
     }
 
@@ -167,7 +167,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       return;
     }
 
-    console.warn(`[MCP] Server disconnected for agent ${this.agentId}:`, error);
+    forgeDebug({ scope: 'mcp-client', level: 'warn', message: 'Server disconnected', context: { agentId: this.agentId, error } });
     this.servers.set(serverId, {
       ...server,
       toolset: null,

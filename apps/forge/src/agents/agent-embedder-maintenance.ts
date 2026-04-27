@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -52,7 +53,7 @@ async function resetVectorDatabase(input: {
   const exists = await fs
     .access(input.databasePath)
     .then(() => true)
-    .catch((err) => { console.error("[safe-catch]", err); return false; });
+    .catch((err) => { forgeDebug({ scope: 'agent-embedder-maintenance', level: 'error', message: '[safe-catch] access check', context: { error: err } }); return false; });
 
   if (!exists) {
     return;

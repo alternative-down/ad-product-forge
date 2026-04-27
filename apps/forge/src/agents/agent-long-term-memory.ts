@@ -155,7 +155,7 @@ async function withTimeout<T>(
 
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);
-  const exists = await fs.access(absoluteRoot).then(() => true).catch((err) => { console.error("[safe-catch]", err); return false; });
+  const exists = await fs.access(absoluteRoot).then(() => true).catch((err) => { forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: '[safe-catch] access check', context: { error: err } }); return false; });
 
   if (!exists) {
     return [];

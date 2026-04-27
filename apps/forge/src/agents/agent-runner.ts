@@ -395,9 +395,12 @@ export function createAgentRunner(
           startingRunStartedAt === null ? 0 : Date.now() - startingRunStartedAt;
 
         if (startingRunAgeMs >= STARTING_RUN_TIMEOUT_MS) {
-          console.error(
-            `[AgentRunner] ${runtime.id} startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state`,
-          );
+          forgeDebug({
+            scope: 'agent-runner',
+            level: 'warn',
+            runtimeId: runtime.id,
+            message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state`,
+          });
           startNewRunEpoch();
           startingRun = false;
           startingRunStartedAt = null;
@@ -411,7 +414,7 @@ export function createAgentRunner(
 
       await queueNextStep(activeRunEpoch);
     } catch (error) {
-      console.error(`[AgentRunner] ${runtime.id} healthcheck failed:`, error);
+      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error } });
     }
   }
 
@@ -463,7 +466,7 @@ export function createAgentRunner(
 
       await queueNextStep(runEpoch);
     } catch (error) {
-      console.error(`[AgentRunner] ${runtime.id} failed to begin run:`, error);
+      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to begin run', context: { error } });
       if (!isStaleRun(runEpoch)) {
         await transitionToIdle(runEpoch);
       }
@@ -510,7 +513,7 @@ export function createAgentRunner(
       const delayMs = nextAttempt.delayMs;
       instant = false;
       nextStepAt = Date.now() + Math.max(delayMs, 0);
-      console.log(`[AgentRunner] ${runtime.id} scheduling next step in ${Math.max(delayMs, 0)}ms`);
+      forgeDebug({ scope: 'agent-runner', level: 'info', runtimeId: runtime.id, message: `scheduling next step in ${Math.max(delayMs, 0)}ms` });
       timer = setTimeout(
         () => {
           timer = null;
@@ -520,7 +523,7 @@ export function createAgentRunner(
         Math.max(delayMs, 0),
       );
     } catch (error) {
-      console.error(`[AgentRunner] ${runtime.id} failed to schedule next step:`, error);
+      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error } });
       instant = false;
       schedule(nextBackoff());
     }
@@ -589,7 +592,7 @@ export function createAgentRunner(
       prompt = flushPendingRunMessages({
         allowOriginIdleOnly: true,
       }) ?? '';
-      console.log(`[AgentRunner] ${runtime.id} executing step`);
+      forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'executing step' });
 
       lastStepStage = 'agent-generate';
       const result = await generateWithTimeoutRetries(
@@ -624,20 +627,22 @@ export function createAgentRunner(
         return;
       }
 
-      console.error(
-        `[AgentRunner] ${runtime.id} step failed:`,
-        JSON.stringify({
-          agentId: runtime.id,
-          mastraId: currentRuntime.mastraId,
-          pricingModelKey: currentRuntime.pricingModelKey,
-          modelProfileId: currentRuntime.modelProfileId,
-          stepStartedAt: lastStepStartedAt,
-          stepStage: lastStepStage,
-          lastGenerateProgress,
-          prompt,
-          error: serializeError(error),
-        }, null, 2),
-      );
+      forgeDebug({
+          scope: 'agent-runner',
+          level: 'error',
+          runtimeId: runtime.id,
+          message: 'step failed',
+          context: {
+            mastraId: currentRuntime.mastraId,
+            pricingModelKey: currentRuntime.pricingModelKey,
+            modelProfileId: currentRuntime.modelProfileId,
+            stepStartedAt: lastStepStartedAt,
+            stepStage: lastStepStage,
+            lastGenerateProgress,
+            prompt,
+            error: serializeError(error),
+          },
+        });
       await withTimeout(
         store.setExecutionAbsent(runtime.id, formatAbsentExecutionError({
           stage: lastStepStage,
@@ -647,7 +652,7 @@ export function createAgentRunner(
         RUNNER_AWAIT_TIMEOUT_MS,
         `Agent execution state update timed out for ${runtime.id}`,
       ).catch((stateError) => {
-        console.error(`[AgentRunner] ${runtime.id} failed to set absent state:`, stateError);
+        forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to set absent state', context: { stateError } });
       });
       schedule(nextBackoff());
     } finally {
@@ -912,13 +917,13 @@ export function createAgentRunner(
       });
 
       try {
-        console.log(`[AgentRunner] ${runtime.id} preparing runtime context before generate`);
+        forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'preparing runtime context before generate' });
         const agentContextInstructions = await loadAgentContextInstructions();
         const systemPrompt = buildStepSystemPrompt({
           agentContextInstructions,
         });
-        console.log(`[AgentRunner] ${runtime.id} runtime context ready before generate`);
-        console.log(`[AgentRunner] ${runtime.id} generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
+        forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'runtime context ready before generate' });
+        forgeDebug({ scope: 'agent-runner', level: 'info', runtimeId: runtime.id, message: `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})` });
         const result = await Promise.race([
           currentRuntime.agent.generate(effectivePromptText, {
             runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
@@ -997,7 +1002,7 @@ export function createAgentRunner(
                   RUNNER_AWAIT_TIMEOUT_MS,
                   `Agent home metric snapshot timed out for ${runtime.id}`,
                 ).catch((error) => {
-                  console.error(`[AgentRunner] Failed to persist home metric snapshot for ${runtime.id}:`, error);
+                  forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'Failed to persist home metric snapshot', context: { error } });
                 });
               }
             },
@@ -1020,10 +1025,13 @@ export function createAgentRunner(
               });
               lastStepStage = 'processing-runner-control';
 
-              console.log(
-                `[AgentRunner] ${runtime.id} iteration toolCalls:`,
-                JSON.stringify(iteration.toolCalls, null, 2),
-              );
+              forgeDebug({
+                scope: 'agent-runner',
+                level: 'debug',
+                runtimeId: runtime.id,
+                message: 'iteration toolCalls',
+                context: { toolCallCount: iteration.toolCalls?.length ?? 0 },
+              });
 
               const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
               const ignoredTextRequested = controlDirective === 'ignore';
@@ -1139,7 +1147,7 @@ export function createAgentRunner(
           }),
           timeout.promise,
         ]);
-        console.log(`[AgentRunner] ${runtime.id} generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`);
+        forgeDebug({ scope: 'agent-runner', level: 'info', runtimeId: runtime.id, message: `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})` });
         return result;
       } catch (error) {
         const timedOut = controller.signal.aborted;
@@ -1149,9 +1157,12 @@ export function createAgentRunner(
         }
 
         const backoffMs = GENERATE_TIMEOUT_BACKOFF_MS * attempt;
-        console.error(
-          `[AgentRunner] ${runtime.id} generate timed out on attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS}; retrying in ${backoffMs}ms`,
-        );
+        forgeDebug({
+          scope: 'agent-runner',
+          level: 'warn',
+          runtimeId: runtime.id,
+          message: `generate timed out on attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS}; retrying in ${backoffMs}ms`,
+        });
         await delay(backoffMs);
       } finally {
         clearGenerateTimeout(timeout);
@@ -1191,7 +1202,7 @@ export function createAgentRunner(
       filesystem.exists(AGENT_CONTEXT_FILE_PATH),
       CONTEXT_DECORATION_TIMEOUT_MS,
       `Agent context existence check timed out for ${runtime.id}`,
-    ).catch((err) => { console.error("[safe-catch]", err); return false; });
+    ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: err } }); return false; });
 
     if (!exists) {
       return null;
@@ -1201,7 +1212,7 @@ export function createAgentRunner(
       filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
       CONTEXT_DECORATION_TIMEOUT_MS,
       `Agent context read timed out for ${runtime.id}`,
-    ).catch((err) => { console.error("[safe-catch]", err); return null; });
+    ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: err } }); return null; });
 
     if (!data) {
       return null;
