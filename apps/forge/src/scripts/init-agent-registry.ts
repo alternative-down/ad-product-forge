@@ -10,7 +10,7 @@ import { getDatabase, runMigrations } from '../database/index';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
-import type { WorkspaceEmbedderId } from '@forge-runtime/core';
+import { forgeDebug, type WorkspaceEmbedderId } from '@forge-runtime/core';
 import { DEFAULT_WORKSPACE_EMBEDDER } from '../agents/agent-embedder-maintenance';
 
 /**
@@ -40,9 +40,9 @@ async function initAgentRegistry() {
     // Get database connection
     const db = getDatabase();
 
-    console.log('[Init] Running database migrations...');
+    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Running database migrations' });
     await runMigrations(db);
-    console.log('[Init] Migrations completed ✓');
+    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Migrations completed' });
 
     // Prepare agent configs
     const llmSettings = createLlmSettingsStore(db);
@@ -95,7 +95,7 @@ async function initAgentRegistry() {
     ];
 
     // Register agents
-    console.log('[Init] Registering agents in database...');
+    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Registering agents in database' });
     for (const config of agentConfigs) {
       const now = Date.now();
 
@@ -123,7 +123,7 @@ async function initAgentRegistry() {
           })
           .where(eq(schema.agents.id, config.id));
 
-        console.log(`  ✓ Updated agent: ${config.id}`);
+        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Updated agent', context: { agentId: config.id } });
       } else {
         // Insert new agent
         await db.insert(schema.agents).values({
@@ -142,12 +142,12 @@ async function initAgentRegistry() {
           updatedAt: now,
         });
 
-        console.log(`  ✓ Created agent: ${config.id}`);
+        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Created agent', context: { agentId: config.id } });
       }
     }
 
     // Register communication providers for agents
-    console.log('[Init] Registering communication providers...');
+    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Registering communication providers' });
 
     // Configure internal-chat provider for both agents
     const agentProviderConfigs = [
@@ -185,7 +185,7 @@ async function initAgentRegistry() {
           })
           .where(eq(schema.agentProviders.id, existing.id));
 
-        console.log(`  ✓ Updated provider: ${providerConfig.agentId}/${providerConfig.providerType}`);
+        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Updated provider', context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType } });
       } else {
         // Insert new provider
         await db.insert(schema.agentProviders).values({
@@ -196,25 +196,20 @@ async function initAgentRegistry() {
           createdAt: now,
         });
 
-        console.log(`  ✓ Created provider: ${providerConfig.agentId}/${providerConfig.providerType}`);
+        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Created provider', context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType } });
       }
     }
 
     // Verify agents were registered
     const agents = await db.query.agents.findMany();
-    console.log(`\n[Init] Agent Registry Status:`);
-    console.log(`  Total agents: ${agents.length}`);
+    
     agents.forEach((agent: typeof schema.agents.$inferSelect) => {
-      console.log(`    - ${agent.id}: ${agent.name}`);
-      console.log(`      Primary profile: ${agent.modelProfileId}`);
-      console.log(`      OM profile: ${agent.omModelProfileId}`);
-      console.log(`      Instructions: ${agent.instructions ? agent.instructions.substring(0, 50) + '...' : 'N/A'}`);
     });
 
-    console.log('\n[Init] Agent registry initialized successfully ✓');
+    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Agent registry initialized successfully' });
     process.exit(0);
   } catch (error) {
-    console.error('[Init] Error initializing agent registry:', error);
+    forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error } });
     process.exit(1);
   }
 }
