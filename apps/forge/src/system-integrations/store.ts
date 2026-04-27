@@ -9,6 +9,7 @@ import type {
   MinimaxSystemIntegrationConfig,
 } from '../database/schema';
 import { systemIntegrations } from '../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 const migaduConfigSchema = z.object({
@@ -190,7 +191,8 @@ export function createSystemIntegrationStore(db: Database) {
   ) {
     try {
       return parseIntegrationConfig(providerType, encryptedConfig);
-    } catch {
+    } catch (error) {
+      forgeDebug({ scope: 'system-integrations', level: 'warn', message: 'Failed to parse integration config', context: { error } });
       return null;
     }
   }
