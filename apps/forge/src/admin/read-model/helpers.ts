@@ -1,3 +1,14 @@
+import { forgeDebug } from '@forge-runtime/core';
+import { decryptSecret } from '../../encryption/crypto';
+
+
+type RuntimeStoredMessagePart = {
+  type: 'text' | 'tool-call' | 'tool-result';
+  text?: { content: string };
+  toolCall?: { toolName: string; toolCallId: string; input: unknown };
+  toolResult?: { toolCallId: string; result: unknown };
+};
+
 import type { agentSchedules } from '../../database/schema';
 
 // Tool name patterns for badge extraction
@@ -322,4 +333,139 @@ export function extractLatestMessageToolBadge(content: unknown) {
   }
 
   return null;
+}
+
+// ============================================================================
+// Message Processing Helpers
+// ============================================================================
+
+export function parseProviderCredentials(encryptedCredentials: string) {
+  const decrypted = decryptSecret(encryptedCredentials);
+
+  try {
+    return JSON.parse(decrypted) as unknown;
+  } catch (error) {
+    forgeDebug({ scope: 'admin/read-model', level: 'warn', message: 'Failed to parse credentials JSON', context: { error } });
+    return decrypted;
+  }
+}
+
+export function mergeToolLogMessages(messages: Array<{
+  id: string;
+  role: string;
+  threadId: string;
+  createdAt: string;
+  parts: RuntimeStoredMessagePart[];
+  metadata?: Record<string, unknown>;
+}>) {
+  const merged: typeof messages = [];
+
+  for (const message of messages) {
+    const previousMessage = merged[merged.length - 1];
+
+    if (
+      previousMessage?.role === 'assistant'
+      && message.role === 'tool'
+      && Array.isArray(previousMessage.metadata?.toolInvocations)
+      && previousMessage.metadata.toolInvocations.length > 0
+      && Array.isArray(message.metadata?.toolResults)
+      && message.metadata.toolResults.length > 0
+    ) {
+      merged[merged.length - 1] = {
+        ...previousMessage,
+        metadata: {
+          ...previousMessage.metadata,
+          toolResults: message.metadata.toolResults,
+        },
+      };
+      continue;
+    }
+
+    merged.push(message);
+  }
+
+  return merged;
+}
+
+export function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
+  const toolInvocations = Array.isArray(metadata?.toolInvocations)
+    ? metadata.toolInvocations
+    : [];
+  const toolResults = Array.isArray(metadata?.toolResults)
+    ? metadata.toolResults
+    : [];
+  const resultIndexesByToolCallId = new Map<string, number>();
+  const parts: Array<Record<string, unknown>> = [];
+  const matchedResultIndexes = new Set<number>();
+
+  for (const [index, toolResult] of toolResults.entries()) {
+    if (
+      typeof toolResult !== 'object'
+      || toolResult === null
+      || typeof toolResult.toolCallId !== 'string'
+    ) {
+      continue;
+    }
+
+    resultIndexesByToolCallId.set(toolResult.toolCallId, index);
+  }
+
+  for (const toolInvocation of toolInvocations) {
+    if (
+      typeof toolInvocation !== 'object'
+      || toolInvocation === null
+      || typeof toolInvocation.toolName !== 'string'
+    ) {
+      continue;
+    }
+
+    const toolCallId = typeof toolInvocation.toolCallId === 'string'
+      ? toolInvocation.toolCallId
+      : null;
+    const matchingResultIndex = toolCallId
+      ? resultIndexesByToolCallId.get(toolCallId)
+      : undefined;
+    const matchingResult = matchingResultIndex !== undefined
+      ? toolResults[matchingResultIndex]
+      : null;
+
+    if (matchingResultIndex !== undefined) {
+      matchedResultIndexes.add(matchingResultIndex);
+    }
+
+    parts.push({
+      type: 'tool-invocation',
+      toolInvocation: {
+        ...toolInvocation,
+        ...(typeof matchingResult === 'object' && matchingResult !== null
+          ? {
+              result: matchingResult.result,
+              state: 'result',
+            }
+          : {
+              state: 'call',
+            }),
+      },
+    });
+  }
+
+  for (const [index, toolResult] of toolResults.entries()) {
+    if (
+      matchedResultIndexes.has(index)
+      || typeof toolResult !== 'object'
+      || toolResult === null
+    ) {
+      continue;
+    }
+
+    parts.push({
+      type: 'tool-result',
+      toolResult: {
+        toolCallId: toolResult.toolCallId,
+        result: toolResult.result,
+      },
+    });
+  }
+
+  return parts;
 }
