@@ -27,7 +27,7 @@ import {
 import {
   readLongTermMemoryRecallSnapshot,
   readLongTermMemoryState,
-} from './read-model/helpers';
+} from './read-model/helpers-ltm';
 
 
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
