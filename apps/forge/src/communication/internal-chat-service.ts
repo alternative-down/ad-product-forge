@@ -326,7 +326,7 @@ export function createInternalChatService(
     }
 
     void replayUnreadMessages(agentId, handler).catch((error) => {
-      console.error(`[InternalChat] Failed to replay unread messages for agent ${agentId}:`, error);
+      forgeDebug({ scope: 'internal-chat', level: 'error', agentId, message: 'Failed to replay unread messages', context: { error } });
     });
   }
 
@@ -1471,7 +1471,7 @@ export function createInternalChatService(
           continue;
         }
 
-        console.error('[InternalChat] Failed to deliver live message to handler:', result.reason);
+        forgeDebug({ scope: 'internal-chat', level: 'warn', message: 'Failed to deliver live message to handler', context: { reason: result.reason } });
       }
 
       if (liveDeliveredAgentIds.length > 0) {

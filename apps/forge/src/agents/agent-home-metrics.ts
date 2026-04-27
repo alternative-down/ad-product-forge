@@ -335,7 +335,7 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
       await closeLibsqlClient(client);
     }
   } catch (error) {
-    console.error(`[AgentHomeMetrics] Failed to load latest thread details for agent ${agentId}:`, error);
+    forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId, message: 'Failed to load latest thread details', context: { error } });
     return {
       preview: null,
       toolBadge: null,
@@ -482,7 +482,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Agent runtime memory read timed out for ${agent.id}`,
     ).catch((error) => {
-      console.error(`[AgentHomeMetrics] Failed to load runtime memory for agent ${agent.id}:`, error);
+      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime memory', context: { error } });
       return null;
     }),
     withTimeout(
@@ -490,7 +490,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Latest thread details read timed out for ${agent.id}`,
     ).catch((error) => {
-      console.error(`[AgentHomeMetrics] Failed to load latest thread details for agent ${agent.id}:`, error);
+      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load latest thread details', context: { error } });
       return {
         preview: null,
         toolBadge: null,
@@ -503,7 +503,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Long-term memory state read timed out for ${agent.id}`,
     ).catch((error) => {
-      console.error(`[AgentHomeMetrics] Failed to load LTM state for agent ${agent.id}:`, error);
+      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load LTM state', context: { error } });
       return null;
     }),
     input.runtime?.longTermMemory
@@ -512,7 +512,7 @@ export async function readAgentHomeMetricSnapshot(input: {
         OBSERVABILITY_READ_TIMEOUT_MS,
         `Runtime LTM snapshot timed out for ${agent.id}`,
       ).catch((error) => {
-        console.error(`[AgentHomeMetrics] Failed to load runtime LTM snapshot for agent ${agent.id}:`, error);
+        forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime LTM snapshot', context: { error } });
         return null;
       })
       : Promise.resolve(null),

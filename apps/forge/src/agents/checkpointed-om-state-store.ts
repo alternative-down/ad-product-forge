@@ -103,9 +103,15 @@ export function createAgentCheckpointedOmStateStore(
       })
       .where(eq(agentCheckpointedOmStates.agentId, input.agentId));
 
-    console.error('[CheckpointedOmStateStore] Repaired invalid persisted OM state', {
+    forgeDebug({
+      scope: 'checkpointed-om-state-store',
+      level: 'warn',
       agentId: input.agentId,
-      issues: parsedState.error.issues,
+      message: 'Repaired invalid persisted OM state',
+      context: {
+        parseError: parsedState.error?.message,
+        recoveredKeys: Object.keys(repairedState),
+      },
     });
 
     return repairedState;
