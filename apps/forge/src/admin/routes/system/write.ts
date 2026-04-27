@@ -14,6 +14,7 @@ import {
   parseJsonBody,
   normalizeOptionalText,
   normalizeJsonText,
+  fsPathExists,
 } from '../helpers.js';
 import {
   upsertSystemSettingsSchema,
@@ -79,7 +80,7 @@ async function readOauthState() {
         : credential?.sourcePath ?? '';
     result[providerId] = {
       sourcePath,
-      sourcePresent: sourcePath ? await Bun.file(sourcePath).exists() : false,
+      sourcePresent: sourcePath ? await fsPathExists(sourcePath) : false,
       synced: credential?.accountId != null,
       hasRefresh: Boolean(credential?.refreshToken),
       expiresAt: credential?.expiresAt ?? null,
