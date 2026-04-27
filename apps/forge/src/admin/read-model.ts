@@ -110,21 +110,10 @@ async function closeLibsqlClient(client: ClosableLibsqlClient) {
   await client.close?.();
 }
 
-async function readLongTermMemoryRecallSnapshot(db: Database, agentId: string) {
-  const state = await createAgentLongTermMemoryStore(db, {
-    agentId,
-  }).readRecallState();
-
-  return state.snapshot;
-}
-
-async function readLongTermMemoryState(db: Database, agentId: string) {
-  const state = await createAgentLongTermMemoryStore(db, {
-    agentId,
-  }).readState();
-
-  return state satisfies LongTermMemoryState;
-}
+import {
+  readLongTermMemoryRecallSnapshot,
+  readLongTermMemoryState,
+} from './read-model/helpers';
 
 export function createAdminReadModel(input: {
   db: Database;
