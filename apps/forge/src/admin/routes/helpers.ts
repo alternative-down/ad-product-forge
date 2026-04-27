@@ -1,3 +1,4 @@
+import { access } from 'node:fs/promises';
 import { z } from 'zod';
 
 export function normalizeOptionalText(value?: string): string | null {
@@ -137,4 +138,13 @@ export function summarizeActiveItems(items: unknown[]): Array<{ name: string; co
   return Array.from(summary.entries())
     .map(([name, count]) => ({ name, count }))
     .sort((left, right) => right.count - left.count);
+}
+
+export async function fsPathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
 }

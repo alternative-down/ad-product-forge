@@ -7,7 +7,7 @@ import { oauthStore } from '@forge-runtime/core';
 import { mcpServerConfigs } from '../../../database/schema.js';
 import { buildSystemHealthcheck } from './healthcheck.js';
 import { listGlobalSkills } from '../../../agents/global-skills.js';
-import { jsonResponse } from '../helpers.js';
+import { jsonResponse, fsPathExists } from '../helpers.js';
 import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
 import type { createForgeHttpServer } from '../../../http/server.js';
 import type { Database } from '../../../database/index.js';
@@ -46,7 +46,7 @@ async function readOauthState() {
     const sourcePath = credential?.sourcePath ?? '';
     result[providerId] = {
       sourcePath,
-      sourcePresent: sourcePath ? await Bun.file(sourcePath).exists() : false,
+      sourcePresent: sourcePath ? await fsPathExists(sourcePath) : false,
       synced: credential?.accountId != null,
       hasRefresh: Boolean(credential?.refreshToken),
       expiresAt: credential?.expiresAt ?? null,
