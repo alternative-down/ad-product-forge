@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
@@ -1534,9 +1535,10 @@ async function listInternalChatGroupParticipants(
       groupId: conversationKey,
     });
     return members.map((member) => member.participantName);
-  } catch {
-    return [];
-  }
+  } catch (error) {
+      forgeDebug({ scope: 'admin/read-model', level: 'warn', message: 'Failed to list group members', context: { error, agentId } });
+      return [];
+    }
 }
 
 async function listThreadMessages(
@@ -1619,7 +1621,8 @@ function parseProviderCredentials(encryptedCredentials: string) {
 
   try {
     return JSON.parse(decrypted) as unknown;
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'admin/read-model', level: 'warn', message: 'Failed to parse credentials JSON', context: { error } });
     return decrypted;
   }
 }
@@ -1775,7 +1778,8 @@ function formatWorkingMemoryValue(value: string | null | undefined) {
 
   try {
     return renderWorkingMemoryMarkdown(JSON.parse(trimmed));
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'admin/read-model', level: 'warn', message: 'Failed to parse working memory', context: { error } });
     return trimmed;
   }
 }

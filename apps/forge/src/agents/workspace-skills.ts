@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -95,7 +96,8 @@ export async function listAgentWorkspaceSkills(
               fileCount,
               updatedAt: stat.mtimeMs,
             };
-          } catch {
+          } catch (error) {
+            forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'Failed to read skill metadata', context: { error, skillName } });
             return null;
           }
         }),
