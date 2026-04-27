@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, like, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from 'drizzle-orm';
 import path from 'node:path';
 import { customAlphabet } from 'nanoid';
 
@@ -199,6 +199,18 @@ export function createInternalChatService(
       createdAt: now,
       updatedAt: now,
     });
+
+    // Create DM conversations with all existing agent accounts
+    const existingAgentAccounts = await db.query.internalChatAccounts.findMany({
+      where: and(
+        isNotNull(internalChatAccounts.agentId),
+        ne(internalChatAccounts.agentId, input.agentId),
+      ),
+    });
+
+    for (const existing of existingAgentAccounts) {
+      await ensureDirectConversation(accountId, existing.id);
+    }
 
     return {
       accountId,
