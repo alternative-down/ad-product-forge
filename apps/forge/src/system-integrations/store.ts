@@ -9,6 +9,7 @@ import type {
   MinimaxSystemIntegrationConfig,
 } from '../database/schema';
 import { systemIntegrations } from '../database/schema';
+import type { SystemIntegration } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
@@ -37,24 +38,27 @@ const minimaxConfigSchema = z.object({
 export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github' | 'minimax';
 
 export function createSystemIntegrationStore(db: Database) {
+  const KNOWN_PROVIDER_TYPES = new Set(['migadu', 'coolify', 'github', 'minimax']);
+
   async function listIntegrations() {
-    const rows = await db.query.systemIntegrations.findMany({
-      orderBy: (fields, { asc }) => [asc(fields.providerType)],
+    const rows = await db.query.systemIntegrations.findMany();
+
+    const typedRows = rows.filter(
+      (row) =>
+        row.providerType === 'migadu' ||
+        row.providerType === 'coolify' ||
+        row.providerType === 'github' ||
+        row.providerType === 'minimax',
+    ) as SystemIntegration[];
+    return typedRows.map((row) => {
+      const { encryptedConfig, ...rest } = row;
+
+      return {
+        ...rest,
+        isEnabled: row.isEnabled === 1,
+        config: parseIntegrationConfigForList(row.providerType, encryptedConfig),
+      };
     });
-
-    return rows
-      .filter((row): row is typeof row & { providerType: SystemIntegrationProviderType } =>
-        row.providerType === 'migadu' || row.providerType === 'coolify' || row.providerType === 'github' || row.providerType === 'minimax',
-      )
-      .map((row) => {
-        const { encryptedConfig, ...rest } = row;
-
-        return {
-          ...rest,
-          isEnabled: row.isEnabled === 1,
-          config: parseIntegrationConfigForList(row.providerType, encryptedConfig),
-        };
-      });
   }
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
@@ -192,7 +196,7 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       return parseIntegrationConfig(providerType, encryptedConfig);
     } catch (error) {
-      forgeDebug({ scope: 'system-integrations', level: 'warn', message: 'Failed to parse integration config', context: { error } });
+      forgeDebug('system-integrations', 'Failed to parse integration config', { error });
       return null;
     }
   }
@@ -205,6 +209,10 @@ export function createSystemIntegrationStore(db: Database) {
       | GitHubSystemIntegrationConfig
       | MinimaxSystemIntegrationConfig,
   ) {
+    if (!KNOWN_PROVIDER_TYPES.has(providerType)) {
+      throw new Error('Unknown integration provider type');
+    }
+
     if (providerType === 'migadu') {
       return migaduConfigSchema.parse(config);
     }
