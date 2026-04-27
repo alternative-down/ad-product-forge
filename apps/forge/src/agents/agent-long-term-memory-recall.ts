@@ -1,4 +1,3 @@
-import { forgeDebug } from '@forge-runtime/core';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
