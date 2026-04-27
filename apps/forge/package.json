@@ -31,7 +31,9 @@
     "octokit": "^5.0.3",
     "onnxruntime-node": "1.21.0",
     "postal-mime": "^2.7.4",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@libsql/client": "^0.15.15",
+    "drizzle-orm": "^0.26.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
