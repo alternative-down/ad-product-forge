@@ -16,7 +16,10 @@ export function createDiscordProvider(config: {
   }>;
 }): CommunicationProvider {
   const OUTBOUND_ECHO_TTL_MS = 2 * 60_000;
+  const MAX_MESSAGE_LENGTH = 2_000;
+  const CHUNK_BREAKPOINT = 1_500;
   const TYPING_INDICATOR_INTERVAL_MS = 8_000;
+  const MEMBER_FETCH_LIMIT = 100;
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -72,7 +75,7 @@ export function createDiscordProvider(config: {
     }
 
     for (const paragraph of normalizedContent.split('\n\n')) {
-      if (paragraph.length <= 2_000) {
+      if (paragraph.length <= MAX_MESSAGE_LENGTH) {
         const nextChunk = chunks[chunks.length - 1];
 
         if (!nextChunk) {
@@ -81,7 +84,7 @@ export function createDiscordProvider(config: {
         }
 
         const separator = nextChunk.length === 0 ? '' : '\n\n';
-        if (nextChunk.length + separator.length + paragraph.length <= 2_000) {
+        if (nextChunk.length + separator.length + paragraph.length <= MAX_MESSAGE_LENGTH) {
           chunks[chunks.length - 1] = `${nextChunk}${separator}${paragraph}`;
           continue;
         }
@@ -92,10 +95,10 @@ export function createDiscordProvider(config: {
 
       let remainingParagraph = paragraph;
 
-      while (remainingParagraph.length > 2_000) {
-        const slice = remainingParagraph.slice(0, 2_000);
+      while (remainingParagraph.length > MAX_MESSAGE_LENGTH) {
+        const slice = remainingParagraph.slice(0, MAX_MESSAGE_LENGTH);
         const breakIndex = Math.max(slice.lastIndexOf('\n'), slice.lastIndexOf(' '));
-        const chunkEnd = breakIndex >= 1_500 ? breakIndex : 2_000;
+        const chunkEnd = breakIndex >= CHUNK_BREAKPOINT ? breakIndex : MAX_MESSAGE_LENGTH;
         chunks.push(remainingParagraph.slice(0, chunkEnd).trim());
         remainingParagraph = remainingParagraph.slice(chunkEnd).trim();
       }
@@ -442,7 +445,7 @@ export function createDiscordProvider(config: {
 
     while (collected.size < targetCount) {
       const batch = await input.channel.messages.fetch({
-        limit: Math.min(100, targetCount - collected.size),
+        limit: Math.min(MEMBER_FETCH_LIMIT, targetCount - collected.size),
         ...(before ? { before } : {}),
       });
 
