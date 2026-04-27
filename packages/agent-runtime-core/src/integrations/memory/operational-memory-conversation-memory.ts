@@ -182,12 +182,33 @@ export class OperationalMemoryConversationMemory {
     });
     const visibleMessageMap = new Map(visibleMessages.map((message) => [message.id, message]));
 
-    return [
+    // Find the latest checkpoint-summary from the SQL results.
+    // After the seed-boundary fix, the SQL correctly returns checkpoint-summary
+    // messages as the terminals of replacement chains. Prepend the latest one
+    // to the visible output so the agent retains its consolidated context.
+    const checkpointSummary = visibleMessages
+      .slice()
+      .reverse()
+      .find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
+
+    const terminalMessages = [
       ...state.overflowMessageIds,
       ...state.recentMessageIds,
     ]
       .map((messageId) => visibleMessageMap.get(messageId))
       .filter((message): message is ConversationMessage => Boolean(message));
+
+    if (!checkpointSummary) {
+      return terminalMessages;
+    }
+
+    // Deduplicate: only prepend if not already in the terminal list.
+    const hasCheckpoint = terminalMessages.some((m) => m.id === checkpointSummary.id);
+    if (hasCheckpoint) {
+      return terminalMessages;
+    }
+
+    return [checkpointSummary, ...terminalMessages];
   }
 
   async getState(): Promise<OperationalMemoryConversationState> {

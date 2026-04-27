@@ -380,7 +380,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
           where thread_id = ?
             and (
               (select checkpoint_rowid from checkpoint) is null
-              or rowid >= (select checkpoint_rowid from checkpoint)
+              or rowid < (select checkpoint_rowid from checkpoint)
             )
         ),
         replacement_chain(root_id, current_id) as (
