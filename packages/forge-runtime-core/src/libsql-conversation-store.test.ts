@@ -396,4 +396,110 @@ describe('LibsqlConversationStore', () => {
       await client.close();
     }
   });
+
+  it('returns latest checkpoint when two checkpoints exist in replacement chain', async () => {
+    const directoryPath = await mkdtemp(path.join(os.tmpdir(), 'forge-runtime-core-'));
+    const databasePath = path.join(directoryPath, 'conversation.db');
+    tempDirectories.push(directoryPath);
+    const client = createClient({
+      url: 'file:' + databasePath,
+    });
+    const store = new LibsqlConversationStore({
+      client,
+      tablePrefix: 'test_runtime_cascading_checkpoints',
+    });
+
+    try {
+      // First checkpoint: raw-a → obs-a → ref-a → checkpoint-a
+      await store.appendMessage({
+        id: 'raw-a',
+        threadId: 'thread-2',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'first raw' }],
+        createdAt: '2026-04-21T00:00:01.000Z',
+      });
+      await store.appendMessage({
+        id: 'obs-a',
+        threadId: 'thread-2',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'first observation' }],
+        operationalMemoryType: 'observation',
+        createdAt: '2026-04-21T00:00:02.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-2',
+        messageId: 'raw-a',
+        replacedByMessageId: 'obs-a',
+      });
+      await store.appendMessage({
+        id: 'ref-a',
+        threadId: 'thread-2',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'first reflection' }],
+        operationalMemoryType: 'reflection',
+        operationalMemoryGeneration: 1,
+        createdAt: '2026-04-21T00:00:03.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-2',
+        messageId: 'obs-a',
+        replacedByMessageId: 'ref-a',
+      });
+      await store.appendMessage({
+        id: 'checkpoint-a',
+        threadId: 'thread-2',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'first checkpoint' }],
+        operationalMemoryType: 'checkpoint-summary',
+        operationalMemoryGeneration: 1,
+        createdAt: '2026-04-21T00:00:04.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-2',
+        messageId: 'ref-a',
+        replacedByMessageId: 'checkpoint-a',
+      });
+
+      // Second checkpoint: checkpoint-a → ref-b → checkpoint-b
+      await store.appendMessage({
+        id: 'ref-b',
+        threadId: 'thread-2',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'second reflection' }],
+        operationalMemoryType: 'reflection',
+        operationalMemoryGeneration: 2,
+        createdAt: '2026-04-21T00:00:05.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-2',
+        messageId: 'checkpoint-a',
+        replacedByMessageId: 'ref-b',
+      });
+      await store.appendMessage({
+        id: 'checkpoint-b',
+        threadId: 'thread-2',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'second checkpoint' }],
+        operationalMemoryType: 'checkpoint-summary',
+        operationalMemoryGeneration: 2,
+        createdAt: '2026-04-21T00:00:06.000Z',
+      });
+      await store.updateMessageReplacement({
+        threadId: 'thread-2',
+        messageId: 'ref-b',
+        replacedByMessageId: 'checkpoint-b',
+      });
+
+      // Latest null-terminal checkpoint-summary is checkpoint-b (rowid=10)
+      // SQL seed: rowid < 10 includes raw-a through ref-b
+      // Chain walks: raw-a→obs-a→ref-a→checkpoint-a→ref-b→checkpoint-b (null terminal)
+      await expect(store.listOperationalMemoryMessages({
+        threadId: 'thread-2',
+      })).resolves.toMatchObject([
+        { id: 'checkpoint-b' },
+      ]);
+    } finally {
+      await client.close();
+    }
+  });
 });
