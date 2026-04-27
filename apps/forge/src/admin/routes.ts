@@ -82,6 +82,7 @@ import {
   summarizeActiveItems,
 } from './routes/helpers.js';
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
+import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/system/index.js';
 
 export function registerAdminRoutes(input: {
   db: Database;
@@ -117,11 +118,6 @@ export function registerAdminRoutes(input: {
     handler: async () => jsonResponse(await readModel.getDashboard()),
   });
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/healthcheck',
-    handler: async () => jsonResponse(await buildSystemHealthcheck(registry, readModel)),
-  });
 
   input.httpServer.registerRoute({
     method: 'GET',
@@ -302,239 +298,14 @@ export function registerAdminRoutes(input: {
     handler: async () => jsonResponse(await readModel.listRoles()),
   });
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/integrations',
-    handler: async () => jsonResponse(await readModel.listSystemIntegrations()),
-  });
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/settings',
-    handler: async () => jsonResponse(await readModel.getSystemSettings()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/llm',
-    handler: async () => jsonResponse(await readModel.getSystemLlm()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/mcp',
-    handler: async () =>
-      jsonResponse(
-        (
-          await input.db.select().from(mcpServerConfigs)
-        )
-          .map((server) => ({
-            serverId: server.id,
-            name: server.name,
-            description: server.description ?? undefined,
-            transport: server.transport as 'stdio' | 'http_streamable',
-            command: server.command ?? '',
-            argsText: server.args ?? '',
-            envVarsText: server.envVars ?? '',
-            url: server.url ?? '',
-            headersText: server.headers ?? '',
-            isActive: server.isActive === 1,
-            createdAt: server.createdAt,
-            updatedAt: server.updatedAt,
-          }))
-          .sort((left, right) => left.name.localeCompare(right.name)),
-      ),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/migrations',
-    handler: async () => jsonResponse(await readModel.getApplicationMigrations()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/skills',
-    handler: async () => jsonResponse(await listGlobalSkills(input.workspaceBasePath)),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/settings/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
-      const result = await systemSettings.upsertSettings({
-        companyName: body.companyName.trim(),
-        companyContext: body.companyContext.trim(),
-        stepDelayEnabled: body.stepDelayEnabled,
-        communicationDmFlushingEnabled: body.communicationDmFlushingEnabled,
-        communicationGroupFlushingEnabled: body.communicationGroupFlushingEnabled,
-        memoryLastMessagesFullEnabled: body.memoryLastMessagesFullEnabled,
-        memoryLastMessagesCount: body.memoryLastMessagesCount,
-        tokenCountFilterEnabled: body.tokenCountFilterEnabled,
-        tokenCountFilterLimit: body.tokenCountFilterLimit,
-        checkpointedOmEnabled: body.checkpointedOmEnabled,
-        checkpointedOmTotalContextTokens: body.checkpointedOmTotalContextTokens,
-        checkpointedOmRecentRawTokens: body.checkpointedOmRecentRawTokens,
-        checkpointedOmRawObservationBatchTokens: body.checkpointedOmRawObservationBatchTokens,
-        checkpointedOmObservationReflectionBatchTokens:
-          body.checkpointedOmObservationReflectionBatchTokens,
-        checkpointedOmObservationSupportTokens: body.checkpointedOmObservationSupportTokens,
-        checkpointedOmReflectionSupportTokens: body.checkpointedOmReflectionSupportTokens,
-        ltmRecallSearchMode: body.ltmRecallSearchMode,
-        ltmRecallWorkspaceTopK: body.ltmRecallWorkspaceTopK,
-        ltmRecallGraphTopK: body.ltmRecallGraphTopK,
-        ltmRecallGraphThreshold: body.ltmRecallGraphThreshold,
-        ltmRecallGraphRandomWalkSteps: body.ltmRecallGraphRandomWalkSteps,
-        ltmRecallGraphIncludeSources: body.ltmRecallGraphIncludeSources,
-        ltmRecallScoreThreshold: body.ltmRecallScoreThreshold,
-        ltmRecallDocumentCount: body.ltmRecallDocumentCount,
-      });
-      const registry = getInternalAgentRegistry();
-
-      for (const entry of registry.list()) {
-        const runtime = await loadAgent(input.db, {
-          ...input.loaderConfig,
-          agentId: entry.runtime.id,
-        });
-
-        await registry.add(input.db, runtime);
-      }
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/mcp/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
-      const timestamp = new Date().toISOString();
-      const serverId = body.serverId ?? createId();
-
-      const values = {
-        name: body.name,
-        description: normalizeOptionalText(body.description),
-        transport: body.transport,
-        command: body.transport === 'stdio' ? body.command : null,
-        args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-        envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
-        url: body.transport === 'http_streamable' ? body.url : null,
-        headers: body.transport === 'http_streamable'
-          ? normalizeJsonText(body.headersText, 'headersText', 'object')
-          : null,
-        isActive: body.isActive ? 1 : 0,
-        updatedAt: timestamp,
-      };
-
-      if (body.serverId) {
-        await input.db.update(mcpServerConfigs).set(values).where(eq(mcpServerConfigs.id, body.serverId));
-      } else {
-        await input.db.insert(mcpServerConfigs).values({
-          id: serverId,
-          ...values,
-          version: 1,
-          createdAt: timestamp,
-        });
-      }
-
-      await reloadLinkedAgentsForMcpServer(input.db, input.loaderConfig, serverId);
-
-      const server = await input.db.query.mcpServerConfigs.findFirst({
-        where: eq(mcpServerConfigs.id, serverId),
-      });
-
-      return jsonResponse({
-        serverId,
-        name: server?.name ?? body.name,
-        description: server?.description ?? undefined,
-        transport: (server?.transport ?? body.transport) as 'stdio' | 'http_streamable',
-        command: server?.command ?? '',
-        argsText: server?.args ?? '',
-        envVarsText: server?.envVars ?? '',
-        url: server?.url ?? '',
-        headersText: server?.headers ?? '',
-        isActive: (server?.isActive ?? (body.isActive ? 1 : 0)) === 1,
-        createdAt: server?.createdAt ?? timestamp,
-        updatedAt: server?.updatedAt ?? timestamp,
-      });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/mcp/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteSystemMcpServerSchema);
-      const linkedConfigs = await input.db.query.agentMcpConfigs.findMany({
-        where: eq(agentMcpConfigs.serverId, body.serverId),
-        columns: {
-          agentId: true,
-          id: true,
-        },
-      });
-
-      for (const linkedConfig of linkedConfigs) {
-        await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, linkedConfig.id));
-      }
-
-      await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
-
-      for (const linkedConfig of linkedConfigs) {
-        await reloadAgentMcp(input.db, input.loaderConfig, linkedConfig.agentId);
-      }
-
-      return jsonResponse({ success: true, serverId: body.serverId });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/skills/upload',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, uploadSystemSkillsSchema);
-      const installedSkillNames = await installGlobalSkillsFromZip({
-        workspaceBasePath: input.workspaceBasePath,
-        zipBase64: body.archiveBase64,
-      });
-
-      return jsonResponse({ success: true, installedSkillNames }, 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/skills/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteSystemSkillSchema);
-      await deleteGlobalSkill({
-        workspaceBasePath: input.workspaceBasePath,
-        skillName: body.skillName,
-      });
-
-      return jsonResponse({ success: true, skillName: body.skillName });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/price/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
-      return jsonResponse(await llmModelPrices.upsertPrice(body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/system/oauth',
-    handler: async () => jsonResponse(await readOauthState()),
-  });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
   registerFinanceReadRoutes(input.httpServer, readModel);
 
+
+  // System GET routes (extracted to ./routes/system/read.ts)
+  registerSystemReadRoutes(input.httpServer, { registry, readModel, db: input.db, workspaceBasePath: input.workspaceBasePath });
   input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/wake',
@@ -1383,96 +1154,19 @@ input.httpServer.registerRoute({
     },
   });
 
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/integration/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
-      const result = await integrations.upsertIntegration(body);
 
-      return jsonResponse(result);
-    },
+  // System POST routes (extracted to ./routes/system/write.ts)
+  registerSystemWriteRoutes(input.httpServer, {
+    db: input.db,
+    workspaceBasePath: input.workspaceBasePath,
+    systemSettings,
+    integrations,
+    llmSettings,
+    llmModelPrices,
+    registry,
+    loaderConfig: input.loaderConfig,
+    loadAgent,
   });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/integration/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
-      await integrations.deleteIntegration(body.providerType);
-      return jsonResponse({ success: true, providerType: body.providerType });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/profile/upsert',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
-      return jsonResponse(await llmSettings.upsertProfile(body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/profile/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
-      await llmSettings.deleteProfile(body.profileId);
-      return jsonResponse({ success: true, profileId: body.profileId });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/llm/defaults/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
-      return jsonResponse(await llmSettings.updateDefaults(body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/system/oauth/sync',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, syncOauthSchema);
-      const providerIds: Array<'openai-codex' | 'anthropic'> =
-        body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
-      const results: Array<{
-        providerId: 'openai-codex' | 'anthropic';
-        synced: boolean;
-        error?: string;
-      }> = [];
-
-      for (const providerId of providerIds) {
-        try {
-          if (providerId === 'openai-codex') {
-            await syncOpenAICodexCredential();
-          } else {
-            await syncAnthropicCredential();
-          }
-
-          results.push({
-            providerId,
-            synced: true,
-          });
-        } catch (error) {
-          results.push({
-            providerId,
-            synced: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-
-      return jsonResponse({
-        state: await readOauthState(),
-        results,
-      });
-    },
-  });
-
   // Finance POST routes (extracted to ./routes/finance/write.ts)
   registerFinanceWriteRoutes(input.httpServer, {
     companyCash,
