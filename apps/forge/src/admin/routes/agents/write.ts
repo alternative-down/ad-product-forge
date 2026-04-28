@@ -1,25 +1,14 @@
 /**
- * Agent Admin Action Routes - Phase 2 of #689
- * POST routes that perform agent actions extracted from routes.ts
+ * Agent Admin Write Routes - Phase 2 of #689
+ * POST routes that perform agent write operations extracted from routes.ts
  */
 
 import { z } from 'zod';
+import type { HttpHandler } from '../../../http/server.js';
 import { jsonResponse, parseJsonBody } from '../index';
-
-const clearAgentHistorySchema = z.object({
-  agentId: z.string(),
-  includeLongTermMemoryThread: z.boolean().optional(),
-}).strict();
-
-const agentLongTermMemoryRecallSearchSchema = z.object({
-  agentId: z.string(),
-  query: z.string(),
-  limit: z.number().optional(),
-}).strict();
-
-const agentActionSchema = z.object({
-  agentId: z.string(),
-}).strict();
+import { clearAgentHistory } from '../helpers';
+import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas';
+import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (agentId: string, opts: { query: string }) => Promise<unknown>;
@@ -31,24 +20,13 @@ interface AgentRoutesInput {
   loaderConfig: unknown;
 }
 
-interface AgentHelpers {
-  clearAgentHistory: (opts: {
-    db: unknown;
-    workspaceBasePath: string;
-    agentId: string;
-    includeLongTermMemoryThread?: boolean;
-  }) => Promise<void>;
-  reloadAgentIfLoaded: (db: unknown, loaderConfig: unknown, agentId: string) => Promise<void>;
-}
-
 /**
  * Register POST routes for agent write operations
  */
 export function registerAgentWriteRoutes(
-  httpServer: { registerRoute: (route: unknown) => void },
+  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
   readModel: ReadModel,
-  input: AgentRoutesInput,
-  helpers: AgentHelpers
+  input: AgentRoutesInput
 ) {
   // POST /admin/agent/clear-history
   httpServer.registerRoute({
@@ -56,13 +34,13 @@ export function registerAgentWriteRoutes(
     path: '/admin/agent/clear-history',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
-      await helpers.clearAgentHistory({
-        db: input.db,
+      await clearAgentHistory({
+        db: input.db as any,
         workspaceBasePath: input.workspaceBasePath,
         agentId: body.agentId,
         includeLongTermMemoryThread: body.includeLongTermMemoryThread,
       });
-      await helpers.reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+      await reloadAgentIfLoaded(input.db as any, input.loaderConfig as any, body.agentId);
       return jsonResponse({
         success: true,
         agentId: body.agentId,

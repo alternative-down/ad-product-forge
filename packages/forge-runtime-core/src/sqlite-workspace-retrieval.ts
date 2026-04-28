@@ -151,7 +151,7 @@ export class SqliteWorkspaceRetrieval {
         db.exec('commit');
       } catch (error) {
         db.exec('rollback');
-        throw error;
+        throw error instanceof Error ? error : new Error(String(error));
       }
 
       return;
@@ -168,8 +168,9 @@ export class SqliteWorkspaceRetrieval {
       db.exec('commit');
     } catch (error) {
       db.exec('rollback');
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
+
   }
 
   async search(

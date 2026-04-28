@@ -33,20 +33,20 @@ const recurringPayableStatusSchema = z.object({
   isActive: z.boolean(),
 }).strict();
 
-interface CompanyCash {
-  recordCashIn: (opts: { type: string; amountUsd: number; description: string; effectiveAt: number }) => Promise<void>;
-  scheduleCashOut: (opts: { type: string; amountUsd: number; description: string; referenceType: string; referenceId: string; dueAt: number }) => Promise<{ entryId: string }>;
-  postPlannedEntry: (entryId: string, opts: { effectiveAt?: number }) => Promise<unknown>;
+type CompanyCash = {
+  recordCashIn: (input: { type: string; amountUsd: number; description: string; effectiveAt?: number }) => Promise<{ entryId: string }>;
+  scheduleCashOut: (input: { type: string; amountUsd: number; description: string; referenceType: string; referenceId: string; dueAt: number }) => Promise<{ entryId: string }>;
+  postPlannedEntry: (entryId: string, opts?: { effectiveAt?: number }) => Promise<unknown>;
   cancelPlannedEntry: (entryId: string) => Promise<unknown>;
 }
 
-interface CompanyPayables {
-  createRecurringPayable: (opts: { name: string; description?: string; amountUsd: number; recurrencePeriod: string; dueAt: number }) => Promise<{ payableId: string; entryId: string }>;
-  syncRecurringPayableOccurrence: (opts: { entryId: string }) => Promise<void>;
-  setRecurringPayableActive: (payableId: string, isActive: boolean) => Promise<unknown>;
+type CompanyPayables = {
+  createRecurringPayable: (input: { name: string; description?: string; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; dueAt: number }) => Promise<{ payableId: string; entryId: string }>;
+  syncRecurringPayableOccurrence: (input: { entryId: string }) => Promise<{ payableId: string; nextDueAt: number } | null>;
+  listRecurringPayables: () => Promise<{ payableId: string; name: string; description: string | undefined; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; isActive: boolean; createdAt: number; updatedAt: number; nextDueAt: number }[]>;
 }
 
-interface FinanceWriteInput {
+type FinanceWriteInput = {
   companyCash: CompanyCash;
   companyPayables: CompanyPayables;
 }
@@ -55,7 +55,7 @@ interface FinanceWriteInput {
  * Register POST routes for finance write operations
  */
 export function registerFinanceWriteRoutes(
-  httpServer: { registerRoute: (route: unknown) => void },
+  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
   input: FinanceWriteInput
 ) {
   // POST /admin/finance/investment/create
