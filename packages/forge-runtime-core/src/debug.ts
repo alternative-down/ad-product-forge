@@ -1,4 +1,4 @@
-import { type LogContext } from './logger.js';
+import { logger, type LogContext } from './logger.js';
 
 function isForgeDebugEnabled(): boolean {
   return process.env.FORGE_DEBUG === '1' || process.env.FORGE_DEBUG === 'true';
@@ -50,18 +50,7 @@ export function forgeDebug(
     context = data;
   }
 
-  const entry: Record<string, unknown> = {
-    timestamp: new Date().toISOString(),
-    level: 'DEBUG',
-    scope: `forge:${scope}`,
-    message,
-  };
-
-  if (context && Object.keys(context).length > 0) {
-    entry.context = context;
-  }
-
-  console.log(JSON.stringify(entry));
+  logger.debug(scope, message, context);
 }
 
 export { isForgeDebugEnabled };
