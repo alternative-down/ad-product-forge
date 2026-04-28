@@ -38,7 +38,30 @@ const minimaxConfigSchema = z.object({
 export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github' | 'minimax';
 
 export function createSystemIntegrationStore(db: Database) {
-  const KNOWN_PROVIDER_TYPES = new Set(['migadu', 'coolify', 'github', 'minimax']);
+  // Map dispatchers — one per concern, replacing if/else chains
+  const parseEncryptedConfigMap: Record<
+    SystemIntegrationProviderType,
+    (encryptedConfig: string) => unknown
+  > = {
+    migadu: (encryptedConfig) =>
+      migaduConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
+    coolify: (encryptedConfig) =>
+      coolifyConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
+    github: (encryptedConfig) =>
+      githubConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
+    minimax: (encryptedConfig) =>
+      minimaxConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
+  };
+
+  const parseConfigSchemaMap: Record<
+    SystemIntegrationProviderType,
+    z.ZodType<unknown>
+  > = {
+    migadu: migaduConfigSchema,
+    coolify: coolifyConfigSchema,
+    github: githubConfigSchema,
+    minimax: minimaxConfigSchema,
+  };
 
   async function listIntegrations() {
     const rows = await db.query.systemIntegrations.findMany();
@@ -63,22 +86,22 @@ export function createSystemIntegrationStore(db: Database) {
 
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
     const row = await getEnabledIntegration('migadu');
-    return row ? parseMigaduConfig(row.encryptedConfig) : null;
+    return row ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig) : null;
   }
 
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
     const row = await getEnabledIntegration('coolify');
-    return row ? parseCoolifyConfig(row.encryptedConfig) : null;
+    return row ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig) : null;
   }
 
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
     const row = await getEnabledIntegration('github');
-    return row ? parseGitHubConfig(row.encryptedConfig) : null;
+    return row ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig) : null;
   }
 
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
     const row = await getEnabledIntegration('minimax');
-    return row ? parseMinimaxConfig(row.encryptedConfig) : null;
+    return row ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig) : null;
   }
 
   async function upsertIntegration(
@@ -172,21 +195,7 @@ export function createSystemIntegrationStore(db: Database) {
     providerType: SystemIntegrationProviderType,
     encryptedConfig: string,
   ) {
-    if (providerType === 'migadu') {
-      return parseMigaduConfig(encryptedConfig);
-    }
-
-    if (providerType === 'coolify') {
-      return parseCoolifyConfig(encryptedConfig);
-    }
-
-    if (providerType === 'github') {
-      return parseGitHubConfig(encryptedConfig);
-    }
-
-    if (providerType === 'minimax') {
-      return parseMinimaxConfig(encryptedConfig);
-    }
+    return parseEncryptedConfigMap[providerType](encryptedConfig);
   }
 
   function parseIntegrationConfigForList(
@@ -209,25 +218,11 @@ export function createSystemIntegrationStore(db: Database) {
       | GitHubSystemIntegrationConfig
       | MinimaxSystemIntegrationConfig,
   ) {
-    if (!KNOWN_PROVIDER_TYPES.has(providerType)) {
+    const schema = parseConfigSchemaMap[providerType];
+    if (!schema) {
       throw new Error('Unknown integration provider type');
     }
-
-    if (providerType === 'migadu') {
-      return migaduConfigSchema.parse(config);
-    }
-
-    if (providerType === 'coolify') {
-      return coolifyConfigSchema.parse(config);
-    }
-
-    if (providerType === 'github') {
-      return githubConfigSchema.parse(config);
-    }
-
-    if (providerType === 'minimax') {
-      return minimaxConfigSchema.parse(config);
-    }
+    return schema.parse(config);
   }
 
   return {
