@@ -132,7 +132,6 @@ export type CreateRuntimeAgentSessionOptions = {
   conversationStore: ConversationStore;
   checkpointedStateStore?: CreateForgeAgentRuntimeOptions['memory']['stateStore'];
   workingMemoryStore: RuntimeWorkingMemoryStore;
-  checkpointedOmStateStore?: unknown;
   checkpointedOmLimits?: {
     totalContextTokens: number;
     recentRawTokens: number;
