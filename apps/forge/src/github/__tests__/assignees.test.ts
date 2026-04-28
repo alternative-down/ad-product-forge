@@ -1,23 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-// Inline the normalizeAssignees function for testing
-function normalizeAssignees(assignees?: string[]): string[] | undefined {
-  if (!assignees || assignees.length === 0) {
-    return undefined;
-  }
-
-  const gitHubAppPattern = /^[a-z0-9]+(-[a-z0-9]+)+$/;
-
-  return assignees.map((assignee) => {
-    if (assignee.endsWith('[bot]')) {
-      return assignee;
-    }
-    if (gitHubAppPattern.test(assignee)) {
-      return `${assignee}[bot]`;
-    }
-    return assignee;
-  });
-}
+import { normalizeAssignees } from '../helpers';
 
 describe('normalizeAssignees', () => {
   it('should return undefined for undefined input', () => {
