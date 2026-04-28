@@ -566,7 +566,7 @@ export function createCoolifyManager(config: {
       adminToken: integration.adminToken,
       serverId: integration.serverId,
       destinationId: integration.destinationId,
-      applicationsBaseDomain: normalizeDomainHost(integration.applicationsBaseDomain) || null,
+      applicationsBaseDomain: normalizeDomainHost(integration.applicationsBaseDomain) ?? null,
     };
   }
 
@@ -605,7 +605,7 @@ function normalizeDomainHost(value: string | null | undefined) {
     ? new URL(trimmed).host
     : trimmed.replace(/^\./, '').replace(/\/+$/, '');
 
-  return normalized || null;
+  return normalized ?? null;
 }
 
 function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>) {

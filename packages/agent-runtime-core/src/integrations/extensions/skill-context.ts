@@ -55,7 +55,7 @@ function buildDefaultSkillQuery(pendingInputs: RuntimeInput[]) {
     .filter((value) => typeof value === 'string')
     .join(' ');
 
-  return payloads.trim() || null;
+  return payloads.trim() ?? null;
 }
 
 function scoreSkill(skill: SkillDefinition, query: string) {

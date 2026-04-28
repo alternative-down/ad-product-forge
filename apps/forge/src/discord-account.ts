@@ -252,7 +252,7 @@ export function createDiscordProvider(config: {
       authorId: message.author.id,
       authorDisplayName,
       authorUsername: message.author.username,
-      content: content || '[attachment only]',
+      content: content ?? '[attachment only]',
       attachments: await downloadDiscordAttachments(message),
       createdAt: new Date(message.createdTimestamp).toISOString(),
       metadata: {
@@ -480,7 +480,7 @@ export function createDiscordProvider(config: {
         provider: 'discord',
         authorId: message.author.id,
         targetKey: input.channel.id,
-        content: extractDiscordMessageContent(message) || '[attachment only]',
+        content: extractDiscordMessageContent(message) ?? '[attachment only]',
         attachments: await downloadDiscordAttachments(message),
         unread: false,
         createdAt: new Date(message.createdTimestamp).toISOString(),

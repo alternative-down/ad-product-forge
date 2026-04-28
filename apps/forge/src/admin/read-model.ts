@@ -650,7 +650,7 @@ export function createAdminReadModel(input: {
         : path.resolve(agentWorkspaceRoot, 'workspace');
       const agentContextPath = path.resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
       const agentContext = await readFile(agentContextPath, 'utf8')
-        .then((content) => content.trim() || null)
+        .then((content) => content.trim() ?? null)
         .catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { error: err } }); return null; });
       const workingMemory = (await conversationStore.read({
         threadId: mastraAgentId,
