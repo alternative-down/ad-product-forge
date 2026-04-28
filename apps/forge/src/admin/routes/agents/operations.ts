@@ -4,6 +4,8 @@
  */
 
 import { z } from 'zod';
+import type { CommunicationFile } from '@forge-runtime/core';
+import type { HttpHandler } from '../../../http/server.js';
 import { jsonResponse, parseJsonBody } from '../index';
 
 const agentActionSchema = z.object({
@@ -19,9 +21,11 @@ const adminInternalChatSendSchema = z.object({
 }).strict();
 
 interface InternalChat {
-  registerExternalAccount: (opts: { slug: string; displayName: string }) => Promise<{ accountId: string }>;
-  sendMessage: (opts: { accountId: string; targetKey: string; content: string; attachments: unknown[] }) => Promise<{ conversationKey: string; messageId: string }>;
-  listAccounts: () => Promise<{ id: string; agentId: string | null; slug: string; displayName: string; description?: string }[]>;
+  registerExternalAccount: (input: { slug: string; displayName: string }) => Promise<{ accountId: string }>;
+  sendMessage: (input: { accountId: string; targetKey: string; content: string; attachments: CommunicationFile[] }) => Promise<{ success: boolean;
+    conversationKey: string;
+    messageId: string;
+  }>;
 }
 
 interface RegistryEntry {
@@ -34,7 +38,7 @@ interface RegistryEntry {
  * Register routes for agent operations (wake, internal chat)
  */
 export function registerAgentOperationRoutes(
-  httpServer: { registerRoute: (route: unknown) => void },
+  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
   input: {
     internalChat: InternalChat;
   },
@@ -57,7 +61,7 @@ export function registerAgentOperationRoutes(
         type: 'manual-wake',
         groupKey: `manual-wake:${agentId}`,
         groupMetadata: {
-          source: 'admin-console',
+          Source: 'admin-console',
           AgentId: agentId,
         },
         idempotencyKey: `manual-wake:${agentId}:${timestamp}`,

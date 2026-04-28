@@ -73,6 +73,7 @@ import {
 
 export * from './schemas.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
+import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes } from './routes/agents/index.js';
 import {
   normalizeOptionalText,
   normalizeJsonText,
@@ -120,9 +121,7 @@ import {
   roleWorkflowPermissionSchema,
   createScheduleSchema,
   updateScheduleSchema,
-  deleteScheduleSchema,
-  upsertAgentWebhookSchema,
-  deleteAgentWebhookSchema,
+  deleteScheduleSchema
 } from './routes/schemas.js';
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
 
@@ -158,185 +157,34 @@ export function registerAdminRoutes(input: {
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
 
+  // Agent operations bundle (used by write-ops routes)
+  const ops = {
+    loadAgent,
+    topUpActiveAgentContract,
+    adjustAgentContractBudget,
+    renewAgentContract,
+    runInternalHiring,
+    runInternalTermination,
+    changeAgentRoleFromAdmin,
+  };
+
+  // Convert registry to Map for submodules expecting Map<string, RegistryEntry>
+  const opRegistry = registry.list().reduce(
+    (acc, e) => { acc.set(e.runtime.id, e as any); return acc; },
+    new Map()
+  );
+
+// Delegate agent routes to extracted submodules
+  registerAgentReadRoutes(input.httpServer, readModel);
+  registerAgentWriteRoutes(input.httpServer, readModel, input);
+  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, opRegistry);
+  registerAgentWriteOpsRoutes(input.httpServer, input, opRegistry, ops);
+
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/overview',
     handler: async () => jsonResponse(await readModel.getDashboard()),
   });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agents',
-    handler: async () => jsonResponse(await readModel.listAgents()),
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent',
-    handler: async (request) => {
-      const { agentId } = agentIdQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-      });
-      const agent = await readModel.getAgent(agentId);
-
-      if (!agent) {
-        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-      }
-
-      return jsonResponse(agent);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/recent-conversations',
-    handler: async (request) => {
-      const { agentId } = agentIdQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-      });
-      const conversations = await readModel.listAgentRecentConversations(agentId);
-
-      if (!conversations) {
-        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-      }
-
-      return jsonResponse(conversations);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/execution-steps',
-    handler: async (request) => {
-      const query = agentExecutionStepsQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-        limit: request.query.get('limit') ?? undefined,
-        offset: request.query.get('offset') ?? undefined,
-      });
-
-      return jsonResponse(await readModel.listAgentExecutionSteps(query));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/thread-messages',
-    handler: async (request) => {
-      const query = agentThreadMessagesQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-        page: request.query.get('page') ?? undefined,
-        perPage: request.query.get('perPage') ?? undefined,
-      });
-
-      return jsonResponse(await readModel.listAgentThreadMessages(query));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/ltm-thread-messages',
-    handler: async (request) => {
-      const query = agentThreadMessagesQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-        page: request.query.get('page') ?? undefined,
-        perPage: request.query.get('perPage') ?? undefined,
-      });
-
-      return jsonResponse(
-        await readModel.listAgentLongTermMemoryThreadMessages({
-          agentId: query.agentId,
-          page: query.page,
-          perPage: query.perPage,
-        }),
-      );
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/clear-history',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
-
-      await clearAgentHistory({
-        db: input.db,
-        workspaceBasePath: input.workspaceBasePath,
-        agentId: body.agentId,
-        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
-      });
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
-      });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/runtime-memory',
-    handler: async (request) => {
-      const { agentId } = agentIdQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-      });
-      const snapshot = await readModel.getAgentRuntimeMemory(agentId);
-
-      if (!snapshot) {
-        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-      }
-
-      return jsonResponse(snapshot);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/om-debug-export',
-    handler: async (request) => {
-      const { agentId } = agentIdQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-      });
-      const snapshot = await readModel.getAgentOmDebugExport(agentId);
-
-      if (!snapshot) {
-        return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
-      }
-
-      return jsonResponse(snapshot);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/ltm-recall-search',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
-      return jsonResponse(
-        await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
-          query: body.query,
-        }),
-      );
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/agent/conversation-messages',
-    handler: async (request) => {
-      const query = agentConversationMessagesQuerySchema.parse({
-        agentId: request.query.get('agentId'),
-        provider: request.query.get('provider'),
-        targetKey: request.query.get('targetKey'),
-        limit: request.query.get('limit') ?? undefined,
-        offset: request.query.get('offset') ?? undefined,
-      });
-
-      return jsonResponse(await readModel.listAgentConversationMessages(query));
-    },
-  });
-
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/roles',
@@ -344,282 +192,28 @@ export function registerAdminRoutes(input: {
   });
 
   // System GET routes (extracted to ./routes/system/read.ts)
-  registerSystemReadRoutes(input.httpServer, readModel, registry, input.workspaceBasePath);
+  registerSystemReadRoutes({
+    httpServer: input.httpServer,
+    db: input.db,
+    registry,
+    readModel,
+    workspaceBasePath: input.workspaceBasePath,
+  });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
   registerFinanceReadRoutes(input.httpServer, readModel);
-
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/wake',
-    handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const entry = registry.get(agentId);
-      const timestamp = Date.now();
-
-      if (!entry) {
-        return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
-      }
-
-      entry.runner.notifyExternalEvent({
-        type: 'manual-wake',
-        groupKey: `manual-wake:${agentId}`,
-        groupMetadata: {
-          Source: 'admin-console',
-          AgentId: agentId,
-        },
-        idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
-        text: 'Manual wake requested from admin console.',
-        timestamp,
-      });
-      return jsonResponse({ success: true });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/internal-chat/send',
-    handler: async (request) => {
-      const payload = parseJsonBody(request.bodyText, adminInternalChatSendSchema);
-      const sender = await input.internalChat.registerExternalAccount({
-        slug: payload.senderSlug,
-        displayName: payload.senderDisplayName,
-      });
-      const sent = await input.internalChat.sendMessage({
-        accountId: sender.accountId,
-        targetKey: payload.targetKey ?? payload.agentId,
-        content: payload.content,
-        attachments: [],
-      });
-
-      return jsonResponse({
-        success: true,
-        conversationKey: sent.conversationKey,
-        messageId: sent.messageId,
-      });
-    },
-  });
-
-  
-registerInternalChatRoutes(input.httpServer, input.internalChat);
-input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/reload',
-    handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const runtime = await loadAgent(input.db, {
-        ...input.loaderConfig,
-        agentId,
-      });
-      await registry.add(input.db, runtime);
-
-      return jsonResponse({ success: true, agentId });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/force-idle',
-    handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const entry = registry.get(agentId);
-
-      if (entry) {
-        await entry.runner.forceIdle();
-      } else {
-        await agentContracts.setExecutionState(agentId, 'idle');
-      }
-
-      return jsonResponse({ success: true, agentId });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/rewakeup',
-    handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      let entry = registry.get(agentId);
-
-      if (entry) {
-        await entry.runner.forceIdle();
-      } else {
-        await agentContracts.setExecutionState(agentId, 'idle');
-        const runtime = await loadAgent(input.db, {
-          ...input.loaderConfig,
-          agentId,
-        });
-        entry = await registry.add(input.db, runtime);
-      }
-
-      entry.runner.notifyExternalEvent({
-        type: 'admin-rewakeup',
-        groupKey: `admin-rewakeup:${agentId}`,
-        groupMetadata: {
-          Source: 'admin',
-        },
-        idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
-        text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
-        timestamp: Date.now(),
-      });
-
-      return jsonResponse({ success: true, agentId });
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/contract/top-up',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
-      return jsonResponse(await topUpActiveAgentContract(input.db, body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/contract/adjust-budget',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
-      return jsonResponse(await adjustAgentContractBudget(input.db, body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/contract/renew',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
-      return jsonResponse(await renewAgentContract(input.db, body));
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/hire',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, hireAgentSchema);
-      const result = await runInternalHiring(input.db, {
-        hiringRequest: body.hiringRequest,
-        additionalContext: body.additionalContext,
-        weeklyBudgetUsd: body.weeklyBudgetUsd,
-        workspaceBasePath: input.workspaceBasePath,
-        githubApps: input.githubApps,
-        emailMailboxes: input.emailMailboxes,
-        coolify: input.coolify,
-        schedules: input.schedules,
-        internalChat: input.internalChat,
-      });
-
-      return jsonResponse(result, 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/terminate',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, terminateAgentSchema);
-      const result = await runInternalTermination(input.db, {
-        agentId: body.agentId,
-        workspaceBasePath: input.workspaceBasePath,
-        githubApps: input.githubApps,
-        emailMailboxes: input.emailMailboxes,
-        coolify: input.coolify,
-        schedules: input.schedules,
-      });
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/change-role',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
-      const result = await changeAgentRoleFromAdmin({
-        db: input.db,
-        loaderConfig: input.loaderConfig,
-        targetAgentId: body.agentId,
-        roleId: body.roleId,
-      });
-
-      return jsonResponse(result);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/github-manifest-config/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
-      const provisioning = await input.githubApps.updateAgentManifestConfig({
-        agentId: body.agentId,
-        manifestConfig: body.manifestConfig,
-      });
-
-      return jsonResponse(provisioning);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/update-config',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
-      const agent = await input.db.query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-      });
-
-      if (!agent) {
-        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-      }
-
-      await input.db
-        .update(agents)
-        .set({
-          name: body.name,
-          description: body.description ?? null,
-          instructions: body.instructions,
-          workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
-          workspaceBm25: body.workspaceBm25 ? 1 : 0,
-          modelProfileId: body.modelProfileId,
-          omModelProfileId: body.omModelProfileId,
-          updatedAt: Date.now(),
-        })
-        .where(eq(agents.id, body.agentId));
-
-      const role = agent.roleId
-        ? await input.db.query.agentRoles.findFirst({
-            where: eq(agentRoles.id, agent.roleId),
-          })
-        : null;
-
-      await updateInternalChatProviderProfile(input.db, {
-        agentId: body.agentId,
-        displayName: body.name,
-        description: role?.description ?? role?.name ?? body.name,
-      });
-
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({ success: true, agentId: body.agentId });
-    },
-  });
 
   input.httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-provider/upsert',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
-      const credentials = parseProviderCredentials(body.providerType, body.credentials);
+      const credentials = { modelId: body.modelId, apiKey: body.apiKey, baseUrl: body.baseUrl };
       const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
       const existing = await input.db.query.agentProviders.findFirst({
         where: and(
           eq(agentProviders.agentId, body.agentId),
-          eq(agentProviders.providerType, body.providerType),
+          eq(agentProviders.providerType, body.provider),
         ),
       });
 
@@ -634,7 +228,7 @@ input.httpServer.registerRoute({
         await input.db.insert(agentProviders).values({
           id: createId(),
           agentId: body.agentId,
-          providerType: body.providerType,
+          providerType: body.provider,
           encryptedCredentials,
           createdAt: Date.now(),
         });
@@ -642,7 +236,7 @@ input.httpServer.registerRoute({
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.provider });
     },
   });
 
@@ -657,13 +251,13 @@ input.httpServer.registerRoute({
         .where(
           and(
             eq(agentProviders.agentId, body.agentId),
-            eq(agentProviders.providerType, body.providerType),
+            eq(agentProviders.providerType, body.provider),
           ),
         );
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.provider });
     },
   });
 
@@ -1199,13 +793,17 @@ input.httpServer.registerRoute({
   });
 
   // System POST routes (extracted to ./routes/system/write.ts)
-  registerSystemWriteRoutes(input.httpServer, input.db, input.workspaceBasePath, input.loaderConfig, {
+  registerSystemWriteRoutes({
+    httpServer: input.httpServer,
+    db: input.db,
+    workspaceBasePath: input.workspaceBasePath,
+    loaderConfig: input.loaderConfig,
+    registry,
     loadAgent,
     systemSettings,
     llmSettings,
     llmModelPrices,
     integrations,
-    reloadLinkedAgentsForMcpServer: (serverId: string) => reloadLinkedAgentsForMcpServer(input.db, input.loaderConfig, serverId),
   });
 
   registerFinanceWriteRoutes(input.httpServer, {
@@ -1214,30 +812,6 @@ input.httpServer.registerRoute({
   });
 }
 
-async function clearAgentHistory(opts: {
-  db: Database;
-  workspaceBasePath: string;
-  agentId: string;
-  includeLongTermMemoryThread?: boolean;
-}): Promise<void> {
-  const { db, workspaceBasePath, agentId, includeLongTermMemoryThread } = opts;
-
-  const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-  const client = createClient({ url: `file:${agentDatabasePath}` });
-  const mastraAgentId = toMastraSafeIdentifier(agentId);
-  const conversationStore = new LibsqlConversationStore({
-    client,
-    tablePrefix: mastraAgentId,
-  });
-
-  await conversationStore.clearThread(mastraAgentId);
-
-  if (includeLongTermMemoryThread) {
-    await db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, agentId));
-    await db.delete(agentLongTermMemoryStates).where(eq(agentLongTermMemoryStates.agentId, agentId));
-    await db.delete(agentLongTermMemoryRecallStates).where(eq(agentLongTermMemoryRecallStates.agentId, agentId));
-  }
-}
 
 
 

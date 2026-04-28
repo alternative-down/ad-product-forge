@@ -3,8 +3,9 @@
  * Routes for internal chat management extracted from routes.ts
  */
 
+import type { HttpHandler } from '../../../http/server.js';
 import { z } from 'zod';
-import type { InternalChatService } from '../../communication/internal-chat-service';
+import type { InternalChatService } from '../../communication/internal-chat-service.js';
 import {
   createExternalInternalChatAccountSchema,
   updateExternalInternalChatAccountSchema,
@@ -28,7 +29,7 @@ interface Request {
  * Register routes for internal chat management
  */
 export function registerInternalChatRoutes(
-  httpServer: { registerRoute: (route: unknown) => void },
+  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
   internalChat: InternalChatService
 ) {
   // GET /admin/internal-chat/accounts

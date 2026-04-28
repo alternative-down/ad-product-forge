@@ -188,24 +188,19 @@ describe('Admin Route Schemas', () => {
   describe('hireAgentSchema', () => {
     it('validates complete input', () => {
       const result = hireAgentSchema.parse({
-        name: 'Test Agent',
-        role: 'developer',
-        weeklyBudget: 1000,
-        budgetCap: 5000,
+        hiringRequest: 'Hire a developer agent named Test Agent',
+        weeklyBudgetUsd: 1000,
       });
-      expect(result.name).toBe('Test Agent');
+      expect(result.hiringRequest).toBe('Hire a developer agent named Test Agent');
     });
 
     it('accepts optional fields', () => {
       const result = hireAgentSchema.parse({
-        name: 'Test Agent',
-        role: 'developer',
-        weeklyBudget: 1000,
-        budgetCap: 5000,
-        systemPrompt: 'Be helpful',
-        modelId: 'claude-3-5-sonnet',
+        hiringRequest: 'Hire a developer agent',
+        additionalContext: 'Be helpful',
+        weeklyBudgetUsd: 1000,
       });
-      expect(result.systemPrompt).toBe('Be helpful');
+      expect(result.additionalContext).toBe('Be helpful');
     });
   });
 

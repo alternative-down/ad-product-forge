@@ -233,18 +233,17 @@ export const removeInternalChatGroupMemberSchema = z.object({
 
 export const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
-  amount: z.number().positive(),
+  amountUsd: z.number().positive(),
 });
 
 export const adjustAgentContractBudgetSchema = z.object({
   agentId: z.string().min(1),
-  weeklyLimit: z.number().positive().optional(),
-  budgetCap: z.number().positive().optional(),
+  newBudgetUsd: z.number().positive(),
 });
 
 export const renewAgentContractSchema = z.object({
   agentId: z.string().min(1),
-  weeks: z.number().int().positive(),
+  newBudgetUsd: z.number().positive(),
 });
 
 // =============================================================================
@@ -252,12 +251,9 @@ export const renewAgentContractSchema = z.object({
 // =============================================================================
 
 export const hireAgentSchema = z.object({
-  name: z.string().min(1),
-  role: z.string().min(1),
-  weeklyBudget: z.number().positive(),
-  budgetCap: z.number().positive(),
-  systemPrompt: z.string().min(1).optional(),
-  modelId: z.string().min(1).optional(),
+  hiringRequest: z.string().min(1),
+  additionalContext: z.string().optional(),
+  weeklyBudgetUsd: z.number().positive(),
 });
 
 export const terminateAgentSchema = z.object({
@@ -271,11 +267,13 @@ export const changeAgentRoleSchema = z.object({
 
 export const updateAgentConfigSchema = z.object({
   agentId: z.string().min(1),
-  systemPrompt: z.string().optional(),
-  modelId: z.string().optional(),
-  temperature: z.number().min(0).max(2).optional(),
-  maxTokens: z.number().int().positive().optional(),
-  tools: z.array(z.string()).optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  instructions: z.string().optional(),
+  workspaceAutoSync: z.boolean().optional(),
+  workspaceBm25: z.boolean().optional(),
+  modelProfileId: z.string().optional(),
+  omModelProfileId: z.string().optional(),
 });
 
 // =============================================================================

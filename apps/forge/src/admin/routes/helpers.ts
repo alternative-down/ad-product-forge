@@ -1,5 +1,14 @@
 import { access } from 'node:fs/promises';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
+import { createClient } from '@libsql/client';
+import { LibsqlConversationStore, toMastraSafeIdentifier } from '@forge-runtime/core';
+import type { Database } from '../../database/index';
+import {
+  agentCheckpointedOmStates,
+  agentLongTermMemoryStates,
+  agentLongTermMemoryRecallStates,
+} from '../../database/schema';
 
 export function normalizeOptionalText(value?: string): string | null {
   const normalized = value?.trim();
@@ -147,5 +156,34 @@ export async function fsPathExists(path: string): Promise<boolean> {
   } catch {
     // Safe: path does not exist — return false to signal absence
     return false;
+  }
+}
+
+/**
+ * Clears agent conversation history and optionally long-term memory.
+ * Extracted from routes.ts for use by registerAgentWriteRoutes.
+ */
+export async function clearAgentHistory(opts: {
+  db: Database;
+  workspaceBasePath: string;
+  agentId: string;
+  includeLongTermMemoryThread?: boolean;
+}): Promise<void> {
+  const { db, workspaceBasePath, agentId, includeLongTermMemoryThread } = opts;
+
+  const agentDatabasePath = `${workspaceBasePath}/${agentId}/database.db`;
+  const client = createClient({ url: `file:${agentDatabasePath}` });
+  const mastraAgentId = toMastraSafeIdentifier(agentId);
+  const conversationStore = new LibsqlConversationStore({
+    client,
+    tablePrefix: mastraAgentId,
+  });
+
+  await conversationStore.clearThread(mastraAgentId);
+
+  if (includeLongTermMemoryThread) {
+    await db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, agentId));
+    await db.delete(agentLongTermMemoryStates).where(eq(agentLongTermMemoryStates.agentId, agentId));
+    await db.delete(agentLongTermMemoryRecallStates).where(eq(agentLongTermMemoryRecallStates.agentId, agentId));
   }
 }

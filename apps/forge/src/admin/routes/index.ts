@@ -11,7 +11,7 @@ export * from './validation.js';
  * Build a JSON response object
  */
 export function jsonResponse(body: unknown, status = 200) {
-  return { status, body };
+  return { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, body: JSON.stringify(body) };
 }
 
 /**
