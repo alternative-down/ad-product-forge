@@ -110,7 +110,7 @@ export function createAgentScheduleStore(db: Database) {
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
     });
 
-    if (!row) {
+    if (!row || row.kind !== 'agent') {
       return null;
     }
 
