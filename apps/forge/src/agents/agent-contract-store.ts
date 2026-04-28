@@ -1,12 +1,12 @@
 import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
 import { createId } from '../utils/id';
+import { WEEK_MS } from '../shared/constants';
 
 import type { Database } from '../database/index';
 import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
-import { WEEK_MS } from '../shared/constants.js';
 
 export function createAgentContractStore(db: Database) {
   const companyCash = createCompanyCashLedger(db);
