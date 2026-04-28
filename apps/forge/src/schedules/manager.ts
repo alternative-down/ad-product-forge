@@ -95,6 +95,10 @@ export function createAgentScheduleManager(input: {
   const jobs = new Map<string, Job>();
   type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
+  async function getOwnedSchedule(agentId: string, scheduleId: string) {
+    return store.getOwnedSchedule(agentId, scheduleId);
+  }
+
   async function loadAll() {
     const schedules = await store.listActiveSchedules();
 
@@ -379,9 +383,11 @@ export function createAgentScheduleManager(input: {
 
   async function deleteSchedule(agentId: string, scheduleId: string) {
     cancelJob(scheduleId);
-    return {
-      success: await store.deleteAgentSchedule(agentId, scheduleId),
-    };
+    const deleted = await store.deleteAgentSchedule(agentId, scheduleId);
+    if (!deleted) {
+      throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
+    }
+    return { success: true };
   }
 
   // Cross-agent: Create schedule for another agent
@@ -652,6 +658,7 @@ export function createAgentScheduleManager(input: {
     createScheduleForAgent,
     editCron,
     deleteCron,
+    getOwnedSchedule,
   };
 }
 
