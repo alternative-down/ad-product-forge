@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { getEncoding } from 'js-tiktoken';
+
+
+import { countTokens, getEncoder } from '../../token-counter.js';
 
 import type { RuntimeActionDefinition } from '../../core/actions.js';
 
@@ -38,20 +40,6 @@ const MAX_PATTERN_LENGTH = 1000;
 // =============================================================================
 
 /**
- * Count tokens using tiktoken (cl100k_base encoding)
- */
-function countTokens(text: string): number {
-  try {
-    const encoder = getEncoding('cl100k_base');
-    const tokens = encoder.encode(text);
-    return tokens.length;
-  } catch {
-    // Fallback: approximate 4 chars per token
-    return Math.ceil(text.length / 4);
-  }
-}
-
-/**
  * Convert content to string
  */
 function toString(content: Uint8Array | Buffer | string, encoding?: string): string {
@@ -85,7 +73,7 @@ function truncateOutput(
 
   if (currentTokens > limit) {
     try {
-      const encoder = getEncoding('cl100k_base');
+      const encoder = getEncoder();
       const allTokens = encoder.encode(result);
       const truncatedTokens = allTokens.slice(-limit);
       result = `[output truncated: showing last ~${limit} of ~${allTokens.length} tokens]\n${encoder.decode(truncatedTokens)}`;
