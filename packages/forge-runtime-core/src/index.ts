@@ -137,11 +137,6 @@ export type {
   OperationalMemoryOmStateStore,
 } from './operational-memory-om.js';
 export {
-  createOperationalMemoryOmCompatibilityObserver,
-  type OperationalMemoryOmCompatibilityObserverOptions,
-} from './operational-memory-om-compatibility.js';
-export { createOperationalMemoryOmContextPlugin } from './operational-memory-om-context-plugin.js';
-export {
   readOperationalMemoryState,
   takeOperationalMemoryBatch,
   estimateMessageUnits,
