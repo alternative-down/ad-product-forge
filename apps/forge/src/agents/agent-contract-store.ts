@@ -25,8 +25,8 @@ export function createAgentContractStore(db: Database) {
       .update(agents)
       .set({
         executionState,
-        lastExecutionError: executionState === 'absent' ? undefined : null,
-        lastExecutionErrorAt: executionState === 'absent' ? undefined : null,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
         updatedAt: Date.now(),
       })
       .where(eq(agents.id, agentId));
