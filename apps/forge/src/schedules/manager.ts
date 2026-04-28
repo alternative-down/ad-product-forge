@@ -1,4 +1,4 @@
-import { gracefulShutdown, scheduleJob, type Job, type RecurrenceSpecDateRange } from 'node-schedule';
+import { gracefulShutdown, scheduleJob, cancelJob as cancelScheduledJob, type Job, type RecurrenceSpecDateRange } from 'node-schedule';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
@@ -103,7 +103,7 @@ export function createAgentScheduleManager(input: {
     const schedules = await store.listActiveSchedules();
 
     for (const scheduleRecord of schedules) {
-      cancelJob(scheduleRecord.scheduleId);
+      cancelScheduledJob(scheduleRecord.scheduleId);
       await registerSchedule(scheduleRecord);
     }
   }
@@ -256,7 +256,7 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    cancelJob(scheduleId);
+    cancelScheduledJob(scheduleId);
 
     try {
       if (updated.isActive) {
@@ -354,7 +354,7 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    cancelJob(scheduleId);
+    cancelScheduledJob(scheduleId);
 
     try {
       if (updated.isActive) {
@@ -382,7 +382,7 @@ export function createAgentScheduleManager(input: {
   }
 
   async function deleteSchedule(agentId: string, scheduleId: string) {
-    cancelJob(scheduleId);
+    cancelScheduledJob(scheduleId);
     const deleted = await store.deleteAgentSchedule(agentId, scheduleId);
     if (!deleted) {
       throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
@@ -480,7 +480,7 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Not authorized to delete schedule: ${scheduleId}`);
     }
 
-    cancelJob(scheduleId);
+    cancelScheduledJob(scheduleId);
     return {
       success: await store.deleteAgentSchedule(schedule.agentId, scheduleId),
     };
@@ -490,7 +490,7 @@ export function createAgentScheduleManager(input: {
     const schedules = await store.listAgentSchedules(agentId);
 
     for (const scheduleRecord of schedules) {
-      cancelJob(scheduleRecord.scheduleId);
+      cancelScheduledJob(scheduleRecord.scheduleId);
     }
   }
 
@@ -507,6 +507,11 @@ export function createAgentScheduleManager(input: {
     if (!scheduleRecord || !scheduleRecord.isActive) {
       return;
     }
+
+    // Cancel any existing node-schedule timer for this ID to prevent duplicate
+    // registrations (e.g. from concurrent updateSchedule + loadAll). Without this,
+    // node-schedule keeps both old and new timer references and fires twice.
+    cancelScheduledJob(scheduleRecord.scheduleId);
 
     if (scheduleRecord.scheduleType === 'date') {
       if (!scheduleRecord.scheduledDate) {
@@ -630,10 +635,10 @@ export function createAgentScheduleManager(input: {
       return;
     }
 
-    cancelJob(scheduleId);
+    cancelScheduledJob(scheduleId);
   }
 
-  function cancelJob(scheduleId: string) {
+  function cancelScheduledJob(scheduleId: string) {
     const job = jobs.get(scheduleId);
 
     if (!job) {
