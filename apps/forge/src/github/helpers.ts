@@ -143,7 +143,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function createAppName(agentName: string, agentId: string): string {
   const suffix = nanoid(GITHUB_APP_NAME_SUFFIX_LENGTH).toLowerCase();
-  const fallbackBaseName = `agent-${agentId.slice(0, 8)}`;
+  const fallbackBaseName = agentId.slice(0, 15);
   const normalizedBaseName = agentName
     .toLowerCase()
     .normalize('NFKD')
@@ -263,7 +263,7 @@ export function toIssueDetails(issue: {
           title: issue.milestone.title,
         }
       : null,
-    comments: 'comments' in issue ? (issue.comments as number) : 0,
+    comments: issue.comments ?? 0,
     createdAt: issue.created_at,
     updatedAt: issue.updated_at,
   };
@@ -287,27 +287,27 @@ export function summarizeGitHubEvent(input: {
   const repositoryText = input.repository ? ` in ${input.repository}` : '';
   const senderText = input.sender ? ` by ${input.sender}` : '';
 
-  if (input.event === 'issues' && issue) {
-    const number = typeof issue.number === 'number' ? issue.number : null;
-    const title = typeof issue.title === 'string' ? issue.title : null;
+  if (input.event === 'issues') {
+    const number = issue && typeof issue.number === 'number' ? issue.number : null;
+    const title = issue && typeof issue.title === 'string' ? issue.title : null;
     return `Issue${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
   }
 
-  if (input.event === 'issue_comment' && issue) {
-    const number = typeof issue.number === 'number' ? issue.number : null;
-    const title = typeof issue.title === 'string' ? issue.title : null;
+  if (input.event === 'issue_comment') {
+    const number = issue && typeof issue.number === 'number' ? issue.number : null;
+    const title = issue && typeof issue.title === 'string' ? issue.title : null;
     return `Issue comment${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
   }
 
   if (input.event === 'pull_request' && pullRequest) {
-    const number = typeof pullRequest.number === 'number' ? pullRequest.number : null;
-    const title = typeof pullRequest.title === 'string' ? pullRequest.title : null;
+    const number = pullRequest && typeof pullRequest.number === 'number' ? pullRequest.number : null;
+    const title = pullRequest && typeof pullRequest.title === 'string' ? pullRequest.title : null;
     return `Pull request${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
   }
 
   if (input.event === 'pull_request_review' && pullRequest) {
-    const number = typeof pullRequest.number === 'number' ? pullRequest.number : null;
-    const title = typeof pullRequest.title === 'string' ? pullRequest.title : null;
+    const number = pullRequest && typeof pullRequest.number === 'number' ? pullRequest.number : null;
+    const title = pullRequest && typeof pullRequest.title === 'string' ? pullRequest.title : null;
     const reviewState = review && typeof review.state === 'string' ? ` (${review.state.toLowerCase()})` : '';
     return `Pull request review${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${reviewState}${senderText}`.trim();
   }
@@ -318,7 +318,7 @@ export function summarizeGitHubEvent(input: {
   }
 
   if (input.event === 'create' || input.event === 'delete') {
-    const refType = isRecord(payloadRecord.ref_type) ? payloadRecord.ref_type : null;
+    const refType = typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
     return `${refType ?? 'ref'}${actionText}${repositoryText}${senderText}`.trim();
   }
 
