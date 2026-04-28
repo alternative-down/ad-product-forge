@@ -2,7 +2,7 @@ import { getEncoding } from 'js-tiktoken';
 
 let encoder: ReturnType<typeof getEncoding> | null = null;
 
-function getEncoder() {
+export function getEncoder() {
   if (!encoder) {
     encoder = getEncoding('cl100k_base');
   }
