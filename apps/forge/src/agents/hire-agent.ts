@@ -1,4 +1,5 @@
 import { createId } from '../utils/id';
+import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
@@ -23,7 +24,6 @@ import { loadAgent } from './agent-loader';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type HireInternalAgentInput = {
   agentId?: string;

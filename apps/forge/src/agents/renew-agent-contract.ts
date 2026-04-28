@@ -6,8 +6,8 @@ import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createAgentContractStore } from './agent-contract-store';
 import { createId } from '../utils/id';
+import { WEEK_MS } from '../shared/constants';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function renewAgentContract(
   db: Database,
