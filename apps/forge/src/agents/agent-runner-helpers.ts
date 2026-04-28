@@ -163,7 +163,7 @@ function buildStepSystemPrompt(input: {
   agentContextInstructions: string | null | undefined;
 }) {
   const sections = [
-    input.agentContextInstructions?.trim() || null,
+    input.agentContextInstructions?.trim() ?? null,
   ].filter((value): value is string => Boolean(value));
 
   if (sections.length === 0) {
