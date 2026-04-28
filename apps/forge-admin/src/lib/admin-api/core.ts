@@ -55,17 +55,18 @@ export async function request<TResponse>(path: string, init?: RequestInit) {
   if (!response.ok) {
     let message = 'Não foi possível concluir a operação.';
 
+    const rawText = await response.text();
     try {
-      const payload = (await response.json()) as { error?: string };
+      const payload = JSON.parse(rawText) as { error?: string };
       message = payload.error ?? message;
     } catch {
-      // Keep default message.
+      console.warn(`[admin-api] ${path}: non-JSON error response (${response.status})`, rawText);
     }
 
     throw new Error(message);
   }
 
-  return response.json() as Promise<TResponse>;
+  return JSON.parse(await response.text()) as Promise<TResponse>;
 }
 
 export async function requestBlob(path: string, init?: RequestInit) {
@@ -82,11 +83,12 @@ export async function requestBlob(path: string, init?: RequestInit) {
   if (!response.ok) {
     let message = 'Não foi possível concluir a operação.';
 
+    const rawText = await response.text();
     try {
-      const payload = (await response.json()) as { error?: string };
+      const payload = JSON.parse(rawText) as { error?: string };
       message = payload.error ?? message;
     } catch {
-      // Keep default message.
+      console.warn(`[admin-api] ${path}: non-JSON error response (${response.status})`, rawText);
     }
 
     throw new Error(message);
@@ -113,11 +115,12 @@ export async function validateAdminSecret(secret: string) {
 
   let message = 'Não foi possível validar a chave.';
 
+  const rawText = await response.text();
   try {
-    const payload = (await response.json()) as { error?: string };
+    const payload = JSON.parse(rawText) as { error?: string };
     message = payload.error ?? message;
   } catch {
-    // Keep default message.
+    console.warn('[admin-api] /admin/overview: non-JSON error response', rawText);
   }
 
   return {
