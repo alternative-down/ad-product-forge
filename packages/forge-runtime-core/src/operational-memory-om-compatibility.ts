@@ -75,14 +75,19 @@ export async function syncOperationalMemoryOmCompatibility(
       - input.limits.observationReflectionBatchTokens,
   );
   const checkpointSummaryMessage = await getCheckpointSummaryMessage(input.conversationStore, input.threadId);
-  let latestPersistedGeneration = await getLatestOperationalMemoryGeneration(
-    input.conversationStore,
-    input.threadId,
-  );
+  let latestPersistedGeneration = 0;
   let checkpointGeneration = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
   let checkpointSummaryText = checkpointSummaryMessage ? extractMessageText(checkpointSummaryMessage) : null;
 
   while (true) {
+
+    // Re-fetch from DB to avoid race condition with concurrent calls
+    // for the same threadId. Without this, two concurrent calls both read
+    // the same initial generation and generate duplicate reflection IDs.
+    latestPersistedGeneration = await getLatestOperationalMemoryGeneration(
+      input.conversationStore,
+      input.threadId,
+    );
     const state = await readOperationalMemoryState({
       threadId: input.threadId,
       store: input.conversationStore,
