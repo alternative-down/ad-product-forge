@@ -49,6 +49,9 @@ vi.mock('../encryption/crypto', () => ({
   encryptSecret: vi.fn((plaintext: string) => `encrypted:${plaintext}`),
   decryptSecret: vi.fn((encrypted: string) => encrypted.replace('encrypted:', '')),
 }));
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
 
 // ─── tests ───────────────────────────────────────────────────────────────────
 
