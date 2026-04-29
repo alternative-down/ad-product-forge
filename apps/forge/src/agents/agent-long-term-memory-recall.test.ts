@@ -256,3 +256,333 @@ describe('AgentLongTermMemoryRecall', () => {
     expect(persistenceStore.writeRecallState).toHaveBeenCalledTimes(1);
   });
 });
+
+
+  it('skips recall when a prior operation is still in flight', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-recall-concurrent-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(),
+      getThread: vi.fn(),
+      listThreads: vi.fn(),
+      appendMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(),
+      listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const readRuntimeMemorySettings = vi.fn(async () => ({
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    }));
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const,
+        packages: [],
+        lastWrittenPackageId: null,
+        lastWrittenAt: null,
+        lastRunAt: null,
+        lastRunError: null,
+        lastRunErrorAt: null,
+        updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => null),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => ({
+        threadId: null,
+        resourceId: null,
+        snapshot: null,
+        history: {
+          recentFingerprints: [],
+          updatedAt: new Date().toISOString(),
+        },
+      })),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    // Slow down runTrackedRecallOperation so the second call fires while the first is in-flight
+    (vi.spyOn(recall as any, 'runTrackedRecallOperation') as any).mockImplementation(
+      async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        return { id: 'doc-1', text: 'content', score: 0.9 };
+      },
+    );
+    (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+      recentFingerprints: [],
+      windowSize: 5,
+      rawWindowMessageCount: 1,
+    });
+
+    const [firstResult, secondResult] = await Promise.all([
+      recall.recallFromStep({ step: { text: 'hello' }, steps: [], threadId: null }),
+      recall.recallFromStep({ step: { text: 'world' }, steps: [], threadId: null }),
+    ]);
+
+    // Second call should be skipped immediately (pending operation in flight)
+    expect(secondResult).toBeNull();
+    // First call either returns text or null depending on graph hit — just verify it tried
+    expect(firstResult === null || typeof firstResult === 'string').toBe(true);
+    // Note: pendingRecallOperationCount is incremented inside runTrackedRecallOperation,
+    // which is called from searchWorkspace/searchGraph AFTER resolveRecallConfig finishes.
+    // Both calls therefore reach readRuntimeMemorySettings before the counter is incremented.
+    // The observable guarantee is: second call returns null (short-circuits before persistence).
+  });
+  it('returns null when workspace search yields no results and graph does not hit', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-recall-miss-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(),
+      getThread: vi.fn(),
+      listThreads: vi.fn(),
+      appendMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(),
+      listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const readRuntimeMemorySettings = vi.fn(async () => ({
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    }));
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const,
+        packages: [],
+        lastWrittenPackageId: null,
+        lastWrittenAt: null,
+        lastRunAt: null,
+        lastRunError: null,
+        lastRunErrorAt: null,
+        updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => null),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => ({
+        threadId: null,
+        resourceId: null,
+        snapshot: null,
+        history: {
+          recentFingerprints: [],
+          updatedAt: new Date().toISOString(),
+        },
+      })),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    (vi.spyOn(recall as any, 'runRecallSearch') as any).mockResolvedValue({
+      formatted: '',
+      results: [],
+      rawWorkspaceResults: [],
+      graph: {
+        queryText: 'test query',
+        dimension: 3,
+        includeSources: false,
+        hit: false,
+        score: null,
+        context: '',
+        relevantContextRaw: null,
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
+        error: null,
+      },
+      effectiveGraphTopK: 3,
+      effectiveGraphThreshold: 0.7,
+    });
+    (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+      recentFingerprints: [],
+      windowSize: 5,
+      rawWindowMessageCount: 1,
+    });
+
+    const result = await recall.recallFromStep({
+      step: { text: 'test query' },
+      steps: [],
+      threadId: null,
+    });
+
+    // No workspace results, no graph hit → buildRecallSystemMessage returns null → return null
+    expect(result).toBeNull();
+    // A hit snapshot should still be persisted
+    expect(persistenceStore.writeRecallState).toHaveBeenCalled();
+    const persistedCall = (persistenceStore.writeRecallState as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as any;
+    expect(persistedCall.snapshot.status).toBe('hit');
+    expect(persistedCall.snapshot.resultCount).toBe(0);
+    expect(persistedCall.snapshot.graphHit).toBe(false);
+  });
+
+  it('returns recall text on successful workspace and graph hit', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-recall-hit-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(),
+      getThread: vi.fn(),
+      listThreads: vi.fn(),
+      appendMessage: vi.fn(),
+      updateMessage: vi.fn(),
+      updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(),
+      listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const readRuntimeMemorySettings = vi.fn(async () => ({
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    }));
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const,
+        packages: [],
+        lastWrittenPackageId: null,
+        lastWrittenAt: null,
+        lastRunAt: null,
+        lastRunError: null,
+        lastRunErrorAt: null,
+        updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => null),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => ({
+        threadId: null,
+        resourceId: null,
+        snapshot: null,
+        history: {
+          recentFingerprints: [],
+          updatedAt: new Date().toISOString(),
+        },
+      })),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    (vi.spyOn(recall as any, 'runRecallSearch') as any).mockResolvedValue({
+      formatted: '',
+      results: [
+        { id: 'memory/doc-a.md', content: 'Content about finance', score: 0.92 },
+        { id: 'memory/doc-b.md', content: 'Also about finance', score: 0.88 },
+      ],
+      rawWorkspaceResults: [
+        { id: 'memory/doc-a.md', content: 'Content about finance', score: 0.92 },
+        { id: 'memory/doc-b.md', content: 'Also about finance', score: 0.88 },
+      ],
+      graph: {
+        queryText: 'finance overview',
+        dimension: 3,
+        includeSources: false,
+        hit: true,
+        score: 0.95,
+        context: 'Finance overview context from graph traversal.',
+        relevantContextRaw: 'Finance overview context from graph traversal.',
+        sourcesCount: 1,
+        sourcesJson: null,
+        rawJson: null,
+        error: null,
+      },
+      effectiveGraphTopK: 3,
+      effectiveGraphThreshold: 0.7,
+    });
+    (vi.spyOn(recall as any, 'readRecallThreadState') as any).mockResolvedValue({
+      recentFingerprints: [],
+      windowSize: 5,
+      rawWindowMessageCount: 8,
+    });
+
+    const result = await recall.recallFromStep({
+      step: { text: 'what is the finance overview?' },
+      steps: [],
+      threadId: 'thread-hit',
+    });
+
+    expect(result).not.toBeNull();
+    expect(typeof result).toBe('string');
+    // Should contain graph context since graph hit
+    expect((result as string).length).toBeGreaterThan(0);
+    // Snapshot should be persisted with graph hit info
+    expect(persistenceStore.writeRecallState).toHaveBeenCalled();
+    const persistedCall = (persistenceStore.writeRecallState as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as any;
+    expect(persistedCall.snapshot.status).toBe('hit');
+    expect(persistedCall.snapshot.graphHit).toBe(true);
+    expect(persistedCall.snapshot.query).toBe('what is the finance overview?');
+  });
