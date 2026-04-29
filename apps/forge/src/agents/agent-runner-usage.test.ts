@@ -3,9 +3,15 @@ import type { InternalAgentRuntime } from './agent-runtime-types';
 
 function createMockStore() {
   return {
+    getExecutionState: vi.fn<() => Promise<'idle' | 'running' | 'absent'>>(),
+    setExecutionState: vi.fn<() => Promise<void>>(),
+    setExecutionAbsent: vi.fn<() => Promise<void>>(),
+    getRunnableContract: vi.fn<() => Promise<null>>(),
     listRecentSteps: vi.fn(),
+    getContractSpend: vi.fn<() => Promise<number>>(),
     getUsagePricing: vi.fn(),
     recordAgentStep: vi.fn(),
+    refundActiveContractBalance: vi.fn<() => Promise<null>>(),
   };
 }
 

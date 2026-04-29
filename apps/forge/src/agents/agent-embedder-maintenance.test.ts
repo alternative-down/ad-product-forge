@@ -48,7 +48,7 @@ describe('agent-embedder-maintenance', () => {
   describe('prepareAgentEmbeddersForStartup', () => {
     it('skips agents with non-fastembed workspaceEmbedder', async () => {
       const mockDb = createMockDb();
-      mockDb.query.agents.findMany.mockResolvedValue([
+      (mockDb.query.agents.findMany as any).mockResolvedValue([
         { id: 'agent-1', workspaceEmbedder: 'transformers-multilingual-e5-small-cpu' },
         { id: 'agent-2', workspaceEmbedder: 'some-other-embedder' },
       ]);
@@ -67,7 +67,7 @@ describe('agent-embedder-maintenance', () => {
 
     it('resets indexes and updates db for agents with fastembed', async () => {
       const mockDb = createMockDb();
-      mockDb.query.agents.findMany.mockResolvedValue([
+      (mockDb.query.agents.findMany as any).mockResolvedValue([
         { id: 'agent-fast', workspaceEmbedder: 'fastembed' },
       ]);
       // All DBs exist
@@ -90,7 +90,7 @@ describe('agent-embedder-maintenance', () => {
 
     it('handles agents with fastembed whose DB files do not exist', async () => {
       const mockDb = createMockDb();
-      mockDb.query.agents.findMany.mockResolvedValue([
+      (mockDb.query.agents.findMany as any).mockResolvedValue([
         { id: 'agent-missing', workspaceEmbedder: 'fastembed' },
       ]);
       // No files exist — access rejects
@@ -108,7 +108,7 @@ describe('agent-embedder-maintenance', () => {
 
     it('processes multiple fastembed agents', async () => {
       const mockDb = createMockDb();
-      mockDb.query.agents.findMany.mockResolvedValue([
+      (mockDb.query.agents.findMany as any).mockResolvedValue([
         { id: 'agent-a', workspaceEmbedder: 'fastembed' },
         { id: 'agent-b', workspaceEmbedder: 'fastembed' },
         { id: 'agent-c', workspaceEmbedder: 'fastembed' },
@@ -132,7 +132,7 @@ describe('agent-embedder-maintenance', () => {
 
     it('calls forgeDebug when access check fails', async () => {
       const mockDb = createMockDb();
-      mockDb.query.agents.findMany.mockResolvedValue([
+      (mockDb.query.agents.findMany as any).mockResolvedValue([
         { id: 'agent-err', workspaceEmbedder: 'fastembed' },
       ]);
       const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
@@ -174,11 +174,11 @@ describe('agent-embedder-maintenance', () => {
       await resetAgentEmbedderIndexes('/tmp/workspaces', 'agent-xyz');
 
       // Verify database.db path was checked but not passed to rm
-      const databaseDbAccessCall = accessMock.mock.calls.find(([p]: [string]) =>
-        (p as string).endsWith('database.db'),
-      );
-      expect(databaseDbAccessCall).toBeDefined();
-      // rm should only be called with memory-recall.db and memory.db
+      let found = false;
+      for (const call of accessMock.mock.calls) {
+        if ((call[0] as string).endsWith('database.db')) { found = true; break; }
+      }
+      expect(found).toBe(true);
       for (const call of rmMock.mock.calls) {
         expect(call[0] as string).not.toContain('database.db');
       }

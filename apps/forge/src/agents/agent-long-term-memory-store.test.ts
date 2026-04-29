@@ -28,7 +28,7 @@ function createMockDb() {
         where: vi.fn().mockResolvedValue(undefined),
       }),
     })),
-  } as unknown as Database;
+  } as any;
 }
 
 beforeEach(() => {
@@ -115,7 +115,7 @@ describe('createAgentLongTermMemoryStore', () => {
       const store = storeFn(mockDb, { agentId: 'agent-123' });
       const state = {
         version: 1 as const,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -124,7 +124,7 @@ describe('createAgentLongTermMemoryStore', () => {
         updatedAt: '2025-01-01T00:00:00.000Z',
       };
 
-      await store.writeState(state);
+      await store.writeState(state as any);
 
       expect(mockDb.insert).toHaveBeenCalled();
       const valuesChain = mockDb.insert.mock.results[0].value;
@@ -147,7 +147,7 @@ describe('createAgentLongTermMemoryStore', () => {
       const store = storeFn(mockDb, { agentId: 'agent-123' });
       const state = {
         version: 1,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -156,7 +156,7 @@ describe('createAgentLongTermMemoryStore', () => {
         updatedAt: '2025-01-01T00:00:00.000Z',
       };
 
-      await store.writeState(state);
+      await store.writeState(state as any);
 
       // Insert was called with recallIndexStamp from existing
       expect(mockDb.insert).toHaveBeenCalled();

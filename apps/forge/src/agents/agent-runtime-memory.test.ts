@@ -32,7 +32,7 @@ describe('createAgentRuntimeMemory', () => {
       agentMemoryPath: '/workspace/agent-123/memory',
       agentModel: {},
       longTermMemory: true,
-      workspaceEmbedder: 'claude-4-sonnet',
+      workspaceEmbedder: undefined,
       conversationStore,
       checkpointedOmLimits: { recentRawTokens: 8000 },
       persistenceStore,
@@ -54,7 +54,7 @@ describe('createAgentRuntimeMemory', () => {
         agentId: 'agent-123',
         agentWorkspacePath: '/workspace/agent-123',
         agentMemoryPath: '/workspace/agent-123/memory',
-        workspaceEmbedder: 'claude-4-sonnet',
+        workspaceEmbedder: undefined,
         mastraId: 'mastra-abc',
       }),
     );

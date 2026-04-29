@@ -42,8 +42,12 @@ vi.mock('./agent-contract-store', () => ({
     getUsagePricing: vi.fn(),
     recordAgentStep: vi.fn(),
     listRecentSteps: vi.fn(),
+    getExecutionState: vi.fn(async () => 'idle' as const),
+    setExecutionState: vi.fn(async () => {}),
+    setExecutionAbsent: vi.fn(async () => {}),
+    refundActiveContractBalance: vi.fn(async () => ({ refunded: false, reason: null })),
     getContractSpend: vi.fn(),
-  })),
+  } as any)),
 }));
 
 const temporaryDirectories: string[] = [];
