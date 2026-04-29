@@ -29,10 +29,10 @@ import {
   collectStepTextParts,
   hasExactControlDirective,
 } from './agent-runner-helpers';
+import { createLoopDetector } from './agent-runner-loop-detector';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
-const STUCK_LOOP_REPEAT_LIMIT = 6;
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
@@ -88,8 +88,8 @@ export function createAgentRunner(
         detail: Record<string, unknown> | null;
       }
     | null = null;
-  let lastLoopSignature: string | null = null;
-  let repeatedLoopCount = 0;
+  const loopState: { lastLoopSignature: string | null; repeatedLoopCount: number } = { lastLoopSignature: null, repeatedLoopCount: 0 };
+  const loopDetector = createLoopDetector(loopState);
   let activeRunEpoch = 0;
   let activeStepEpoch = 0;
   let activeGenerateToken = 0;
@@ -692,8 +692,7 @@ export function createAgentRunner(
   }
 
   function resetLoopDetector() {
-    lastLoopSignature = null;
-    repeatedLoopCount = 0;
+    loopDetector.reset();
   }
 
   async function resetRunLastMessages() {
@@ -763,14 +762,7 @@ export function createAgentRunner(
   }
 
   function registerLoopSignature(signature: string) {
-    if (lastLoopSignature === signature) {
-      repeatedLoopCount += 1;
-      return repeatedLoopCount;
-    }
-
-    lastLoopSignature = signature;
-    repeatedLoopCount = 1;
-    return repeatedLoopCount;
+    return loopDetector.register(signature);
   }
 
   async function planNextAttempt(): Promise<
@@ -1074,13 +1066,13 @@ export function createAgentRunner(
                 ]);
               }
 
-              if (registerLoopSignature(loopSignature) >= STUCK_LOOP_REPEAT_LIMIT) {
+              if (loopDetector.isStuck()) {
                 await withTimeout(
                   notifications.createNotification({
                     agentId: runtime.id,
                     content: [
                       'Stuck loop detected.',
-                      `Repeated signature count: ${repeatedLoopCount}`,
+                      `Repeated signature count: ${loopDetector.getSignatureCount()}`,
                       'The agent repeated the same tool/text pattern and was forced to stop.',
                       '',
                       'Signature:',
@@ -1444,3 +1436,5 @@ export function createAgentRunner(
   }
 }
 
+
+export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
