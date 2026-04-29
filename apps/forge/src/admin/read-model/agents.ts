@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
@@ -9,55 +9,38 @@ import {
   agentSchedules,
   agents,
   mcpServerConfigs,
-  agentProviders,
 } from '../../database/schema';
 import { createClient } from '@libsql/client';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { closeLibsqlClient, listRecentConversations, listThreadMessages } from './conversation-helpers';
 import {
-  extractLatestMessagePreview,
-  extractLatestMessageToolBadge,
   formatWorkingMemoryValue,
-  humanizeMemoryKey,
-  isMemoryRecallText,
   isTextPart,
-  mergeToolLogMessages,
-  renderWorkingMemoryMarkdown,
-  splitMemoryRecallSegments,
   toScheduleSummary as toScheduleSummaryHelper,
-  truncatePreview,
 } from './helpers';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 import type { Database } from '../../database/index';
-import { createCapabilityStore } from '../../capabilities/store';
 import { createSystemSettingsStore } from '../../system-settings/store';
-import { createLlmSettingsStore } from '../../llm/settings-store';
 import { createMicroErpReadModel } from '../../micro-erp/read-model';
-import { createAgentNotificationStore } from '../../notifications/store';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/agent-long-term-memory-recall';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 import { forgeDebug } from '@forge-runtime/core';
 import {
   toMastraSafeIdentifier,
-  estimateMessageUnits,
   LibsqlConversationStore,
   readOperationalMemoryState,
   type CommunicationMessageView,
   type CommunicationProviderMessage,
 } from '@forge-runtime/core';
 import { withTimeout } from './conversation-helpers';
-import type { GitHubAppManager } from '../../github/manager';
-import { parseProviderCredentials } from './helpers';
 
 const ADMIN_OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_STEP_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 
-type MessagePart = { type?: string; text?: string };
-type TextPart = Extract<MessagePart, { type: 'text' | 'reasoning' }>;
 
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
@@ -101,26 +84,18 @@ export interface AgentReadModel {
 
 interface AgentsReadModelDeps {
   db: Database;
-  capabilities: ReturnType<typeof createCapabilityStore>;
-  llmSettings: ReturnType<typeof createLlmSettingsStore>;
   finance: ReturnType<typeof createMicroErpReadModel>;
-  notifications: ReturnType<typeof createAgentNotificationStore>;
   internalChat: InternalChatService;
   workspaceBasePath: string;
-  githubApps: GitHubAppManager;
   systemSettings: ReturnType<typeof createSystemSettingsStore>;
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
   const {
     db,
-    capabilities,
-    llmSettings,
     finance,
-    notifications,
     internalChat,
     workspaceBasePath,
-    githubApps,
     systemSettings,
   } = deps;
 
