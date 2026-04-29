@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+  createTool: vi.fn((config) => ({ name: config.id, inputSchema: config.inputSchema, type: 'tool' })),
+  toolsToRuntimeActions: vi.fn((tools) =>
+    Object.values(tools).map((t) => ({ name: t.name, inputSchema: t.inputSchema }))
+  ),
+}));
+
 import { toolsToRuntimeActions } from '@forge-runtime/core';
 
 import { createInternalAgentTools } from './internal-agent-tools';

@@ -5,6 +5,11 @@
 
 import { z } from 'zod';
 import { vi, describe, it, expect } from 'vitest';
+
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
 import { registerAgentReadRoutes } from './index';
 import { registerAgentOperationRoutes } from './operations';
 import { registerAgentWriteRoutes } from './write';

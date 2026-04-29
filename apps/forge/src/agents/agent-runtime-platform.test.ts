@@ -4,6 +4,11 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+
 import { createAgentRuntimePlatform } from './agent-runtime-platform';
 
 const temporaryDirectories: string[] = [];

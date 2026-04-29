@@ -1,4 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+
 import { z } from 'zod';
 import {
   normalizeOptionalText,
