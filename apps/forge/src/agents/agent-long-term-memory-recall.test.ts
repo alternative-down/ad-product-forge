@@ -5,17 +5,65 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 
-vi.mock('@forge-runtime/core', () => ({
-  SqliteWorkspaceRetrieval: vi.fn().mockImplementation(function() { return {}; }),
-  FilesystemDocumentSource: vi.fn().mockImplementation(function() { return {}; }),
-  forgeDebug: vi.fn(),
-}));
+let __forgeInstance: Record<string, any> | null = null;
+let __retrievalInstance: Record<string, any> | null = null;
+
+vi.mock('@forge-runtime/core', () => {
+  function makeDefaultInstance() {
+    return {
+      refresh: vi.fn(async () => undefined),
+      search: vi.fn(async () => []),
+      searchGraph: vi.fn(async () => ({ hit: false, score: null, context: '', sourcesCount: 0, sourcesJson: null, rawJson: null })),
+      getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 0 })),
+      listIndexes: vi.fn(async () => []),
+      queryVector: vi.fn(async () => []),
+      dispose: vi.fn(),
+    };
+  }
+
+  class SqliteWorkspaceRetrieval {
+    private _inst: Record<string, any>;
+    constructor(...args: any[]) {
+      this._inst = __forgeInstance !== null
+        ? { ...makeDefaultInstance(), ...__forgeInstance }
+        : makeDefaultInstance();
+      __retrievalInstance = this._inst;
+    }
+    get refresh() { return this._inst.refresh; }
+    get search() { return this._inst.search; }
+    get searchGraph() { return this._inst.searchGraph; }
+    get getStats() { return this._inst.getStats; }
+    get listIndexes() { return this._inst.listIndexes; }
+    get queryVector() { return this._inst.queryVector; }
+    get dispose() { return this._inst.dispose; }
+    refresh() { return this._inst.refresh(); }
+    search(...args: any[]) { return this._inst.search(...args); }
+    searchGraph(...args: any[]) { return this._inst.searchGraph(...args); }
+    dispose() { return this._inst.dispose(); }
+  }
+
+  const FilesystemDocumentSource = vi.fn(function(_opts: any) {
+    return { loadDocuments: vi.fn(async () => []) };
+  });
+
+  return {
+    SqliteWorkspaceRetrieval,
+    FilesystemDocumentSource,
+    forgeDebug: vi.fn(),
+    embedTextWithWorkspaceEmbedder: vi.fn(async () => new Array(384).fill(0)),
+  };
+});
+
+function setForgeInstance(obj: Record<string, any> | null) { __forgeInstance = obj; }
+function getCreatedInstance() { return __retrievalInstance; }
 
 import { AgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
+  __forgeInstance = null;
+  __retrievalInstance = null;
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) =>
       rm(directory, { recursive: true, force: true })),
@@ -631,9 +679,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
       clearRecallState: vi.fn(),
     };
 
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return { refresh: vi.fn(async () => undefined) };
-    } as any);
+    setForgeInstance({ refresh: vi.fn(async () => undefined) });
 
     const recall = new AgentLongTermMemoryRecall({
       conversationStore: mockConversationStore,
@@ -650,7 +696,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
     // second call should be a no-op
     await recall.initialize();
 
-    const retrievalInstance = vi.mocked(SqliteWorkspaceRetrieval).mock.results[0]?.value as any;
+    const retrievalInstance = getCreatedInstance();
     expect(retrievalInstance?.refresh).toHaveBeenCalledTimes(1);
   });
 
@@ -685,9 +731,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
       clearRecallState: vi.fn(),
     };
 
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return { refresh: vi.fn(async () => undefined) };
-    } as any);
+    setForgeInstance({ refresh: vi.fn(async () => undefined) });
 
     const recall = new AgentLongTermMemoryRecall({
       conversationStore: mockConversationStore,
@@ -699,7 +743,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
       persistenceStore,
     });
 
-    await expect(recall.initialize()).rejects.toThrow(
+    await expect(recall.debugSearch({ query: "test" })).rejects.toThrow(
       'LTM recall requires runtime memory settings',
     );
   });
@@ -747,7 +791,7 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
       writeState: vi.fn(),
-      readRecallIndexStamp: vi.fn(async () => `stamp-${callCount}`),
+      readRecallIndexStamp: vi.fn(async () => `stamp-${{},++callCount}`),
       writeRecallIndexStamp: vi.fn(),
       readRecallState: vi.fn(async () => null),
       writeRecallState: vi.fn(),
@@ -755,9 +799,9 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
     };
 
     let refreshCalls = 0;
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return { refresh: vi.fn(async () => { refreshCalls++; }) };
-    } as any);
+    setForgeInstance({
+      refresh: vi.fn(async () => { refreshCalls++; }),
+    });
 
     const recall = new AgentLongTermMemoryRecall({
       conversationStore: mockConversationStore,
@@ -817,9 +861,7 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
       clearRecallState: vi.fn(),
     };
 
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return { refresh: vi.fn(async () => undefined) };
-    } as any);
+    setForgeInstance({ refresh: vi.fn(async () => undefined) });
 
     const recall = new AgentLongTermMemoryRecall({
       conversationStore: mockConversationStore,
@@ -835,7 +877,7 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
     await recall.refreshIndex();
 
     // Same stamp, no re-index on second call
-    const retrievalInstance = vi.mocked(SqliteWorkspaceRetrieval).mock.results[0]?.value as any;
+    const retrievalInstance = getCreatedInstance();
     expect(retrievalInstance?.refresh).toHaveBeenCalledTimes(1);
   });
 });
@@ -884,21 +926,10 @@ describe('AgentLongTermMemoryRecall.debugSearch', () => {
       clearRecallState: vi.fn(),
     };
 
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return {
-        refresh: vi.fn(async () => undefined),
-        search: vi.fn(async () => ({ rows: [] })),
-        getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 0 })),
-        listIndexes: vi.fn(async () => []),
-      };
-    } as any);
-
-    vi.mock('@forge-runtime/core', async () => {
-      const actual = await vi.importActual('@forge-runtime/core');
-      return {
-        ...actual,
-        embedTextWithWorkspaceEmbedder: vi.fn(async () => []),
-      };
+    setForgeInstance({
+      search: vi.fn(async () => []),
+      getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 0 })),
+      listIndexes: vi.fn(async () => []),
     });
 
     const recall = new AgentLongTermMemoryRecall({
@@ -965,28 +996,15 @@ describe('AgentLongTermMemoryRecall.debugSearch', () => {
       clearRecallState: vi.fn(),
     };
 
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return {
-        refresh: vi.fn(async () => undefined),
-        search: vi.fn(async () => ({
-          rows: [{
-            id: 'doc-1',
-            content: 'Finance overview document',
-            score: 0.95,
-          }],
-        })),
-        getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 1 })),
-        listIndexes: vi.fn(async () => [{ name: 'forge_runtime_memory_recall' }]),
-        queryIndex: vi.fn(async () => []),
-      };
-    } as any);
-
-    vi.mock('@forge-runtime/core', async () => {
-      const actual = await vi.importActual('@forge-runtime/core');
-      return {
-        ...actual,
-        embedTextWithWorkspaceEmbedder: vi.fn(async () => [0.1, 0.2, 0.3]),
-      };
+    setForgeInstance({
+      search: vi.fn(async () => [{
+        id: 'doc-1',
+        text: 'Finance overview document',
+        score: 0.95,
+      }]),
+      queryVector: vi.fn(async () => []),
+      getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 1 })),
+      listIndexes: vi.fn(async () => [{ name: 'forge_runtime_memory_recall' }]),
     });
 
     const recall = new AgentLongTermMemoryRecall({
@@ -1046,9 +1064,7 @@ describe('AgentLongTermMemoryRecall.dispose', () => {
       clearRecallState: vi.fn(),
     };
 
-    vi.mocked(SqliteWorkspaceRetrieval).mockImplementation(function() {
-      return { dispose: vi.fn() };
-    } as any);
+    setForgeInstance({ dispose: vi.fn() });
 
     const recall = new AgentLongTermMemoryRecall({
       conversationStore: mockConversationStore,
@@ -1062,7 +1078,7 @@ describe('AgentLongTermMemoryRecall.dispose', () => {
 
     await recall.dispose();
 
-    const retrievalInstance = vi.mocked(SqliteWorkspaceRetrieval).mock.results[0]?.value as any;
+    const retrievalInstance = getCreatedInstance();
     expect(retrievalInstance?.dispose).toHaveBeenCalledTimes(1);
   });
 });
