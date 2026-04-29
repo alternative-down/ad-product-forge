@@ -132,8 +132,8 @@ export function toToolBadge(toolName: string) {
 export function humanizeMemoryKey(value: string) {
   return value
     .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (str) => str.toUpperCase())
     .replace(/_/g, ' ')
+    .replace(/(^|\s)[a-z]/g, (str: string) => str.toUpperCase())
     .trim();
 }
 
@@ -207,11 +207,12 @@ export function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
   return {
     id: row.id,
     kind: row.kind,
-    expression: row.expression,
-    input: row.input ?? null,
-    isActive: row.isActive ?? false,
-    lastRunAt: row.lastRunAt ?? null,
-    nextRunAt: row.nextRunAt ?? null,
+    name: row.name,
+    expression: row.cronExpression ?? null,
+    input: row.content ? JSON.parse(row.content) : null,
+    isActive: row.isActive != null ? Boolean(row.isActive) : null,
+    lastRunAt: row.lastTriggeredAt ?? null,
+    nextRunAt: row.nextTriggerAt ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
