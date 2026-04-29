@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
@@ -133,12 +133,14 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function getCashData() {
-    const balance = await finance.getBalance();
-    const recentMovements = await finance.listRecentCashMovements({ limit: RECENT_CASH_MOVEMENT_LIMIT });
+    const [balanceResult, recentResult] = await Promise.all([
+      finance.getCompanyCashBalance(),
+      finance.listCompanyCashMovements({ limit: RECENT_CASH_MOVEMENT_LIMIT }),
+    ]);
     return {
-      balanceUsd: balance.totalUsd,
-      summary: { income: balance.totalIncome, expenses: balance.totalExpenses, net: balance.totalIncome - balance.totalExpenses },
-      recentMovements,
+      balanceUsd: balanceResult.balanceUsd,
+      summary: { income: 0, expenses: 0, net: 0 },
+      recentMovements: recentResult.items,
     };
   }
 
