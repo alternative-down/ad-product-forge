@@ -1,152 +1,175 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ForgeMcpToolset } from './mcp.js';
-import type { ForgeMcpToolsetOptions } from './mcp.js';
 
-describe('mcp', () => {
-  describe('ForgeMcpToolsetOptions', () => {
-    it('accepts minimal options', () => {
-      const opts: ForgeMcpToolsetOptions = {
-        servers: [{
-          id: 's1',
-          name: 'Server One',
-          transport: 'stdio',
-          command: 'node',
-        }],
+// vi.hoisted ensures these are available before vi.mock runs (hoisting)
+const { mockMcpSessionRegistry, mockMcpGateway } = vi.hoisted(() => {
+  const mockSessionRegistry = vi.fn(function MockSessionRegistry() {
+    return {
+      getActionDefinitions: vi.fn().mockResolvedValue([]),
+      getSession: vi.fn().mockResolvedValue({
+        listTools: vi.fn().mockResolvedValue([]),
+        callTool: vi.fn().mockResolvedValue({ result: 'ok' }),
+      }),
+      disposeAll: vi.fn().mockResolvedValue(undefined),
+    };
+  });
+
+  const mockGateway = vi.fn(function MockGateway() {
+    return {};
+  });
+
+  return { mockMcpSessionRegistry: mockSessionRegistry, mockMcpGateway: mockGateway };
+});
+
+vi.mock('agent-runtime-core/integrations', async (original) => {
+  const actual = await original();
+  return {
+    ...actual,
+    McpSessionRegistry: mockMcpSessionRegistry,
+    SdkMcpGateway: mockMcpGateway,
+  };
+});
+
+describe('ForgeMcpToolset', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMcpSessionRegistry.mockImplementation(function MockSessionRegistry() {
+      return {
+        getActionDefinitions: vi.fn().mockResolvedValue([]),
+        getSession: vi.fn().mockResolvedValue({
+          listTools: vi.fn().mockResolvedValue([]),
+          callTool: vi.fn().mockResolvedValue({ result: 'ok' }),
+        }),
+        disposeAll: vi.fn().mockResolvedValue(undefined),
       };
-      expect(opts.servers).toHaveLength(1);
     });
-
-    it('accepts options with runtimeActionOptions', () => {
-      const opts: ForgeMcpToolsetOptions = {
-        servers: [{
-          id: 's2',
-          name: 'Server Two',
-          transport: 'stdio',
-          command: 'python',
-        }],
-        runtimeActionOptions: {
-          timeoutMs: 30000,
-        },
-      };
-      expect(opts.runtimeActionOptions).toHaveProperty('timeoutMs');
-    });
-
-    it('accepts http transport in options', () => {
-      const opts: ForgeMcpToolsetOptions = {
-        servers: [{
-          id: 'h1',
-          name: 'HTTP Server',
-          transport: 'http-stream',
-          url: 'https://api.example.com/mcp',
-        }],
-      };
-      expect(opts.servers[0].transport).toBe('http-stream');
+    mockMcpGateway.mockImplementation(function MockGateway() {
+      return {};
     });
   });
 
-  describe('ForgeMcpToolset', () => {
-    it('instantiates with stdio server config', () => {
-      const toolset = new ForgeMcpToolset({
-        servers: [{
-          id: 'test-stdio',
-          name: 'Test Stdio Server',
-          transport: 'stdio',
-          command: 'echo',
-        }],
-      });
-      expect(toolset).toBeDefined();
-      expect(typeof toolset.createTools).toBe('function');
-      expect(typeof toolset.createRuntimeActions).toBe('function');
-      expect(typeof toolset.dispose).toBe('function');
+  describe('constructor', () => {
+    it('accepts empty server array', () => {
+      expect(() => new ForgeMcpToolset({ servers: [] })).not.toThrow();
     });
 
-    it('instantiates with http server config', () => {
-      const toolset = new ForgeMcpToolset({
+    it('accepts valid stdio server config', () => {
+      expect(() => new ForgeMcpToolset({
         servers: [{
-          id: 'test-http',
-          name: 'Test HTTP Server',
+          id: 'server-1',
+          name: 'TestServer',
+          transport: 'stdio',
+          command: 'node',
+          args: ['./server.js'],
+        }],
+      })).not.toThrow();
+    });
+
+    it('accepts valid streamable-http server config', () => {
+      expect(() => new ForgeMcpToolset({
+        servers: [{
+          id: 'server-1',
+          name: 'HttpServer',
           transport: 'http-stream',
           url: 'https://example.com/mcp',
         }],
-      });
-      expect(toolset).toBeDefined();
+      })).not.toThrow();
     });
 
-    it('instantiates with empty servers array', () => {
-      const toolset = new ForgeMcpToolset({ servers: [] });
-      expect(toolset).toBeDefined();
+    it('throws for missing required server fields', () => {
+      expect(() => new ForgeMcpToolset({
+        servers: [{ id: 's1' }] as never,
+      })).toThrow();
     });
 
-    it('instantiates with multiple servers', () => {
-      const toolset = new ForgeMcpToolset({
-        servers: [
-          { id: 's1', name: 'Server 1', transport: 'stdio', command: 'node' },
-          { id: 's2', name: 'Server 2', transport: 'stdio', command: 'python' },
-        ],
-      });
-      expect(toolset).toBeDefined();
-    });
-
-    it('createRuntimeActions returns a promise', () => {
-      const toolset = new ForgeMcpToolset({ servers: [] });
-      const result = toolset.createRuntimeActions();
-      expect(result).toBeInstanceOf(Promise);
-    });
-
-    it('createTools returns a promise', () => {
-      const toolset = new ForgeMcpToolset({ servers: [] });
-      const result = toolset.createTools();
-      expect(result).toBeInstanceOf(Promise);
-    });
-
-    it('dispose returns a promise', async () => {
-      const toolset = new ForgeMcpToolset({ servers: [] });
-      const result = toolset.dispose();
-      expect(result).toBeInstanceOf(Promise);
-      await result;
-    });
-
-    it('accepts custom runtime action options', () => {
-      const toolset = new ForgeMcpToolset({
+    it('throws for invalid transport type', () => {
+      expect(() => new ForgeMcpToolset({
         servers: [{
           id: 's1',
-          name: 'Server',
-          transport: 'stdio',
-          command: 'node',
+          name: 'Bad',
+          transport: 'invalid' as never,
         }],
-        runtimeActionOptions: {
-          timeoutMs: 60000,
-          retryAttempts: 3,
-        },
-      });
-      expect(toolset).toBeDefined();
+      })).toThrow();
+    });
+  });
+
+  describe('createRuntimeActions', () => {
+    it('resolves to empty array for no servers', async () => {
+      const ts = new ForgeMcpToolset({ servers: [] });
+      const result = await ts.createRuntimeActions();
+      expect(result).toEqual([]);
     });
 
-    it('creates instance with server containing args and env', () => {
-      const toolset = new ForgeMcpToolset({
+    it('registers a session for each server', async () => {
+      const ts = new ForgeMcpToolset({
         servers: [{
           id: 's1',
-          name: 'Server with args',
+          name: 'ServerOne',
           transport: 'stdio',
           command: 'node',
-          args: ['--flag', 'value'],
+          args: [],
+        }],
+      });
+      await ts.createRuntimeActions();
+      expect(mockMcpSessionRegistry).toHaveBeenCalled();
+    });
+  });
+
+  describe('createTools', () => {
+    it('resolves to empty record for no servers', async () => {
+      const ts = new ForgeMcpToolset({ servers: [] });
+      const result = await ts.createTools();
+      expect(result).toEqual({});
+    });
+
+    it('resolves to empty record when server has no tools', async () => {
+      const ts = new ForgeMcpToolset({
+        servers: [{
+          id: 's1',
+          name: 'EmptyServer',
+          transport: 'stdio',
+          command: 'node',
+          args: [],
+        }],
+      });
+      const result = await ts.createTools();
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('dispose', () => {
+    it('resolves without error', async () => {
+      const ts = new ForgeMcpToolset({ servers: [] });
+      await expect(ts.dispose()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('mapServerToTransport', () => {
+    it('maps stdio transport with env', async () => {
+      const ts = new ForgeMcpToolset({
+        servers: [{
+          id: 's1',
+          name: 'StdioWithEnv',
+          transport: 'stdio',
+          command: 'node',
+          args: ['./server.js'],
           env: { DEBUG: '1' },
         }],
       });
-      expect(toolset).toBeDefined();
+      await expect(ts.createRuntimeActions()).resolves.toBeDefined();
     });
 
-    it('creates instance with server containing custom headers', () => {
-      const toolset = new ForgeMcpToolset({
+    it('maps streamable-http transport with headers', async () => {
+      const ts = new ForgeMcpToolset({
         servers: [{
-          id: 'h1',
-          name: 'Secured HTTP',
+          id: 's1',
+          name: 'HttpWithHeaders',
           transport: 'http-stream',
-          url: 'https://secure.example.com/mcp',
+          url: 'https://example.com/mcp',
           headers: { Authorization: 'Bearer token' },
         }],
       });
-      expect(toolset).toBeDefined();
+      await expect(ts.createRuntimeActions()).resolves.toBeDefined();
     });
   });
 });
