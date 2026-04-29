@@ -288,3 +288,212 @@ describe('appendRuntimeSessionModelMessages', () => {
     });
   });
 });
+
+// Additional edge-case tests for internal functions via public API
+
+describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessages)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('unwrapToolOutput unwraps json-type output', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'tool',
+        content: [{
+          type: 'tool-result' as const,
+          toolCallId: 'call-1',
+          toolName: 'fetch',
+          output: { type: 'json' as const, value: { key: 'secret' } },
+        }],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    // unwrapToolOutput should return { key: 'secret' }, not the wrapper
+    expect(msg.metadata.toolResults).toEqual([
+      { toolCallId: 'call-1', toolName: 'fetch', result: { key: 'secret' } },
+    ]);
+  });
+
+  it('isRecord handles null input (tool-call with null args)', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'assistant',
+        content: [{
+          type: 'tool-call' as const,
+          toolCallId: 'call-1',
+          toolName: 'ping',
+          input: null,
+        }],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    // isRecord(null) === false → args should be {}
+    expect(msg.metadata.toolInvocations).toEqual([
+      { toolCallId: 'call-1', toolName: 'ping', args: {} },
+    ]);
+  });
+
+  it('isRecord handles array input (tool-call with array args)', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'assistant',
+        content: [{
+          type: 'tool-call' as const,
+          toolCallId: 'call-1',
+          toolName: 'batch',
+          input: ['item1', 'item2'],
+        }],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    // isRecord(['item1', 'item2']) === false → args should be {}
+    expect(msg.metadata.toolInvocations).toEqual([
+      { toolCallId: 'call-1', toolName: 'batch', args: {} },
+    ]);
+  });
+
+  it('reasoning part uses providerMetadata.anthropic when providerOptions is absent', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'assistant',
+        content: [{
+          type: 'reasoning' as const,
+          text: 'thinking',
+          providerMetadata: { anthropic: { redactedData: 'rd-xyz' } },
+        }],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    expect(msg.parts[0]).toMatchObject({
+      type: 'reasoning',
+      text: 'thinking',
+      providerMetadata: { anthropic: { redactedData: 'rd-xyz' } },
+    });
+  });
+
+  it('tool message skips non-tool-result content items', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'tool',
+        content: [
+          { type: 'tool-result' as const, toolCallId: 'call-1', toolName: 'a', output: 'x' },
+          { type: 'text' as const, text: 'not a tool-result' }, // filtered out
+          { type: 'tool-result' as const, toolCallId: 'call-2', toolName: 'b', output: 'y' },
+        ],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    expect(msg.metadata.toolResults).toEqual([
+      { toolCallId: 'call-1', toolName: 'a', result: 'x' },
+      { toolCallId: 'call-2', toolName: 'b', result: 'y' },
+    ]);
+  });
+
+  it('skips tool message with non-array content', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'tool',
+        content: 'not an array' as never,
+      }],
+    });
+
+    expect(mockAppendMessage).not.toHaveBeenCalled();
+  });
+
+  it('message with only tool-call parts (no text) is still appended', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'assistant',
+        content: [
+          { type: 'tool-call' as const, toolCallId: 'call-1', toolName: 'a', input: {} },
+          { type: 'tool-call' as const, toolCallId: 'call-2', toolName: 'b', input: {} },
+        ],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    expect(msg.parts).toEqual([]);
+    expect(msg.metadata.toolInvocations).toHaveLength(2);
+  });
+
+  it('mixed content parts are all preserved', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      messages: [{
+        role: 'assistant',
+        content: [
+          { type: 'text' as const, text: 'Hello' },
+          { type: 'reasoning' as const, text: 'thinking' },
+          { type: 'tool-call' as const, toolCallId: 'call-1', toolName: 'ping', input: null },
+          { type: 'text' as const, text: 'World' },
+        ],
+      }],
+    });
+
+    expect(mockAppendMessage).toHaveBeenCalledOnce();
+    const msg = mockAppendMessage.mock.calls[0][0];
+    expect(msg.parts).toHaveLength(3); // 2 text + 1 reasoning (tool-call goes to metadata)
+    expect(msg.metadata.toolInvocations).toEqual([
+      { toolCallId: 'call-1', toolName: 'ping', args: {} },
+    ]);
+  });
+
+  it('system message with string content uses assistant authorId', async () => {
+    mockAppendMessage.mockResolvedValue(undefined);
+
+    await appendRuntimeSessionModelMessages({
+      store: makeStore(),
+      threadId: 'thread-1',
+      assistantAuthorId: 'agent-42',
+      messages: [{ role: 'system', content: 'You are helpful.' }],
+    });
+
+    const msg = mockAppendMessage.mock.calls[0][0];
+    // system role → no authorId (unlike assistant)
+    expect(msg.authorId).toBeUndefined();
+    expect(msg.parts).toEqual([{ type: 'text', text: 'You are helpful.' }]);
+  });
+});
