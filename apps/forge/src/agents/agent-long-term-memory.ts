@@ -707,13 +707,13 @@ export function createAgentLongTermMemory(input: {
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
-      await writeCheckpointPackage(payload);
+      return writeCheckpointPackage(payload);
     },
 
     async onAgentIdle() {
       idle = true;
-      snapshot.queued = true;
-      await scheduleRun(0);
+      if (!stopped) snapshot.queued = true;
+      if (!stopped) await scheduleRun(0);
     },
 
     onAgentRunning() {
