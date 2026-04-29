@@ -12,7 +12,7 @@ import { createCoolifyManager } from './coolify/manager';
 import { createMiniMaxManager } from './minimax/manager';
 import { createAgentScheduleManager } from './schedules/manager';
 import { createAgentPendingSummaryReader } from './agents/pending-summary';
-import { registerAdminRoutes } from './admin/routes';
+import { registerAdminRoutes } from './admin/routes.js';
 import { createSystemIntegrationStore } from './system-integrations/store';
 import { createInternalChatService } from './communication/internal-chat-service';
 import { createAgentContractStore } from './agents/agent-contract-store';
