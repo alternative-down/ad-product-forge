@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 
 vi.mock('@forge-runtime/core', () => ({
+  SqliteWorkspaceRetrieval: vi.fn().mockImplementation(function() { return {}; }),
+  FilesystemDocumentSource: vi.fn().mockImplementation(function() { return {}; }),
   forgeDebug: vi.fn(),
 }));
 
