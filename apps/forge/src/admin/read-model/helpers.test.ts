@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
 import {
   isMemoryRecallText,
   splitMemoryRecallSegments,
