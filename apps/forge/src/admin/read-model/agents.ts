@@ -6,8 +6,10 @@ import {
   agentHomeMetricSnapshots,
   agentMcpConfigs,
   agentNotifications,
+  agentRoles,
   agentSchedules,
   agents,
+  llmProfiles,
   mcpServerConfigs,
 } from '../../database/schema';
 import { createClient } from '@libsql/client';
@@ -18,6 +20,8 @@ import {
   formatWorkingMemoryValue,
   isTextPart,
   toScheduleSummary as toScheduleSummaryHelper,
+  extractLatestMessagePreview,
+  extractLatestMessageToolBadge,
 } from './helpers';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
@@ -138,18 +142,169 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     };
   }
 
-  async function listAgents() {
-    const rows = await db.query.agents.findMany({ orderBy: desc(agents.createdAt) });
-    return rows.map((agent) => ({
-      id: agent.id,
-      name: agent.name ?? '',
-      role: agent.role ?? null,
-      executionState: agent.executionState ?? 'absent',
-      lastExecutionError: agent.lastExecutionError ?? null,
-      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-      createdAt: agent.createdAt,
-      updatedAt: agent.updatedAt,
-    }));
+  async function listAgents(): Promise<import('./index').AgentListItem[]> {
+    const [agentRows, unreadNotificationRows, allRoles, allProfiles] = await Promise.all([
+      db.query.agents.findMany({ orderBy: (fields, { asc }) => [asc(fields.name)] }),
+      db
+        .select({ agentId: agentNotifications.agentId, count: sql<number>`count(*)` })
+        .from(agentNotifications)
+        .where(sql`${agentNotifications.readAt} is null`)
+        .groupBy(agentNotifications.agentId),
+      db.query.agentRoles.findMany(),
+      db.query.llmProfiles.findMany(),
+    ]);
+
+    const unreadNotificationCountByAgentId = new Map(
+      unreadNotificationRows.map((row) => [row.agentId, row.count]),
+    );
+    const roleMap = new Map(allRoles.map((r) => [r.id, r]));
+    const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
+
+    const recentStepsByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => [
+          agent.id,
+          await db.query.agentExecutionSteps.findMany({
+            where: and(
+              eq(agentExecutionSteps.agentId, agent.id),
+              eq(agentExecutionSteps.kind, 'agent-step'),
+            ),
+            orderBy: [desc(agentExecutionSteps.createdAt)],
+            limit: 6,
+          }),
+        ] as const),
+      ),
+    );
+
+    const runtimeMemoryByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => [
+          agent.id,
+          await withTimeout(
+            getAgentRuntimeMemory(agent.id),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            `Admin runtime memory read timed out for ${agent.id}`,
+          ).catch((error) => {
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load runtime memory', context: { agentId: agent.id, error } });
+            return null;
+          }),
+        ] as const),
+      ),
+    );
+
+    const latestThreadDetailsByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => {
+          const threadMessages = await withTimeout(
+            listThreadMessages(workspaceBasePath, agent.id, { page: 0, perPage: 8 }),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            `Admin latest thread details read timed out for ${agent.id}`,
+          ).catch(() => ({ items: [], hasMore: false }));
+
+          let preview = null;
+          let toolBadge = null;
+
+          for (const message of threadMessages.items) {
+            if (message.role !== 'assistant') continue;
+            preview ??= extractLatestMessagePreview(message.content);
+            toolBadge ??= extractLatestMessageToolBadge(message.content);
+            if (preview) break;
+          }
+
+          return [agent.id, { preview, toolBadge }] as const;
+        }),
+      ),
+    );
+
+    const longTermMemoryStateByAgentId = new Map(
+      await Promise.all(
+        agentRows.map(async (agent) => [
+          agent.id,
+          await withTimeout(
+            readLongTermMemoryState(db, agent.id),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            `Admin LTM state read timed out for ${agent.id}`,
+          ).catch((error) => {
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load LTM state', context: { agentId: agent.id, error } });
+            return null;
+          }),
+        ] as const),
+      ),
+    );
+
+    return agentRows.map((agent) => {
+      const loadedAgent = registry.get(agent.id);
+      const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
+      const recentSteps = recentStepsByAgentId.get(agent.id) ?? [];
+      const lastStep = recentSteps[0] ?? null;
+      const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
+      const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
+      const latestThreadDetails = latestThreadDetailsByAgentId.get(agent.id) ?? { preview: null, toolBadge: null };
+      const executionState = agent.executionState ?? 'absent';
+
+      const averageStepIntervalMs = recentSteps.length >= 2
+        ? Math.round(
+            recentSteps
+              .slice(0, 6)
+              .map((step, index, items) => {
+                if (index === items.length - 1) return null;
+                return Math.max(step.createdAt - items[index + 1].createdAt, 0);
+              })
+              .filter((v) => v !== null)
+              .reduce((sum, v, _, arr) => sum + v / arr.length, 0),
+          )
+        : null;
+
+      return {
+        id: agent.id,
+        name: agent.name ?? '',
+        description: agent.description ?? undefined,
+        role: agent.role ?? null,
+        executionState,
+        lastExecutionError: agent.lastExecutionError ?? null,
+        lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
+        roleName: agent.roleId ? (roleMap.get(agent.roleId)?.name ?? null) : null,
+        modelProfile: agent.modelProfileId ? (profileMap.get(agent.modelProfileId)?.id ?? null) : null,
+        omModelProfile: agent.omModelProfileId ? (profileMap.get(agent.omModelProfileId)?.id ?? null) : null,
+        loaded: Boolean(loadedAgent),
+        runner: runnerSnapshot,
+        providerTypes: [],
+        overview: {
+          lastStepAt: lastStep?.createdAt ?? null,
+          lastStepContextTokens: lastStep?.inputTokens ?? null,
+          lastStepPreview: latestThreadDetails.preview,
+          lastToolBadge: latestThreadDetails.toolBadge,
+          lastStepTokens: lastStep
+            ? lastStep.inputTokens + (lastStep.cachedInputTokens ?? 0) + lastStep.outputTokens
+            : null,
+          lastStepCostUsd: lastStep?.costUsd ?? null,
+          averageStepIntervalMs,
+          unreadNotificationCount: unreadNotificationCountByAgentId.get(agent.id) ?? 0,
+          om: runtimeMemory
+            ? {
+                generationCount: runtimeMemory.generationCount,
+                checkpointGeneration: runtimeMemory.checkpointGeneration,
+                recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
+                recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
+                overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
+                overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
+                observationTokenCount: runtimeMemory.metrics.observationTokenCount,
+                reflectionTriggerTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
+                reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
+                reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
+                checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
+              }
+            : null,
+          ltm: {
+            running: executionState === 'idle' ? (loadedAgent?.runtime?.longTermMemory?.readSnapshot()?.running ?? false) : false,
+            queued: executionState === 'idle' ? (loadedAgent?.runtime?.longTermMemory?.readSnapshot()?.queued ?? false) : false,
+            packageCount: longTermMemoryState?.packages.length ?? 0,
+          },
+        },
+        createdAt: agent.createdAt,
+        updatedAt: agent.updatedAt,
+      };
+    });
   }
 
   async function getAgent(agentId: string) {
