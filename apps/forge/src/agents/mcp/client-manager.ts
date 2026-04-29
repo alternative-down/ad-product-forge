@@ -2,7 +2,8 @@ import {
   ForgeMcpToolset,
   type ForgeMcpServerConfig,
   type RuntimeActionDefinition,
-forgeDebug } from '@forge-runtime/core';
+  forgeDebug,
+} from '@forge-runtime/core';
 
 import { getAgentMcpServers } from './store';
 
