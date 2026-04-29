@@ -87,7 +87,8 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       this.retryTimer = null;
     }
 
-    const linkedServers = await getAgentMcpServers(this.agentId);
+    const rawLinkedServers = await getAgentMcpServers(this.agentId);
+    const linkedServers = Array.isArray(rawLinkedServers) ? rawLinkedServers : [];
     const nextServerIds = new Set(linkedServers.map(({ server }) => server.id));
     const staleServerIds = Array.from(this.servers.keys()).filter((serverId) => !nextServerIds.has(serverId));
 
