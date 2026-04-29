@@ -4,6 +4,13 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+
+vi.mock('@forge-runtime/core', () => ({
+  SqliteWorkspaceRetrieval: vi.fn().mockImplementation(function() { return {}; }),
+  FilesystemDocumentSource: vi.fn().mockImplementation(function() { return {}; }),
+  forgeDebug: vi.fn(),
+}));
+
 import { AgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 const temporaryDirectories: string[] = [];

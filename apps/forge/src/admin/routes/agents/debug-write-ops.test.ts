@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
 import { registerAgentWriteOpsRoutes } from './write-ops';
 
 describe('debug rewakeup', () => {
