@@ -1,4 +1,5 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
+import type { Database } from '../database';
 import { WEEK_MS } from '../shared/constants.js';
 
 function isSQL(x: unknown): x is { queryChunks: unknown[] } {
@@ -132,8 +133,8 @@ const wh = extractWhere(opts?.where);
       values: vi.fn(async (vals: unknown) => {
         const v = vals as Record<string, unknown>;
         if (!v.id || !v.agentId) return;
-        if (v.budgetUsd !== undefined) collections.contracts.set(v.id as string, v as ContractRow);
-        if (v.costUsd !== undefined) collections.steps.set(v.id as string, v as StepRow);
+        if (v.budgetUsd !== undefined) collections.contracts.set(v.id as string, v as unknown as ContractRow);
+        if (v.costUsd !== undefined) collections.steps.set(v.id as string, v as unknown as StepRow);
       }),
     })),
     update: vi.fn(() => ({
@@ -163,7 +164,7 @@ const wh = extractWhere(opts?.where);
   return { db, collections };
 }
 
-let createAgentContractStore: (db: unknown) => ReturnType<typeof import('./agent-contract-store').createAgentContractStore>;
+let createAgentContractStore: (db: any) => ReturnType<typeof import('./agent-contract-store').createAgentContractStore>;
 let collections: MockCollections;
 
 beforeEach(async () => {

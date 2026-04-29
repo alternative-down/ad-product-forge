@@ -36,10 +36,10 @@ vi.mock('@forge-runtime/core', () => {
     get listIndexes() { return this._inst.listIndexes; }
     get queryVector() { return this._inst.queryVector; }
     get dispose() { return this._inst.dispose; }
-    refresh() { return this._inst.refresh(); }
-    search(...args: any[]) { return this._inst.search(...args); }
-    searchGraph(...args: any[]) { return this._inst.searchGraph(...args); }
-    dispose() { return this._inst.dispose(); }
+    _refresh() { return this._inst.refresh(); }
+    _search(...args: any[]) { return this._inst.search(...args); }
+    _searchGraph(...args: any[]) { return this._inst.searchGraph(...args); }
+    _dispose() { return this._inst.dispose(); }
   }
 
   const FilesystemDocumentSource = vi.fn(function(_opts: any) {
@@ -114,7 +114,7 @@ describe('AgentLongTermMemoryRecall', () => {
     const persistenceStore = {
       readState: vi.fn(async () => ({
         version: 1 as const,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -225,7 +225,7 @@ describe('AgentLongTermMemoryRecall', () => {
     const persistenceStore = {
       readState: vi.fn(async () => ({
         version: 1 as const,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -342,7 +342,7 @@ describe('AgentLongTermMemoryRecall', () => {
     const persistenceStore = {
       readState: vi.fn(async () => ({
         version: 1 as const,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -439,7 +439,7 @@ describe('AgentLongTermMemoryRecall', () => {
     const persistenceStore = {
       readState: vi.fn(async () => ({
         version: 1 as const,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -551,7 +551,7 @@ describe('AgentLongTermMemoryRecall', () => {
     const persistenceStore = {
       readState: vi.fn(async () => ({
         version: 1 as const,
-        packages: [],
+        packages: [] as any,
         lastWrittenPackageId: null,
         lastWrittenAt: null,
         lastRunAt: null,
@@ -667,7 +667,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
@@ -688,7 +688,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await recall.initialize();
@@ -719,7 +719,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
@@ -740,7 +740,7 @@ describe('AgentLongTermMemoryRecall.initialize', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings: undefined,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await expect(recall.debugSearch({ query: "test" })).rejects.toThrow(
@@ -786,12 +786,12 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
       writeState: vi.fn(),
-      readRecallIndexStamp: vi.fn(async () => `stamp-${{},++callCount}`),
+      readRecallIndexStamp: vi.fn(async () => `stamp-${++callCount}`),
       writeRecallIndexStamp: vi.fn(),
       readRecallState: vi.fn(async () => null),
       writeRecallState: vi.fn(),
@@ -810,7 +810,7 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await recall.refreshIndex();
@@ -849,7 +849,7 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
@@ -870,7 +870,7 @@ describe('AgentLongTermMemoryRecall.refreshIndex', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await recall.refreshIndex();
@@ -914,7 +914,7 @@ describe('AgentLongTermMemoryRecall.debugSearch', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
@@ -939,7 +939,7 @@ describe('AgentLongTermMemoryRecall.debugSearch', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await recall.initialize();
@@ -984,7 +984,7 @@ describe('AgentLongTermMemoryRecall.debugSearch', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
@@ -1014,7 +1014,7 @@ describe('AgentLongTermMemoryRecall.debugSearch', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await recall.initialize();
@@ -1052,7 +1052,7 @@ describe('AgentLongTermMemoryRecall.dispose', () => {
 
     const persistenceStore = {
       readState: vi.fn(async () => ({
-        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
         lastWrittenAt: null, lastRunAt: null, lastRunError: null,
         lastRunErrorAt: null, updatedAt: new Date().toISOString(),
       })),
@@ -1073,7 +1073,7 @@ describe('AgentLongTermMemoryRecall.dispose', () => {
       agentMemoryPath,
       mastraId: 'agent_1',
       readRuntimeMemorySettings: undefined,
-      persistenceStore,
+      persistenceStore: persistenceStore as any,
     });
 
     await recall.dispose();
