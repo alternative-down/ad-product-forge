@@ -21,7 +21,6 @@ import {
   serializeUnknown,
   formatAbsentExecutionError,
   extractAbsentErrorDetails,
-  buildStepSystemPrompt,
   extractRunnerControlDirective,
   extractRunnerControlDirectiveFromIteration,
   buildRecallStepFromIteration,
@@ -30,6 +29,7 @@ import {
   hasExactControlDirective,
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
+import { createContextLoader } from './agent-runner-context.js';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
@@ -39,14 +39,10 @@ const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
-const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
-const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
-const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
-const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
@@ -90,6 +86,9 @@ export function createAgentRunner(
     | null = null;
   const loopState: { lastLoopSignature: string | null; repeatedLoopCount: number } = { lastLoopSignature: null, repeatedLoopCount: 0 };
   const loopDetector = createLoopDetector(loopState);
+  const contextLoader = createContextLoader({
+    getRuntimeHome: () => Promise.resolve(options.workspaceBasePath ?? runtime.home ?? ''),
+  });
   let activeRunEpoch = 0;
   let activeStepEpoch = 0;
   let activeGenerateToken = 0;
@@ -927,8 +926,8 @@ export function createAgentRunner(
 
       try {
         forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'preparing runtime context before generate' });
-        const agentContextInstructions = await loadAgentContextInstructions();
-        const systemPrompt = buildStepSystemPrompt({
+        const agentContextInstructions = await contextLoader.loadAgentContextInstructions();
+        const systemPrompt = contextLoader.buildStepSystemPrompt({
           agentContextInstructions,
         });
         forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'runtime context ready before generate' });
@@ -1180,72 +1179,6 @@ export function createAgentRunner(
     }
 
     throw new Error('Agent generate timed out after all retry attempts');
-  }
-
-  async function loadAgentContextInstructions() {
-    const filesystem = currentRuntime.workspace.filesystem;
-    const agentContextContent = await loadAgentContextContent(filesystem);
-
-    if (!agentContextContent) {
-      return undefined;
-    }
-
-    return [
-      'Automatically loaded workspace context file.',
-      `File: ${AGENT_CONTEXT_FILE_PATH}`,
-      'This file should be treated as additional runtime instructions and context.',
-      'This is the only workspace file auto-loaded into the execution context.',
-      'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
-      'If you mention or use information from this file, do not say it came from context, instructions, notes, or memory. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when appropriate.',
-      '',
-      agentContextContent,
-    ].filter(Boolean).join('\n');
-  }
-
-  async function loadAgentContextContent(filesystem: typeof currentRuntime.workspace.filesystem) {
-    if (!filesystem) {
-      return null;
-    }
-
-    const exists = await withTimeout(
-      filesystem.exists(AGENT_CONTEXT_FILE_PATH),
-      CONTEXT_DECORATION_TIMEOUT_MS,
-      `Agent context existence check timed out for ${runtime.id}`,
-    ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: err } }); return false; });
-
-    if (!exists) {
-      return null;
-    }
-
-    const data = await withTimeout(
-      filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
-      CONTEXT_DECORATION_TIMEOUT_MS,
-      `Agent context read timed out for ${runtime.id}`,
-    ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: err } }); return null; });
-
-    if (!data) {
-      return null;
-    }
-
-    const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
-    const trimmedContent = content.trim();
-    if (!trimmedContent) {
-      return null;
-    }
-
-    if (trimmedContent.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
-      return [
-        'Context pressure warning:',
-        `- \`${AGENT_CONTEXT_FILE_PATH}\` is getting large (${trimmedContent.length} chars).`,
-        '- Keep only high-signal summary context there.',
-        '- Move detailed notes, logs, and long task detail into separate workspace files.',
-        '- Leave short retrieval hints and file references in `AGENT_CONTEXT.md`.',
-        '',
-        trimmedContent,
-      ].join('\n');
-    }
-
-    return trimmedContent;
   }
 
   function notifyExternalEvent(event: AgentWakeEvent) {
