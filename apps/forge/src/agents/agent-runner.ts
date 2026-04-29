@@ -11,7 +11,7 @@ import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
-import { createMessageManager } from './agent-runner-messages';
+import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
 
 import {
   delay,
@@ -263,57 +263,22 @@ export function createAgentRunner(
     });
   }
 
-  async function appendPendingRunMessages(
-  events: AgentWakeEvent[],
-  options: {
-    allowIdleOnly?: boolean;
-  } = {},
-) {
-  await messageManager.appendPendingRunMessages(events, options);
-}
+  function appendPendingRunMessages(
+    events: AgentWakeEvent[],
+    options: {
+      allowIdleOnly?: boolean;
+    } = {},
+  ) {
+    void messageManager.appendPendingRunMessages(events, options);
+  }
+
 
   function flushPendingRunMessages(options: {
     allowOriginIdleOnly?: boolean;
   } = {}) {
-    if (messageManager.getPendingCount() === 0) {
-
-      return null;
-
-    }
-
-    const allEvents = Array.from(messageManagerState.pendingRunMessages.values()).sort(
-      (left, right) => left.timestamp - right.timestamp,
-    );
-    const deferredEvents: AgentWakeEvent[] = [];
-
-    const events = allEvents.filter((event) => {
-      if (flushedRunEventKeys.has(event.idempotencyKey)) {
-        return false;
-      }
-
-      if (event.originIdleOnly && !options.allowOriginIdleOnly) {
-        deferredEvents.push(event);
-        return false;
-      }
-
-      return shouldIncludePendingRunEventInFlush(event);
-    });
-
-    pendingRunMessages.clear();
-
-    for (const event of deferredEvents) {
-      pendingRunMessages.set(event.idempotencyKey, event);
-    }
-
-    if (events.length === 0) {
-      return null;
-    }
-
-    for (const event of events) {
-      rememberFlushedRunEventKey(event.idempotencyKey);
-    }
-    return formatPendingRunEvents(events);
+    return messageManager.flushPendingRunMessages(options);
   }
+
 
   function stop() {
     stopped = true;
@@ -327,7 +292,7 @@ export function createAgentRunner(
     clearTimer();
     clearHealthcheck();
     wakeQueue.stop();
-    resetFlushedRunEventKeys();
+  messageManager.resetFlushedRunEventKeys();
   }
 
   async function forceIdle(options: {
@@ -340,9 +305,9 @@ export function createAgentRunner(
     clearTimer();
     if (!options.preserveQueuedWork) {
       wakeQueue.stop();
-      pendingRunMessages.clear();
+      messageManagerState.pendingRunMessages.clear();
     }
-    resetFlushedRunEventKeys();
+  messageManager.resetFlushedRunEventKeys();
     instant = false;
     resetLoopDetector();
     await withTimeout(
@@ -452,7 +417,7 @@ export function createAgentRunner(
       backoffMs = ONE_MINUTE_MS;
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
-      resetFlushedRunEventKeys();
+    messageManager.resetFlushedRunEventKeys();
       pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
@@ -717,19 +682,6 @@ export function createAgentRunner(
 
     messageManager.updateFlushSettings(settings);
   }
-
-  function shouldIncludePendingRunEventInFlush(event: AgentWakeEvent) {
-  return messageManager.shouldIncludePendingRunEventInFlush(event);
-}
-
-  function resetFlushedRunEventKeys() {
-  messageManager.resetFlushedRunEventKeys();
-}
-
-  function rememberFlushedRunEventKey(idempotencyKey: string) {
-  messageManager.rememberFlushedRunEventKey(idempotencyKey);
-}
-
   function registerLoopSignature(signature: string) {
     return loopDetector.register(signature);
   }
