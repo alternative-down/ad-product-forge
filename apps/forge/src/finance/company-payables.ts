@@ -114,15 +114,17 @@ export function createCompanyPayables(db: Database) {
       ),
     });
 
-    if (!existingNextEntry) {
-      await createPlannedOccurrence({
-        payableId: payable.id,
-        name: payable.name,
-        description: payable.description ?? undefined,
-        amountUsd: payable.amountUsd,
-        dueAt: nextDueAt,
-      });
+    if (existingNextEntry) {
+      return null;
     }
+
+    await createPlannedOccurrence({
+      payableId: payable.id,
+      name: payable.name,
+      description: payable.description ?? undefined,
+      amountUsd: payable.amountUsd,
+      dueAt: nextDueAt,
+    });
 
     await db
       .update(companyRecurringPayables)
