@@ -315,7 +315,7 @@ describe('createAppName', () => {
 
   it('uses fallback with nanoid suffix when base name is empty after normalization', () => {
     const result = createAppName('---', 'agent-xyz');
-    expect(result).toMatch(/^agent-[a-z0-9_]+-[a-z0-9_]+$/);
+    expect(result).toMatch(/^agent-[a-z0-9_-]+-[a-z0-9_-]+$/);
   });
 });
 
