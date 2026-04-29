@@ -22,10 +22,18 @@ import {
 import { createId } from "../utils/id";
 import {
   buildAgentAccountDescription,
+  buildGroupMemberViews,
+  buildGroupMetadata,
+  buildGroupRow,
+  buildConversationParticipantNames,
   createInternalChatSlug,
   parseFilterDate,
   resolveContentType,
   sanitizeAttachmentName,
+  sortParticipantsBySelfFirst,
+  type InternalChatGroupMember,
+  type InternalChatGroupParticipant,
+  type InternalChatGroupRow,
 } from "./internal-chat-helpers";
 export function createInternalChatService(
   db: Database,
@@ -650,13 +658,7 @@ export function createInternalChatService(
       name: group.name ?? groupId,
       provider: 'internal-chat',
       conversationKey: groupId,
-      members: members.map((member) => ({
-        participantId: member.participantId,
-        participantKey: member.participantKey,
-        participantSlug: member.participantSlug,
-        participantName: member.participantName,
-        role: member.role,
-      })),
+      members: buildGroupMemberViews(members),
       createdAt: new Date(group.createdAt).toISOString(),
       updatedAt: new Date(group.updatedAt).toISOString(),
     };
@@ -686,14 +688,7 @@ export function createInternalChatService(
       .orderBy(desc(internalChatConversations.updatedAt))
       .limit(input.limit);
 
-    return rows.map((row) => ({
-      groupId: row.id,
-      name: row.name ?? row.id,
-      provider: 'internal-chat',
-      conversationKey: row.id,
-      createdAt: new Date(row.createdAt).toISOString(),
-      updatedAt: new Date(row.updatedAt).toISOString(),
-    }));
+    return rows.map((row) => buildGroupRow(row satisfies InternalChatGroupRow));
   }
 
   async function listGroupMembers(input: { agentId: string; groupId: string }): Promise<InternalChatGroupMember[]> {
@@ -866,7 +861,7 @@ export function createInternalChatService(
           latestMessageAt: new Date(conversation.updatedAt).toISOString(),
           unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
           name: conversationName,
-          participants: participants.map((participant) => participant.displayName),
+          participants: buildConversationParticipantNames(participants),
           messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
         };
       }),
@@ -1381,12 +1376,7 @@ export function createInternalChatService(
           metadata: {
             conversationType: conversation.type,
             groupMembers: conversation.type === 'group'
-              ? participants.map((member) => ({
-                  participantId: member.accountId,
-                  agentId: member.agentId,
-                  slug: member.slug,
-                  displayName: member.displayName,
-                }))
+              ? buildGroupMetadata(participants)
               : undefined,
           },
         })).then(() => ({
@@ -1507,17 +1497,7 @@ export function createInternalChatService(
       )
       .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-    return rows.sort((left, right) => {
-      if (left.accountId === accountId) {
-        return -1;
-      }
-
-      if (right.accountId === accountId) {
-        return 1;
-      }
-
-      return left.displayName.localeCompare(right.displayName);
-    });
+    return sortParticipantsBySelfFirst(rows, accountId);
   }
 
   async function getRequiredAccount(accountId: string) {

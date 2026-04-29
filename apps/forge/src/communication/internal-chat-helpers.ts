@@ -3,6 +3,38 @@ import path from 'node:path';
 
 const createSlugSuffix = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface InternalChatGroupMember {
+  groupId: string;
+  participantId: string;
+  participantKey: string;
+  participantSlug: string;
+  participantName: string;
+  role: string;
+  createdAt: string;
+}
+
+export interface InternalChatGroupParticipant {
+  accountId: string;
+  agentId: string | null;
+  slug: string;
+  displayName: string;
+}
+
+export interface InternalChatGroupRow {
+  id: string;
+  name: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Slug & filename helpers
+// ---------------------------------------------------------------------------
+
 /**
  * Parses a date string into a Unix timestamp (ms), or null if undefined.
  * Throws if the value is provided but not a valid date string.
@@ -91,4 +123,110 @@ export function buildAgentAccountDescription(input: {
     input.roleName?.trim() ? `Role name: ${input.roleName.trim()}` : null,
     input.roleDescription?.trim() ? `Role description: ${input.roleDescription.trim()}` : null,
   ].filter(Boolean).join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Conversation & participant transformation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Transforms an array of group members into simplified view objects
+ * suitable for API responses (strips internal groupId and createdAt).
+ */
+export function buildGroupMemberViews(members: InternalChatGroupMember[]): Array<{
+  participantId: string;
+  participantKey: string;
+  participantSlug: string;
+  participantName: string;
+  role: string;
+}> {
+  return members.map((member) => ({
+    participantId: member.participantId,
+    participantKey: member.participantKey,
+    participantSlug: member.participantSlug,
+    participantName: member.participantName,
+    role: member.role,
+  }));
+}
+
+/**
+ * Transforms a raw DB group row into a group view object with ISO timestamps.
+ */
+export function buildGroupRow(row: InternalChatGroupRow): {
+  groupId: string;
+  name: string;
+  provider: 'internal-chat';
+  conversationKey: string;
+  createdAt: string;
+  updatedAt: string;
+} {
+  return {
+    groupId: row.id,
+    name: row.name ?? row.id,
+    provider: 'internal-chat',
+    conversationKey: row.id,
+    createdAt: new Date(row.createdAt).toISOString(),
+    updatedAt: new Date(row.updatedAt).toISOString(),
+  };
+}
+
+/**
+ * Sorts participants so the self-account appears first, followed by
+ * the rest sorted alphabetically by displayName.
+ */
+export function sortParticipantsBySelfFirst<T extends InternalChatGroupParticipant>(
+  participants: T[],
+  selfAccountId: string,
+): T[] {
+  return [...participants].sort((left, right) => {
+    if (left.accountId === selfAccountId) {
+      return -1;
+    }
+    if (right.accountId === selfAccountId) {
+      return 1;
+    }
+    return left.displayName.localeCompare(right.displayName);
+  });
+}
+
+/**
+ * Resolves the display name for a conversation.
+ * Prefers the explicitly set name; falls back to the first non-self participant's
+ * display name (for DMs), then the first participant's name.
+ */
+export function resolveConversationDisplayName(
+  conversation: { name: string | null; type: string },
+  participants: InternalChatGroupParticipant[],
+  selfAccountId: string,
+): string | undefined {
+  return (
+    conversation.name
+    ?? participants.find((p) => p.accountId !== selfAccountId)?.displayName
+    ?? participants[0]?.displayName
+  );
+}
+
+/**
+ * Extracts an ordered list of participant display names from a participant array.
+ */
+export function buildConversationParticipantNames(participants: InternalChatGroupParticipant[]): string[] {
+  return participants.map((p) => p.displayName);
+}
+
+/**
+ * Transforms an array of participants into the groupMembers metadata format
+ * used in live message delivery and unread replay payloads.
+ */
+export function buildGroupMetadata(participants: InternalChatGroupParticipant[]): Array<{
+  participantId: string;
+  agentId: string | null;
+  slug: string;
+  displayName: string;
+}> {
+  return participants.map((p) => ({
+    participantId: p.accountId,
+    agentId: p.agentId,
+    slug: p.slug,
+    displayName: p.displayName,
+  }));
 }
