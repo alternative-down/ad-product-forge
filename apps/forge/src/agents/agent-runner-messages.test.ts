@@ -1,10 +1,10 @@
-import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createMessageManager, type MessageManagerState } from './agent-runner-messages.js';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
 function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {
   return {
-    id: 'id-' + Math.random(),
+    groupKey: 'group-' + Math.random(),
     type: 'message:user',
     timestamp: Date.now(),
     idempotencyKey: 'key-' + Math.random(),

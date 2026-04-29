@@ -4,7 +4,6 @@ import { createScheduler, type SchedulerState, type SchedulerDependencies } from
 // ─── Constants (must match scheduler source) ─────────────────────────────────
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 600_000;
-const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 
 // ─── Factory helpers ───────────────────────────────────────────────────────────
@@ -433,7 +432,7 @@ describe('createScheduler', () => {
         reloadRuntime: false,
         wakeStartedAt: Date.now(),
         markRunning: false,
-        onReloadRuntime: async (runEpoch) => {},
+        onReloadRuntime: async (_runEpoch: number) => {},
         setExecutionState: async () => {},
         onAgentRunning: () => {},
         onRunnerIdle: async () => {},
