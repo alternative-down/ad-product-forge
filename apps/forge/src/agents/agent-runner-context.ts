@@ -4,19 +4,43 @@ const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
 const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
 const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 
+export type WorkspaceFilesystem = {
+  exists(path: string): Promise<boolean>;
+  readFile(path: string): Promise<string | Uint8Array | Buffer>;
+};
+
 export type ContextLoaderDependencies = {
-  getRuntimeHome(): Promise<string>;
-  getAgentContextInstructions(): Promise<string>;
+  filesystem: WorkspaceFilesystem;
 };
 
 export function createContextLoader(deps: ContextLoaderDependencies) {
+  const { filesystem } = deps;
+
   async function loadAgentContextInstructions(): Promise<string> {
-    const home = await deps.getRuntimeHome();
+    const contextPath = `${AGENT_CONTEXT_FILE_PATH}`;
 
     try {
-      const { readFile } = await import('fs/promises');
-      const contextPath = `${home}/${AGENT_CONTEXT_FILE_PATH}`;
-      const content = await readFile(contextPath, 'utf-8');
+      const fileExists = await withTimeout(
+        filesystem.exists(contextPath),
+        CONTEXT_DECORATION_TIMEOUT_MS,
+        'Context file existence check timed out',
+      );
+
+      if (!fileExists) {
+        return '';
+      }
+
+      const rawContent = await withTimeout(
+        filesystem.readFile(contextPath),
+        CONTEXT_DECORATION_TIMEOUT_MS,
+        'Context file read timed out',
+      );
+
+      if (!rawContent) {
+        return '';
+      }
+
+      const content = toString(rawContent);
       return decorateContext(content);
     } catch {
       // File doesn't exist or can't be read — use default
@@ -69,4 +93,20 @@ export function createContextLoader(deps: ContextLoaderDependencies) {
     loadRuntimeContext,
     buildStepSystemPrompt,
   };
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), ms),
+    ),
+  ]);
+}
+
+function toString(data: string | Uint8Array | Buffer): string {
+  if (typeof data === 'string') return data;
+  if (Buffer.isBuffer(data)) return data.toString('utf-8');
+  // Uint8Array — use TextDecoder for proper UTF-8 decode
+  return new TextDecoder('utf-8').decode(data);
 }
