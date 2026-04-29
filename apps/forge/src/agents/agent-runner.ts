@@ -11,6 +11,7 @@ import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
+import { createMessageManager } from './agent-runner-messages';
 
 import {
   delay,
@@ -97,13 +98,17 @@ export function createAgentRunner(
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   let pendingLongTermMemoryRecallSystemText: string | null = null;
-  let flushedRunEventKeys = new Set<string>();
-  let flushedRunEventKeyOrder: string[] = [];
-  let currentFlushSettings = {
-    communicationDmFlushingEnabled: true,
-    communicationGroupFlushingEnabled: true,
+  const messageManagerState: MessageManagerState = {
+    flushedRunEventKeys: new Set<string>(),
+    flushedRunEventKeyOrder: [] as string[],
+    currentFlushSettings: {
+      communicationDmFlushingEnabled: true,
+      communicationGroupFlushingEnabled: true,
+    },
+    pendingRunMessages: new Map<string, AgentWakeEvent>(),
   };
-  const pendingRunMessages = new Map<string, AgentWakeEvent>();
+
+  const messageManager = createMessageManager(messageManagerState, formatPendingRunEvents);
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
 
@@ -258,37 +263,25 @@ export function createAgentRunner(
     });
   }
 
-  function appendPendingRunMessages(
-    events: AgentWakeEvent[],
-    options: {
-      allowIdleOnly?: boolean;
-    } = {},
-  ) {
-    for (const event of events) {
-      if (event.idleOnly && !options.allowIdleOnly) {
-        continue;
-      }
-
-      if (!event.text.trim()) {
-        continue;
-      }
-
-      pendingRunMessages.set(event.idempotencyKey, {
-        ...event,
-        originIdleOnly: event.originIdleOnly ?? event.idleOnly ?? false,
-        idleOnly: options.allowIdleOnly ? false : event.idleOnly,
-      });
-    }
-  }
+  async function appendPendingRunMessages(
+  events: AgentWakeEvent[],
+  options: {
+    allowIdleOnly?: boolean;
+  } = {},
+) {
+  await messageManager.appendPendingRunMessages(events, options);
+}
 
   function flushPendingRunMessages(options: {
     allowOriginIdleOnly?: boolean;
   } = {}) {
-    if (pendingRunMessages.size === 0) {
+    if (messageManager.getPendingCount() === 0) {
+
       return null;
+
     }
 
-    const allEvents = Array.from(pendingRunMessages.values()).sort(
+    const allEvents = Array.from(messageManagerState.pendingRunMessages.values()).sort(
       (left, right) => left.timestamp - right.timestamp,
     );
     const deferredEvents: AgentWakeEvent[] = [];
@@ -390,11 +383,16 @@ export function createAgentRunner(
           return;
         }
 
-        if (pendingRunMessages.size > 0) {
+        if (messageManager.getPendingCount() > 0) {
+
           await beginRun({
+
             reloadRuntime: false,
+
             wakeStartedAt: Date.now(),
+
             markRunning: true,
+
           });
           return;
         }
@@ -627,7 +625,7 @@ export function createAgentRunner(
       const controlDirective = extractRunnerControlDirective(result);
       const stopRequested = controlDirective === 'stop';
 
-      if (stopRequested && pendingRunMessages.size === 0) {
+      if (stopRequested && messageManager.getPendingCount() === 0) {
         nextStepAt = null;
         resetLoopDetector();
         await transitionToIdle(runEpoch, {
@@ -638,7 +636,7 @@ export function createAgentRunner(
       }
 
       backoffMs = ONE_MINUTE_MS;
-      continueRunning = pendingRunMessages.size > 0;
+      continueRunning = messageManager.getPendingCount() > 0;
     } catch (error) {
       if (isStaleRun(runEpoch)) {
         return;
@@ -717,49 +715,20 @@ export function createAgentRunner(
       `System settings lookup timed out for ${runtime.id}`,
     );
 
-    currentFlushSettings = {
-      communicationDmFlushingEnabled: settings.communicationDmFlushingEnabled,
-      communicationGroupFlushingEnabled: settings.communicationGroupFlushingEnabled,
-    };
+    messageManager.updateFlushSettings(settings);
   }
 
   function shouldIncludePendingRunEventInFlush(event: AgentWakeEvent) {
-    if (!event.type.startsWith('message:')) {
-      return true;
-    }
-
-    const conversationType = event.groupMetadata?.ConversationType;
-
-    if (conversationType === 'group') {
-      return currentFlushSettings.communicationGroupFlushingEnabled;
-    }
-
-    return currentFlushSettings.communicationDmFlushingEnabled;
-  }
+  return messageManager.shouldIncludePendingRunEventInFlush(event);
+}
 
   function resetFlushedRunEventKeys() {
-    flushedRunEventKeys = new Set<string>();
-    flushedRunEventKeyOrder = [];
-  }
+  messageManager.resetFlushedRunEventKeys();
+}
 
   function rememberFlushedRunEventKey(idempotencyKey: string) {
-    if (flushedRunEventKeys.has(idempotencyKey)) {
-      return;
-    }
-
-    flushedRunEventKeys.add(idempotencyKey);
-    flushedRunEventKeyOrder.push(idempotencyKey);
-
-    while (flushedRunEventKeyOrder.length > MAX_FLUSHED_RUN_EVENT_KEYS) {
-      const oldestIdempotencyKey = flushedRunEventKeyOrder.shift();
-
-      if (!oldestIdempotencyKey) {
-        return;
-      }
-
-      flushedRunEventKeys.delete(oldestIdempotencyKey);
-    }
-  }
+  messageManager.rememberFlushedRunEventKey(idempotencyKey);
+}
 
   function registerLoopSignature(signature: string) {
     return loopDetector.register(signature);
@@ -866,7 +835,7 @@ export function createAgentRunner(
       estimatedDelayMs: nextStepAt ? Math.max(nextStepAt - Date.now(), 0) : null,
       lastStepStartedAt,
       lastStepStage,
-      pendingRunEvents: Array.from(pendingRunMessages.values()),
+      pendingRunEvents: Array.from(messageManagerState.pendingRunMessages.values()),
       wake: wakeQueue.getSnapshot(),
       lastWakeStartedAt,
     };
@@ -1435,6 +1404,5 @@ export function createAgentRunner(
     timeout.timeoutId = null;
   }
 }
-
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
