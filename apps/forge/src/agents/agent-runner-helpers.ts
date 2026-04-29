@@ -58,7 +58,9 @@ function serializeError(error: unknown): Record<string, unknown> {
   }
 
   const extra = Object.fromEntries(
-    Object.entries(error).map(([key, value]) => [key, serializeUnknown(value)]),
+    Object.keys(error)
+      .filter((key) => !['name', 'message', 'stack'].includes(key))
+      .map((key) => [key, serializeUnknown((error as Record<string, unknown>)[key])]),
   );
 
   return {
@@ -127,16 +129,40 @@ function formatAbsentExecutionError(input: {
 
 function extractAbsentErrorDetails(error: Error) {
   const details: string[] = [];
+  const e = error as Record<string, unknown>;
 
-  if ('code' in error && typeof (error as Record<string, unknown>).code === 'string') {
-    details.push(`Error code: ${(error as Record<string, unknown>).code}`);
+  if ('code' in e && typeof e.code === 'string') {
+    details.push(`Error code: ${e.code}`);
   }
 
-  if ('statusCode' in error && typeof (error as Record<string, unknown>).statusCode === 'number') {
-    details.push(`HTTP status: ${(error as Record<string, unknown>).statusCode}`);
+  if ('statusCode' in e && typeof e.statusCode === 'number') {
+    details.push(`statusCode: ${e.statusCode}`);
   }
 
-  const detail = formatAbsentErrorDetailValue((error as Record<string, unknown>).detail);
+  if ('statusText' in e && typeof e.statusText === 'string') {
+    details.push(`statusText: ${e.statusText}`);
+  }
+
+  if ('url' in e && typeof e.url === 'string') {
+    details.push(`url: ${e.url}`);
+  }
+
+  const responseBody = formatAbsentErrorDetailValue(e.responseBody);
+  if (responseBody !== null) {
+    details.push(`responseBody: ${responseBody}`);
+  }
+
+  const body = formatAbsentErrorDetailValue(e.body);
+  if (body !== null) {
+    details.push(`body: ${body}`);
+  }
+
+  const data = formatAbsentErrorDetailValue(e.data);
+  if (data !== null) {
+    details.push(`data: ${data}`);
+  }
+
+  const detail = formatAbsentErrorDetailValue(e.detail);
   if (detail !== null) {
     details.push(`Detail: ${detail}`);
   }
@@ -246,7 +272,7 @@ function didIterationProduceVisibleAssistantText(iteration: {
   text: string;
   messages: unknown[];
 }) {
-  if (iteration.text.trim()) {
+  if (iteration.text.length > 0) {
     return true;
   }
 
