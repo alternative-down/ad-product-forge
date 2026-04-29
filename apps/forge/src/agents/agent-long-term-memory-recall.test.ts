@@ -5,17 +5,65 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 
-vi.mock('@forge-runtime/core', () => ({
-  SqliteWorkspaceRetrieval: vi.fn().mockImplementation(function() { return {}; }),
-  FilesystemDocumentSource: vi.fn().mockImplementation(function() { return {}; }),
-  forgeDebug: vi.fn(),
-}));
+let __forgeInstance: Record<string, any> | null = null;
+let __retrievalInstance: Record<string, any> | null = null;
+
+vi.mock('@forge-runtime/core', () => {
+  function makeDefaultInstance() {
+    return {
+      refresh: vi.fn(async () => undefined),
+      search: vi.fn(async () => []),
+      searchGraph: vi.fn(async () => ({ hit: false, score: null, context: '', sourcesCount: 0, sourcesJson: null, rawJson: null })),
+      getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 0 })),
+      listIndexes: vi.fn(async () => []),
+      queryVector: vi.fn(async () => []),
+      dispose: vi.fn(),
+    };
+  }
+
+  class SqliteWorkspaceRetrieval {
+    private _inst: Record<string, any>;
+    constructor(...args: any[]) {
+      this._inst = __forgeInstance !== null
+        ? { ...makeDefaultInstance(), ...__forgeInstance }
+        : makeDefaultInstance();
+      __retrievalInstance = this._inst;
+    }
+    get refresh() { return this._inst.refresh; }
+    get search() { return this._inst.search; }
+    get searchGraph() { return this._inst.searchGraph; }
+    get getStats() { return this._inst.getStats; }
+    get listIndexes() { return this._inst.listIndexes; }
+    get queryVector() { return this._inst.queryVector; }
+    get dispose() { return this._inst.dispose; }
+    refresh() { return this._inst.refresh(); }
+    search(...args: any[]) { return this._inst.search(...args); }
+    searchGraph(...args: any[]) { return this._inst.searchGraph(...args); }
+    dispose() { return this._inst.dispose(); }
+  }
+
+  const FilesystemDocumentSource = vi.fn(function(_opts: any) {
+    return { loadDocuments: vi.fn(async () => []) };
+  });
+
+  return {
+    SqliteWorkspaceRetrieval,
+    FilesystemDocumentSource,
+    forgeDebug: vi.fn(),
+    embedTextWithWorkspaceEmbedder: vi.fn(async () => new Array(384).fill(0)),
+  };
+});
+
+function setForgeInstance(obj: Record<string, any> | null) { __forgeInstance = obj; }
+function getCreatedInstance() { return __retrievalInstance; }
 
 import { AgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
 
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
+  __forgeInstance = null;
+  __retrievalInstance = null;
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) =>
       rm(directory, { recursive: true, force: true })),
@@ -586,3 +634,451 @@ describe('AgentLongTermMemoryRecall', () => {
     expect(persistedCall.snapshot.graphHit).toBe(true);
     expect(persistedCall.snapshot.query).toBe('what is the finance overview?');
   });
+
+describe('AgentLongTermMemoryRecall.initialize', () => {
+  it('marks workspace as initialized and sets lastInitAt', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-init-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const recallConfig = {
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    };
+    const readRuntimeMemorySettings = vi.fn(async () => recallConfig);
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => 'stamp-001'),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    setForgeInstance({ refresh: vi.fn(async () => undefined) });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    await recall.initialize();
+
+    // second call should be a no-op
+    await recall.initialize();
+
+    const retrievalInstance = getCreatedInstance();
+    expect(retrievalInstance?.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws when runtime memory settings are unavailable', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-init-err-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => 'stamp-001'),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    setForgeInstance({ refresh: vi.fn(async () => undefined) });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings: undefined,
+      persistenceStore,
+    });
+
+    await expect(recall.debugSearch({ query: "test" })).rejects.toThrow(
+      'LTM recall requires runtime memory settings',
+    );
+  });
+});
+
+describe('AgentLongTermMemoryRecall.refreshIndex', () => {
+  it('re-indexes when stamp has changed since last init', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-refresh-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const recallConfig = {
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    };
+
+    let callCount = 0;
+    const readRuntimeMemorySettings = vi.fn(async () => {
+      callCount++;
+      return recallConfig;
+    });
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => `stamp-${{},++callCount}`),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    let refreshCalls = 0;
+    setForgeInstance({
+      refresh: vi.fn(async () => { refreshCalls++; }),
+    });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    await recall.refreshIndex();
+    // stamp-1 on init, stamp-2 on refresh → different → re-index
+    expect(refreshCalls).toBe(2);
+  });
+
+  it('skips re-index when stamp is unchanged', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-refresh-skip-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const recallConfig = {
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    };
+    const readRuntimeMemorySettings = vi.fn(async () => recallConfig);
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => 'stable-stamp'),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    setForgeInstance({ refresh: vi.fn(async () => undefined) });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    await recall.refreshIndex();
+    await recall.refreshIndex();
+
+    // Same stamp, no re-index on second call
+    const retrievalInstance = getCreatedInstance();
+    expect(retrievalInstance?.refresh).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AgentLongTermMemoryRecall.debugSearch', () => {
+  it('returns empty result structure when query is blank', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-debug-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const recallConfig = {
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 5,
+      ltmRecallGraphTopK: 5,
+      ltmRecallGraphThreshold: 0.5,
+      ltmRecallGraphRandomWalkSteps: 200,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.5,
+      ltmRecallDocumentCount: 5,
+    };
+    const readRuntimeMemorySettings = vi.fn(async () => recallConfig);
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => 'stamp-debug'),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    setForgeInstance({
+      search: vi.fn(async () => []),
+      getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 0 })),
+      listIndexes: vi.fn(async () => []),
+    });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    await recall.initialize();
+    const result = await recall.debugSearch({ query: '   ' });
+
+    expect(result.query).toBe('');
+    expect(result.searchMode).toBe('hybrid');
+    expect(result.workspaceResults).toEqual([]);
+    expect(result.vectorResults).toEqual([]);
+    expect(result.graphHit).toBe(false);
+    expect(result.graphContext).toBe('');
+  });
+
+  it('populates result fields when query has content', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-debug-full-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const recallConfig = {
+      ltmRecallSearchMode: 'hybrid' as const,
+      ltmRecallWorkspaceTopK: 3,
+      ltmRecallGraphTopK: 3,
+      ltmRecallGraphThreshold: 0.7,
+      ltmRecallGraphRandomWalkSteps: 100,
+      ltmRecallGraphIncludeSources: false,
+      ltmRecallScoreThreshold: 0.7,
+      ltmRecallDocumentCount: 3,
+    };
+    const readRuntimeMemorySettings = vi.fn(async () => recallConfig);
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => 'stamp-full'),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    setForgeInstance({
+      search: vi.fn(async () => [{
+        id: 'doc-1',
+        text: 'Finance overview document',
+        score: 0.95,
+      }]),
+      queryVector: vi.fn(async () => []),
+      getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 1 })),
+      listIndexes: vi.fn(async () => [{ name: 'forge_runtime_memory_recall' }]),
+    });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings,
+      persistenceStore,
+    });
+
+    await recall.initialize();
+    const result = await recall.debugSearch({ query: 'finance overview' });
+
+    expect(result.query).toBe('finance overview');
+    expect(result.searchMode).toBe('hybrid');
+    expect(result.workspaceResults.length).toBeGreaterThan(0);
+    expect(result.workspaceResults[0]?.id).toBe('doc-1');
+    expect(result.queryEmbeddingDimension).toBeGreaterThan(0);
+    expect(result.injectedSystemMessage).toBeTruthy();
+    expect(result.workspaceCanBm25).toBe(true);
+    expect(result.workspaceCanVector).toBe(true);
+    expect(result.workspaceCanHybrid).toBe(true);
+  });
+});
+
+describe('AgentLongTermMemoryRecall.dispose', () => {
+  it('disposes retrieval workspace without throwing', async () => {
+    const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-dispose-test-'));
+    temporaryDirectories.push(workspaceBasePath);
+
+    const agentWorkspacePath = path.join(workspaceBasePath, 'workspace');
+    const agentMemoryPath = path.join(agentWorkspacePath, 'memory');
+
+    await mkdir(path.join(agentWorkspacePath, 'skills'), { recursive: true });
+    await mkdir(agentMemoryPath, { recursive: true });
+
+    const mockConversationStore = {
+      upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
+      appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
+      updateMessageReplacement: vi.fn(), listMessages: vi.fn(),
+      listOperationalMemoryMessages: vi.fn(),
+    };
+
+    const persistenceStore = {
+      readState: vi.fn(async () => ({
+        version: 1 as const, packages: [], lastWrittenPackageId: null,
+        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
+        lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      })),
+      writeState: vi.fn(),
+      readRecallIndexStamp: vi.fn(async () => null),
+      writeRecallIndexStamp: vi.fn(),
+      readRecallState: vi.fn(async () => null),
+      writeRecallState: vi.fn(),
+      clearRecallState: vi.fn(),
+    };
+
+    setForgeInstance({ dispose: vi.fn() });
+
+    const recall = new AgentLongTermMemoryRecall({
+      conversationStore: mockConversationStore,
+      agentId: 'agent-1',
+      agentWorkspacePath,
+      agentMemoryPath,
+      mastraId: 'agent_1',
+      readRuntimeMemorySettings: undefined,
+      persistenceStore,
+    });
+
+    await recall.dispose();
+
+    const retrievalInstance = getCreatedInstance();
+    expect(retrievalInstance?.dispose).toHaveBeenCalledTimes(1);
+  });
+});
