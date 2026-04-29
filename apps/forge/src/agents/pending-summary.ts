@@ -26,7 +26,7 @@ export function createAgentPendingSummaryReader(input: {
     const internalChatSummary = await input.internalChat.getUnreadSummary(agentId);
 
     return {
-      unreadNotificationCount: unreadNotificationRows[0]?.count ?? 0,
+      unreadNotificationCount: ((unreadNotificationRows as unknown) as { count: number }[])[0]?.count ?? 0,
       unreadConversationCount: internalChatSummary.unreadConversationCount,
       unreadMessageCount: internalChatSummary.unreadMessageCount,
     };

@@ -557,7 +557,7 @@ export async function readAgentHomeMetricSnapshot(input: {
         : null,
       lastStepCostUsd: lastStep?.costUsd ?? null,
       averageStepIntervalMs: buildAverageStepIntervalMs(recentSteps),
-      unreadNotificationCount: unreadNotificationRows[0]?.count ?? 0,
+      unreadNotificationCount: ((unreadNotificationRows as unknown) as { count: number }[])[0]?.count ?? 0,
       om: runtimeMemory
         ? {
             generationCount: runtimeMemory.generationCount,

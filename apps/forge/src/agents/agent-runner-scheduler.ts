@@ -39,6 +39,11 @@ export function createScheduler(
   deps: SchedulerDependencies,
 ) {
   let healthcheckTimer: NodeJS.Timeout | null = null;
+  // Healthcheck callbacks — set when the runner starts and when beginRun is configured
+  let healthcheckGetExecutionState: ((runtimeId: string) => Promise<'idle' | 'running' | 'absent'>) | null = null;
+  let healthcheckOnRunnerIdle: (() => Promise<void>) | null = null;
+  let healthcheckBeginRunFn: ((opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>) | null = null;
+  let healthcheckGetPendingCount: (() => number) | null = null;
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
   let startingRun = false;
@@ -191,6 +196,8 @@ export function createScheduler(
       return;
     }
 
+    healthcheckGetExecutionState = getExecutionState;
+    healthcheckBeginRunFn = beginRunFn;
     startHealthcheck();
     await refreshRunFlushSettings();
 
@@ -313,7 +320,7 @@ export function createScheduler(
     }
 
     healthcheckTimer = setInterval(() => {
-      void runHealthcheck();
+      void runHealthcheck(healthcheckGetExecutionState!, healthcheckOnRunnerIdle!, healthcheckBeginRunFn!, healthcheckGetPendingCount!);
     }, RUNNER_HEALTHCHECK_INTERVAL_MS);
   }
 
@@ -395,6 +402,7 @@ export function createScheduler(
       setExecutionState: (runtimeId: string, state: 'idle' | 'running' | 'absent') => Promise<void>;
       onAgentRunning: () => void;
       onRunnerIdle: () => Promise<void>;
+      getPendingCount: () => number;
     },
   ) {
     if (stopped || startingRun) {
@@ -408,6 +416,9 @@ export function createScheduler(
     try {
       activeRunId = crypto.randomUUID();
       state.instant = true;
+      // Store healthcheck callbacks from beginRun input
+      healthcheckOnRunnerIdle = input.onRunnerIdle;
+      healthcheckGetPendingCount = input.getPendingCount;
       resetBackoff();
       resetFlushedRunEventKeys();
       await refreshRunFlushSettings();

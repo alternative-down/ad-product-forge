@@ -1436,3 +1436,5 @@ export function createAgentRunner(
   }
 }
 
+
+export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

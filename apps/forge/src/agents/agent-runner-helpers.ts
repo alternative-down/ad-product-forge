@@ -58,9 +58,9 @@ function serializeError(error: unknown): Record<string, unknown> {
   }
 
   const extra = Object.fromEntries(
-    Object.keys(error)
+    Object.keys(error as unknown as Record<string, unknown>)
       .filter((key) => !['name', 'message', 'stack'].includes(key))
-      .map((key) => [key, serializeUnknown((error as Record<string, unknown>)[key])]),
+      .map((key) => [key, serializeUnknown((error as unknown as Record<string, unknown>)[key])]),
   );
 
   return {
@@ -129,7 +129,7 @@ function formatAbsentExecutionError(input: {
 
 function extractAbsentErrorDetails(error: Error) {
   const details: string[] = [];
-  const e = error as Record<string, unknown>;
+  const e = error as unknown as Record<string, unknown>;
 
   if ('code' in e && typeof e.code === 'string') {
     details.push(`Error code: ${e.code}`);
