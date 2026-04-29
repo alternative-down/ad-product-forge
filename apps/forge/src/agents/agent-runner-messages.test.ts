@@ -175,6 +175,33 @@ describe('createMessageManager', () => {
     });
   });
 
+  describe('clear', () => {
+    test('clears pendingRunMessages and flushedRunEventKeys', () => {
+      const state = makeState({
+        pendingRunMessages: new Map([
+          ['key1', makeEvent({ idempotencyKey: 'key1' })],
+          ['key2', makeEvent({ idempotencyKey: 'key2' })],
+        ]),
+        flushedRunEventKeys: new Set(['key1']),
+        flushedRunEventKeyOrder: ['key1'],
+      });
+      const manager = createMessageManager(state, () => '');
+
+      manager.clear();
+
+      expect(state.pendingRunMessages.size).toBe(0);
+      expect(state.flushedRunEventKeys.size).toBe(0);
+      expect(state.flushedRunEventKeyOrder).toEqual([]);
+    });
+
+    test('is safe to call on already-empty state', () => {
+      const state = makeState();
+      const manager = createMessageManager(state, () => '');
+      manager.clear();
+      expect(state.pendingRunMessages.size).toBe(0);
+    });
+  });
+
   describe('resetFlushedRunEventKeys', () => {
     test('clears flushedRunEventKeys and flushedRunEventKeyOrder', () => {
       const state = makeState({

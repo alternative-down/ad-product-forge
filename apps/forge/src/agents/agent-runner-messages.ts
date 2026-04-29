@@ -53,6 +53,11 @@ export function createMessageManager(
     return state.currentFlushSettings.communicationDmFlushingEnabled;
   }
 
+  function clear() {
+    state.pendingRunMessages.clear();
+    resetFlushedRunEventKeys();
+  }
+
   function resetFlushedRunEventKeys() {
     state.flushedRunEventKeys = new Set<string>();
     state.flushedRunEventKeyOrder = [];
@@ -129,6 +134,16 @@ export function createMessageManager(
     };
   }
 
+  function getState(): MessageManagerState {
+    return state;
+  }
+
+
+  function getPendingEvents(): AgentWakeEvent[] {
+    return Array.from(state.pendingRunMessages.values());
+  }
+
+
   function getPendingCount(): number {
     return state.pendingRunMessages.size;
   }
@@ -137,9 +152,12 @@ export function createMessageManager(
     appendPendingRunMessages,
     flushPendingRunMessages,
     shouldIncludePendingRunEventInFlush,
+    clear,
     resetFlushedRunEventKeys,
     rememberFlushedRunEventKey,
     updateFlushSettings,
+    getState,
+    getPendingEvents,
     getPendingCount,
   };
 }
