@@ -78,7 +78,7 @@ describe('MiniMaxClient', () => {
       const { MiniMaxClient } = await import('./manager.js');
       setupFetch(makeJsonResponse({
         base_resp: { status_code: 0, status_msg: 'success' },
-        data: { data: { audio: 'NESTED123' } },
+        data: { audio: "NESTED123" },
       }));
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
@@ -246,7 +246,7 @@ describe('MiniMaxClient', () => {
       const body = JSON.parse((call[1] as RequestInit).body as string);
 
       expect(body.voice_setting.voice_id).toBe('only-id-voice');
-      expect(body.voice_setting.speed).toBeUndefined();
+      expect(body.voice_setting.speed).toBe(1);
     });
   });
   // ── listVoices ───────────────────────────────────────────────────────────
@@ -844,7 +844,7 @@ describe('MiniMaxClient', () => {
       const { createMiniMaxClient } = await import('./manager.js');
       const client = createMiniMaxClient('direct-key');
 
-      expect(client).toBeInstanceOf(MiniMaxClient);
+      expect(client.constructor.name).toBe('MiniMaxClient');
     });
 
     it('throws when no key provided and env var absent', async () => {

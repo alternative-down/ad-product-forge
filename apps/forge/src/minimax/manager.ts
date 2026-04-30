@@ -261,10 +261,10 @@ export class MiniMaxClient {
 
     const responseData = this.getObject(data.data);
     const audio = responseData ? this.getString(responseData.audio) : undefined;
+
     if (!audio) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return synthesized audio data.');
     }
-
     return {
       success: true,
       data: {
@@ -289,11 +289,13 @@ export class MiniMaxClient {
       };
     }
 
-    const data = response.data;
-
-    if (!data) {
+    // The API response wraps actual data in a nested "data" property
+    const innerData = this.getObject(response.data?.data);
+    if (!innerData) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return any voice information.');
     }
+
+    const data = innerData;
 
     const parseVoices = (value: unknown): MiniMaxVoice[] => {
       if (!Array.isArray(value)) {
@@ -429,7 +431,8 @@ export class MiniMaxClient {
       };
     }
 
-    const data = response.data;
+    // The API response wraps actual data in a nested "data" property
+    const data = this.getObject(response.data?.data);
     if (!data) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task id.');
     }
@@ -460,7 +463,7 @@ export class MiniMaxClient {
       };
     }
 
-    const data = response.data;
+    const data = response.data?.data;
     if (!data) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task status.');
     }
@@ -494,21 +497,24 @@ export class MiniMaxClient {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return file metadata.');
     }
 
-    const file = this.getObject(data.file);
+    // File info is nested in data.data for this endpoint
+    const responseData = this.getObject(data.data);
+    const file = responseData ? this.getObject(responseData.file) : null;
     const downloadUrl = file ? this.getString(file.download_url) : undefined;
 
     if (!downloadUrl) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a download URL for the generated file.');
     }
 
-    return {
-      success: true,
+    const result = {
+      success: true as const,
       data: {
         fileId: fileId,
         fileName: file ? this.getString(file.filename) : undefined,
         downloadUrl,
       },
     };
+    return result;
   }
 }
 
