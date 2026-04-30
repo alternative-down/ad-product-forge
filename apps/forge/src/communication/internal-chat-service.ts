@@ -686,7 +686,7 @@ export function createInternalChatService(
         eq(internalChatConversationMembers.accountId, agentAccount.id),
       ))
       .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit);
+      .limit(input.limit).all();
 
     return rows.map((row) => buildGroupRow(row satisfies InternalChatGroupRow));
   }
@@ -766,7 +766,7 @@ export function createInternalChatService(
       )
       .where(eq(internalChatConversationMembers.accountId, agentAccount.id))
       .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit);
+      .limit(input.limit).all();
 
     const conversationIds = conversationRows.map((row) => row.id);
 
@@ -894,7 +894,7 @@ export function createInternalChatService(
       )
       .where(eq(internalChatConversationMembers.accountId, input.accountId))
       .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit);
+      .limit(input.limit).all();
 
     const conversationIds = conversationRows.map((row) => row.id);
 
@@ -1006,7 +1006,7 @@ export function createInternalChatService(
       .where(and(...filters))
       .orderBy(desc(internalChatMessages.createdAt))
       .offset(input.offset)
-      .limit(input.limit);
+      .limit(input.limit).all();
 
     const unreadMessageIds = rows.filter((row) => row.unread === 1).map((row) => row.messageId);
 
@@ -1070,7 +1070,7 @@ export function createInternalChatService(
       .where(and(...filters))
       .orderBy(desc(internalChatMessages.createdAt))
       .offset(input.offset)
-      .limit(input.limit);
+      .limit(input.limit).all();
 
     return Promise.all(
       rows.reverse().map(async (row) => ({

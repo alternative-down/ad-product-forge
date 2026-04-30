@@ -96,7 +96,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     method: 'GET',
     path: '/admin/system/mcp',
     handler: async () => {
-      const servers = await db.select().from(mcpServerConfigs);
+      const servers = await db.select().from(mcpServerConfigs).all();
       const formatted = servers
         .map((server) => ({
           serverId: server.id,

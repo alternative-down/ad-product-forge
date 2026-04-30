@@ -232,7 +232,7 @@ export function createMicroErpReadModel(db: Database) {
         })
         .from(agentExecutionSteps)
         .where(inArray(agentExecutionSteps.contractId, contractIds))
-        .groupBy(agentExecutionSteps.contractId),
+        .groupBy(agentExecutionSteps.contractId).all(),
       db.query.agentExecutionSteps.findMany({
         where: inArray(agentExecutionSteps.contractId, contractIds),
         orderBy: [desc(agentExecutionSteps.createdAt)],

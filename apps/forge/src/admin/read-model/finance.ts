@@ -58,7 +58,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
       })
       .from(agentExecutionSteps)
       .where(inArray(agentExecutionSteps.contractId, contractIds))
-      .groupBy(agentExecutionSteps.contractId);
+      .groupBy(agentExecutionSteps.contractId).all();
 
     const spentUsdByContractId = new Map<string, number>();
     for (const row of spendRows) {
