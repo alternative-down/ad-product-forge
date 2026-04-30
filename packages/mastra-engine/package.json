@@ -22,7 +22,7 @@
     "@ai-sdk/anthropic": "^3.0.71",
     "@ai-sdk/openai": "^3.0.52",
     "@huggingface/transformers": "3.7.5",
-    "@libsql/client": "^0.17.2",
+    "@libsql/client": "^0.17.3",
     "@mastra/core": "^1.25.0",
     "@mastra/fastembed": "^1.0.1",
     "@mastra/libsql": "^1.8.1",
