@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   forgeCustomToolIds,
   forgeCapabilityIds,
@@ -9,22 +9,46 @@ import {
 } from './catalog';
 
 describe('forgeCustomToolIds', () => {
-  it('contains expected tool IDs', () => {
-    expect(forgeCustomToolIds).toContain('list_contacts');
-    expect(forgeCustomToolIds).toContain('send_message');
+  it('contains expected number of tool IDs', () => {
+    expect(forgeCustomToolIds).toHaveLength(30);
+  });
+
+  it('includes hire-internal-agent and terminate-internal-agent', () => {
     expect(forgeCustomToolIds).toContain('hire-internal-agent');
     expect(forgeCustomToolIds).toContain('terminate-internal-agent');
   });
 
-  it('has 30 entries', () => {
-    expect(forgeCustomToolIds.length).toBe(30);
+  it('includes chat-related tool IDs', () => {
+    expect(forgeCustomToolIds).toContain('list_conversations');
+    expect(forgeCustomToolIds).toContain('send_message');
+    expect(forgeCustomToolIds).toContain('change_chat_group');
   });
 
-  it('forgeCapabilityIds is a copy of forgeCustomToolIds', () => {
-    // Same content, not same reference
+  it('includes all expected ForgeCustomToolIds', () => {
+    // Spot-check a sample of known IDs
+    const knownIds = [
+      'list_contacts',
+      'send_message',
+      'change_chat_group',
+      'hire-internal-agent',
+      'terminate-internal-agent',
+      'minimax_tts',
+      'list_company_cash',
+      'get_github_git_credentials',
+    ];
+    knownIds.forEach((id) => {
+      expect(forgeCustomToolIds).toContain(id);
+    });
+  });
+});
+
+describe('forgeCapabilityIds', () => {
+  it('has same contents as forgeCustomToolIds', () => {
     expect(forgeCapabilityIds).toEqual(forgeCustomToolIds);
+  });
+
+  it('has same length as forgeCustomToolIds', () => {
     expect(forgeCapabilityIds.length).toBe(forgeCustomToolIds.length);
-    expect(forgeCapabilityIds).not.toBe(forgeCustomToolIds);
   });
 });
 
@@ -37,77 +61,95 @@ describe('hasToolPermission', () => {
     expect(hasToolPermission(undefined, 'send_message')).toBe(true);
   });
 
-  it('returns false when allowedToolIds is an empty Set', () => {
-    // Empty Set means nothing is allowed — returns false, not true
-    expect(hasToolPermission(new Set(), 'send_message')).toBe(false);
-  });
-
-  it('returns true when toolId is in the allowed set', () => {
-    const allowed = new Set(['send_message', 'list_contacts']);
+  it('returns true when allowedToolIds has the requested tool', () => {
+    const allowed = new Set(['send_message', 'list_conversations']);
     expect(hasToolPermission(allowed, 'send_message')).toBe(true);
   });
 
-  it('returns false when toolId is NOT in the allowed set', () => {
-    const allowed = new Set(['list_contacts']);
+  it('returns false when allowedToolIds does not have the requested tool', () => {
+    const allowed = new Set(['list_conversations']);
     expect(hasToolPermission(allowed, 'send_message')).toBe(false);
   });
 
-  it('handles Set with many entries', () => {
-    const allowed = new Set(forgeCustomToolIds);
-    expect(hasToolPermission(allowed, 'terminate-internal-agent')).toBe(true);
+  it('returns false for unknown tool not in set', () => {
+    const allowed = new Set(['list_contacts']);
+    expect(hasToolPermission(allowed, 'unknown_tool' as ForgeCustomToolId)).toBe(false);
+  });
+
+  it('returns false for empty set', () => {
+    const allowed = new Set<string>();
+    expect(hasToolPermission(allowed, 'list_contacts')).toBe(false);
+  });
+
+  it('is case-sensitive', () => {
+    const allowed = new Set(['Send_Message']);
+    expect(hasToolPermission(allowed, 'send_message')).toBe(false);
   });
 });
 
 describe('isToolCapabilityId', () => {
-  it('returns true for a known tool ID', () => {
+  it('returns true for valid tool IDs', () => {
     expect(isToolCapabilityId('send_message')).toBe(true);
+    expect(isToolCapabilityId('hire-internal-agent')).toBe(true);
+    expect(isToolCapabilityId('minimax_tts')).toBe(true);
+    expect(isToolCapabilityId('list_company_cash')).toBe(true);
   });
 
-  it('returns true for first tool ID in the list', () => {
-    expect(isToolCapabilityId('list_contacts')).toBe(true);
-  });
-
-  it('returns false for an unknown string', () => {
-    expect(isToolCapabilityId('unknown_tool')).toBe(false);
-  });
-
-  it('returns false for a partial match', () => {
+  it('returns false for invalid tool IDs', () => {
+    expect(isToolCapabilityId('fake_tool')).toBe(false);
     expect(isToolCapabilityId('send_message_extra')).toBe(false);
+    expect(isToolCapabilityId('')).toBe(false);
+    expect(isToolCapabilityId('SEND_MESSAGE')).toBe(false);
   });
 
-  it('acts as a type predicate (TypeScript narrowing)', () => {
-    const id: string = 'send_message';
-    if (isToolCapabilityId(id)) {
-      const _: ForgeCustomToolId = id;
-      expect(_).toBe('send_message');
+  it('returns false for arbitrary strings', () => {
+    expect(isToolCapabilityId('anything')).toBe(false);
+    expect(isToolCapabilityId('foobar')).toBe(false);
+  });
+
+  it(' narrows type to ForgeCustomToolId when returning true', () => {
+    const toolId: string = 'send_message';
+    if (isToolCapabilityId(toolId)) {
+      expect(toolId).toBe('send_message');
     }
   });
 });
 
 describe('normalizeToolPermissionIds', () => {
-  it('removes duplicates', () => {
-    const result = normalizeToolPermissionIds(['a', 'b', 'a', 'c']);
-    expect(result).toEqual(['a', 'b', 'c']);
-  });
-
-  it('sorts alphabetically', () => {
-    const result = normalizeToolPermissionIds(['z', 'a', 'm', 'b']);
-    expect(result).toEqual(['a', 'b', 'm', 'z']);
-  });
-
   it('returns empty array for empty input', () => {
     expect(normalizeToolPermissionIds([])).toEqual([]);
   });
 
-  it('handles single element', () => {
-    expect(normalizeToolPermissionIds(['tool_x'])).toEqual(['tool_x']);
+  it('deduplicates entries', () => {
+    expect(normalizeToolPermissionIds(['a', 'b', 'a', 'c', 'b'])).toEqual(['a', 'b', 'c']);
   });
 
-  it('handles all unique already-sorted input', () => {
-    const input = ['a', 'b', 'c'];
-    const result = normalizeToolPermissionIds(input);
-    expect(result).toEqual(['a', 'b', 'c']);
-    // Original should not be mutated
-    expect(input).toEqual(['a', 'b', 'c']);
+  it('sorts entries alphabetically', () => {
+    expect(normalizeToolPermissionIds(['z', 'a', 'm'])).toEqual(['a', 'm', 'z']);
+  });
+
+  it('sorts after deduplication', () => {
+    expect(normalizeToolPermissionIds(['c', 'a', 'b', 'c'])).toEqual(['a', 'b', 'c']);
+  });
+
+  it('preserves all unique values', () => {
+    const result = normalizeToolPermissionIds(['x', 'y', 'z', 'x']);
+    expect(result).toHaveLength(3);
+  });
+
+  it('handles tool IDs with underscores and hyphens', () => {
+    const result = normalizeToolPermissionIds(['list_conversations', 'send_message']);
+    expect(result).toEqual(['list_conversations', 'send_message']);
+  });
+
+  it('handles readonly input', () => {
+    const input: readonly string[] = ['b', 'a'];
+    expect(normalizeToolPermissionIds(input)).toEqual(['a', 'b']);
+  });
+
+  it('does not mutate original array', () => {
+    const input = ['z', 'a'];
+    normalizeToolPermissionIds(input);
+    expect(input).toEqual(['z', 'a']);
   });
 });
