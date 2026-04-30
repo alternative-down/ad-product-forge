@@ -19,7 +19,7 @@ type GlobalSkillSummary = {
   editable: boolean;
 };
 
-function parseSkillMetadata(skillContent: string) {
+export function parseSkillMetadata(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
     return {};
   }
@@ -52,7 +52,7 @@ function parseSkillMetadata(skillContent: string) {
   return { description };
 }
 
-async function countSkillFiles(skillRoot: string): Promise<number> {
+export async function countSkillFiles(skillRoot: string): Promise<number> {
   const entries = await fs.readdir(skillRoot, { withFileTypes: true });
   let fileCount = 0;
 
@@ -72,11 +72,11 @@ async function countSkillFiles(skillRoot: string): Promise<number> {
   return fileCount;
 }
 
-function resolveGlobalSkillsRoot(workspaceBasePath: string) {
+export function resolveGlobalSkillsRoot(workspaceBasePath: string) {
   return path.resolve(workspaceBasePath, '_system', 'skills');
 }
 
-function normalizeArchiveEntryPath(entryPath: string) {
+export function normalizeArchiveEntryPath(entryPath: string) {
   const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
   const isDirectory = normalizedPath.endsWith('/');
   const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
@@ -162,7 +162,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
   }
 }
 
-async function listBundledGlobalSkills(): Promise<GlobalSkillSummary[]> {
+export async function listBundledGlobalSkills(): Promise<GlobalSkillSummary[]> {
   const skills = await Promise.all(
     BUNDLED_SKILL_DIRECTORY_NAMES.map(async (sourceDirectoryName) => {
       const skillRoot = await resolveBundledSkillRoot(sourceDirectoryName);
