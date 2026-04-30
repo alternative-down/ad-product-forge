@@ -69,10 +69,14 @@ function createChain(result: unknown) {
     leftJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
     orderBy: vi.fn(() => chain),
-    limit: vi.fn(() => Promise.resolve(result)),
+    limit: vi.fn(() => chain),
     in: vi.fn(() => chain),
     inArray: vi.fn(() => chain),
   };
+  Object.defineProperty(chain, 'all', {
+    value: vi.fn(() => Promise.resolve(result)),
+    configurable: true, writable: true,
+  });
   // Make chain awaitable: await chain → result
   Object.defineProperty(chain, 'then', {
     value: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(result).then(onFulfilled),
