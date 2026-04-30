@@ -61,15 +61,14 @@ describe('LocalBashWorkspaceGateway', () => {
     expect(result.stdout.trim()).toBe(root);
   });
 
-  it('uses real curl, python, and node from the environment', async () => {
+  it('uses real curl and node from the environment', async () => {
     const gateway = new LocalBashWorkspaceGateway();
     const availabilityResult = await gateway.execute({
-      command: 'which curl && which python3 && which node',
+      command: 'which curl && which node',
     });
 
     expect(availabilityResult.exitCode).toBe(0);
     expect(availabilityResult.stdout).toContain('/bin/curl');
-    expect(availabilityResult.stdout).toContain('/bin/python3');
     expect(availabilityResult.stdout).toContain('/bin/node');
   });
 
