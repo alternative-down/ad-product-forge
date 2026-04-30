@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
-import { llmProfiles, systemLlmDefaults } from '../database/schema';
+import { llmProfiles, systemLlmDefaults, type LlmProfile } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
 const llmProfileSchema = z.object({
@@ -226,7 +226,7 @@ export function createLlmSettingsStore(db: Database) {
   };
 }
 
-function toProfileRecord(row: typeof llmProfiles.$inferSelect) {
+function toProfileRecord(row: LlmProfile) {
   const {
     id,
     encryptedApiKey,

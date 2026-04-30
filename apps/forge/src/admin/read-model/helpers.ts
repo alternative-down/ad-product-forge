@@ -9,7 +9,7 @@ type RuntimeStoredMessagePart = {
   toolResult?: { toolCallId: string; result: unknown };
 };
 
-import type { agentSchedules } from '../../database/schema';
+import { agentSchedules, type AgentSchedule } from '../../database/schema';
 
 // Tool name patterns for badge extraction
 const TOOL_NAME_BADGES: Array<{ pattern: RegExp; icon: string; label: string }> = [
@@ -203,7 +203,7 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
 /**
  * Convert agent schedule row to summary object
  */
-export function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
+export function toScheduleSummary(row: AgentSchedule) {
   return {
     id: row.id,
     kind: row.kind,
