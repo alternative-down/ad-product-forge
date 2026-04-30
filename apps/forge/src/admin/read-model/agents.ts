@@ -151,7 +151,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
         .select({ agentId: agentNotifications.agentId, count: sql<number>`count(*)` })
         .from(agentNotifications)
         .where(sql`${agentNotifications.readAt} is null`)
-        .groupBy(agentNotifications.agentId),
+        .groupBy(agentNotifications.agentId).all(),
       db.query.agentRoles.findMany(),
       db.query.llmProfiles.findMany(),
     ]);
