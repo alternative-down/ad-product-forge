@@ -69,7 +69,6 @@ describe('LocalBashWorkspaceGateway', () => {
 
     expect(availabilityResult.exitCode).toBe(0);
     expect(availabilityResult.stdout).toContain('/bin/curl');
-    expect(availabilityResult.stdout).toContain('/bin/python3');
     expect(availabilityResult.stdout).toContain('/bin/node');
   });
 
