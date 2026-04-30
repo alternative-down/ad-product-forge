@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
-    "@huggingface/transformers": "3.7.5",
+    "@huggingface/transformers": "4.2.0",
     "@mastra-engine/core": "0.1.0",
     "@mastra/core": "^1.25.0",
     "@mastra/mcp": "^1.4.2",
