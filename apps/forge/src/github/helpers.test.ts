@@ -233,7 +233,8 @@ describe('isRecord', () => {
 describe('createAppName', () => {
   it('creates app name from agent name and ID', () => {
     const name = createAppName('My Agent', 'agent-123');
-    expect(name).toMatch(/^my-agent-[a-z0-9]{6}$/);
+    // nanoid@5 alphabet: [A-Za-z0-9_-] — underscores are valid characters
+    expect(name).toMatch(/^my-agent-[a-z0-9_-]{6}$/);
   });
 
   it('uses lowercase and replaces spaces/special chars with hyphens', () => {
