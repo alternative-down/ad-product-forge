@@ -74,8 +74,8 @@ export type AgentHomeMetricSnapshot = {
       overflowTokenLimit: number;
       observationTokenCount: number;
       reflectionTriggerTokenLimit: number;
-      reflectionTokenCount: number;
       reflectionTokenLimit: number;
+      reflectionTokenCount: number;
       checkpointTokenCount: number;
     } | null;
     ltm: {
@@ -95,7 +95,7 @@ export type AgentHomeMetricSnapshot = {
   }>;
 };
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+export async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
   let timer: NodeJS.Timeout | null = null;
 
   try {
@@ -118,11 +118,11 @@ async function closeLibsqlClient(client: ClosableLibsqlClient) {
   await client.close?.();
 }
 
-function truncatePreview(value: string) {
+export function truncatePreview(value: string) {
   return value.length > 220 ? `${value.slice(0, 217).trimEnd()}...` : value;
 }
 
-function extractLatestMessagePreview(content: unknown) {
+export function extractLatestMessagePreview(content: unknown) {
   if (!content || typeof content !== 'object') {
     return null;
   }
@@ -142,7 +142,7 @@ function extractLatestMessagePreview(content: unknown) {
   return truncatePreview(textSegments.join(' '));
 }
 
-function extractLatestMessageToolBadge(content: unknown) {
+export function extractLatestMessageToolBadge(content: unknown) {
   if (!content || typeof content !== 'object') {
     return null;
   }
@@ -175,7 +175,7 @@ function extractLatestMessageToolBadge(content: unknown) {
   return null;
 }
 
-function mergeToolLogMessages(messages: Array<{
+export function mergeToolLogMessages(messages: Array<{
   id: string;
   role: string;
   threadId: string;
@@ -212,7 +212,7 @@ function mergeToolLogMessages(messages: Array<{
   return merged;
 }
 
-function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
+export function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
   const toolInvocations = Array.isArray(metadata?.toolInvocations)
     ? metadata.toolInvocations
     : [];
@@ -343,7 +343,7 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
   }
 }
 
-async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
+export async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
   const agent = await db.query.agents.findFirst({
     where: eq(agents.id, agentId),
   });
@@ -366,12 +366,16 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
   try {
     const settings = await systemSettings.getSettings();
 
-    await migrateLegacyCheckpointedOmState({
-      db,
-      agentId,
-      threadId: mastraAgentId,
-      conversationStore,
-    });
+    try {
+      await migrateLegacyCheckpointedOmState({
+        db,
+        agentId,
+        threadId: mastraAgentId,
+        conversationStore,
+      });
+    } catch {
+      // silently ignore migration failures
+    }
 
     const operationalMemoryState = await readOperationalMemoryState({
       threadId: mastraAgentId,
@@ -405,12 +409,14 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
         checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
       },
     };
+  } catch {
+    return null;
   } finally {
     await closeLibsqlClient(client);
   }
 }
 
-function buildAverageStepIntervalMs(recentSteps: Array<{ createdAt: number }>) {
+export function buildAverageStepIntervalMs(recentSteps: Array<{ createdAt: number }>) {
   if (recentSteps.length < 2) {
     return null;
   }
