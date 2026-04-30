@@ -263,10 +263,8 @@ export function createAgentRunner(
     stopped = true;
     startingRun = false;
     startingRunStartedAt = null;
-    activeRunEpoch += 1;
-    activeStepEpoch = 0;
     activeRunId = null;
-    invalidateInFlightGenerate();
+    scheduler.stop();
     executing = false;
     clearTimer();
     clearHealthcheck();
@@ -287,7 +285,7 @@ export function createAgentRunner(
       messageManagerState.pendingRunMessages.clear();
     }
     messageManager.resetFlushedRunEventKeys();
-    instant = false;
+    scheduler.setInstant(false);
     resetLoopDetector();
     await withTimeout(
       store.setExecutionState(runtime.id, 'idle'),
@@ -371,7 +369,7 @@ export function createAgentRunner(
         return;
       }
 
-      await queueNextStep(activeRunEpoch);
+      await queueNextStep();
     } catch (error) {
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error } });
     }
@@ -392,8 +390,8 @@ export function createAgentRunner(
 
     try {
       activeRunId = crypto.randomUUID();
-      instant = true;
-      backoffMs = ONE_MINUTE_MS;
+      scheduler.setInstant(true);
+      scheduler.resetBackoff();
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
       messageManager.resetFlushedRunEventKeys();
@@ -458,32 +456,23 @@ export function createAgentRunner(
       }
 
       if (nextAttempt.execute === 'idle') {
-        instant = false;
+        scheduler.setInstant(false);
         await transitionToIdle(runEpoch);
         return;
       }
 
       if (!nextAttempt.execute) {
-        instant = false;
+        scheduler.setInstant(false);
         scheduler.scheduleNextStep(nextAttempt.delayMs);
         return;
       }
 
       const delayMs = nextAttempt.delayMs;
-      instant = false;
-      nextStepAt = Date.now() + Math.max(delayMs, 0);
-      forgeDebug({ scope: 'agent-runner', level: 'info', runtimeId: runtime.id, message: `scheduling next step in ${Math.max(delayMs, 0)}ms` });
-      timer = setTimeout(
-        () => {
-          timer = null;
-          nextStepAt = null;
-          void executeStep(nextAttempt.contractId, runEpoch);
-        },
-        Math.max(delayMs, 0),
-      );
+      scheduler.setInstant(false);
+      scheduler.scheduleNextStep(delayMs, () => executeStep(nextAttempt.contractId, runEpoch));
     } catch (error) {
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error } });
-      instant = false;
+      scheduler.setInstant(false);
       schedule(nextBackoff());
     }
   }
@@ -579,7 +568,7 @@ export function createAgentRunner(
         return;
       }
 
-      backoffMs = ONE_MINUTE_MS;
+      scheduler.resetBackoff();
       continueRunning = messageManager.getPendingCount() > 0;
     } catch (error) {
       if (isStaleRun(runEpoch)) {
@@ -618,6 +607,7 @@ export function createAgentRunner(
       lastStepStartedAt = null;
       lastStepStage = null;
       lastGenerateProgress = null;
+      // scheduler manages its own step epoch
       if (activeStepEpoch === runEpoch) {
         activeStepEpoch = 0;
         executing = false;
@@ -709,7 +699,7 @@ export function createAgentRunner(
       };
     }
 
-    backoffMs = ONE_MINUTE_MS;
+    scheduler.resetBackoff();
     const settings = await withTimeout(
       systemSettings.getSettings(),
       RUNNER_AWAIT_TIMEOUT_MS,
@@ -1187,7 +1177,7 @@ export function createAgentRunner(
 
     clearTimer();
     invalidateInFlightGenerate();
-    instant = false;
+    scheduler.setInstant(false);
     resetLoopDetector();
     await withTimeout(
       store.setExecutionState(runtime.id, 'idle'),
@@ -1238,7 +1228,7 @@ export function createAgentRunner(
     budgetUsd: number;
     endsAt: number;
   }) {
-    backoffMs = ONE_MINUTE_MS;
+    scheduler.resetBackoff();
     const settings = await withTimeout(
       systemSettings.getSettings(),
       RUNNER_AWAIT_TIMEOUT_MS,
