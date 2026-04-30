@@ -52,7 +52,7 @@ vi.mock('./migrate-legacy-checkpointed-om', () => ({
   migrateLegacyCheckpointedOmState: mockMigrateLegacyOmState,
 }));
 
-vi.mock('../database/index', () => ({
+vi.mock('@libsql/client', () => ({
   createClient: mockCreateLibsqlClient,
 }));
 
