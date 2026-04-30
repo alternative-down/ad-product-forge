@@ -23,7 +23,6 @@ import { createId } from "../utils/id";
 import {
   buildAgentAccountDescription,
   buildGroupMemberViews,
-  buildGroupMetadata,
   buildGroupRow,
   buildConversationParticipantNames,
   createInternalChatSlug,
@@ -35,7 +34,7 @@ import {
   type InternalChatGroupParticipant,
   type InternalChatGroupRow,
 } from "./internal-chat-helpers";
-import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
+import { createInternalChatConnection } from "./internal-chat-connection";
 export function createInternalChatService(
   db: Database,
 ) {
@@ -1322,62 +1321,39 @@ export function createInternalChatService(
     const author = await getRequiredAccount(input.accountId);
     const participants = await listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);
 
-    const deliveries: Array<Promise<{ agentId: string; delivered: boolean }>> = [];
+    
+    const liveDeliveredAgentIds = connection.deliverToParticipants({
+      excludeAccountId: input.accountId,
+      participants,
+      conversation: {
+        id: conversation.id,
+        name: conversation.name,
+        type: conversation.type,
+      },
+      messageId,
+      author: {
+        id: author.id,
+        displayName: author.displayName,
+        slug: author.slug,
+      },
+      content: input.content,
+      attachments: input.attachments,
+      createdAt: new Date(now).toISOString(),
+    });
 
-    for (const participant of participants) {
-      if (participant.accountId === input.accountId || !participant.agentId) {
-        continue;
-      }
-
-      const message: InternalChatDeliveryMessage = {
-        targetKey: conversation.id,
-        messageId,
-        conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
-        authorId: author.id,
-        authorDisplayName: author.displayName,
-        authorUsername: author.slug,
-        content: input.content,
-        attachments: input.attachments,
-        createdAt: new Date(now).toISOString(),
-        metadata: {
-          conversationType: conversation.type,
-          groupMembers: conversation.type === 'group'
-            ? buildGroupMetadata(participants)
-            : undefined,
-        },
-      };
-
-      if (connection.deliverMessage(participant.agentId, message)) {
-        deliveries.push(Promise.resolve({ agentId: participant.agentId as string, delivered: true }));
-      }
+    if (liveDeliveredAgentIds.length > 0) {
+      await db
+        .update(internalChatMessageReads)
+        .set({
+          readAt: now,
+        })
+        .where(and(
+          eq(internalChatMessageReads.messageId, messageId),
+          inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
+          isNull(internalChatMessageReads.readAt),
+        ));
     }
 
-    if (deliveries.length > 0) {
-      const results = await Promise.allSettled(deliveries);
-      const liveDeliveredAgentIds: string[] = [];
-
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          liveDeliveredAgentIds.push(result.value.agentId);
-          continue;
-        }
-
-        forgeDebug({ scope: 'internal-chat', level: 'warn', message: 'Failed to deliver live message to handler', context: { reason: result.reason } });
-      }
-
-      if (liveDeliveredAgentIds.length > 0) {
-        await db
-          .update(internalChatMessageReads)
-          .set({
-            readAt: now,
-          })
-          .where(and(
-            eq(internalChatMessageReads.messageId, messageId),
-            inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
-            isNull(internalChatMessageReads.readAt),
-          ));
-      }
-    }
 
     return {
       success: true,
