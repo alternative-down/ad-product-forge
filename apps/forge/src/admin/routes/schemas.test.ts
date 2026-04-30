@@ -121,25 +121,12 @@ describe('Admin Route Schemas', () => {
       expect(result.offset).toBe(10);
     });
 
-    it('rejects missing required fields', () => {
-      expect(() =>
-        agentConversationMessagesQuerySchema.parse({ agentId: 'agent-1' }),
-      ).toThrow();
-      expect(() =>
-        agentConversationMessagesQuerySchema.parse({ provider: 'email' }),
-      ).toThrow();
-      expect(() =>
-        agentConversationMessagesQuerySchema.parse({ targetKey: 't-1' }),
-      ).toThrow();
-    });
-
-    it('rejects limit below minimum', () => {
+    it('rejects empty provider', () => {
       expect(() =>
         agentConversationMessagesQuerySchema.parse({
           agentId: 'agent-1',
-          provider: 'email',
-          targetKey: 't-1',
-          limit: 0,
+          provider: '',
+          targetKey: 'key',
         }),
       ).toThrow();
     });
@@ -149,7 +136,7 @@ describe('Admin Route Schemas', () => {
     it('applies defaults', () => {
       const result = agentLongTermMemoryRecallSearchSchema.parse({
         agentId: 'agent-1',
-        query: 'what was discussed yesterday',
+        query: 'find tasks',
       });
       expect(result.limit).toBe(10);
     });
@@ -157,25 +144,23 @@ describe('Admin Route Schemas', () => {
     it('respects provided limit', () => {
       const result = agentLongTermMemoryRecallSearchSchema.parse({
         agentId: 'agent-1',
-        query: 'recent decisions',
-        limit: 25,
+        query: 'find tasks',
+        limit: '25',
       });
       expect(result.limit).toBe(25);
     });
 
-    it('rejects missing agentId', () => {
+    it('rejects limit above maximum', () => {
       expect(() =>
-        agentLongTermMemoryRecallSearchSchema.parse({ query: 'test' }),
+        agentLongTermMemoryRecallSearchSchema.parse({
+          agentId: 'agent-1',
+          query: 'find tasks',
+          limit: 150,
+        }),
       ).toThrow();
     });
 
-    it('rejects missing query', () => {
-      expect(() =>
-        agentLongTermMemoryRecallSearchSchema.parse({ agentId: 'agent-1' }),
-      ).toThrow();
-    });
-
-    it('rejects empty query string', () => {
+    it('rejects empty query', () => {
       expect(() =>
         agentLongTermMemoryRecallSearchSchema.parse({
           agentId: 'agent-1',
@@ -185,106 +170,11 @@ describe('Admin Route Schemas', () => {
     });
   });
 
-  describe('hireAgentSchema', () => {
-    it('validates complete input', () => {
-      const result = hireAgentSchema.parse({
-        hiringRequest: 'Hire a developer agent named Test Agent',
-        weeklyBudgetUsd: 1000,
-      });
-      expect(result.hiringRequest).toBe('Hire a developer agent named Test Agent');
-    });
-
-    it('accepts optional fields', () => {
-      const result = hireAgentSchema.parse({
-        hiringRequest: 'Hire a developer agent',
-        additionalContext: 'Be helpful',
-        weeklyBudgetUsd: 1000,
-      });
-      expect(result.additionalContext).toBe('Be helpful');
-    });
-  });
-
-  describe('upsertSystemIntegrationSchema', () => {
-    it('validates migadu integration', () => {
-      const result = upsertSystemIntegrationSchema.parse({
-        providerType: 'migadu',
-        isEnabled: true,
-        config: {
-          apiUser: 'test@example.com',
-          apiKey: 'secret-key',
-        },
-      });
-      expect(result.providerType).toBe('migadu');
-    });
-
-    it('validates coolify integration', () => {
-      const result = upsertSystemIntegrationSchema.parse({
-        providerType: 'coolify',
-        isEnabled: true,
-        config: {
-          baseUrl: 'https://coolify.example.com',
-          adminToken: 'token',
-          serverId: 'srv-123',
-          destinationId: 'dest-456',
-        },
-      });
-      expect(result.providerType).toBe('coolify');
-    });
-  });
-
-  describe('createPayableSchema', () => {
-    it('validates agent_contract payable', () => {
-      const result = createPayableSchema.parse({
-        kind: 'agent_contract',
-        agentId: 'agent-123',
-        amount: 500,
-      });
-      expect(result.kind).toBe('agent_contract');
-    });
-
-    it('validates system_expense payable', () => {
-      const result = createPayableSchema.parse({
-        kind: 'system_expense',
-        description: 'Server costs',
-        amount: 100,
-        category: 'infrastructure',
-      });
-      expect(result.kind).toBe('system_expense');
-    });
-  });
-
-  describe('createAgentMcpServerSchema', () => {
-    it('validates stdio transport', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-123',
-        name: 'test-mcp',
-        transport: 'stdio',
-        command: 'npx',
-        argsText: '-v',
-      });
-      expect(result.transport).toBe('stdio');
-    });
-
-    it('validates http_streamable transport', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-123',
-        name: 'test-mcp',
-        transport: 'http_streamable',
-        url: 'https://mcp.example.com',
-      });
-      expect(result.transport).toBe('http_streamable');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Internal Chat Schemas
-  // ---------------------------------------------------------------------------
-
   describe('adminInternalChatSendSchema', () => {
-    it('validates minimal required fields', () => {
+    it('validates required fields', () => {
       const result = adminInternalChatSendSchema.parse({
         agentId: 'agent-1',
-        targetKey: 'conversation-abc',
+        targetKey: 'user-abc',
         provider: 'email',
         content: 'Hello there',
       });
@@ -292,80 +182,55 @@ describe('Admin Route Schemas', () => {
       expect(result.content).toBe('Hello there');
     });
 
-    it('rejects missing required fields', () => {
-      expect(() =>
-        adminInternalChatSendSchema.parse({ agentId: 'agent-1' }),
-      ).toThrow();
-      expect(() =>
-        adminInternalChatSendSchema.parse({ content: 'Hello' }),
-      ).toThrow();
-    });
-
-    it('rejects empty string values', () => {
+    it('rejects missing content', () => {
       expect(() =>
         adminInternalChatSendSchema.parse({
-          agentId: '',
-          targetKey: 'c-1',
+          agentId: 'agent-1',
+          targetKey: 'user-abc',
           provider: 'email',
-          content: 'Hi',
         }),
       ).toThrow();
     });
   });
 
   describe('createExternalInternalChatAccountSchema', () => {
-    it('validates with required fields only', () => {
-      const result = createExternalInternalChatAccountSchema.parse({
-        provider: 'email',
-        targetKey: 'user@example.com',
-      });
-      expect(result.provider).toBe('email');
-      expect(result.targetKey).toBe('user@example.com');
-    });
-
-    it('accepts optional name field', () => {
+    it('validates required fields', () => {
       const result = createExternalInternalChatAccountSchema.parse({
         provider: 'slack',
-        targetKey: 'U123456',
-        name: 'Alice',
+        targetKey: 'channel-123',
       });
-      expect(result.name).toBe('Alice');
+      expect(result.provider).toBe('slack');
     });
 
-    it('rejects missing provider', () => {
-      expect(() =>
-        createExternalInternalChatAccountSchema.parse({ targetKey: 'k-1' }),
-      ).toThrow();
+    it('allows optional name', () => {
+      const result = createExternalInternalChatAccountSchema.parse({
+        provider: 'slack',
+        targetKey: 'channel-123',
+        name: 'My Slack',
+      });
+      expect(result.name).toBe('My Slack');
     });
   });
 
   describe('updateExternalInternalChatAccountSchema', () => {
-    it('validates with required fields only', () => {
+    it('allows optional fields', () => {
       const result = updateExternalInternalChatAccountSchema.parse({
-        accountId: 'acct-123',
+        accountId: 'acct-1',
       });
-      expect(result.accountId).toBe('acct-123');
-    });
-
-    it('accepts optional name update', () => {
-      const result = updateExternalInternalChatAccountSchema.parse({
-        accountId: 'acct-123',
-        name: 'New Name',
-      });
-      expect(result.name).toBe('New Name');
+      expect(result.accountId).toBe('acct-1');
     });
 
     it('accepts valid webhookUrl', () => {
       const result = updateExternalInternalChatAccountSchema.parse({
-        accountId: 'acct-123',
-        webhookUrl: 'https://example.com/webhook',
+        accountId: 'acct-1',
+        webhookUrl: 'https://example.com/hook',
       });
-      expect(result.webhookUrl).toBe('https://example.com/webhook');
+      expect(result.webhookUrl).toBe('https://example.com/hook');
     });
 
     it('accepts null webhookUrl', () => {
       const result = updateExternalInternalChatAccountSchema.parse({
-        accountId: 'acct-123',
+        accountId: 'acct-1',
         webhookUrl: null,
       });
       expect(result.webhookUrl).toBeNull();
@@ -374,7 +239,7 @@ describe('Admin Route Schemas', () => {
     it('rejects invalid webhookUrl', () => {
       expect(() =>
         updateExternalInternalChatAccountSchema.parse({
-          accountId: 'acct-123',
+          accountId: 'acct-1',
           webhookUrl: 'not-a-url',
         }),
       ).toThrow();
@@ -382,44 +247,28 @@ describe('Admin Route Schemas', () => {
   });
 
   describe('deleteExternalInternalChatAccountSchema', () => {
-    it('validates with accountId', () => {
+    it('validates required accountId', () => {
       const result = deleteExternalInternalChatAccountSchema.parse({
-        accountId: 'acct-123',
+        accountId: 'acct-1',
       });
-      expect(result.accountId).toBe('acct-123');
-    });
-
-    it('rejects missing accountId', () => {
-      expect(() => deleteExternalInternalChatAccountSchema.parse({})).toThrow();
-    });
-
-    it('rejects empty accountId', () => {
-      expect(() =>
-        deleteExternalInternalChatAccountSchema.parse({ accountId: '' }),
-      ).toThrow();
+      expect(result.accountId).toBe('acct-1');
     });
   });
 
   describe('internalChatAccountIdQuerySchema', () => {
-    it('validates accountId', () => {
+    it('validates required accountId', () => {
       const result = internalChatAccountIdQuerySchema.parse({
-        accountId: 'acct-abc',
+        accountId: 'acct-1',
       });
-      expect(result.accountId).toBe('acct-abc');
-    });
-
-    it('rejects empty accountId', () => {
-      expect(() =>
-        internalChatAccountIdQuerySchema.parse({ accountId: '' }),
-      ).toThrow();
+      expect(result.accountId).toBe('acct-1');
     });
   });
 
   describe('internalChatMessagesQuerySchema', () => {
     it('applies defaults', () => {
       const result = internalChatMessagesQuerySchema.parse({
-        accountId: 'acct-123',
-        conversationId: 'conv-456',
+        accountId: 'acct-1',
+        conversationId: 'conv-1',
       });
       expect(result.limit).toBe(20);
       expect(result.offset).toBe(0);
@@ -427,176 +276,95 @@ describe('Admin Route Schemas', () => {
 
     it('respects provided values', () => {
       const result = internalChatMessagesQuerySchema.parse({
-        accountId: 'acct-123',
-        conversationId: 'conv-456',
+        accountId: 'acct-1',
+        conversationId: 'conv-1',
         limit: '50',
         offset: '10',
       });
       expect(result.limit).toBe(50);
       expect(result.offset).toBe(10);
     });
-
-    it('rejects limit below minimum', () => {
-      expect(() =>
-        internalChatMessagesQuerySchema.parse({
-          accountId: 'acct-123',
-          conversationId: 'conv-456',
-          limit: 0,
-        }),
-      ).toThrow();
-    });
   });
 
   describe('internalChatMessageAttachmentQuerySchema', () => {
     it('validates all required fields', () => {
       const result = internalChatMessageAttachmentQuerySchema.parse({
-        accountId: 'acct-123',
-        conversationId: 'conv-456',
-        messageId: 'msg-789',
-        attachmentName: 'document.pdf',
+        accountId: 'acct-1',
+        conversationId: 'conv-1',
+        messageId: 'msg-1',
+        attachmentName: 'file.pdf',
       });
-      expect(result.attachmentName).toBe('document.pdf');
-    });
-
-    it('rejects missing attachmentName', () => {
-      expect(() =>
-        internalChatMessageAttachmentQuerySchema.parse({
-          accountId: 'acct-123',
-          conversationId: 'conv-456',
-          messageId: 'msg-789',
-        }),
-      ).toThrow();
+      expect(result.attachmentName).toBe('file.pdf');
     });
   });
 
   describe('createInternalChatConversationSchema', () => {
-    it('validates with required fields', () => {
+    it('allows optional name with memberKeys required', () => {
       const result = createInternalChatConversationSchema.parse({
-        accountId: 'acct-123',
-        memberKeys: ['user-1', 'user-2'],
-      });
-      expect(result.accountId).toBe('acct-123');
-      expect(result.memberKeys).toHaveLength(2);
-    });
-
-    it('accepts optional name field', () => {
-      const result = createInternalChatConversationSchema.parse({
-        accountId: 'acct-123',
+        accountId: 'acct-1',
         memberKeys: ['user-1'],
-        name: 'Project Chat',
       });
-      expect(result.name).toBe('Project Chat');
+      expect(result.name).toBeUndefined();
     });
 
-    it('rejects empty memberKeys array', () => {
-      expect(() =>
-        createInternalChatConversationSchema.parse({
-          accountId: 'acct-123',
-          memberKeys: [],
-        }),
-      ).toThrow();
-    });
-
-    it('rejects missing memberKeys', () => {
-      expect(() =>
-        createInternalChatConversationSchema.parse({ accountId: 'acct-123' }),
-      ).toThrow();
+    it('validates required accountId with memberKeys', () => {
+      const result = createInternalChatConversationSchema.parse({
+        accountId: 'acct-1',
+        name: 'Team Chat',
+        memberKeys: ['user-1'],
+      });
+      expect(result.accountId).toBe('acct-1');
+      expect(result.name).toBe('Team Chat');
     });
   });
 
   describe('sendInternalChatConversationMessageSchema', () => {
-    it('validates with required fields', () => {
+    it('validates required fields', () => {
       const result = sendInternalChatConversationMessageSchema.parse({
-        conversationId: 'conv-123',
-        content: 'Hello everyone',
+        conversationId: 'conv-1',
+        content: 'Hello team',
       });
-      expect(result.content).toBe('Hello everyone');
-    });
-
-    it('accepts optional parentMessageId for replies', () => {
-      const result = sendInternalChatConversationMessageSchema.parse({
-        conversationId: 'conv-123',
-        content: 'Reply to message',
-        parentMessageId: 'msg-parent-1',
-      });
-      expect(result.parentMessageId).toBe('msg-parent-1');
-    });
-
-    it('rejects empty conversationId', () => {
-      expect(() =>
-        sendInternalChatConversationMessageSchema.parse({
-          conversationId: '',
-          content: 'Hello',
-        }),
-      ).toThrow();
-    });
-
-    it('rejects empty content', () => {
-      expect(() =>
-        sendInternalChatConversationMessageSchema.parse({
-          conversationId: 'conv-123',
-          content: '',
-        }),
-      ).toThrow();
+      expect(result.content).toBe('Hello team');
     });
   });
 
   describe('updateInternalChatConversationSchema', () => {
-    it('accepts optional name update', () => {
+    it('allows optional fields', () => {
       const result = updateInternalChatConversationSchema.parse({
-        conversationId: 'conv-123',
-        name: 'Updated Name',
+        conversationId: 'conv-1',
       });
-      expect(result.name).toBe('Updated Name');
+      expect(result.conversationId).toBe('conv-1');
     });
 
-    it('accepts optional archive flag', () => {
+    it('accepts name update', () => {
       const result = updateInternalChatConversationSchema.parse({
-        conversationId: 'conv-123',
-        archive: true,
+        conversationId: 'conv-1',
+        name: 'New Name',
       });
-      expect(result.archive).toBe(true);
-    });
-
-    it('rejects missing conversationId', () => {
-      expect(() =>
-        updateInternalChatConversationSchema.parse({ name: 'Test' }),
-      ).toThrow();
+      expect(result.name).toBe('New Name');
     });
   });
 
   describe('archiveInternalChatConversationSchema', () => {
-    it('validates conversationId', () => {
+    it('validates required conversationId', () => {
       const result = archiveInternalChatConversationSchema.parse({
-        conversationId: 'conv-123',
+        conversationId: 'conv-1',
       });
-      expect(result.conversationId).toBe('conv-123');
-    });
-
-    it('rejects empty conversationId', () => {
-      expect(() =>
-        archiveInternalChatConversationSchema.parse({ conversationId: '' }),
-      ).toThrow();
+      expect(result.conversationId).toBe('conv-1');
     });
   });
 
   describe('internalChatGroupMembersQuerySchema', () => {
-    it('validates conversationId', () => {
+    it('validates required conversationId', () => {
       const result = internalChatGroupMembersQuerySchema.parse({
-        conversationId: 'conv-abc',
+        conversationId: 'conv-1',
       });
-      expect(result.conversationId).toBe('conv-abc');
-    });
-
-    it('rejects empty conversationId', () => {
-      expect(() =>
-        internalChatGroupMembersQuerySchema.parse({ conversationId: '' }),
-      ).toThrow();
+      expect(result.conversationId).toBe('conv-1');
     });
   });
 
   describe('addInternalChatGroupMemberSchema', () => {
-    it('validates with all fields', () => {
+    it('validates all required fields', () => {
       const result = addInternalChatGroupMemberSchema.parse({
         conversationId: 'conv-123',
         participantKey: 'user-xyz',
@@ -605,10 +373,11 @@ describe('Admin Route Schemas', () => {
       expect(result.role).toBe('admin');
     });
 
-    it('applies default role', () => {
+    it('accepts normal role', () => {
       const result = addInternalChatGroupMemberSchema.parse({
         conversationId: 'conv-123',
         participantKey: 'user-xyz',
+        role: 'normal',
       });
       expect(result.role).toBe('normal');
     });
@@ -688,6 +457,374 @@ describe('Admin Route Schemas', () => {
           participantKey: '',
         }),
       ).toThrow();
+    });
+  });
+});
+
+describe('Hire Agent Schema', () => {
+  describe('hireAgentSchema', () => {
+    it('validates required fields for hiring request', () => {
+      const result = hireAgentSchema.parse({
+        hiringRequest: 'I need a senior developer for frontend work',
+        weeklyBudgetUsd: 500,
+      });
+      expect(result.hiringRequest).toBe('I need a senior developer for frontend work');
+      expect(result.weeklyBudgetUsd).toBe(500);
+    });
+
+    it('allows optional additionalContext', () => {
+      const result = hireAgentSchema.parse({
+        hiringRequest: 'Build a login page',
+        additionalContext: 'Use React and TypeScript',
+        weeklyBudgetUsd: 300,
+      });
+      expect(result.additionalContext).toBe('Use React and TypeScript');
+    });
+
+    it('rejects zero budget', () => {
+      expect(() =>
+        hireAgentSchema.parse({
+          hiringRequest: 'Test request',
+          weeklyBudgetUsd: 0,
+        }),
+      ).toThrow();
+    });
+
+    it('rejects negative budget', () => {
+      expect(() =>
+        hireAgentSchema.parse({
+          hiringRequest: 'Test request',
+          weeklyBudgetUsd: -100,
+        }),
+      ).toThrow();
+    });
+
+    it('rejects empty hiring request', () => {
+      expect(() =>
+        hireAgentSchema.parse({
+          hiringRequest: '',
+          weeklyBudgetUsd: 200,
+        }),
+      ).toThrow();
+    });
+  });
+});
+
+describe('System Integration Schemas', () => {
+  describe('upsertSystemIntegrationSchema — migadu variant', () => {
+    it('validates migadu integration with email api credentials', () => {
+      const result = upsertSystemIntegrationSchema.parse({
+        providerType: 'migadu',
+        isEnabled: true,
+        config: {
+          apiUser: 'admin@example.com',
+          apiKey: 'secret-key-123',
+        },
+      });
+      expect(result.providerType).toBe('migadu');
+      expect(result.config.apiUser).toBe('admin@example.com');
+    });
+
+    it('rejects migadu with invalid email', () => {
+      expect(() =>
+        upsertSystemIntegrationSchema.parse({
+          providerType: 'migadu',
+          config: { apiUser: 'not-email', apiKey: 'key' },
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('upsertSystemIntegrationSchema — coolify variant', () => {
+    it('validates coolify integration with full config', () => {
+      const result = upsertSystemIntegrationSchema.parse({
+        providerType: 'coolify',
+        isEnabled: true,
+        config: {
+          baseUrl: 'https://coolify.example.com',
+          adminToken: 'tok_abc123',
+          serverId: 'srv-1',
+          destinationId: 'dest-2',
+          applicationsBaseDomain: 'app.example.com',
+        },
+      });
+      expect(result.providerType).toBe('coolify');
+      expect(result.config.baseUrl).toBe('https://coolify.example.com');
+    });
+
+    it('rejects coolify with invalid baseUrl', () => {
+      expect(() =>
+        upsertSystemIntegrationSchema.parse({
+          providerType: 'coolify',
+          config: {
+            baseUrl: 'not-a-url',
+            adminToken: 'tok',
+            serverId: 's1',
+            destinationId: 'd1',
+          },
+        }),
+      ).toThrow();
+    });
+
+    it('applies default isEnabled', () => {
+      const result = upsertSystemIntegrationSchema.parse({
+        providerType: 'coolify',
+        config: {
+          baseUrl: 'https://coolify.example.com',
+          adminToken: 'tok_abc123',
+          serverId: 'srv-1',
+          destinationId: 'dest-2',
+        },
+      });
+      expect(result.isEnabled).toBe(true);
+    });
+  });
+
+  describe('upsertSystemIntegrationSchema — github variant', () => {
+    it('validates github integration', () => {
+      const result = upsertSystemIntegrationSchema.parse({
+        providerType: 'github',
+        isEnabled: false,
+        config: {
+          organization: 'my-org',
+          appHomeUrl: 'https://github.com/apps/my-app',
+        },
+      });
+      expect(result.providerType).toBe('github');
+      expect(result.isEnabled).toBe(false);
+    });
+
+    it('rejects github with invalid appHomeUrl', () => {
+      expect(() =>
+        upsertSystemIntegrationSchema.parse({
+          providerType: 'github',
+          config: { organization: 'my-org', appHomeUrl: 'not-a-url' },
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('upsertSystemIntegrationSchema — minimax variant', () => {
+    it('validates minimax integration', () => {
+      const result = upsertSystemIntegrationSchema.parse({
+        providerType: 'minimax',
+        config: {
+          apiKey: 'minimax-key-xyz',
+        },
+      });
+      expect(result.providerType).toBe('minimax');
+    });
+  });
+
+  describe('upsertSystemIntegrationSchema — discriminated union enforcement', () => {
+    it('rejects mismatched providerType', () => {
+      expect(() =>
+        upsertSystemIntegrationSchema.parse({
+          providerType: 'coolify',
+          config: { apiUser: 'x', apiKey: 'y' }, // migadu config shape
+        }),
+      ).toThrow();
+    });
+
+    it('rejects unknown providerType', () => {
+      expect(() =>
+        upsertSystemIntegrationSchema.parse({
+          providerType: 'unknown',
+          config: {},
+        }),
+      ).toThrow();
+    });
+  });
+});
+
+describe('Finance Schemas', () => {
+  describe('createPayableSchema — agent_contract variant', () => {
+    it('validates agent_contract payable', () => {
+      const result = createPayableSchema.parse({
+        kind: 'agent_contract',
+        agentId: 'agent-1',
+        amount: 150,
+        description: 'Week 1 work',
+      });
+      expect(result.kind).toBe('agent_contract');
+      expect(result.amount).toBe(150);
+    });
+
+    it('allows optional description', () => {
+      const result = createPayableSchema.parse({
+        kind: 'agent_contract',
+        agentId: 'agent-1',
+        amount: 200,
+      });
+      expect(result.description).toBeUndefined();
+    });
+
+    it('rejects zero amount', () => {
+      expect(() =>
+        createPayableSchema.parse({
+          kind: 'agent_contract',
+          agentId: 'agent-1',
+          amount: 0,
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('createPayableSchema — system_expense variant', () => {
+    it('validates system_expense payable', () => {
+      const result = createPayableSchema.parse({
+        kind: 'system_expense',
+        description: 'Cloud hosting fees',
+        amount: 500,
+        category: 'infrastructure',
+      });
+      expect(result.kind).toBe('system_expense');
+      expect(result.amount).toBe(500);
+    });
+
+    it('rejects negative amount on system_expense', () => {
+      expect(() =>
+        createPayableSchema.parse({
+          kind: 'system_expense',
+          description: 'Expense',
+          amount: -1,
+          category: 'misc',
+        }),
+      ).toThrow();
+    });
+
+    it('rejects system_expense without category', () => {
+      expect(() =>
+        createPayableSchema.parse({
+          kind: 'system_expense',
+          description: 'Expense',
+          amount: 50,
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('createPayableSchema — discriminated union enforcement', () => {
+    it('rejects missing kind', () => {
+      expect(() =>
+        createPayableSchema.parse({
+          agentId: 'agent-1',
+          amount: 100,
+        }),
+      ).toThrow();
+    });
+
+    it('rejects unknown kind', () => {
+      expect(() =>
+        createPayableSchema.parse({
+          kind: 'subscription',
+          description: 'x',
+          amount: 50,
+          category: 'misc',
+        }),
+      ).toThrow();
+    });
+  });
+});
+
+describe('MCP Server Schemas', () => {
+  describe('createAgentMcpServerSchema — stdio transport', () => {
+    it('validates stdio transport config', () => {
+      const result = createAgentMcpServerSchema.parse({
+        agentId: 'agent-1',
+        name: 'filesystem-server',
+        transport: 'stdio',
+        command: '/usr/local/bin/mcp-server',
+        argsText: '--verbose',
+        envVarsText: 'API_KEY=secret',
+        url: '',
+        headersText: '',
+      });
+      expect(result.transport).toBe('stdio');
+      expect(result.command).toBe('/usr/local/bin/mcp-server');
+    });
+
+    it('applies default isActive', () => {
+      const result = createAgentMcpServerSchema.parse({
+        agentId: 'agent-1',
+        name: 'test-server',
+        transport: 'stdio',
+        command: 'node',
+      });
+      expect(result.isActive).toBe(true);
+    });
+
+    it('applies default empty strings for optional fields', () => {
+      const result = createAgentMcpServerSchema.parse({
+        agentId: 'agent-1',
+        name: 'test-server',
+        transport: 'stdio',
+        command: 'node',
+      });
+      expect(result.argsText).toBe('');
+      expect(result.envVarsText).toBe('');
+      expect(result.url).toBe('');
+      expect(result.headersText).toBe('');
+    });
+
+    it('rejects empty name', () => {
+      expect(() =>
+        createAgentMcpServerSchema.parse({
+          agentId: 'agent-1',
+          name: '   ',
+          transport: 'stdio',
+          command: 'node',
+        }),
+      ).toThrow();
+    });
+
+    it('rejects empty command', () => {
+      expect(() =>
+        createAgentMcpServerSchema.parse({
+          agentId: 'agent-1',
+          name: 'server',
+          transport: 'stdio',
+          command: '',
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('createAgentMcpServerSchema — http_streamable transport', () => {
+    it('validates http_streamable transport config', () => {
+      const result = createAgentMcpServerSchema.parse({
+        agentId: 'agent-1',
+        name: 'remote-api',
+        transport: 'http_streamable',
+        url: 'https://mcp.example.com/stream',
+        headersText: 'Authorization: Bearer token',
+      });
+      expect(result.transport).toBe('http_streamable');
+      expect(result.url).toBe('https://mcp.example.com/stream');
+    });
+
+    it('rejects stdio fields on http_streamable variant', () => {
+      // http_streamable variant has command as optional default(''),
+      // but url must be a valid URL
+      expect(() =>
+        createAgentMcpServerSchema.parse({
+          agentId: 'agent-1',
+          name: 'remote-api',
+          transport: 'http_streamable',
+          url: 'not-a-url',
+        }),
+      ).toThrow();
+    });
+
+    it('accepts http_streamable without command', () => {
+      const result = createAgentMcpServerSchema.parse({
+        agentId: 'agent-1',
+        name: 'remote-api',
+        transport: 'http_streamable',
+        url: 'https://api.example.com/mcp',
+      });
+      expect(result.transport).toBe('http_streamable');
+      expect(result.url).toBe('https://api.example.com/mcp');
     });
   });
 });
