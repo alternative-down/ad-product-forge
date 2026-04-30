@@ -146,6 +146,14 @@ function makeMockDb(overrides: MockDbOverrides = {}) {
       agentProviders: {
         findMany: vi.fn().mockResolvedValue(agentProvidersFindMany),
       },
+      systemSettings: {
+        findFirst: vi.fn().mockResolvedValue({
+          checkpointedOmRecentRawTokens: 10000,
+          checkpointedOmRawObservationBatchTokens: 5000,
+          checkpointedOmObservationReflectionBatchTokens: 2000,
+          checkpointedOmTotalContextTokens: 200000,
+        }),
+      },
     },
   } as unknown as import('../../database').Database;
 }
@@ -160,7 +168,6 @@ describe('readAgentHomeMetricSnapshot', () => {
 
     mockForgeDebug.mockReturnValue(undefined);
     mockToMastraSafeIdentifier.mockImplementation((id: string) => id);
-    mockReadOperationalMemoryState.mockResolvedValue(null);
     mockLibsqlConversationStore.mockImplementation(function (opts: { client: unknown; tablePrefix: string }) {
       return {
         tablePrefix: opts.tablePrefix,
@@ -610,56 +617,6 @@ describe('readAgentHomeMetricSnapshot', () => {
 
 
 
-  it('DEBUG: direct readAgentRuntimeMemory test', async () => {
-    mockReadOperationalMemoryState.mockResolvedValue({
-      checkpointSummaryMessage: { operationalMemoryGeneration: 3 },
-      metrics: {
-        recentRawMessageCount: 10,
-        recentRawTokenCount: 5000,
-        recentRawTokenLimit: 10000,
-        overflowMessageCount: 2,
-        overflowTokenCount: 1000,
-        observationTokenCount: 500,
-        checkpointTokenCount: 300,
-        reflectionTokenCount: 0,
-      },
-      observationMessages: [],
-      reflectionMessages: [],
-    });
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: 'Test',
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: 'role-1',
-        modelProfileId: 'profile-1',
-        omModelProfileId: 'profile-2',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    });
-    // Check what the mock db returns for agents.findFirst
-    const agentResult = await db.query.agents.findFirst({});
-    console.log('[DEBUG2] agent from db:', JSON.stringify(agentResult));
-    
-    // Check what readOperationalMemoryState is
-    console.log('[DEBUG2] mockReadOp type:', typeof mockReadOperationalMemoryState);
-    console.log('[DEBUG2] mockReadOp value:', mockReadOperationalMemoryState);
-    const val = mockReadOperationalMemoryState({ threadId: 'x', store: {}, recentTokenLimit: 1000 });
-    console.log('[DEBUG2] mockReadOp({}) returns:', val, 'thenable?', val && typeof val.then === 'function');
-    mockReadOperationalMemoryState.mockResolvedValue({});
-    const val2 = mockReadOperationalMemoryState({ threadId: 'x', store: {}, recentTokenLimit: 1000 });
-    console.log('[DEBUG2] after mockResolvedValue:');
-    try {
-      const r = await val2;
-      console.log('[DEBUG2] await result:', r);
-    } catch(e) {
-      console.log('[DEBUG2] await error:', e.message);
-    }
-  });
 
 
   it('returns complete snapshot for fully configured agent', async () => {
@@ -1066,96 +1023,7 @@ describe('readAgentHomeMetricSnapshot', () => {
 
 
 
-  it('DEBUG: direct readAgentRuntimeMemory test', async () => {
-    mockReadOperationalMemoryState.mockResolvedValue({
-      checkpointSummaryMessage: { operationalMemoryGeneration: 3 },
-      metrics: {
-        recentRawMessageCount: 10,
-        recentRawTokenCount: 5000,
-        recentRawTokenLimit: 10000,
-        overflowMessageCount: 2,
-        overflowTokenCount: 1000,
-        observationTokenCount: 500,
-        checkpointTokenCount: 300,
-        reflectionTokenCount: 0,
-      },
-      observationMessages: [],
-      reflectionMessages: [],
-    });
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: 'Test',
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: 'role-1',
-        modelProfileId: 'profile-1',
-        omModelProfileId: 'profile-2',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    });
-    
-    // Directly test what readAgentRuntimeMemory returns
-    const memResult = await (await import('../agents/agent-home-metrics.ts')).readAgentRuntimeMemory(
-      db,
-      '/tmp',
-      'agent-1'
-    );
-    console.log('[DEBUG2] readAgentRuntimeMemory result:', JSON.stringify(memResult));
-  });
 
-  it('DEBUG: readAgentRuntimeMemory mock behavior', async () => {
-    mockReadOperationalMemoryState.mockResolvedValue({
-      checkpointSummaryMessage: { operationalMemoryGeneration: 3 },
-      metrics: {
-        recentRawMessageCount: 10,
-        recentRawTokenCount: 5000,
-        recentRawTokenLimit: 10000,
-        overflowMessageCount: 2,
-        overflowTokenCount: 1000,
-        observationTokenCount: 500,
-        checkpointTokenCount: 300,
-        reflectionTokenCount: 0,
-      },
-      observationMessages: [],
-      reflectionMessages: [],
-    });
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: 'Test',
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: 'role-1',
-        modelProfileId: 'profile-1',
-        omModelProfileId: 'profile-2',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    });
-    try {
-      const result = await readAgentHomeMetricSnapshot({
-        db,
-        workspaceBasePath: '/tmp',
-        agentId: 'agent-1',
-        runtime: null,
-        runnerSnapshot: null,
-      });
-      console.log('[DEBUG] result keys:', Object.keys(result ?? {}));
-      console.log('[DEBUG] overview:', result?.overview ? Object.keys(result.overview) : 'MISSING');
-      console.log('[DEBUG] om:', JSON.stringify(result?.overview?.om));
-      console.log('[DEBUG] lastStepAt:', result?.overview?.lastStepAt);
-      console.log('[DEBUG] mockReadOp.calls:', mockReadOperationalMemoryState.mock.calls.length);
-    } catch (e) {
-      console.log('[DEBUG] ERROR:', e.message);
-      console.log('[DEBUG] mockReadOp.calls:', mockReadOperationalMemoryState.mock.calls.length);
-    }
-  });
 
 
   it('ltm packageCount is 0 when ltm store readState times out', async () => {
