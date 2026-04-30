@@ -1,1062 +1,268 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Stable mock references (hoisted to top of module)
-// ---------------------------------------------------------------------------
-
-const mockForgeDebug = vi.fn();
-const mockToMastraSafeIdentifier = vi.fn((id: string) => id);
-const mockReadOperationalMemoryState = vi.fn();
-const mockLibsqlConversationStore = vi.fn();
-
-const mockCreateLibsqlClient = vi.fn(() => ({
-  close: vi.fn(() => Promise.resolve()),
-}));
-
-const mockMigrateLegacyOmState = vi.fn();
-
-const mockCreateLtmStore = vi.fn(() => ({
-  readState: vi.fn(() => Promise.resolve({ packages: [] })),
-}));
-
-const mockCreateSystemSettingsStore = vi.fn((_db: unknown) => {
-  const settings = {
-    checkpointedOmRecentRawTokens: 10000,
-    checkpointedOmRawObservationBatchTokens: 5000,
-    checkpointedOmObservationReflectionBatchTokens: 2000,
-    checkpointedOmTotalContextTokens: 200000,
-  };
-  return { getSettings: () => Promise.resolve(settings) };
-});
-
-// ---------------------------------------------------------------------------
-// Mock module dependencies
-// ---------------------------------------------------------------------------
-
+// -----------------------------------------------------------------------
+// Mock @forge-runtime/core so the module can be loaded without a full build.
+// -----------------------------------------------------------------------
 vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: mockForgeDebug,
-  readOperationalMemoryState: mockReadOperationalMemoryState,
-  toMastraSafeIdentifier: mockToMastraSafeIdentifier,
-  LibsqlConversationStore: mockLibsqlConversationStore,
+  forgeDebug: vi.fn(),
+  toMastraSafeIdentifier: (s: string) => s,
+  LibsqlConversationStore: vi.fn(),
+  readOperationalMemoryState: vi.fn(),
 }));
 
-vi.mock('./agent-long-term-memory-store', () => ({
-  createAgentLongTermMemoryStore: mockCreateLtmStore,
-}));
+// -----------------------------------------------------------------------
+// Import all utilities under test — loaded after mocks are registered so
+// the module graph resolves.
+// -----------------------------------------------------------------------
+import {
+  truncatePreview,
+  extractLatestMessagePreview,
+  extractLatestMessageToolBadge,
+  buildAverageStepIntervalMs,
+  buildThreadToolInvocationParts,
+} from './agent-home-metrics';
 
-vi.mock('../database/system-settings/store', () => ({
-  createSystemSettingsStore: mockCreateSystemSettingsStore,
-}));
+describe('agent-home-metrics utilities', () => {
+  describe('truncatePreview', () => {
+    it('returns the input unchanged when under 220 characters', () => {
+      expect(truncatePreview('This is a short preview.')).toBe('This is a short preview.');
+    });
 
-vi.mock('./migrate-legacy-checkpointed-om', () => ({
-  migrateLegacyCheckpointedOmState: mockMigrateLegacyOmState,
-}));
+    it('truncates strings longer than 220 characters with ellipsis', () => {
+      const result = truncatePreview('a'.repeat(250));
+      expect(result.length).toBeLessThanOrEqual(220);
+      expect(result.endsWith('...')).toBe(true);
+    });
 
-vi.mock('@libsql/client', () => ({
-  createClient: mockCreateLibsqlClient,
-}));
+    it('produces exactly 220 characters including ellipsis for long input', () => {
+      expect(truncatePreview('x'.repeat(500))).toBe('x'.repeat(217) + '...');
+    });
 
-// ---------------------------------------------------------------------------
-// Import after mocks
-// ---------------------------------------------------------------------------
+    it('leaves a string at exactly 220 characters untouched', () => {
+      expect(truncatePreview('y'.repeat(220))).toBe('y'.repeat(220));
+    });
 
-const { readAgentHomeMetricSnapshot } = await import('./agent-home-metrics.ts');
+    it('handles empty string', () => {
+      expect(truncatePreview('')).toBe('');
+    });
+  });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+  describe('extractLatestMessagePreview', () => {
+    it('returns null when content is not an object', () => {
+      expect(extractLatestMessagePreview(null)).toBe(null);
+      expect(extractLatestMessagePreview('string')).toBe(null);
+      expect(extractLatestMessagePreview(undefined)).toBe(null);
+    });
 
-// Schema-compliant step factory
-function mockStep(overrides) {
-  return {
-    id: 'step-1',
-    agentId: 'agent-1',
-    contractId: 'contract-1',
-    llmProfileId: 'profile-1',
-    modelKey: 'gpt-4',
-    kind: 'agent-step',
-    inputTokens: 1000,
-    cachedInputTokens: 0,
-    outputTokens: 500,
-    inputPerMillionUsd: 2.0,
-    inputCachePerMillionUsd: 0.5,
-    outputPerMillionUsd: 6.0,
-    contractCostMultiplier: 1.0,
-    costUsd: 0.01,
-    createdAt: Date.now(),
-    ...overrides,
-  };
-}
+    it('returns null when parts is not an array', () => {
+      expect(extractLatestMessagePreview({ parts: 'not an array' })).toBe(null);
+    });
 
-type MockDbOverrides = {
-  agentsFindFirst?: Record<string, unknown> | null;
-  llmProfilesFindFirst?: Record<string, unknown> | Record<string, unknown>[] | null;
-  agentRolesFindFirst?: Record<string, unknown> | null;
-  agentExecutionStepsFindMany?: Record<string, unknown>[];
-  agentNotificationsFindMany?: Record<string, unknown>[];
-  agentProvidersFindMany?: Record<string, unknown>[];
-};
+    it('returns null when no text or reasoning parts exist', () => {
+      expect(extractLatestMessagePreview({ parts: [{ type: 'tool-call', text: 'ignored' }] })).toBe(null);
+    });
 
-function makeMockDb(overrides: MockDbOverrides = {}) {
-  const {
-    agentsFindFirst = null,
-    llmProfilesFindFirst = [],
-    agentRolesFindFirst = null,
-    agentExecutionStepsFindMany = [],
-    agentNotificationsFindMany = [],
-    agentProvidersFindMany = [],
-  } = overrides;
+    it('extracts and joins text and reasoning parts, then truncates', () => {
+      const longText = 'x'.repeat(300);
+      const result = extractLatestMessagePreview({
+        parts: [
+          { type: 'text', text: 'Hello, ' },
+          { type: 'reasoning', text: 'thinking... ' },
+          { type: 'text', text: longText },
+        ],
+      });
+      expect(result).not.toBeNull();
+      expect(result!.length).toBeLessThanOrEqual(220);
+      expect(result!.startsWith('Hello, thinking... ')).toBe(true);
+    });
 
-  // Queue-based llmProfiles.findFirst (for sequential calls)
-  const llmProfileQueue: (Record<string, unknown> | null)[] = Array.isArray(llmProfilesFindFirst)
-    ? [...llmProfilesFindFirst]
-    : llmProfilesFindFirst !== null ? [llmProfilesFindFirst] : [];
+    it('truncates combined text exceeding 220 characters', () => {
+      const result = extractLatestMessagePreview({
+        parts: [{ type: 'text', text: 'a'.repeat(250) }],
+      });
+      expect(result).not.toBeNull();
+      expect(result!.length).toBeLessThanOrEqual(220);
+      expect(result!.endsWith('...')).toBe(true);
+    });
 
-  return {
-    // db.select() used for unread notification count
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => {
-          const unread = agentNotificationsFindMany.filter(
-            (n: Record<string, unknown>) => n.readAt == null,
-          );
-          return Promise.resolve([{ count: unread.length }]);
+    it('filters out empty/whitespace-only text parts', () => {
+      expect(
+        extractLatestMessagePreview({
+          parts: [{ type: 'text', text: '' }, { type: 'text', text: '  ' }, { type: 'text', text: 'valid' }],
         }),
-      })),
-    })),
-    query: {
-      agents: {
-        findFirst: vi.fn().mockResolvedValue(agentsFindFirst),
-      },
-      llmProfiles: {
-        findFirst: vi.fn().mockImplementation(() => {
-          const next = llmProfileQueue.shift();
-          return Promise.resolve(next ?? null);
+      ).toBe('valid');
+    });
+  });
+
+  describe('extractLatestMessageToolBadge', () => {
+    it('returns null when content is not an object', () => {
+      expect(extractLatestMessageToolBadge(null)).toBe(null);
+      expect(extractLatestMessageToolBadge(42)).toBe(null);
+    });
+
+    it('returns null when no tool-call part is present', () => {
+      expect(extractLatestMessageToolBadge({ parts: [{ type: 'text', text: 'hello' }] })).toBe(null);
+    });
+
+    it('returns null when tool-call part has no toolName', () => {
+      expect(extractLatestMessageToolBadge({ parts: [{ type: 'tool-call' }] })).toBe(null);
+    });
+
+    it('returns message badge for send_message tool', () => {
+      expect(
+        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'send_message', toolCallId: 'abc' }] }),
+      ).toEqual({ icon: '✉️', label: 'Mensagem' });
+    });
+
+    it('returns workspace badge for workspace_ prefixed tools', () => {
+      expect(
+        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'workspace_write_file', toolCallId: 'abc' }] }),
+      ).toEqual({ icon: '🛠️', label: 'Workspace' });
+    });
+
+    it('returns github badge for github_ prefixed tools', () => {
+      expect(
+        extractLatestMessageToolBadge({
+          parts: [{ type: 'tool-call', toolName: 'github_create_pull_request', toolCallId: 'abc' }],
         }),
-      },
-      agentRoles: {
-        findFirst: vi.fn().mockResolvedValue(agentRolesFindFirst),
-      },
-      agentExecutionSteps: {
-        findMany: vi.fn().mockResolvedValue([...(agentExecutionStepsFindMany)].sort((a, b) => b.createdAt - a.createdAt)),
-      },
-      agentNotifications: {
-        findMany: vi.fn().mockResolvedValue(agentNotificationsFindMany),
-      },
-      agentProviders: {
-        findMany: vi.fn().mockResolvedValue(agentProvidersFindMany),
-      },
-      systemSettings: {
-        findFirst: vi.fn().mockResolvedValue({
-          checkpointedOmRecentRawTokens: 10000,
-          checkpointedOmRawObservationBatchTokens: 5000,
-          checkpointedOmObservationReflectionBatchTokens: 2000,
-          checkpointedOmTotalContextTokens: 200000,
-        }),
-      },
-    },
-  } as unknown as import('../../database').Database;
-}
+      ).toEqual({ icon: '🐙', label: 'GitHub' });
+    });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+    it('returns search badge for search_ prefixed tools', () => {
+      expect(
+        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'search_docs', toolCallId: 'abc' }] }),
+      ).toEqual({ icon: '🔎', label: 'Busca' });
+    });
 
-describe('readAgentHomeMetricSnapshot', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    it('returns null for unrecognized tool name', () => {
+      expect(
+        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'custom_tool', toolCallId: 'abc' }] }),
+      ).toBe(null);
+    });
+  });
 
-    mockForgeDebug.mockReturnValue(undefined);
-    mockToMastraSafeIdentifier.mockImplementation((id: string) => id);
-    mockLibsqlConversationStore.mockImplementation(function (opts: { client: unknown; tablePrefix: string }) {
-      return {
-        tablePrefix: opts.tablePrefix,
-        listMessages: vi.fn().mockResolvedValue([]),
-        listOperationalMemoryMessages: vi.fn().mockResolvedValue([]),
+  describe('buildAverageStepIntervalMs', () => {
+    it('returns null for empty array', () => {
+      expect(buildAverageStepIntervalMs([])).toBe(null);
+    });
+
+    it('returns null for single step', () => {
+      expect(buildAverageStepIntervalMs([{ createdAt: 1000 }])).toBe(null);
+    });
+
+    it('returns 0 for two identical timestamps (zero interval is a valid number)', () => {
+      // Math.max(0, 0) = 0, which is a number, not null — filter keeps it
+      expect(buildAverageStepIntervalMs([{ createdAt: 1000 }, { createdAt: 1000 }])).toBe(0);
+    });
+
+    it('returns correct average interval for multiple steps (descending timestamps)', () => {
+      // Steps newest-first: 5000,4000,3000,2000,1000,0 — intervals all 1000 → avg=1000
+      expect(
+        buildAverageStepIntervalMs([5000, 4000, 3000, 2000, 1000, 0].map((t) => ({ createdAt: t }))),
+      ).toBe(1000);
+    });
+
+    it('uses only the first 6 steps', () => {
+      // 7 steps: first 6 avg=1000, 7th (at 0) creates interval 1000 with 6th
+      // but since only first 6 are sliced, 7th is excluded → avg stays 1000
+      expect(
+        buildAverageStepIntervalMs([6000, 5000, 4000, 3000, 2000, 1000, 0].map((t) => ({ createdAt: t }))),
+      ).toBe(1000);
+    });
+
+    it('rounds to nearest integer', () => {
+      // intervals: 333, 333, 333 → avg=333 (no fractional part to round)
+      expect(buildAverageStepIntervalMs([999, 666, 333].map((t) => ({ createdAt: t })))).toBe(333);
+    });
+
+    it('handles larger intervals', () => {
+      // intervals: 5000, 5000 → avg=5000
+      expect(buildAverageStepIntervalMs([10000, 5000, 0].map((t) => ({ createdAt: t })))).toBe(5000);
+    });
+  });
+
+  describe('buildThreadToolInvocationParts', () => {
+    it('returns empty array when metadata is undefined', () => {
+      expect(buildThreadToolInvocationParts(undefined)).toEqual([]);
+    });
+
+    it('returns empty array when no toolInvocations or toolResults exist', () => {
+      expect(buildThreadToolInvocationParts({})).toEqual([]);
+    });
+
+    it('returns empty array when toolInvocations is not an array', () => {
+      expect(buildThreadToolInvocationParts({ toolInvocations: 'invalid' })).toEqual([]);
+    });
+
+    it('skips invocations that are not objects or lack a toolName string', () => {
+      const result = buildThreadToolInvocationParts({
+        toolInvocations: [null, undefined, { name: 'not-toolName' }, { toolName: 'valid_tool' }],
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0].toolName).toBe('valid_tool');
+    });
+
+    it('excludes results without a string toolCallId from the index, but still emits them as unmatched tool-result parts', () => {
+      // Results with non-string toolCallId are skipped for matching,
+      // but still output at the end as unmatched tool-result parts.
+      const metadata = {
+        toolInvocations: [],
+        toolResults: [
+          { toolCallId: null },
+          { toolCallId: undefined },
+          { toolCallId: 123 as unknown as string },
+          { toolCallId: 'valid-id', result: { output: 'ok' } },
+        ],
       };
+      const result = buildThreadToolInvocationParts(metadata);
+      // 3 invalid results are emitted as tool-result parts (no index entry),
+      // plus 1 valid result that was never matched → all 4 emitted.
+      expect(result).toHaveLength(4);
+      expect(result.filter((p) => p.type === 'tool-result')).toHaveLength(4);
     });
-    mockCreateLibsqlClient.mockReturnValue({ close: vi.fn(() => Promise.resolve()) });
-    mockMigrateLegacyOmState.mockResolvedValue(undefined);
-    mockCreateLtmStore.mockReturnValue({ readState: vi.fn().mockResolvedValue({ packages: [] }) });
-    mockCreateSystemSettingsStore.mockImplementation((_db: unknown) => {
-      const settings = {
-        checkpointedOmRecentRawTokens: 10000,
-        checkpointedOmRawObservationBatchTokens: 5000,
-        checkpointedOmObservationReflectionBatchTokens: 2000,
-        checkpointedOmTotalContextTokens: 200000,
+
+    it('pairs invocations with their matching results by toolCallId', () => {
+      const metadata = {
+        toolInvocations: [
+          { toolName: 'send_message', toolCallId: 'call-1', args: { to: 'alice' } },
+          { toolName: 'workspace_write_file', toolCallId: 'call-2', args: { path: '/test' } },
+        ],
+        toolResults: [
+          { toolCallId: 'call-2', result: { success: true } },
+          { toolCallId: 'call-1', result: { sent: true } },
+        ],
       };
-      return { getSettings: () => Promise.resolve(settings) };
-    });
-  });
-
-  it('returns null when agent does not exist', async () => {
-    const db = makeMockDb({ agentsFindFirst: null });
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-nonexistent',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-    expect(result).toBeNull();
-  });
-
-  it('returns null when agent not found in db', async () => {
-    const db = makeMockDb({ agentsFindFirst: null });
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-    expect(result).toBeNull();
-  });
-
-  it('returns complete snapshot for fully configured agent', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: 'A test agent',
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: 'role-1',
-        modelProfileId: 'profile-1',
-        omModelProfileId: 'profile-2',
-        createdAt: now,
-        updatedAt: now,
-      },
-      llmProfilesFindFirst: [
-        { id: 'profile-1', name: 'GPT-4', modelKey: 'gpt-4' },
-        { id: 'profile-2', name: 'Claude', modelKey: 'claude-3-5' },
-      ],
-      agentRolesFindFirst: { id: 'role-1', name: 'Admin' },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: now - 60000, costUsd: 0.01, inputTokens: 1000 }),
-        mockStep({ id: 'step-2', createdAt: now - 30000, costUsd: 0.02, inputTokens: 2000 }),
-        mockStep({ id: 'step-3', createdAt: now - 10000, costUsd: 0.03, inputTokens: 3000 }),
-      ],
-      agentNotificationsFindMany: [
-        { id: 'notif-1', agentId: 'agent-1', readAt: null },
-        { id: 'notif-2', agentId: 'agent-1', readAt: null },
-      ],
-      agentProvidersFindMany: [
-        { id: 'prov-1', agentId: 'agent-1', providerType: 'openai' },
-        { id: 'prov-2', agentId: 'agent-1', providerType: 'anthropic' },
-      ],
+      const result = buildThreadToolInvocationParts(metadata);
+      // call-1 invocation output first (order from toolInvocations), result attached
+      expect(result).toHaveLength(2);
+      expect(result[0].toolName).toBe('send_message');
+      expect((result[0] as Record<string, unknown>).result).toEqual({ toolCallId: "call-1", result: { sent: true } });
+      expect(result[1].toolName).toBe('workspace_write_file');
+      expect((result[1] as Record<string, unknown>).result).toEqual({ toolCallId: "call-2", result: { success: true } });
     });
 
-    mockReadOperationalMemoryState.mockResolvedValue({
-      checkpointSummaryMessage: { operationalMemoryGeneration: 3 },
-      metrics: {
-        recentRawMessageCount: 10,
-        recentRawTokenCount: 5000,
-        recentRawTokenLimit: 10000,
-        overflowMessageCount: 2,
-        overflowTokenCount: 1000,
-        observationTokenCount: 500,
-        checkpointTokenCount: 300,
-        reflectionTokenCount: 0,
-      },
-      observationMessages: [{ id: 'obs1' }],
-      reflectionMessages: [],
+    it('outputs unmatched results as tool-result parts after all invocations', () => {
+      const metadata = {
+        toolInvocations: [{ toolName: 'send_message', toolCallId: 'call-1', args: {} }],
+        toolResults: [
+          { toolCallId: 'call-1', result: { sent: true } },
+          { toolCallId: 'unmatched-call', result: { error: 'not found' } },
+        ],
+      };
+      const result = buildThreadToolInvocationParts(metadata);
+      expect(result).toHaveLength(2);
+      expect(result[0].toolName).toBe('send_message');
+      expect(result[1].type).toBe('tool-result');
+      expect((result[1] as Record<string, unknown>).toolCallId).toBe('unmatched-call');
     });
 
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
+    it('handles null toolCallId on invocation without crashing', () => {
+      const result = buildThreadToolInvocationParts({
+        toolInvocations: [{ toolName: 'some_tool', toolCallId: null as unknown as string, args: {} }],
+        toolResults: [],
+      });
+      expect(result).toHaveLength(1);
+      expect((result[0] as Record<string, unknown>).toolCallId).toBe(null);
     });
-
-    expect(result).not.toBeNull();
-    expect(result!.agentId).toBe('agent-1');
-    expect(result!.name).toBe('Test Agent');
-    expect(result!.executionState).toBe('idle');
-    expect(result!.roleName).toBe('Admin');
-    expect(result!.loaded).toBe(false);
-    expect(result!.providerTypes).toEqual(['anthropic', 'openai']);
-    expect(result!.overview.unreadNotificationCount).toBe(2);
-    expect(result!.overview.lastStepAt).toBe(now - 10000);
-    expect(result!.overview.lastStepCostUsd).toBe(0.03);
-    expect(result!.overview.om).toMatchObject({
-      generationCount: 3,
-      checkpointGeneration: 3,
-      recentRawTokenCount: 5000,
-      recentRawTokenLimit: 10000,
-      overflowTokenCount: 1000,
-      overflowTokenLimit: 5000,
-      observationTokenCount: 500,
-      checkpointTokenCount: 300,
-      reflectionTokenCount: 0,
-    });
-  });
-
-  it('sets roleName to null when agent has no roleId', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.roleName).toBeNull();
-    expect(result!.roleId).toBeNull();
-    expect(result!.modelProfile).toBeNull();
-    expect(result!.omModelProfile).toBeNull();
-  });
-
-  it('sets loaded to false when runtime is null', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.loaded).toBe(false);
-    expect(result!.runner).toBeNull();
-  });
-
-  it('sets ltm.running and ltm.queued to false when executionState is not idle', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'running',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.ltm.running).toBe(false);
-    expect(result!.overview.ltm.queued).toBe(false);
-  });
-
-  it('sets averageStepIntervalMs to null when fewer than 2 steps', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: now - 10000, costUsd: 0.01, inputTokens: 1000 }),
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.averageStepIntervalMs).toBeNull();
-  });
-
-  it('calculates averageStepIntervalMs correctly for multiple steps', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: now - 90000, costUsd: 0.01, inputTokens: 1000 }),
-        mockStep({ id: 'step-2', createdAt: now - 60000, costUsd: 0.02, inputTokens: 2000 }),
-        mockStep({ id: 'step-3', createdAt: now - 30000, costUsd: 0.03, inputTokens: 3000 }),
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    // Steps at now-90000, now-60000, now-30000 → intervals: 30s, 30s → avg: 30s
-    expect(result!.overview.averageStepIntervalMs).toBe(30000);
-  });
-
-  it('sets om to null when readOperationalMemoryState rejects (timeout/error)', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    mockReadOperationalMemoryState.mockRejectedValue(new Error('Timeout'));
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.overview.om).toBeNull();
-  });
-
-  it('uses lastStep.createdAt as lastStepAt in overview', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: 1000000000000, costUsd: 0.05, inputTokens: 5000 }),
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.lastStepAt).toBe(1000000000000);
-  });
-
-  it('sorts providerTypes alphabetically', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentProvidersFindMany: [
-        { id: 'prov-1', agentId: 'agent-1', providerType: 'zebra' },
-        { id: 'prov-2', agentId: 'agent-1', providerType: 'alpha' },
-        { id: 'prov-3', agentId: 'agent-1', providerType: 'beta' },
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.providerTypes).toEqual(['alpha', 'beta', 'zebra']);
-  });
-
-  it('includes createdAt and updatedAt from agent row', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.createdAt).toBe(now);
-    expect(result!.updatedAt).toBe(now);
-  });
-
-  it('calls toMastraSafeIdentifier for workspace path generation', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    mockToMastraSafeIdentifier.mockReturnValue('safe-agent-1');
-
-    await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(mockToMastraSafeIdentifier).toHaveBeenCalledWith('agent-1');
-  });
-
-
-
-
-
-
-  it('returns complete snapshot for fully configured agent', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: 'A test agent',
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: 'role-1',
-        modelProfileId: 'profile-1',
-        omModelProfileId: 'profile-2',
-        createdAt: now,
-        updatedAt: now,
-      },
-      llmProfilesFindFirst: [
-        { id: 'profile-1', name: 'GPT-4', modelKey: 'gpt-4' },
-        { id: 'profile-2', name: 'Claude', modelKey: 'claude-3-5' },
-      ],
-      agentRolesFindFirst: { id: 'role-1', name: 'Admin' },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: now - 60000, costUsd: 0.01, inputTokens: 1000 }),
-        mockStep({ id: 'step-2', createdAt: now - 30000, costUsd: 0.02, inputTokens: 2000 }),
-        mockStep({ id: 'step-3', createdAt: now - 10000, costUsd: 0.03, inputTokens: 3000 }),
-      ],
-      agentNotificationsFindMany: [
-        { id: 'notif-1', agentId: 'agent-1', readAt: null },
-        { id: 'notif-2', agentId: 'agent-1', readAt: null },
-      ],
-      agentProvidersFindMany: [
-        { id: 'prov-1', agentId: 'agent-1', providerType: 'openai' },
-        { id: 'prov-2', agentId: 'agent-1', providerType: 'anthropic' },
-      ],
-    });
-
-    mockReadOperationalMemoryState.mockResolvedValue({
-      checkpointSummaryMessage: { operationalMemoryGeneration: 3 },
-      metrics: {
-        recentRawMessageCount: 10,
-        recentRawTokenCount: 5000,
-        recentRawTokenLimit: 10000,
-        overflowMessageCount: 2,
-        overflowTokenCount: 1000,
-        observationTokenCount: 500,
-        checkpointTokenCount: 300,
-        reflectionTokenCount: 0,
-      },
-      observationMessages: [{ id: 'obs1' }],
-      reflectionMessages: [],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.agentId).toBe('agent-1');
-    expect(result!.name).toBe('Test Agent');
-    expect(result!.executionState).toBe('idle');
-    expect(result!.roleName).toBe('Admin');
-    expect(result!.loaded).toBe(false);
-    expect(result!.providerTypes).toEqual(['anthropic', 'openai']);
-    expect(result!.overview.unreadNotificationCount).toBe(2);
-    expect(result!.overview.lastStepAt).toBe(now - 10000);
-    expect(result!.overview.lastStepCostUsd).toBe(0.03);
-    expect(result!.overview.om).toMatchObject({
-      generationCount: 3,
-      checkpointGeneration: 3,
-      recentRawTokenCount: 5000,
-      recentRawTokenLimit: 10000,
-      overflowTokenCount: 1000,
-      overflowTokenLimit: 5000,
-      observationTokenCount: 500,
-      checkpointTokenCount: 300,
-      reflectionTokenCount: 0,
-    });
-  });
-
-  it('sets roleName to null when agent has no roleId', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.roleName).toBeNull();
-    expect(result!.roleId).toBeNull();
-    expect(result!.modelProfile).toBeNull();
-    expect(result!.omModelProfile).toBeNull();
-  });
-
-  it('sets loaded to false when runtime is null', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.loaded).toBe(false);
-    expect(result!.runner).toBeNull();
-  });
-
-  it('sets ltm.running and ltm.queued to false when executionState is not idle', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'running',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.ltm.running).toBe(false);
-    expect(result!.overview.ltm.queued).toBe(false);
-  });
-
-  it('sets averageStepIntervalMs to null when fewer than 2 steps', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: now - 10000, costUsd: 0.01, inputTokens: 1000 }),
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.averageStepIntervalMs).toBeNull();
-  });
-
-  it('calculates averageStepIntervalMs correctly for multiple steps', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: now - 90000, costUsd: 0.01, inputTokens: 1000 }),
-        mockStep({ id: 'step-2', createdAt: now - 60000, costUsd: 0.02, inputTokens: 2000 }),
-        mockStep({ id: 'step-3', createdAt: now - 30000, costUsd: 0.03, inputTokens: 3000 }),
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    // Steps at now-90000, now-60000, now-30000 → intervals: 30s, 30s → avg: 30s
-    expect(result!.overview.averageStepIntervalMs).toBe(30000);
-  });
-
-  it('sets om to null when readOperationalMemoryState rejects (timeout/error)', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    mockReadOperationalMemoryState.mockRejectedValue(new Error('Timeout'));
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.overview.om).toBeNull();
-  });
-
-  it('uses lastStep.createdAt as lastStepAt in overview', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentExecutionStepsFindMany: [
-        mockStep({ id: 'step-1', createdAt: 1000000000000, costUsd: 0.05, inputTokens: 5000 }),
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.lastStepAt).toBe(1000000000000);
-  });
-
-  it('sorts providerTypes alphabetically', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      agentProvidersFindMany: [
-        { id: 'prov-1', agentId: 'agent-1', providerType: 'zebra' },
-        { id: 'prov-2', agentId: 'agent-1', providerType: 'alpha' },
-        { id: 'prov-3', agentId: 'agent-1', providerType: 'beta' },
-      ],
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.providerTypes).toEqual(['alpha', 'beta', 'zebra']);
-  });
-
-  it('includes createdAt and updatedAt from agent row', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.createdAt).toBe(now);
-    expect(result!.updatedAt).toBe(now);
-  });
-
-  it('calls toMastraSafeIdentifier for workspace path generation', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    mockToMastraSafeIdentifier.mockReturnValue('safe-agent-1');
-
-    await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(mockToMastraSafeIdentifier).toHaveBeenCalledWith('agent-1');
-  });
-
-
-
-
-
-
-  it('ltm packageCount is 0 when ltm store readState times out', async () => {
-    const now = Date.now();
-    const db = makeMockDb({
-      agentsFindFirst: {
-        id: 'agent-1',
-        name: 'Test Agent',
-        description: null,
-        executionState: 'idle',
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-
-    mockCreateLtmStore.mockReturnValue({
-      readState: vi.fn().mockRejectedValue(new Error('LTM timeout')),
-    });
-
-    const result = await readAgentHomeMetricSnapshot({
-      db,
-      workspaceBasePath: '/tmp',
-      agentId: 'agent-1',
-      runtime: null,
-      runnerSnapshot: null,
-    });
-
-    expect(result!.overview.ltm.packageCount).toBe(0);
   });
 });
