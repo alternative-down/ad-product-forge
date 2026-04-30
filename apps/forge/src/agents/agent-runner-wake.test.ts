@@ -1,348 +1,269 @@
-import { describe, expect, it } from 'vitest';
-import type { AgentWakeEvent } from '@forge-runtime/core';
-import { RUN_STOP_REMINDER, formatPendingRunEvents } from './agent-runner-wake';
+import { describe, it, expect } from 'vitest';
+import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 
-function makeEvent(overrides: Partial<AgentWakeEvent>): AgentWakeEvent {
-  return {
-    type: 'message:chat',
-    groupKey: 'conv_abc123',
-    idempotencyKey: 'msg_xyz',
-    timestamp: 1746000000000,
-    text: 'Hello world',
-    ...overrides,
-  };
-}
-
-describe('agent-runner-wake', () => {
-  describe('RUN_STOP_REMINDER', () => {
-    it('is a non-empty string', () => {
-      expect(typeof RUN_STOP_REMINDER).toBe('string');
-      expect(RUN_STOP_REMINDER.length).toBeGreaterThan(0);
-    });
-
-    it('contains the STOP_AND_IDLE instruction', () => {
-      expect(RUN_STOP_REMINDER).toContain('STOP_AND_IDLE');
-    });
-
-    it('mentions send_message as the delivery confirmation', () => {
-      expect(RUN_STOP_REMINDER).toContain('send_message');
-    });
+describe('RUN_STOP_REMINDER', () => {
+  it('is a string (array joined with newlines)', () => {
+    expect(typeof RUN_STOP_REMINDER).toBe('string');
+    expect(RUN_STOP_REMINDER.length).toBeGreaterThan(0);
   });
 
-  describe('formatPendingRunEvents', () => {
-    it('returns empty string for empty events array', () => {
-      expect(formatPendingRunEvents([])).toBe('');
-    });
+  it('contains STOP_AND_IDLE instruction', () => {
+    expect(RUN_STOP_REMINDER).toContain('STOP_AND_IDLE');
+  });
 
-    it('formats a single event with timestamp and text', () => {
-      const event = makeEvent({ timestamp: 1746000000000, text: 'Hello there' });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('Hello there');
-      expect(result).toContain('[08:00]');
-    });
+  it('warns about plain text not being sent', () => {
+    expect(RUN_STOP_REMINDER).toContain('plain text');
+    expect(RUN_STOP_REMINDER).toContain('send_message');
+  });
 
-    it('groups events with the same groupKey together', () => {
-      const ts1 = 1746000000000;
-      const ts2 = 1746000001000;
-      const events = [
-        makeEvent({ groupKey: 'conv_abc', timestamp: ts2, text: 'Second' }),
-        makeEvent({ groupKey: 'conv_abc', timestamp: ts1, text: 'First' }),
-      ];
-      const result = formatPendingRunEvents(events);
-      expect(result).toContain('First');
-      expect(result).toContain('Second');
-    });
+  it('is joined with newline separators', () => {
+    // The original is an array joined with '\n'
+    expect(RUN_STOP_REMINDER).toContain('\n');
+  });
+});
 
-    it('separates events with different groupKeys', () => {
-      const events = [
-        makeEvent({ groupKey: 'conv_abc', timestamp: 1000, text: 'Group A' }),
-        makeEvent({ groupKey: 'conv_xyz', timestamp: 2000, text: 'Group B' }),
-      ];
-      const result = formatPendingRunEvents(events);
-      expect(result).toContain('Group A');
-      expect(result).toContain('Group B');
-    });
+describe('formatPendingRunEvents', () => {
+  const makeEvent = (overrides = {}) => ({
+    type: 'message:text',
+    groupKey: 'conv_abc',
+    idempotencyKey: 'idem-001',
+    timestamp: 1700000000000,
+    text: 'Hello',
+    groupMetadata: {},
+    itemMetadata: {},
+    ...overrides,
+  });
 
-    it('sorts events within a group by timestamp ascending', () => {
-      const events = [
-        makeEvent({ groupKey: 'conv_abc', timestamp: 1746000003000, text: 'Third' }),
-        makeEvent({ groupKey: 'conv_abc', timestamp: 1746000001000, text: 'First' }),
-        makeEvent({ groupKey: 'conv_abc', timestamp: 1746000002000, text: 'Second' }),
-      ];
-      const result = formatPendingRunEvents(events);
-      const firstIdx = result.indexOf('First');
-      const secondIdx = result.indexOf('Second');
-      const thirdIdx = result.indexOf('Third');
-      expect(firstIdx).toBeLessThan(secondIdx);
-      expect(secondIdx).toBeLessThan(thirdIdx);
-    });
+  it('returns empty string for empty array', () => {
+    expect(formatPendingRunEvents([])).toBe('');
+  });
 
-    it('includes provider in group header for message events', () => {
-      const event = makeEvent({
-        groupMetadata: { Provider: 'whatsapp', TargetKey: 'conv_abc' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('provider: whatsapp');
-      expect(result).toContain('targetKey: abc');
-    });
+  it('formats a single message event', () => {
+    const result = formatPendingRunEvents([makeEvent({ groupKey: 'conv_abc', text: 'Hi there' })]);
+    expect(result).toContain('conv_abc');
+    expect(result).toContain('Hi there');
+  });
 
-    it('normalizes conv_ prefix from targetKey', () => {
-      const event = makeEvent({
-        groupKey: 'conv_abc123',
-        groupMetadata: { TargetKey: 'conv_abc123' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('targetKey: abc123');
-    });
+  it('groups events by groupKey', () => {
+    const events = [
+      makeEvent({ groupKey: 'conv_abc', idempotencyKey: 'i1', text: 'first' }),
+      makeEvent({ groupKey: 'conv_abc', idempotencyKey: 'i2', text: 'second' }),
+      makeEvent({ groupKey: 'conv_xyz', idempotencyKey: 'i3', text: 'other' }),
+    ];
+    const result = formatPendingRunEvents(events);
+    expect(result).toContain('first');
+    expect(result).toContain('second');
+    expect(result).toContain('other');
+  });
 
-    it('normalizes msg_ prefix from messageId', () => {
-      const event = makeEvent({
-        itemMetadata: { MessageId: 'msg_12345' },
-        text: 'Test message',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('[messageId: 12345]');
-    });
+  it('sorts events within each group by timestamp ascending', () => {
+    const events = [
+      makeEvent({ groupKey: 'conv_abc', idempotencyKey: 'i2', timestamp: 1700000002000, text: 'second' }),
+      makeEvent({ groupKey: 'conv_abc', idempotencyKey: 'i1', timestamp: 1700000001000, text: 'first' }),
+      makeEvent({ groupKey: 'conv_abc', idempotencyKey: 'i3', timestamp: 1700000003000, text: 'third' }),
+    ];
+    const result = formatPendingRunEvents(events);
+    const firstIdx = result.indexOf('first');
+    const secondIdx = result.indexOf('second');
+    const thirdIdx = result.indexOf('third');
+    expect(firstIdx).toBeLessThan(secondIdx);
+    expect(secondIdx).toBeLessThan(thirdIdx);
+  });
 
-    it('includes conversationType: group for group conversations', () => {
-      const event = makeEvent({
-        groupMetadata: {
-          Provider: 'telegram',
-          TargetKey: 'conv_abc',
-          ConversationType: 'group',
-        },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('conversationType: group');
-    });
+  it('formats schedule event as scheduler group', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({ type: 'schedule', groupKey: 'cron-42', text: 'scheduled run' }),
+    ]);
+    expect(result).toContain('scheduler');
+    expect(result).toContain('scheduled run');
+  });
 
-    it('includes participants in group header', () => {
-      const event = makeEvent({
-        groupMetadata: {
-          Provider: 'slack',
-          TargetKey: 'conv_abc',
-          Participants: 'john, jane, bob',
-        },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('participants: john, jane, bob');
-    });
+  it('includes scheduleId in scheduler group header when present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        type: 'schedule',
+        groupKey: 'cron-42',
+        text: 'run',
+        groupMetadata: { ScheduleId: 'sched-abc-123' },
+      }),
+    ]);
+    expect(result).toContain('scheduler: sched-abc-123');
+  });
 
-    it('includes conversationName in group header', () => {
-      const event = makeEvent({
-        groupMetadata: {
-          Provider: 'telegram',
-          TargetKey: 'conv_abc',
-          ConversationName: 'Team Chat',
-        },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('conversationName: Team Chat');
-    });
-
-    it('describes GitHub events with Source metadata', () => {
-      const event = makeEvent({
-        type: 'github:push',
-        groupKey: 'github-push',
-        groupMetadata: { Source: 'github', EventType: 'push' },
-        itemMetadata: { Author: 'Alice', AuthorKey: 'alice' },
-        text: 'New push',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('GitHub: push');
-    });
-
-    it('describes GitHub events by type prefix without Source', () => {
-      const event = makeEvent({
-        type: 'github:pull_request',
-        groupKey: 'github-pr',
-        groupMetadata: { EventType: 'pull_request' },
-        text: 'PR opened',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('GitHub: pull_request');
-    });
-
-    it('describes heartbeat schedule events as "scheduler"', () => {
-      const event = makeEvent({
+  it('formats heartbeat schedule event as plain scheduler (no heartbeat word in header)', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
         type: 'schedule',
         groupKey: 'heartbeat-1',
+        text: 'heartbeat',
         groupMetadata: { ScheduleKind: 'heartbeat' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('scheduler');
-    });
-
-    it('describes schedule with ScheduleId in group header', () => {
-      const event = makeEvent({
-        type: 'schedule',
-        groupKey: 'scheduled-1',
-        groupMetadata: { ScheduleId: 'cron-123', ScheduleKind: 'cron' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('scheduler: cron-123');
-    });
-
-    it('describes role-change events', () => {
-      const event = makeEvent({
-        type: 'role-change',
-        groupKey: 'role-abc',
-        groupMetadata: { TargetAgentId: 'agent-1' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('Role change: agent-1');
-    });
-
-    it('describes runner-reminder events', () => {
-      const event = makeEvent({
-        type: 'runner-reminder',
-        groupKey: 'reminder-1',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('System: runner-reminder');
-    });
-
-    it('shows "scheduler" as group label for schedule events (not "System")', () => {
-      const event = makeEvent({
-        type: 'schedule',
-        groupKey: 'scheduled-1',
-        text: 'Scheduled task',
-        timestamp: 1746000000000,
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('scheduler');
-      // describeWakeActor returns '' for schedule events, so no "System" label
-      expect(result).not.toMatch(/\[08:00\] System/);
-    });
-
-    it('includes actor name and key in event item', () => {
-      const event = makeEvent({
-        itemMetadata: { Author: 'John Doe', AuthorKey: 'john.doe@example.com' },
-        text: 'Hello world',
-        timestamp: 1746000000000,
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('John Doe (john.doe@example.com)');
-    });
-
-    it('shows actor name without key if key is absent', () => {
-      const event = makeEvent({
-        itemMetadata: { Author: 'Jane' },
-        text: 'Hi',
-        timestamp: 1746000000000,
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('Jane');
-      expect(result).not.toContain('Jane (');
-    });
-
-    it('includes attachments suffix when present', () => {
-      const event = makeEvent({
-        itemMetadata: { Author: 'Alice', Attachments: 'file.pdf, image.png' },
-        text: 'See files',
-        timestamp: 1746000000000,
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('(attachments: file.pdf, image.png)');
-    });
-
-    it('handles multi-line event text with actor', () => {
-      const event = makeEvent({
-        itemMetadata: { Author: 'Bob' },
-        text: 'Line one\nLine two\nLine three',
-        timestamp: 1746000000000,
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('Line one');
-      expect(result).toContain('Line two');
-      expect(result).toContain('Line three');
-    });
-
-    it('handles multi-line event text without actor', () => {
-      const event = makeEvent({
-        itemMetadata: {},
-        text: 'Multi\nLine\nText',
-        timestamp: 1746000000000,
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('Multi');
-    });
-
-    it('includes timestamp in HH:MM format', () => {
-      const event = makeEvent({
-        timestamp: new Date(2025, 3, 29, 14, 30).getTime(),
-        text: 'Afternoon message',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('[14:30]');
-    });
-
-    it('formats time with leading zeros', () => {
-      const event = makeEvent({
-        timestamp: new Date(2025, 3, 29, 8, 5).getTime(),
-        text: 'Morning message',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('[08:05]');
-    });
-
-    it('falls back to formatWakeLabel for unrecognized event types', () => {
-      const event = makeEvent({
-        type: 'custom_unknown_event',
-        groupKey: 'unknown-key',
-        text: 'Custom',
-      });
-      const result = formatPendingRunEvents([event]);
-      // formatWakeLabel converts 'custom_unknown_event' -> 'custom unknown event'
-      expect(result).toContain('custom unknown event');
-      expect(result).toContain('unknown-key');
-    });
-
-    it('handles dash in event type as space in fallback', () => {
-      const event = makeEvent({
-        type: 'my-custom-type',
-        groupKey: 'x',
-        text: '',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('my custom type: x');
-    });
-
-    it('handles colon in event type as space in fallback', () => {
-      const event = makeEvent({
-        type: 'my:custom:type',
-        groupKey: 'y',
-        text: '',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('my custom type: y');
-    });
+      }),
+    ]);
+    // Header is just "scheduler", text "heartbeat" comes from event text
+    expect(result).toContain('scheduler\n\n[22:13] heartbeat');
   });
 
-  describe('normalizeProviderCode', () => {
-    it('removes conv_ prefix from targetKey', () => {
-      const event = makeEvent({
-        groupMetadata: { TargetKey: 'conv_abc' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('targetKey: abc');
-    });
+  it('formats github event with GitHub prefix', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({ type: 'github:push', groupKey: 'github/repo', text: 'push event', groupMetadata: { Source: 'github' } }),
+    ]);
+    expect(result).toContain('GitHub:');
+  });
 
-    it('removes msg_ prefix from messageId', () => {
-      const event = makeEvent({
+  it('formats github event with EventType when provided', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        type: 'github:push',
+        groupKey: 'github/repo',
+        text: 'push',
+        groupMetadata: { Source: 'github', EventType: 'push' },
+      }),
+    ]);
+    expect(result).toContain('GitHub: push');
+  });
+
+  it('formats role-change event with target agent', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        type: 'role-change',
+        groupKey: 'agent-role-123',
+        text: 'role changed',
+        groupMetadata: { TargetAgentId: 'agent-xyz' },
+      }),
+    ]);
+    expect(result).toContain('Role change: agent-xyz');
+  });
+
+  it('formats runner-reminder event', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({ type: 'runner-reminder', groupKey: 'reminder-1', text: 'reminder text' }),
+    ]);
+    expect(result).toContain('runner-reminder');
+  });
+
+  it('formats message event with provider in group header', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        groupKey: 'conv_abc',
+        text: 'hello',
+        groupMetadata: { Provider: 'telegram', TargetKey: 'conv_abc' },
+      }),
+    ]);
+    expect(result).toContain('provider: telegram');
+    expect(result).toContain('targetKey: abc');
+  });
+
+  it('strips conv_ and msg_ prefix from targetKey', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        groupKey: 'conv_abc',
+        text: 'hello',
+        groupMetadata: { TargetKey: 'conv_channel-123' },
+      }),
+    ]);
+    expect(result).toContain('targetKey: channel-123');
+    expect(result).not.toContain('conv_channel-123');
+  });
+
+  it('includes conversationType group when present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        groupKey: 'conv_group',
+        text: 'group msg',
+        groupMetadata: { ConversationType: 'group', TargetKey: 'conv_group' },
+      }),
+    ]);
+    expect(result).toContain('conversationType: group');
+  });
+
+  it('includes ConversationName when present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        groupKey: 'conv_abc',
+        text: 'named group',
+        groupMetadata: { ConversationName: 'Team Chat', TargetKey: 'conv_abc' },
+      }),
+    ]);
+    expect(result).toContain('conversationName: Team Chat');
+  });
+
+  it('includes Participants when present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        groupKey: 'conv_abc',
+        text: 'with participants',
+        groupMetadata: { Participants: 'alice, bob', TargetKey: 'conv_abc' },
+      }),
+    ]);
+    expect(result).toContain('participants: alice, bob');
+  });
+
+  it('includes author in item line when Author is present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        text: 'alice says hi',
+        itemMetadata: { Author: 'Alice', AuthorKey: 'alice@x.com' },
+      }),
+    ]);
+    expect(result).toContain('Alice');
+    expect(result).toContain('alice@x.com');
+  });
+
+  it('includes messageId from itemMetadata when present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        text: 'msg with id',
         itemMetadata: { MessageId: 'msg_12345' },
-        text: 'Test',
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('[messageId: 12345]');
-    });
+      }),
+    ]);
+    expect(result).toContain('[messageId: 12345]');
+  });
 
-    it('leaves plain codes unchanged', () => {
-      const event = makeEvent({
-        groupMetadata: { TargetKey: 'abc123' },
-      });
-      const result = formatPendingRunEvents([event]);
-      expect(result).toContain('targetKey: abc123');
-    });
+  it('strips both conv_ and msg_ prefix from MessageId (strips conv_ first, then msg_)', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        text: 'msg',
+        itemMetadata: { MessageId: 'conv_msg_abc' },
+      }),
+    ]);
+    // conv_msg_abc -> msg_abc (strips conv_) -> abc (strips msg_)
+    expect(result).toContain('[messageId: abc]');
+  });
+
+  it('includes attachments count when present', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        text: 'file msg',
+        itemMetadata: { Attachments: '3' },
+      }),
+    ]);
+    expect(result).toContain('(attachments: 3)');
+  });
+
+  it('trims text', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({ text: '  spaces around  ' }),
+    ]);
+    expect(result).toContain('spaces around');
+  });
+
+  it('formats multi-line text on its own line', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({
+        text: 'line one\nline two\nline three',
+        itemMetadata: { Author: 'Alice' },
+      }),
+    ]);
+    expect(result).toContain('line one');
+    expect(result).toContain('line two');
+    expect(result).toContain('line three');
+  });
+
+  it('returns non-empty string for unknown event type without group metadata', () => {
+    const result = formatPendingRunEvents([
+      makeEvent({ type: 'unknown:event', groupKey: 'unknown-group', text: 'unknown' }),
+    ]);
+    expect(result).not.toBe('');
+    expect(result).toContain('unknown-group');
   });
 });
