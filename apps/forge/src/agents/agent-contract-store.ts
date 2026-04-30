@@ -3,7 +3,7 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 
 import type { Database } from '../database/index';
-import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles } from '../database/schema';
+import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles, type AgentExecutionContract } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
@@ -185,7 +185,7 @@ export function createAgentContractStore(db: Database) {
     return nextContract;
   }
 
-  async function fundContractIfNeeded(contract: typeof agentExecutionContracts.$inferSelect) {
+  async function fundContractIfNeeded(contract: AgentExecutionContract) {
     if (contract.fundedAt) {
       return contract;
     }

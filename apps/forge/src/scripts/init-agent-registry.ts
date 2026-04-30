@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { eq, and } from 'drizzle-orm';
 
-import * as schema from '../database/schema';
+import * as schema, { type Agent } from '../database/schema';
 import { getDatabase, runMigrations } from '../database/index';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
@@ -203,7 +203,7 @@ async function initAgentRegistry() {
     // Verify agents were registered
     const agents = await db.query.agents.findMany();
     
-    agents.forEach((agent: typeof schema.agents.$inferSelect) => {
+    agents.forEach((agent: Agent) => {
     });
 
     forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Agent registry initialized successfully' });
