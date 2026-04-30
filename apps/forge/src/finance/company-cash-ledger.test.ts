@@ -62,6 +62,12 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
       i = j;
       continue;
     }
+    if (value === undefined) {
+      // isNotNull / isNull have no value operand — skip so they don't add
+      // a spurious undefined filter that findFirst would try to ===-match.
+      i = j;
+      continue;
+    }
     result.push({ colName, value });
     i = j;
   }
