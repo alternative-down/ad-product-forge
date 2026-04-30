@@ -343,7 +343,7 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
   }
 }
 
-async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
+export async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
   const agent = await db.query.agents.findFirst({
     where: eq(agents.id, agentId),
   });
@@ -366,12 +366,16 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
   try {
     const settings = await systemSettings.getSettings();
 
-    await migrateLegacyCheckpointedOmState({
-      db,
-      agentId,
-      threadId: mastraAgentId,
-      conversationStore,
-    });
+    try {
+      await migrateLegacyCheckpointedOmState({
+        db,
+        agentId,
+        threadId: mastraAgentId,
+        conversationStore,
+      });
+    } catch {
+      // silently ignore migration failures
+    }
 
     const operationalMemoryState = await readOperationalMemoryState({
       threadId: mastraAgentId,
@@ -405,6 +409,8 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
         checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
       },
     };
+  } catch {
+    return null;
   } finally {
     await closeLibsqlClient(client);
   }
