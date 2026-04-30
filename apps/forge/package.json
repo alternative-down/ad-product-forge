@@ -23,7 +23,7 @@
     "@octokit/auth-app": "^8.1.1",
     "@types/node-schedule": "^2.1.8",
     "discord.js": "^14.26.2",
-    "dotenv": "^17.4.1",
+    "dotenv": "^17.4.2",
     "fflate": "^0.8.2",
     "imapflow": "^1.3.1",
     "nanoid": "^5.1.9",
