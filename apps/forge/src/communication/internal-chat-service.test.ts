@@ -69,7 +69,9 @@ function createChain(result: unknown) {
     leftJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
     orderBy: vi.fn(() => chain),
-    limit: vi.fn(() => Promise.resolve(result)),
+    limit: vi.fn(() => chain),
+    // .all() is the Drizzle terminal method that materializes the query
+    all: vi.fn(() => result),
     in: vi.fn(() => chain),
     inArray: vi.fn(() => chain),
   };
