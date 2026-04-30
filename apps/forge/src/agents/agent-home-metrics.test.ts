@@ -172,6 +172,7 @@ describe('readAgentHomeMetricSnapshot', () => {
       return {
         tablePrefix: opts.tablePrefix,
         listMessages: vi.fn().mockResolvedValue([]),
+        listOperationalMemoryMessages: vi.fn().mockResolvedValue([]),
       };
     });
     mockCreateLibsqlClient.mockReturnValue({ close: vi.fn(() => Promise.resolve()) });
