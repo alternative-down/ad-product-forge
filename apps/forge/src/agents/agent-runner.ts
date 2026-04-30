@@ -31,6 +31,7 @@ import {
   hasExactControlDirective,
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
+import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
@@ -69,6 +70,23 @@ export function createAgentRunner(
   const wakeQueue = createAgentWakeQueue({
     label: currentRuntime.id,
     execute,
+  });
+
+  const schedulerState: SchedulerState = {
+    nextStepAt: null,
+    backoffMs: ONE_MINUTE_MS,
+    instant: false,
+    activeRunEpoch: 0,
+    activeStepEpoch: 0,
+    activeGenerateToken: 0,
+  };
+  const scheduler = createScheduler(schedulerState, {
+    getSystemSettings: () => systemSettings.getSettings(),
+    getRunnableContract: (id) => store.getRunnableContract(id),
+    getContractSpend: (id) => store.getContractSpend(id),
+    estimateStepCostUsd: () => usage.estimateStepCostUsd(),
+    runtimeId: runtime.id,
+    setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
   let timer: NodeJS.Timeout | null = null;
   let healthcheckTimer: NodeJS.Timeout | null = null;
@@ -144,57 +162,20 @@ export function createAgentRunner(
     );
   }
 
-  function clearTimer() {
-    if (!timer) {
-      return;
-    }
+  function clearTimer() { scheduler.clearTimer(); }
 
-    clearTimeout(timer);
-    timer = null;
-    nextStepAt = null;
-  }
+  function startHealthcheck() { scheduler.startHealthcheck(); }
 
-  function startHealthcheck() {
-    if (healthcheckTimer) {
-      return;
-    }
+  function clearHealthcheck() { scheduler.clearHealthcheck(); }
 
-    healthcheckTimer = setInterval(() => {
-      void runHealthcheck();
-    }, RUNNER_HEALTHCHECK_INTERVAL_MS);
-  }
-
-  function clearHealthcheck() {
-    if (!healthcheckTimer) {
-      return;
-    }
-
-    clearInterval(healthcheckTimer);
-    healthcheckTimer = null;
-  }
-
-  function schedule(delayMs: number) {
-    if (stopped || timer) {
-      return;
-    }
-
-    nextStepAt = Date.now() + Math.max(delayMs, 0);
-    timer = setTimeout(
-      () => {
-        timer = null;
-        nextStepAt = null;
-        void queueNextStep();
-      },
-      Math.max(delayMs, 0),
-    );
-  }
+  function schedule(delayMs: number) { scheduler.scheduleNextStep(delayMs); }
 
   async function start() {
     if (stopped) {
       return;
     }
 
-    startHealthcheck();
+    scheduler.startHealthcheck();
     await refreshRunFlushSettings();
 
     const executionState = await withTimeout(
@@ -272,13 +253,11 @@ export function createAgentRunner(
     void messageManager.appendPendingRunMessages(events, options);
   }
 
-
   function flushPendingRunMessages(options: {
     allowOriginIdleOnly?: boolean;
   } = {}) {
     return messageManager.flushPendingRunMessages(options);
   }
-
 
   function stop() {
     stopped = true;
@@ -292,7 +271,7 @@ export function createAgentRunner(
     clearTimer();
     clearHealthcheck();
     wakeQueue.stop();
-  messageManager.resetFlushedRunEventKeys();
+    messageManager.resetFlushedRunEventKeys();
   }
 
   async function forceIdle(options: {
@@ -307,7 +286,7 @@ export function createAgentRunner(
       wakeQueue.stop();
       messageManagerState.pendingRunMessages.clear();
     }
-  messageManager.resetFlushedRunEventKeys();
+    messageManager.resetFlushedRunEventKeys();
     instant = false;
     resetLoopDetector();
     await withTimeout(
@@ -417,7 +396,7 @@ export function createAgentRunner(
       backoffMs = ONE_MINUTE_MS;
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
-    messageManager.resetFlushedRunEventKeys();
+      messageManager.resetFlushedRunEventKeys();
       pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
@@ -486,7 +465,7 @@ export function createAgentRunner(
 
       if (!nextAttempt.execute) {
         instant = false;
-        schedule(nextAttempt.delayMs);
+        scheduler.scheduleNextStep(nextAttempt.delayMs);
         return;
       }
 
