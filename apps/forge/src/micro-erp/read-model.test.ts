@@ -76,6 +76,7 @@ function makeSelectChain(rows: unknown[] = []) {
     limit: vi.fn().mockImplementation(() => chain),
     offset: vi.fn().mockImplementation(() => chain),
     groupBy: vi.fn().mockImplementation(() => chain),
+    all: vi.fn().mockImplementation(() => rows),
   };
   const promise = Promise.resolve(rows);
   return Object.assign(chain, { then: promise.then.bind(promise) });

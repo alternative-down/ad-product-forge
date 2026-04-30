@@ -60,7 +60,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
           count: sql<number>`count(*)`,
         })
         .from(agents)
-        .groupBy(agents.roleId),
+        .groupBy(agents.roleId).all(),
     ]);
     const capabilityPermissions = await Promise.all(
       roles.map(async (role) => ({
