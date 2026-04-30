@@ -1,109 +1,98 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { topUpActiveAgentContract } from './top-up-agent-contract';
 
-const mocks = vi.hoisted(() => ({
-  getCurrentBalanceUsdMock: vi.fn(),
-  recordCashOutMock: vi.fn(() => Promise.resolve()),
-  updateMock: vi.fn(() => Promise.resolve()),
+const { mockRecordCashOut, mockGetCurrentBalanceUsd } = vi.hoisted(() => ({
+  mockRecordCashOut: vi.fn().mockResolvedValue(undefined),
+  mockGetCurrentBalanceUsd: vi.fn().mockResolvedValue(1000),
 }));
 
-function createMockDb(withContract = true) {
-  const contract = withContract ? {
-    id: 'contract-1',
-    agentId: 'agent-1',
-    budgetUsd: 100,
-    startsAt: Date.now() - 86400000,
-    endsAt: Date.now() + 86400000,
-  } : null;
-  
-  return {
-    query: {
-      agentExecutionContracts: {
-        findFirst: vi.fn(() => Promise.resolve(contract)),
-      },
-    },
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: mocks.updateMock,
-      })),
-    })),
-  };
-}
-
-function createMockLedger() {
-  return {
-    getCurrentBalanceUsd: mocks.getCurrentBalanceUsdMock,
-  };
-}
-
-function createMockOperations() {
-  return {
-    recordCashOut: mocks.recordCashOutMock,
-    recordCashIn: vi.fn(),
-  };
-}
-
 vi.mock('../finance/company-cash-ledger', () => ({
-  createCompanyCashLedger: vi.fn(() => createMockLedger()),
+  createCompanyCashLedger: vi.fn(() => ({ getCurrentBalanceUsd: mockGetCurrentBalanceUsd })),
 }));
 
 vi.mock('../finance/company-cash-operations', () => ({
-  createCompanyCashOperations: vi.fn(() => createMockOperations()),
+  createCompanyCashOperations: vi.fn(() => ({ recordCashOut: mockRecordCashOut })),
 }));
+
+import { topUpActiveAgentContract } from './top-up-agent-contract';
+import { agentExecutionContracts } from '../database/schema';
+
+function createMockDb(contract?: Record<string, unknown> | null) {
+  return {
+    query: {
+      agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract ?? null) },
+    },
+    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+  };
+}
+
+function mockContract(overrides: Record<string, unknown> = {}) {
+  return { id: 'contract-1', agentId: 'agent-1', budgetUsd: 100, startsAt: Date.now() - 86400000, endsAt: Date.now() + 86400000, ...overrides };
+}
 
 describe('topUpActiveAgentContract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(1000);
-    mocks.recordCashOutMock.mockResolvedValue(undefined);
-    mocks.updateMock.mockResolvedValue(undefined);
+    mockGetCurrentBalanceUsd.mockResolvedValue(1000);
   });
 
   it('throws when no active contract exists', async () => {
-    const db = createMockDb(false);
-
-    await expect(topUpActiveAgentContract(db as any, {
-      agentId: 'agent-1',
-      amountUsd: 50,
-    })).rejects.toThrow('No active contract');
+    const db = createMockDb(null);
+    await expect(topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 }))
+      .rejects.toThrow('No active contract for agent: agent-1');
   });
 
   it('throws when insufficient company cash', async () => {
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(20);
-
-    await expect(topUpActiveAgentContract(createMockDb() as any, {
-      agentId: 'agent-1',
-      amountUsd: 50,
-    })).rejects.toThrow('Insufficient company cash');
+    mockGetCurrentBalanceUsd.mockResolvedValue(20);
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    await expect(topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 }))
+      .rejects.toThrow('Insufficient company cash for contract top-up');
   });
 
-  it('deducts company cash and updates contract budget', async () => {
-    const result = await topUpActiveAgentContract(createMockDb() as any, {
-      agentId: 'agent-1',
-      amountUsd: 50,
-    });
+  it('records cash out for top-up amount', async () => {
+    const db = createMockDb(mockContract({ id: 'c-1', budgetUsd: 100 }));
+    await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 });
+    expect(mockRecordCashOut).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'agent-contract-topup', amountUsd: 50,
+      referenceType: 'agent-execution-contract', referenceId: 'c-1',
+    }));
+  });
 
+  it('updates contract budget by adding amount', async () => {
+    const db = createMockDb(mockContract({ id: 'c-1', budgetUsd: 100 }));
+    await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 });
+    expect(db.update).toHaveBeenCalledWith(agentExecutionContracts);
+  });
+
+  it('returns agentId, contractId, and new budgetUsd', async () => {
+    const db = createMockDb(mockContract({ id: 'c-1', agentId: 'agent-1', budgetUsd: 100 }));
+    const result = await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 });
     expect(result.agentId).toBe('agent-1');
-    expect(result.contractId).toBe('contract-1');
-    expect(result.budgetUsd).toBe(150); // 100 + 50
-
-    expect(mocks.recordCashOutMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'agent-contract-topup',
-        amountUsd: 50,
-        referenceType: 'agent-execution-contract',
-      })
-    );
-
-    expect(mocks.updateMock).toHaveBeenCalled();
+    expect(result.contractId).toBe('c-1');
+    expect(result.budgetUsd).toBe(150);
   });
 
-  it('returns updated budget in result', async () => {
-    const result = await topUpActiveAgentContract(createMockDb() as any, {
-      agentId: 'agent-1',
-      amountUsd: 100,
-    });
+  it('calls findFirst to locate active contract', async () => {
+    const db = createMockDb(mockContract());
+    await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 });
+    expect(db.query.agentExecutionContracts.findFirst).toHaveBeenCalled();
+  });
 
-    expect(result.budgetUsd).toBe(200);
+  it('returns updated budget including top-up amount', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 200 }));
+    const result = await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 75 });
+    expect(result.budgetUsd).toBe(275);
+  });
+
+  it('handles large top-up amount with sufficient cash', async () => {
+    mockGetCurrentBalanceUsd.mockResolvedValue(100000);
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    const result = await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50000 });
+    expect(result.budgetUsd).toBe(50100);
+  });
+
+  it('works with tiny top-up amount', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    const result = await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 0.01 });
+    expect(result.budgetUsd).toBeCloseTo(100.01);
   });
 });

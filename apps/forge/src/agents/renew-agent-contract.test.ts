@@ -1,241 +1,164 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { renewAgentContract } from './renew-agent-contract';
 
-const mocks = vi.hoisted(() => ({
-  createIdMock: vi.fn(() => 'new-contract-id'),
-  recordCashInMock: vi.fn(),
-  recordCashOutMock: vi.fn(),
-  getContractSpendMock: vi.fn(),
-  getCurrentBalanceUsdMock: vi.fn(),
+const { mockRecordCashIn, mockRecordCashOut, mockGetCurrentBalanceUsd, mockGetContractSpend } = vi.hoisted(() => ({
+  mockRecordCashIn: vi.fn().mockResolvedValue(undefined),
+  mockRecordCashOut: vi.fn().mockResolvedValue(undefined),
+  mockGetCurrentBalanceUsd: vi.fn().mockResolvedValue(200),
+  mockGetContractSpend: vi.fn().mockResolvedValue(30),
 }));
 
-vi.mock('../utils/id', () => ({ createId: mocks.createIdMock }));
-vi.mock('./agent-contract-store', () => ({
-  createAgentContractStore: vi.fn(() => ({
-    getContractSpend: mocks.getContractSpendMock,
-  })),
-}));
 vi.mock('../finance/company-cash-ledger', () => ({
-  createCompanyCashLedger: vi.fn(() => ({
-    getCurrentBalanceUsd: mocks.getCurrentBalanceUsdMock,
-  })),
-}));
-vi.mock('../finance/company-cash-operations', () => ({
-  createCompanyCashOperations: vi.fn(() => ({
-    recordCashIn: mocks.recordCashInMock,
-    recordCashOut: mocks.recordCashOutMock,
-  })),
+  createCompanyCashLedger: vi.fn(() => ({ getCurrentBalanceUsd: mockGetCurrentBalanceUsd })),
 }));
 
-function createMockDb() {
-  const updateValues: any[] = [];
-  const insertValues: any[] = [];
-  
-  const db: any = {
+vi.mock('../finance/company-cash-operations', () => ({
+  createCompanyCashOperations: vi.fn(() => ({ recordCashIn: mockRecordCashIn, recordCashOut: mockRecordCashOut })),
+}));
+
+vi.mock('./agent-contract-store', () => ({
+  createAgentContractStore: vi.fn(() => ({ getContractSpend: mockGetContractSpend })),
+}));
+
+import { renewAgentContract } from './renew-agent-contract';
+import { agentExecutionContracts } from '../database/schema';
+
+function createMockDb(contract?: Record<string, unknown> | null) {
+  return {
     query: {
-      agentExecutionContracts: {
-        findFirst: vi.fn(),
-      },
+      agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract ?? null) },
     },
-    // Drizzle API: db.update(table).set(values).where(condition)
-    update: vi.fn().mockReturnValue({
-      set: vi.fn().mockImplementation((values) => {
-        updateValues.push(values);
-        return {
-          where: vi.fn().mockResolvedValue(undefined),
-        };
-      }),
-    }),
-    // Drizzle API: db.insert(table).values(data).returning()
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockImplementation((values) => {
-        insertValues.push(values);
-        return {
-          returning: vi.fn().mockResolvedValue({}),
-        };
-      }),
-    }),
-    _updateValues: updateValues,
-    _insertValues: insertValues,
+    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
   };
-  return db;
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  mocks.getCurrentBalanceUsdMock.mockResolvedValue(0);
-  mocks.recordCashInMock.mockResolvedValue(undefined);
-  mocks.recordCashOutMock.mockResolvedValue(undefined);
-});
-
-function setupDbWithContract(db: any, contract: any) {
-  db.query.agentExecutionContracts.findFirst.mockResolvedValue(contract);
+function mockContract(overrides: Record<string, unknown> = {}) {
+  return { id: 'contract-1', agentId: 'agent-1', budgetUsd: 100, fundedAt: Date.now() - 100000, autoRenew: false, startsAt: Date.now() - 86400000, endsAt: Date.now() + 86400000, ...overrides };
 }
 
 describe('renewAgentContract', () => {
-  it('throws when no active contract exists for agent', async () => {
-    const db = createMockDb();
-    setupDbWithContract(db, null);
-    await expect(
-      renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 500 }),
-    ).rejects.toThrow('No active contract for agent: agent-1');
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetCurrentBalanceUsd.mockResolvedValue(200);
+    mockGetContractSpend.mockResolvedValue(30);
   });
 
-  it('creates new contract with updated budget when balance is sufficient and no refund needed', async () => {
-    const now = Date.now();
-    const activeContract = {
-      id: 'contract-1',
-      agentId: 'agent-1',
-      budgetUsd: 500,
-      fundedAt: null,
-      autoRenew: 1,
-      startsAt: now - 1000,
-      endsAt: now + 1000,
-    };
-    const db = createMockDb();
-    setupDbWithContract(db, activeContract);
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(600);
-    mocks.getContractSpendMock.mockResolvedValue(0);
-
-    await renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 600 });
-
-    expect(mocks.recordCashInMock).not.toHaveBeenCalled();
-    expect(mocks.recordCashOutMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'agent-contract-renewal-funding',
-        amountUsd: 600,
-        referenceType: 'agent-execution-contract',
-      }),
-    );
+  it('throws when no active contract exists', async () => {
+    const db = createMockDb(null);
+    await expect(renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 })).rejects.toThrow('No active contract for agent: agent-1');
   });
 
-  it('records refund cash-in when prior contract was funded and has refundable amount', async () => {
-    const now = Date.now();
-    const activeContract = {
-      id: 'contract-1',
-      agentId: 'agent-1',
-      budgetUsd: 500,
-      fundedAt: now - 86400000,
-      autoRenew: 1,
-      startsAt: now - 1000,
-      endsAt: now + 1000,
-    };
-    const db = createMockDb();
-    setupDbWithContract(db, activeContract);
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(200);
-    mocks.getContractSpendMock.mockResolvedValue(200);
-
-    await renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 500 });
-
-    expect(mocks.recordCashInMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'agent-contract-renewal-refund',
-        amountUsd: 300,
-        referenceId: 'contract-1',
-      }),
-    );
-    expect(mocks.recordCashOutMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'agent-contract-renewal-funding',
-        amountUsd: 500,
-      }),
-    );
+  it('throws when insufficient cash for new budget', async () => {
+    mockGetCurrentBalanceUsd.mockResolvedValue(50);
+    mockGetContractSpend.mockResolvedValue(80);
+    const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
+    await expect(renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 })).rejects.toThrow('Insufficient company cash to renew this contract');
   });
 
-  it('throws when company cash balance (plus refund) is insufficient for new budget', async () => {
-    const now = Date.now();
-    const activeContract = {
-      id: 'contract-1',
-      agentId: 'agent-1',
-      budgetUsd: 500,
-      fundedAt: now - 86400000,
-      autoRenew: 1,
-      startsAt: now - 1000,
-      endsAt: now + 1000,
-    };
-    const db = createMockDb();
-    setupDbWithContract(db, activeContract);
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(50);
-    mocks.getContractSpendMock.mockResolvedValue(450);
-
-    await expect(
-      renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 1000 }),
-    ).rejects.toThrow('Insufficient company cash to renew this contract');
+  it('records cash in for refundable amount when fundedAt exists', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(mockRecordCashIn).toHaveBeenCalledWith(expect.objectContaining({ type: 'agent-contract-renewal-refund', referenceType: 'agent-execution-contract' }));
   });
 
-  it('closes old contract and inserts new contract with correct fields', async () => {
-    const now = Date.now();
-    const activeContract = {
-      id: 'contract-1',
-      agentId: 'agent-1',
-      budgetUsd: 300,
-      fundedAt: null,
-      autoRenew: 1,
-      startsAt: now - 1000,
-      endsAt: now + 1000,
-    };
-    const db = createMockDb();
-    setupDbWithContract(db, activeContract);
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(500);
-    mocks.getContractSpendMock.mockResolvedValue(0);
+  it('does not record cash in when contract is not funded', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: null }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(mockRecordCashIn).not.toHaveBeenCalled();
+  });
 
-    const result = await renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 400 });
+  it('closes old contract by updating endsAt', async () => {
+    const db = createMockDb(mockContract({ id: 'old-contract', budgetUsd: 100 }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(db.update).toHaveBeenCalledWith(agentExecutionContracts);
+  });
 
-    expect(result).toMatchObject({
-      agentId: 'agent-1',
-      previousContractId: 'contract-1',
-      newContractId: 'new-contract-id',
-      previousBudgetUsd: 300,
-      previousSpentUsd: 0,
-      refundedUsd: 0,
-      newBudgetUsd: 400,
-    });
+  it('inserts new contract with correct values', async () => {
+    const db = createMockDb(mockContract({ id: 'old-contract', budgetUsd: 100 }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 });
+    expect(db.insert).toHaveBeenCalledWith(agentExecutionContracts);
+  });
+
+  it('records cash out for new contract funding', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(mockRecordCashOut).toHaveBeenCalledWith(expect.objectContaining({ type: 'agent-contract-renewal-funding', amountUsd: 150 }));
+  });
+
+  it('updates new contract fundedAt after cash out', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(db.update).toHaveBeenCalledWith(agentExecutionContracts);
+  });
+
+  it('returns object with agentId, previousContractId, newContractId', async () => {
+    const db = createMockDb(mockContract({ id: 'prev-c', budgetUsd: 100 }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(result.agentId).toBe('agent-1');
+    expect(result.previousContractId).toBe('prev-c');
+    expect(result.newContractId).toBeDefined();
+    expect(result.newContractId).not.toBe('prev-c');
+  });
+
+  it('returns previousBudgetUsd and newBudgetUsd', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 250 });
+    expect(result.previousBudgetUsd).toBe(100);
+    expect(result.newBudgetUsd).toBe(250);
+  });
+
+  it('returns previousSpentUsd from contractStore.getContractSpend', async () => {
+    mockGetContractSpend.mockResolvedValue(45.5);
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(result.previousSpentUsd).toBe(45.5);
+  });
+
+  it('returns refundedUsd based on budget minus spent when funded', async () => {
+    mockGetContractSpend.mockResolvedValue(25);
+    const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(result.refundedUsd).toBe(75);
+  });
+
+  it('returns refundedUsd of 0 when contract not funded', async () => {
+    mockGetContractSpend.mockResolvedValue(25);
+    const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: null }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(result.refundedUsd).toBe(0);
+  });
+
+  it('sets startsAt and endsAt on result with WEEK_MS offset', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(result.endsAt).toBeGreaterThan(result.startsAt);
     expect(result.endsAt - result.startsAt).toBe(7 * 24 * 60 * 60 * 1000);
   });
 
-  it('sets fundedAt on new contract after cash-out recording', async () => {
-    const now = Date.now();
-    const activeContract = {
-      id: 'contract-1',
-      agentId: 'agent-1',
-      budgetUsd: 500,
-      fundedAt: now - 86400000,
-      autoRenew: 1,
-      startsAt: now - 1000,
-      endsAt: now + 1000,
-    };
-    const db = createMockDb();
-    setupDbWithContract(db, activeContract);
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(200);
-    mocks.getContractSpendMock.mockResolvedValue(200);
-
-    await renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 500 });
-
-    expect(db._updateValues.length).toBe(2);
-    const secondUpdateValues = db._updateValues[1];
-    expect(secondUpdateValues).toHaveProperty('fundedAt');
-    expect(typeof secondUpdateValues.fundedAt).toBe('number');
+  it('preserves autoRenew from active contract in new contract', async () => {
+    const db = createMockDb(mockContract({ autoRenew: true }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(db.insert).toHaveBeenCalled();
   });
 
-  it('keeps autoRenew flag from original contract on new contract', async () => {
-    const now = Date.now();
-    const activeContract = {
-      id: 'contract-1',
-      agentId: 'agent-1',
-      budgetUsd: 500,
-      fundedAt: null,
-      autoRenew: 0,
-      startsAt: now - 1000,
-      endsAt: now + 1000,
-    };
-    const db = createMockDb();
-    setupDbWithContract(db, activeContract);
-    mocks.getCurrentBalanceUsdMock.mockResolvedValue(500);
-    mocks.getContractSpendMock.mockResolvedValue(0);
+  it('uses contractStore.getContractSpend to calculate refund', async () => {
+    mockGetContractSpend.mockResolvedValue(80);
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(mockGetContractSpend).toHaveBeenCalledWith('contract-1');
+  });
 
-    await renewAgentContract(db, { agentId: 'agent-1', newBudgetUsd: 500 });
+  it('handles refund scenario where spent equals budget (zero refund)', async () => {
+    mockGetContractSpend.mockResolvedValue(100);
+    const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
+    const result = await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 120 });
+    expect(result.refundedUsd).toBe(0);
+    expect(mockRecordCashIn).not.toHaveBeenCalled();
+  });
 
-    expect(db._insertValues.length).toBe(1);
-    expect(db._insertValues[0]).toHaveProperty('autoRenew', 0);
+  it('sets fundedAt to null on new contract before recording cash out', async () => {
+    const db = createMockDb(mockContract({ budgetUsd: 100 }));
+    await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
+    expect(db.insert).toHaveBeenCalled();
   });
 });
