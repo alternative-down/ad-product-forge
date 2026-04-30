@@ -31,6 +31,7 @@ import {
   hasExactControlDirective,
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
+import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
 const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
@@ -69,6 +70,23 @@ export function createAgentRunner(
   const wakeQueue = createAgentWakeQueue({
     label: currentRuntime.id,
     execute,
+  });
+
+  const schedulerState: SchedulerState = {
+    nextStepAt: null,
+    backoffMs: ONE_MINUTE_MS,
+    instant: false,
+    activeRunEpoch: 0,
+    activeStepEpoch: 0,
+    activeGenerateToken: 0,
+  };
+  const scheduler = createScheduler(schedulerState, {
+    getSystemSettings: () => systemSettings.getSettings(),
+    getRunnableContract: (id) => store.getRunnableContract(id),
+    getContractSpend: (id) => store.getContractSpend(id),
+    estimateStepCostUsd: () => usage.estimateStepCostUsd(),
+    runtimeId: runtime.id,
+    setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
   let timer: NodeJS.Timeout | null = null;
   let healthcheckTimer: NodeJS.Timeout | null = null;
