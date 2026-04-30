@@ -463,7 +463,7 @@ export class MiniMaxClient {
       };
     }
 
-    const data = response.data?.data;
+    const data = response.data?.data as Record<string, string | undefined | null>;
     if (!data) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax did not return a video task status.');
     }
