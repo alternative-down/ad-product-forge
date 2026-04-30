@@ -106,7 +106,7 @@ function makeMockDb(overrides = {}) {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          groupBy: vi.fn().mockResolvedValue([]),
+          groupBy: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }),
         }),
       }),
     }),
