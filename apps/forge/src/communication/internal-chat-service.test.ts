@@ -769,4 +769,127 @@ describe('createInternalChatService', () => {
       ).rejects.toThrow('External account not found: acc_agent');
     });
   });
-});
+// =============================================================================
+// CHUNK 2 — Account Queries
+// Covers: listAccounts, getAccountBySlug, getAccountByAgentId
+// Note: getAccountByTargetKey is internal (not in return block), excluded.
+// =============================================================================
+
+  describe('listAccounts', () => {
+    it('returns all accounts when no exclusion is specified', async () => {
+      db.query.internalChatAccounts.findMany.mockResolvedValueOnce([
+        {
+          id: 'acc_1',
+          agentId: null,
+          slug: 'slack-billing',
+          displayName: 'Slack Billing',
+          description: null,
+          createdAt: MOCK_DATE,
+          updatedAt: MOCK_DATE,
+        },
+        {
+          id: 'acc_2',
+          agentId: null,
+          slug: 'github-ops',
+          displayName: 'GitHub Ops',
+          description: 'External',
+          createdAt: MOCK_DATE,
+          updatedAt: MOCK_DATE,
+        },
+      ]);
+
+      const service = createInternalChatService(db);
+      const result = await service.listAccounts();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].slug).toBe('slack-billing');
+      expect(result[1].slug).toBe('github-ops');
+    });
+
+    it('excludes the specified agentId when excludeAgentId is given', async () => {
+      db.query.internalChatAccounts.findMany.mockResolvedValueOnce([
+        {
+          id: 'acc_ext',
+          agentId: null,
+          slug: 'slack-billing',
+          displayName: 'Slack Billing',
+          description: null,
+          createdAt: MOCK_DATE,
+          updatedAt: MOCK_DATE,
+        },
+      ]);
+
+      const service = createInternalChatService(db);
+      const result = await service.listAccounts({ excludeAgentId: 'agent-exclude-me' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('acc_ext');
+    });
+
+    it('returns empty array when no accounts exist', async () => {
+      db.query.internalChatAccounts.findMany.mockResolvedValueOnce([]);
+
+      const service = createInternalChatService(db);
+      const result = await service.listAccounts();
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getAccountBySlug', () => {
+    it('returns the account when found', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
+        id: 'acc_ext_1',
+        agentId: null,
+        slug: 'github-ops',
+        displayName: 'GitHub Ops',
+        description: null,
+        createdAt: MOCK_DATE,
+        updatedAt: MOCK_DATE,
+      });
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountBySlug('github-ops');
+
+      expect(result?.slug).toBe('github-ops');
+      expect(result?.displayName).toBe('GitHub Ops');
+    });
+
+    it('returns null when no account matches the slug', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountBySlug('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getAccountByAgentId', () => {
+    it('returns the account when an agent has one', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
+        id: 'acc_agent_1',
+        agentId: 'agent-kaelen',
+        slug: 'kaelen',
+        displayName: 'Kaelen',
+        description: 'agent-kaelen (Kaelen)',
+        createdAt: MOCK_DATE,
+        updatedAt: MOCK_DATE,
+      });
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountByAgentId('agent-kaelen');
+
+      expect(result?.agentId).toBe('agent-kaelen');
+      expect(result?.slug).toBe('kaelen');
+    });
+
+    it('returns null when no account belongs to the agent', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountByAgentId('agent-nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });});
