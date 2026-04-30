@@ -1,68 +1,110 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import path from 'node:path';
-import {
-  resolveAgentWorkspaceRoot,
-  resolveAgentSkillsRoot,
-  resolveAgentSkillRoot,
-} from './workspace-skill-paths';
-
-vi.mock('node:path', async (importOriginal) => {
-  const actual = await importOriginal<typeof path>();
-  return {
-    ...actual,
-    resolve: (...args: string[]) => actual.resolve(...args),
-  };
-});
+import { describe, expect, it } from 'vitest';
+import { resolveAgentWorkspaceRoot, resolveAgentSkillsRoot, resolveAgentSkillRoot } from './workspace-skill-paths';
+import type { WorkspaceFilesystemConfig } from '../database/schema';
 
 describe('resolveAgentWorkspaceRoot', () => {
-  it('uses default workspace subdir when no filesystem config', () => {
-    const result = resolveAgentWorkspaceRoot('/base', null, 'agent-abc');
-    expect(result).toBe(path.resolve('/base/agent-abc/workspace'));
+  const base = '/workspace';
+
+  it('uses "workspace" when workspaceFilesystem is null', () => {
+    const result = resolveAgentWorkspaceRoot(base, null, 'agent-1');
+    expect(result).toBe('/workspace/agent-1/workspace');
   });
 
-  it('uses default workspace subdir when filesystem config is undefined', () => {
-    const result = resolveAgentWorkspaceRoot('/base', undefined, 'agent-abc');
-    expect(result).toBe(path.resolve('/base/agent-abc/workspace'));
+  it('uses "workspace" when workspaceFilesystem is undefined', () => {
+    const result = resolveAgentWorkspaceRoot(base, undefined, 'agent-1');
+    expect(result).toBe('/workspace/agent-1/workspace');
   });
 
-  it('uses basePath from workspaceFilesystem when provided', () => {
-    const result = resolveAgentWorkspaceRoot('/base', { basePath: 'my-workspace' }, 'agent-abc');
-    expect(result).toBe(path.resolve('/base/agent-abc/my-workspace'));
+  it('uses "workspace" when workspaceFilesystem has no basePath', () => {
+    const result = resolveAgentWorkspaceRoot(base, {}, 'agent-1');
+    expect(result).toBe('/workspace/agent-1/workspace');
+  });
+
+  it('treats basePath as absolute path, not relative', () => {
+    const config: WorkspaceFilesystemConfig = { basePath: '/custom' };
+    const result = resolveAgentWorkspaceRoot(base, config, 'agent-1');
+    expect(result).toBe('/custom');
+  });
+
+  it('handles basePath as absolute path', () => {
+    const config: WorkspaceFilesystemConfig = { basePath: '/absolute/path' };
+    const result = resolveAgentWorkspaceRoot(base, config, 'agent-1');
+    expect(result).toBe('/absolute/path');
+  });
+
+  it('handles relative basePath (joined with agent dir)', () => {
+    const config: WorkspaceFilesystemConfig = { basePath: 'data' };
+    const result = resolveAgentWorkspaceRoot(base, config, 'agent-1');
+    expect(result).toBe('/workspace/agent-1/data');
   });
 });
 
 describe('resolveAgentSkillsRoot', () => {
-  it('uses skills subdir of workspace root when no filesystem config', () => {
-    const result = resolveAgentSkillsRoot('/base', null, 'agent-abc');
-    expect(result).toBe(path.resolve('/base/agent-abc/workspace/skills'));
+  const base = '/workspace';
+
+  it('appends /skills to workspace root when no custom basePath', () => {
+    const result = resolveAgentSkillsRoot(base, null, 'agent-1');
+    expect(result).toBe('/workspace/agent-1/workspace/skills');
   });
 
-  it('uses basePath from workspaceFilesystem when provided', () => {
-    const result = resolveAgentSkillsRoot('/base', { basePath: 'data/agents' }, 'agent-abc');
-    expect(result).toBe(path.resolve('/base/agent-abc/data/agents/skills'));
+  it('appends /skills to absolute basePath', () => {
+    const config: WorkspaceFilesystemConfig = { basePath: '/custom' };
+    const result = resolveAgentSkillsRoot(base, config, 'agent-1');
+    expect(result).toBe('/custom/skills');
   });
 });
 
 describe('resolveAgentSkillRoot', () => {
-  it('returns skillsRoot and skillRoot with skill name appended', () => {
-    const result = resolveAgentSkillRoot({
-      workspaceBasePath: '/base',
-      agent: { id: 'agent-xyz', workspaceFilesystem: null },
-      skillName: 'code-review',
-    });
+  const base = '/workspace';
 
-    expect(result.skillsRoot).toBe(path.resolve('/base/agent-xyz/workspace/skills'));
-    expect(result.skillRoot).toBe(path.resolve('/base/agent-xyz/workspace/skills/code-review'));
+  it('returns skillsRoot and skillRoot correctly for default config', () => {
+    const result = resolveAgentSkillRoot({
+      workspaceBasePath: base,
+      agent: { id: 'agent-5', workspaceFilesystem: null },
+      skillName: 'coding',
+    });
+    expect(result.skillsRoot).toBe('/workspace/agent-5/workspace/skills');
+    expect(result.skillRoot).toBe('/workspace/agent-5/workspace/skills/coding');
   });
 
-  it('uses agent workspaceFilesystem.basePath for skillsRoot', () => {
+  it('returns correct paths with absolute basePath', () => {
     const result = resolveAgentSkillRoot({
-      workspaceBasePath: '/base',
-      agent: { id: 'agent-xyz', workspaceFilesystem: { basePath: 'data' } },
-      skillName: 'test-skill',
+      workspaceBasePath: base,
+      agent: {
+        id: 'agent-5',
+        workspaceFilesystem: { basePath: '/my-workspace' },
+      },
+      skillName: 'testing',
     });
+    expect(result.skillsRoot).toBe('/my-workspace/skills');
+    expect(result.skillRoot).toBe('/my-workspace/skills/testing');
+  });
 
-    expect(result.skillsRoot).toBe(path.resolve('/base/agent-xyz/data/skills'));
-    expect(result.skillRoot).toBe(path.resolve('/base/agent-xyz/data/skills/test-skill'));
+  it('handles skillName with special characters', () => {
+    const result = resolveAgentSkillRoot({
+      workspaceBasePath: base,
+      agent: { id: 'agent-5', workspaceFilesystem: null },
+      skillName: 'my-skill-v2.0',
+    });
+    expect(result.skillRoot).toBe('/workspace/agent-5/workspace/skills/my-skill-v2.0');
+  });
+
+  it('handles skillName with slashes (nested paths)', () => {
+    const result = resolveAgentSkillRoot({
+      workspaceBasePath: base,
+      agent: { id: 'agent-5', workspaceFilesystem: null },
+      skillName: 'nested/skill',
+    });
+    expect(result.skillRoot).toBe('/workspace/agent-5/workspace/skills/nested/skill');
+  });
+
+  it('handles empty skillName', () => {
+    const result = resolveAgentSkillRoot({
+      workspaceBasePath: base,
+      agent: { id: 'agent-5', workspaceFilesystem: null },
+      skillName: '',
+    });
+    expect(result.skillsRoot).toBe('/workspace/agent-5/workspace/skills');
+    expect(result.skillRoot).toBe('/workspace/agent-5/workspace/skills');
   });
 });
