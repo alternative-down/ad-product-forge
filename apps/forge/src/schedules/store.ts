@@ -295,7 +295,7 @@ export function createAgentScheduleStore(db: Database) {
   };
 }
 
-function toScheduleRecord(row: AgentSchedule): {
+function toScheduleRecord(row: AgentSchedule) {
   const { id, ...rest } = row;
 
   return {
@@ -314,7 +314,7 @@ function toScheduleRecord(row: AgentSchedule): {
   };
 }
 
-function toScheduleSummary(row: AgentSchedule): {
+function toScheduleSummary(row: AgentSchedule) {
   const { id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = row;
 
   return {
