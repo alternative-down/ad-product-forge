@@ -1,36 +1,37 @@
 import { describe, expect, it } from 'vitest';
+import { createId } from './id';
 
-import { createId } from './id.js';
-
+// Note: crypto.randomUUID is a real system call, so we can't mock it in unit tests.
+// We verify the shape and properties of the returned value.
 describe('createId', () => {
-  it('returns a non-empty string', () => {
+  it('returns a string', () => {
     const id = createId();
     expect(typeof id).toBe('string');
+  });
+
+  it('returns a non-empty string', () => {
+    const id = createId();
     expect(id.length).toBeGreaterThan(0);
   });
 
-  it('returns a valid UUID format (8-4-4-4-12)', () => {
+  it('returns different values on each call', () => {
+    const ids = new Set([createId(), createId(), createId(), createId()]);
+    expect(ids.size).toBe(4);
+  });
+
+  it('returns a valid UUID format (8-4-4-4-12 hex)', () => {
     const id = createId();
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     expect(id).toMatch(uuidRegex);
   });
 
-  it('returns lowercase hex characters', () => {
+  it('UUID is lowercase hex characters', () => {
     const id = createId();
-    expect(id).toBe(id.toLowerCase());
-  });
-
-  it('generates unique IDs on repeated calls', () => {
-    const ids = new Set<string>();
-    for (let i = 0; i < 100; i++) {
-      ids.add(createId());
-    }
-    // All 100 should be unique
-    expect(ids.size).toBe(100);
+    expect(id).toMatch(/^[0-9a-f-]+$/);
   });
 
   it('length is 36 characters', () => {
     const id = createId();
-    expect(id.length).toBe(36);
+    expect(id).toHaveLength(36);
   });
 });

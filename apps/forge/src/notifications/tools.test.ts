@@ -1,86 +1,97 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createAgentNotificationTools } from './tools';
 
-const mocks = vi.hoisted(() => ({
-  listNotifications: vi.fn(),
-}));
-
-vi.mock('./store', () => ({
-  createAgentNotificationStore: vi.fn(() => ({
-    listNotifications: mocks.listNotifications,
+vi.mock('@forge-runtime/core', () => ({
+  createTool: vi.fn((config: { id: string; description: string; inputSchema: unknown; execute: unknown }) => ({
+    ...config,
+    _isTool: true,
   })),
 }));
 
-vi.mock('../capabilities/catalog', () => ({
-  hasToolPermission: vi.fn(),
+// Mock the notifications store
+const mockListNotifications = vi.fn();
+vi.mock('./store', () => ({
+  createAgentNotificationStore: vi.fn(() => ({
+    listNotifications: mockListNotifications,
+    createNotification: vi.fn(),
+    getNotification: vi.fn(),
+  })),
 }));
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('createAgentNotificationTools', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it('returns list_agent_notifications when permission is granted', () => {
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['list_agent_notifications']));
+    expect(Object.keys(tools)).toContain('list_agent_notifications');
   });
 
-  it('returns empty object when allowedToolIds is null', () => {
-    const tools = createAgentNotificationTools({} as any, 'agent-1', null);
-    expect(tools).toEqual({});
+  it('does NOT include tool when no permission', () => {
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['other_tool']));
+    expect(Object.keys(tools)).not.toContain('list_agent_notifications');
   });
 
-  it('returns empty object when allowedToolIds does not include list_agent_notifications', async () => {
-    const { hasToolPermission } = await import('../capabilities/catalog');
-    (hasToolPermission as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const tools = createAgentNotificationTools({} as any, 'agent-1', new Set<string>());
-    expect(tools).toEqual({});
+  it('includes tool when allowedToolIds is null', () => {
+    const tools = createAgentNotificationTools({} as any, 'agent-123', null);
+    expect(Object.keys(tools)).toContain('list_agent_notifications');
   });
 
-  it('registers list_agent_notifications tool when permitted', async () => {
-    const { hasToolPermission } = await import('../capabilities/catalog');
-    (hasToolPermission as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    const tools = createAgentNotificationTools({} as any, 'agent-1', new Set(['list_agent_notifications']));
-    expect(tools).toHaveProperty('list_agent_notifications');
-    expect(typeof tools.list_agent_notifications).toBe('object');
-    expect((tools.list_agent_notifications as any).id).toBe('list_agent_notifications');
+  it('does NOT include tool when allowedToolIds is empty set', () => {
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set());
+    expect(Object.keys(tools)).not.toContain('list_agent_notifications');
   });
 
-  it('execute calls listNotifications with correct params', async () => {
-    const { hasToolPermission } = await import('../capabilities/catalog');
-    (hasToolPermission as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    mocks.listNotifications.mockResolvedValue({ items: [], total: 0 });
+  it('tool has correct id', () => {
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['list_agent_notifications']));
+    expect(tools.list_agent_notifications.id).toBe('list_agent_notifications');
+  });
+
+  it('tool execute calls store.listNotifications with agentId', async () => {
+    mockListNotifications.mockResolvedValue([]);
     const tools = createAgentNotificationTools({} as any, 'agent-abc', new Set(['list_agent_notifications']));
-    const tool = tools.list_agent_notifications as any;
-    const result = await tool.execute({ unreadOnly: true, limit: 5 });
-    expect(mocks.listNotifications).toHaveBeenCalledWith({
-      agentId: 'agent-abc',
-      unreadOnly: true,
-      limit: 5,
-    });
-    expect(result).toEqual({ items: [], total: 0 });
+    const execute = (tools.list_agent_notifications as { execute: (input: unknown) => Promise<unknown> }).execute;
+    await execute({});
+    expect(mockListNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'agent-abc', unreadOnly: false, limit: 20 }),
+    );
   });
 
-  it('execute returns error result on exception', async () => {
-    const { hasToolPermission } = await import('../capabilities/catalog');
-    (hasToolPermission as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    mocks.listNotifications.mockRejectedValue(new Error('DB unavailable'));
-    const tools = createAgentNotificationTools({} as any, 'agent-1', new Set(['list_agent_notifications']));
-    const tool = tools.list_agent_notifications as any;
-    const result = await tool.execute({});
-    expect(result).toEqual({
-      valid: false,
-      error: 'DB unavailable',
-      hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
-    });
+  it('tool execute respects unreadOnly from input', async () => {
+    mockListNotifications.mockResolvedValue([]);
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['list_agent_notifications']));
+    const execute = (tools.list_agent_notifications as { execute: (input: unknown) => Promise<unknown> }).execute;
+    await execute({ unreadOnly: true });
+    expect(mockListNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({ unreadOnly: true }),
+    );
   });
 
-  it('execute uses default values when input missing', async () => {
-    const { hasToolPermission } = await import('../capabilities/catalog');
-    (hasToolPermission as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    mocks.listNotifications.mockResolvedValue({ items: [] });
-    const tools = createAgentNotificationTools({} as any, 'agent-1', new Set(['list_agent_notifications']));
-    const tool = tools.list_agent_notifications as any;
-    await tool.execute({});
-    expect(mocks.listNotifications).toHaveBeenCalledWith({
-      agentId: 'agent-1',
-      unreadOnly: false,
-      limit: 20,
-    });
+  it('tool execute respects limit from input', async () => {
+    mockListNotifications.mockResolvedValue([]);
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['list_agent_notifications']));
+    const execute = (tools.list_agent_notifications as { execute: (input: unknown) => Promise<unknown> }).execute;
+    await execute({ limit: 50 });
+    expect(mockListNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50 }),
+    );
+  });
+
+  it('tool execute returns store result on success', async () => {
+    const notifications = [{ notificationId: 'n1', content: 'test', timestamp: 1234567890, read: false }];
+    mockListNotifications.mockResolvedValue(notifications);
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['list_agent_notifications']));
+    const execute = (tools.list_agent_notifications as { execute: (input: unknown) => Promise<unknown> }).execute;
+    const result = await execute({});
+    expect(result).toEqual(notifications);
+  });
+
+  it('tool execute returns valid:false error object on exception', async () => {
+    mockListNotifications.mockRejectedValue(new Error('DB error'));
+    const tools = createAgentNotificationTools({} as any, 'agent-123', new Set(['list_agent_notifications']));
+    const execute = (tools.list_agent_notifications as { execute: (input: unknown) => Promise<unknown> }).execute;
+    const result = await execute({});
+    expect(result).toMatchObject({ valid: false, error: expect.stringContaining('DB error') });
   });
 });
