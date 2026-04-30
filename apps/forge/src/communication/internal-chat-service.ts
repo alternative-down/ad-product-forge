@@ -35,11 +35,10 @@ import {
   type InternalChatGroupParticipant,
   type InternalChatGroupRow,
 } from "./internal-chat-helpers";
+import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
 export function createInternalChatService(
   db: Database,
 ) {
-  const handlers = new Map<string, InternalChatHandler>();
-
   async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
     if (attachments.length === 0) {
       return;
@@ -258,32 +257,6 @@ export function createInternalChatService(
       accountId: input.accountId,
       deleted: true,
     };
-  }
-
-  function onReceiveMessage(agentId: string, handler: InternalChatHandler) {
-    const hadHandler = handlers.has(agentId);
-    handlers.set(agentId, handler);
-
-    if (hadHandler) {
-      return;
-    }
-
-    void replayUnreadMessages(agentId, handler).catch((error) => {
-      forgeDebug({ scope: 'internal-chat', level: 'error', agentId, message: 'Failed to replay unread messages', context: { error } });
-    });
-  }
-
-  function clearHandler(agentId: string, handler?: InternalChatHandler) {
-    if (!handler) {
-      handlers.delete(agentId);
-      return;
-    }
-
-    if (handlers.get(agentId) !== handler) {
-      return;
-    }
-
-    handlers.delete(agentId);
   }
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
@@ -1356,34 +1329,27 @@ export function createInternalChatService(
         continue;
       }
 
-      const handler = handlers.get(participant.agentId);
+      const message: InternalChatDeliveryMessage = {
+        targetKey: conversation.id,
+        messageId,
+        conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
+        authorId: author.id,
+        authorDisplayName: author.displayName,
+        authorUsername: author.slug,
+        content: input.content,
+        attachments: input.attachments,
+        createdAt: new Date(now).toISOString(),
+        metadata: {
+          conversationType: conversation.type,
+          groupMembers: conversation.type === 'group'
+            ? buildGroupMetadata(participants)
+            : undefined,
+        },
+      };
 
-      if (!handler) {
-        continue;
+      if (connection.deliverMessage(participant.agentId, message)) {
+        deliveries.push(Promise.resolve({ agentId: participant.agentId as string, delivered: true }));
       }
-
-      deliveries.push(
-        Promise.resolve(handler({
-          targetKey: conversation.id,
-          messageId,
-          conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
-          authorId: author.id,
-          authorDisplayName: author.displayName,
-          authorUsername: author.slug,
-          content: input.content,
-          attachments: input.attachments,
-          createdAt: new Date(now).toISOString(),
-          metadata: {
-            conversationType: conversation.type,
-            groupMembers: conversation.type === 'group'
-              ? buildGroupMetadata(participants)
-              : undefined,
-          },
-        })).then(() => ({
-          agentId: participant.agentId as string,
-          delivered: true,
-        })),
-      );
     }
 
     if (deliveries.length > 0) {
@@ -1601,13 +1567,19 @@ export function createInternalChatService(
     return group;
   }
 
+  const connection = createInternalChatConnection(db, {
+    readMessageAttachments,
+    getRequiredAgentAccount,
+    listGroupMembersOrDmPeers,
+  });
+
   return {
     registerAgentAccount,
     registerExternalAccount,
     updateExternalAccount,
     deleteExternalAccount,
-    onReceiveMessage,
-    clearHandler,
+    onReceiveMessage: connection.onReceiveMessage,
+    clearHandler: connection.clearHandler,
     listAccounts,
     getAccountBySlug,
     getAccountByAgentId,
@@ -1636,84 +1608,7 @@ export function createInternalChatService(
     listRecentConversations,
   };
 
-  async function replayUnreadMessages(agentId: string, handler: InternalChatHandler) {
-    const unreadRows = await db
-      .select({
-        conversationId: internalChatMessages.conversationId,
-        conversationName: internalChatConversations.name,
-        conversationType: internalChatConversations.type,
-        messageId: internalChatMessages.id,
-        content: internalChatMessages.content,
-        createdAt: internalChatMessages.createdAt,
-        authorAccountId: internalChatMessages.authorAccountId,
-        authorDisplayName: internalChatAccounts.displayName,
-        authorSlug: internalChatAccounts.slug,
-      })
-      .from(internalChatMessageReads)
-      .innerJoin(
-        internalChatMessages,
-        eq(internalChatMessages.id, internalChatMessageReads.messageId),
-      )
-      .innerJoin(
-        internalChatConversations,
-        eq(internalChatConversations.id, internalChatMessages.conversationId),
-      )
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
-      )
-      .where(and(
-        eq(internalChatMessageReads.agentId, agentId),
-        isNull(internalChatMessageReads.readAt),
-      ))
-      .orderBy(internalChatMessages.createdAt);
 
-    if (unreadRows.length === 0) {
-      return;
-    }
-
-    const participantsByConversationId = new Map<
-      string,
-      Awaited<ReturnType<typeof listGroupMembersOrDmPeers>>
-    >();
-
-    for (const row of unreadRows) {
-      let participants = participantsByConversationId.get(row.conversationId);
-
-      if (!participants) {
-        participants = await listGroupMembersOrDmPeers(agentId, row.conversationId);
-        participantsByConversationId.set(row.conversationId, participants);
-      }
-
-      await handler({
-        targetKey: row.conversationId,
-        messageId: row.messageId,
-        conversationName: row.conversationName
-          ?? (
-            row.conversationType === 'dm'
-              ? row.authorDisplayName
-              : undefined
-          ),
-        authorId: row.authorAccountId,
-        authorDisplayName: row.authorDisplayName,
-        authorUsername: row.authorSlug,
-        content: row.content,
-        attachments: await readMessageAttachments(row.messageId),
-        createdAt: new Date(row.createdAt).toISOString(),
-        metadata: {
-          conversationType: row.conversationType,
-          groupMembers: row.conversationType === 'group'
-            ? participants.map((participant) => ({
-                participantId: participant.accountId,
-                agentId: participant.agentId,
-                slug: participant.slug,
-                displayName: participant.displayName,
-              }))
-            : undefined,
-        },
-      });
-    }
-  }
 }
 
 export type InternalChatService = ReturnType<typeof createInternalChatService>;
