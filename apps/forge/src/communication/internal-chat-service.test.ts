@@ -460,6 +460,110 @@ describe('createInternalChatService', () => {
     });
   });
 
+
+
+// =============================================================================
+// CHUNK 3 — Conversation Listing
+// Covers: listConversations, listConversationsByAccount
+// =============================================================================
+
+  describe('listConversations', () => {
+    it('returns empty array when agent has no conversations', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+      db.select.mockReturnValueOnce(createChain([]));
+
+      const service = createInternalChatService(db);
+      const result = await service.listConversations({ agentId: 'agent-kaelen', limit: 20 });
+
+      expect(result).toEqual([]);
+    });
+
+    it('throws when agent has no chat account', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+      const service = createInternalChatService(db);
+      await expect(
+        service.listConversations({ agentId: 'agent-no-account', limit: 20 }),
+      ).rejects.toThrow('Internal chat account not found for agent: agent-no-account');
+    });
+
+    it('filters messages to unread only when unread=true', async () => {
+      db.query.internalChatAccounts.findFirst
+        .mockResolvedValueOnce(MOCK_ACCOUNT_A)
+        .mockResolvedValueOnce(MOCK_ACCOUNT_A);
+
+      db.select
+        .mockReturnValueOnce(createChain([{ id: 'conv_1', name: null, type: 'direct', updatedAt: MOCK_DATE }]))
+        .mockReturnValueOnce(
+          createChain([
+            { conversationId: 'conv_1', messageId: 'msg_read', content: 'Read', createdAt: MOCK_DATE, authorAccountId: 'acc_other', authorDisplayName: 'Other', unread: 0 },
+            { conversationId: 'conv_1', messageId: 'msg_unread', content: 'Unread', createdAt: MOCK_DATE + 1, authorAccountId: 'acc_other', authorDisplayName: 'Other', unread: 1 },
+          ]),
+        )
+        .mockReturnValueOnce(createChain([{ accountId: 'acc_kaelen', agentId: 'agent-kaelen', slug: 'kaelen', displayName: 'Kaelen' }]));
+
+      const service = createInternalChatService(db);
+      const result = await service.listConversations({ agentId: 'agent-kaelen', limit: 20, unread: true });
+
+      expect(result[0].messages).toHaveLength(1);
+      expect(result[0].messages[0].content).toBe('Unread');
+    });
+  });
+
+  describe('listConversationsByAccount', () => {
+    it('returns empty array when external account has no conversations', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
+        id: 'acc_ext_1', agentId: null, slug: 'slack-ops', displayName: 'Slack Ops', description: null, createdAt: MOCK_DATE, updatedAt: MOCK_DATE,
+      });
+      db.select.mockReturnValueOnce(createChain([]));
+
+      const service = createInternalChatService(db);
+      const result = await service.listConversationsByAccount({ accountId: 'acc_ext_1', limit: 20 });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('returns conversations with messages and participants', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
+        id: 'acc_ext_1', agentId: null, slug: 'slack-ops', displayName: 'Slack Ops', description: null, createdAt: MOCK_DATE, updatedAt: MOCK_DATE,
+      });
+      db.select
+        .mockReturnValueOnce(createChain([{ id: 'conv_1', name: 'Team Chat', type: 'group', updatedAt: MOCK_DATE }]))
+        .mockReturnValueOnce(
+          createChain([{ conversationId: 'conv_1', messageId: 'msg_1', content: 'Hello', createdAt: MOCK_DATE, authorAccountId: 'acc_agent', authorDisplayName: 'Agent' }]),
+        )
+        .mockReturnValueOnce(createChain([{ accountId: 'acc_ext_1', agentId: null, slug: 'slack-ops', displayName: 'Slack Ops' }]));
+
+      const service = createInternalChatService(db);
+      const result = await service.listConversationsByAccount({ accountId: 'acc_ext_1', limit: 20 });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Team Chat');
+      expect(result[0].unreadCount).toBe(0);
+    });
+
+    it('throws when account does not exist', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+      const service = createInternalChatService(db);
+      await expect(
+        service.listConversationsByAccount({ accountId: 'acc-nonexistent', limit: 20 }),
+      ).rejects.toThrow('Internal chat account not found: acc-nonexistent');
+    });
+
+    it('throws when account belongs to an agent (external account required)', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
+        id: 'acc_agent', agentId: 'agent-123', slug: 'agent-123', displayName: 'Agent 123', description: null, createdAt: MOCK_DATE, updatedAt: MOCK_DATE,
+      });
+
+      const service = createInternalChatService(db);
+      await expect(
+        service.listConversationsByAccount({ accountId: 'acc_agent', limit: 20 }),
+      ).rejects.toThrow('External internal chat account not found: acc_agent');
+    });
+  });
+
+
   // -------------------------------------------------------------------------
   // sendMessage
   // -------------------------------------------------------------------------
