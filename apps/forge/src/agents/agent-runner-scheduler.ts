@@ -139,13 +139,13 @@ export function createScheduler(
       : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
   }
 
-  function scheduleNextStep(delayMs: number, stepFn: () => void) {
+  function scheduleNextStep(delayMs: number, stepFn?: () => void) {
     clearTimer();
     state.nextStepAt = Date.now() + delayMs;
     timer = setTimeout(() => {
       timer = null;
       state.nextStepAt = null;
-      stepFn();
+      if (stepFn) { stepFn(); }
     }, Math.max(delayMs, 0));
   }
 
