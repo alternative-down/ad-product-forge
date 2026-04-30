@@ -1,0 +1,533 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Mock helpers
+// ---------------------------------------------------------------------------
+const mockHelpers = {
+  buildAgentAccountDescription: vi.fn(
+    (opts: { agentId: string; agentName: string }) =>
+      `${opts.agentId} (${opts.agentName})`,
+  ),
+  buildGroupMemberViews: vi.fn((members: unknown[]) =>
+    (members as Array<Record<string, unknown>>).map((m) => ({
+      participantId: m.participantId,
+      participantKey: (m.participantKey ?? m.participantId) as string,
+      participantSlug: (m.participantSlug ?? m.participantId) as string,
+      participantName: (m.participantName ?? m.participantId) as string,
+      role: m.role,
+    })),
+  ),
+  buildGroupMetadata: vi.fn((participants: unknown[]) =>
+    (participants as Array<Record<string, string>>).map((p) => ({
+      participantId: p.participantId ?? p.participantId,
+      participantKey: (p.participantKey ?? p.participantId) as string,
+      participantSlug: (p.participantSlug ?? p.participantId) as string,
+      participantName: (p.participantName ?? p.participantId) as string,
+      role: p.role ?? 'normal',
+    })),
+  ),
+  buildConversationParticipantNames: vi.fn(
+    (participants: Array<{ displayName?: string; participantName?: string }>) =>
+      participants.map((p) => p.displayName ?? p.participantName ?? ''),
+  ),
+  createInternalChatSlug: vi.fn((name: string) =>
+    name.toLowerCase().replace(/\s+/g, '-'),
+  ),
+  buildGroupRow: vi.fn((row: Record<string, unknown>) => ({
+    groupId: row.id,
+    name: (row.name ?? row.id) as string,
+    provider: 'internal-chat',
+    conversationKey: row.id,
+    createdAt: new Date(row.createdAt as number).toISOString(),
+    updatedAt: new Date(row.updatedAt as number).toISOString(),
+  })),
+  sanitizeAttachmentName: vi.fn((name: string) => name),
+  resolveContentType: vi.fn(() => undefined),
+  parseFilterDate: vi.fn(() => null),
+  sortParticipantsBySelfFirst: vi.fn(<T extends Record<string, unknown>>(rows: T[]) => rows),
+  resolveConversationDisplayName: vi.fn(() => undefined),
+};
+
+vi.mock('./internal-chat-helpers', async () => mockHelpers);
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+
+vi.mock('../utils/id', () => ({
+  createId: vi.fn(() => 'mock-id-123'),
+}));
+
+// ---------------------------------------------------------------------------
+// Query chain builder
+// ---------------------------------------------------------------------------
+/** thenable + sync-iterable chain — await resolves to result, for...of iterates it. */
+function createChain(result: unknown) {
+  const chain: Record<string, unknown> = {
+    from: vi.fn(() => chain),
+    innerJoin: vi.fn(() => chain),
+    leftJoin: vi.fn(() => chain),
+    where: vi.fn(() => chain),
+    orderBy: vi.fn(() => chain),
+    limit: vi.fn(() => Promise.resolve(result)),
+    in: vi.fn(() => chain),
+    inArray: vi.fn(() => chain),
+  };
+  // Make chain awaitable: await chain → result
+  Object.defineProperty(chain, 'then', {
+    value: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(result).then(onFulfilled),
+    configurable: true, writable: true,
+  });
+  // Make chain sync-iterable: for (const x of chain) → iterates result
+  chain[Symbol.iterator] = function* () { yield* (result as unknown[]); };
+  return chain;
+}
+
+// ---------------------------------------------------------------------------
+// Mock DB factory
+// ---------------------------------------------------------------------------
+// Mock DB factory
+// ---------------------------------------------------------------------------
+function createMockDb() {
+  const db = {
+    query: {
+      internalChatAccounts: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      internalChatConversations: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      internalChatConversationMembers: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      internalChatMessages: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      internalChatMessageAttachments: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      internalChatMessageReads: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    },
+    select: vi.fn(() => createChain([])),
+    insert: vi.fn(),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => Promise.resolve({})),
+      })),
+    })),
+    transaction: vi.fn((fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
+  };
+  return db;
+}
+
+// Import service
+// ---------------------------------------------------------------------------
+const { createInternalChatService } = await import('./internal-chat-service');
+
+const MOCK_NOW = 1700000000000;
+const MOCK_DATE = new Date(MOCK_NOW);
+
+const MOCK_ACCOUNT_A = {
+  id: 'acc_kaelen',
+  agentId: 'agent-kaelen',
+  slug: 'kaelen',
+  displayName: 'Kaelen',
+  description: 'agent-kaelen (Kaelen)',
+  createdAt: MOCK_DATE,
+  updatedAt: MOCK_DATE,
+};
+
+const MOCK_ACCOUNT_B = {
+  id: 'acc_bob',
+  agentId: 'agent-bob',
+  slug: 'bob',
+  displayName: 'Bob',
+  description: 'agent-bob (Bob)',
+  createdAt: MOCK_DATE,
+  updatedAt: MOCK_DATE,
+};
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+describe('createInternalChatService', () => {
+  let db: ReturnType<typeof createMockDb>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(MOCK_NOW);
+    db = createMockDb();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // -------------------------------------------------------------------------
+  // registerAgentAccount
+  // -------------------------------------------------------------------------
+  describe('registerAgentAccount', () => {
+    it('returns existing account when already registered', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A); // listConversations direct call
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A); // listGroupMembersOrDmPeers nested call
+
+      const service = createInternalChatService(db);
+      const result = await service.registerAgentAccount({
+        agentId: 'agent-kaelen',
+        displayName: 'Kaelen',
+        agentName: 'Kaelen',
+      });
+
+      expect(result.accountId).toBe('acc_kaelen');
+      expect(db.insert).not.toHaveBeenCalled();
+    });
+
+    it('inserts a new account when not yet registered', async () => {
+      db.query.internalChatAccounts.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      db.query.internalChatConversationMembers.findMany.mockResolvedValueOnce([]);
+      db.query.internalChatConversations.findFirst.mockResolvedValue(null);
+      db.query.internalChatAccounts.findMany.mockResolvedValueOnce([]);
+
+      db.insert.mockImplementation(() => ({
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue({
+          id: 'acc_new',
+          agentId: 'agent-kaelen',
+          slug: 'kaelen',
+          displayName: 'Kaelen',
+          description: 'agent-kaelen (Kaelen)',
+          createdAt: MOCK_DATE,
+          updatedAt: MOCK_DATE,
+        }),
+      }));
+
+      const service = createInternalChatService(db);
+      const result = await service.registerAgentAccount({
+        agentId: 'agent-kaelen',
+        displayName: 'Kaelen',
+        agentName: 'Kaelen',
+      });
+
+      expect(result.agentId).toBe('agent-kaelen');
+    });
+
+    it('creates DM conversations with existing accounts when registering', async () => {
+      db.query.internalChatAccounts.findFirst
+        .mockResolvedValueOnce(null)   // no existing account
+        .mockResolvedValueOnce(null);  // no existing DM peer for ensureDirectConversation
+      db.query.internalChatConversationMembers.findMany.mockResolvedValueOnce([]);
+      db.query.internalChatConversations.findFirst.mockResolvedValue(null);
+      db.query.internalChatAccounts.findMany.mockResolvedValue([MOCK_ACCOUNT_B]);
+
+      // ensureDirectConversation → db.select().from().where().limit() → empty rows
+      db.select.mockReturnValueOnce(createChain([]));
+
+      let insertCall = 0;
+      db.insert.mockImplementation(() => ({
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue(
+          insertCall++ === 0
+            ? {
+                id: 'dm_new_bob',
+                type: 'dm',
+                name: null,
+                createdByAccountId: 'acc_new',
+                createdAt: MOCK_NOW,
+                updatedAt: MOCK_NOW,
+              }
+            : {
+                id: 'member_new_bob',
+                conversationId: 'dm_new_bob',
+                accountId: 'acc_bob',
+                role: 'normal',
+                createdAt: MOCK_NOW,
+              },
+        ),
+      }));
+
+      const service = createInternalChatService(db);
+      const result = await service.registerAgentAccount({
+        agentId: 'agent-kaelen',
+        displayName: 'Kaelen',
+        agentName: 'Kaelen',
+      });
+
+      expect(result.agentId).toBe('agent-kaelen');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getAccountBySlug
+  // -------------------------------------------------------------------------
+  describe('getAccountBySlug', () => {
+    it('returns the account when found', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountBySlug('kaelen');
+
+      expect(result?.slug).toBe('kaelen');
+    });
+
+    it('returns null when not found', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountBySlug('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getAccountByAgentId
+  // -------------------------------------------------------------------------
+  describe('getAccountByAgentId', () => {
+    it('returns the account when found', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+
+      const service = createInternalChatService(db);
+      const result = await service.getAccountByAgentId('agent-kaelen');
+
+      expect(result?.agentId).toBe('agent-kaelen');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // listAccounts
+  // -------------------------------------------------------------------------
+  describe('listAccounts', () => {
+    it('returns all accounts', async () => {
+      db.query.internalChatAccounts.findMany.mockResolvedValueOnce([
+        MOCK_ACCOUNT_A,
+        MOCK_ACCOUNT_B,
+      ]);
+
+      const service = createInternalChatService(db);
+      const result = await service.listAccounts();
+
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // createChatGroup
+  // -------------------------------------------------------------------------
+  describe('createChatGroup', () => {
+    it('creates a group and returns the group view', async () => {
+      const groupId = 'my-team-group';
+
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+      db.query.internalChatConversations.findFirst.mockResolvedValueOnce(null);
+
+      db.insert.mockImplementation(() => ({
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue({
+          id: groupId,
+          name: 'Team A',
+          type: 'group',
+          createdByAccountId: 'acc_kaelen',
+          createdAt: MOCK_DATE,
+          updatedAt: MOCK_DATE,
+        }),
+      }));
+
+      const service = createInternalChatService(db);
+      const result = await service.createChatGroup({
+        agentId: 'agent-kaelen',
+        conversationKey: groupId,
+        name: 'Team A',
+        creatorName: 'Kaelen',
+      });
+
+      expect(result.groupId).toBe(groupId);
+      expect(result.name).toBe('Team A');
+    });
+
+    it('throws when agent account not found', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+      const service = createInternalChatService(db);
+      await expect(
+        service.createChatGroup({
+          agentId: 'invalid',
+          conversationKey: 'my-group',
+          name: 'Team A',
+          creatorName: 'Kaelen',
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // listChatGroups
+  // -------------------------------------------------------------------------
+  describe('listChatGroups', () => {
+    it('returns groups for an agent', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+
+      const groupRows = [
+        { id: 'grp_1', name: 'Team A', createdAt: MOCK_NOW, updatedAt: MOCK_NOW },
+        { id: 'grp_2', name: 'Team B', createdAt: MOCK_NOW, updatedAt: MOCK_NOW },
+      ];
+      db.select.mockReturnValueOnce(createChain(groupRows));
+
+      const service = createInternalChatService(db);
+      const result = await service.listChatGroups({ agentId: 'agent-kaelen', limit: 20 });
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('returns empty array when agent has no groups', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+      db.select.mockReturnValueOnce(createChain([]));
+
+      const service = createInternalChatService(db);
+      const result = await service.listChatGroups({ agentId: 'agent-kaelen', limit: 20 });
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // listConversations
+  // -------------------------------------------------------------------------
+  describe('listConversations', () => {
+    it('returns conversations for an agent', async () => {
+      // 1. listConversations direct call to getRequiredAgentAccount
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+      // 2. listGroupMembersOrDmPeers nested call to getRequiredAgentAccount
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+
+      const conversationRows = [
+        { id: 'conv_1', name: 'DM with Bob', type: 'dm', updatedAt: MOCK_NOW },
+      ];
+      const messageRows = [
+        {
+          conversationId: 'conv_1',
+          messageId: 'msg_1',
+          content: 'Hello',
+          createdAt: MOCK_NOW,
+          authorAccountId: 'acc_kaelen',
+          authorDisplayName: 'Kaelen',
+          unread: 0,
+        },
+      ];
+
+      const membersChain = createChain([{
+        accountId: 'acc_kaelen',
+        agentId: 'agent-kaelen',
+        slug: 'kaelen',
+        displayName: 'Kaelen',
+      }]);
+
+      // 1st → conversation rows; 2nd → message rows; 3rd → group members
+      db.select
+        .mockReturnValueOnce(createChain(conversationRows))
+        .mockReturnValueOnce(createChain(messageRows))
+        .mockReturnValueOnce(membersChain);
+
+      const service = createInternalChatService(db);
+      const result = await service.listConversations({ agentId: 'agent-kaelen', limit: 20 });
+
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(1);
+    });
+
+    it('returns empty list when no conversations', async () => {
+      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+      db.select.mockReturnValueOnce(createChain([]));
+
+      const service = createInternalChatService(db);
+      const result = await service.listConversations({ agentId: 'agent-kaelen', limit: 20 });
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // sendMessage
+  // -------------------------------------------------------------------------
+  describe('sendMessage', () => {
+    it('stores a message and returns success with message id', async () => {
+      const convId = 'conv_1';
+
+      db.query.internalChatAccounts.findFirst
+        .mockResolvedValueOnce(MOCK_ACCOUNT_A) // getAccountByAgentId (author)
+        .mockResolvedValueOnce(MOCK_ACCOUNT_A) // getRequiredAccount (author)
+        .mockResolvedValueOnce(MOCK_ACCOUNT_A); // getRequiredAccount (member)
+
+      db.query.internalChatConversations.findFirst.mockResolvedValueOnce({
+        id: convId,
+        name: 'Team A',
+        type: 'group',
+        createdAt: MOCK_DATE,
+        updatedAt: MOCK_DATE,
+        createdByAccountId: 'acc_kaelen',
+      });
+
+      db.query.internalChatConversationMembers.findMany.mockResolvedValueOnce([
+        {
+          accountId: 'acc_kaelen',
+          conversationId: convId,
+          role: 'admin',
+          agentId: 'agent-kaelen',
+          participantId: 'acc_kaelen',
+          participantKey: 'agent-kaelen',
+          participantSlug: 'kaelen',
+          participantName: 'Kaelen',
+          createdAt: MOCK_DATE,
+        },
+      ]);
+
+      db.query.internalChatMessageReads.findMany.mockResolvedValueOnce([]);
+      db.query.internalChatMessages.findFirst.mockResolvedValueOnce(null);
+      db.query.internalChatMessageAttachments.findMany.mockResolvedValueOnce([]);
+
+      const membersChain = createChain([{
+        accountId: 'acc_kaelen',
+        agentId: 'agent-kaelen',
+        slug: 'kaelen',
+        displayName: 'Kaelen',
+      }]);
+
+      // First select → ensureDirectConversation (empty → creates new DM)
+      // Second select → listGroupMembersOrDmPeersByAccount (returns member)
+      db.select
+        .mockReturnValueOnce(createChain([]))
+        .mockReturnValueOnce(membersChain);
+
+      db.insert.mockImplementation(() => ({
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue({
+          id: 'msg_1',
+          conversationId: convId,
+          content: 'Hello',
+          authorAccountId: 'acc_kaelen',
+          createdAt: MOCK_NOW,
+        }),
+      }));
+
+      const service = createInternalChatService(db);
+      const result = await service.sendMessage({
+        accountId: 'acc_kaelen',
+        targetKey: convId,
+        content: 'Hello',
+        attachments: [],
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.messageId).toBe('mock-id-123');
+    });
+  });
+});
