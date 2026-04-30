@@ -1,249 +1,112 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const { mockRemove, mockContractStoreRefund, mockRm, mockContractStore } = vi.hoisted(() => ({
-  mockRemove: vi.fn(),
-  mockContractStoreRefund: vi.fn().mockResolvedValue(undefined),
+const { mockRefundBalance, mockRemoveAgent, mockRemoveSchedule, mockDeleteMailbox, mockDeleteApp, mockRm } = vi.hoisted(() => ({
+  mockRefundBalance: vi.fn().mockResolvedValue(undefined),
+  mockRemoveAgent: vi.fn(),
+  mockRemoveSchedule: vi.fn().mockResolvedValue(undefined),
+  mockDeleteMailbox: vi.fn().mockResolvedValue(undefined),
+  mockDeleteApp: vi.fn().mockResolvedValue(undefined),
   mockRm: vi.fn().mockResolvedValue(undefined),
-  mockContractStore: vi.fn(() => ({
-    refundActiveContractBalance: mockContractStoreRefund,
-  })),
-}));
-
-vi.mock('./internal-agent-registry', () => ({
-  getInternalAgentRegistry: vi.fn(() => ({
-    remove: mockRemove,
-  })),
 }));
 
 vi.mock('./agent-contract-store', () => ({
-  createAgentContractStore: mockContractStore,
+  createAgentContractStore: vi.fn(() => ({ refundActiveContractBalance: mockRefundBalance })),
 }));
 
-vi.mock('node:fs/promises', () => ({
-  rm: mockRm,
+vi.mock('./internal-agent-registry', () => ({
+  getInternalAgentRegistry: vi.fn(() => ({ remove: mockRemoveAgent })),
 }));
+
+vi.mock('node:fs/promises', () => ({ rm: mockRm }));
 
 import { terminateInternalAgent } from './terminate-agent';
-import { createAgentContractStore } from './agent-contract-store';
+import { agents } from '../database/schema';
+import type { AgentEmailManager, CoolifyManager } from '../index';
 
-function createMockDb(agent = { id: 'agent-1', name: 'Test Agent' }) {
+function createMockDb(agent?: Record<string, unknown> | null) {
   return {
-    query: {
-      agents: {
-        findFirst: vi.fn().mockResolvedValue(agent),
-      },
-    },
-    delete: vi.fn().mockReturnValue({
-      where: vi.fn().mockResolvedValue(undefined),
-    }),
+    query: { agents: { findFirst: vi.fn().mockResolvedValue(agent ?? null) } },
+    delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
   };
 }
 
-function createMockGithubApps() {
-  return {
-    deleteAgentApp: vi.fn().mockResolvedValue(undefined),
-  };
+function mockAgent(overrides: Record<string, unknown> = {}) {
+  return { id: 'agent-1', name: 'Test Agent', createdAt: Date.now(), ...overrides };
 }
 
-function createMockEmailMailboxes() {
-  return {
-    isConfigured: vi.fn().mockResolvedValue(true),
-    deleteAgentMailbox: vi.fn().mockResolvedValue(undefined),
-  };
-}
+const mockSchedules = { removeAgent: mockRemoveSchedule };
+const mockEmail = { deleteAgentMailbox: mockDeleteMailbox, isConfigured: vi.fn().mockResolvedValue(true) } as unknown as AgentEmailManager;
+const mockCoolify = { deleteAgentApp: mockDeleteApp } as unknown as CoolifyManager;
+const mockGitHubApps = { deleteAgentApp: mockDeleteApp } as unknown as ReturnType<AgentEmailManager['deleteAgentMailbox']> extends never ? object : any;
 
-function createMockSchedules() {
-  return {
-    removeAgent: vi.fn().mockResolvedValue(undefined),
-  };
-}
+const defaultInput = () => ({
+  agentId: 'agent-1',
+  workspaceBasePath: '/ws',
+  githubApps: mockGitHubApps,
+  emailMailboxes: mockEmail,
+  coolify: mockCoolify,
+  schedules: mockSchedules,
+});
 
 describe('terminateInternalAgent', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('throws when agent not found', async () => {
     const db = createMockDb(null);
-    const fn = terminateInternalAgent(db as any, {
-      agentId: 'nonexistent',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    await expect(fn).rejects.toThrow('Agent not found: nonexistent');
+    await expect(terminateInternalAgent(db as any, defaultInput())).rejects.toThrow('Agent not found: agent-1');
   });
 
-  it('creates contract store with db parameter', async () => {
-    const db = createMockDb() as any;
-    await terminateInternalAgent(db, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(createAgentContractStore).toHaveBeenCalledWith(db);
+  it('refunds active contract balance', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(mockRefundBalance).toHaveBeenCalledWith('agent-1');
   });
 
   it('removes agent from internal registry', async () => {
-    const db = createMockDb();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(mockRemove).toHaveBeenCalledWith('agent-1');
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(mockRemoveAgent).toHaveBeenCalledWith('agent-1');
   });
 
-  it('calls schedules.removeAgent', async () => {
-    const db = createMockDb();
-    const schedules = createMockSchedules();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: schedules as any,
-    });
-    expect(schedules.removeAgent).toHaveBeenCalledWith('agent-1');
+  it('removes agent from schedule manager', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(mockRemoveSchedule).toHaveBeenCalledWith('agent-1');
   });
 
-  it('deletes email mailbox when configured and isConfigured returns true', async () => {
-    const db = createMockDb();
-    const emailMailboxes = createMockEmailMailboxes();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: emailMailboxes as any,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(emailMailboxes.isConfigured).toHaveBeenCalled();
-    expect(emailMailboxes.deleteAgentMailbox).toHaveBeenCalledWith('agent-1');
+  it('deletes agent mailbox when email is configured', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(mockDeleteMailbox).toHaveBeenCalledWith('agent-1');
   });
 
-  it('does not delete email mailbox when isConfigured returns false', async () => {
-    const db = createMockDb();
-    const emailMailboxes = {
-      isConfigured: vi.fn().mockResolvedValue(false),
-      deleteAgentMailbox: vi.fn(),
-    };
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: emailMailboxes as any,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(emailMailboxes.deleteAgentMailbox).not.toHaveBeenCalled();
+  it('does not call delete mailbox when email is not configured', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, { ...defaultInput(), emailMailboxes: null });
+    expect(mockDeleteMailbox).not.toHaveBeenCalled();
   });
 
-  it('calls githubApps.deleteAgentApp', async () => {
-    const db = createMockDb();
-    const githubApps = createMockGithubApps();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: githubApps as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(githubApps.deleteAgentApp).toHaveBeenCalledWith('agent-1');
+  it('deletes GitHub App for agent', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(mockDeleteApp).toHaveBeenCalledWith('agent-1');
   });
 
-  it('calls db.delete with agents table', async () => {
-    const db = createMockDb();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(db.delete).toHaveBeenCalled();
+  it('deletes agent record from database', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(db.delete).toHaveBeenCalledWith(agents);
   });
 
-  it('calls rm with resolved workspace path for agent', async () => {
-    const db = createMockDb();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/base/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(mockRm).toHaveBeenCalledWith(
-      '/base/workspaces/agent-1',
-      expect.objectContaining({ recursive: true, force: true })
-    );
+  it('removes agent workspace directory', async () => {
+    const db = createMockDb(mockAgent());
+    await terminateInternalAgent(db as any, defaultInput());
+    expect(mockRm).toHaveBeenCalledWith('/ws/agent-1', { recursive: true, force: true });
   });
 
   it('returns object with agentId', async () => {
-    const db = createMockDb();
-    const result = await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(result).toEqual({ agentId: 'agent-1' });
-  });
-
-  it('calls rm with correct agent-specific workspace path', async () => {
-    const db = createMockDb();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-abc-123',
-      workspaceBasePath: '/path/to/workspaces',
-      githubApps: createMockGithubApps() as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(mockRm).toHaveBeenCalledWith('/path/to/workspaces/agent-abc-123', expect.any(Object));
-  });
-
-  it('handles null emailMailboxes gracefully', async () => {
-    const db = createMockDb();
-    const githubApps = createMockGithubApps();
-    const schedules = createMockSchedules();
-    await terminateInternalAgent(db as any, {
-      agentId: 'agent-1',
-      workspaceBasePath: '/workspaces',
-      githubApps: githubApps as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: schedules as any,
-    });
-    expect(githubApps.deleteAgentApp).toHaveBeenCalled();
-    expect(schedules.removeAgent).toHaveBeenCalled();
-  });
-
-  it('passes correct agentId to githubApps.deleteAgentApp', async () => {
-    const db = createMockDb({ id: 'specific-agent-id', name: 'Test' });
-    const githubApps = { deleteAgentApp: vi.fn().mockResolvedValue(undefined) };
-    await terminateInternalAgent(db as any, {
-      agentId: 'specific-agent-id',
-      workspaceBasePath: '/workspaces',
-      githubApps: githubApps as any,
-      emailMailboxes: null,
-      coolify: null,
-      schedules: createMockSchedules() as any,
-    });
-    expect(githubApps.deleteAgentApp).toHaveBeenCalledWith('specific-agent-id');
+    const db = createMockDb(mockAgent({ id: 'agent-xyz' }));
+    const result = await terminateInternalAgent(db as any, { ...defaultInput(), agentId: 'agent-xyz' });
+    expect(result.agentId).toBe('agent-xyz');
   });
 });

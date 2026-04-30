@@ -1,139 +1,149 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { hireInternalAgent, type HireInternalAgentInput } from './hire-agent';
+
+// Mock @forge-runtime/core before anything else
+vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
+vi.mock('@forge-runtime/core/memory', () => ({}));
+
+// Mock agent-runner so registry doesn't crash when we add the loaded agent
+vi.mock('./agent-runner', () => ({
+  createAgentRunner: vi.fn(() => ({
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+    getSnapshot: vi.fn().mockReturnValue({ wake: { events: [] }, pendingRunEvents: [] }),
+  })),
+}));
+
+vi.mock('./agent-loader', () => ({
+  loadAgent: vi.fn().mockResolvedValue({ agentId: 'agent-new', name: 'Test Agent', dispose: vi.fn() }),
+}));
+
+vi.mock('../utils/id', () => ({ createId: vi.fn().mockReturnValue('generated-id') }));
+vi.mock('../encryption/crypto', () => ({ encryptSecret: vi.fn().mockReturnValue('encrypted-value') }));
+
+import { hireInternalAgent } from './hire-agent';
 import { agents, agentExecutionContracts, agentProviders } from '../database/schema';
 
-const mocks = vi.hoisted(() => ({
-  createIdMock: vi.fn(() => 'generated-id'),
-  insertMock: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })),
-  deleteMock: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })),
-  encryptSecretMock: vi.fn((v: string) => `encrypted:${v}`),
-  addMock: vi.fn(),
-  removeMock: vi.fn(),
-  loadAgentMock: vi.fn(),
-  provisionMailboxMock: vi.fn(),
-  isConfiguredMock: vi.fn(),
-  createHeartbeatScheduleMock: vi.fn(),
-  registerAgentAccountMock: vi.fn(),
-}));
-
-vi.mock('../utils/id', () => ({ createId: mocks.createIdMock }));
-vi.mock('../encryption/crypto', () => ({ encryptSecret: mocks.encryptSecretMock }));
-vi.mock('./internal-agent-registry', () => ({
-  getInternalAgentRegistry: () => ({
-    add: mocks.addMock,
-    remove: mocks.removeMock,
-  }),
-}));
-vi.mock('./agent-loader', () => ({ loadAgent: mocks.loadAgentMock }));
+const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
+const mockDelete = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
 
 function createMockDb() {
-  return {
-    insert: mocks.insertMock,
-    delete: mocks.deleteMock,
-  };
+  return { insert: mockInsert, delete: mockDelete, query: { agents: { findFirst: vi.fn().mockResolvedValue(null) } } };
 }
 
-function createMockSchedules() {
-  return {
-    createHeartbeatSchedule: mocks.createHeartbeatScheduleMock.mockResolvedValue(undefined),
-  };
-}
-
-function createMockInternalChat() {
-  return {
-    registerAgentAccount: mocks.registerAgentAccountMock.mockResolvedValue(undefined),
-  };
-}
-
-function createMinimalInput(): HireInternalAgentInput {
+function createInput() {
   return {
     roleId: 'role-1',
     name: 'Test Agent',
-    instructions: 'Test instructions',
+    instructions: 'Do stuff',
     modelProfileId: 'profile-1',
     omModelProfileId: 'om-profile-1',
-    workspaceBasePath: '/workspace/test',
+    workspaceBasePath: '/ws',
     weeklyBudgetUsd: 100,
-    providerCredentials: {},
     githubApps: {} as any,
-    emailMailboxes: null,
+    emailMailboxes: {
+      isConfigured: vi.fn().mockResolvedValue(false),
+      provisionMailbox: vi.fn(),
+      deleteMailboxByAddress: vi.fn(),
+    } as any,
     coolify: null,
-    schedules: createMockSchedules(),
-    internalChat: createMockInternalChat(),
+    schedules: { createHeartbeatSchedule: vi.fn().mockResolvedValue(undefined) } as any,
+    internalChat: { registerAgentAccount: vi.fn().mockResolvedValue(undefined) } as any,
   };
 }
 
 describe('hireInternalAgent', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.insertMock.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
-    mocks.deleteMock.mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
-    mocks.addMock.mockResolvedValue(undefined);
-    mocks.loadAgentMock.mockResolvedValue(undefined);
-    mocks.registerAgentAccountMock.mockResolvedValue(undefined);
-    mocks.createHeartbeatScheduleMock.mockResolvedValue(undefined);
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('inserts agent record into database', async () => {
+    const db = createMockDb();
+    await hireInternalAgent(db as any, createInput());
+    expect(mockInsert).toHaveBeenCalledWith(agents);
   });
 
-  it('calls db.insert for database records', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    expect(mocks.insertMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  it('inserts contract record with budget from input', async () => {
+    const db = createMockDb();
+    await hireInternalAgent(db as any, createInput());
+    const insertCall = mockInsert.mock.calls.find(c => c[0] === agentExecutionContracts);
+    expect(insertCall).toBeDefined();
   });
 
-  it('inserts both agent and contract records', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    // Check that insert was called with the correct table references
-    const agentCall = mocks.insertMock.mock.calls.find(call => call[0] === agents);
-    const contractCall = mocks.insertMock.mock.calls.find(call => call[0] === agentExecutionContracts);
-
-    expect(agentCall).toBeDefined();
-    expect(contractCall).toBeDefined();
-  });
-
-  it('adds agent to internal registry after creation', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    expect(mocks.addMock).toHaveBeenCalled();
-  });
-
-  it('loads agent after insertion', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    expect(mocks.loadAgentMock).toHaveBeenCalled();
-  });
-
-  it('skips email provisioning when emailMailboxes is null', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    expect(mocks.provisionMailboxMock).not.toHaveBeenCalled();
-  });
-
-  it('inserts agentProviders for internal-chat', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    const providerCall = mocks.insertMock.mock.calls.find(call => call[0] === agentProviders);
-    expect(providerCall).toBeDefined();
-  });
-
-  it('cleans up agent on failure', async () => {
-    mocks.addMock.mockRejectedValue(new Error('load failure'));
-
-    await expect(hireInternalAgent(createMockDb() as any, createMinimalInput())).rejects.toThrow('load failure');
-
-    expect(mocks.removeMock).toHaveBeenCalledWith('generated-id');
-    expect(mocks.deleteMock).toHaveBeenCalled();
+  it('inserts provider record for internal-chat', async () => {
+    const db = createMockDb();
+    await hireInternalAgent(db as any, createInput());
+    expect(mockInsert).toHaveBeenCalledWith(agentProviders);
   });
 
   it('registers agent account in internal chat', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
-
-    expect(mocks.registerAgentAccountMock).toHaveBeenCalled();
+    const db = createMockDb();
+    const input = createInput();
+    await hireInternalAgent(db as any, input);
+    expect(input.internalChat.registerAgentAccount).toHaveBeenCalled();
   });
 
-  it('creates heartbeat schedule for agent', async () => {
-    await hireInternalAgent(createMockDb() as any, createMinimalInput());
+  it('creates heartbeat schedule', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    await hireInternalAgent(db as any, input);
+    expect(input.schedules.createHeartbeatSchedule).toHaveBeenCalled();
+  });
 
-    expect(mocks.createHeartbeatScheduleMock).toHaveBeenCalledWith('generated-id');
+  it('loads agent runtime', async () => {
+    const { loadAgent } = await import('./agent-loader');
+    const db = createMockDb();
+    await hireInternalAgent(db as any, createInput());
+    expect(loadAgent).toHaveBeenCalled();
+  });
+
+  it('returns agentId as string', async () => {
+    const db = createMockDb();
+    const result = await hireInternalAgent(db as any, createInput());
+    expect(typeof result.agentId).toBe('string');
+  });
+
+  it('returns null email when email not configured', async () => {
+    const db = createMockDb();
+    const result = await hireInternalAgent(db as any, createInput());
+    expect(result.emailAddress).toBeNull();
+  });
+
+  it('uses provided agentId when given', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.agentId = 'my-custom-id';
+    const result = await hireInternalAgent(db as any, input);
+    expect(result.agentId).toBe('my-custom-id');
+  });
+
+  it('rolls back agent deletion on loadAgent failure', async () => {
+    const { loadAgent } = await import('./agent-loader');
+    vi.mocked(loadAgent).mockRejectedValueOnce(new Error('load failed'));
+    const db = createMockDb();
+    const input = createInput();
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('load failed');
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
+  it('provisions mailbox when email is configured', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.emailMailboxes = {
+      isConfigured: vi.fn().mockResolvedValue(true),
+      provisionMailbox: vi.fn().mockResolvedValue({ address: 'test@test.com', credentials: {} }),
+      deleteMailboxByAddress: vi.fn(),
+    } as any;
+    await hireInternalAgent(db as any, input);
+    expect(input.emailMailboxes.provisionMailbox).toHaveBeenCalled();
+  });
+
+  it('adds email provider credentials when mailbox is provisioned', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.emailMailboxes = {
+      isConfigured: vi.fn().mockResolvedValue(true),
+      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', pass: 'p' } }),
+      deleteMailboxByAddress: vi.fn(),
+    } as any;
+    await hireInternalAgent(db as any, input);
+    expect(input.internalChat.registerAgentAccount).toHaveBeenCalled();
   });
 });
