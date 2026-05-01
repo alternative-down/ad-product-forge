@@ -12,7 +12,7 @@ const fsMocks = vi.hoisted(() => ({
     if (mockState.readdir.length === 0) return Promise.resolve([]);
     return Promise.resolve(mockState.readdir.shift()!);
   }),
-  readFile: vi.fn((path: string) => {
+  readFile: vi.fn((_path: string) => {
     if (mockState.readFileErrors.length > 0) {
       const err = mockState.readFileErrors.shift()!;
       return Promise.reject(err) as never;
@@ -70,7 +70,7 @@ describe('createAgentSkillTools', () => {
         findFirst: vi.fn(),
       },
     },
-  } as any;
+  } as { insert: () => { values: () => Promise<{ rowid: number }> }; query: { agents: { findFirst: () => unknown } } };
 
   const baseInput = {
     db: mockDb,
