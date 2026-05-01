@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getStoredAdminSecret } from '@/lib/admin-secret';
 
@@ -20,7 +19,7 @@ import { request, requestBlob, validateAdminSecret } from './core';
 // ───────────────────────────────────────────────────────────────────────────────
 
 function buildMockFetch(response: Response) {
-  return vi.fn<typeof fetch>((_url: URL | Request | string) => {
+  return vi.fn<typeof fetch>(() => {
     return Promise.resolve(response);
   });
 }
