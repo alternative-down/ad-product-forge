@@ -539,6 +539,7 @@ describe('toScheduleSummary', () => {
   it('maps id, kind, name, and scheduleType', () => {
     const row = makeRow({ id: 's99', kind: 'data', name: 'My Job', scheduleType: 'cron' });
     const r = toScheduleSummary(row);
+    expect(r.scheduleId).toBe('s99');
     expect(r.id).toBe('s99');
     expect(r.kind).toBe('data');
     expect(r.name).toBe('My Job');
