@@ -49,6 +49,21 @@ const mockHelpers = {
 };
 
 vi.mock('./internal-chat-helpers', async () => mockHelpers);
+const mockGroups = vi.hoisted(() => ({
+  createChatGroup: vi.fn(),
+  addMemberToGroup: vi.fn(),
+  removeMemberFromGroup: vi.fn(),
+  changeChatGroup: vi.fn(),
+  listChatGroups: vi.fn(),
+  listGroupMembers: vi.fn(),
+  listGroupMembersByAccount: vi.fn(),
+}));
+vi.mock('./internal-chat-groups', async () => ({
+  ...(await vi.importActual('./internal-chat-groups')),
+  createInternalChatGroups: () => mockGroups,
+  createInternalChatService: () => mockGroups,
+}));
+
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
@@ -334,21 +349,14 @@ describe('createInternalChatService', () => {
   describe('createChatGroup', () => {
     it('creates a group and returns the group view', async () => {
       const groupId = 'my-team-group';
-
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
-      db.query.internalChatConversations.findFirst.mockResolvedValueOnce(null);
-
-      db.insert.mockImplementation(() => ({
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue({
-          id: groupId,
-          name: 'Team A',
-          type: 'group',
-          createdByAccountId: 'acc_kaelen',
-          createdAt: MOCK_DATE,
-          updatedAt: MOCK_DATE,
-        }),
-      }));
+      mockGroups.createChatGroup.mockResolvedValueOnce({
+        groupId,
+        name: 'Team A',
+        provider: 'internal-chat',
+        conversationKey: groupId,
+        creatorMember: { participantId: 'acc_kaelen', participantName: 'Kaelen', role: 'admin' },
+        createdAt: '2025-01-01T00:00:00.000Z',
+      });
 
       const service = createInternalChatService(db);
       const result = await service.createChatGroup({
@@ -360,10 +368,16 @@ describe('createInternalChatService', () => {
 
       expect(result.groupId).toBe(groupId);
       expect(result.name).toBe('Team A');
+      expect(mockGroups.createChatGroup).toHaveBeenCalledWith({
+        agentId: 'agent-kaelen',
+        conversationKey: groupId,
+        name: 'Team A',
+        creatorName: 'Kaelen',
+      });
     });
 
     it('throws when agent account not found', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+      mockGroups.createChatGroup.mockRejectedValueOnce(new Error('Agent account not found'));
 
       const service = createInternalChatService(db);
       await expect(
@@ -373,7 +387,7 @@ describe('createInternalChatService', () => {
           name: 'Team A',
           creatorName: 'Kaelen',
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow('Agent account not found');
     });
   });
 
@@ -382,23 +396,21 @@ describe('createInternalChatService', () => {
   // -------------------------------------------------------------------------
   describe('listChatGroups', () => {
     it('returns groups for an agent', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
-
       const groupRows = [
-        { id: 'grp_1', name: 'Team A', createdAt: MOCK_NOW, updatedAt: MOCK_NOW },
-        { id: 'grp_2', name: 'Team B', createdAt: MOCK_NOW, updatedAt: MOCK_NOW },
+        { groupId: 'grp_1', name: 'Team A', conversationKey: 'grp_1', provider: 'internal-chat', createdAt: '2025-01-01T00:00:00.000Z', memberCount: 3 },
+        { groupId: 'grp_2', name: 'Team B', conversationKey: 'grp_2', provider: 'internal-chat', createdAt: '2025-01-02T00:00:00.000Z', memberCount: 2 },
       ];
-      db.select.mockReturnValueOnce(createChain(groupRows));
+      mockGroups.listChatGroups.mockResolvedValueOnce(groupRows);
 
       const service = createInternalChatService(db);
       const result = await service.listChatGroups({ agentId: 'agent-kaelen', limit: 20 });
 
       expect(result).toHaveLength(2);
+      expect(mockGroups.listChatGroups).toHaveBeenCalledWith({ agentId: 'agent-kaelen', limit: 20 });
     });
 
     it('returns empty array when agent has no groups', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
-      db.select.mockReturnValueOnce(createChain([]));
+      mockGroups.listChatGroups.mockResolvedValueOnce([]);
 
       const service = createInternalChatService(db);
       const result = await service.listChatGroups({ agentId: 'agent-kaelen', limit: 20 });
