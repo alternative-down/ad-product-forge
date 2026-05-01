@@ -49,7 +49,7 @@ describe('safe-identifier', () => {
     it('produces valid identifier (starts with letter or underscore)', () => {
       const ids = ['hello', '123abc', 'a-b', 'a b', '...', '__test__'];
       for (const id of ids) {
-        const result = toForgeSafeIdentifier(id);
+        const _result = toForgeSafeIdentifier(id);
         expect(/^[A-Za-z_]/).toBeTruthy();
       }
     });

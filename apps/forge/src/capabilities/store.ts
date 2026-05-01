@@ -291,12 +291,19 @@ export function createCapabilityStore(db: Database) {
     roleId: string;
     capabilityId: string;
   }) {
-    return input.action === 'add'
-      ? addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId })
-      : removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
+    const isWorkflow = input.capabilityId.startsWith('wf-');
+    if (input.action === 'add') {
+      return isWorkflow
+        ? addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
+        : addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
+    } else {
+      return isWorkflow
+        ? removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
+        : removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
+    }
   }
-
   async function getAgentCapabilities(agentId: string): Promise<CapabilitySet> {
+
     const agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
     });

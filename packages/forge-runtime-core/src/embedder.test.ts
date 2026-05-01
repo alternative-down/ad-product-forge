@@ -4,7 +4,6 @@ import {
   resolveWorkspaceEmbedderId,
   WORKSPACE_EMBEDDER_IDS,
 } from './embedder.js';
-import type { WorkspaceEmbedderId } from './embedder.js';
 
 describe('embedder', () => {
   describe('WORKSPACE_EMBEDDER_IDS', () => {

@@ -45,6 +45,26 @@ export interface InternalChatConnection {
    * Returns true if a handler was found and called; false otherwise.
    */
   deliverMessage(agentId: string, message: InternalChatDeliveryMessage): boolean;
+  /**
+   * Alias of deliverMessage for single-agent direct delivery.
+   * Returns true if a handler was found and called; false otherwise.
+   */
+  deliverToHandler(agentId: string, message: InternalChatDeliveryMessage): boolean;
+  /**
+   * Delivers a message to all participants who have a registered handler,
+   * optionally excluding one account (e.g., the sender).
+   * Returns the array of agentIds that received the message.
+   */
+  deliverToParticipants(params: {
+    participants: InternalChatGroupParticipant[];
+    conversation: { id: string; name: string; type: "dm" | "group" };
+    messageId: string;
+    author: { id: string; displayName: string; slug: string };
+    content: string;
+    attachments: CommunicationFile[];
+    createdAt: string;
+    excludeAccountId?: string;
+  }): string[];
 }
 
 function createConnectionImpl(
@@ -184,10 +204,70 @@ function createConnectionImpl(
     }
   }
 
+  function deliverToHandler(
+    agentId: string,
+    message: InternalChatDeliveryMessage,
+  ): boolean {
+    return deliverMessage(agentId, message);
+  }
+
+  function deliverToParticipants(params: {
+    participants: InternalChatGroupParticipant[];
+    conversation: { id: string; name: string; type: "dm" | "group" };
+    messageId: string;
+    author: { id: string; displayName: string; slug: string };
+    content: string;
+    attachments: CommunicationFile[];
+    createdAt: string;
+    excludeAccountId?: string;
+  }): string[] {
+    const liveAgentIds: string[] = [];
+
+    for (const participant of params.participants) {
+      if (participant.agentId === undefined) {
+        continue;
+      }
+      if (
+        params.excludeAccountId !== undefined &&
+        participant.accountId === params.excludeAccountId
+      ) {
+        continue;
+      }
+      if (!handlers.has(participant.agentId)) {
+        continue;
+      }
+
+      void handlers.get(participant.agentId)!({
+        targetKey: params.conversation.id,
+        messageId: params.messageId,
+        conversationName: params.conversation.name,
+        authorId: params.author.id,
+        authorDisplayName: params.author.displayName,
+        authorUsername: params.author.slug,
+        content: params.content,
+        attachments: params.attachments,
+        createdAt: params.createdAt,
+        metadata: {
+          conversationType: params.conversation.type,
+          groupMembers:
+            params.conversation.type === "group"
+              ? buildGroupMetadata(params.participants)
+              : undefined,
+        },
+      });
+
+      liveAgentIds.push(participant.agentId);
+    }
+
+    return liveAgentIds;
+  }
+
   return {
     onReceiveMessage,
     clearHandler,
     deliverMessage,
+    deliverToHandler,
+    deliverToParticipants,
   };
 }
 

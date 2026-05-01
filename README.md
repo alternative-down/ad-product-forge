@@ -37,9 +37,11 @@ For an explicit list of what is still missing, see [docs/current/known-gaps.md](
   - Separate human admin UI.
   - Owns the maintenance dashboard for runtime visibility, agent lifecycle, runtime config, provider credentials, schedules, and role tool grants.
 
-- `packages/mastra-engine/`
-  - Shared engine layer.
-  - Owns communication abstractions, wake queue, memory components, and shared LLM gateway pieces.
+- `packages/agent-runtime-core/`
+  - Agent runtime core: actions, memory, integrations, adapters, and gateways.
+
+- `packages/forge-runtime-core/`
+  - Forge runtime core: internal-chat service, workflow registry, agent lifecycle.
 
 - `docs/current/`
   - Current implemented behavior.

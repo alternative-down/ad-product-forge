@@ -106,10 +106,9 @@ export function createInternalChatTools(
             ...result,
           };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use action create with create.name to create a group. Use action update with update.groupId to update one existing group.',
           };
         }

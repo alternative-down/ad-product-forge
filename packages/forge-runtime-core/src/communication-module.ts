@@ -15,13 +15,13 @@ import type {
   CommunicationProviderMessage,
 } from './communication.js';
 
-const contactRecordSchema = z.object({
+const _contactRecordSchema = z.object({
   slug: z.string().min(1),
   displayName: z.string().min(1),
   description: z.string().optional(),
 });
 
-type ContactRecord = z.infer<typeof contactRecordSchema>;
+type ContactRecord = z.infer<typeof _contactRecordSchema>;
 
 type RuntimeWorkspaceFilesystem = {
   readFile(path: string): Promise<string | Uint8Array | Buffer>;

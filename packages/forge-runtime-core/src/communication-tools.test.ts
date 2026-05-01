@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createExternalAccountTools } from './communication-tools.js';
-import { createTool } from './tools.js';
+// createTool used by vi.mock only; imported value needed for hoisting check
 
 vi.mock('./tools.js', () => ({ createTool: vi.fn((def) => def) }));
 

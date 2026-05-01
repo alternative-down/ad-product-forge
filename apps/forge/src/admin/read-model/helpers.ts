@@ -205,6 +205,7 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
  */
 export function toScheduleSummary(row: AgentSchedule) {
   return {
+    scheduleId: row.id,
     id: row.id,
     kind: row.kind,
     name: row.name,

@@ -143,7 +143,6 @@ export async function main() {
 }
 
 main().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  forgeDebug({ scope: 'forge-main', level: 'error', message: 'Fatal error', context: { error: message } });
+  forgeDebug({ scope: 'forge-main', level: 'error', message: 'Fatal error', context: { error: error instanceof Error ? error.message : String(error) } });
   process.exitCode = 1;
 });
