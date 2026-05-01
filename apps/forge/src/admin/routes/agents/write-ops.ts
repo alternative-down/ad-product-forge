@@ -295,9 +295,14 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/github-manifest-config/update',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
-      // Delegate to capability store update — this route updates github manifest config
-      // The actual implementation writes to agentGithubManifestConfigs table
-      return jsonResponse({ success: true, agentId: body.agentId });
+      if (!input.githubApps) {
+        return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
+      }
+      const provisioning = await input.githubApps.updateAgentManifestConfig({
+        agentId: body.agentId,
+        manifestConfig: body.manifestConfig,
+      });
+      return jsonResponse({ success: true, agentId: body.agentId, provisioning });
     },
   });
 
