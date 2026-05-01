@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ConversationMessage, ConversationStore, ConversationThread } from 'agent-runtime-core/integrations';
+import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/integrations';
 
 export type RuntimeSessionModelMessage =
   | {

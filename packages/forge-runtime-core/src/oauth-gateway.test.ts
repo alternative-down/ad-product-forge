@@ -40,14 +40,14 @@ describe('oauth-gateway', () => {
 
     it('parses openai-codex key format', async () => {
       const { createOAuthGateway, OAUTH_GATEWAY_ID } = await import('./oauth-gateway.js');
-      const gateway = createOAuthGateway();
+      const _gateway = createOAuthGateway();
       const key = `${OAUTH_GATEWAY_ID}/openai-codex/model`;
       expect(key.startsWith(`${OAUTH_GATEWAY_ID}/openai-codex/`)).toBe(true);
     });
 
     it('parses claude-code key format', async () => {
       const { createOAuthGateway, OAUTH_GATEWAY_ID } = await import('./oauth-gateway.js');
-      const gateway = createOAuthGateway();
+      const _gateway = createOAuthGateway();
       const key = `${OAUTH_GATEWAY_ID}/claude-code/model`;
       expect(key.startsWith(`${OAUTH_GATEWAY_ID}/claude-code/`)).toBe(true);
     });
