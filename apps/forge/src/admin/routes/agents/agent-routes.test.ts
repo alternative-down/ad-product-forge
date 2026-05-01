@@ -450,4 +450,56 @@ describe('Agent Write Ops Routes', () => {
     expect(mockTopUp).toHaveBeenCalled();
     expect(response.body.success).toBe(true);
   });
+
+  it("should return 503 when githubApps is not configured", async () => {
+    let capturedHandler: Function | null = null;
+    const httpServer = {
+      registerRoute: ({ path, handler }: { method: string; path: string; handler: Function }) => {
+        if (path === "/admin/agent/github-manifest-config/update") capturedHandler = handler;
+      },
+    };
+    registerAgentWriteOpsRoutes(
+      httpServer as any,
+      { db: {}, githubApps: undefined, workspaceBasePath: "/tmp", loaderConfig: {} },
+      new Map(),
+      createOps(),
+    );
+    expect(capturedHandler).toBeTruthy();
+    const response = await capturedHandler!({
+      bodyText: JSON.stringify({
+        agentId: "test-agent",
+        manifestConfig: { permissions: {}, events: {} },
+      }),
+    });
+    expect(response.status).toBe(503);
+    expect(response.body.error).toBe("GitHub Apps not configured");
+  });
+
+  it("should call githubApps.updateAgentManifestConfig and return provisioning", async () => {
+    const mockUpdate = vi.fn().mockResolvedValue({ status: "active", appName: "test" });
+    let capturedHandler: Function | null = null;
+    const httpServer = {
+      registerRoute: ({ path, handler }: { method: string; path: string; handler: Function }) => {
+        if (path === "/admin/agent/github-manifest-config/update") capturedHandler = handler;
+      },
+    };
+    const githubApps = { updateAgentManifestConfig: mockUpdate };
+    registerAgentWriteOpsRoutes(
+      httpServer as any,
+      { db: {}, githubApps, workspaceBasePath: "/tmp", loaderConfig: {} },
+      new Map(),
+      createOps(),
+    );
+    expect(capturedHandler).toBeTruthy();
+    const manifestConfig = {
+      permissions: { administration: true, contents: true, issues: false, metadata: true, organization_projects: false, pull_requests: true, repository_projects: false, workflows: false },
+      events: { push: true, pull_request: true, pull_request_review: false, issues: true, issue_comment: false, repository: false, workflow_run: false },
+    };
+    const response = await capturedHandler!({
+      bodyText: JSON.stringify({ agentId: "test-agent", manifestConfig }),
+    });
+    expect(mockUpdate).toHaveBeenCalledWith({ agentId: "test-agent", manifestConfig });
+    expect(response.body.success).toBe(true);
+    expect(response.body.provisioning).toEqual({ status: "active", appName: "test" });
+  });
 });
