@@ -650,8 +650,9 @@ export function registerAdminRoutes(input: {
         const body = parseJsonBody(request.bodyText, createRoleSchema);
       return jsonResponse(await capabilities.createRole(body), 201);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to create role', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -668,8 +669,9 @@ export function registerAdminRoutes(input: {
         });
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to update role', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -682,8 +684,9 @@ export function registerAdminRoutes(input: {
         const body = parseJsonBody(request.bodyText, deleteRoleSchema);
         return jsonResponse(await capabilities.deleteRole(body.roleId));
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to delete role', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -702,8 +705,9 @@ export function registerAdminRoutes(input: {
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role capability', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -722,8 +726,9 @@ export function registerAdminRoutes(input: {
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role capability', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -738,8 +743,9 @@ export function registerAdminRoutes(input: {
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role tool permission', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -754,8 +760,9 @@ export function registerAdminRoutes(input: {
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role workflow permission', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -770,8 +777,9 @@ export function registerAdminRoutes(input: {
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role workflow permission', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });
@@ -786,8 +794,9 @@ export function registerAdminRoutes(input: {
         await reloadAgentsForRole(input.db, input.loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role tool permission', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: message }, 500);
       }
     },
   });

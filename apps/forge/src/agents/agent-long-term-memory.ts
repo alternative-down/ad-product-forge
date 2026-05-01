@@ -598,6 +598,7 @@ export function createAgentLongTermMemory(input: {
         );
         break;
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         forgeDebug('ltm', 'memory workflow attempt failed', {
           agentId: input.agentId,
           attempt,
@@ -678,6 +679,7 @@ export function createAgentLongTermMemory(input: {
         await refreshRecallIndex?.();
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       const nowIso = new Date().toISOString();
 
       state.lastRunAt = nowIso;

@@ -348,6 +348,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           }
           results.push({ providerId, synced: true });
         } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           results.push({
             providerId,
             synced: false,
