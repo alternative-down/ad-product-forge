@@ -335,7 +335,6 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
       await closeLibsqlClient(client);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId, message: 'Failed to load latest thread details', context: { error } });
     return {
       preview: null,

@@ -450,7 +450,6 @@ export function createCoolifyManager(config: {
         destinationUuid: providerConfig.destinationId,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load default deployment context from Coolify: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -471,7 +470,6 @@ export function createCoolifyManager(config: {
 
       return extractItem(created, ProjectSchema);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load default Coolify project: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -504,7 +502,6 @@ export function createCoolifyManager(config: {
         ServerSchema,
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load default Coolify server: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -588,7 +585,6 @@ export function createCoolifyManager(config: {
 
       return wildcardDomain;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to resolve Coolify applications base domain: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
