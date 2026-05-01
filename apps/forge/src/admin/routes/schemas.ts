@@ -262,7 +262,7 @@ export const terminateAgentSchema = z.object({
 
 export const changeAgentRoleSchema = z.object({
   agentId: z.string().min(1),
-  newRole: z.string().min(1),
+  roleId: z.string().min(1),
 });
 
 export const updateAgentConfigSchema = z.object({
@@ -282,15 +282,13 @@ export const updateAgentConfigSchema = z.object({
 
 export const upsertAgentProviderSchema = z.object({
   agentId: z.string().min(1),
-  provider: z.string().min(1),
-  modelId: z.string().min(1),
-  apiKey: z.string().min(1).optional(),
-  baseUrl: z.string().url().optional().nullable(),
+  providerType: z.enum(['discord', 'email']),
+  credentials: z.unknown(),
 });
 
 export const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
-  provider: z.string().min(1),
+  providerType: z.enum(['discord', 'email']),
 });
 
 // =============================================================================

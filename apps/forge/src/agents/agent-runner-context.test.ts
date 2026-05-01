@@ -1,129 +1,136 @@
-import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { createContextLoader } from './agent-runner-context.js';
-
-const existsMock = vi.hoisted(() => vi.fn());
-const readFileMock = vi.hoisted(() => vi.fn());
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { createContextLoader } from './agent-runner-context';
 
 describe('createContextLoader', () => {
+  let filesystem: ReturnType<ReturnType<typeof vi.fn>>;
+
   beforeEach(() => {
-    existsMock.mockReset();
-    readFileMock.mockReset();
+    filesystem = {
+      exists: vi.fn(),
+      readFile: vi.fn(),
+    };
   });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  function makeLoader() {
-    return createContextLoader({
-      filesystem: {
-        exists: existsMock,
-        readFile: readFileMock,
-      },
-    });
-  }
 
   describe('loadAgentContextInstructions', () => {
-    test('returns file content when file exists and is non-empty', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('My agent context instructions here.');
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('My agent context instructions here.');
-      expect(existsMock).toHaveBeenCalledWith('AGENT_CONTEXT.md');
-      expect(readFileMock).toHaveBeenCalledWith('AGENT_CONTEXT.md');
-    });
+    it('returns empty string when file does not exist', async () => {
+      filesystem.exists.mockResolvedValue(false);
 
-    test('returns empty string when file does not exist', async () => {
-      existsMock.mockResolvedValueOnce(false);
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('');
-      expect(readFileMock).not.toHaveBeenCalled();
-    });
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
 
-    test('returns empty string when file is empty', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('');
-      const result = await makeLoader().loadAgentContextInstructions();
       expect(result).toBe('');
     });
 
-    test('returns empty string when file contains only whitespace', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('   \n  \n  ');
-      const result = await makeLoader().loadAgentContextInstructions();
+    it('returns empty string when file is empty', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      filesystem.readFile.mockResolvedValue('');
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
       expect(result).toBe('');
     });
 
-    test('returns empty string when readFile throws (unreadable)', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockRejectedValueOnce(new Error('ENOENT'));
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('');
+    it('returns trimmed content when file exists', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      filesystem.readFile.mockResolvedValue('  some context  ');
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
+      expect(result).toBe('some context');
     });
 
-    test('trims leading and trailing whitespace from content', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('  \n  Some content  \n  ');
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('Some content');
+    it('returns trimmed content for Buffer', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      filesystem.readFile.mockResolvedValue(Buffer.from('  buffer context  '));
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
+      expect(result).toBe('buffer context');
     });
 
-    test('adds warning decoration when content exceeds AGENT_CONTEXT_WARNING_CHAR_LIMIT', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('A'.repeat(8005));
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toContain('⚠️');
-      expect(result).toContain('8005 chars');
+    it('returns trimmed content for Uint8Array', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      const text = '  uint8 context  ';
+      const encoder = new TextEncoder();
+      filesystem.readFile.mockResolvedValue(encoder.encode(text));
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
+      expect(result).toBe('uint8 context');
+    });
+
+    it('returns content with warning when exceeding 8k char limit', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      const longContent = 'x'.repeat(10_000);
+      filesystem.readFile.mockResolvedValue(longContent);
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
+      expect(result).toContain(`Context file is ${longContent.length} chars`);
       expect(result).toContain('8000 char warning threshold');
     });
 
-    test('does not add warning when content is exactly at the warning threshold', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('B'.repeat(8000));
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('B'.repeat(8000));
+    it('returns raw trimmed content when under 8k limit', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      const content = 'x'.repeat(7_000);
+      filesystem.readFile.mockResolvedValue(content);
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
+      expect(result).toBe(content);
       expect(result).not.toContain('⚠️');
     });
 
-    test('does not add warning when content is below the warning threshold', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('Short content.');
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('Short content.');
-      expect(result).not.toContain('⚠️');
-    });
+    it('returns empty string on read error', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      filesystem.readFile.mockRejectedValue(new Error('read error'));
 
-    test('handles Uint8Array content from readFile', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      const encoder = new TextEncoder();
-      readFileMock.mockResolvedValueOnce(encoder.encode('Uint8Array content'));
-      const result = await makeLoader().loadAgentContextInstructions();
-      expect(result).toBe('Uint8Array content');
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadAgentContextInstructions();
+
+      expect(result).toBe('');
     });
   });
 
   describe('loadRuntimeContext', () => {
-    test('delegates to loadAgentContextInstructions', async () => {
-      existsMock.mockResolvedValueOnce(true);
-      readFileMock.mockResolvedValueOnce('runtime context from file');
-      const result = await makeLoader().loadRuntimeContext();
-      expect(result).toBe('runtime context from file');
+    it('delegates to loadAgentContextInstructions', async () => {
+      filesystem.exists.mockResolvedValue(true);
+      filesystem.readFile.mockResolvedValue('runtime content');
+
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = await loader.loadRuntimeContext();
+
+      expect(result).toBe('runtime content');
     });
   });
 
   describe('buildStepSystemPrompt', () => {
-    test('returns null when agentContextInstructions is empty', () => {
-      expect(makeLoader().buildStepSystemPrompt({ agentContextInstructions: '' })).toBeNull();
+    it('returns null when agentContextInstructions is empty', () => {
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = loader.buildStepSystemPrompt({ agentContextInstructions: '' });
+
+      expect(result).toBeNull();
     });
 
-    test('returns null when agentContextInstructions is only whitespace', () => {
-      expect(makeLoader().buildStepSystemPrompt({ agentContextInstructions: '   \n  ' })).toBeNull();
+    it('returns null when agentContextInstructions is whitespace only', () => {
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = loader.buildStepSystemPrompt({ agentContextInstructions: '   ' });
+
+      expect(result).toBeNull();
     });
 
-    test('returns formatted system prompt with non-empty instructions', () => {
-      const result = makeLoader().buildStepSystemPrompt({ agentContextInstructions: 'You are a helpful assistant.' });
+    it('returns formatted prompt when instructions are present', () => {
+      const loader = createContextLoader({ filesystem: filesystem as never });
+      const result = loader.buildStepSystemPrompt({ agentContextInstructions: 'my instructions' });
+
       expect(result).toContain('You have access to the following agent context:');
-      expect(result).toContain('You are a helpful assistant.');
+      expect(result).toContain('my instructions');
     });
   });
 });

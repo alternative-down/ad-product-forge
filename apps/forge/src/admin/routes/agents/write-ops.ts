@@ -8,19 +8,8 @@ import type { HttpHandler } from '../../../http/server.js';
 import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema.js';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime.js';
-import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
+import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema, upsertAgentProviderSchema, deleteAgentProviderSchema } from '../index';
 
-
-const upsertAgentProviderSchema = z.object({
-  agentId: z.string(),
-  providerType: z.string(),
-  credentials: z.record(z.string(), z.string()),
-}).strict();
-
-const deleteAgentProviderSchema = z.object({
-  agentId: z.string(),
-  providerType: z.string(),
-}).strict();
 
 const createAgentMcpServerSchema = z.object({
   agentId: z.string(),

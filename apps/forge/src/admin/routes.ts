@@ -208,12 +208,12 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent-provider/upsert',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
-      const credentials = { modelId: body.modelId, apiKey: body.apiKey, baseUrl: body.baseUrl };
+      const credentials = { [body.providerType]: body.credentials };
       const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
       const existing = await input.db.query.agentProviders.findFirst({
         where: and(
           eq(agentProviders.agentId, body.agentId),
-          eq(agentProviders.providerType, body.provider),
+          eq(agentProviders.providerType, body.providerType),
         ),
       });
 
@@ -228,7 +228,7 @@ export function registerAdminRoutes(input: {
         await input.db.insert(agentProviders).values({
           id: createId(),
           agentId: body.agentId,
-          providerType: body.provider,
+          providerType: body.providerType,
           encryptedCredentials,
           createdAt: Date.now(),
         });
@@ -236,7 +236,7 @@ export function registerAdminRoutes(input: {
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.provider });
+      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
     },
   });
 
@@ -251,13 +251,13 @@ export function registerAdminRoutes(input: {
         .where(
           and(
             eq(agentProviders.agentId, body.agentId),
-            eq(agentProviders.providerType, body.provider),
+            eq(agentProviders.providerType, body.providerType),
           ),
         );
 
       await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.provider });
+      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
     },
   });
 
