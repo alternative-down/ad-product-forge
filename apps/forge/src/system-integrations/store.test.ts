@@ -91,7 +91,7 @@ describe('system-integrations/store', () => {
       expect(result[0]).toMatchObject({
         providerType: 'migadu',
         isEnabled: true,
-        config: expect.objectContaining({ apiUser: 'test@example.com', apiKey: 'key123' }),
+        config: expect.objectContaining({ apiUser: 'test@example.com', apiKey: null }),
       });
     });
 
@@ -297,7 +297,7 @@ describe('system-integrations/store', () => {
 
       expect(result[0].config).toMatchObject({
         baseUrl: 'https://coolify.io',
-        adminToken: 'tok',
+        adminToken: null,
         serverId: 's1',
         destinationId: 'd1',
       });
@@ -329,7 +329,7 @@ describe('system-integrations/store', () => {
       const store = createSystemIntegrationStore(db);
       const result = await store.listIntegrations();
 
-      expect(result[0].config).toMatchObject({ apiKey: 'minimax-api-key' });
+      expect(result[0].config).toMatchObject({ apiKey: null });
     });
   });
 
