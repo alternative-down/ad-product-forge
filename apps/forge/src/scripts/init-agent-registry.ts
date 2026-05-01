@@ -209,7 +209,6 @@ async function initAgentRegistry() {
     forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Agent registry initialized successfully' });
     process.exit(0);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error } });
     process.exit(1);
   }

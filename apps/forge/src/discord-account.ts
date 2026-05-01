@@ -316,7 +316,6 @@ export function createDiscordProvider(config: {
         await deliverMessage(inboundMessage);
         forgeDebug('discord', 'deliverMessage completed');
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
         forgeDebug({ scope: 'discord-account', level: 'error', message: 'Error handling MessageCreate event', context: { error } });
       }
     });

@@ -10,7 +10,6 @@ export function safeSerializeRecallSteps(steps: unknown[]) {
   try {
     return JSON.stringify(steps, null, 2);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize recall steps', context: { error } });
     return '[unserializable steps payload]';
   }
@@ -20,7 +19,6 @@ export function safeSerializeGraphResult(result: unknown) {
   try {
     return JSON.stringify(result, null, 2);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize graph result', context: { error } });
     return '[unserializable graph result]';
   }

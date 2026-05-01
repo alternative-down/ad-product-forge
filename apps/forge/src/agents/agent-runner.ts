@@ -371,7 +371,6 @@ export function createAgentRunner(
 
       await queueNextStep();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error } });
     }
   }
@@ -424,7 +423,6 @@ export function createAgentRunner(
 
       await queueNextStep(runEpoch);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to begin run', context: { error } });
       if (!isStaleRun(runEpoch)) {
         await transitionToIdle(runEpoch);
@@ -473,7 +471,6 @@ export function createAgentRunner(
       scheduler.setInstant(false);
       scheduler.scheduleNextStep(delayMs, () => executeStep(nextAttempt.contractId, runEpoch));
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error } });
       scheduler.setInstant(false);
       schedule(nextBackoff());
