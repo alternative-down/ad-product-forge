@@ -1,154 +1,282 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, test, vi, afterEach } from 'vitest';
+import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from './agent-ltm-helpers.js';
 
-// Mock @forge-runtime/core before importing the module under test
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 }));
 
-import {
-  escapeXml,
-  buildRecallSystemMessage,
-  safeSerializeRecallSteps,
-  safeSerializeGraphResult,
-} from './agent-ltm-helpers';
-
-describe('escapeXml', () => {
-  it('escapes ampersand', () => {
-    expect(escapeXml('foo & bar')).toBe('foo &amp; bar');
-  });
-
-  it('escapes less-than and greater-than', () => {
-    expect(escapeXml('<hello>')).toBe('&lt;hello&gt;');
-  });
-
-  it('escapes double-quote', () => {
-    expect(escapeXml('say "hello"')).toBe('say &quot;hello&quot;');
-  });
-
-  it('escapes single-quote', () => {
-    expect(escapeXml("it's fine")).toBe("it&apos;s fine");
-  });
-
-  it('escapes all special chars', () => {
-    const input = "a & b < c > d \"e\" 'f'";
-    const output = escapeXml(input);
-    expect(output).toBe('a &amp; b &lt; c &gt; d &quot;e&quot; &apos;f&apos;');
-  });
-
-  it('returns unchanged string with no special chars', () => {
-    expect(escapeXml('hello world 123')).toBe('hello world 123');
-  });
-});
+import { forgeDebug } from '@forge-runtime/core';
 
 describe('safeSerializeRecallSteps', () => {
-  it('serializes valid data', () => {
-    const steps = [{ id: '1', content: 'hello' }];
-    expect(safeSerializeRecallSteps(steps)).toBe(JSON.stringify(steps, null, 2));
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  test('serializes plain array of objects', () => {
+    const steps = [{ id: 1, text: 'hello' }, { id: 2, text: 'world' }];
+    expect(safeSerializeRecallSteps(steps)).toBe(
+      '[\n  {\n    "id": 1,\n    "text": "hello"\n  },\n  {\n    "id": 2,\n    "text": "world"\n  }\n]',
+    );
   });
 
-  it('returns fallback on circular reference', () => {
-    const circular: any = { a: 1 };
-    circular.self = circular;
-    expect(safeSerializeRecallSteps([circular])).toBe('[unserializable steps payload]');
+  test('serializes mixed types including strings and numbers', () => {
+    const steps = ['text', 42, true, null];
+    expect(safeSerializeRecallSteps(steps)).toBe(
+      '[\n  "text",\n  42,\n  true,\n  null\n]',
+    );
   });
 
-  it('returns fallback on bigint', () => {
-    expect(safeSerializeRecallSteps([BigInt(42)])).toBe('[unserializable steps payload]');
+  test('returns fallback message on circular reference', () => {
+    const circular: unknown[] = [{ label: 'a' }];
+    (circular[0] as Record<string, unknown>).self = circular;
+    const result = safeSerializeRecallSteps(circular);
+    expect(result).toBe('[unserializable steps payload]');
+    expect(forgeDebug).toHaveBeenCalled();
+    expect(forgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'agent-long-term-memory-recall', level: 'warn' }),
+    );
+  });
+
+  test('returns fallback message when stringify throws', () => {
+    const bad = { toJSON: () => { throw new Error('boom'); } };
+    const result = safeSerializeRecallSteps([bad]);
+    expect(result).toBe('[unserializable steps payload]');
+    expect(forgeDebug).toHaveBeenCalled();
+  });
+
+  test('serializes empty array', () => {
+    expect(safeSerializeRecallSteps([])).toBe('[]');
+  });
+
+  test('serializes deeply nested structure', () => {
+    const steps = [{ a: { b: { c: [{ d: 1 }] } } }];
+    expect(safeSerializeRecallSteps(steps)).toContain('"d": 1');
   });
 });
 
 describe('safeSerializeGraphResult', () => {
-  it('serializes valid data', () => {
-    const result = { nodes: ['a', 'b'], edges: [] };
-    expect(safeSerializeGraphResult(result)).toBe(JSON.stringify(result, null, 2));
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  test('serializes a plain result object', () => {
+    const result = { hit: true, score: 0.95, context: 'found it', sourcesCount: 2 };
+    expect(safeSerializeGraphResult(result)).toContain('"hit": true');
+    expect(safeSerializeGraphResult(result)).toContain('"score": 0.95');
   });
 
-  it('returns fallback on circular reference', () => {
-    const circular: any = { x: 1 };
-    circular.x = circular;
-    expect(safeSerializeGraphResult(circular)).toBe('[unserializable graph result]');
+  test('serializes null gracefully', () => {
+    expect(safeSerializeGraphResult(null)).toBe('null');
+  });
+
+  test('serializes array of results', () => {
+    const results = [{ id: '1' }, { id: '2' }];
+    expect(safeSerializeGraphResult(results)).toContain('"id": "1"');
+  });
+
+  test('returns fallback when circular reference detected', () => {
+    const circular: Record<string, unknown> = { label: 'loop' };
+    circular.self = circular;
+    const result = safeSerializeGraphResult(circular);
+    expect(result).toBe('[unserializable graph result]');
+    expect(forgeDebug).toHaveBeenCalled();
+  });
+
+  test('returns fallback when toJSON throws', () => {
+    const bad = { toJSON: () => { throw new Error('serialize error'); } };
+    const result = safeSerializeGraphResult(bad);
+    expect(result).toBe('[unserializable graph result]');
+  });
+});
+
+describe('escapeXml', () => {
+  test('escapes ampersand', () => {
+    expect(escapeXml('A & B')).toBe('A &amp; B');
+  });
+
+  test('escapes less-than', () => {
+    expect(escapeXml('<div>')).toBe('&lt;div&gt;');
+  });
+
+  test('escapes greater-than', () => {
+    expect(escapeXml('a > b')).toBe('a &gt; b');
+  });
+
+  test('escapes double-quote', () => {
+    expect(escapeXml('say "hello"')).toBe('say &quot;hello&quot;');
+  });
+
+  test('escapes single-quote', () => {
+    expect(escapeXml("it's")).toBe("it&apos;s");
+  });
+
+  test('escapes all special chars in one call', () => {
+    expect(escapeXml('A & B < C > D "E" \'F\'')).toBe(
+      'A &amp; B &lt; C &gt; D &quot;E&quot; &apos;F&apos;',
+    );
+  });
+
+  test('returns input unchanged when no special chars present', () => {
+    expect(escapeXml('plain text 123')).toBe('plain text 123');
+  });
+
+  test('escapes empty string', () => {
+    expect(escapeXml('')).toBe('');
+  });
+
+  test('escapes unicode content', () => {
+    expect(escapeXml('日本語 & émojis 🎉')).toBe('日本語 &amp; émojis 🎉');
   });
 });
 
 describe('buildRecallSystemMessage', () => {
-  it('returns null when no results and no graph context', () => {
-    const result = buildRecallSystemMessage({
-      query: 'what did we discuss?',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [],
-    });
-    expect(result).toBeNull();
+  const defaultInput = {
+    query: 'test query',
+    graphHit: false,
+    graphScore: null,
+    graphContext: '',
+    results: [] as { id: string; content: string; score?: number }[],
+  };
+
+  test('returns null when graph hit is false and results array is empty', () => {
+    expect(buildRecallSystemMessage(defaultInput)).toBeNull();
   });
 
-  it('returns null when graph hit but empty graph context', () => {
-    const result = buildRecallSystemMessage({
-      query: 'what did we discuss?',
-      graphHit: true,
-      graphScore: 0.95,
-      graphContext: '   ',
-      results: [],
-    });
-    expect(result).toBeNull();
+  test('returns null when graph hit is true but graphContext is empty', () => {
+    expect(buildRecallSystemMessage({ ...defaultInput, graphHit: true, graphScore: 0.9 })).toBeNull();
   });
 
-  it('returns memory-recall XML with graph hit', () => {
+  test('returns null when graph hit is true but graphContext is whitespace only', () => {
+    expect(buildRecallSystemMessage({ ...defaultInput, graphHit: true, graphScore: 0.8, graphContext: '   \n  ' })).toBeNull();
+  });
+
+  test('returns system message with graph item when graph hit and non-empty context', () => {
     const result = buildRecallSystemMessage({
-      query: 'project X',
+      ...defaultInput,
       graphHit: true,
-      graphScore: 0.9523,
-      graphContext: 'We discussed project X last week.',
-      results: [],
+      graphScore: 0.85,
+      graphContext: 'Graph retrieved context about the query',
     });
+    expect(result).not.toBeNull();
     expect(result).toContain('<memory-recall');
-    expect(result).toContain('on-datetime="');
     expect(result).toContain('source="graph"');
-    expect(result).toContain('score="0.9523"');
-    expect(result).toContain('We discussed project X last week.');
-    expect(result).not.toContain('source="workspace"');
+    expect(result).toContain('score="0.8500"');
+    expect(result).toContain('Graph retrieved context');
+    expect(result).toContain('</memory-recall>');
   });
 
-  it('returns memory-recall XML with workspace results (no graph hit)', () => {
+  test('includes on-datetime attribute in opening tag', () => {
     const result = buildRecallSystemMessage({
-      query: 'project X',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [
-        { id: 'result-1', content: 'First discussion about X', score: 0.87 },
-        { id: 'result-2', content: 'Second discussion about X', score: 0.65 },
-      ],
-    });
-    expect(result).toContain('<memory-recall');
-    expect(result).toContain('source="workspace"');
-    expect(result).toContain('id="result-1"');
-    expect(result).toContain('score="0.8700"');
-    expect(result).toContain('First discussion about X');
-    expect(result).toContain('id="result-2"');
-    expect(result).toContain('score="0.6500"');
-  });
-
-  it('escapes XML special chars in content', () => {
-    const result = buildRecallSystemMessage({
-      query: 'query',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'r1', content: 'a < b & c > d', score: 0.5 }],
-    });
-    expect(result).not.toContain('a < b');
-    expect(result).toContain('&lt; b &amp; c &gt; d');
-  });
-
-  it('escapes XML special chars in query (graph hit branch)', () => {
-    const result = buildRecallSystemMessage({
-      query: 'a < b & c > d',
+      ...defaultInput,
       graphHit: true,
       graphScore: 0.5,
-      graphContext: 'graph context here',
-      results: [],
+      graphContext: 'content',
     });
-    expect(result).toContain('query="a &lt; b &amp; c &gt; d"');
+    expect(result).toMatch(/\bon-datetime="[^"]+"/);
+  });
+
+  test('escapes graph context XML chars', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      graphHit: true,
+      graphScore: 0.7,
+      graphContext: 'Contains <special> & "chars" here',
+    });
+    expect(result).toContain('&lt;special&gt;');
+    expect(result).toContain('&amp;');
+    expect(result).toContain('&quot;chars&quot;');
+  });
+
+  test('escapes graph query XML chars in attribute', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      graphHit: true,
+      graphScore: 0.9,
+      graphContext: 'some context',
+      query: 'Query with <special> & "chars"',
+    });
+    expect(result).toContain('&lt;special&gt;');
+    expect(result).toContain('&amp;');
+    expect(result).toContain('&quot;chars&quot;');
+  });
+
+  test('returns system message with workspace items when graph hit is false', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      results: [
+        { id: 'doc-1', content: 'First document content', score: 0.95 },
+        { id: 'doc-2', content: 'Second document content', score: 0.72 },
+      ],
+    });
+    expect(result).not.toBeNull();
+    expect(result).toContain('source="workspace"');
+    expect(result).toContain('id="doc-1"');
+    expect(result).toContain('score="0.9500"');
+    expect(result).toContain('First document content');
+    expect(result).toContain('id="doc-2"');
+    expect(result).toContain('score="0.7200"');
+  });
+
+  test('escapes workspace item content XML chars', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      results: [{ id: 'd1', content: 'Content with <tag> & "quotes"', score: 0.8 }],
+    });
+    expect(result).toContain('&lt;tag&gt;');
+    expect(result).toContain('&amp;');
+    expect(result).toContain('&quot;quotes&quot;');
+  });
+
+  test('escapes workspace item id XML chars', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      results: [{ id: 'id-with-<special>&chars"', content: 'text', score: 0.5 }],
+    });
+    expect(result).toContain('id="id-with-&lt;special&gt;&amp;chars&quot;"');
+  });
+
+  test('defaults score to 0.0000 when score is undefined', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      results: [{ id: 'd1', content: 'No score' }],
+    });
+    expect(result).toContain('score="0.0000"');
+  });
+
+  test('defaults graphScore to no score attribute when graphScore is null', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      graphHit: true,
+      graphScore: null,
+      graphContext: 'Graph content without score',
+    });
+    expect(result).not.toContain('score=');
+  });
+
+  test('includes instructions section', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      results: [{ id: 'd1', content: 'test' }],
+    });
+    expect(result).toContain('<instructions>');
+    expect(result).toContain('Now is the datetime');
+    expect(result).toContain('long-term memory');
+    expect(result).toContain('</instructions>');
+  });
+
+  test('handles many workspace results', () => {
+    const results = Array.from({ length: 20 }, (_, i) => ({
+      id: `doc-${i}`,
+      content: `Document ${i} content`,
+      score: 0.9 - i * 0.01,
+    }));
+    const result = buildRecallSystemMessage({ ...defaultInput, results });
+    expect(result).not.toBeNull();
+    expect(result?.match(/<item/g)?.length).toBe(20);
+  });
+
+  test('on-datetime is ISO format', () => {
+    const result = buildRecallSystemMessage({
+      ...defaultInput,
+      results: [{ id: 'd1', content: 'test' }],
+    });
+    const match = result?.match(/on-datetime="([^"]+)"/);
+    expect(match?.[1]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 });
