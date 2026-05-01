@@ -36,6 +36,19 @@ import {
 } from "./internal-chat-helpers";
 import { createInternalChatConnection } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
+import {
+  ConversationNotFoundError,
+  ChatGroupNotFoundError,
+  ChatGroupAlreadyExistsError,
+  GroupMemberAlreadyExistsError,
+  OnlyAdminsCanUpdateGroupError,
+  OnlyAdminsCanUpdateGroupByAccountError,
+  NameRequiredForNewGroupError,
+  InternalChatParticipantNotFoundError,
+  InternalChatAccountNotFoundError,
+  MessageNotFoundError,
+  ExternalChatGroupAlreadyExistsError,
+} from "./internal-chat-errors";
 
 export function createInternalChatService(
 
@@ -775,7 +788,7 @@ export function createInternalChatService(
     });
 
     if (existing) {
-      throw new Error(`Chat group already exists: ${input.conversationKey}`);
+      throw new ExternalChatGroupAlreadyExistsError(input.conversationKey);
     }
 
     const creatorAccount = await getRequiredExternalAccount(input.accountId);
@@ -925,7 +938,7 @@ export function createInternalChatService(
     });
 
     if (!membership || membership.role !== 'admin') {
-      throw new Error('Only admins can update the group.');
+      throw new OnlyAdminsCanUpdateGroupByAccountError();
     }
 
     const now = Date.now();
@@ -983,7 +996,7 @@ export function createInternalChatService(
       : await getRequiredConversationForAccount(input.accountId, input.targetKey);
 
     if (!conversation) {
-      throw new Error(`Conversation not found: ${input.targetKey}`);
+      throw new ConversationNotFoundError(input.targetKey);
     }
 
     const now = Date.now();
@@ -1084,7 +1097,7 @@ export function createInternalChatService(
     });
 
     if (!message) {
-      throw new Error(`Message not found: ${input.messageId}`);
+      throw new MessageNotFoundError(input.messageId);
     }
 
     const attachment = await readMessageAttachment(input.messageId, input.attachmentName);
@@ -1186,7 +1199,7 @@ export function createInternalChatService(
     const account = await getAccountBySlug(slug);
 
     if (!account) {
-      throw new Error(`Internal chat participant not found: ${slug}`);
+      throw new InternalChatAccountNotFoundError(slug);
     }
 
     return account;
@@ -1206,7 +1219,7 @@ export function createInternalChatService(
     });
 
     if (!membership) {
-      throw new Error(`Conversation not found: ${conversationId}`);
+      throw new ConversationNotFoundError(conversationId);
     }
   }
 
@@ -1223,7 +1236,7 @@ export function createInternalChatService(
     });
 
     if (!conversation) {
-      throw new Error(`Conversation not found: ${conversationId}`);
+      throw new ConversationNotFoundError(conversationId);
     }
 
     return conversation;
@@ -1233,7 +1246,7 @@ export function createInternalChatService(
     const group = await getRequiredConversationForAgent(agentId, groupId);
 
     if (group.type !== 'group') {
-      throw new Error(`Chat group not found: ${groupId}`);
+      throw new ChatGroupNotFoundError(groupId);
     }
 
     return group;
@@ -1243,7 +1256,7 @@ export function createInternalChatService(
     const group = await getRequiredConversationForAccount(accountId, groupId);
 
     if (group.type !== 'group') {
-      throw new Error(`Chat group not found: ${groupId}`);
+      throw new ChatGroupNotFoundError(groupId);
     }
 
     return group;
