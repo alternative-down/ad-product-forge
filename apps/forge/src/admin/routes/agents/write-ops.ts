@@ -273,7 +273,7 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/change-role',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
-      await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.newRole });
+      await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
       return jsonResponse({ success: true });
     },
   });
