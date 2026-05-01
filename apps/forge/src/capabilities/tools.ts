@@ -38,11 +38,10 @@ export function createCapabilityTools(
           });
           return result;
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'list_agent_roles error', { error: message });
+          forgeDebug('tools:capabilities', 'list_agent_roles error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
           };
         }
@@ -164,11 +163,10 @@ export function createCapabilityTools(
           forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
           return { valid: true, ...result };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'manage_agent_role error', { error: message });
+          forgeDebug('tools:capabilities', 'manage_agent_role error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
           };
         }
@@ -198,11 +196,10 @@ export function createCapabilityTools(
           forgeDebug('tools:capabilities', 'change_agent_role success', { result });
           return { valid: true, ...result };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'change_agent_role error', { error: message });
+          forgeDebug('tools:capabilities', 'change_agent_role error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use list_agents and list_agent_roles to verify the agentId and roleId.',
           };
         }
@@ -229,11 +226,10 @@ export function createCapabilityTools(
           forgeDebug('tools:capabilities', 'list_agent_statuses result', { count: result.length });
           return result;
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'list_agent_statuses error', { error: message });
+          forgeDebug('tools:capabilities', 'list_agent_statuses error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Verify the agentId when filtering one agent.',
           };
         }
@@ -254,11 +250,10 @@ export function createCapabilityTools(
         try {
           return await capabilities.listRoleCapabilities(input.roleId);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'list_role_capabilities error', { error: message });
+          forgeDebug('tools:capabilities', 'list_role_capabilities error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use list_agent_roles to confirm the roleId.',
           };
         }
@@ -284,11 +279,10 @@ export function createCapabilityTools(
           forgeDebug('tools:capabilities', 'manage_role_capabilities success', { result });
           return { valid: true, ...result };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:capabilities', 'manage_role_capabilities error', { error: message });
+          forgeDebug('tools:capabilities', 'manage_role_capabilities error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use list_agent_roles and list_role_capabilities to verify the roleId and capabilityId.',
           };
         }

@@ -91,7 +91,7 @@ describe('system-integrations/store', () => {
       expect(result[0]).toMatchObject({
         providerType: 'migadu',
         isEnabled: true,
-        config: expect.objectContaining({ apiUser: 'test@example.com', apiKey: 'key123' }),
+        config: expect.objectContaining({ apiUser: 'test@example.com', apiKey: null }),
       });
     });
 
@@ -297,7 +297,7 @@ describe('system-integrations/store', () => {
 
       expect(result[0].config).toMatchObject({
         baseUrl: 'https://coolify.io',
-        adminToken: 'tok',
+        adminToken: null,
         serverId: 's1',
         destinationId: 'd1',
       });
@@ -329,7 +329,147 @@ describe('system-integrations/store', () => {
       const store = createSystemIntegrationStore(db);
       const result = await store.listIntegrations();
 
-      expect(result[0].config).toMatchObject({ apiKey: 'minimax-api-key' });
+      expect(result[0].config).toMatchObject({ apiKey: null });
+    });
+  });
+
+
+  // ── getEnabledIntegration edge case ─────────────────────────────────────────
+
+  describe('getEnabledIntegration (via getGitHubConfig)', () => {
+    it('returns null when integration exists but isEnabled is 0', async () => {
+      const existingRow = createMockRow('github', { isEnabled: 0 });
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.getGitHubConfig();
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null when integration exists and isEnabled is 1', async () => {
+      const existingRow = createMockRow('github', {
+        isEnabled: 1,
+        encryptedConfig: 'encrypted:{"organization":"my-org","appHomeUrl":"https://github.com/apps/my-app"}',
+      });
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.getGitHubConfig();
+
+      expect(result).toEqual({
+        organization: 'my-org',
+        appHomeUrl: 'https://github.com/apps/my-app',
+      });
+    });
+  });
+
+  // ── upsertIntegration: update path details ──────────────────────────────────
+
+  describe('upsertIntegration — update path', () => {
+    it('returns isEnabled: true when updating and isEnabled not specified', async () => {
+      const existingRow = createMockRow('migadu');
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.upsertIntegration({
+        providerType: 'migadu',
+        config: { apiUser: 'updated@example.com', apiKey: 'updated-key' },
+      });
+
+      expect(result.isEnabled).toBe(true);
+    });
+
+    it('returns isEnabled: false when updating an existing integration with isEnabled: false', async () => {
+      const existingRow = createMockRow('minimax');
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.upsertIntegration({
+        providerType: 'minimax',
+        config: { apiKey: 'new-key' },
+        isEnabled: false,
+      });
+
+      expect(result.isEnabled).toBe(false);
+    });
+
+    it('calls encryptSecret during upsert (insert path)', async () => {
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      const { encryptSecret } = await import('../encryption/crypto');
+
+      const store = createSystemIntegrationStore(db);
+      await store.upsertIntegration({
+        providerType: 'github',
+        config: { organization: 'test-org', appHomeUrl: 'https://github.com/apps/test' },
+      });
+
+      expect(encryptSecret).toHaveBeenCalled();
+    });
+
+    it('upserts with minimax provider type', async () => {
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.upsertIntegration({
+        providerType: 'minimax',
+        config: { apiKey: 'minimax-secret' },
+      });
+
+      expect(result.providerType).toBe('minimax');
+      expect(result.config).toEqual({ apiKey: 'minimax-secret' });
+    });
+
+    it('upserts with coolify provider type including optional field', async () => {
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.upsertIntegration({
+        providerType: 'coolify',
+        config: {
+          baseUrl: 'https://cool.example.com',
+          adminToken: 'tok123',
+          serverId: 'srv-1',
+          destinationId: 'dst-1',
+          applicationsBaseDomain: 'app.example.com',
+        },
+      });
+
+      expect(result.providerType).toBe('coolify');
+      expect(result.config).toMatchObject({ applicationsBaseDomain: 'app.example.com' });
+    });
+  });
+
+  // ── parseIntegrationConfigForList error paths ────────────────────────────────
+
+  describe('parseIntegrationConfigForList (via listIntegrations)', () => {
+    it('returns null config when decryptSecret throws', async () => {
+      const row = createMockRow('minimax', { encryptedConfig: 'garbage' });
+      (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
+
+      // Override decryptSecret mock for this test
+      const { decryptSecret } = await import('../encryption/crypto');
+      (decryptSecret as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+        throw new Error('Decryption failed');
+      });
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.listIntegrations();
+
+      expect(result[0].config).toBeNull();
+    });
+
+    it('returns null config when JSON.parse throws', async () => {
+      const { decryptSecret } = await import('../encryption/crypto');
+      (decryptSecret as ReturnType<typeof vi.fn>).mockResolvedValueOnce('not-json');
+
+      const row = createMockRow('github', { encryptedConfig: 'encrypted:not-json' });
+      (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
+
+      const store = createSystemIntegrationStore(db);
+      const result = await store.listIntegrations();
+
+      expect(result[0].config).toBeNull();
     });
   });
 });

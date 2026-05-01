@@ -23,7 +23,6 @@ import { createId } from "../utils/id";
 import {
   buildAgentAccountDescription,
   buildGroupMemberViews,
-  buildGroupMetadata,
   buildGroupRow,
   buildConversationParticipantNames,
   createInternalChatSlug,
@@ -35,8 +34,26 @@ import {
   type InternalChatGroupParticipant,
   type InternalChatGroupRow,
 } from "./internal-chat-helpers";
-import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
+import { createInternalChatConnection } from "./internal-chat-connection";
+import { createInternalChatGroups } from "./internal-chat-groups";
+import {
+  ConversationNotFoundError,
+  ChatGroupNotFoundError,
+  ChatGroupAlreadyExistsError,
+  GroupMemberAlreadyExistsError,
+  OnlyAdminsCanUpdateGroupError,
+  NameRequiredForNewGroupError,
+  InternalChatParticipantNotFoundError,
+  InternalChatAccountNotFoundError,
+  MessageNotFoundError,
+  ExternalAccountNotFoundError,
+  InternalChatAccountSlugAlreadyExistsError,
+  DirectConversationFailedError,
+  AttachmentNotFoundError,
+} from "./internal-chat-errors";
+
 export function createInternalChatService(
+
   db: Database,
 ) {
   async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
@@ -209,7 +226,7 @@ export function createInternalChatService(
     });
 
     if (!account || account.agentId) {
-      throw new Error(`External account not found: ${input.accountId}`);
+      throw new ExternalAccountNotFoundError(input.accountId);
     }
 
     const existingWithSlug = await db.query.internalChatAccounts.findFirst({
@@ -217,7 +234,7 @@ export function createInternalChatService(
     });
 
     if (existingWithSlug && existingWithSlug.id !== input.accountId) {
-      throw new Error(`Internal chat account slug already exists: ${input.slug}`);
+      throw new InternalChatAccountSlugAlreadyExistsError(input.slug);
     }
 
     const now = Date.now();
@@ -246,7 +263,7 @@ export function createInternalChatService(
     });
 
     if (!account || account.agentId) {
-      throw new Error(`External account not found: ${input.accountId}`);
+      throw new ExternalAccountNotFoundError(input.accountId);
     }
 
     await db
@@ -364,51 +381,14 @@ export function createInternalChatService(
     });
   }
 
+
   async function createChatGroup(input: {
     agentId: string;
     conversationKey: string;
     name: string;
     creatorName: string;
   }) {
-    const existing = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, input.conversationKey),
-    });
-
-    if (existing) {
-      throw new Error(`Chat group already exists: ${input.conversationKey}`);
-    }
-
-    const now = Date.now();
-    const creatorAccount = await getRequiredAgentAccount(input.agentId);
-
-    await db.insert(internalChatConversations).values({
-      id: input.conversationKey,
-      type: 'group',
-      name: input.name,
-      createdByAccountId: creatorAccount.id,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await db.insert(internalChatConversationMembers).values({
-      conversationId: input.conversationKey,
-      accountId: creatorAccount.id,
-      role: 'admin',
-      createdAt: now,
-    });
-
-    return {
-      groupId: input.conversationKey,
-      name: input.name,
-      provider: 'internal-chat',
-      conversationKey: input.conversationKey,
-      creatorMember: {
-        participantId: creatorAccount.id,
-        participantName: input.creatorName,
-        role: 'admin',
-      },
-      createdAt: new Date(now).toISOString(),
-    };
+    return groups.createChatGroup(input);
   }
 
   async function addMemberToGroup(input: {
@@ -417,36 +397,7 @@ export function createInternalChatService(
     participantSlug: string;
     role?: string;
   }) {
-    const group = await getRequiredGroupForAgent(input.agentId, input.groupId);
-    const participant = await getRequiredAccountBySlug(input.participantSlug);
-    const now = Date.now();
-
-    const existing = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.conversationId, group.id),
-        eq(internalChatConversationMembers.accountId, participant.id),
-      ),
-    });
-
-    if (existing) {
-      throw new Error(`Group member already exists: ${input.participantSlug}`);
-    }
-
-    await db.insert(internalChatConversationMembers).values({
-      conversationId: group.id,
-      accountId: participant.id,
-      role: input.role ?? 'normal',
-      createdAt: now,
-    });
-
-    return {
-      groupId: group.id,
-      participantSlug: participant.slug,
-      participantId: participant.id,
-      participantName: participant.displayName,
-      role: input.role ?? 'normal',
-      createdAt: new Date(now).toISOString(),
-    };
+    return groups.addMemberToGroup(input);
   }
 
   async function removeMemberFromGroup(input: {
@@ -454,21 +405,7 @@ export function createInternalChatService(
     groupId: string;
     participantSlug: string;
   }) {
-    await getRequiredGroupForAgent(input.agentId, input.groupId);
-    const participant = await getRequiredAccountBySlug(input.participantSlug);
-
-    await db
-      .delete(internalChatConversationMembers)
-      .where(and(
-        eq(internalChatConversationMembers.conversationId, input.groupId),
-        eq(internalChatConversationMembers.accountId, participant.id),
-      ));
-
-    return {
-      success: true,
-      groupId: input.groupId,
-      participantSlug: participant.slug,
-    };
+    return groups.removeMemberFromGroup(input);
   }
 
   async function changeChatGroup(input: {
@@ -480,244 +417,27 @@ export function createInternalChatService(
       role?: 'admin' | 'normal';
     }>;
   }) {
-    const actorAccount = await getRequiredAgentAccount(input.agentId);
-    const now = Date.now();
-    const groupId = input.groupId ?? `grp_${createId()}`;
-    let desiredMembers: Map<string, {
-      accountId: string;
-      participantKey: string;
-      participantSlug: string;
-      participantName: string;
-      role: string;
-    }> | null = null;
-
-    if (input.members) {
-      desiredMembers = new Map<string, { accountId: string; participantKey: string; participantSlug: string; participantName: string; role: string }>();
-
-      for (const member of input.members) {
-        const participant = await getAccountByTargetKey(member.participantKey);
-
-        if (!participant) {
-          throw new Error(`Internal chat participant not found: ${member.participantKey}`);
-        }
-
-        desiredMembers.set(participant.id, {
-          accountId: participant.id,
-          participantKey: participant.agentId ?? participant.slug,
-          participantSlug: participant.slug,
-          participantName: participant.displayName,
-          role: member.role ?? 'normal',
-        });
-      }
-
-      desiredMembers.set(actorAccount.id, {
-        accountId: actorAccount.id,
-        participantKey: actorAccount.agentId ?? actorAccount.slug,
-        participantSlug: actorAccount.slug,
-        participantName: actorAccount.displayName,
-        role: 'admin',
-      });
-    }
-
-    if (input.groupId) {
-      await getRequiredGroupForAgent(input.agentId, groupId);
-      const membership = await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.conversationId, groupId),
-          eq(internalChatConversationMembers.accountId, actorAccount.id),
-        ),
-      });
-
-      if (!membership || membership.role !== 'admin') {
-        throw new Error('Only admins can update the group.');
-      }
-    } else {
-      if (!input.name) {
-        throw new Error('name is required when creating a group.');
-      }
-    }
-
-    await db.transaction(async (tx) => {
-      if (!input.groupId) {
-        await tx.insert(internalChatConversations).values({
-          id: groupId,
-          type: 'group',
-          name: input.name,
-          createdByAccountId: actorAccount.id,
-          createdAt: now,
-          updatedAt: now,
-        });
-
-        await tx.insert(internalChatConversationMembers).values({
-          conversationId: groupId,
-          accountId: actorAccount.id,
-          role: 'admin',
-          createdAt: now,
-        });
-      }
-
-      if (input.name !== undefined) {
-        await tx
-          .update(internalChatConversations)
-          .set({
-            name: input.name,
-            updatedAt: now,
-          })
-          .where(eq(internalChatConversations.id, groupId));
-      }
-
-      if (!desiredMembers) {
-        return;
-      }
-
-      const existingMembers = await tx.query.internalChatConversationMembers.findMany({
-        where: eq(internalChatConversationMembers.conversationId, groupId),
-      });
-      const existingByAccountId = new Map(existingMembers.map((member) => [member.accountId, member]));
-
-      for (const existingMember of existingMembers) {
-        if (!desiredMembers.has(existingMember.accountId)) {
-          await tx
-            .delete(internalChatConversationMembers)
-            .where(and(
-              eq(internalChatConversationMembers.conversationId, groupId),
-              eq(internalChatConversationMembers.accountId, existingMember.accountId),
-            ));
-        }
-      }
-
-      for (const desiredMember of desiredMembers.values()) {
-        const existingMember = existingByAccountId.get(desiredMember.accountId);
-
-        if (!existingMember) {
-          await tx.insert(internalChatConversationMembers).values({
-            conversationId: groupId,
-            accountId: desiredMember.accountId,
-            role: desiredMember.role,
-            createdAt: now,
-          });
-          continue;
-        }
-
-        if (existingMember.role !== desiredMember.role) {
-          await tx
-            .update(internalChatConversationMembers)
-            .set({
-              role: desiredMember.role,
-            })
-            .where(and(
-              eq(internalChatConversationMembers.conversationId, groupId),
-              eq(internalChatConversationMembers.accountId, desiredMember.accountId),
-            ));
-        }
-      }
-
-      await tx
-        .update(internalChatConversations)
-        .set({
-          updatedAt: now,
-        })
-        .where(eq(internalChatConversations.id, groupId));
-    });
-
-    const group = await getRequiredGroupForAgent(input.agentId, groupId);
-    const members = await listGroupMembers({
-      agentId: input.agentId,
-      groupId,
-    });
-
-    return {
-      groupId,
-      name: group.name ?? groupId,
-      provider: 'internal-chat',
-      conversationKey: groupId,
-      members: buildGroupMemberViews(members),
-      createdAt: new Date(group.createdAt).toISOString(),
-      updatedAt: new Date(group.updatedAt).toISOString(),
-    };
+    return groups.changeChatGroup(input);
   }
 
   async function listChatGroups(input: {
     agentId: string;
     limit: number;
   }) {
-    const agentAccount = await getRequiredAgentAccount(input.agentId);
-    const rows = await db
-      .select({
-        id: internalChatConversations.id,
-        name: internalChatConversations.name,
-        createdAt: internalChatConversations.createdAt,
-        updatedAt: internalChatConversations.updatedAt,
-      })
-      .from(internalChatConversations)
-      .innerJoin(
-        internalChatConversationMembers,
-        eq(internalChatConversationMembers.conversationId, internalChatConversations.id),
-      )
-      .where(and(
-        eq(internalChatConversations.type, 'group'),
-        eq(internalChatConversationMembers.accountId, agentAccount.id),
-      ))
-      .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit).all();
-
-    return rows.map((row) => buildGroupRow(row satisfies InternalChatGroupRow));
+    return groups.listChatGroups(input);
   }
 
   async function listGroupMembers(input: { agentId: string; groupId: string }): Promise<InternalChatGroupMember[]> {
-    await getRequiredGroupForAgent(input.agentId, input.groupId);
-
-    const rows = await db
-      .select({
-        groupId: internalChatConversationMembers.conversationId,
-        participantId: internalChatAccounts.id,
-        participantKey: sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
-        participantSlug: internalChatAccounts.slug,
-        participantName: internalChatAccounts.displayName,
-        role: internalChatConversationMembers.role,
-        createdAt: internalChatConversationMembers.createdAt,
-      })
-      .from(internalChatConversationMembers)
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
-      )
-      .where(eq(internalChatConversationMembers.conversationId, input.groupId));
-
-    return rows.map((row) => ({
-      ...row,
-      createdAt: new Date(row.createdAt).toISOString(),
-    }));
+    return groups.listGroupMembers(input);
   }
 
   async function listGroupMembersByAccount(input: {
     accountId: string;
     groupId: string;
   }): Promise<InternalChatGroupMember[]> {
-    await getRequiredGroupForAccount(input.accountId, input.groupId);
-
-    const rows = await db
-      .select({
-        groupId: internalChatConversationMembers.conversationId,
-        participantId: internalChatAccounts.id,
-        participantKey: sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
-        participantSlug: internalChatAccounts.slug,
-        participantName: internalChatAccounts.displayName,
-        role: internalChatConversationMembers.role,
-        createdAt: internalChatConversationMembers.createdAt,
-      })
-      .from(internalChatConversationMembers)
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
-      )
-      .where(eq(internalChatConversationMembers.conversationId, input.groupId));
-
-    return rows.map((row) => ({
-      ...row,
-      createdAt: new Date(row.createdAt).toISOString(),
-    }));
+    return groups.listGroupMembersByAccount(input);
   }
+
 
   async function listConversations(input: {
     agentId: string;
@@ -1070,7 +790,7 @@ export function createInternalChatService(
     });
 
     if (existing) {
-      throw new Error(`Chat group already exists: ${input.conversationKey}`);
+      throw new ChatGroupAlreadyExistsError(input.conversationKey);
     }
 
     const creatorAccount = await getRequiredExternalAccount(input.accountId);
@@ -1116,7 +836,7 @@ export function createInternalChatService(
     const conversation = await ensureDirectConversation(input.accountId, input.participantAccountId);
 
     if (!conversation) {
-      throw new Error('Failed to create direct conversation.');
+      throw new DirectConversationFailedError();
     }
 
     return {
@@ -1220,7 +940,7 @@ export function createInternalChatService(
     });
 
     if (!membership || membership.role !== 'admin') {
-      throw new Error('Only admins can update the group.');
+      throw new OnlyAdminsCanUpdateGroupError();
     }
 
     const now = Date.now();
@@ -1278,7 +998,7 @@ export function createInternalChatService(
       : await getRequiredConversationForAccount(input.accountId, input.targetKey);
 
     if (!conversation) {
-      throw new Error(`Conversation not found: ${input.targetKey}`);
+      throw new ConversationNotFoundError(input.targetKey);
     }
 
     const now = Date.now();
@@ -1322,62 +1042,39 @@ export function createInternalChatService(
     const author = await getRequiredAccount(input.accountId);
     const participants = await listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);
 
-    const deliveries: Array<Promise<{ agentId: string; delivered: boolean }>> = [];
+    
+    const liveDeliveredAgentIds = connection.deliverToParticipants({
+      excludeAccountId: input.accountId,
+      participants,
+      conversation: {
+        id: conversation.id,
+        name: conversation.name,
+        type: conversation.type,
+      },
+      messageId,
+      author: {
+        id: author.id,
+        displayName: author.displayName,
+        slug: author.slug,
+      },
+      content: input.content,
+      attachments: input.attachments,
+      createdAt: new Date(now).toISOString(),
+    });
 
-    for (const participant of participants) {
-      if (participant.accountId === input.accountId || !participant.agentId) {
-        continue;
-      }
-
-      const message: InternalChatDeliveryMessage = {
-        targetKey: conversation.id,
-        messageId,
-        conversationName: conversation.name ?? (conversation.type === 'dm' ? author.displayName : undefined),
-        authorId: author.id,
-        authorDisplayName: author.displayName,
-        authorUsername: author.slug,
-        content: input.content,
-        attachments: input.attachments,
-        createdAt: new Date(now).toISOString(),
-        metadata: {
-          conversationType: conversation.type,
-          groupMembers: conversation.type === 'group'
-            ? buildGroupMetadata(participants)
-            : undefined,
-        },
-      };
-
-      if (connection.deliverMessage(participant.agentId, message)) {
-        deliveries.push(Promise.resolve({ agentId: participant.agentId as string, delivered: true }));
-      }
+    if (liveDeliveredAgentIds.length > 0) {
+      await db
+        .update(internalChatMessageReads)
+        .set({
+          readAt: now,
+        })
+        .where(and(
+          eq(internalChatMessageReads.messageId, messageId),
+          inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
+          isNull(internalChatMessageReads.readAt),
+        ));
     }
 
-    if (deliveries.length > 0) {
-      const results = await Promise.allSettled(deliveries);
-      const liveDeliveredAgentIds: string[] = [];
-
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          liveDeliveredAgentIds.push(result.value.agentId);
-          continue;
-        }
-
-        forgeDebug({ scope: 'internal-chat', level: 'warn', message: 'Failed to deliver live message to handler', context: { reason: result.reason } });
-      }
-
-      if (liveDeliveredAgentIds.length > 0) {
-        await db
-          .update(internalChatMessageReads)
-          .set({
-            readAt: now,
-          })
-          .where(and(
-            eq(internalChatMessageReads.messageId, messageId),
-            inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
-            isNull(internalChatMessageReads.readAt),
-          ));
-      }
-    }
 
     return {
       success: true,
@@ -1402,13 +1099,13 @@ export function createInternalChatService(
     });
 
     if (!message) {
-      throw new Error(`Message not found: ${input.messageId}`);
+      throw new MessageNotFoundError(input.messageId);
     }
 
     const attachment = await readMessageAttachment(input.messageId, input.attachmentName);
 
     if (!attachment) {
-      throw new Error(`Attachment not found: ${input.attachmentName}`);
+      throw new AttachmentNotFoundError(input.attachmentName);
     }
 
     return attachment;
@@ -1472,7 +1169,7 @@ export function createInternalChatService(
     });
 
     if (!account) {
-      throw new Error(`Internal chat account not found: ${accountId}`);
+      throw new InternalChatAccountNotFoundError(accountId, `Internal chat account not found: ${accountId}`);
     }
 
     return account;
@@ -1484,7 +1181,7 @@ export function createInternalChatService(
     });
 
     if (!account) {
-      throw new Error(`Internal chat account not found for agent: ${agentId}`);
+      throw new InternalChatAccountNotFoundError(agentId, `Internal chat account not found for agent: ${agentId}`);
     }
 
     return account;
@@ -1494,7 +1191,7 @@ export function createInternalChatService(
     const account = await getRequiredAccount(accountId);
 
     if (account.agentId) {
-      throw new Error(`External internal chat account not found: ${accountId}`);
+      throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
     }
 
     return account;
@@ -1504,7 +1201,7 @@ export function createInternalChatService(
     const account = await getAccountBySlug(slug);
 
     if (!account) {
-      throw new Error(`Internal chat participant not found: ${slug}`);
+      throw new InternalChatAccountNotFoundError(slug);
     }
 
     return account;
@@ -1524,7 +1221,7 @@ export function createInternalChatService(
     });
 
     if (!membership) {
-      throw new Error(`Conversation not found: ${conversationId}`);
+      throw new ConversationNotFoundError(conversationId);
     }
   }
 
@@ -1541,7 +1238,7 @@ export function createInternalChatService(
     });
 
     if (!conversation) {
-      throw new Error(`Conversation not found: ${conversationId}`);
+      throw new ConversationNotFoundError(conversationId);
     }
 
     return conversation;
@@ -1551,7 +1248,7 @@ export function createInternalChatService(
     const group = await getRequiredConversationForAgent(agentId, groupId);
 
     if (group.type !== 'group') {
-      throw new Error(`Chat group not found: ${groupId}`);
+      throw new ChatGroupNotFoundError(groupId);
     }
 
     return group;
@@ -1561,11 +1258,19 @@ export function createInternalChatService(
     const group = await getRequiredConversationForAccount(accountId, groupId);
 
     if (group.type !== 'group') {
-      throw new Error(`Chat group not found: ${groupId}`);
+      throw new ChatGroupNotFoundError(groupId);
     }
 
     return group;
   }
+
+
+  const groups = createInternalChatGroups(db, {
+    getRequiredAccount,
+    getRequiredAgentAccount,
+    getRequiredAccountBySlug,
+    getAccountByTargetKey,
+  });
 
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
@@ -1607,7 +1312,6 @@ export function createInternalChatService(
     getUnreadSummary,
     listRecentConversations,
   };
-
 
 }
 

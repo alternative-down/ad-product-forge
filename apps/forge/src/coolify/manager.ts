@@ -249,7 +249,7 @@ export function createCoolifyManager(config: {
     if (input.buildCommand !== undefined) body.build_command = input.buildCommand;
     if (input.startCommand !== undefined) body.start_command = input.startCommand;
     if (input.installCommand !== undefined) body.install_command = input.installCommand;
-    if (input.branch !== undefined) body.branch = input.branch;
+    if (input.branch !== undefined) body.git_branch = input.branch;
     if (input.slug !== undefined) {
       body.fqdn = await buildApplicationDomain(input.slug);
     }

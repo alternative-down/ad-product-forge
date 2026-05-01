@@ -19,7 +19,7 @@ import { request, requestBlob, validateAdminSecret } from './core';
 // ───────────────────────────────────────────────────────────────────────────────
 
 function buildMockFetch(response: Response) {
-  return vi.fn<typeof fetch>((_input: URL | Request | string) => {
+  return vi.fn<typeof fetch>(() => {
     return Promise.resolve(response);
   });
 }

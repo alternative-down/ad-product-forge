@@ -114,7 +114,7 @@ describe('registerInternalChatRoutes', () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversations');
     const res = await route!.handler({ query: new Map(), bodyText: '' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('accountId required');
+    expect(JSON.parse(res.body).error).toBe('accountId required');
   });
   test('GET /admin/internal-chat/conversations — delegates with limit 100', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversations');
@@ -154,7 +154,7 @@ describe('registerInternalChatRoutes', () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/messages');
     const res = await route!.handler({ query: new Map(), bodyText: '' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('accountId and conversationId required');
+    expect(JSON.parse(res.body).error).toBe('accountId and conversationId required');
   });
   test('GET /admin/internal-chat/messages — returns 400 when conversationId missing', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/messages');
@@ -195,7 +195,7 @@ describe('registerInternalChatRoutes', () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/message-attachment');
     const res = await route!.handler({ query: new Map(), bodyText: '' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Missing required query params');
+    expect(JSON.parse(res.body).error).toBe('Missing required query params');
   });
   test('GET /admin/internal-chat/message-attachment — returns file with correct headers', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/message-attachment');
@@ -214,7 +214,7 @@ describe('registerInternalChatRoutes', () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-members');
     const res = await route!.handler({ query: new Map(), bodyText: '' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('accountId and conversationId required');
+    expect(JSON.parse(res.body).error).toBe('accountId and conversationId required');
   });
   test('GET /admin/internal-chat/group-members — delegates to listGroupMembersByAccount', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-members');

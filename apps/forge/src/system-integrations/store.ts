@@ -37,8 +37,24 @@ const minimaxConfigSchema = z.object({
 
 export type SystemIntegrationProviderType = 'migadu' | 'coolify' | 'github' | 'minimax';
 
+export type SystemIntegrationSummary = {
+  id: string;
+  providerType: SystemIntegrationProviderType;
+  isEnabled: boolean;
+  config: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** Fields that must not appear in list/summary API responses */
+const SENSITIVE_FIELDS: Record<SystemIntegrationProviderType, string[]> = {
+  migadu: ['apiKey'],
+  coolify: ['adminToken'],
+  github: [], // no raw secrets; appHomeUrl and organization are not secret
+  minimax: ['apiKey'],
+};
+
 export function createSystemIntegrationStore(db: Database) {
-  // Map dispatchers — one per concern, replacing if/else chains
   const parseEncryptedConfigMap: Record<
     SystemIntegrationProviderType,
     (encryptedConfig: string) => unknown
@@ -63,7 +79,7 @@ export function createSystemIntegrationStore(db: Database) {
     minimax: minimaxConfigSchema,
   };
 
-  async function listIntegrations() {
+  async function listIntegrations(): Promise<SystemIntegrationSummary[]> {
     const rows = await db.query.systemIntegrations.findMany();
 
     const typedRows = rows.filter(
@@ -73,13 +89,15 @@ export function createSystemIntegrationStore(db: Database) {
         row.providerType === 'github' ||
         row.providerType === 'minimax',
     ) as SystemIntegration[];
+
     return typedRows.map((row) => {
       const { encryptedConfig, ...rest } = row;
+      const rawConfig = parseIntegrationConfigForList(row.providerType, encryptedConfig);
 
       return {
         ...rest,
         isEnabled: row.isEnabled === 1,
-        config: parseIntegrationConfigForList(row.providerType, encryptedConfig),
+        config: sanitizeForList(row.providerType, rawConfig),
       };
     });
   }
@@ -208,6 +226,26 @@ export function createSystemIntegrationStore(db: Database) {
       forgeDebug('system-integrations', 'Failed to parse integration config', { error });
       return null;
     }
+  }
+
+  function sanitizeForList(
+    providerType: SystemIntegrationProviderType,
+    rawConfig: unknown,
+  ): Record<string, unknown> | null {
+    if (!rawConfig || typeof rawConfig !== 'object') {
+      return null;
+    }
+
+    const sensitive = SENSITIVE_FIELDS[providerType] ?? [];
+    const result: Record<string, unknown> = { ...(rawConfig as Record<string, unknown>) };
+
+    for (const field of sensitive) {
+      if (field in result) {
+        result[field] = null;
+      }
+    }
+
+    return result;
   }
 
   function parseUpsertConfig(

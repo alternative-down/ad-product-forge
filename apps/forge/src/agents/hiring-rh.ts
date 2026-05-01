@@ -375,10 +375,9 @@ export async function generateHiredAgentInstructions(
             forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Agent status report', context: { status } });
           return { valid: true, logged: status };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Try again in a moment. If the problem persists, report the same status in plain text.',
           };
         }
@@ -434,11 +433,10 @@ export async function generateHiredAgentInstructions(
             forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
           return result;
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-            forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent failure', context: { error: message } });
+            forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Verify the selected role and its permissions, then try again.',
           };
         }

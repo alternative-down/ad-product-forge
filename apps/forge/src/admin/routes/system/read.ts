@@ -3,11 +3,11 @@
  * GET routes extracted from routes.ts
  */
 
-import { oauthStore } from '@forge-runtime/core';
+import { buildOauthState } from './oauth-state.js';
 import { mcpServerConfigs } from '../../../database/schema.js';
 import { buildSystemHealthcheck } from './healthcheck.js';
 import { listGlobalSkills } from '../../../agents/global-skills.js';
-import { jsonResponse, fsPathExists } from '../helpers.js';
+import { jsonResponse } from '../helpers.js';
 import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
 import type { createForgeHttpServer } from '../../../http/server.js';
 import type { Database } from '../../../database/index.js';
@@ -25,36 +25,6 @@ interface SystemReadRoutesInput {
   registry: InternalAgentRegistry;
   readModel: SystemReadModel;
   workspaceBasePath: string;
-}
-
-async function readOauthState() {
-  const store = oauthStore;
-  const state = await store.read();
-  const result: Record<
-    string,
-    {
-      sourcePath: string;
-      sourcePresent: boolean;
-      synced: boolean;
-      hasRefresh: boolean;
-      expiresAt: string | null;
-      accountId: string | null;
-    }
-  > = {};
-
-  for (const [providerId, credential] of Object.entries(state)) {
-    const sourcePath = credential?.sourcePath ?? '';
-    result[providerId] = {
-      sourcePath,
-      sourcePresent: sourcePath ? await fsPathExists(sourcePath) : false,
-      synced: credential?.accountId != null,
-      hasRefresh: false,
-      expiresAt: credential?.expiresAt ?? null,
-      accountId: credential?.accountId ?? null,
-    };
-  }
-
-  return result;
 }
 
 export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
@@ -135,6 +105,6 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/oauth',
-    handler: async () => jsonResponse(await readOauthState()),
+    handler: async () => jsonResponse(await buildOauthState()),
   });
 }

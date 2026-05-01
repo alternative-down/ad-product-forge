@@ -718,7 +718,6 @@ export class AgentLongTermMemoryRecall {
       });
       return { formatted: '', results: searchResults };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
 
       if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
         return { formatted: '', results: [] };
@@ -727,7 +726,7 @@ export class AgentLongTermMemoryRecall {
       forgeDebug('ltm', 'ltm recall workspace search failed', {
         agentId: this.agentId,
         durationMs: Date.now() - stageStartedAt,
-        error: message,
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }

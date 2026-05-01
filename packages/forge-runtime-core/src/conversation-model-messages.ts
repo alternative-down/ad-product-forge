@@ -106,7 +106,7 @@ function normalizeOperationalMemoryPart(part: ConversationMessagePart): Conversa
 function createAssistantContentParts(
   message: ConversationMessage,
   availableToolCallIds: Set<string>,
-  fulfilledToolCallIds: Set<string>,
+  _fulfilledToolCallIds: Set<string>,
 ) {
   const parts: Array<Record<string, unknown>> = [];
 

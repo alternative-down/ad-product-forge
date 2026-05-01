@@ -2,6 +2,12 @@ import http, { type IncomingHttpHeaders } from 'node:http';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
 
+export const MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
+
+type BodyResult =
+  | { isRejected: true }
+  | { isRejected: false; buffer: Buffer };
+
 export type HttpRequest = {
   method: string;
   path: string;
@@ -67,7 +73,17 @@ export function createForgeHttpServer(config: { port: number; adminApiKey?: stri
       }
     }
 
-    const body = await readBody(req);
+    const bodyResult = await readBodyWithLimit(req);
+
+    if (bodyResult.isRejected) {
+      res.writeHead(413, {
+        ...CORS_HEADERS,
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      res.end(JSON.stringify({ error: 'Request body too large' }));
+      return;
+    }
 
     try {
       const response = await handler({
@@ -75,8 +91,8 @@ export function createForgeHttpServer(config: { port: number; adminApiKey?: stri
         path: url.pathname,
         query: url.searchParams,
         headers: req.headers,
-        body,
-        bodyText: body.toString('utf8'),
+        body: bodyResult.buffer,
+        bodyText: bodyResult.buffer.toString('utf8'),
       });
 
       res.writeHead(response.status, {
@@ -166,18 +182,30 @@ function getHeaderValue(value: string | string[] | undefined) {
   return undefined;
 }
 
-function readBody(request: http.IncomingMessage) {
-  return new Promise<Buffer>((resolve, reject) => {
+function readBodyWithLimit(request: http.IncomingMessage): Promise<BodyResult> {
+  return new Promise<BodyResult>((resolve) => {
     const chunks: Buffer[] = [];
+    let bytesReceived = 0;
 
     request.on('data', (chunk) => {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+      const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+      bytesReceived += buf.byteLength;
+
+      if (bytesReceived > MAX_BODY_BYTES) {
+        request.destroy();
+        resolve({ isRejected: true });
+        return;
+      }
+
+      chunks.push(buf);
     });
 
     request.on('end', () => {
-      resolve(Buffer.concat(chunks));
+      resolve({ isRejected: false, buffer: Buffer.concat(chunks) });
     });
 
-    request.on('error', reject);
+    request.on('error', () => {
+      resolve({ isRejected: true });
+    });
   });
 }
