@@ -424,7 +424,7 @@ export class AgentLongTermMemoryRecall {
         memoryFileCount: 0,
         checkpointFileCount: 0,
         error: error instanceof Error ? error.message : String(error),
-      }, persistedState.history ?? undefined);
+      }, persistedState?.history ?? undefined);
       return null;
     }
   }
