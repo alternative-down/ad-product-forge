@@ -120,7 +120,7 @@ export function registerInternalChatRoutes(
     handler: async (request: Request) => {
       const accountId = request.query.get('accountId');
       if (!accountId) {
-        return { status: 400, body: { error: 'accountId required' } };
+        return jsonResponse({ error: 'accountId required' }, 400);
       }
       const items = await internalChat.listConversationsByAccount({
         accountId,
@@ -159,7 +159,7 @@ export function registerInternalChatRoutes(
       const offset = request.query.get('offset');
 
       if (!accountId || !conversationId) {
-        return { status: 400, body: { error: 'accountId and conversationId required' } };
+        return jsonResponse({ error: 'accountId and conversationId required' }, 400);
       }
 
       const items = await internalChat.getMessagesByAccount({
@@ -198,7 +198,7 @@ export function registerInternalChatRoutes(
       const attachmentName = request.query.get('attachmentName');
 
       if (!accountId || !conversationId || !messageId || !attachmentName) {
-        return { status: 400, body: { error: 'Missing required query params' } };
+        return jsonResponse({ error: 'Missing required query params' }, 400);
       }
 
       const attachment = await internalChat.getMessageAttachmentByAccount({
@@ -318,7 +318,7 @@ export function registerInternalChatRoutes(
       const conversationId = request.query.get('conversationId');
 
       if (!accountId || !conversationId) {
-        return { status: 400, body: { error: 'accountId and conversationId required' } };
+        return jsonResponse({ error: 'accountId and conversationId required' }, 400);
       }
 
       return jsonResponse(
