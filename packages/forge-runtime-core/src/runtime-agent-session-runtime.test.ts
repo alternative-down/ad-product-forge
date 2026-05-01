@@ -34,24 +34,13 @@ const { sharedMocks, mockLogger } = vi.hoisted(() => {
     observers: [],
   } as unknown as ForgeConversationMemory;
 
-  const workingMemoryTool = {
-    id: 'working-memory',
-    description: 'Updates working memory',
-    inputSchema: { type: 'object', properties: {} },
-    execute: vi.fn(),
-  };
 
-  const workingMemoryStore = {
-    read: vi.fn().mockResolvedValue(null),
-    write: vi.fn().mockResolvedValue(),
-  };
 
   const createForgeConversationMemory = vi.fn().mockReturnValue(conversationMemory);
   const createOperationalMemoryConversationObserver = vi.fn().mockReturnValue({
     onStepComplete: vi.fn(),
     onGenerationStart: vi.fn(),
   });
-  const createUpdateWorkingMemoryTool = vi.fn().mockReturnValue(workingMemoryTool);
   const readOperationalMemoryState = vi.fn().mockResolvedValue({ observationMessages: [] });
   const toolToRuntimeAction = vi.fn().mockImplementation((tool: { id: string }) => ({
     name: tool.id,
@@ -77,11 +66,8 @@ const { sharedMocks, mockLogger } = vi.hoisted(() => {
       memoryStabilize,
       innerMemory,
       conversationMemory,
-      workingMemoryTool,
-      workingMemoryStore,
       createForgeConversationMemory,
       createOperationalMemoryConversationObserver,
-      createUpdateWorkingMemoryTool,
       readOperationalMemoryState,
       toolToRuntimeAction,
     },
@@ -101,9 +87,6 @@ vi.mock('./operational-memory-conversation-observer.js', () => ({
   createOperationalMemoryConversationObserver: sharedMocks.createOperationalMemoryConversationObserver,
 }));
 
-vi.mock('./runtime-working-memory.js', () => ({
-  createUpdateWorkingMemoryTool: sharedMocks.createUpdateWorkingMemoryTool,
-}));
 
 vi.mock('./tools.js', () => ({
   toolToRuntimeAction: sharedMocks.toolToRuntimeAction,
@@ -139,7 +122,6 @@ function makeMinimalOptions(overrides: Partial<CreateRuntimeAgentSessionOptions>
     threadId: 'thread_test',
     resourceId: 'resource_test',
     conversationStore: new InMemoryConversationStore(),
-    workingMemoryStore: sharedMocks.workingMemoryStore,
     ...overrides,
   };
 }
@@ -156,7 +138,6 @@ describe('createRuntimeAgentSessionRuntime', () => {
       model: expect.anything(),
       conversationStore: expect.anything(),
       conversationMemory: expect.anything(),
-      workingMemoryStore: expect.anything(),
     });
     expect(typeof runtime.getRuntimeActions).toBe('function');
     expect(typeof runtime.syncState).toBe('function');
@@ -180,9 +161,7 @@ describe('getRuntimeActions', () => {
     const runtime = await createRuntimeAgentSessionRuntime(makeMinimalOptions());
     const actions = await runtime.getRuntimeActions();
 
-    expect(sharedMocks.toolToRuntimeAction).toHaveBeenCalledWith(sharedMocks.workingMemoryTool);
-    expect(actions).toHaveLength(1);
-    expect(actions[0].name).toBe('working-memory');
+    expect(actions).toHaveLength(0);
   });
 
   it('appends dynamic actions when loadRuntimeActions succeeds', async () => {
@@ -201,9 +180,8 @@ describe('getRuntimeActions', () => {
     );
     const actions = await runtime.getRuntimeActions();
 
-    expect(actions).toHaveLength(2);
-    expect(actions[0].name).toBe('working-memory');
-    expect(actions[1].name).toBe('custom-action');
+    expect(actions).toHaveLength(1);
+    expect(actions[0].name).toBe('custom-action');
   });
 
   it('logs a warning and omits dynamic actions when loadRuntimeActions throws', async () => {
@@ -216,7 +194,7 @@ describe('getRuntimeActions', () => {
     );
     const actions = await runtime.getRuntimeActions();
 
-    expect(actions).toHaveLength(1); // only static
+    expect(actions).toHaveLength(0); // only static
     expect(sharedMocks.warnMock).toHaveBeenCalledTimes(1);
     const [scope, message] = sharedMocks.warnMock.mock.calls[0];
     expect(scope).toBe('runtime');

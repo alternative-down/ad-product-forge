@@ -182,7 +182,6 @@ export async function createInternalAgentRuntime<
     model: config.model as never,
     system: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     conversationStore: platform.conversationStore,
-    workingMemoryStore: platform.conversationStore,
     checkpointedOmLimits,
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
