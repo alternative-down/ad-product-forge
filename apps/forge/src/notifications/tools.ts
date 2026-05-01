@@ -25,10 +25,9 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
             limit: input.limit ?? 20,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
           };
         }

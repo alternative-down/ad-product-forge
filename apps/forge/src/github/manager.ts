@@ -1165,7 +1165,6 @@ export function createGitHubAppManager(config: {
       });
       conversion = manifestConversionSchema.parse(response.data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       return html(500, `<h1>Failed to convert GitHub App manifest</h1><pre>${escapeHtml(message)}</pre>`);
     }
     const app = createGitHubApp({
