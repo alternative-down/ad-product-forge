@@ -24,6 +24,7 @@ export function parseRequest<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Validation failed',
@@ -46,6 +47,7 @@ export function parseQueryParams<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Query validation failed',

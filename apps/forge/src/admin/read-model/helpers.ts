@@ -347,6 +347,7 @@ export function parseProviderCredentials(encryptedCredentials: string) {
   try {
     return JSON.parse(decrypted) as unknown;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     forgeDebug({ scope: 'admin/read-model', level: 'warn', message: 'Failed to parse credentials JSON', context: { error } });
     return decrypted;
   }

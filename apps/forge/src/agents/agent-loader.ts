@@ -108,6 +108,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       });
       agents.set(agentConfig.id, runtime);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       forgeDebug({ scope: 'agent-loader', level: 'error', agentId: agentConfig.id, message: 'Failed to load agent', context: { error } });
       // Continue loading other agents even if one fails
     }

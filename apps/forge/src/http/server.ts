@@ -85,6 +85,7 @@ export function createForgeHttpServer(config: { port: number; adminApiKey?: stri
       });
       res.end(response.body);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       if (error instanceof ZodError) {
         res.writeHead(400, {
           ...CORS_HEADERS,

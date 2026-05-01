@@ -24,6 +24,7 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     forgeDebug({ scope: 'migrations', level: 'info', message: 'Applied rows after migrate', context: { appliedRows: await getAppliedMigrationRows(db) } });
     forgeDebug({ scope: 'migrations', level: 'info', message: 'Migrations completed successfully' });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     forgeDebug({ scope: 'migrations', level: 'error', message: 'Failed to run migrations', context: { error } });
     forgeDebug({ scope: 'migrations', level: 'error', message: 'Applied rows at failure', context: { appliedRows: await getAppliedMigrationRows(db) } });
     throw error;
@@ -46,6 +47,7 @@ async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown
       limit 10
     `);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       error: error instanceof Error ? error.message : String(error),
     };
