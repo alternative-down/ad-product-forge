@@ -24,15 +24,6 @@ export class ChatGroupNotFoundError extends Error {
   }
 }
 
-export class ChatGroupAlreadyExistsError extends Error {
-  readonly conversationKey: string;
-
-  constructor(conversationKey: string) {
-    super(`Chat group already exists: ${conversationKey}`);
-    this.name = "ChatGroupAlreadyExistsError";
-    this.conversationKey = conversationKey;
-  }
-}
 
 export class GroupMemberAlreadyExistsError extends Error {
   readonly participantSlug: string;
@@ -68,22 +59,7 @@ export class InternalChatParticipantNotFoundError extends Error {
   }
 }
 
-export class ExternalChatGroupAlreadyExistsError extends Error {
-  readonly conversationKey: string;
 
-  constructor(conversationKey: string) {
-    super(`Chat group already exists: ${conversationKey}`);
-    this.name = "ExternalChatGroupAlreadyExistsError";
-    this.conversationKey = conversationKey;
-  }
-}
-
-export class OnlyAdminsCanUpdateGroupByAccountError extends Error {
-  constructor() {
-    super("Only admins can update the group.");
-    this.name = "OnlyAdminsCanUpdateGroupByAccountError";
-  }
-}
 
 export class InternalChatAccountNotFoundError extends Error {
   readonly slug: string;
