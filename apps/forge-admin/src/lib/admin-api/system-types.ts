@@ -16,6 +16,12 @@ export type SystemSettings = {
   checkpointedOmObservationSupportTokens: number;
   checkpointedOmReflectionSupportTokens: number;
   ltmRecallScoreThreshold: number;
+  ltmRecallSearchMode: 'hybrid' | 'vector' | 'bm25';
+  ltmRecallWorkspaceTopK: number;
+  ltmRecallGraphTopK: number;
+  ltmRecallGraphThreshold: number;
+  ltmRecallGraphRandomWalkSteps: number;
+  ltmRecallGraphIncludeSources: number;
   ltmRecallDocumentCount: number;
 };
 
@@ -122,71 +128,19 @@ export type SystemLlmResponse = {
   }>;
 };
 
-export type UpsertLlmProfileInput = {
-  profileId?: string;
-  name: string;
-  modelKey: string;
-  baseUrl?: string | null;
-  apiKey: string;
-  contractCostMultiplier: number;
-  isEnabled: boolean;
+export type SystemHealthcheck = {
+  database: boolean;
+  agentRegistry: boolean;
+  agentCount: number;
+  systemSettings: {
+    companyName: string;
+    checkpointedOmEnabled: boolean;
+  };
 };
 
-export type UpsertLlmModelPriceInput = {
-  modelKey: string;
-  inputPerMillionUsd: number;
-  inputCachePerMillionUsd: number;
-  outputPerMillionUsd: number;
+export type SystemMigration = {
+  id: number;
+  version: string;
+  description: string;
+  appliedAt: number;
 };
-
-export type UpdateLlmDefaultsInput = {
-  primaryProfileId: string;
-  omProfileId: string;
-  hiringRhProfileId: string;
-};
-
-export type SystemIntegrationProviderType = 'github' | 'coolify' | 'migadu' | 'minimax';
-
-export type SystemIntegration =
-  | {
-      providerType: 'github';
-      isEnabled: boolean;
-      createdAt: number;
-      updatedAt: number;
-      config: {
-        organization: string;
-        appHomeUrl: string;
-      } | null;
-    }
-  | {
-      providerType: 'coolify';
-      isEnabled: boolean;
-      createdAt: number;
-      updatedAt: number;
-      config: {
-        baseUrl: string;
-        adminToken: string;
-        serverId: string;
-        destinationId: string;
-        applicationsBaseDomain?: string;
-      } | null;
-    }
-  | {
-      providerType: 'migadu';
-      isEnabled: boolean;
-      createdAt: number;
-      updatedAt: number;
-      config: {
-        apiUser: string;
-        apiKey: string;
-      } | null;
-    }
-  | {
-      providerType: 'minimax';
-      isEnabled: boolean;
-      createdAt: number;
-      updatedAt: number;
-      config: {
-        apiKey: string;
-      } | null;
-    };

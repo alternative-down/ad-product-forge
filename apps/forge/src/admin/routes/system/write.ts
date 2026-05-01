@@ -76,13 +76,13 @@ async function readOauthState() {
   for (const [providerId, credential] of Object.entries(state)) {
     const sourcePath =
       providerId === 'openai-codex'
-        ? credential?.sourcePath ?? ''
-        : credential?.sourcePath ?? '';
+        ? ''
+        : '';
     result[providerId] = {
       sourcePath,
       sourcePresent: sourcePath ? await fsPathExists(sourcePath) : false,
       synced: credential?.accountId != null,
-      hasRefresh: Boolean(credential?.refreshToken),
+      hasRefresh: false,
       expiresAt: credential?.expiresAt ?? null,
       accountId: credential?.accountId ?? null,
     };

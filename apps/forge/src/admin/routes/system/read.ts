@@ -48,7 +48,7 @@ async function readOauthState() {
       sourcePath,
       sourcePresent: sourcePath ? await fsPathExists(sourcePath) : false,
       synced: credential?.accountId != null,
-      hasRefresh: Boolean(credential?.refreshToken),
+      hasRefresh: false,
       expiresAt: credential?.expiresAt ?? null,
       accountId: credential?.accountId ?? null,
     };
