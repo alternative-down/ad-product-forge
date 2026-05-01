@@ -373,8 +373,9 @@ export async function readAgentRuntimeMemory(db: Database, workspaceBasePath: st
         threadId: mastraAgentId,
         conversationStore,
       });
-    } catch {
-      // silently ignore migration failures
+    } catch (error) {
+      // Migration failure is non-fatal: state may already be up-to-date or in a compatible format
+      forgeDebug({ scope: 'agent-home-metrics', level: 'warn', agentId, message: 'Legacy checkpointed OM state migration failed', context: { error } });
     }
 
     const operationalMemoryState = await readOperationalMemoryState({
