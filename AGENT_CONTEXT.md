@@ -2,42 +2,56 @@
 
 ## Identity
 - Role: Fullstack Developer — Test coverage expansion, code quality enforcement
+- Scope: ad-product-forge monorepo — apps/forge primarily
 - Mission: Expand test coverage, enforce code quality, drive structured refactoring
 
-## Current Mission
-**Fix branch: `fix/1059-1057-ltm-oauth-fields`**
+## Current Status
 
-### Bug Fix #1057 + #1059 (ready to commit/push)
-- `apps/forge-admin/src/lib/admin-api/system-types.ts` — Added LTM recall fields to `SystemSettings`
-- `apps/forge/src/admin/routes/system/write.ts` — Removed non-existent `sourcePath`/`refreshToken` access
-- `apps/forge/src/admin/routes/system/read.ts` — Same fix
+### Open PRs
+| PR | Branch | Description | Status |
+|----|--------|-------------|--------|
+| #1121 | fix/1047-admin-schema-drift-v2 | Restore encryptSecret() in upsert + align roleId field | CLEAN ✅ |
+| #1115 | test/1067-internal-chat-groups-coverage | Unit tests for internal-chat-groups | CLEAN ✅ |
+| #1118 | refactor/1092-remove-working-memory | Remove updateWorkingMemory tool from runtime | MERGED ✅ |
 
-### Bug Fix #1046 (planned, next step after pushing above)
-**Root cause:** `registerAdminRoutes()` in `routes.ts` creates a **snapshot copy** of the registry and passes it to `registerAgentOperationRoutes` and `registerAgentWriteOpsRoutes`. The routes then try to mutate this copy, not the real registry.
+### PR #1121 — what's in the branch
+The branch `fix/1047-admin-schema-drift-v2` targets `develop`. Current head is `38a9855b` (ahead of develop `666b2572` by 1 commit: `fix(1047): restore missing encryptSecret() and align roleId field`).
 
-**Specifically:**
-1. `routes.ts:172-177` creates `opRegistry` as a `Map` snapshot and passes it
-2. `write-ops.ts` `reload` handler does `registry.set(agentId, runtime)` — writes to the copy
-3. `write-ops.ts` `rewakeup` handler does double `loadAgent` + `registry.set` — writes to the copy
-4. `operation-routes.ts` `force-idle` reads `entry.runner` from the copy (which has no runner)
+**Changes:**
+- `apps/forge/src/admin/routes.ts`: Fixed upsert handler — `encryptSecret()` now properly called. Fields `body.provider` → `body.providerType`. Credentials parsed as string or JSON before encrypting.
+- `apps/forge/src/admin/routes/agents/write-ops.ts`: Fixed change-role handler — `body.newRole` → `body.roleId` matching canonical `changeAgentRoleSchema`.
+- `AGENT_CONTEXT.md`: stale workspace notes (removed from branch)
+
+**Tests:** All 23 agent-routes tests pass.
+
+### PR #1115 — status
+`test/1067-internal-chat-groups-coverage` merged to develop at `6f299cf1`. Confirmed.
+
+### Pre-existing failures on develop
+- `company-cash-ledger.test.ts` — "getCurrentBalanceUsd sums posted in/out entries correctly" fails. Unrelated to any open PR.
+
+### Bug #1046 investigation
+**Root cause (identified but not yet fixed):** `registerAdminRoutes()` passes a **Map snapshot** to submodules instead of the real registry:
+1. `routes.ts` creates `opRegistry` as `new Map([...registry])` 
+2. `write-ops.ts` `reload` does `registry.set(agentId, runtime)` — writes to copy
+3. `write-ops.ts` `rewakeup` does `loadAgent()` + `registry.set()` — writes to copy
+4. `operations.ts` `force-idle` reads `entry.runner` from copy (no runner set)
 
 **Fix plan:**
-1. Pass the actual `registry` object (return from `getInternalAgentRegistry()`) instead of a `Map` copy
-2. In `write-ops.ts`: `reload` → use `registry.add(db, runtime)` to create runner properly
-3. In `write-ops.ts`: `rewakeup` → fix double-load, use `registry.add(db, runtime)` + `registry.get()` for entry
-4. Update `registerAgentOperationRoutes` to accept registry object
-5. Update `registerAgentWriteOpsRoutes` to accept registry object with `add/get` methods
-6. Clean up `routes.ts` to pass real registry
+- Pass real registry object (already done at line 172-173 of routes.ts)
+- Use `registry.add(db, runtime)` in write-ops.ts reload/rewakeup instead of direct map mutations
+- Already partially done (lines 170-212 in write-ops.ts)
 
-**Key files:**
-- `apps/forge/src/admin/routes.ts` — remove `opRegistry` snapshot, pass real registry
-- `apps/forge/src/admin/routes/agents/write-ops.ts` — fix reload and rewakeup
-- `apps/forge/src/admin/routes/agents/operation-routes.ts` — accept registry object
-
-## Status
-- TypeScript checked OK for forge-admin
-- Bug #1046 investigation complete, fix pending after push
+### Key files
+- `apps/forge/src/admin/routes.ts` — main route registration, upsert fix
+- `apps/forge/src/admin/routes/agents/write-ops.ts` — roleId fix, registry usage
+- `apps/forge/src/admin/routes/agents/operations.ts` — accepts registry object
 
 ## Git
-- Working branch: `fix/1059-1057-ltm-oauth-fields` (based on `origin/develop`)
-- PR target: `develop`
+- Working branch: `fix/1047-admin-schema-drift-v2`
+- Upstream: `origin/fix/1047-admin-schema-drift-v2`
+- Target: `develop`
+- Git user: `aldric-zvqgom` (via GitHub App token)
+
+## Success definition
+All open PRs merged to develop.
