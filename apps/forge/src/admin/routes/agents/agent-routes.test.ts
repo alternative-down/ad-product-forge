@@ -426,7 +426,7 @@ describe('Agent Write Ops Routes', () => {
     );
     expect(capturedHandler).toBeTruthy();
     await capturedHandler!({ bodyText: JSON.stringify({ agentId: 'new-agent' }) });
-    expect(mockLoadAgent).toHaveBeenCalled();
+    expect(mockLoadAgent).toHaveBeenCalledTimes(1);
     expect(registry.get('new-agent')).not.toBeNull();
   });
 
