@@ -230,10 +230,9 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'list_self_crons result', { count: result.length });
         return result.map(toCronOutput);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
         return {
           valid: false,
-          error: message,
+          error: error instanceof Error ? error.message : String(error),
           hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
         };
       }
@@ -290,10 +289,9 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
             return {
               valid: false,
-              error: message,
+              error: error instanceof Error ? error.message : String(error),
               hint: 'Review the cron fields and try again. Use cron for recurring execution or date for one-time execution.',
             };
           }
@@ -338,10 +336,9 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
             return {
               valid: false,
-              error: message,
+              error: error instanceof Error ? error.message : String(error),
               hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
             };
           }
@@ -375,10 +372,9 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
           };
         }
@@ -400,10 +396,9 @@ export function createAgentScheduleTools(
           forgeDebug('tools:schedules', 'list_crons result', { count: result.length });
           return result.map(toCronOutput);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Try again in a moment. If the problem persists, verify the delegated cron store is available.',
           };
         }
@@ -469,10 +464,9 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
             return {
               valid: false,
-              error: message,
+              error: error instanceof Error ? error.message : String(error),
               hint: 'Verify the targetAgentId exists and that you have permission to create delegated crons.',
             };
           }
@@ -517,10 +511,9 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
             return {
               valid: false,
-              error: message,
+              error: error instanceof Error ? error.message : String(error),
               hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
             };
           }
@@ -554,10 +547,9 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
           };
         }

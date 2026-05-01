@@ -20,11 +20,10 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           forgeDebug('tools:coolify', 'get_coolify_credentials result', { hasBaseUrl: !!result.baseUrl });
           return result;
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          forgeDebug('tools:coolify', 'get_coolify_credentials error', { error: message });
+          forgeDebug('tools:coolify', 'get_coolify_credentials error', { error: error instanceof Error ? error.message : String(error) });
           return {
             valid: false,
-            error: message,
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Verify Coolify integration is configured and enabled.',
           };
         }
