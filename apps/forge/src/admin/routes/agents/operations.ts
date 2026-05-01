@@ -31,7 +31,12 @@ interface InternalChat {
 interface RegistryEntry {
   runner: {
     notifyExternalEvent: (event: unknown) => void;
+    forceIdle: () => Promise<void>;
   };
+}
+
+interface Registry {
+  get(agentId: string): RegistryEntry | null;
 }
 
 /**
@@ -42,7 +47,7 @@ export function registerAgentOperationRoutes(
   input: {
     internalChat: InternalChat;
   },
-  registry: Map<string, RegistryEntry>
+  registry: Registry
 ) {
   // POST /admin/agent/wake
   httpServer.registerRoute({

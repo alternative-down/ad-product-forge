@@ -168,17 +168,10 @@ export function registerAdminRoutes(input: {
     changeAgentRoleFromAdmin,
   };
 
-  // Convert registry to Map for submodules expecting Map<string, RegistryEntry>
-  const opRegistry = registry.list().reduce(
-    (acc, e) => { acc.set(e.runtime.id, e as any); return acc; },
-    new Map()
-  );
+  // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
+  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry);
+  registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
 
-// Delegate agent routes to extracted submodules
-  registerAgentReadRoutes(input.httpServer, readModel);
-  registerAgentWriteRoutes(input.httpServer, readModel, input);
-  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, opRegistry);
-  registerAgentWriteOpsRoutes(input.httpServer, input, opRegistry, ops);
 
   input.httpServer.registerRoute({
     method: 'GET',
