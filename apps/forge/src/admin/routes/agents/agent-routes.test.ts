@@ -43,7 +43,7 @@ vi.mock('../index', () => ({
   renewAgentContractSchema: z.object({ agentId: z.string(), newBudgetUsd: z.number().positive() }),
   hireAgentSchema: z.object({ hiringRequest: z.string(), additionalContext: z.string().optional(), weeklyBudgetUsd: z.number().positive() }),
   terminateAgentSchema: z.object({ agentId: z.string() }),
-  changeAgentRoleSchema: z.object({ agentId: z.string(), newRole: z.string() }),
+  changeAgentRoleSchema: z.object({ agentId: z.string(), roleId: z.string() }),
   updateAgentGitHubManifestConfigSchema: z.object({ agentId: z.string() }),
   updateAgentConfigSchema: z.object({ agentId: z.string(), name: z.string().optional(), description: z.string().optional(), instructions: z.string().optional(), workspaceAutoSync: z.boolean().optional(), workspaceBm25: z.boolean().optional(), modelProfileId: z.string().optional(), omModelProfileId: z.string().optional() }),
 }));
