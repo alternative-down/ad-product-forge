@@ -48,6 +48,10 @@ import {
   InternalChatAccountNotFoundError,
   MessageNotFoundError,
   ExternalChatGroupAlreadyExistsError,
+  ExternalAccountNotFoundError,
+  InternalChatAccountSlugAlreadyExistsError,
+  DirectConversationFailedError,
+  AttachmentNotFoundError,
 } from "./internal-chat-errors";
 
 export function createInternalChatService(
@@ -224,7 +228,7 @@ export function createInternalChatService(
     });
 
     if (!account || account.agentId) {
-      throw new Error(`External account not found: ${input.accountId}`);
+      throw new ExternalAccountNotFoundError(input.accountId);
     }
 
     const existingWithSlug = await db.query.internalChatAccounts.findFirst({
@@ -232,7 +236,7 @@ export function createInternalChatService(
     });
 
     if (existingWithSlug && existingWithSlug.id !== input.accountId) {
-      throw new Error(`Internal chat account slug already exists: ${input.slug}`);
+      throw new InternalChatAccountSlugAlreadyExistsError(input.slug);
     }
 
     const now = Date.now();
@@ -261,7 +265,7 @@ export function createInternalChatService(
     });
 
     if (!account || account.agentId) {
-      throw new Error(`External account not found: ${input.accountId}`);
+      throw new ExternalAccountNotFoundError(input.accountId);
     }
 
     await db
@@ -834,7 +838,7 @@ export function createInternalChatService(
     const conversation = await ensureDirectConversation(input.accountId, input.participantAccountId);
 
     if (!conversation) {
-      throw new Error('Failed to create direct conversation.');
+      throw new DirectConversationFailedError();
     }
 
     return {
@@ -1103,7 +1107,7 @@ export function createInternalChatService(
     const attachment = await readMessageAttachment(input.messageId, input.attachmentName);
 
     if (!attachment) {
-      throw new Error(`Attachment not found: ${input.attachmentName}`);
+      throw new AttachmentNotFoundError(input.attachmentName);
     }
 
     return attachment;
@@ -1167,7 +1171,7 @@ export function createInternalChatService(
     });
 
     if (!account) {
-      throw new Error(`Internal chat account not found: ${accountId}`);
+      throw new InternalChatAccountNotFoundError(accountId, `Internal chat account not found: ${accountId}`);
     }
 
     return account;
@@ -1179,7 +1183,7 @@ export function createInternalChatService(
     });
 
     if (!account) {
-      throw new Error(`Internal chat account not found for agent: ${agentId}`);
+      throw new InternalChatAccountNotFoundError(agentId, `Internal chat account not found for agent: ${agentId}`);
     }
 
     return account;
@@ -1189,7 +1193,7 @@ export function createInternalChatService(
     const account = await getRequiredAccount(accountId);
 
     if (account.agentId) {
-      throw new Error(`External internal chat account not found: ${accountId}`);
+      throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
     }
 
     return account;

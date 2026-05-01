@@ -88,8 +88,8 @@ export class OnlyAdminsCanUpdateGroupByAccountError extends Error {
 export class InternalChatAccountNotFoundError extends Error {
   readonly slug: string;
 
-  constructor(slug: string) {
-    super(`Internal chat participant not found: ${slug}`);
+  constructor(slug: string, message?: string) {
+    super(message ?? `Internal chat account not found: ${slug}`);
     this.name = "InternalChatAccountNotFoundError";
     this.slug = slug;
   }
@@ -102,5 +102,42 @@ export class MessageNotFoundError extends Error {
     super(`Message not found: ${messageId}`);
     this.name = "MessageNotFoundError";
     this.messageId = messageId;
+  }
+}
+
+export class ExternalAccountNotFoundError extends Error {
+  readonly accountId: string;
+
+  constructor(accountId: string, prefix?: string) {
+    super(`${prefix ?? "External account not found"}: ${accountId}`);
+    this.name = "ExternalAccountNotFoundError";
+    this.accountId = accountId;
+  }
+}
+
+export class InternalChatAccountSlugAlreadyExistsError extends Error {
+  readonly slug: string;
+
+  constructor(slug: string) {
+    super(`Internal chat account slug already exists: ${slug}`);
+    this.name = "InternalChatAccountSlugAlreadyExistsError";
+    this.slug = slug;
+  }
+}
+
+export class DirectConversationFailedError extends Error {
+  constructor() {
+    super("Failed to create direct conversation.");
+    this.name = "DirectConversationFailedError";
+  }
+}
+
+export class AttachmentNotFoundError extends Error {
+  readonly attachmentName: string;
+
+  constructor(attachmentName: string) {
+    super(`Attachment not found: ${attachmentName}`);
+    this.name = "AttachmentNotFoundError";
+    this.attachmentName = attachmentName;
   }
 }
