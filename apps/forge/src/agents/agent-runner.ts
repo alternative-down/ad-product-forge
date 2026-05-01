@@ -17,7 +17,6 @@ import {
   delay,
   withTimeout,
   buildIterationLoopSignature,
-  didIterationUpdateWorkingMemory,
   serializeError,
   serializeUnknown,
   formatAbsentExecutionError,
@@ -935,26 +934,6 @@ export function createAgentRunner(
               const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
               const ignoredTextRequested = controlDirective === 'ignore';
               const stopRequested = controlDirective === 'stop';
-              const workingMemoryUpdated = didIterationUpdateWorkingMemory(iteration);
-              const loopSignature = buildIterationLoopSignature(iteration);
-
-              if (workingMemoryUpdated) {
-                appendPendingRunMessages([
-                  {
-                    type: 'runner-working-memory-update',
-                    groupKey: `runner-working-memory-update:${runtime.id}`,
-                    groupMetadata: {
-                      Source: 'runner',
-                    },
-                    idempotencyKey: `runner-working-memory-update:${runtime.id}:${Date.now()}`,
-                    itemMetadata: {
-                      Kind: 'working-memory-update',
-                    },
-                    text: `Working memory was updated at ${new Date().toISOString()} during the last step.`,
-                    timestamp: Date.now(),
-                  },
-                ]);
-              }
 
               if (loopDetector.isStuck()) {
                 await withTimeout(

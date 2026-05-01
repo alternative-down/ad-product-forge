@@ -7,9 +7,6 @@ import { createOperationalMemoryConversationObserver } from './operational-memor
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
 import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';
-import {
-  createUpdateWorkingMemoryTool,
-} from './runtime-working-memory.js';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
 
@@ -18,7 +15,7 @@ export type RuntimeAgentSessionRuntime = {
   assistantAuthorId?: string;
   conversationStore: CreateRuntimeAgentSessionOptions['conversationStore'];
   conversationMemory: ForgeConversationMemory;
-  workingMemoryStore: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
+  workingMemoryStore?: CreateRuntimeAgentSessionOptions['workingMemoryStore'];
   getRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   syncState(input?: {
     diagnostics?: {
@@ -46,11 +43,6 @@ function requireOperationalMemoryOmLimits(
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSessionRuntime> {
-  const workingMemoryTool = input.workingMemoryTool ?? createUpdateWorkingMemoryTool({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    store: input.workingMemoryStore,
-  });
   const checkpointedOmEnabled = input.consolidateConversationOverflow === true;
   const checkpointedOmLimits = checkpointedOmEnabled ? requireOperationalMemoryOmLimits(input) : undefined;
 
@@ -89,17 +81,15 @@ export async function createRuntimeAgentSessionRuntime(
       checkpointedOmEnabled ? checkpointedOmLimits!.rawObservationBatchTokens : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
-  const staticRuntimeActions = [
-    toolToRuntimeAction(workingMemoryTool),
-    ...(input.runtimeActions ?? []),
-  ];
+  const staticRuntimeActions = input.workingMemoryTool
+    ? [toolToRuntimeAction(input.workingMemoryTool), ...(input.runtimeActions ?? [])]
+    : (input.runtimeActions ?? []);
 
   return {
     model: input.model,
     assistantAuthorId: input.assistantAuthorId,
     conversationStore: input.conversationStore,
     conversationMemory,
-    workingMemoryStore: input.workingMemoryStore,
     async getRuntimeActions() {
       let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [];
 

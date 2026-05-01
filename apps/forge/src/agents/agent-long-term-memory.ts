@@ -322,7 +322,6 @@ export function createAgentLongTermMemory(input: {
         instructions: input.instructions,
       }),
       conversationStore: input.conversationStore,
-      workingMemoryStore: input.conversationStore,
       runtimeActions: input.workspaceActions,
       consolidateConversationOverflow: false,
     });

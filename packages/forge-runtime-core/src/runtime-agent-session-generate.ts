@@ -27,7 +27,6 @@ import type {
 } from './runtime-agent-session.js';
 import type { RuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
 import { truncateToolOutputValue } from './tool-output-truncation.js';
-import { loadWorkingMemoryContextText } from './runtime-working-memory.js';
 
 export async function runRuntimeAgentSessionGenerate(input: {
   runtime: RuntimeAgentSessionRuntime;
@@ -88,7 +87,6 @@ export async function runRuntimeAgentSessionGenerate(input: {
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
-      workingMemoryStore: input.runtime.workingMemoryStore,
     });
     const messages = await input.runtime.conversationMemory.renderModelMessages({
       historyWindow: runHistoryWindow,
@@ -360,16 +358,10 @@ async function buildRuntimeSessionSystemPrompt(input: {
   agentContext?: string;
   threadId: string;
   resourceId: string;
-  workingMemoryStore: RuntimeAgentSessionRuntime['workingMemoryStore'];
 }) {
-  const workingMemoryText = await loadWorkingMemoryContextText({
-    threadId: input.threadId,
-    resourceId: input.resourceId,
-    store: input.workingMemoryStore,
-  });
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: workingMemoryText?.trim() || '',
+    workingMemory: '' || '',
     agentContext: input.agentContext?.trim() || '',
   };
 

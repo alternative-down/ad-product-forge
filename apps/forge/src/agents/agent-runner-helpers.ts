@@ -41,13 +41,6 @@ function buildIterationLoopSignature(iteration: {
   });
 }
 
-function didIterationUpdateWorkingMemory(iteration: {
-  toolCalls: Array<{
-    name: string;
-  }>;
-}) {
-  return iteration.toolCalls.some((toolCall) => toolCall.name === 'updateWorkingMemory');
-}
 
 function serializeError(error: unknown): Record<string, unknown> {
   if (!(error instanceof Error)) {
@@ -361,7 +354,6 @@ export {
   delay,
   withTimeout,
   buildIterationLoopSignature,
-  didIterationUpdateWorkingMemory,
   serializeError,
   serializeUnknown,
   formatAbsentExecutionError,
