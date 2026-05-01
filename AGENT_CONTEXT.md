@@ -10,6 +10,7 @@
 ### Open PRs
 | PR | Branch | Description | Status |
 |----|--------|-------------|--------|
+<<<<<<< HEAD
 | #1121 | fix/1047-admin-schema-drift-v2 | Restore encryptSecret() in upsert + align roleId field | CLEAN ✅ |
 | #1115 | test/1067-internal-chat-groups-coverage | Unit tests for internal-chat-groups | CLEAN ✅ |
 | #1118 | refactor/1092-remove-working-memory | Remove updateWorkingMemory tool from runtime | MERGED ✅ |
@@ -46,6 +47,24 @@ The branch `fix/1047-admin-schema-drift-v2` targets `develop`. Current head is `
 - `apps/forge/src/admin/routes.ts` — main route registration, upsert fix
 - `apps/forge/src/admin/routes/agents/write-ops.ts` — roleId fix, registry usage
 - `apps/forge/src/admin/routes/agents/operations.ts` — accepts registry object
+
+## Git
+- Working branch: `fix/1047-admin-schema-drift-v2`
+- Upstream: `origin/fix/1047-admin-schema-drift-v2`
+- Target: `develop`
+- Git user: `aldric-zvqgom` (via GitHub App token)
+
+## Success definition
+All open PRs merged to develop.
+
+### Open PRs
+| PR | Branch | Description | Status |
+|----|--------|-------------|--------|
+| #1121 | fix/1047-admin-schema-drift-v2 | Restore encryptSecret() in upsert + align roleId field | PENDING MERGE |
+| #1115 | test/1067-internal-chat-groups-coverage | Unit tests for internal-chat-groups | MERGED ✅ |
+
+### Pre-existing failures on develop
+- `company-cash-ledger.test.ts` — "getCurrentBalanceUsd sums posted in/out entries correctly" fails. Unrelated to any open PR.
 
 ## Git
 - Working branch: `fix/1047-admin-schema-drift-v2`

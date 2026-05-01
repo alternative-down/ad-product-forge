@@ -201,9 +201,7 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent-provider/upsert',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
-      const rawCredentials = typeof body.credentials === 'string'
-        ? body.credentials
-        : JSON.stringify(body.credentials);
+      const rawCredentials = typeof body.credentials === 'string' ? body.credentials : JSON.stringify(body.credentials);
       const encryptedCredentials = encryptSecret(rawCredentials);
       const existing = await input.db.query.agentProviders.findFirst({
         where: and(

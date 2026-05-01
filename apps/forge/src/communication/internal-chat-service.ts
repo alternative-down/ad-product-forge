@@ -34,7 +34,7 @@ import {
   type InternalChatGroupParticipant,
   type InternalChatGroupRow,
 } from "./internal-chat-helpers";
-import { createInternalChatConnection } from "./internal-chat-connection";
+import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
 import {
   ConversationNotFoundError,
@@ -51,7 +51,6 @@ import {
   DirectConversationFailedError,
   AttachmentNotFoundError,
 } from "./internal-chat-errors";
-
 export function createInternalChatService(
 
   db: Database,
