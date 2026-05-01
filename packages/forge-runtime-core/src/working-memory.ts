@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isWorkingMemoryEqual } from './working-memory-equality.js';
 
 const workingMemoryText = (description: string) =>
   z
@@ -11,9 +12,9 @@ export const WORKING_MEMORY_INSTRUCTIONS = [
   'Use it for identity-level guidance that should remain true across runs unless something genuinely changed.',
   'Update it when something meaningfully changes in your role core, non-negotiables, domain boundaries, or current mission and direction.',
   'When several related fields changed, update them together in one working-memory update instead of making multiple fragmented updates.',
-  'Use working memory only for intrinsic guidance: identity, stable rules, domain boundaries, and current mission-level direction.',
+  'Use working memory only for intrinsic guidance: identity, rules, domain boundaries, and current mission-level direction.',
   'Do not use working memory as a task log, notebook, timeline, dump of recent findings, or storage for operational detail that should live in workspace files.',
-  'Use it for things like: the core of your role, non-negotiable constraints, operating principles that define how you should behave, the true boundaries of your area, the mission you are currently advancing, and what success means at a high level.',
+  'Use it for things like: the core of your role, non-negotiable constraints, operating principles that define how you should behave, the true boundaries of your area, the mission you are currently advancing, and what success looks like at a high level.',
   'Use domain information to capture what belongs to your function in practice, what kinds of activities are legitimately inside your role, and where the boundaries are without drifting into another function.',
   'Do not duplicate the system prompt, role text, tool descriptions, obvious runtime behavior, full conversation history, or information that is easy to find elsewhere.',
   'Keep every field clear, information-dense, and descriptive enough to avoid ambiguity without becoming verbose.',
@@ -26,60 +27,53 @@ export const WORKING_MEMORY_INSTRUCTIONS = [
 export const WORKING_MEMORY_SCHEMA = z.object({
   identity: z
     .object({
-      roleCore: workingMemoryText(
-        'Role core.',
-      ),
-      nonNegotiables: workingMemoryText(
-        'Hard rules and prohibitions.',
-      ),
-      operatingPrinciples: workingMemoryText(
-        'Stable operating principles.',
-      ),
+      roleCore: workingMemoryText('Role core.'),
+      nonNegotiables: workingMemoryText('Hard rules and prohibitions.'),
+      operatingPrinciples: workingMemoryText('Stable operating principles.'),
     })
     .optional()
     .describe('Identity.'),
   domain: z
     .object({
-      scope: workingMemoryText(
-        'Role scope.',
-      ),
-      activities: workingMemoryText(
-        'Typical activities.',
-      ),
-      boundaries: workingMemoryText(
-        'Role boundaries.',
-      ),
+      scope: workingMemoryText('Role scope.'),
+      activities: workingMemoryText('Typical activities.'),
+      boundaries: workingMemoryText('Role boundaries.'),
     })
     .optional()
     .describe('Domain.'),
   direction: z
     .object({
-      currentMission: workingMemoryText(
-        'Current mission.',
-      ),
-      successDefinition: workingMemoryText(
-        'Success definition.',
-      ),
+      currentMission: workingMemoryText('Current mission.'),
+      successDefinition: workingMemoryText('Success definition.'),
     })
     .optional()
     .describe('Direction.'),
 }).describe('Structured working memory.');
 
 export const WORKING_MEMORY_UPDATE_SCHEMA = z.object({
-  identity: z.object({
-    roleCore: z.string().optional(),
-    nonNegotiables: z.string().optional(),
-    operatingPrinciples: z.string().optional(),
-  }).partial().optional(),
-  domain: z.object({
-    scope: z.string().optional(),
-    activities: z.string().optional(),
-    boundaries: z.string().optional(),
-  }).partial().optional(),
-  direction: z.object({
-    currentMission: z.string().optional(),
-    successDefinition: z.string().optional(),
-  }).partial().optional(),
+  identity: z
+    .object({
+      roleCore: z.string().optional(),
+      nonNegotiables: z.string().optional(),
+      operatingPrinciples: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+  domain: z
+    .object({
+      scope: z.string().optional(),
+      activities: z.string().optional(),
+      boundaries: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+  direction: z
+    .object({
+      currentMission: z.string().optional(),
+      successDefinition: z.string().optional(),
+    })
+    .partial()
+    .optional(),
 }).describe('Partial working memory update.');
 
 export type WorkingMemoryAccess = {
@@ -120,11 +114,16 @@ export async function sanitizeWorkingMemory(input: {
 
   const parsedCurrentWorkingMemory = parseStoredWorkingMemory(currentWorkingMemory);
   const sanitizedWorkingMemory = WORKING_MEMORY_SCHEMA.safeParse(parsedCurrentWorkingMemory);
-  const normalizedWorkingMemory = JSON.stringify(sanitizedWorkingMemory.success ? sanitizedWorkingMemory.data : {});
+  const newData = sanitizedWorkingMemory.success ? sanitizedWorkingMemory.data : {};
 
-  if (normalizedWorkingMemory === currentWorkingMemory) {
+  // Use property-by-property comparison instead of JSON.stringify to avoid:
+  // - False positive writes from JSON.stringify key-ordering differences across runs
+  // - Silent skipped writes when a field is set to undefined (JSON.stringify drops it)
+  if (isWorkingMemoryEqual(newData, parsedCurrentWorkingMemory as Parameters<typeof isWorkingMemoryEqual>[0])) {
     return;
   }
+
+  const normalizedWorkingMemory = JSON.stringify(newData);
 
   await input.memory.updateWorkingMemory({
     threadId: input.threadId,
