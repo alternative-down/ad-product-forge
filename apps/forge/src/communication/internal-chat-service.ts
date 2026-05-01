@@ -42,12 +42,10 @@ import {
   ChatGroupAlreadyExistsError,
   GroupMemberAlreadyExistsError,
   OnlyAdminsCanUpdateGroupError,
-  OnlyAdminsCanUpdateGroupByAccountError,
   NameRequiredForNewGroupError,
   InternalChatParticipantNotFoundError,
   InternalChatAccountNotFoundError,
   MessageNotFoundError,
-  ExternalChatGroupAlreadyExistsError,
   ExternalAccountNotFoundError,
   InternalChatAccountSlugAlreadyExistsError,
   DirectConversationFailedError,
@@ -792,7 +790,7 @@ export function createInternalChatService(
     });
 
     if (existing) {
-      throw new ExternalChatGroupAlreadyExistsError(input.conversationKey);
+      throw new ChatGroupAlreadyExistsError(input.conversationKey);
     }
 
     const creatorAccount = await getRequiredExternalAccount(input.accountId);
@@ -942,7 +940,7 @@ export function createInternalChatService(
     });
 
     if (!membership || membership.role !== 'admin') {
-      throw new OnlyAdminsCanUpdateGroupByAccountError();
+      throw new OnlyAdminsCanUpdateGroupError();
     }
 
     const now = Date.now();
