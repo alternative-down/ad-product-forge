@@ -4,17 +4,16 @@
  */
 
 import {
-  oauthStore,
   syncOpenAICodexCredential,
   syncAnthropicCredential,
 } from '@forge-runtime/core';
+import { buildOauthState } from './oauth-state.js';
 import { eq } from 'drizzle-orm';
 import {
   jsonResponse,
   parseJsonBody,
   normalizeOptionalText,
   normalizeJsonText,
-  fsPathExists,
 } from '../helpers.js';
 import {
   upsertSystemSettingsSchema,
@@ -58,38 +57,7 @@ interface SystemWriteRoutesInput {
   loadAgent: typeof loadAgent;
 }
 
-async function readOauthState() {
-  const store = oauthStore;
-  const state = await store.read();
-  const result: Record<
-    string,
-    {
-      sourcePath: string;
-      sourcePresent: boolean;
-      synced: boolean;
-      hasRefresh: boolean;
-      expiresAt: string | null;
-      accountId: string | null;
-    }
-  > = {};
 
-  for (const [providerId, credential] of Object.entries(state)) {
-    const sourcePath =
-      providerId === 'openai-codex'
-        ? credential?.sourcePath ?? ''
-        : credential?.sourcePath ?? '';
-    result[providerId] = {
-      sourcePath,
-      sourcePresent: sourcePath ? await fsPathExists(sourcePath) : false,
-      synced: credential?.accountId != null,
-      hasRefresh: Boolean(credential?.refreshToken),
-      expiresAt: credential?.expiresAt ?? null,
-      accountId: credential?.accountId ?? null,
-    };
-  }
-
-  return result;
-}
 
 export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   const {
@@ -356,7 +324,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         }
       }
 
-      return jsonResponse({ state: await readOauthState(), results });
+      return jsonResponse({ state: await buildOauthState(), results });
     },
   });
 }
