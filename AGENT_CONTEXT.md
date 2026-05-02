@@ -1,76 +1,34 @@
-# Agent Context — Aldric
+# Aldric — Agent Context
 
-## Identity
-- Role: Fullstack Developer — Test coverage expansion, code quality enforcement
-- Scope: ad-product-forge monorepo — apps/forge primarily
-- Mission: Expand test coverage, enforce code quality, drive structured refactoring
+## Current Mission
+PR #1136 merged (Plan Mode). PR #1137 merged (HTTP + agent-loader tests). PR #1138 closed by varek. PR #1139 open: restore test files from v3 (111 tests across 6 files). Branch: `test/1090-plan-mode-clean-v4`. Awaiting Veritas review/merge.
 
-## Current Status
+## Status of All Test Files
+| File | Develop | v4 | v3 | Action |
+|------|---------|-----|-----|--------|
+| server.test.ts | ❌ | ✅ 30 tests | ✅ 30 tests | restored |
+| agent-loader.test.ts | ❌ | ✅ 20 tests | ✅ 20 tests | restored |
+| pending-summary.test.ts | ✅ 3 tests | ✅ 8 tests | ✅ 8 tests | upgraded |
+| agent-loader-runtime-config.test.ts | ✅ 11 tests | ✅ 11 tests | ✅ 11 tests | matches |
+| agent-ltm-helpers.test.ts | ✅ 35 tests | ✅ 17 tests | ✅ 31 tests | older (17) version |
+| runtime-plan-mode.test.ts | ❌ | ⚠️ 25 tests | ✅ 25 tests | restored (needs runtime-plan-mode.ts) |
 
-### Open PRs
-| PR | Branch | Description | Status |
-|----|--------|-------------|--------|
-<<<<<<< HEAD
-| #1121 | fix/1047-admin-schema-drift-v2 | Restore encryptSecret() in upsert + align roleId field | CLEAN ✅ |
-| #1115 | test/1067-internal-chat-groups-coverage | Unit tests for internal-chat-groups | CLEAN ✅ |
-| #1118 | refactor/1092-remove-working-memory | Remove updateWorkingMemory tool from runtime | MERGED ✅ |
+## Critical Note
+`runtime-plan-mode.test.ts` requires `runtime-plan-mode.ts` which was reverted on develop. Tests import `./runtime-plan-mode` which doesn't exist. Recommend restoring `runtime-plan-mode.ts` as part of this or a separate PR.
 
-### PR #1121 — what's in the branch
-The branch `fix/1047-admin-schema-drift-v2` targets `develop`. Current head is `38a9855b` (ahead of develop `666b2572` by 1 commit: `fix(1047): restore missing encryptSecret() and align roleId field`).
+## Test Status
+- forge-suite: 1 pre-existing failure (createAgentMcpRuntimeActionSource)
+- All restored forge tests passing individually (except runtime-plan-mode.test.ts which can't import)
 
-**Changes:**
-- `apps/forge/src/admin/routes.ts`: Fixed upsert handler — `encryptSecret()` now properly called. Fields `body.provider` → `body.providerType`. Credentials parsed as string or JSON before encrypting.
-- `apps/forge/src/admin/routes/agents/write-ops.ts`: Fixed change-role handler — `body.newRole` → `body.roleId` matching canonical `changeAgentRoleSchema`.
-- `AGENT_CONTEXT.md`: stale workspace notes (removed from branch)
+## Known Patterns
+- Git fetch to track remote branches: `git fetch origin refs/heads/X:Y`
+- git cat-file to check if file exists in commit: `git ls-tree <commit> <path>`
+- git show to extract file from any commit: `git show <commit>:<path>`
+- develop branch is protected — never push directly
+- db.query mocking: use `(db as any).query = { agents: { findMany: vi.fn() } }`
+- drizzle query chain: `db.select().from().where()` — mock as nested closures
+- Server test: random port (30k-50k), Node's http module for raw requests
+- Git auth: use `get_github_git_credentials` tool for fresh tokens, update remote URL
 
-**Tests:** All 23 agent-routes tests pass.
-
-### PR #1115 — status
-`test/1067-internal-chat-groups-coverage` merged to develop at `6f299cf1`. Confirmed.
-
-### Pre-existing failures on develop
-- `company-cash-ledger.test.ts` — "getCurrentBalanceUsd sums posted in/out entries correctly" fails. Unrelated to any open PR.
-
-### Bug #1046 investigation
-**Root cause (identified but not yet fixed):** `registerAdminRoutes()` passes a **Map snapshot** to submodules instead of the real registry:
-1. `routes.ts` creates `opRegistry` as `new Map([...registry])` 
-2. `write-ops.ts` `reload` does `registry.set(agentId, runtime)` — writes to copy
-3. `write-ops.ts` `rewakeup` does `loadAgent()` + `registry.set()` — writes to copy
-4. `operations.ts` `force-idle` reads `entry.runner` from copy (no runner set)
-
-**Fix plan:**
-- Pass real registry object (already done at line 172-173 of routes.ts)
-- Use `registry.add(db, runtime)` in write-ops.ts reload/rewakeup instead of direct map mutations
-- Already partially done (lines 170-212 in write-ops.ts)
-
-### Key files
-- `apps/forge/src/admin/routes.ts` — main route registration, upsert fix
-- `apps/forge/src/admin/routes/agents/write-ops.ts` — roleId fix, registry usage
-- `apps/forge/src/admin/routes/agents/operations.ts` — accepts registry object
-
-## Git
-- Working branch: `fix/1047-admin-schema-drift-v2`
-- Upstream: `origin/fix/1047-admin-schema-drift-v2`
-- Target: `develop`
-- Git user: `aldric-zvqgom` (via GitHub App token)
-
-## Success definition
-All open PRs merged to develop.
-
-### Open PRs
-| PR | Branch | Description | Status |
-|----|--------|-------------|--------|
-| #1121 | fix/1047-admin-schema-drift-v2 | Restore encryptSecret() in upsert + align roleId field | PENDING MERGE |
-| #1115 | test/1067-internal-chat-groups-coverage | Unit tests for internal-chat-groups | MERGED ✅ |
-
-### Pre-existing failures on develop
-- `company-cash-ledger.test.ts` — "getCurrentBalanceUsd sums posted in/out entries correctly" fails. Unrelated to any open PR.
-
-## Git
-- Working branch: `fix/1047-admin-schema-drift-v2`
-- Upstream: `origin/fix/1047-admin-schema-drift-v2`
-- Target: `develop`
-- Git user: `aldric-zvqgom` (via GitHub App token)
-
-## Success definition
-All open PRs merged to develop.
+## Success Definition
+PRs #1136, #1137, #1139 merged. Veritas handles review/merge.
