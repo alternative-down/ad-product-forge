@@ -10,11 +10,11 @@ vi.mock('../../../agents/global-skills', () => ({
   listGlobalSkills: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('./oauth-state.js', () => ({
+vi.mock('./oauth-state', () => ({
   buildOauthState: vi.fn().mockResolvedValue({ storePath: '/mock', providers: [] }),
 }));
 
-vi.mock('./healthcheck.js', () => ({
+vi.mock('./healthcheck', () => ({
   buildSystemHealthcheck: vi.fn().mockResolvedValue({ status: 'ok' }),
 }));
 
