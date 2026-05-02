@@ -15,6 +15,7 @@ export {
   type TodoItemStatus,
   type UpdateTodosInput,
 } from './libsql-todo-store.js';
+export { RuntimePlanMode } from './runtime-plan-mode.js';
 export type {
   AgentConfig,
 } from './agent-config.js';

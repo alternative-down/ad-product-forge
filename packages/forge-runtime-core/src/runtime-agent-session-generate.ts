@@ -86,6 +86,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
       baseSystem: input.session.system,
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
       todosText: iterationNumber === 1 ? (input.options.loadTodosText ? await input.options.loadTodosText() : undefined) : undefined,
+      planText: iterationNumber === 1 ? (input.options.loadPlanText ? await input.options.loadPlanText() : undefined) : undefined,
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
     });
@@ -205,6 +206,7 @@ function summarizeGenerateRequest(input: {
     workingMemory: string;
     agentContext: string;
     todosText: string;
+    planText: string;
   };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
@@ -359,6 +361,7 @@ async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
   agentContext?: string;
   todosText?: string;
+  planText?: string;
   threadId: string;
   resourceId: string;
 }) {
@@ -367,6 +370,7 @@ async function buildRuntimeSessionSystemPrompt(input: {
     workingMemory: '' || '',
     agentContext: input.agentContext?.trim() || '',
     todosText: input.todosText?.trim() || '',
+    planText: input.planText?.trim() || '',
   };
 
   return {

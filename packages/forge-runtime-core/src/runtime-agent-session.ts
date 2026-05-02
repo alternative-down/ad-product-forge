@@ -9,6 +9,7 @@ import type { CreateForgeAgentRuntimeOptions } from './runtime.js';
 import { type RuntimeWorkingMemoryStore } from './runtime-working-memory.js';
 import { runRuntimeAgentSessionGenerate } from './runtime-agent-session-generate.js';
 import { createRuntimeAgentSessionRuntime } from './runtime-agent-session-runtime.js';
+import type { RuntimePlanMode } from './runtime-plan-mode.js';
 import { type Tool } from './tools.js';
 
 export type RuntimeAgentSessionGenerateMessage =
@@ -77,6 +78,7 @@ export type RuntimeAgentSessionGenerateOptions = {
   };
   providerOptions?: Record<string, unknown>;
   loadTodosText?: () => Promise<string | undefined>;
+  loadPlanText?: () => Promise<string | undefined>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
   onIterationComplete?: (
     iteration: RuntimeAgentSessionIteration,
@@ -175,6 +177,7 @@ export type CreateRuntimeAgentSessionOptions = {
   runtimeObservers?: RuntimeObserver[];
   workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
   todoStore?: { client: { execute(sql: string, args?: unknown[]): Promise<{ rows: unknown[] }> }; tablePrefix?: string };
+  planMode?: RuntimePlanMode;
   consolidateConversationOverflow?: boolean;
 };
 
