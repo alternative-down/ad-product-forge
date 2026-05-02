@@ -24,7 +24,7 @@ vi.mock('../../../capabilities/runtime.js', () => ({
 function makeMockDb(): Database {
   return {
     insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnThis(), where: vi.fn().mockResolvedValue(undefined) }),
+    update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
@@ -38,17 +38,16 @@ function makeMockDb(): Database {
   } as unknown as Database;
 }
 
-function makeInput(db: Database, extras: Partial<ReturnType<typeof makeInput>> = {}) {
+function makeInput(db: Database) {
   return {
     db,
     workspaceBasePath: '/tmp/test-workspace',
     loaderConfig: {},
-    ...extras,
   };
 }
 
 function makeRequest(body: unknown): { bodyText: string } {
-  return { bodyText: JSON.stringify(body) }
+  return { bodyText: JSON.stringify(body) };
 }
 
 function getRouteHandler(httpServer: { registerRoute: Function }, method: string, path: string): Function {
@@ -66,9 +65,9 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/reload', () => {
     it('returns success with agentId after loading', async () => {
       const loadAgent = vi.fn().mockResolvedValue({ runner: { forceIdle: vi.fn() } });
-      const registry = { add: vi.fn(), get: vi.fn() };;
+      const registry = new Map<string, any>();
       const db = makeMockDb();
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(db), registry, { loadAgent } as any);
 
@@ -82,7 +81,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('throws if agentId missing', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { loadAgent: vi.fn() } as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
@@ -94,7 +93,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     it('calls forceIdle on running agent', async () => {
       const forceIdle = vi.fn();
       const registry = new Map([['agent-123', { runner: { forceIdle } }]]);
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), registry, {} as any);
 
@@ -106,7 +105,7 @@ describe('registerAgentWriteOpsRoutes', () => {
 
     it('does not throw if agent not in registry', async () => {
       const registry = new Map();
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), registry, {} as any);
 
@@ -121,7 +120,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     it('calls notifyExternalEvent on running agent', async () => {
       const notifyExternalEvent = vi.fn();
       const registry = new Map([['agent-123', { runner: { notifyExternalEvent, forceIdle: vi.fn() } }]]);
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), registry, {} as any);
 
@@ -135,7 +134,7 @@ describe('registerAgentWriteOpsRoutes', () => {
 
     it('throws if agent not in registry and loadAgent missing', async () => {
       const registry = new Map();
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), registry, {} as any);
 
@@ -147,7 +146,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/contract/top-up', () => {
     it('calls topUpActiveAgentContract', async () => {
       const topUpActiveAgentContract = vi.fn().mockResolvedValue({ success: true });
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { topUpActiveAgentContract } as any);
 
@@ -158,7 +157,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('throws if amountUsd missing', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { topUpActiveAgentContract: vi.fn() } as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/top-up');
@@ -169,7 +168,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/contract/adjust-budget', () => {
     it('calls adjustAgentContractBudget', async () => {
       const adjustAgentContractBudget = vi.fn().mockResolvedValue({ success: true });
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { adjustAgentContractBudget } as any);
 
@@ -180,7 +179,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('throws if newBudgetUsd missing', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { adjustAgentContractBudget: vi.fn() } as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/adjust-budget');
@@ -191,7 +190,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/contract/renew', () => {
     it('calls renewAgentContract', async () => {
       const renewAgentContract = vi.fn().mockResolvedValue({ success: true });
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { renewAgentContract } as any);
 
@@ -202,7 +201,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('throws if newBudgetUsd missing', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), { renewAgentContract: vi.fn() } as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/renew');
@@ -213,7 +212,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/hire', () => {
     it('calls runInternalHiring with parsed schema', async () => {
       const runInternalHiring = vi.fn().mockResolvedValue({ success: true });
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(
         httpServer as any,
@@ -235,7 +234,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('throws if required fields missing', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       registerAgentWriteOpsRoutes(
         httpServer as any,
         makeInput(makeMockDb()),
@@ -252,7 +251,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/terminate', () => {
     it('calls runInternalTermination', async () => {
       const runInternalTermination = vi.fn().mockResolvedValue({ success: true });
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(
         httpServer as any,
@@ -272,7 +271,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     it('calls changeAgentRoleFromAdmin', async () => {
       const changeAgentRoleFromAdmin = vi.fn().mockResolvedValue({ success: true });
       const reloadAgentsForRole = vi.fn();
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(
         httpServer as any,
@@ -288,7 +287,7 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('throws if roleId missing', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       registerAgentWriteOpsRoutes(
         httpServer as any,
         makeInput(makeMockDb()),
@@ -303,10 +302,10 @@ describe('registerAgentWriteOpsRoutes', () => {
 
   describe('POST /admin/agent/github-manifest-config/update', () => {
     it('parses github manifest config and returns success', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       const db = makeMockDb();
 
-      registerAgentWriteOpsRoutes(httpServer as any, makeInput(db, { githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) }}), new Map(), {} as any);
+      registerAgentWriteOpsRoutes(httpServer as any, makeInput(db), new Map(), {} as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-manifest-config/update');
       const result = await handler(
@@ -342,9 +341,9 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('rejects invalid manifest config', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
 
-      registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb(), { githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) } }), new Map(), {} as any);
+      registerAgentWriteOpsRoutes(httpServer as any, makeInput(makeMockDb()), new Map(), {} as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-manifest-config/update');
       // Missing permissions and events
@@ -354,11 +353,11 @@ describe('registerAgentWriteOpsRoutes', () => {
 
   describe('POST /admin/agent/update-config', () => {
     it('returns error if agent not found', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       const db = makeMockDb();
-      (db.query as any).agents = { findFirst: vi.fn().mockResolvedValue(null) }
+      (db.query as any).agents = { findFirst: vi.fn().mockResolvedValue(null) };
 
-      registerAgentWriteOpsRoutes(httpServer as any, makeInput(db, { githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) }}), new Map(), {} as any);
+      registerAgentWriteOpsRoutes(httpServer as any, makeInput(db), new Map(), {} as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/update-config');
       const result = await handler(makeRequest({ agentId: 'unknown-agent', instructions: 'be helpful' }));
@@ -368,13 +367,14 @@ describe('registerAgentWriteOpsRoutes', () => {
     });
 
     it('returns success after updating agent config', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+      const httpServer = { registerRoute: vi.fn() };
       const db = makeMockDb();
-      const chain = { set: vi.fn().mockReturnThis(), where: vi.fn().mockResolvedValue(undefined) };
-      (db as any).update = vi.fn().mockReturnValue(chain);
-      (db.query as any).agents = { findFirst: vi.fn().mockResolvedValue({ id: 'agent-123', roleId: null }) };
-      (db.query as any).agentRoles = { findFirst: vi.fn() };
+      (db.query as any).agents = { findFirst: vi.fn().mockResolvedValue({ id: 'agent-123', roleId: 'role-1' }) };
+      (db.query as any).agentRoles = { findFirst: vi.fn().mockResolvedValue({ id: 'role-1', name: 'Developer', description: 'Code monkey' }) };
       (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(null) };
+      const mockSet = vi.fn().mockReturnThis();
+      const mockWhere = vi.fn().mockResolvedValue(undefined);
+      (db as any).update = vi.fn().mockReturnValue({ set: mockSet, where: mockWhere });
 
       registerAgentWriteOpsRoutes(httpServer as any, makeInput(db), new Map(), {} as any);
 
@@ -384,13 +384,15 @@ describe('registerAgentWriteOpsRoutes', () => {
       const parsed = JSON.parse((result as { body: string }).body);
       expect(parsed.success).toBe(true);
       expect(parsed.agentId).toBe('agent-123');
+      expect(mockSet).toHaveBeenCalled();
+      expect(mockWhere).toHaveBeenCalled();
       expect(mockReloadAgentIfLoaded).toHaveBeenCalled();
     });
   });
 
   describe('registers expected number of routes', () => {
-    it('registers exactly 29 routes', async () => {
-      const httpServer = { registerRoute: vi.fn() }
+    it('registers exactly 11 routes', async () => {
+      const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(
         httpServer as any,
@@ -412,7 +414,7 @@ describe('registerAgentWriteOpsRoutes', () => {
         } as any,
       );
 
-      expect(httpServer.registerRoute).toHaveBeenCalledTimes(29);
+      expect(httpServer.registerRoute).toHaveBeenCalledTimes(11);
     });
   });
 });

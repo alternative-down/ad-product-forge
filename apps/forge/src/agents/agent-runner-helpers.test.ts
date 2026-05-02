@@ -3,6 +3,7 @@ import {
   delay,
   withTimeout,
   buildIterationLoopSignature,
+  didIterationUpdateWorkingMemory,
   serializeError,
   serializeUnknown,
   formatAbsentExecutionError,
@@ -97,6 +98,31 @@ describe('agent-runner-helpers', () => {
     it('handles empty toolCalls', () => {
       const sig = buildIterationLoopSignature({ text: 'empty', toolCalls: [] });
       expect(JSON.parse(sig).toolCalls).toEqual([]);
+    });
+  });
+
+  // ── didIterationUpdateWorkingMemory ──────────────────────────────────────────
+  describe('didIterationUpdateWorkingMemory', () => {
+    it('returns true when toolCalls includes updateWorkingMemory', () => {
+      expect(didIterationUpdateWorkingMemory({
+        toolCalls: [{ name: 'readFile' }, { name: 'updateWorkingMemory' }],
+      })).toBe(true);
+    });
+
+    it('returns false when no updateWorkingMemory tool', () => {
+      expect(didIterationUpdateWorkingMemory({
+        toolCalls: [{ name: 'readFile' }, { name: 'writeFile' }],
+      })).toBe(false);
+    });
+
+    it('returns false for empty toolCalls', () => {
+      expect(didIterationUpdateWorkingMemory({ toolCalls: [] })).toBe(false);
+    });
+
+    it('is case-sensitive', () => {
+      expect(didIterationUpdateWorkingMemory({
+        toolCalls: [{ name: 'UpdateWorkingMemory' }],
+      })).toBe(false);
     });
   });
 
