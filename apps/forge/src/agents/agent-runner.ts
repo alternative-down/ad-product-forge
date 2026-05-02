@@ -31,9 +31,7 @@ import {
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
-const ONE_MINUTE_MS = 60_000;
-const TEN_MINUTES_MS = 10 * ONE_MINUTE_MS;
-const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS;
+import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants.js';
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
