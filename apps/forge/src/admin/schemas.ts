@@ -519,3 +519,27 @@ export const recurringPayableStatusSchema = z.object({
   isActive: z.boolean(),
 });
 
+
+export const discordProviderDeleteSignalSchema = z.object({
+  token: z.string(),
+});
+
+export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
+  z.object({
+    transport: z.literal('stdio'),
+    command: z.string().trim().min(1),
+    argsText: z.string().optional().default(''),
+    envVarsText: z.string().optional().default(''),
+    url: z.string().optional().default(''),
+    headersText: z.string().optional().default(''),
+  }),
+  z.object({
+    transport: z.literal('http_streamable'),
+    url: z.string().trim().url(),
+    headersText: z.string().optional().default(''),
+    command: z.string().optional().default(''),
+    argsText: z.string().optional().default(''),
+    envVarsText: z.string().optional().default(''),
+  }),
+]);
+
