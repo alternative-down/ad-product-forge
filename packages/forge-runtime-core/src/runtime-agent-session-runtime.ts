@@ -10,6 +10,7 @@ import { countTokens } from 'agent-runtime-core';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
 import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store.js';
+import { RuntimePlanMode, createPlanModeActions } from './runtime-plan-mode.js';
 
 export type RuntimeAgentSessionRuntime = {
   model: CreateRuntimeAgentSessionOptions['model'];
@@ -91,6 +92,13 @@ export async function createRuntimeAgentSessionRuntime(
     todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
   }
 
+  const planMode = input.planMode ?? new RuntimePlanMode({ agentMemoryPath: input.threadId });
+  let stepCounter = 0;
+  const planModeActions = createPlanModeActions({
+    planMode,
+    getCurrentStepNumber: () => stepCounter,
+  });
+
 
   return {
     model: input.model,
@@ -98,6 +106,7 @@ export async function createRuntimeAgentSessionRuntime(
     conversationStore: input.conversationStore,
     conversationMemory,
     async getRuntimeActions() {
+      stepCounter++;
       let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [];
 
       if (input.loadRuntimeActions) {
@@ -108,11 +117,15 @@ export async function createRuntimeAgentSessionRuntime(
         }
       }
 
-      return [
+      const allActions = [
         ...staticRuntimeActions,
         ...(todoUpdateTodosAction ? [todoUpdateTodosAction] : []),
         ...dynamicRuntimeActions,
+        planModeActions.enterPlanMode,
+        planModeActions.exitPlanMode,
       ];
+      const isReadOnly = planMode.isInPlanMode;
+      return isReadOnly ? planMode.filterReadOnlyActions(allActions) : allActions;
     },
     async syncState(options) {
       options?.diagnostics?.record({

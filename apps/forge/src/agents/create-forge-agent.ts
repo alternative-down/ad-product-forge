@@ -1,5 +1,6 @@
 import {
   type CommunicationModule,
+  type RuntimePlanMode,
   createRuntimeAgentSession,
   createExternalAccountTools,
   type ToolsInput,
@@ -192,6 +193,7 @@ export async function createInternalAgentRuntime<
     ],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     todoStore: { client: platform.client },
+    planMode: new RuntimePlanMode({ agentMemoryPath: platform.agentMemoryPath }),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   });
 
