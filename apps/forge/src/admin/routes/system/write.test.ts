@@ -21,7 +21,7 @@ vi.mock('@forge-runtime/core', () => ({
   syncAnthropicCredential: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('./oauth-state.js', () => ({
+vi.mock('./oauth-state', () => ({
   buildOauthState: vi.fn().mockResolvedValue({ storePath: '/mock', providers: [] }),
 }));
 
