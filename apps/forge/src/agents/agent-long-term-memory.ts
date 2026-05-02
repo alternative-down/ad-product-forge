@@ -352,7 +352,7 @@ export function createAgentLongTermMemory(input: {
     await input.persistenceStore.writeRecallIndexStamp(reason);
   }
 
-  async function scheduleRun(delayMs: number) {
+  function scheduleRun(delayMs: number) {
     if (stopped || !idle) {
       return;
     }
