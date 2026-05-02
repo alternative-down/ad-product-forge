@@ -140,6 +140,26 @@ export async function main() {
 
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));
   process.on('SIGINT', () => handleShutdown('SIGINT'));
+
+  process.on('unhandledRejection', (reason) => {
+    forgeDebug({
+      scope: 'forge-main',
+      level: 'error',
+      message: 'Unhandled promise rejection',
+      context: { reason: reason instanceof Error ? reason.message : String(reason) },
+    });
+    process.exitCode = 1;
+  });
+
+  process.on('unhandledException', (error) => {
+    forgeDebug({
+      scope: 'forge-main',
+      level: 'error',
+      message: 'Unhandled exception',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
+    process.exitCode = 1;
+  });
 }
 
 main().catch((error) => {
