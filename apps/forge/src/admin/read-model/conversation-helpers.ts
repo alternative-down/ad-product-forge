@@ -37,24 +37,8 @@ type ClosableLibsqlClient = ReturnType<typeof createClient> & {
 const RECENT_CONVERSATION_LIMIT = 10;
 const ADMIN_OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
-  let timer: NodeJS.Timeout | null = null;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => {
-          reject(new Error(message));
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
+// shared utility — imported from utils/async
+import { withTimeout } from "../../utils/async";
 
 async function closeLibsqlClient(client: ClosableLibsqlClient) {
   await client.close?.();

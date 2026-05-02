@@ -95,6 +95,8 @@ export type AgentHomeMetricSnapshot = {
   }>;
 };
 
+import { withTimeout } from "../utils/async";
+
 export async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
   let timer: NodeJS.Timeout | null = null;
 
