@@ -55,6 +55,7 @@ export function createInternalChatService(
 
   db: Database,
 ) {
+  // ── Attachment Storage ──────────────────────────────────────────────────
   async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
     if (attachments.length === 0) {
       return;
@@ -93,6 +94,7 @@ export function createInternalChatService(
     return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
   }
 
+  // === Account Management ──────────────────────────────────────────────────
   async function registerAgentAccount(input: {
     agentId: string;
     displayName: string;
@@ -317,6 +319,7 @@ export function createInternalChatService(
     });
   }
 
+  // ── Conversation Setup ──────────────────────────────────────────────────
   async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
     const rows = await db
       .select({
@@ -381,6 +384,7 @@ export function createInternalChatService(
   }
 
 
+  // === Group Management ───────────────────────────────────────────────────
   async function createChatGroup(input: {
     agentId: string;
     conversationKey: string;
@@ -438,6 +442,7 @@ export function createInternalChatService(
   }
 
 
+  // === Message Listing ───────────────────────────────────────────────────
   async function listConversations(input: {
     agentId: string;
     unread?: boolean;
@@ -566,6 +571,7 @@ export function createInternalChatService(
     return views.filter((view) => view.unreadCount > 0);
   }
 
+  // ── Account-scoped Conversation Listing ───────────────────────────────────
   async function listConversationsByAccount(input: {
     accountId: string;
     limit: number;
@@ -655,6 +661,7 @@ export function createInternalChatService(
     );
   }
 
+  // === Message Retrieval ──────────────────────────────────────────────────
   async function getMessages(input: {
     agentId: string;
     conversationKey: string;
@@ -727,6 +734,7 @@ export function createInternalChatService(
     );
   }
 
+  // ── Account-scoped Message Retrieval ─────────────────────────────────────
   async function getMessagesByAccount(input: {
     accountId: string;
     conversationKey: string;
@@ -779,6 +787,7 @@ export function createInternalChatService(
     );
   }
 
+  // === Account-scoped Group & Conversation Operations ──────────────────────
   async function createExternalChatGroup(input: {
     accountId: string;
     conversationKey: string;
@@ -955,6 +964,7 @@ export function createInternalChatService(
     return getRequiredGroupForAccount(input.accountId, input.groupId);
   }
 
+  // ── Conversation Archival ─────────────────────────────────────────────────
   async function archiveConversationByAccount(input: {
     accountId: string;
     conversationId: string;
@@ -985,6 +995,7 @@ export function createInternalChatService(
     };
   }
 
+  // === Message Sending ───────────────────────────────────────────────────
   async function sendMessage(input: {
     accountId: string;
     targetKey: string;
@@ -1110,6 +1121,7 @@ export function createInternalChatService(
     return attachment;
   }
 
+  // === Unread / Recent ────────────────────────────────────────────────────
   async function getUnreadSummary(agentId: string) {
     const rows = await db
       .select({
@@ -1139,6 +1151,7 @@ export function createInternalChatService(
     });
   }
 
+  // === Internal Helpers ────────────────────────────────────────────────────
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
     const account = await getRequiredAgentAccount(agentId);
     return listGroupMembersOrDmPeersByAccount(account.id, conversationId);
