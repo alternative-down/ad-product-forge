@@ -391,7 +391,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   });
 
   describe('registers expected number of routes', () => {
-    it('registers exactly 29 routes', async () => {
+    it('registers exactly 30 routes', async () => {
       const httpServer = { registerRoute: vi.fn() };
 
       registerAgentWriteOpsRoutes(
@@ -414,7 +414,7 @@ describe('registerAgentWriteOpsRoutes', () => {
         } as any,
       );
 
-      expect(httpServer.registerRoute).toHaveBeenCalledTimes(29);
+      expect(httpServer.registerRoute).toHaveBeenCalledTimes(30);
     
   describe('POST /admin/agent/providers/upsert', () => {
     it('returns success with agentId and providerType', async () => {
