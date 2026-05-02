@@ -93,12 +93,12 @@ export type ProviderCredentialsMap = {
 /**
  * Load communication providers from credentials map.
  */
-export function loadCommunicationProviders(
+export async function loadCommunicationProviders(
   credentials: ProviderCredentialsMap,
   config?: {
     internalChat: InternalChatService;
   },
-): CommunicationProvider[] {
+): Promise<CommunicationProvider[]> {
   const providers: CommunicationProvider[] = [];
 
   if (credentials['internal-chat']) {
@@ -115,13 +115,24 @@ export function loadCommunicationProviders(
   }
 
   if (credentials.discord) {
-    const discord = discordCredentialsSchema.parse(credentials.discord);
-    providers.push(
-      createDiscordProvider({
+    try {
+      const discord = discordCredentialsSchema.parse(credentials.discord);
+      const provider = createDiscordProvider({
         token: discord.token,
         channels: discord.channels ?? undefined,
-      })
-    );
+      });
+
+      try {
+        await provider.getSelfContact?.();
+      } catch (error) {
+        await provider.dispose?.();
+        throw error;
+      }
+
+      providers.push(provider);
+    } catch (error) {
+      console.warn('[ProviderLoader] Skipping Discord provider because it failed to start:', error);
+    }
   }
 
   if (credentials.email) {
