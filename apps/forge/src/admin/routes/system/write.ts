@@ -35,14 +35,14 @@ import {
   installGlobalSkillsFromZip,
   deleteGlobalSkill,
 } from '../../../agents/global-skills.js';
-import type { AgentLoaderConfig } from '../../../agents/types.js';
-import type { createForgeHttpServer } from '../../../http/server.js';
-import type { SystemSettingsStore } from '../../../config/system-settings-store.js';
-import type { LlmSettingsStore } from '../../../llm/llm-settings-store.js';
-import type { LlmModelPriceStore } from '../../../llm/llm-model-price-store.js';
-import type { createSystemIntegrationStore } from '../../../integrations/system-integration-store.js';
-import type { getInternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
-import type { loadAgent } from '../../../agents/loader.js';
+import { AgentLoaderConfig } from '../../../agents/agent-loader-types.js';
+import { createForgeHttpServer } from '../../../http/server.js';
+import { SystemSettingsStore } from '../../../config/system-settings-store.js';
+import { LlmSettingsStore } from '../../../llm/llm-settings-store.js';
+import { LlmModelPriceStore } from '../../../llm/llm-model-price-store.js';
+import { createSystemIntegrationStore } from '../../../integrations/system-integration-store.js';
+import { getInternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
+import { loadAgent } from '../../../agents/loader.js';
 
 interface SystemWriteRoutesInput {
   httpServer: ReturnType<typeof createForgeHttpServer>;
