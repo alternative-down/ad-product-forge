@@ -35,6 +35,16 @@ export class GroupMemberAlreadyExistsError extends Error {
   }
 }
 
+export class ChatGroupAlreadyExistsError extends Error {
+  readonly conversationKey: string;
+
+  constructor(conversationKey: string) {
+    super(`Chat group already exists: ${conversationKey}`);
+    this.name = "ChatGroupAlreadyExistsError";
+    this.conversationKey = conversationKey;
+  }
+}
+
 export class OnlyAdminsCanUpdateGroupError extends Error {
   constructor() {
     super("Only admins can update the group.");
