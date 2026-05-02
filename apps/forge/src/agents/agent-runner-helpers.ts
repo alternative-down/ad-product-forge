@@ -350,6 +350,13 @@ function hasExactControlDirective(text: string, directive: string) {
     .some((line) => line.includes(directive));
 }
 
+
+function didIterationUpdateWorkingMemory(iteration: {
+  toolCalls: Array<{ name: string }>;
+}) {
+  return iteration.toolCalls.some((tool) => tool.name === 'updateWorkingMemory');
+}
+
 export {
   delay,
   withTimeout,
@@ -364,6 +371,8 @@ export {
   extractRunnerControlDirectiveFromIteration,
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
+  didIterationUpdateWorkingMemory,
   collectStepTextParts,
   hasExactControlDirective,
 };
+
