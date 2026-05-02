@@ -37,6 +37,7 @@ export function createDiscordProvider(config: {
   const pendingMessages: CommunicationInboundMessage[] = [];
   const recentOutboundMessages = new Map<string, Array<{ content: string; createdAt: number }>>();
   let disposed = false;
+  const pendingTypingTimers = new Set<NodeJS.Timeout>();
 
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
@@ -195,6 +196,7 @@ export function createDiscordProvider(config: {
     const typingTimer = setInterval(() => {
       void channel.sendTyping();
     }, TYPING_INDICATOR_INTERVAL_MS);
+    pendingTypingTimers.add(typingTimer);
 
     try {
       return await run();
@@ -497,6 +499,8 @@ export function createDiscordProvider(config: {
     },
     async dispose() {
       disposed = true;
+      for (const timer of pendingTypingTimers) clearInterval(timer);
+      pendingTypingTimers.clear();
       onInboundMessage = null;
       pendingMessages.length = 0;
       recentOutboundMessages.clear();
