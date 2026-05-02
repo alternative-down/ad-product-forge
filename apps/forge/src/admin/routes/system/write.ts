@@ -40,9 +40,9 @@ import type { createForgeHttpServer } from '../../../http/server.js';
 import type { SystemSettingsStore } from '../../../config/system-settings-store.js';
 import type { LlmSettingsStore } from '../../../llm/llm-settings-store.js';
 import type { LlmModelPriceStore } from '../../../llm/llm-model-price-store.js';
-import type { createSystemIntegrationStore } from '../../../integrations/system-integration-store.js';
+import type { createSystemIntegrationStore } from '../../../system-integrations/store.js';
 import type { getInternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
-import type { loadAgent } from '../../../agents/loader.js';
+import type { loadAgent } from '../../../agents/agent-loader.js';
 
 interface SystemWriteRoutesInput {
   httpServer: ReturnType<typeof createForgeHttpServer>;
