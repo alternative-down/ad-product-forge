@@ -66,6 +66,8 @@ describe('registerAgentWriteOpsRoutes', () => {
     it('returns success with agentId after loading', async () => {
       const loadAgent = vi.fn().mockResolvedValue({ runner: { forceIdle: vi.fn() } });
       const registry = new Map<string, any>();
+      const mockAdd = vi.fn();
+      registry.add = mockAdd;
       const db = makeMockDb();
       const httpServer = { registerRoute: vi.fn() };
 
@@ -77,6 +79,7 @@ describe('registerAgentWriteOpsRoutes', () => {
       const parsed = JSON.parse((result as { body: string }).body);
       expect(parsed.success).toBe(true);
       expect(parsed.agentId).toBe('agent-123');
+      expect(mockAdd).toHaveBeenCalledWith(db, expect.objectContaining({ runner: expect.any(Object) }));
       expect(loadAgent).toHaveBeenCalledWith(db, expect.objectContaining({ agentId: 'agent-123' }));
     });
 
