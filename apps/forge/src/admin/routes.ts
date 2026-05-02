@@ -344,6 +344,10 @@ const upsertAgentProviderSchema = z.object({
   credentials: z.unknown(),
 });
 
+const discordProviderDeleteSignalSchema = z.object({
+  token: z.string(),
+});
+
 const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
@@ -1622,6 +1626,26 @@ export function registerAdminRoutes(input: {
     path: '/admin/agent-provider/upsert',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
+
+      if (body.providerType === 'discord') {
+        const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
+
+        if (deleteSignal.token.trim().length === 0) {
+          await input.db
+            .delete(agentProviders)
+            .where(
+              and(
+                eq(agentProviders.agentId, body.agentId),
+                eq(agentProviders.providerType, body.providerType),
+              ),
+            );
+
+          await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+          return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+        }
+      }
+
       const credentials = parseProviderCredentials(body.providerType, body.credentials);
       const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
       const existing = await input.db.query.agentProviders.findFirst({
