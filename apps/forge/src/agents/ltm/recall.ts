@@ -19,7 +19,7 @@ import type {
 } from './ltm/store';
 
 
-import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from './agent-ltm-helpers';
+import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from './helpers';
 type SearchResult = {
   id: string;
   content: string;

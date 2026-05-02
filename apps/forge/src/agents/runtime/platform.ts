@@ -20,7 +20,7 @@ import type {
   WorkspaceFilesystemConfig,
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
-} from '../database/schema';
+} from '../../database/schema';
 import type { RuntimeWorkspace } from './runtime/types';
 
 type CommunicationWorkspaceFilesystem = {

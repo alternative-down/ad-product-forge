@@ -10,12 +10,12 @@ import type {
   WorkspaceFilesystemConfig,
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
-} from '../database/schema';
+} from '../../database/schema';
 import type { createAgentContractStore } from './agent-contract-store';
 import type {
   AgentLongTermMemoryRecallDebugSearchInput,
   AgentLongTermMemoryRecallDebugSearchResult,
-} from './ltm/recall';
+} from '../ltm/recall';
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,

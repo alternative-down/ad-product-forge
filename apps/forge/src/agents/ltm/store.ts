@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database';
+import type { Database } from '../../database';
 import {
   agentLongTermMemoryRecallStates,
   agentLongTermMemoryStates,
-} from '../database/schema';
+} from '../../database/schema';
 
 const packageManifestSchema = z.object({
   packageId: z.string().min(1),

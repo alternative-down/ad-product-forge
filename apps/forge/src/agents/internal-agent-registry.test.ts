@@ -28,7 +28,7 @@ vi.mock('./agent-loader', () => ({
 
 // Import the factory function — not the shared singleton directly
 import { getInternalAgentRegistry } from './internal-agent-registry';
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 import type { Database } from '../database/index';
 
 function makeRuntime(id = 'agent-test-1', name = 'Test Agent'): InternalAgentRuntime {

@@ -57,7 +57,7 @@ vi.mock('@forge-runtime/core', () => {
 function setForgeInstance(obj: Record<string, any> | null) { __forgeInstance = obj; }
 function getCreatedInstance() { return __retrievalInstance; }
 
-import { AgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
+import { AgentLongTermMemoryRecall } from './ltm/recall';
 
 const temporaryDirectories: string[] = [];
 
