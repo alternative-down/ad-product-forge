@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerSystemReadRoutes } from './read';
 import type { SystemReadModel } from './read';
 
-vi.mock('../../../database/schema.js', () => ({
+vi.mock('../../../database/schema', () => ({
   mcpServerConfigs: { id: null, name: null } as any,
 }));
 
-vi.mock('../../../agents/global-skills.js', () => ({
+vi.mock('../../../agents/global-skills', () => ({
   listGlobalSkills: vi.fn().mockResolvedValue([]),
 }));
 
