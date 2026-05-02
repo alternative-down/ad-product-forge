@@ -417,7 +417,7 @@ describe('Agent Write Ops Routes', () => {
     };
     const registry = new Map();
     registry.add = vi.fn();
-    registry.get = vi.fn(() => undefined);
+    registry.get = vi.fn((id) => id === 'new-agent' ? { runner: mockRuntime } : undefined);
     const ops = { ...createOps(), loadAgent: mockLoadAgent };
     registerAgentWriteOpsRoutes(
       httpServer as any,
