@@ -91,7 +91,7 @@ describe('upsertAgentProviderSchema', () => {
   it('accepts credentials with extra unknown keys', () => {
     const result = upsertAgentProviderSchema.safeParse({
       agentId: 'agent-42',
-      providerType: 'telegram',
+      providerType: 'discord',
       credentials: { botToken: '12345:ABC', extraField: 'ignored' },
     });
     expect(result.success).toBe(true);
@@ -100,11 +100,12 @@ describe('upsertAgentProviderSchema', () => {
     }
   });
 
+
   it('rejects non-string credential values', () => {
     const result = upsertAgentProviderSchema.safeParse({
       agentId: 'agent-42',
       providerType: 'discord',
-      credentials: { token: 'x', active: true },
+      credentials: { token: 'bot123', active: true },
     });
     expect(result.success).toBe(false);
   });

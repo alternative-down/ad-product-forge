@@ -283,7 +283,7 @@ export const updateAgentConfigSchema = z.object({
 export const upsertAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
-  credentials: z.record(z.unknown()),
+  credentials: z.record(z.string(), z.string()).optional(),
 });
 
 export const deleteAgentProviderSchema = z.object({
