@@ -5,11 +5,13 @@
 /**
  * Race a promise against a timeout. Rejects with Error(message) on timeout.
  * The timer is always cleared in finally to avoid memory leaks.
+ * Optionally calls onTimeout() before rejecting (useful for side-effects like cleanup).
  */
 export async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   message: string,
+  onTimeout?: () => void,
 ): Promise<T> {
   let timer: NodeJS.Timeout | null = null;
 
@@ -17,7 +19,10 @@ export async function withTimeout<T>(
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+        timer = setTimeout(() => {
+          onTimeout?.();
+          reject(new Error(message));
+        }, timeoutMs);
       }),
     ]);
   } finally {

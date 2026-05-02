@@ -1,29 +1,16 @@
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
+import { withTimeout } from '../utils/async';
+
 function delay(delayMs: number) {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, delayMs);
   });
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
-  let timeoutId: NodeJS.Timeout | null = null;
 
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(message));
-    }, timeoutMs);
-  });
 
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    if (!timeoutId) {
-      return;
-    }
-
-    clearTimeout(timeoutId);
-  });
-}
 
 function buildIterationLoopSignature(iteration: {
   text: string;
