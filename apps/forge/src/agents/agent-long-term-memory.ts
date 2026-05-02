@@ -20,6 +20,7 @@ import {
 } from './agent-long-term-memory-store';
 import { createAgentContractStore } from './agent-contract-store';
 
+import { withTimeout } from '../utils/async';
 const CHECKPOINTS_DIR = 'checkpoints';
 const MEMORY_DIR = 'memory';
 const SKILLS_DIR = path.join('workspace', 'skills');
@@ -128,30 +129,6 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  message: string,
-  onTimeout?: () => void,
-) {
-  let timer: NodeJS.Timeout | null = null;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => {
-          onTimeout?.();
-          reject(new Error(message));
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
 
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);

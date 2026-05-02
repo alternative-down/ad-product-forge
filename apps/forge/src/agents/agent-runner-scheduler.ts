@@ -1,4 +1,5 @@
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants.js';
+import { withTimeout } from '../utils/async';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
@@ -10,6 +11,7 @@ export type SchedulerState = {
   activeRunEpoch: number;
   activeStepEpoch: number;
   activeGenerateToken: number;
+  isStopped: boolean;
 };
 
 export type SchedulerDependencies = {
@@ -660,13 +662,4 @@ export function createScheduler(
     getState: () => ({ ...state }),
     isStopped: () => stopped,
   };
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`${message} (timeout after ${timeoutMs}ms)`));
-    }, timeoutMs);
-    promise.finally(() => clearTimeout(timer)).then(resolve, reject);
-  });
 }

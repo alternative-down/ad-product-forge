@@ -1,3 +1,4 @@
+import { withTimeout } from '../utils/async';
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
@@ -95,14 +96,6 @@ export function createContextLoader(deps: ContextLoaderDependencies) {
   };
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(message)), ms),
-    ),
-  ]);
-}
 
 function toString(data: string | Uint8Array | Buffer): string {
   if (typeof data === 'string') return data;
