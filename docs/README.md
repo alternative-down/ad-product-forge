@@ -1,47 +1,31 @@
-# Documentation
+# ad-product-forge Documentation
 
-This documentation set is organized by purpose instead of by historical creation order.
+## System Overview
 
-## Structure
+ad-product-forge is a local-first runtime for operating a company of persistent AI agents.
 
-- `current/`
-  - Current technical documentation.
-  - This is the source of truth for what is implemented today.
-  - It is written against the current codebase and runtime behavior.
+## Documentation Index
 
-- `planning/`
-  - Future work that still makes sense.
-  - These documents describe intended directions, not implemented behavior.
+1. [System Overview](./01-overview.md) — What is Forge, stack, modules
+2. [Architecture](./02-architecture.md) — System design, components, patterns
+3. [Data Model](./03-data-model.md) — Database tables and relationships
+4. [Agents](./04-agents.md) — Lifecycle, runtime, memory, capabilities
+5. [Communication](./05-communication.md) — Providers (Discord, InternalChat, Email)
+6. [Admin API](./06-admin-api.md) — REST endpoints and read models
+7. [Integrations](./07-integrations.md) — GitHub, Coolify, Migadu, MiniMax
+8. [Configuration](./08-configuration.md) — Environment variables, settings
+9. [Tools](./09-tools.md) — Available tools for agents
+10. [Monitoring](./10-monitoring.md) — Health checks, metrics, observability
+11. [Troubleshooting](./11-troubleshooting.md) — Common issues and fixes
+12. [Development](./12-development.md) — Setup, patterns, testing
+13. [Security](./13-security.md) — Credentials, permissions, best practices
 
-- `backlog/`
-  - Feature requests, ideas, and exploratory product directions.
-  - These are not implementation docs.
+## Quick Start
 
-- `references/`
-  - Vision, external references, technical notes, and historical architectural context worth keeping for reasoning.
-
-- `archive/`
-  - Older planning and system documents that no longer represent the primary source of truth.
-  - They are kept only for history and decision traceability.
-
-## Rules
-
-- If a document describes current runtime behavior, it belongs in `current/`.
-- If a document describes future intent, it belongs in `planning/`.
-- If a document is an idea, proposal, or product exploration, it belongs in `backlog/`.
-- If a document is no longer authoritative but still useful historically, it belongs in `archive/`.
-
-## Starting point
-
-If the goal is to understand the current system, start here:
-
-- [Current Overview](./current/README.md)
-- [Architecture](./current/architecture.md)
-- [Runtime and Lifecycle](./current/runtime-and-lifecycle.md)
-- [Data Model](./current/data-model.md)
-- [Integrations](./current/integrations.md)
-- [Tools and Permissions](./current/tools-and-permissions.md)
-- [Finance and Execution](./current/finance-and-execution.md)
-- [Configuration and Endpoints](./current/configuration-and-endpoints.md)
-- [Known Gaps](./current/known-gaps.md)
-- [Code Map](./current/code-map.md)
+```bash
+npm install
+openssl rand -base64 32  # generate ENCRYPTION_KEY
+export ENCRYPTION_KEY=<key>
+export DATABASE_URL=file:./data/forge.db
+npm run dev
+```
