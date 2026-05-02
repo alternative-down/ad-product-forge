@@ -1,3 +1,13 @@
+
+export function validateCronExpression(expression: string): boolean {
+  try {
+    parseExpression(expression, { utc: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function parseScheduleDate(value: string) {
   const timestamp = Date.parse(value);
 

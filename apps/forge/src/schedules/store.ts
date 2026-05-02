@@ -141,40 +141,6 @@ export function createAgentScheduleStore(db: Database) {
 
   // Shared update logic — avoids duplicating the field-mapping block between
   // updateAgentSchedule and updateOwnedSchedule.
-  async function applyUpdate(
-    agentId: string,
-    scheduleId: string,
-    input: UpdateAgentScheduleInput,
-  ) {
-    const existing = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-    });
-
-    if (!existing) {
-      return null;
-    }
-
-    const updated = {
-      name: input.name ?? existing.name,
-      description: input.description === undefined ? existing.description : input.description,
-      scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
-      cronExpression:
-        input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
-      scheduledDate:
-        input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
-      timezone: input.timezone ?? existing.timezone,
-      content: input.content ?? existing.content,
-      wakeWhenRunning:
-        input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
-      isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
-      updatedAt: Date.now(),
-    };
-
-    await db
-      .update(agentSchedules)
-      .set(updated)
-      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
-  }
 
   async function updateAgentSchedule(
     agentId: string,
