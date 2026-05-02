@@ -64,6 +64,10 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     resolveProfileRuntimeModel(omProfile),
   ]);
 
+  const providers = await loadCommunicationProviders(providerCredentials, {
+    internalChat: config.internalChat,
+  });
+
   return {
     agent,
     role,
@@ -74,8 +78,6 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     primaryRuntimeModel,
     omRuntimeModel,
     providerCredentials,
-    providers: loadCommunicationProviders(providerCredentials, {
-      internalChat: config.internalChat,
-    }),
+    providers,
   };
 }

@@ -63,6 +63,12 @@ export function DiscordProviderForm(input: {
           className="space-y-5"
           onSubmit={(event) => {
             event.preventDefault();
+
+            if (!credentials.token.trim()) {
+              deleteMutation.mutate();
+              return;
+            }
+
             saveMutation.mutate({
               agentId: input.agentId,
               providerType: 'discord',
@@ -89,6 +95,9 @@ export function DiscordProviderForm(input: {
               }
               disabled={pending}
             />
+            <div className="text-xs text-muted-foreground">
+              Deixe o token vazio e salve para remover completamente a configuração do Discord.
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -299,8 +308,14 @@ export function DiscordProviderForm(input: {
                 {deleteMutation.isPending ? 'Removendo...' : 'Remover'}
               </AdminButton>
             ) : null}
-            <AdminButton type="submit" disabled={pending || !credentials.token.trim()}>
-              {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+            <AdminButton type="submit" disabled={pending || (!input.configured && !credentials.token.trim())}>
+              {deleteMutation.isPending
+                ? 'Removendo...'
+                : saveMutation.isPending
+                  ? 'Salvando...'
+                  : !credentials.token.trim()
+                    ? 'Remover'
+                    : 'Salvar'}
             </AdminButton>
           </div>
         </form>
