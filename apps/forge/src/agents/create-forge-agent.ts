@@ -191,6 +191,7 @@ export async function createInternalAgentRuntime<
       ...toolsToRuntimeActions(allAgentTools),
     ],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
+    todoStore: { client: platform.client },
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   });
 

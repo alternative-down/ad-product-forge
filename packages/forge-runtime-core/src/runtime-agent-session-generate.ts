@@ -85,6 +85,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
+      todosText: iterationNumber === 1 ? (input.options.loadTodosText ? await input.options.loadTodosText() : undefined) : undefined,
       threadId: input.session.threadId,
       resourceId: input.session.resourceId,
     });
@@ -203,6 +204,7 @@ function summarizeGenerateRequest(input: {
     baseSystem: string;
     workingMemory: string;
     agentContext: string;
+    todosText: string;
   };
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
@@ -356,6 +358,7 @@ function appendGenerateDiagnostics(error: unknown, diagnostics: {
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
   agentContext?: string;
+  todosText?: string;
   threadId: string;
   resourceId: string;
 }) {
@@ -363,6 +366,7 @@ async function buildRuntimeSessionSystemPrompt(input: {
     baseSystem: input.baseSystem?.trim() || '',
     workingMemory: '' || '',
     agentContext: input.agentContext?.trim() || '',
+    todosText: input.todosText?.trim() || '',
   };
 
   return {
@@ -374,6 +378,7 @@ async function buildRuntimeSessionSystemPrompt(input: {
       .filter((value): value is string => Boolean(value))
       .join('\n\n')
       .trim() || undefined,
+    todosText: input.todosText?.trim() || '',
     segments,
   };
 }

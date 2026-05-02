@@ -9,6 +9,7 @@ import { readOperationalMemoryState } from './operational-memory-state.js';
 import { countTokens } from 'agent-runtime-core';
 import type { CreateRuntimeAgentSessionOptions } from './runtime-agent-session.js';
 import { toolToRuntimeAction } from './tools.js';
+import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store.js';
 
 export type RuntimeAgentSessionRuntime = {
   model: CreateRuntimeAgentSessionOptions['model'];
@@ -84,6 +85,12 @@ export async function createRuntimeAgentSessionRuntime(
   const staticRuntimeActions = input.workingMemoryTool
     ? [toolToRuntimeAction(input.workingMemoryTool), ...(input.runtimeActions ?? [])]
     : (input.runtimeActions ?? []);
+  let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
+  if (input.todoStore) {
+    const todoLib = new LibsqlTodoStore({ client: input.todoStore.client, tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime' });
+    todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
+  }
+
 
   return {
     model: input.model,
@@ -103,6 +110,7 @@ export async function createRuntimeAgentSessionRuntime(
 
       return [
         ...staticRuntimeActions,
+        ...(todoUpdateTodosAction ? [todoUpdateTodosAction] : []),
         ...dynamicRuntimeActions,
       ];
     },
