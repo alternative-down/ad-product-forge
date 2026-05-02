@@ -23,7 +23,7 @@ import {
   toScheduleSummary,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
-  parseProviderCredentials,
+  decryptProviderConfig,
   mergeToolLogMessages,
   buildThreadToolInvocationParts,
   collectConversationParticipants,
@@ -429,24 +429,24 @@ describe('extractLatestMessageToolBadge', () => {
   });
 });
 
-describe('parseProviderCredentials', () => {
-  // parseProviderCredentials returns the decrypted string on parse failure (not null)
+describe('decryptProviderConfig', () => {
+  // decryptProviderConfig returns the decrypted string on parse failure (not null)
   test('returns null for null input', () => {
-    expect(parseProviderCredentials(null as unknown as string)).toBeNull();
+    expect(decryptProviderConfig(null as unknown as string)).toBeNull();
   });
 
   test('returns null for undefined input', () => {
-    expect(parseProviderCredentials(undefined as unknown as string)).toBeUndefined();
+    expect(decryptProviderConfig(undefined as unknown as string)).toBeUndefined();
   });
 
   test('decrypts and parses valid credentials JSON', () => {
-    const result = parseProviderCredentials('{"apiKey":"secret","endpoint":"url"}');
+    const result = decryptProviderConfig('{"apiKey":"secret","endpoint":"url"}');
     expect(result).toEqual({ apiKey: 'secret', endpoint: 'url' });
   });
 
   test('returns decrypted string for invalid JSON', () => {
     // On JSON parse failure the function returns the decrypted (plain) string
-    expect(parseProviderCredentials('not-json')).toBe('not-json');
+    expect(decryptProviderConfig('not-json')).toBe('not-json');
   });
 });
 
