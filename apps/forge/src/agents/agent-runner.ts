@@ -1,3 +1,5 @@
+import { AGENT_CONTEXT_FILE_PATH, AGENT_CONTEXT_WARNING_CHAR_LIMIT, WORKING_MEMORY_WARNING_CHAR_LIMIT } from './agent-context-constants.js';
+
 import { forgeDebug } from '@forge-runtime/core';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -45,9 +47,6 @@ const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
-const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
-const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
-const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
 const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 

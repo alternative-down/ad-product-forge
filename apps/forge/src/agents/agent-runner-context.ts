@@ -1,8 +1,7 @@
+import { AGENT_CONTEXT_FILE_PATH, AGENT_CONTEXT_WARNING_CHAR_LIMIT, WORKING_MEMORY_WARNING_CHAR_LIMIT } from './agent-context-constants.js';
+
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
-const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
-const AGENT_CONTEXT_WARNING_CHAR_LIMIT = 8_000;
-const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
 
 export type WorkspaceFilesystem = {
   exists(path: string): Promise<boolean>;
