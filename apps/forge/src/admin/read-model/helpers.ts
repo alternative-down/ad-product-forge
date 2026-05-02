@@ -342,7 +342,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
 // Message Processing Helpers
 // ============================================================================
 
-export function parseProviderCredentials(encryptedCredentials: string) {
+export function decryptProviderConfig(encryptedCredentials: string) {
   const decrypted = decryptSecret(encryptedCredentials);
 
   try {
