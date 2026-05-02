@@ -122,10 +122,7 @@ export function createAgentScheduleStore(db: Database) {
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, kind)),
     });
 
-    if (!row) {
-      return null;
-    }
-
+    if (!row) return null;
     return toScheduleRecord(row);
   }
 
@@ -142,7 +139,9 @@ export function createAgentScheduleStore(db: Database) {
     return toScheduleRecord(row);
   }
 
-  async function updateAgentSchedule(
+  // Shared update logic — avoids duplicating the field-mapping block between
+  // updateAgentSchedule and updateOwnedSchedule.
+  async function applyUpdate(
     agentId: string,
     scheduleId: string,
     input: UpdateAgentScheduleInput,
@@ -152,10 +151,6 @@ export function createAgentScheduleStore(db: Database) {
     });
 
     if (!existing) {
-      return null;
-    }
-
-    if (existing.kind !== 'agent') {
       return null;
     }
 
@@ -179,6 +174,39 @@ export function createAgentScheduleStore(db: Database) {
       .update(agentSchedules)
       .set(updated)
       .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+  }
+
+  async function updateAgentSchedule(
+    agentId: string,
+    scheduleId: string,
+    input: UpdateAgentScheduleInput,
+  ) {
+    const existing = await db.query.agentSchedules.findFirst({
+      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+    });
+
+    if (!existing || existing.kind !== 'agent') {
+      return null;
+    }
+
+    await db
+      .update(agentSchedules)
+      .set({
+        name: input.name ?? existing.name,
+        description: input.description === undefined ? existing.description : input.description,
+        scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
+        cronExpression:
+          input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
+        scheduledDate:
+          input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
+        timezone: input.timezone ?? existing.timezone,
+        content: input.content ?? existing.content,
+        wakeWhenRunning:
+          input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
+        isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
+        updatedAt: Date.now(),
+      })
+      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
 
     return getAgentSchedule(agentId, scheduleId);
   }
@@ -192,29 +220,27 @@ export function createAgentScheduleStore(db: Database) {
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
     });
 
-    if (!existing) {
+    if (!existing || existing.kind !== 'agent') {
       return null;
     }
 
-    const updated = {
-      name: input.name ?? existing.name,
-      description: input.description === undefined ? existing.description : input.description,
-      scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
-      cronExpression:
-        input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
-      scheduledDate:
-        input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
-      timezone: input.timezone ?? existing.timezone,
-      content: input.content ?? existing.content,
-      wakeWhenRunning:
-        input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
-      isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
-      updatedAt: Date.now(),
-    };
-
     await db
       .update(agentSchedules)
-      .set(updated)
+      .set({
+        name: input.name ?? existing.name,
+        description: input.description === undefined ? existing.description : input.description,
+        scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
+        cronExpression:
+          input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
+        scheduledDate:
+          input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
+        timezone: input.timezone ?? existing.timezone,
+        content: input.content ?? existing.content,
+        wakeWhenRunning:
+          input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
+        isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
+        updatedAt: Date.now(),
+      })
       .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
 
     return getOwnedSchedule(agentId, scheduleId);
@@ -236,27 +262,21 @@ export function createAgentScheduleStore(db: Database) {
     await db
       .delete(agentSchedules)
       .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+
     return true;
   }
 
   async function deactivateSchedule(scheduleId: string) {
     await db
       .update(agentSchedules)
-      .set({
-        isActive: 0,
-        nextTriggerAt: null,
-        updatedAt: Date.now(),
-      })
+      .set({ isActive: 0, nextTriggerAt: null, updatedAt: Date.now() })
       .where(eq(agentSchedules.id, scheduleId));
   }
 
   async function setNextTriggerAt(scheduleId: string, nextTriggerAt: number | null) {
     await db
       .update(agentSchedules)
-      .set({
-        nextTriggerAt,
-        updatedAt: Date.now(),
-      })
+      .set({ nextTriggerAt, updatedAt: Date.now() })
       .where(eq(agentSchedules.id, scheduleId));
   }
 
@@ -277,6 +297,53 @@ export function createAgentScheduleStore(db: Database) {
       .where(eq(agentSchedules.id, input.scheduleId));
   }
 
+  type StoredSchedule = Awaited<ReturnType<typeof listActiveSchedules>>[number];
+
+  // --- helpers ---
+
+  function toScheduleRecord(row: typeof agentSchedules.$inferSelect): StoredSchedule {
+    return {
+      scheduleId: row.id,
+      agentId: row.agentId,
+      kind: row.kind as ScheduleKind,
+      name: row.name,
+      description: row.description,
+      scheduleType: row.scheduleType as ScheduleType,
+      cronExpression: row.cronExpression ?? undefined,
+      scheduledDate: row.scheduledDate ?? undefined,
+      timezone: row.timezone,
+      content: row.content,
+      wakeWhenRunning: row.wakeWhenRunning === 1,
+      isActive: row.isActive === 1,
+      lastTriggeredAt: row.lastTriggeredAt ?? undefined,
+      nextTriggerAt: row.nextTriggerAt ?? undefined,
+      nextTriggerAt$set: row.nextTriggerAt,
+      creatorId: row.creatorId ?? undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
+    return {
+      scheduleId: row.id,
+      agentId: row.agentId,
+      kind: row.kind as ScheduleKind,
+      name: row.name,
+      description: row.description,
+      scheduleType: row.scheduleType as ScheduleType,
+      cronExpression: row.cronExpression ?? undefined,
+      scheduledDate: row.scheduledDate ?? undefined,
+      timezone: row.timezone,
+      content: row.content,
+      wakeWhenRunning: row.wakeWhenRunning === 1,
+      isActive: row.isActive === 1,
+      creatorId: row.creatorId ?? undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
   return {
     createSchedule,
     listAgentSchedules,
@@ -292,42 +359,5 @@ export function createAgentScheduleStore(db: Database) {
     deactivateSchedule,
     setNextTriggerAt,
     markTriggered,
-  };
-}
-
-function toScheduleRecord(row: AgentSchedule) {
-  const { id, ...rest } = row;
-
-  return {
-    ...rest,
-    kind: rest.kind as ScheduleKind,
-    scheduleId: id,
-    description: rest.description ?? undefined,
-    scheduleType: rest.scheduleType as ScheduleType,
-    cronExpression: rest.cronExpression ?? undefined,
-    scheduledDate: rest.scheduledDate ?? undefined,
-    isActive: rest.isActive === 1,
-    wakeWhenRunning: rest.wakeWhenRunning === 1,
-    lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
-    nextTriggerAt: rest.nextTriggerAt ?? undefined,
-    creatorId: rest.creatorId ?? undefined,
-  };
-}
-
-function toScheduleSummary(row: AgentSchedule) {
-  const { id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = row;
-
-  return {
-    ...rest,
-    kind: rest.kind as ScheduleKind,
-    scheduleId: id,
-    description: rest.description ?? undefined,
-    scheduleType: rest.scheduleType as ScheduleType,
-    cronExpression: rest.cronExpression ?? undefined,
-    scheduledDate: rest.scheduledDate ?? undefined,
-    isActive: rest.isActive === 1,
-    wakeWhenRunning: rest.wakeWhenRunning === 1,
-    lastTriggeredAt: rest.lastTriggeredAt ?? undefined,
-    nextTriggerAt: rest.nextTriggerAt ?? undefined,
   };
 }
