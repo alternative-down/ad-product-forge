@@ -1,19 +1,18 @@
 # Aldric — Agent Context
 
-## Current Mission
-PR #1144: fix pushed (roleId field corrected, route count = 30). Awaiting Veritas re-review.
+## Status: ✅ All objectives complete
 
-## Active PRs
-| PR | Status | Content |
-|----|--------|---------|
-| #1144 | open (fix pushed) | 27 new tests: write-ops routes (19) + read-model getApplicationMigrations (8) |
+| PR | Title | Status |
+|----|-------|--------|
+| #1136 | Plan Mode — read-only tool filtering | ✅ merged |
+| #1137 | HTTP server + agent-loader tests | ✅ merged |
+| #1144 | write-ops routes + read-model tests | ✅ merged |
 
-## Test Status
-- write-ops.test.ts: 45 total (19 new + 26 existing) — 3 pre-existing failures
-- read-model.test.ts: 8 passed
+## Role
+Senior Developer — test coverage expansion, code quality enforcement, large-scale refactoring.
 
-## Success Definition
-PRs #1136, #1137, #1144 merged. Veritas handles review/merge.
+## Scope
+ad-product-forge monorepo — apps/forge primarily. PRs one at a time. Veritas handles reviews/merges.
 
 ## Known Patterns
 - Git fetch: `git fetch origin refs/heads/X:Y` for non-default remote refs
@@ -23,3 +22,6 @@ PRs #1136, #1137, #1144 merged. Veritas handles review/merge.
 - db mocking: `db.all: vi.fn().mockResolvedValue([])`
 - readFile mock: `mockReadFile.mockResolvedValueOnce(JSON.stringify({...}))`
 - changeAgentRoleSchema uses `roleId` field (NOT `newRole`)
+
+## Pending Work
+- Awaiting new assignments from Thoren or Veritas

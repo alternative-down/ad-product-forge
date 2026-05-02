@@ -65,7 +65,9 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/reload', () => {
     it('returns success with agentId after loading', async () => {
       const loadAgent = vi.fn().mockResolvedValue({ runner: { forceIdle: vi.fn() } });
+      const mockAdd = vi.fn();
       const registry = new Map<string, any>();
+      registry.add = mockAdd;
       const db = makeMockDb();
       const httpServer = { registerRoute: vi.fn() };
 
@@ -78,6 +80,7 @@ describe('registerAgentWriteOpsRoutes', () => {
       expect(parsed.success).toBe(true);
       expect(parsed.agentId).toBe('agent-123');
       expect(loadAgent).toHaveBeenCalledWith(db, expect.objectContaining({ agentId: 'agent-123' }));
+      expect(mockAdd).toHaveBeenCalledWith(db, expect.objectContaining({ runner: expect.any(Object) }));
     });
 
     it('throws if agentId missing', async () => {
