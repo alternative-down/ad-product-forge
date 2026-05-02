@@ -6,6 +6,15 @@ export {
   LibsqlConversationStore,
   type LibsqlConversationStoreOptions,
 } from './libsql-conversation-store.js';
+export {
+  LibsqlTodoStore,
+  createUpdateTodosAction,
+  type LibsqlTodoStoreOptions,
+  type TodoItem,
+  type TodoItemInput,
+  type TodoItemStatus,
+  type UpdateTodosInput,
+} from './libsql-todo-store.js';
 export type {
   AgentConfig,
 } from './agent-config.js';

@@ -76,6 +76,7 @@ export type RuntimeAgentSessionGenerateOptions = {
     };
   };
   providerOptions?: Record<string, unknown>;
+  loadTodosText?: () => Promise<string | undefined>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
   onIterationComplete?: (
     iteration: RuntimeAgentSessionIteration,
@@ -173,6 +174,7 @@ export type CreateRuntimeAgentSessionOptions = {
   loadRuntimeActions?: () => Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
   runtimeObservers?: RuntimeObserver[];
   workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
+  todoStore?: { client: { execute(sql: string, args?: unknown[]): Promise<{ rows: unknown[] }> }; tablePrefix?: string };
   consolidateConversationOverflow?: boolean;
 };
 

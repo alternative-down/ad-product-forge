@@ -180,6 +180,7 @@ export async function createAgentRuntimePlatform(input: {
     agentWorkspacePath,
     agentWorkspaceDir,
     agentMemoryPath,
+    client,
     async dispose() {
       client.close();
     },
