@@ -282,7 +282,7 @@ describe('registerAgentWriteOpsRoutes', () => {
       );
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/change-role');
-      await handler(makeRequest({ agentId: 'agent-123', newRole: 'new-role' }));
+      await handler(makeRequest({ agentId: 'agent-123', roleId: 'new-role' }));
 
       expect(changeAgentRoleFromAdmin).toHaveBeenCalled();
     });
