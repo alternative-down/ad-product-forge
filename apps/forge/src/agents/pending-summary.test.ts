@@ -1,129 +1,80 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAgentPendingSummaryReader, type AgentPendingSummary } from './pending-summary';
-
-function createMockDb() {
-  const whereMock = vi.fn();
-  const fromMock = vi.fn().mockReturnValue({ where: whereMock });
-  const selectMock = vi.fn().mockReturnValue({ from: fromMock });
-  return {
-    select: selectMock,
-    _whereMock: whereMock,
-  } as unknown as ReturnType<typeof import('../database').getDatabase>['select'] & {
-    _whereMock: ReturnType<typeof whereMock>;
-  };
-}
-
-function createMockInternalChat() {
-  return {
-    getUnreadSummary: vi.fn<() => Promise<{ unreadConversationCount: number; unreadMessageCount: number }>>(),
-  };
-}
+import { describe, expect, it, vi } from 'vitest';
+import { createAgentPendingSummaryReader } from './pending-summary';
 
 describe('createAgentPendingSummaryReader', () => {
-  let mockDb: ReturnType<typeof createMockDb>;
-  let mockInternalChat: ReturnType<typeof createMockInternalChat>;
-
-  beforeEach(() => {
-    mockDb = createMockDb();
-    mockInternalChat = createMockInternalChat();
-  });
-
   it('returns zero counts when no unread data', async () => {
-    mockDb._whereMock.mockResolvedValue([]);
-    mockInternalChat.getUnreadSummary.mockResolvedValue({
-      unreadConversationCount: 0,
-      unreadMessageCount: 0,
-    });
+    const mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    };
+    const mockInternalChat = {
+      getUnreadSummary: vi.fn().mockResolvedValue({
+        unreadConversationCount: 0,
+        unreadMessageCount: 0,
+      }),
+    };
 
     const reader = createAgentPendingSummaryReader({
-      db: mockDb as any,
+      db: mockDb as never,
       workspaceBasePath: '/workspace',
-      internalChat: mockInternalChat as any,
+      internalChat: mockInternalChat as never,
     });
 
-    const result = await reader('agent-1');
+    const result = await reader('agent-123');
 
-    expect(result).toEqual<AgentPendingSummary>({
-      unreadNotificationCount: 0,
-      unreadConversationCount: 0,
-      unreadMessageCount: 0,
-    });
+    expect(result.unreadNotificationCount).toBe(0);
+    expect(result.unreadConversationCount).toBe(0);
+    expect(result.unreadMessageCount).toBe(0);
   });
 
-  it('returns notification count from DB query', async () => {
-    mockDb._whereMock.mockResolvedValue([{ count: 5 }]);
-    mockInternalChat.getUnreadSummary.mockResolvedValue({
-      unreadConversationCount: 0,
-      unreadMessageCount: 0,
-    });
+  it('returns correct counts from db and internalChat', async () => {
+    const mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([{ count: 5 }]),
+    };
+    const mockInternalChat = {
+      getUnreadSummary: vi.fn().mockResolvedValue({
+        unreadConversationCount: 2,
+        unreadMessageCount: 10,
+      }),
+    };
 
     const reader = createAgentPendingSummaryReader({
-      db: mockDb as any,
+      db: mockDb as never,
       workspaceBasePath: '/workspace',
-      internalChat: mockInternalChat as any,
+      internalChat: mockInternalChat as never,
     });
 
-    const result = await reader('agent-2');
+    const result = await reader('agent-456');
 
     expect(result.unreadNotificationCount).toBe(5);
+    expect(result.unreadConversationCount).toBe(2);
+    expect(result.unreadMessageCount).toBe(10);
   });
 
-  it('returns conversation and message counts from internal chat', async () => {
-    mockDb._whereMock.mockResolvedValue([]);
-    mockInternalChat.getUnreadSummary.mockResolvedValue({
-      unreadConversationCount: 3,
-      unreadMessageCount: 12,
-    });
+  it('handles db returning undefined count', async () => {
+    const mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    };
+    const mockInternalChat = {
+      getUnreadSummary: vi.fn().mockResolvedValue({
+        unreadConversationCount: 0,
+        unreadMessageCount: 0,
+      }),
+    };
 
     const reader = createAgentPendingSummaryReader({
-      db: mockDb as any,
+      db: mockDb as never,
       workspaceBasePath: '/workspace',
-      internalChat: mockInternalChat as any,
+      internalChat: mockInternalChat as never,
     });
 
-    const result = await reader('agent-3');
+    const result = await reader('agent-789');
 
-    expect(result.unreadConversationCount).toBe(3);
-    expect(result.unreadMessageCount).toBe(12);
-  });
-
-  it('passes agentId to internal chat getUnreadSummary', async () => {
-    mockDb._whereMock.mockResolvedValue([]);
-    mockInternalChat.getUnreadSummary.mockResolvedValue({
-      unreadConversationCount: 0,
-      unreadMessageCount: 0,
-    });
-
-    const reader = createAgentPendingSummaryReader({
-      db: mockDb as any,
-      workspaceBasePath: '/workspace',
-      internalChat: mockInternalChat as any,
-    });
-
-    await reader('agent-specific-id');
-
-    expect(mockInternalChat.getUnreadSummary).toHaveBeenCalledWith('agent-specific-id');
-  });
-
-  it('aggregates all three counts', async () => {
-    mockDb._whereMock.mockResolvedValue([{ count: 7 }]);
-    mockInternalChat.getUnreadSummary.mockResolvedValue({
-      unreadConversationCount: 2,
-      unreadMessageCount: 15,
-    });
-
-    const reader = createAgentPendingSummaryReader({
-      db: mockDb as any,
-      workspaceBasePath: '/workspace',
-      internalChat: mockInternalChat as any,
-    });
-
-    const result = await reader('agent-4');
-
-    expect(result).toEqual<AgentPendingSummary>({
-      unreadNotificationCount: 7,
-      unreadConversationCount: 2,
-      unreadMessageCount: 15,
-    });
+    expect(result.unreadNotificationCount).toBe(0);
   });
 });

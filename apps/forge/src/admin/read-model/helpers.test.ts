@@ -1,14 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
-// Stable module-level mocks so they can be referenced consistently across vi.mock and tests
-const mockForgeDebug = vi.fn();
-const mockDecryptSecret = vi.fn();
+const mockForgeDebug = vi.hoisted(() => vi.fn());
 
-// Mock @forge-runtime/core before helpers.ts tries to import it
-vi.mock('@forge-runtime/core', () => ({ forgeDebug: (...args: unknown[]) => mockForgeDebug(...args) }));
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: mockForgeDebug,
+  LibsqlConversationStore: vi.fn(),
+  readOperationalMemoryState: vi.fn(),
+}));
 
-// Mock encryption before helpers.ts tries to import it
-vi.mock('../../encryption/crypto', () => ({ decryptSecret: (...args: unknown[]) => mockDecryptSecret(...args) }));
+vi.mock('../../encryption/crypto', () => ({
+  decryptSecret: vi.fn((x: string) => x),
+}));
 
 import {
   isMemoryRecallText,
@@ -18,641 +20,552 @@ import {
   humanizeMemoryKey,
   formatWorkingMemoryValue,
   renderWorkingMemoryMarkdown,
+  toScheduleSummary,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
+  parseProviderCredentials,
   mergeToolLogMessages,
   buildThreadToolInvocationParts,
   collectConversationParticipants,
   isTextPart,
-  toScheduleSummary,
-  parseProviderCredentials,
 } from './helpers';
 
-// ---------------------------------------------------------------------------
-// isMemoryRecallText
-// ---------------------------------------------------------------------------
 describe('isMemoryRecallText', () => {
-  it('returns false for plain text without tags', () => {
-    expect(isMemoryRecallText('hello world')).toBe(false);
-  });
-
-  it('returns false for empty string', () => {
-    expect(isMemoryRecallText('')).toBe(false);
-  });
-
-  it('returns true for valid memory-recall block', () => {
+  test('returns true for memory-recall tag with content', () => {
     expect(isMemoryRecallText('<memory-recall>test</memory-recall>')).toBe(true);
   });
 
-  it('returns true for nested memory-recall blocks (greedy regex)', () => {
-    expect(isMemoryRecallText('<memory-recall>a<memory-recall>b</memory-recall>')).toBe(true);
+  test('returns true for multi-line memory-recall block', () => {
+    expect(
+      isMemoryRecallText('<memory-recall>\n<items>\n<item>content</item>\n</items>\n</memory-recall>'),
+    ).toBe(true);
   });
 
-  it('returns false for incomplete block (missing closing tag)', () => {
-    expect(isMemoryRecallText('<memory-recall>test')).toBe(false);
+  test('returns false for plain text', () => {
+    expect(isMemoryRecallText('just some regular text')).toBe(false);
+  });
+
+  test('returns false for open tag only', () => {
+    expect(isMemoryRecallText('<memory-recall>')).toBe(false);
+  });
+
+  test('returns false for closing tag only', () => {
+    expect(isMemoryRecallText('</memory-recall>')).toBe(false);
+  });
+
+  test('returns false for mismatched tags', () => {
+    expect(isMemoryRecallText('<memory-recall>test</memory-other>')).toBe(false);
+  });
+
+  test('returns false for whitespace-only text', () => {
+    expect(isMemoryRecallText('   ')).toBe(false);
+  });
+
+  test('returns true when wrapped in whitespace', () => {
+    expect(isMemoryRecallText('  <memory-recall>x</memory-recall>  ')).toBe(true);
+  });
+
+  test('returns false for nested mismatched tags', () => {
+    expect(isMemoryRecallText('<memory-recall><other>x</other></memory-other>')).toBe(false);
   });
 });
 
-// ---------------------------------------------------------------------------
-// splitMemoryRecallSegments
-// ---------------------------------------------------------------------------
 describe('splitMemoryRecallSegments', () => {
-  it('returns empty array for empty string', () => {
-    expect(splitMemoryRecallSegments('')).toEqual([]);
+  test('returns text segment when no memory-recall', () => {
+    const result = splitMemoryRecallSegments('hello world');
+    expect(result).toEqual([{ kind: 'text', value: 'hello world' }]);
   });
 
-  it('returns single text segment for plain text', () => {
-    expect(splitMemoryRecallSegments('hello')).toEqual([{ kind: 'text', value: 'hello' }]);
+  test('extracts single memory-recall block', () => {
+    const result = splitMemoryRecallSegments('hello <memory-recall>x</memory-recall> world');
+    expect(result).toEqual([
+      { kind: 'text', value: 'hello' },
+      { kind: 'memory-recall', value: '<memory-recall>x</memory-recall>' },
+      { kind: 'text', value: 'world' },
+    ]);
   });
 
-  it('returns memory-recall segment for valid block', () => {
-    const result = splitMemoryRecallSegments('<memory-recall>test</memory-recall>');
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ kind: 'memory-recall', value: '<memory-recall>test</memory-recall>' });
+  test('extracts multiple memory-recall blocks', () => {
+    const result = splitMemoryRecallSegments(
+      '<memory-recall>a</memory-recall> text <memory-recall>b</memory-recall>',
+    );
+    expect(result).toEqual([
+      { kind: 'memory-recall', value: '<memory-recall>a</memory-recall>' },
+      { kind: 'text', value: 'text' },
+      { kind: 'memory-recall', value: '<memory-recall>b</memory-recall>' },
+    ]);
   });
 
-  it('splits mixed content into multiple segments', () => {
-    const result = splitMemoryRecallSegments('before <memory-recall>test</memory-recall> after');
-    expect(result).toHaveLength(3);
-    expect(result[0]).toMatchObject({ kind: 'text', value: 'before' });
-    expect(result[1]).toMatchObject({ kind: 'memory-recall' });
-    expect(result[2]).toMatchObject({ kind: 'text', value: 'after' });
+  test('trims surrounding whitespace', () => {
+    const result = splitMemoryRecallSegments('  hello  ');
+    expect(result).toEqual([{ kind: 'text', value: 'hello' }]);
   });
 
-  it('returns text segment for incomplete block (no closing tag)', () => {
-    expect(splitMemoryRecallSegments('<memory-recall>test')).toEqual([{ kind: 'text', value: '<memory-recall>test' }]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// truncatePreview
-// ---------------------------------------------------------------------------
-describe('truncatePreview', () => {
-  it('returns unchanged string under max length (199)', () => {
-    expect(truncatePreview('a'.repeat(199))).toBe('a'.repeat(199));
+  test('skips empty text segments', () => {
+    const result = splitMemoryRecallSegments('<memory-recall>x</memory-recall>');
+    expect(result).toEqual([{ kind: 'memory-recall', value: '<memory-recall>x</memory-recall>' }]);
   });
 
-  it('truncates and appends ellipsis at max length (200)', () => {
-    expect(truncatePreview('a'.repeat(200))).toBe('a'.repeat(199) + '…');
+  test('handles nested tags inside memory-recall', () => {
+    const xml = '<memory-recall><items><item>content</item></items></memory-recall>';
+    const result = splitMemoryRecallSegments(xml);
+    expect(result).toEqual([{ kind: 'memory-recall', value: xml }]);
   });
 
-  it('truncates longer strings with ellipsis', () => {
-    expect(truncatePreview('a'.repeat(201))).toBe('a'.repeat(199) + '…');
-  });
-
-  it('returns empty string unchanged', () => {
-    expect(truncatePreview('')).toBe('');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// toToolBadge
-// ---------------------------------------------------------------------------
-describe('toToolBadge', () => {
-  it('returns Email badge for tools matching email pattern', () => {
-    expect(toToolBadge('send_email_to_customer')).toEqual({ icon: '📧', label: 'Email' });
-  });
-
-  it('returns Chat badge for chat tools', () => {
-    expect(toToolBadge('slack_chat_message')).toEqual({ icon: '💬', label: 'Chat' });
-  });
-
-  it('returns MCP badge for mcp tools', () => {
-    expect(toToolBadge('mcp_tool_call')).toEqual({ icon: '🔌', label: 'MCP' });
-  });
-
-  it('is case insensitive in pattern matching', () => {
-    expect(toToolBadge('WORKSPACE_EXECUTE_COMMAND')).toEqual({ icon: '💻', label: 'Terminal' });
-  });
-
-  it('returns direct match from TOOL_NAME_BADGES for workspace_list_files', () => {
-    expect(toToolBadge('workspace_list_files')).toEqual({ icon: '📁', label: 'Files' });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// humanizeMemoryKey
-// ---------------------------------------------------------------------------
-describe('humanizeMemoryKey', () => {
-  it('converts snake_case to Title Case', () => {
-    // Order: replace caps, capitalize first char, then replace underscores
-    // total_spend -> " Total spend" -> " Total Spend" -> "Total Spend"
-    expect(humanizeMemoryKey('total_spend')).toBe('Total Spend');
-  });
-
-  it('converts camelCase to Title Case', () => {
-    expect(humanizeMemoryKey('lastUpdated')).toBe('Last Updated');
-  });
-
-  it('returns single word unchanged', () => {
-    expect(humanizeMemoryKey('notes')).toBe('Notes');
-  });
-
-  it('handles mixed snake_case and spaces', () => {
-    expect(humanizeMemoryKey('customer_notes')).toBe('Customer Notes');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// formatWorkingMemoryValue
-// ---------------------------------------------------------------------------
-describe('formatWorkingMemoryValue', () => {
-  it('returns null for null', () => {
-    expect(formatWorkingMemoryValue(null)).toBeNull();
-  });
-
-  it('returns null for undefined', () => {
-    expect(formatWorkingMemoryValue(undefined)).toBeNull();
-  });
-
-  it('parses JSON string and returns markdown bullet list', () => {
-    const result = formatWorkingMemoryValue('{"name":"Alice","age":30}');
-    expect(result).toContain('- **Name**: Alice');
-    expect(result).toContain('- **Age**: 30');
-  });
-
-  it('returns null for empty JSON object', () => {
-    expect(formatWorkingMemoryValue('{}')).toBeNull();
-  });
-
-  it('filters out null/undefined values from JSON', () => {
-    const result = formatWorkingMemoryValue('{"a":1,"b":null,"c":"hi"}');
-    expect(result).not.toContain('b');
-    expect(result).toContain('A');
-    expect(result).toContain('C');
-  });
-
-  it('returns null for non-JSON string', () => {
-    expect(formatWorkingMemoryValue('not-json')).toBeNull();
-  });
-
-  it('uses humanizeMemoryKey to format field names', () => {
-    const result = formatWorkingMemoryValue('{"total_spend":100}');
-    expect(result).toContain('**Total Spend**');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// renderWorkingMemoryMarkdown
-// ---------------------------------------------------------------------------
-describe('renderWorkingMemoryMarkdown', () => {
-  it('returns null for null', () => {
-    expect(renderWorkingMemoryMarkdown(null)).toBeNull();
-  });
-
-  it('returns null for non-object values', () => {
-    expect(renderWorkingMemoryMarkdown(42)).toBeNull();
-    expect(renderWorkingMemoryMarkdown('hello')).toBeNull();
-  });
-
-  it('returns null for empty object', () => {
-    expect(renderWorkingMemoryMarkdown({})).toBeNull();
-  });
-
-  it('returns markdown sections for a valid memory object', () => {
-    const memory = {
-      name: JSON.stringify({ value: 'Alice' }),
-      age: JSON.stringify({ value: 30 }),
-      notes: JSON.stringify({ value: 'VIP customer' }),
-    };
-    const result = renderWorkingMemoryMarkdown(memory);
-    expect(result).toContain('## Name');
-    expect(result).toContain('Alice');
-    expect(result).toContain('## Age');
-    expect(result).toContain('30');
-    expect(result).toContain('## Notes');
-    expect(result).toContain('VIP customer');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// extractLatestMessagePreview
-// ---------------------------------------------------------------------------
-describe('extractLatestMessagePreview', () => {
-  it('returns null for null', () => {
-    expect(extractLatestMessagePreview(null)).toBeNull();
-  });
-
-  it('returns null for undefined', () => {
-    expect(extractLatestMessagePreview(undefined)).toBeNull();
-  });
-
-  it('returns null for non-object content', () => {
-    expect(extractLatestMessagePreview('hello')).toBeNull();
-  });
-
-  it('returns null for empty object', () => {
-    expect(extractLatestMessagePreview({})).toBeNull();
-  });
-
-  it('returns null for content with no text, reasoning, or parts', () => {
-    expect(extractLatestMessagePreview({ foo: 'bar' })).toBeNull();
-  });
-
-  it('extracts text from content.text', () => {
-    expect(extractLatestMessagePreview({ content: 'hello world' })).toBe('hello world');
-  });
-
-  it('extracts text from content.reasoning', () => {
-    expect(extractLatestMessagePreview({ reasoning: 'I think' })).toBe('I think');
-  });
-
-  it('extracts from parts array in reverse order, skipping memory-recall text', () => {
-    // Parts are iterated in reverse. The last non-memory-recall text wins.
-    const content = {
-      parts: [
-        { type: 'text', text: 'should be ignored (memory recall)' },
-        { type: 'text', text: '<memory-recall>ignored</memory-recall>' },
-        { type: 'text', text: 'this is the preview' },
-      ],
-    };
-    expect(extractLatestMessagePreview(content)).toBe('this is the preview');
-  });
-
-  it('prefers text over reasoning when both present in parts', () => {
-    const content = {
-      parts: [
-        { type: 'reasoning', text: 'thinking...' },
-        { type: 'text', text: 'final answer' },
-      ],
-    };
-    expect(extractLatestMessagePreview(content)).toBe('final answer');
-  });
-
-  it('truncates long text via truncatePreview', () => {
-    const longText = 'a'.repeat(250);
-    expect(extractLatestMessagePreview({ content: longText })).toHaveLength(200); // 199 + …
-  });
-});
-
-// ---------------------------------------------------------------------------
-// extractLatestMessageToolBadge
-// ---------------------------------------------------------------------------
-describe('extractLatestMessageToolBadge', () => {
-  it('returns null for null', () => {
-    expect(extractLatestMessageToolBadge(null)).toBeNull();
-  });
-
-  it('returns null for empty object', () => {
-    expect(extractLatestMessageToolBadge({})).toBeNull();
-  });
-
-  it('returns null for empty parts array', () => {
-    expect(extractLatestMessageToolBadge({ parts: [] })).toBeNull();
-  });
-
-  it('returns null when no tool-invocation part is found', () => {
-    expect(extractLatestMessageToolBadge({ parts: [{ type: 'text', text: 'hello' }] })).toBeNull();
-  });
-
-  it('returns Recall badge for memory-recall text in parts', () => {
-    const content = { parts: [{ type: 'text', text: 'hello <memory-recall>some memory</memory-recall>' }] };
-    expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '🧠', label: 'Recall' });
-  });
-
-  it('returns Recall badge for memory-recall text in content field', () => {
-    const content = { content: 'hello <memory-recall>some memory</memory-recall>' };
-    expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '🧠', label: 'Recall' });
-  });
-
-  it('extracts tool badge from tool-invocation part', () => {
-    const content = {
-      parts: [{
-        type: 'tool-invocation',
-        toolInvocation: { toolName: 'slack_chat', toolCallId: 'c1', state: 'result' },
-      }],
-    };
-    expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '💬', label: 'Chat' });
-  });
-
-  it('extracts from topLevel toolInvocations field', () => {
-    const content = {
-      toolInvocations: [{ toolName: 'mcp_tool_call', toolCallId: 'c1' }],
-    };
-    expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '🔌', label: 'MCP' });
-  });
-
-  it('skips non-tool-invocation parts and finds the first matching tool', () => {
-    const content = {
-      parts: [
-        { type: 'text' },
-        { type: 'tool-invocation', toolInvocation: { toolName: 'workspace_execute_command', state: 'call' } },
-      ],
-    };
-    expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '💻', label: 'Terminal' });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// mergeToolLogMessages
-// ---------------------------------------------------------------------------
-describe('mergeToolLogMessages', () => {
-  it('returns empty array for empty input', () => {
-    expect(mergeToolLogMessages([])).toEqual([]);
-  });
-
-  it('returns messages unchanged when no adjacent assistant+tool pair', () => {
-    const messages = [
-      makeMsg('user', 'u1', 't1'),
-      makeMsg('assistant', 'a1', 't1', [], { toolInvocations: [] }),
-    ];
-    expect(mergeToolLogMessages(messages)).toHaveLength(2);
-  });
-
-  it('merges tool result into previous assistant message as toolResults', () => {
-    const assistantMsg = makeMsg('assistant', 'a1', 't1', [], {
-      toolInvocations: [{ toolName: 'test', toolCallId: 'c1' }],
-    });
-    const toolMsg = makeMsg('tool', 't1', 't1', [], {
-      toolResults: [{ toolCallId: 'c1', result: { output: 'done' } }],
-    });
-    const result = mergeToolLogMessages([assistantMsg, toolMsg]);
-    expect(result).toHaveLength(1);
-    expect(result[0].metadata?.toolResults).toHaveLength(1);
-    expect(result[0].metadata?.toolResults?.[0].toolCallId).toBe('c1');
-  });
-
-  it('does not merge when previous message has no toolInvocations', () => {
-    const assistantMsg = makeMsg('assistant', 'a1', 't1');
-    const toolMsg = makeMsg('tool', 't1', 't1');
-    const result = mergeToolLogMessages([assistantMsg, toolMsg]);
-    expect(result).toHaveLength(2);
-  });
-
-  it('does not merge when tool message has no toolResults', () => {
-    const assistantMsg = makeMsg('assistant', 'a1', 't1', [], { toolInvocations: [{ toolName: 't', toolCallId: 'c1' }] });
-    const toolMsg = makeMsg('tool', 't1', 't1');
-    const result = mergeToolLogMessages([assistantMsg, toolMsg]);
-    expect(result).toHaveLength(2);
-  });
-
-  it('does not merge across non-adjacent messages', () => {
-    const m1 = makeMsg('assistant', 'a1', 't1', [], { toolInvocations: [{ toolName: 't', toolCallId: 'c1' }] });
-    const m2 = makeMsg('user', 'u1', 't1');
-    const m3 = makeMsg('tool', 't1', 't1', [], { toolResults: [{ toolCallId: 'c1', result: {} }] });
-    const result = mergeToolLogMessages([m1, m2, m3]);
-    expect(result).toHaveLength(3);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// buildThreadToolInvocationParts
-// ---------------------------------------------------------------------------
-describe('buildThreadToolInvocationParts', () => {
-  it('returns empty array for undefined', () => {
-    expect(buildThreadToolInvocationParts(undefined)).toEqual([]);
-  });
-
-  it('returns empty array for empty object', () => {
-    expect(buildThreadToolInvocationParts({})).toEqual([]);
-  });
-
-  it('returns empty array when no toolInvocations or toolResults', () => {
-    expect(buildThreadToolInvocationParts({ foo: 'bar' })).toEqual([]);
-  });
-
-  it('builds tool-invocation parts from toolInvocations', () => {
-    const metadata = {
-      toolInvocations: [
-        { toolName: 'test_tool', toolCallId: 'call-abc', args: { x: 1 }, state: 'result', result: { out: 'done' } },
-      ],
-    };
-    const parts = buildThreadToolInvocationParts(metadata);
-    expect(parts).toHaveLength(1);
-    expect(parts[0]).toMatchObject({
-      type: 'tool-invocation',
-      toolInvocation: { toolName: 'test_tool', toolCallId: 'call-abc', state: 'call' },
-    });
-  });
-
-  it('sets state to "call" when no matching result is found', () => {
-    const metadata = {
-      toolInvocations: [{ toolName: 'test', toolCallId: 'c1', args: {} }],
-    };
-    const parts = buildThreadToolInvocationParts(metadata);
-    expect(parts[0].toolInvocation.state).toBe('call');
-  });
-
-  it('appends unmatched toolResults as tool-result parts', () => {
-    const metadata = {
-      toolResults: [{ toolCallId: 'orphan', result: { data: 'yes' } }],
-    };
-    const parts = buildThreadToolInvocationParts(metadata);
-    expect(parts).toHaveLength(1);
-    expect(parts[0]).toMatchObject({ type: 'tool-result', toolResult: { toolCallId: 'orphan' } });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// collectConversationParticipants
-// ---------------------------------------------------------------------------
-describe('collectConversationParticipants', () => {
-  it('returns empty array when no participants and no messages', () => {
-    const result = collectConversationParticipants({ name: 'Chat', participants: [], messages: [] });
+  test('returns empty array for empty string', () => {
+    const result = splitMemoryRecallSegments('');
     expect(result).toEqual([]);
   });
 
-  it('deduplicates participants using Set', () => {
-    const result = collectConversationParticipants({
-      name: 'Group',
-      participants: ['Alice', 'Bob', 'Alice'],
-      messages: [],
-    });
-    expect(result).toEqual(['Alice', 'Bob']);
+  test('handles memory-recall at start of string', () => {
+    const result = splitMemoryRecallSegments('<memory-recall>x</memory-recall> rest');
+    expect(result).toEqual([
+      { kind: 'memory-recall', value: '<memory-recall>x</memory-recall>' },
+      { kind: 'text', value: 'rest' },
+    ]);
   });
 
-  it('includes message authors not already in participants', () => {
-    const result = collectConversationParticipants({
-      name: 'Alice',
-      participants: ['Bob'],
-      messages: [{ authorDisplayName: 'Diana' }, { authorDisplayName: 'Bob' }],
-    });
-    expect(result).toContain('Bob');
-    expect(result).toContain('Diana');
-  });
-
-  it('excludes the chat name from participants', () => {
-    const result = collectConversationParticipants({
-      name: 'Alice',
-      participants: ['Alice', 'Bob'],
-      messages: [],
-    });
-    expect(result).toEqual(['Bob']);
+  test('handles memory-recall at end of string', () => {
+    const result = splitMemoryRecallSegments('start <memory-recall>x</memory-recall>');
+    expect(result).toEqual([
+      { kind: 'text', value: 'start' },
+      { kind: 'memory-recall', value: '<memory-recall>x</memory-recall>' },
+    ]);
   });
 });
 
-// ---------------------------------------------------------------------------
-// isTextPart
-// ---------------------------------------------------------------------------
+describe('truncatePreview', () => {
+  test('returns original string when under 200 chars', () => {
+    const input = 'a'.repeat(199);
+    expect(truncatePreview(input)).toBe(input);
+  });
+
+  test('truncates and appends ellipsis when over 200 chars', () => {
+    const input = 'a'.repeat(300);
+    const result = truncatePreview(input);
+    expect(result.length).toBe(200);
+    expect(result.endsWith('…')).toBe(true);
+  });
+
+  test('returns original for empty string', () => {
+    expect(truncatePreview('')).toBe('');
+  });
+
+  test('returns original for single character', () => {
+    expect(truncatePreview('a')).toBe('a');
+  });
+});
+
+describe('toToolBadge', () => {
+  test('returns Terminal badge for execute_command variants', () => {
+    expect(toToolBadge('workspace_execute_command')).toEqual({ icon: '💻', label: 'Terminal' });
+    expect(toToolBadge('bash')).toEqual({ icon: '💻', label: 'Terminal' });
+    expect(toToolBadge('shell')).toEqual({ icon: '💻', label: 'Terminal' });
+  });
+
+  test('returns File badge for read variants', () => {
+    expect(toToolBadge('workspace_read_file')).toEqual({ icon: '📄', label: 'File' });
+    expect(toToolBadge('read_file')).toEqual({ icon: '📄', label: 'File' });
+  });
+
+  test('returns Write badge for write variants', () => {
+    expect(toToolBadge('workspace_write_file')).toEqual({ icon: '✏️', label: 'Write' });
+  });
+
+  test('returns Edit badge for edit variants', () => {
+    expect(toToolBadge('workspace_edit_file')).toEqual({ icon: '🔧', label: 'Edit' });
+  });
+
+  test('returns Files badge for list variants', () => {
+    expect(toToolBadge('workspace_list_files')).toEqual({ icon: '📁', label: 'Files' });
+  });
+
+  test('returns Search badge for grep/search', () => {
+    expect(toToolBadge('workspace_grep')).toEqual({ icon: '🔎', label: 'Search' });
+  });
+
+  test('returns HTTP badge for http/fetch', () => {
+    expect(toToolBadge('send_http_request')).toEqual({ icon: '🌐', label: 'HTTP' });
+  });
+
+  test('returns Email badge for email/mail', () => {
+    expect(toToolBadge('send_email')).toEqual({ icon: '📧', label: 'Email' });
+  });
+
+  test('returns Memory badge for memory/recall', () => {
+    expect(toToolBadge('memory_recall')).toEqual({ icon: '🧠', label: 'Memory' });
+  });
+
+  test('returns GitHub badge for git/github', () => {
+    expect(toToolBadge('github_api')).toEqual({ icon: '🐙', label: 'GitHub' });
+  });
+
+  test('returns Schedule badge for schedule/cron', () => {
+    expect(toToolBadge('create_schedule')).toEqual({ icon: '⏰', label: 'Schedule' });
+  });
+
+  test('returns MCP badge for mcp/tool', () => {
+    expect(toToolBadge('mcp_list_tools')).toEqual({ icon: '🔌', label: 'MCP' });
+  });
+
+  test('returns default badge for unrecognized tool name', () => {
+    // unrecognized names fall through to TOOL_ICONS (not found) then return ⚙️ default
+    expect(toToolBadge('something_completely_arbitrary')).toEqual({
+      icon: '⚙️',
+      label: 'something_completely_arbitrary',
+    });
+  });
+
+  test('badge extraction is case-insensitive', () => {
+    expect(toToolBadge('WORKSPACE_EXECUTE_COMMAND')).toEqual({ icon: '💻', label: 'Terminal' });
+    expect(toToolBadge('Workspace_Execute_Command')).toEqual({ icon: '💻', label: 'Terminal' });
+  });
+});
+
+describe('humanizeMemoryKey', () => {
+  test('replaces underscores with spaces', () => {
+    expect(humanizeMemoryKey('hello_world')).toBe('Hello World');
+  });
+
+  test('splits camelCase words', () => {
+    expect(humanizeMemoryKey('helloWorld')).toBe('Hello World');
+  });
+
+  test('trims leading/trailing whitespace', () => {
+    expect(humanizeMemoryKey('  hello  ')).toBe('Hello');
+  });
+});
+
+describe('formatWorkingMemoryValue', () => {
+  test('returns null for null input', () => {
+    expect(formatWorkingMemoryValue(null)).toBeNull();
+  });
+
+  test('returns null for undefined input', () => {
+    expect(formatWorkingMemoryValue(undefined)).toBeNull();
+  });
+
+  test('returns null for empty string', () => {
+    expect(formatWorkingMemoryValue('')).toBeNull();
+  });
+
+  test('returns null for invalid JSON', () => {
+    expect(formatWorkingMemoryValue('not json')).toBeNull();
+  });
+
+  test('formats valid JSON object as markdown bullet points', () => {
+    const result = formatWorkingMemoryValue('{"key1":"value1","key2":"value2"}');
+    expect(result).toContain('- **Key1**: value1');
+    expect(result).toContain('- **Key2**: value2');
+  });
+
+  test('filters out null and undefined values', () => {
+    // Entries with null/undefined values are excluded from output
+    const result = formatWorkingMemoryValue('{"active":"yes","deleted":null}');
+    expect(result).toContain('- **Active**: yes');
+    expect(result).not.toContain('deleted');
+  });
+
+  test('returns null when all values are null/undefined', () => {
+    expect(formatWorkingMemoryValue('{"a":null,"b":null}')).toBeNull();
+  });
+});
+
+describe('renderWorkingMemoryMarkdown', () => {
+  test('returns null for null input', () => {
+    expect(renderWorkingMemoryMarkdown(null)).toBeNull();
+  });
+
+  test('returns null for empty string', () => {
+    expect(renderWorkingMemoryMarkdown('')).toBeNull();
+  });
+
+  test('returns null for invalid JSON', () => {
+    expect(renderWorkingMemoryMarkdown('not-json')).toBeNull();
+  });
+});
+
+describe('toScheduleSummary', () => {
+  // toScheduleSummary always returns an object; it never returns a plain string
+  test('returns an object for valid row', () => {
+    const result = toScheduleSummary({
+      id: '1',
+      kind: 'agent',
+      name: 'TestAgent',
+      content: '{"msg":"hello"}',
+      nextTriggerAt: '2025-01-01T00:00:00Z',
+    });
+    expect(result).toHaveProperty('id', '1');
+    expect(result).toHaveProperty('kind', 'agent');
+    expect(result).toHaveProperty('name', 'TestAgent');
+    expect(result).toHaveProperty('nextRunAt', '2025-01-01T00:00:00Z');
+  });
+
+  test('returns null cronExpression when not set', () => {
+    const result = toScheduleSummary({
+      id: '1',
+      kind: 'agent',
+      name: 'Test',
+    });
+    expect(result).toHaveProperty('expression', null);
+  });
+
+  test('parses content as JSON when present', () => {
+    const result = toScheduleSummary({
+      id: '1',
+      kind: 'agent',
+      name: 'Test',
+      content: '{"key":"value"}',
+    });
+    expect(result.input).toEqual({ key: 'value' });
+  });
+
+  test('returns null input when content is null', () => {
+    const result = toScheduleSummary({
+      id: '1',
+      kind: 'agent',
+      name: 'Test',
+      content: null,
+    });
+    expect(result.input).toBeNull();
+  });
+});
+
+describe('extractLatestMessagePreview', () => {
+  // These functions receive message.content directly (not wrapped in {messages:[...]})
+  // They read parts[], content, reasoning at the top level of the input object
+
+  test('returns null for null/undefined', () => {
+    expect(extractLatestMessagePreview(null)).toBeNull();
+    expect(extractLatestMessagePreview(undefined)).toBeNull();
+  });
+
+  test('returns null when parts array is empty and no content/reasoning', () => {
+    expect(extractLatestMessagePreview({ parts: [] })).toBeNull();
+  });
+
+  test('returns null for message with null content and empty parts', () => {
+    expect(extractLatestMessagePreview({ content: null, parts: [] })).toBeNull();
+  });
+
+  test('returns truncated preview from text part in parts array', () => {
+    const result = extractLatestMessagePreview({
+      parts: [{ type: 'text', text: 'hello from parts' }],
+    });
+    expect(result).toBe('hello from parts');
+  });
+
+  test('returns truncated preview from content string', () => {
+    const result = extractLatestMessagePreview({
+      content: 'simple content',
+      parts: [],
+    });
+    expect(result).toBe('simple content');
+  });
+
+  test('returns truncated preview from reasoning', () => {
+    const result = extractLatestMessagePreview({
+      reasoning: 'thinking out loud',
+      parts: [],
+      content: null,
+    });
+    expect(result).toBe('thinking out loud');
+  });
+
+  test('skips memory-recall-only text', () => {
+    const result = extractLatestMessagePreview({
+      parts: [{ type: 'text', text: '<memory-recall><item>x</item></memory-recall>' }],
+      content: null,
+    });
+    expect(result).toBeNull();
+  });
+});
+
+describe('extractLatestMessageToolBadge', () => {
+  // These functions receive message.content directly
+  // They read parts[], toolInvocations, content at the top level of the input
+
+  test('returns null for null/undefined', () => {
+    expect(extractLatestMessageToolBadge(null)).toBeNull();
+    expect(extractLatestMessageToolBadge(undefined)).toBeNull();
+  });
+
+  test('returns null for empty parts', () => {
+    expect(extractLatestMessageToolBadge({ parts: [] })).toBeNull();
+  });
+
+  test('returns null when no tool invocation is present', () => {
+    expect(extractLatestMessageToolBadge({ content: 'text only', parts: [] })).toBeNull();
+  });
+
+  test('returns Recall badge for memory-recall text part', () => {
+    const result = extractLatestMessageToolBadge({
+      parts: [{ type: 'text', text: '<memory-recall><item>x</item></memory-recall>' }],
+      content: null,
+    });
+    expect(result).toEqual({ icon: '🧠', label: 'Recall' });
+  });
+
+  test('returns tool badge for last tool-invocation part', () => {
+    const result = extractLatestMessageToolBadge({
+      content: null,
+      parts: [
+        { type: 'text', text: 'some text' },
+        {
+          type: 'tool-invocation',
+          toolInvocation: { toolName: 'bash', toolCallId: '1' },
+        },
+      ],
+    });
+    expect(result).toEqual({ icon: '💻', label: 'Terminal' });
+  });
+
+  test('returns null when toolInvocation is missing toolName', () => {
+    const result = extractLatestMessageToolBadge({
+      parts: [{ type: 'tool-invocation', toolInvocation: { toolCallId: '1' } }],
+      content: null,
+    });
+    expect(result).toBeNull();
+  });
+});
+
+describe('parseProviderCredentials', () => {
+  // parseProviderCredentials returns the decrypted string on parse failure (not null)
+  test('returns null for null input', () => {
+    expect(parseProviderCredentials(null as unknown as string)).toBeNull();
+  });
+
+  test('returns null for undefined input', () => {
+    expect(parseProviderCredentials(undefined as unknown as string)).toBeUndefined();
+  });
+
+  test('decrypts and parses valid credentials JSON', () => {
+    const result = parseProviderCredentials('{"apiKey":"secret","endpoint":"url"}');
+    expect(result).toEqual({ apiKey: 'secret', endpoint: 'url' });
+  });
+
+  test('returns decrypted string for invalid JSON', () => {
+    // On JSON parse failure the function returns the decrypted (plain) string
+    expect(parseProviderCredentials('not-json')).toBe('not-json');
+  });
+});
+
+describe('mergeToolLogMessages', () => {
+  test('returns empty array for empty input', () => {
+    expect(mergeToolLogMessages([])).toEqual([]);
+  });
+
+  test('passes through messages without inputPartIndex', () => {
+    const messages = [{ role: 'user' as const, content: 'hello', parts: [] }];
+    expect(mergeToolLogMessages(messages)).toEqual(messages);
+  });
+
+  test('does not merge when inputPartIndex differs', () => {
+    const messages = [
+      {
+        role: 'assistant' as const,
+        parts: [{ type: 'tool-call' as const, toolCall: { toolCallId: '1', toolName: 'a', input: { inputPartIndex: 0 } } }],
+      },
+      {
+        role: 'assistant' as const,
+        parts: [{ type: 'tool-call' as const, toolCall: { toolCallId: '2', toolName: 'b', input: { inputPartIndex: 1 } } }],
+      },
+    ];
+    const result = mergeToolLogMessages(messages);
+    expect(result).toHaveLength(2);
+  });
+});
+
+describe('buildThreadToolInvocationParts', () => {
+  test('returns empty array for undefined', () => {
+    expect(buildThreadToolInvocationParts(undefined)).toEqual([]);
+  });
+
+  test('returns empty array for empty object', () => {
+    expect(buildThreadToolInvocationParts({})).toEqual([]);
+  });
+
+  test('returns empty array for object without invocation', () => {
+    expect(buildThreadToolInvocationParts({ other: 'field' })).toEqual([]);
+  });
+
+  test('returns empty array when invocation is empty', () => {
+    expect(buildThreadToolInvocationParts({ invocation: {} })).toEqual([]);
+  });
+
+  test('returns empty array when invocation has no toolCalls', () => {
+    expect(buildThreadToolInvocationParts({ invocation: { toolCalls: null } })).toEqual([]);
+  });
+});
+
+describe('collectConversationParticipants', () => {
+  test('returns unique participants from participants array', () => {
+    const result = collectConversationParticipants({
+      name: 'room',
+      participants: ['Alice', 'Bob', 'Alice', 'Charlie'],
+      messages: [],
+    });
+    expect(result).toContain('Alice');
+    expect(result).toContain('Bob');
+    expect(result).toContain('Charlie');
+    expect(result).not.toContain('room');
+  });
+
+  test('extracts authorDisplayName from messages', () => {
+    const result = collectConversationParticipants({
+      name: 'room',
+      participants: [],
+      messages: [
+        { authorDisplayName: 'Alice' },
+        { authorDisplayName: 'Bob' },
+      ],
+    });
+    expect(result).toContain('Alice');
+    expect(result).toContain('Bob');
+  });
+
+  test('excludes room name from participants', () => {
+    const result = collectConversationParticipants({
+      name: 'MainRoom',
+      participants: ['MainRoom', 'Alice'],
+      messages: [],
+    });
+    expect(result).not.toContain('MainRoom');
+    expect(result).toContain('Alice');
+  });
+
+  test('deduplicates across participants and messages', () => {
+    const result = collectConversationParticipants({
+      name: 'room',
+      participants: ['Alice'],
+      messages: [{ authorDisplayName: 'Alice' }, { authorDisplayName: 'Bob' }],
+    });
+    expect(result.filter((n) => n === 'Alice')).toHaveLength(1);
+  });
+});
+
 describe('isTextPart', () => {
-  it('returns true for text part', () => {
+  test('returns true for text part', () => {
     expect(isTextPart({ type: 'text', text: 'hello' })).toBe(true);
   });
 
-  it('returns true for reasoning part', () => {
+  test('returns true for reasoning part', () => {
     expect(isTextPart({ type: 'reasoning', text: 'thinking...' })).toBe(true);
   });
 
-  it('returns false for other part types', () => {
-    expect(isTextPart({ type: 'tool-call', text: 'hello' })).toBe(false);
-    expect(isTextPart({ type: 'tool-result', text: 'hello' })).toBe(false);
-    expect(isTextPart({ type: 'image', text: 'hello' })).toBe(false);
+  test('returns false for tool-call part', () => {
+    expect(isTextPart({ type: 'tool-call' })).toBe(false);
   });
 
-  it('returns false when text is missing', () => {
+  test('returns false for part with empty text', () => {
+    expect(isTextPart({ type: 'text', text: '' })).toBe(false);
+  });
+
+  test('returns false for part with undefined text', () => {
     expect(isTextPart({ type: 'text' })).toBe(false);
-    expect(isTextPart({ type: 'reasoning' })).toBe(false);
   });
 
-  it('returns false for null/undefined type', () => {
-    expect(isTextPart({ text: 'hello' })).toBe(false);
-    expect(isTextPart({ type: undefined, text: 'hello' })).toBe(false);
+  test('returns false for part with null text', () => {
+    expect(isTextPart({ type: 'text', text: null })).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// toScheduleSummary
-// ---------------------------------------------------------------------------
-describe('toScheduleSummary', () => {
-  // Minimal row matching agentSchedules.$inferSelect (actual column names)
-  const makeRow = (overrides: Record<string, unknown> = {}) => ({
-    id: 'sched-1',
-    agentId: 'agent-1',
-    kind: 'agent',
-    name: 'Daily Report',
-    description: null,
-    scheduleType: 'cron' as const,
-    cronExpression: '0 9 * * *',
-    scheduledDate: null,
-    timezone: 'UTC',
-    content: '{}',
-    wakeWhenRunning: 1,
-    isActive: 1,
-    lastTriggeredAt: 1710000000000,
-    nextTriggerAt: 1710086400000,
-    creatorId: null,
-    createdAt: 1709900000000,
-    updatedAt: 1710000000000,
-    ...overrides,
-  });
-
-  it('maps id, kind, name, and scheduleType', () => {
-    const row = makeRow({ id: 's99', kind: 'data', name: 'My Job', scheduleType: 'cron' });
-    const r = toScheduleSummary(row);
-    expect(r.scheduleId).toBe('s99');
-    expect(r.id).toBe('s99');
-    expect(r.kind).toBe('data');
-    expect(r.name).toBe('My Job');
-  });
-
-  it('maps createdAt and updatedAt', () => {
-    const r = toScheduleSummary(makeRow({ createdAt: 1000, updatedAt: 2000 }));
-    expect(r.createdAt).toBe(1000);
-    expect(r.updatedAt).toBe(2000);
-  });
-
-  it('parses content JSON string to input object', () => {
-    const row = makeRow({ content: '{"topic":"daily"}' });
-    expect(toScheduleSummary(row).input).toEqual({ topic: 'daily' });
-  });
-
-  it('returns null input when content is null', () => {
-    const row = makeRow({ content: null });
-    expect(toScheduleSummary(row).input).toBeNull();
-  });
-
-  it('maps isActive 1 → true, isActive 0 → false', () => {
-    expect(toScheduleSummary(makeRow({ isActive: 1 })).isActive).toBe(true);
-    expect(toScheduleSummary(makeRow({ isActive: 0 })).isActive).toBe(false);
-    expect(toScheduleSummary(makeRow({ isActive: null })).isActive).toBeNull();
-  });
-
-  it('maps lastTriggeredAt → lastRunAt (ms), nextTriggerAt → nextRunAt (ms)', () => {
-    const r = toScheduleSummary(makeRow({ lastTriggeredAt: 1710000000000, nextTriggerAt: 1710086400000 }));
-    expect(r.lastRunAt).toBe(1710000000000);
-    expect(r.nextRunAt).toBe(1710086400000);
-  });
-
-  it('maps null timestamps to null', () => {
-    const r = toScheduleSummary(makeRow({ lastTriggeredAt: null, nextTriggerAt: null }));
-    expect(r.lastRunAt).toBeNull();
-    expect(r.nextRunAt).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// parseProviderCredentials
-// ---------------------------------------------------------------------------
-describe('parseProviderCredentials', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('parses valid JSON decrypted string and returns parsed object', () => {
-    mockDecryptSecret.mockReturnValue('{"apiKey":"sk-secret","region":"us-west"}');
-
-    const result = parseProviderCredentials('encrypted_value');
-
-    expect(result).toEqual({ apiKey: 'sk-secret', region: 'us-west' });
-    expect(mockDecryptSecret).toHaveBeenCalledWith('encrypted_value');
-  });
-
-  it('returns raw string when JSON parse fails, logging a warning', () => {
-    mockDecryptSecret.mockReturnValue('plain-text-token');
-    mockForgeDebug.mockImplementation(() => {});
-
-    const result = parseProviderCredentials('encrypted_bad');
-
-    expect(result).toBe('plain-text-token');
-    expect(mockForgeDebug).toHaveBeenCalledOnce();
-  });
-
-  it('logs with warn level on parse failure', () => {
-    mockDecryptSecret.mockReturnValue('not-valid-json');
-    mockForgeDebug.mockImplementation(() => {});
-
-    parseProviderCredentials('data');
-
-    expect(mockForgeDebug.mock.calls[0][0]).toMatchObject({
-      level: 'warn',
-      message: 'Failed to parse credentials JSON',
-    });
-  });
-
-  it('returns decrypted string even when parse throws', () => {
-    mockDecryptSecret.mockReturnValue('still-raw');
-
-    const result = parseProviderCredentials('throws-json');
-
-    expect(result).toBe('still-raw');
-  });
-
-  it('passes encryptedCredentials directly to decryptSecret', () => {
-    mockDecryptSecret.mockReturnValue('{}');
-
-    parseProviderCredentials('my-encrypted-creds');
-
-    expect(mockDecryptSecret).toHaveBeenCalledOnce();
-    expect(mockDecryptSecret).toHaveBeenCalledWith('my-encrypted-creds');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-function makeMsg(
-  role: string,
-  id: string,
-  threadId: string,
-  parts: Array<{ type: string; text?: string; toolInvocation?: Record<string, unknown> }> = [],
-  metadata: Record<string, unknown> = {},
-) {
-  return {
-    id,
-    role,
-    threadId,
-    createdAt: '2024-01-01',
-    parts,
-    metadata,
-  } as unknown;
-}

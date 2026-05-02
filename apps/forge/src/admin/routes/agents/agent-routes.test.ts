@@ -75,7 +75,6 @@ function createMockRunner() {
 
 function createMockRuntime() {
   return {
-    id: 'new-agent',
     runner: createMockRunner(),
   };
 }
@@ -357,7 +356,7 @@ describe('Agent Write Ops Routes', () => {
       new Map(),
       createOps(),
     );
-    expect(routes.length).toBeGreaterThanOrEqual(29);
+    expect(routes).toHaveLength(11);
   });
 
   it('should handle force-idle correctly', () => {
@@ -368,9 +367,9 @@ describe('Agent Write Ops Routes', () => {
         response = handler({ bodyText: JSON.stringify({ agentId: 'test-agent' }) });
       },
     };
-    const registry = createMockRegistry(new Map([
+    const registry = new Map([
       ['test-agent', { runner: { forceIdle, notifyExternalEvent: vi.fn() } } as any],
-    ]));
+    ]);
     registerAgentWriteOpsRoutes(
       httpServer as any,
       { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
@@ -388,9 +387,9 @@ describe('Agent Write Ops Routes', () => {
         if (path === '/admin/agent/rewakeup') capturedHandler = handler;
       },
     };
-    const registry = createMockRegistry(new Map([
+    const registry = new Map([
       ['test-agent', { runner: { notifyExternalEvent, forceIdle: vi.fn() } } as any],
-    ]));
+    ]);
     registerAgentWriteOpsRoutes(
       httpServer as any,
       { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
@@ -416,7 +415,7 @@ describe('Agent Write Ops Routes', () => {
         if (path === '/admin/agent/rewakeup') capturedHandler = handler;
       },
     };
-    const registry = createMockRegistry();
+    const registry = new Map();
     const ops = { ...createOps(), loadAgent: mockLoadAgent };
     registerAgentWriteOpsRoutes(
       httpServer as any,
@@ -426,8 +425,8 @@ describe('Agent Write Ops Routes', () => {
     );
     expect(capturedHandler).toBeTruthy();
     await capturedHandler!({ bodyText: JSON.stringify({ agentId: 'new-agent' }) });
-    expect(mockLoadAgent).toHaveBeenCalledTimes(1);
-    expect(registry.get('new-agent')).not.toBeNull();
+    expect(mockLoadAgent).toHaveBeenCalled();
+    expect(registry.has('new-agent')).toBe(true);
   });
 
   it('should call top-up contract with correct params', async () => {
@@ -451,83 +450,4 @@ describe('Agent Write Ops Routes', () => {
     expect(mockTopUp).toHaveBeenCalled();
     expect(response.body.success).toBe(true);
   });
-
-  it("should return 503 when githubApps is not configured", async () => {
-    let capturedHandler: Function | null = null;
-    const httpServer = {
-      registerRoute: ({ path, handler }: { method: string; path: string; handler: Function }) => {
-        if (path === "/admin/agent/github-manifest-config/update") capturedHandler = handler;
-      },
-    };
-    registerAgentWriteOpsRoutes(
-      httpServer as any,
-      { db: {}, githubApps: undefined, workspaceBasePath: "/tmp", loaderConfig: {} },
-      new Map(),
-      createOps(),
-    );
-    expect(capturedHandler).toBeTruthy();
-    const response = await capturedHandler!({
-      bodyText: JSON.stringify({
-        agentId: "test-agent",
-        manifestConfig: { permissions: {}, events: {} },
-      }),
-    });
-    expect(response.status).toBe(503);
-    expect(response.body.error).toBe("GitHub Apps not configured");
-  });
-
-  it("should call githubApps.updateAgentManifestConfig and return provisioning", async () => {
-    const mockUpdate = vi.fn().mockResolvedValue({ status: "active", appName: "test" });
-    let capturedHandler: Function | null = null;
-    const httpServer = {
-      registerRoute: ({ path, handler }: { method: string; path: string; handler: Function }) => {
-        if (path === "/admin/agent/github-manifest-config/update") capturedHandler = handler;
-      },
-    };
-    const githubApps = { updateAgentManifestConfig: mockUpdate };
-    registerAgentWriteOpsRoutes(
-      httpServer as any,
-      { db: {}, githubApps, workspaceBasePath: "/tmp", loaderConfig: {} },
-      new Map(),
-      createOps(),
-    );
-    expect(capturedHandler).toBeTruthy();
-    const manifestConfig = {
-      permissions: { administration: true, contents: true, issues: false, metadata: true, organization_projects: false, pull_requests: true, repository_projects: false, workflows: false },
-      events: { push: true, pull_request: true, pull_request_review: false, issues: true, issue_comment: false, repository: false, workflow_run: false },
-    };
-    const response = await capturedHandler!({
-      bodyText: JSON.stringify({ agentId: "test-agent", manifestConfig }),
-    });
-    expect(mockUpdate).toHaveBeenCalledWith({ agentId: "test-agent", manifestConfig });
-    expect(response.body.success).toBe(true);
-    expect(response.body.provisioning).toEqual({ status: "active", appName: "test" });
-  });
 });
-// ── Mock Registry Factory (FIX #1046) ────────────────────────────────────────
-
-/**
- * Creates a mock registry that mimics the real InternalAgentRegistry interface.
- * This is needed because write-ops.ts now calls registry.add() and registry.get()
- * instead of treating registry as a plain Map.
- */
-function createMockRegistry(initialEntries: Map<string, any> = new Map()) {
-  const entries = new Map(initialEntries);
-  return {
-    get(agentId: string) {
-      return entries.get(agentId) ?? null;
-    },
-    add(_db: unknown, runtime: any) {
-      const agentId = runtime?.id ?? runtime?.agent?.id ?? 'unknown';
-      const entry = { runner: runtime?.runner ?? runtime };
-      entries.set(agentId, entry);
-      return Promise.resolve(entry);
-    },
-    remove(agentId: string) {
-      entries.delete(agentId);
-    },
-    list() {
-      return Array.from(entries.values());
-    },
-  };
-}

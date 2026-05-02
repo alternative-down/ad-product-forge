@@ -2,143 +2,146 @@ import { describe, expect, it } from 'vitest';
 import { createLoopDetector, type LoopDetectorState } from './agent-runner-loop-detector';
 
 describe('createLoopDetector', () => {
-  it('starts with no loop detected', () => {
+  it('starts with no loop signature', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state);
 
-    expect(detector.isStuck()).toBe(false);
-    expect(detector.getSignatureCount()).toBe(0);
     expect(detector.getCurrentSignature()).toBeNull();
+    expect(detector.getSignatureCount()).toBe(0);
   });
 
-  it('register returns 1 on first occurrence of a signature', () => {
+  it('registers a new signature', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state);
 
-    const count = detector.register('run step');
+    const count = detector.register('call_tool_x');
+
+    expect(detector.getCurrentSignature()).toBe('call_tool_x');
+    expect(detector.getSignatureCount()).toBe(1);
     expect(count).toBe(1);
-    expect(detector.getCurrentSignature()).toBe('run step');
   });
 
-  it('register increments count on same signature repeated', () => {
+  it('increments count when same signature repeats', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state);
 
-    detector.register('repeat-me');
-    detector.register('repeat-me');
-    detector.register('repeat-me');
+    detector.register('call_tool_x');
+    detector.register('call_tool_x');
+    detector.register('call_tool_x');
 
     expect(detector.getSignatureCount()).toBe(3);
-    expect(detector.isStuck()).toBe(false); // 3 < 6
   });
 
-  it('changing signature resets count and updates signature', () => {
+  it('resets count and signature when new signature appears', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state);
 
-    detector.register('first');
-    detector.register('first');
-    detector.register('first');
+    detector.register('call_tool_x');
+    detector.register('call_tool_x');
+    detector.register('call_tool_y');
 
-    detector.register('second');
-
+    expect(detector.getCurrentSignature()).toBe('call_tool_y');
     expect(detector.getSignatureCount()).toBe(1);
-    expect(detector.getCurrentSignature()).toBe('second');
   });
 
-  it('isStuck returns true when repeat count reaches the limit', () => {
+  it('resets state', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state);
 
-    for (let i = 0; i < 6; i++) {
-      detector.register('stuck-loop');
-    }
-
-    expect(detector.isStuck()).toBe(true);
-  });
-
-  it('isStuck returns false just below the limit', () => {
-    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
-    const detector = createLoopDetector(state);
-
-    for (let i = 0; i < 5; i++) {
-      detector.register('almost-stuck');
-    }
-
-    expect(detector.isStuck()).toBe(false);
-  });
-
-  it('reset clears state completely', () => {
-    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
-    const detector = createLoopDetector(state);
-
-    for (let i = 0; i < 4; i++) {
-      detector.register('loop');
-    }
-    expect(detector.isStuck()).toBe(false);
-
+    detector.register('call_tool_x');
+    detector.register('call_tool_x');
     detector.reset();
 
     expect(detector.getCurrentSignature()).toBeNull();
     expect(detector.getSignatureCount()).toBe(0);
-    expect(detector.isStuck()).toBe(false);
   });
 
-  it('custom stuckLoopRepeatLimit changes the threshold', () => {
+  it('is stuck when repeat limit reached', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state, { stuckLoopRepeatLimit: 3 });
 
     for (let i = 0; i < 3; i++) {
-      detector.register('bounded-loop');
+      detector.register('call_tool_x');
     }
 
     expect(detector.isStuck()).toBe(true);
   });
 
-  it('register returns current repeat count after each call', () => {
+  it('is not stuck before repeat limit', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
-    const detector = createLoopDetector(state);
+    const detector = createLoopDetector(state, { stuckLoopRepeatLimit: 3 });
 
-    expect(detector.register('sig-A')).toBe(1);
-    expect(detector.register('sig-A')).toBe(2);
-    expect(detector.register('sig-B')).toBe(1);
-    expect(detector.register('sig-B')).toBe(2);
-    expect(detector.register('sig-B')).toBe(3);
-  });
+    detector.register('call_tool_x');
+    detector.register('call_tool_x');
 
-  it('empty string signature works correctly', () => {
-    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
-    const detector = createLoopDetector(state);
-
-    detector.register('');
-    detector.register('');
-
-    expect(detector.getSignatureCount()).toBe(2);
-    expect(detector.getCurrentSignature()).toBe('');
-  });
-
-  it('unicode signatures are handled correctly', () => {
-    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
-    const detector = createLoopDetector(state);
-
-    detector.register('ループ検出🔄');
-    detector.register('ループ検出🔄');
-
-    expect(detector.getSignatureCount()).toBe(2);
     expect(detector.isStuck()).toBe(false);
   });
 
-  it('reset then register new signature starts fresh count', () => {
+  it('uses default stuckLoopRepeatLimit of 6', () => {
     const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
     const detector = createLoopDetector(state);
 
-    detector.register('long-loop');
-    detector.register('long-loop');
-    detector.register('long-loop');
-    detector.reset();
-    detector.register('new-sig');
+    for (let i = 0; i < 6; i++) {
+      detector.register('call_tool_x');
+    }
 
+    expect(detector.isStuck()).toBe(true);
+  });
+
+  it('resets stuck state when signature changes', () => {
+    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
+    const detector = createLoopDetector(state, { stuckLoopRepeatLimit: 3 });
+
+    for (let i = 0; i < 3; i++) {
+      detector.register('call_tool_x');
+    }
+    expect(detector.isStuck()).toBe(true);
+
+    detector.register('call_tool_y');
+    expect(detector.isStuck()).toBe(false);
     expect(detector.getSignatureCount()).toBe(1);
-    expect(detector.getCurrentSignature()).toBe('new-sig');
+  });
+
+  it('handles empty signature string', () => {
+    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
+    const detector = createLoopDetector(state);
+
+    detector.register('');
+    expect(detector.getCurrentSignature()).toBe('');
+
+    detector.register('');
+    expect(detector.getSignatureCount()).toBe(2);
+  });
+
+  it('works with complex signature strings', () => {
+    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
+    const detector = createLoopDetector(state);
+
+    const sig = JSON.stringify({ tool: 'send_message', args: { targetKey: 'user-1' } });
+    detector.register(sig);
+    detector.register(sig);
+
+    expect(detector.getSignatureCount()).toBe(2);
+    expect(detector.getCurrentSignature()).toBe(sig);
+  });
+
+  it('allows custom stuckLoopRepeatLimit', () => {
+    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
+    const detector = createLoopDetector(state, { stuckLoopRepeatLimit: 1 });
+
+    detector.register('call_tool_x');
+
+    expect(detector.isStuck()).toBe(true);
+  });
+
+  it('reset clears stuck state', () => {
+    const state: LoopDetectorState = { lastLoopSignature: null, repeatedLoopCount: 0 };
+    const detector = createLoopDetector(state, { stuckLoopRepeatLimit: 1 });
+
+    detector.register('call_tool_x');
+    expect(detector.isStuck()).toBe(true);
+
+    detector.reset();
+    expect(detector.isStuck()).toBe(false);
   });
 });

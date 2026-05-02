@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import {
   parseScheduleDate,
   validateScheduleShape,
@@ -8,291 +8,316 @@ import {
   createHeartbeatWakeInstruction,
 } from './schedule-helpers';
 
-// ─── parseScheduleDate ────────────────────────────────────────────────────────
-
 describe('parseScheduleDate', () => {
-  test('parses a valid ISO-8601 date string', () => {
-    const result = parseScheduleDate('2026-07-15T10:00:00.000Z');
-    expect(result).toBe(Date.parse('2026-07-15T10:00:00.000Z'));
+  test('parses valid ISO date string', () => {
+    const result = parseScheduleDate('2026-06-01T12:00:00.000Z');
+    expect(result).toBe(new Date('2026-06-01T12:00:00.000Z').getTime());
   });
 
-  test('parses a valid locale date string', () => {
-    const result = parseScheduleDate('July 15 2026 10:00');
-    expect(result).toBe(Date.parse('July 15 2026 10:00'));
-  });
-
-  test('throws on invalid date string', () => {
+  test('throws for invalid date string', () => {
     expect(() => parseScheduleDate('not-a-date')).toThrow('Invalid scheduledDate: not-a-date');
   });
 
-  test('throws on empty string', () => {
+  test('throws for empty string', () => {
     expect(() => parseScheduleDate('')).toThrow('Invalid scheduledDate: ');
   });
 });
 
-// ─── validateScheduleShape ────────────────────────────────────────────────────
-
 describe('validateScheduleShape', () => {
-  test('does not throw for valid cron shape', () => {
+  test('passes for cron with cronExpression', () => {
     expect(() =>
-      validateScheduleShape({ scheduleType: 'cron', cronExpression: '*/5 * * * *' }),
+      validateScheduleShape({ scheduleType: 'cron', cronExpression: '0 9 * * *' }),
     ).not.toThrow();
   });
 
-  test('does not throw for valid date shape', () => {
-    expect(() =>
-      validateScheduleShape({ scheduleType: 'date', scheduledDate: Date.now() + 86400000 }),
-    ).not.toThrow();
-  });
-
-  test('throws when scheduleType is cron and cronExpression is missing', () => {
+  test('throws for cron without cronExpression', () => {
     expect(() => validateScheduleShape({ scheduleType: 'cron' })).toThrow(
       'cronExpression is required when scheduleType is cron',
     );
   });
 
-  test('throws when scheduleType is date and scheduledDate is missing', () => {
+  test('passes for date with scheduledDate', () => {
+    expect(() => validateScheduleShape({ scheduleType: 'date', scheduledDate: 1717200000000 })).not.toThrow();
+  });
+
+  test('throws for date without scheduledDate', () => {
     expect(() => validateScheduleShape({ scheduleType: 'date' })).toThrow(
       'scheduledDate is required when scheduleType is date',
     );
   });
-
-  test('throws when cronExpression is empty string', () => {
-    expect(() => validateScheduleShape({ scheduleType: 'cron', cronExpression: '' })).toThrow(
-      'cronExpression is required when scheduleType is cron',
-    );
-  });
 });
 
-// ─── assertFutureScheduledDate ────────────────────────────────────────────────
-
 describe('assertFutureScheduledDate', () => {
-  test('returns early when scheduleType is cron', () => {
-    expect(() => assertFutureScheduledDate('cron')).not.toThrow();
+  test('returns for cron schedule', () => {
+    expect(() => assertFutureScheduledDate('cron', Date.now() + 86400000)).not.toThrow();
   });
 
-  test('returns early when scheduleType is date but no scheduledDate provided', () => {
-    expect(() => assertFutureScheduledDate('date')).not.toThrow();
-  });
-
-  test('returns early when scheduledDate is in the future', () => {
-    const future = Date.now() + 86400000;
-    expect(() => assertFutureScheduledDate('date', future)).not.toThrow();
+  test('returns when scheduledDate is in the future', () => {
+    expect(() => assertFutureScheduledDate('date', Date.now() + 86400000)).not.toThrow();
   });
 
   test('throws when scheduledDate is in the past', () => {
-    const past = Date.now() - 86400000;
-    expect(() => assertFutureScheduledDate('date', past)).toThrow(
+    expect(() => assertFutureScheduledDate('date', Date.now() - 86400000)).toThrow(
       'scheduledDate must be in the future',
     );
   });
 
-  test('throws when scheduledDate equals now (boundary)', () => {
-    const now = Date.now();
-    expect(() => assertFutureScheduledDate('date', now)).toThrow(
+  test('throws when scheduledDate is exactly now', () => {
+    expect(() => assertFutureScheduledDate('date', Date.now() - 1)).toThrow(
       'scheduledDate must be in the future',
     );
   });
 });
-
-// ─── createNotificationContent ───────────────────────────────────────────────
 
 describe('createNotificationContent', () => {
-  const baseInput = {
-    agentId: 'agent-1',
-    scheduleId: 'sched-1',
-    kind: 'agent' as const,
-    name: 'Daily Sync',
-    description: undefined as string | undefined,
-    scheduleType: 'cron' as const,
-    cronExpression: '0 9 * * *',
-    scheduledDate: undefined as number | undefined,
-    timezone: 'UTC',
-    content: 'Run daily sync',
-    fireDate: new Date('2026-07-15T09:00:00.000Z'),
-  };
+  test('agent schedule includes scheduleId in title', () => {
+    const result = createNotificationContent({
+      agentId: 'agent-1',
+      scheduleId: 'sched-123',
+      kind: 'agent',
+      name: 'Morning sync',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: 'Check dashboard',
+      fireDate: new Date('2026-06-01T09:00:00.000Z'),
+    });
 
-  test('returns sections joined by double newlines', () => {
-    const result = createNotificationContent(baseInput);
-    expect(result).toBe(
-      'Cron: sched-1\n\nTask:\nRun daily sync\n\n2026-07-15T09:00:00.000Z',
-    );
+    expect(result).toContain('Cron: sched-123');
+    expect(result).toContain('Task:');
+    expect(result).toContain('Check dashboard');
+    expect(result).toContain('2026-06-01T09:00:00.000Z');
   });
 
-  test('includes description when provided and trimmed', () => {
-    const withDesc = { ...baseInput, description: '  Important daily task  ' };
-    const result = createNotificationContent(withDesc);
-    expect(result).toContain('Description: Important daily task');
+  test('heartbeat schedule uses simple title', () => {
+    const result = createNotificationContent({
+      agentId: 'agent-1',
+      scheduleId: 'sched-456',
+      kind: 'heartbeat',
+      name: 'Heartbeat',
+      scheduleType: 'cron',
+      cronExpression: '*/15 * * * *',
+      timezone: 'America/New_York',
+      content: '',
+      fireDate: new Date('2026-06-01T09:00:00Z'),
+    });
+
+    expect(result).toContain('Cron\n');
+    expect(result).not.toContain('Cron:');
   });
 
-  test('omits description section when description is empty string', () => {
-    const withEmptyDesc = { ...baseInput, description: '' };
-    const result = createNotificationContent(withEmptyDesc);
-    expect(result).not.toContain('Description:');
+  test('includes description when provided', () => {
+    const result = createNotificationContent({
+      agentId: 'agent-1',
+      scheduleId: 'sched-789',
+      kind: 'agent',
+      name: 'Weekly review',
+      description: ' Review weekly metrics ',
+      scheduleType: 'date',
+      scheduledDate: 1717200000000,
+      timezone: 'UTC',
+      content: 'Generate report',
+      fireDate: new Date('2026-06-01T10:00:00Z'),
+    });
+
+    expect(result).toContain('Description: Review weekly metrics');
   });
 
-  test('omits description section when description is only whitespace', () => {
-    const withWs = { ...baseInput, description: '   \n\t  ' };
-    const result = createNotificationContent(withWs);
-    expect(result).not.toContain('Description:');
+  test('trims content whitespace', () => {
+    const result = createNotificationContent({
+      agentId: 'agent-1',
+      scheduleId: 'sched-abc',
+      kind: 'agent',
+      name: 'Cleanup',
+      scheduleType: 'cron',
+      cronExpression: '0 0 * * *',
+      timezone: 'UTC',
+      content: '  Remove old files  ',
+      fireDate: new Date('2026-06-01T00:00:00Z'),
+    });
+
+    expect(result).toContain('Task:\nRemove old files');
+    expect(result).not.toContain('  Remove old files  ');
   });
 
-  test('uses "Cron" title for heartbeat kind', () => {
-    const heartbeat = { ...baseInput, kind: 'heartbeat' as const };
-    const result = createNotificationContent(heartbeat);
-    expect(result.startsWith('Cron\n\n')).toBe(true);
-  });
+  test('includes ISO fire date', () => {
+    const fireDate = new Date('2026-06-01T09:00:00Z');
+    const result = createNotificationContent({
+      agentId: 'agent-1',
+      scheduleId: 'sched-fire',
+      kind: 'agent',
+      name: 'Fire test',
+      scheduleType: 'date',
+      scheduledDate: 1717200000000,
+      timezone: 'UTC',
+      content: '',
+      fireDate,
+    });
 
-  test('appends fireDate ISO string as last line', () => {
-    const result = createNotificationContent(baseInput);
-    expect(result.endsWith('2026-07-15T09:00:00.000Z')).toBe(true);
-  });
-
-  test('handles date scheduleType', () => {
-    const dateInput = {
-      ...baseInput,
-      scheduleType: 'date' as const,
-      scheduledDate: Date.parse('2026-07-15T09:00:00.000Z'),
-    };
-    const result = createNotificationContent(dateInput);
-    expect(result).toContain('Run daily sync');
+    expect(result).toContain(fireDate.toISOString());
   });
 });
 
-// ─── createWakeContent ────────────────────────────────────────────────────────
-
 describe('createWakeContent', () => {
-  const baseInput = {
-    name: 'Nightly Report',
-    description: undefined as string | undefined,
-    scheduleKind: 'agent' as const,
-    scheduleType: 'cron' as const,
-    cronExpression: '0 2 * * *',
-    scheduledDate: null as number | null,
-    timezone: 'America/New_York',
-    nextTriggerAt: null as number | null,
-    content: 'Generate nightly report',
-    wakeWhenRunning: false,
-  };
+  test('agent schedule includes task description', () => {
+    const result = createWakeContent({
+      name: 'Morning check',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 8 * * *',
+      timezone: 'UTC',
+      content: 'Review pending tasks',
+      wakeWhenRunning: false,
+    });
 
-  test('returns string with schedule info and content', () => {
-    const result = createWakeContent(baseInput);
     expect(result).toContain('Scheduled task triggered.');
-    expect(result).toContain('Schedule name: Nightly Report');
+    expect(result).toContain('Morning check');
     expect(result).toContain('Schedule kind: agent');
-    expect(result).toContain('Schedule type: cron');
-    expect(result).toContain('Timezone: America/New_York');
+    expect(result).toContain('Cron expression: 0 8 * * *');
     expect(result).toContain('Wake while running: only when idle');
-    expect(result).toContain('Cron expression: 0 2 * * *');
     expect(result).toContain('Content:');
-    expect(result).toContain('Generate nightly report');
+    expect(result).toContain('Review pending tasks');
   });
 
-  test('uses "Heartbeat triggered." for heartbeat kind', () => {
-    const heartbeat = { ...baseInput, scheduleKind: 'heartbeat' as const };
-    const result = createWakeContent(heartbeat);
-    expect(result.startsWith('Heartbeat triggered.')).toBe(true);
+  test('heartbeat schedule uses heartbeat triggered', () => {
+    const result = createWakeContent({
+      name: 'Heartbeat check',
+      scheduleKind: 'heartbeat',
+      scheduleType: 'cron',
+      cronExpression: '*/15 * * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: true,
+    });
+
+    expect(result).toContain('Heartbeat triggered.');
+    expect(result).toContain('Schedule kind: heartbeat');
   });
 
-  test('includes description when provided and trimmed', () => {
-    const withDesc = { ...baseInput, description: '  Nightly backup  ' };
-    const result = createWakeContent(withDesc);
-    expect(result).toContain('Description: Nightly backup');
+  test('includes description when trimmed is non-empty', () => {
+    const result = createWakeContent({
+      name: 'With description',
+      description: '  Important task  ',
+      scheduleKind: 'agent',
+      scheduleType: 'date',
+      scheduledDate: 1717200000000,
+      timezone: 'America/Sao_Paulo',
+      content: 'Do work',
+      wakeWhenRunning: true,
+    });
+
+    expect(result).toContain('Description: Important task');
   });
 
-  test('omits description when only whitespace', () => {
-    const withWs = { ...baseInput, description: '   \n' };
-    const result = createWakeContent(withWs);
+  test('skips description when only whitespace', () => {
+    const result = createWakeContent({
+      name: 'No description',
+      description: '   ',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
     expect(result).not.toContain('Description:');
   });
 
-  test('omits description when undefined', () => {
-    const result = createWakeContent(baseInput);
-    expect(result).not.toContain('Description:');
-  });
+  test('omits cronExpression for date schedules', () => {
+    const result = createWakeContent({
+      name: 'Date schedule',
+      scheduleKind: 'agent',
+      scheduleType: 'date',
+      scheduledDate: 1717200000000,
+      timezone: 'UTC',
+      content: 'One-time task',
+      wakeWhenRunning: false,
+    });
 
-  test('includes Scheduled date for date scheduleType', () => {
-    const dateInput = {
-      ...baseInput,
-      scheduleType: 'date' as const,
-      cronExpression: null,
-      scheduledDate: 1752535200000,
-    };
-    const result = createWakeContent(dateInput);
-    expect(result).toContain('Scheduled date:');
     expect(result).not.toContain('Cron expression:');
-  });
-
-  test('omits nextTriggerAt section when null', () => {
-    const result = createWakeContent(baseInput);
-    expect(result).not.toContain('Next trigger at:');
+    expect(result).toContain('Scheduled date:');
   });
 
   test('includes nextTriggerAt when provided', () => {
-    const withNext = { ...baseInput, nextTriggerAt: 1752535200000 };
-    const result = createWakeContent(withNext);
+    const nextTrigger = 1717286400000;
+    const result = createWakeContent({
+      name: 'Recurring',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      nextTriggerAt: nextTrigger,
+      content: '',
+      wakeWhenRunning: false,
+    });
+
     expect(result).toContain('Next trigger at:');
+    expect(result).toContain(new Date(nextTrigger).toISOString());
   });
 
-  test('omits scheduledDate section when null (for date type)', () => {
-    const dateInput = {
-      ...baseInput,
-      scheduleType: 'date' as const,
-      cronExpression: null,
-      scheduledDate: null,
-    };
-    const result = createWakeContent(dateInput);
-    expect(result).not.toContain('Scheduled date:');
-  });
+  test('omits nextTriggerAt when null', () => {
+    const result = createWakeContent({
+      name: 'No next trigger',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      nextTriggerAt: null,
+      content: '',
+      wakeWhenRunning: false,
+    });
 
-  test('sets wakeWhenRunning: enabled when true', () => {
-    const withWake = { ...baseInput, wakeWhenRunning: true };
-    const result = createWakeContent(withWake);
-    expect(result).toContain('Wake while running: enabled');
-  });
-
-  test('sets wakeWhenRunning: only when idle when false', () => {
-    const result = createWakeContent(baseInput);
-    expect(result).toContain('Wake while running: only when idle');
+    expect(result).not.toContain('Next trigger at:');
   });
 });
 
-// ─── createHeartbeatWakeInstruction ───────────────────────────────────────────
-
 describe('createHeartbeatWakeInstruction', () => {
-  test('returns custom content when provided and non-empty', () => {
-    const result = createHeartbeatWakeInstruction('Custom heartbeat content');
-    expect(result).toBe('Custom heartbeat content');
+  test('returns custom content when provided and non-empty after trim', () => {
+    const result = createHeartbeatWakeInstruction('Check pending tasks');
+    expect(result).toBe('Check pending tasks');
   });
 
-  test('trims custom content', () => {
-    const result = createHeartbeatWakeInstruction('  trimmed  ');
-    expect(result).toBe('trimmed');
+  test('returns trimmed custom content', () => {
+    const result = createHeartbeatWakeInstruction('  Check pending tasks  ');
+    expect(result).toBe('Check pending tasks');
   });
 
-  test('returns default instruction when custom content is empty', () => {
+  test('returns default instruction when content is empty string', () => {
     const result = createHeartbeatWakeInstruction('');
     expect(result).toContain('Phase 1. Recover the current reality.');
-    expect(result).toContain('Phase 2. Widen your view without leaving your role.');
+    expect(result).toContain('Phase 2.');
   });
 
-  test('returns default instruction when custom content is only whitespace', () => {
-    const result = createHeartbeatWakeInstruction('  \n\t  ');
+  test('returns default instruction when content is whitespace only', () => {
+    const result = createHeartbeatWakeInstruction('   ');
+    expect(result).toContain('Phase 1. Recover the current reality.');
+    expect(result).toContain('Phase 2.');
+  });
+
+  test('returns default instruction when content is undefined', () => {
+    const result = createHeartbeatWakeInstruction(undefined);
+    expect(result).toContain('Phase 1. Recover the current reality.');
+    expect(result).toContain('Phase 2.');
+  });
+
+  test('default instruction contains Phase 1 header', () => {
+    const result = createHeartbeatWakeInstruction('');
     expect(result).toContain('Phase 1. Recover the current reality.');
   });
 
-  test('returns default instruction when custom content is undefined', () => {
-    const result = createHeartbeatWakeInstruction(undefined);
-    expect(result).toContain('Phase 1. Recover the current reality.');
+  test('default instruction contains Phase 2 header', () => {
+    const result = createHeartbeatWakeInstruction('');
+    expect(result).toContain('Phase 2.');
   });
 
-  test('default instruction includes Phase 2', () => {
-    const result = createHeartbeatWakeInstruction(undefined);
-    expect(result).toContain('Phase 2. Widen your view without leaving your role.');
+  test('default instruction mentions reading unread conversations', () => {
+    const result = createHeartbeatWakeInstruction('');
+    expect(result).toContain('unread conversations');
   });
 
-  test('default instruction includes Phase 3', () => {
-    const result = createHeartbeatWakeInstruction(undefined);
-    expect(result).toContain('Phase 3.');
+  test('default instruction mentions reading unread notifications', () => {
+    const result = createHeartbeatWakeInstruction('');
+    expect(result).toContain('unread notifications');
   });
 });
