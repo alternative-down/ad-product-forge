@@ -35,10 +35,10 @@ type ClosableLibsqlClient = ReturnType<typeof createClient> & {
 };
 
 const RECENT_CONVERSATION_LIMIT = 10;
-const ADMIN_OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
+import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants.js';
 
 // shared utility — imported from utils/async
-import { withTimeout } from "../../utils/async";
+import { withTimeout } from '../../utils/async';
 
 async function closeLibsqlClient(client: ClosableLibsqlClient) {
   await client.close?.();
