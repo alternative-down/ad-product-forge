@@ -17,7 +17,7 @@ import {
   createAgentLongTermMemoryStore,
   type CheckpointPackageManifest,
   type LongTermMemoryState,
-} from './agent-long-term-memory-store';
+} from './ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
 
 import { withTimeout } from '../utils/async';

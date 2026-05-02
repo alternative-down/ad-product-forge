@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAgentSystemPrompt } from './agent-runtime-prompt';
+import { buildAgentSystemPrompt } from './runtime/prompt';
 
 describe('buildAgentSystemPrompt', () => {
   // --- Overload: instructions as string returns full system prompt ---

@@ -14,10 +14,10 @@ import {
   llmProfiles,
 } from '../database/schema';
 import { createSystemSettingsStore } from '../system-settings/store';
-import { createAgentLongTermMemoryStore } from './agent-long-term-memory-store';
+import { createAgentLongTermMemoryStore } from './ltm/store';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import type { InternalAgentRunner } from './agent-runner';
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 
 const OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 

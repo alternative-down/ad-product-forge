@@ -1,7 +1,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/index';
 import { createInternalAgentRuntime } from './create-forge-agent';
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 import { loadAgentRuntimeData } from './agent-loader-data';
 import { loadAgentToolset } from './agent-loader-tools';
 import type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';

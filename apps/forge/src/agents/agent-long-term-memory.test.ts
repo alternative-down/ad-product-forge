@@ -61,7 +61,7 @@ afterEach(async () => {
   );
 });
 
-import { createAgentLongTermMemory } from './agent-long-term-memory';
+import { createAgentLongTermMemory } from './ltm/index';
 
 function makeRuntimeSettings() {
   return {

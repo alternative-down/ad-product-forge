@@ -1,4 +1,4 @@
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
 
 const RECENT_STEP_LIMIT = 10;
