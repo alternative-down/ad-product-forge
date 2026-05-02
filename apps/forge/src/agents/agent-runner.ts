@@ -32,6 +32,7 @@ import {
 import { createLoopDetector } from './agent-runner-loop-detector';
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants.js';
+import { createId } from '../utils/id.js';
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
@@ -386,7 +387,7 @@ export function createAgentRunner(
     const runEpoch = startNewRunEpoch();
 
     try {
-      activeRunId = crypto.randomUUID();
+      activeRunId = createId();
       scheduler.setInstant(true);
       scheduler.resetBackoff();
       lastWakeStartedAt = input.wakeStartedAt;

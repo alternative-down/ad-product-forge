@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createId } from '../utils/id.js';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -102,7 +102,7 @@ export function createLlmSettingsStore(db: Database) {
   }) {
     const parsed = llmProfileSchema.parse(input);
     const now = Date.now();
-    const profileId = input.profileId ?? randomUUID();
+    const profileId = input.profileId ?? createId();
     const existing = input.profileId
       ? await db.query.llmProfiles.findFirst({
           where: eq(llmProfiles.id, input.profileId),
