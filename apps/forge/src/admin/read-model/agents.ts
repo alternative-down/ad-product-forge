@@ -40,7 +40,7 @@ import {
 } from '@forge-runtime/core';
 import { withTimeout } from './conversation-helpers';
 
-const ADMIN_OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
+import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants.js';
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_STEP_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
