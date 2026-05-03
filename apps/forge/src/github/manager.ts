@@ -41,6 +41,15 @@ import {
   escapeHtml,
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
 } from './helpers';
+import { createReposOps } from './ops/repos.js';
+import { createPullRequestsOps } from './ops/pull-requests.js';
+import { createIssuesOps } from './ops/issues.js';
+import { createLabelsOps } from './ops/labels.js';
+import { createMilestonesOps } from './ops/milestones.js';
+import { createRoutingOps } from './ops/routing.js';
+import { createCredentialsOps } from './ops/credentials.js';
+import type { OpsContext } from './ops/context.js';
+
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
 const INSTALLATION_READY_ATTEMPTS = 10;
@@ -69,9 +78,60 @@ export function createGitHubAppManager(config: {
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
+  // ── Build shared ops context ───────────────────────────────────────────────
+  const opsCtx: OpsContext = {
+    config,
+    notifications,
+    routeCleanups,
+    GITHUB_PROVIDER_TYPE,
+    and,
+    eq,
+    agentProviders,
+    agents,
+    createId,
+    nanoid,
+    forgeDebug,
+    getGlobalConfig,
+    getDefaultOwner,
+    getInstallationOctokit,
+    getInstallationToken,
+    getCredentials,
+    getActiveCredentials,
+    saveCredentials,
+    parseCredentials,
+    createInstallationOctokit,
+    getHeader,
+    getRegisterPath,
+    getManifestCallbackPath,
+    getSetupPath,
+    getWebhookPath,
+    escapeHtml,
+    normalizeAssignees,
+    toIssueSummary: (p) => toIssueSummary(p as Parameters<typeof toIssueSummary>[0]) as never,
+    toIssueDetails: (p) => toIssueDetails(p as Parameters<typeof toIssueDetails>[0]) as never,
+    DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
+    buildManifestEvents,
+    buildManifestPermissions,
+    createAppName,
+    createGitHubInstallWakeContent,
+    createGitHubWebhookWakeContent,
+    isGitHubSelfEvent,
+    isRecord,
+    summarizeGitHubEvent,
+    normalizeGitHubAppCredentials: (r) => normalizeGitHubAppCredentials(r as Parameters<typeof normalizeGitHubAppCredentials>[0]) as never,
+    normalizeManifestConfig: (r) => normalizeManifestConfig(r as Parameters<typeof normalizeManifestConfig>[0]) as never,
+  };
 
+  // ── Instantiate ops modules ─────────────────────────────────────────────
+  const opsCredentials = createCredentialsOps(opsCtx);
+  const opsRepos = createReposOps(opsCtx);
+  const opsPullRequests = createPullRequestsOps(opsCtx);
+  const opsIssues = createIssuesOps(opsCtx);
+  const opsLabels = createLabelsOps(opsCtx);
+  const opsMilestones = createMilestonesOps(opsCtx);
+  const opsRouting = createRoutingOps(opsCtx);
 
-// === App Lifecycle ===
+  // ── App Lifecycle ────────────────────────────────────────────────────────
   async function getGlobalConfig() {
     const githubConfig = await config.integrations.getGitHubConfig();
 
