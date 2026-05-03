@@ -39,7 +39,7 @@ vi.mock('./hiring-profile', () => ({
   buildHiredAgentProfile: mockBuildHiredAgentProfile,
 }));
 
-vi.mock('./hiring-rh', () => ({
+vi.mock('./hiring-requests-handler', () => ({
   generateHiredAgentInstructions: mockGenerateHiredAgentInstructions,
 }));
 

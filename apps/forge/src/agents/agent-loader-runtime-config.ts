@@ -1,4 +1,4 @@
-import type { CreateAgentConfig } from './agent-runtime-types';
+import type { CreateAgentConfig } from './runtime/types';
 import type { AgentLoaderConfig } from './agent-loader-types';
 import type { loadAgentRuntimeData } from './agent-loader-data';
 import type { loadAgentToolset } from './agent-loader-tools';

@@ -10,7 +10,7 @@ import {
   buildRecallSystemMessage,
   safeSerializeRecallSteps,
   safeSerializeGraphResult,
-} from './agent-ltm-helpers';
+} from './ltm/helpers';
 
 describe('escapeXml', () => {
   it('escapes ampersand', () => {

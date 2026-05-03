@@ -7,11 +7,11 @@ import {
   toolsToRuntimeActions,
 } from '@forge-runtime/core';
 import { getDatabase } from '../database';
-import { createAgentLongTermMemoryStore } from './agent-long-term-memory-store';
-import { createAgentRuntimePlatform } from './agent-runtime-platform';
-import { createAgentLongTermMemory } from './agent-long-term-memory';
-import { createAgentRuntimeMemory } from './agent-runtime-memory';
-import { buildAgentSystemPrompt } from './agent-runtime-prompt';
+import { createAgentLongTermMemoryStore } from './ltm/store';
+import { createAgentRuntimePlatform } from './runtime/platform';
+import { createAgentLongTermMemory } from './ltm/index';
+import { createAgentRuntimeMemory } from './runtime/memory';
+import { buildAgentSystemPrompt } from './runtime/prompt';
 import { createAgentMcpRuntimeActionSource } from './mcp/client-manager';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import { normalizeOperationalMemoryMessages } from './normalize-operational-memory-messages';
@@ -20,7 +20,7 @@ import type {
   CreateAgentOptions,
   InternalAgentRuntime,
   RuntimeAgent,
-} from './agent-runtime-types';
+} from './runtime/types';
 
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {

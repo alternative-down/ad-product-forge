@@ -56,7 +56,7 @@ vi.mock('@libsql/client', () => ({
 
 
 
-import { createAgentRuntimePlatform } from './agent-runtime-platform';
+import { createAgentRuntimePlatform } from './runtime/platform';
 
 const temporaryDirectories: string[] = [];
 

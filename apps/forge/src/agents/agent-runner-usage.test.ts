@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 
 function createMockStore() {
   return {

@@ -2,7 +2,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
-import type { InternalAgentRuntime } from './agent-runtime-types';
+import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/index';
 import { createSystemSettingsStore } from '../system-settings/store';
