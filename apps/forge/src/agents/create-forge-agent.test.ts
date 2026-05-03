@@ -19,6 +19,7 @@ vi.mock('@forge-runtime/core', () => {
     createRuntimeAgentSession: mockSession,
     createExternalAccountTools: vi.fn().mockReturnValue({}),
     toolsToRuntimeActions: vi.fn().mockReturnValue([]),
+    toMastraSafeIdentifier: vi.fn((s: string) => s),
   };
 });
 
@@ -30,7 +31,7 @@ vi.mock('./agent-long-term-memory-store', () => ({
   createAgentLongTermMemoryStore: vi.fn(() => mockMemoryStore),
 }));
 
-vi.mock('./agent-runtime-platform', () => ({
+vi.mock('./runtime/platform', () => ({
   createAgentRuntimePlatform: vi.fn().mockResolvedValue({
     mastraId: 'forge-agent',
     agentWorkspacePath: '/workspaces/forge-agent',
