@@ -155,7 +155,7 @@ export function createMicroErpReadModel(db: Database) {
           gte(agentExecutionContracts.endsAt, now),
         ),
       )
-      .orderBy(desc(agentExecutionContracts.endsAt));
+      .orderBy(desc(agentExecutionContracts.endsAt)).all();
     const metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
