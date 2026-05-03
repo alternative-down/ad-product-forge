@@ -44,6 +44,7 @@ type CompanyPayables = {
   createRecurringPayable: (input: { name: string; description?: string; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; dueAt: number }) => Promise<{ payableId: string; entryId: string }>;
   syncRecurringPayableOccurrence: (input: { entryId: string }) => Promise<{ payableId: string; nextDueAt: number } | null>;
   listRecurringPayables: () => Promise<{ payableId: string; name: string; description: string | undefined; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; isActive: boolean; createdAt: number; updatedAt: number; nextDueAt: number }[]>;
+  setRecurringPayableActive: (payableId: string, isActive: boolean) => Promise<{ payableId: string }>;
 }
 
 type FinanceWriteInput = {
