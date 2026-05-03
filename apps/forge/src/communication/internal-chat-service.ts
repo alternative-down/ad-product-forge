@@ -1,3 +1,47 @@
+/**
+ * Internal Chat Service
+ *
+ * A 1300-line factory function organized into five responsibility zones.
+ * Each zone handles a distinct concern. The "ByAgent" vs "ByAccount" naming
+ * convention reflects an intentional architectural pattern — see below.
+ *
+ * ## Responsibility Zones
+ *
+ * | Section | Lines | Purpose |
+ * |---------|-------|---------|
+ * | Attachments | 54–97 | Store and retrieve message attachments |
+ * | Account Management | 98–305 | Register, update, list accounts |
+ * | Conversation Setup | 306–388 | Ensure DM conversations exist |
+ * | Group Management | 388–575 | Delegate to internal-chat-groups |
+ * | Conversations / Messages | 446–1000 | List, read, send messages |
+ *
+ * ## The ByAgent / ByAccount Pattern
+ *
+ * Several operations exist in two variants — "ByAgent" and "ByAccount":
+ *
+ *   ByAgent   — first resolves `agentId` → `accountId`, then does the operation.
+ *               Caller only knows the agent identifier.
+ *
+ *   ByAccount — operates directly on a resolved `accountId`.
+ *               Used by admin routes, external integrations, or when
+ *               the caller already has a concrete account reference.
+ *
+ * These are NOT duplicates. They represent different trust domains:
+ * - ByAgent routes protect against unauthorized agent impersonation
+ * - ByAccount routes are used by trusted callers (admins, external integrations)
+ *
+ * ## Planned Extraction (#1215)
+ *
+ * This module will be split into:
+ *   - internal-chat-attachments.ts  — attachment storage and retrieval
+ *   - internal-chat-accounts.ts    — account registration and lookup
+ *   - internal-chat-conversations.ts — conversations, groups, messages
+ *   - internal-chat-messages.ts     — send/receive message operations
+ *   - internal-chat-service.ts      — thin orchestrator, re-exports unified API
+ *
+ * @module
+ */
+
 import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from "drizzle-orm";
 import path from "node:path";
 import { customAlphabet } from "nanoid";
@@ -572,6 +616,12 @@ export function createInternalChatService(
   }
 
   // ── Account-scoped Conversation Listing ───────────────────────────────────
+
+  // ── ByAccount variant ─────────────────────────────────────────────────────
+  // listConversationsByAccount: same as listConversations above, but accepts
+  // a resolved accountId directly instead of looking it up from an agentId.
+  // Used by admin routes and external integrations that already have the account.
+  // NOT a duplicate — this is intentional architectural separation.
   async function listConversationsByAccount(input: {
     accountId: string;
     limit: number;
@@ -735,6 +785,10 @@ export function createInternalChatService(
   }
 
   // ── Account-scoped Message Retrieval ─────────────────────────────────────
+
+  // ── ByAccount variant ─────────────────────────────────────────────────────
+  // getMessagesByAccount: same as getMessages above, but uses accountId directly.
+  // Used when the caller already has a concrete account reference.
   async function getMessagesByAccount(input: {
     accountId: string;
     conversationKey: string;
@@ -965,6 +1019,10 @@ export function createInternalChatService(
   }
 
   // ── Conversation Archival ─────────────────────────────────────────────────
+
+  // ── ByAccount variant ─────────────────────────────────────────────────────
+  // archiveConversationByAccount: same as archiveConversationByAgent, but
+  // uses accountId directly for trusted admin callers.
   async function archiveConversationByAccount(input: {
     accountId: string;
     conversationId: string;
