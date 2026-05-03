@@ -20,7 +20,7 @@ const createPayableSchema = z.object({
   amountUsd: z.number().positive(),
   dueAt: z.string(),
   kind: z.enum(['single', 'recurring']),
-  recurrencePeriod: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
+  recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
 }).strict();
 
 const ledgerEntryActionSchema = z.object({

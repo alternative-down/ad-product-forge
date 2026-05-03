@@ -14,7 +14,7 @@ const createPayableSchema = z.object({
   amountUsd: z.number().positive(),
   dueAt: z.string(),
   kind: z.enum(['single', 'recurring']),
-  recurrencePeriod: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
+  recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
 }).strict();
 
 const ledgerEntryActionSchema = z.object({
@@ -98,6 +98,15 @@ describe('Finance Route Schemas', () => {
       })).toThrow();
     });
 
+    it('rejects daily recurrence period', () => {
+      expect(() => createPayableSchema.parse({
+        name: 'Test Daily',
+        amountUsd: 100,
+        dueAt: '2025-01-01',
+        kind: 'recurring',
+        recurrencePeriod: 'daily',
+      })).toThrow();
+    });
     it('rejects invalid recurrence period', () => {
       expect(() => createPayableSchema.parse({
         name: 'Test',
