@@ -1,20 +1,23 @@
-import { describe, it, expect } from 'vitest';
-
-/*
+/**
  * Tests for helper functions in coolify/manager.ts.
- * Inline copies of the source helpers are tested directly.
+ * Tests the real exported helpers from the source module.
  */
-describe('normalizeDomainHost', () => {
-  function normalizeDomainHost(value: string | null | undefined) {
-    if (!value) return null;
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return null;
-    const normalized = /^[a-z]+:\/\//i.test(trimmed)
-      ? new URL(trimmed).host
-      : trimmed.replace(/^\./, '').replace(/\/+$/, '');
-    return normalized ?? null;
-  }
 
+import { describe, it, expect } from 'vitest';
+import {
+  normalizeDomainHost,
+  extractCollection,
+  extractItem,
+  extractLogs,
+  toApplicationSummary,
+  safeJsonParse,
+  buildRequestError,
+} from './manager';
+import { z } from 'zod';
+
+// ─── normalizeDomainHost ────────────────────────────────────────────────────
+
+describe('normalizeDomainHost', () => {
   it('returns null for null', () => expect(normalizeDomainHost(null)).toBe(null));
   it('returns null for undefined', () => expect(normalizeDomainHost(undefined)).toBe(null));
   it('returns null for empty string', () => expect(normalizeDomainHost('')).toBe(null));
@@ -29,109 +32,81 @@ describe('normalizeDomainHost', () => {
   it('returns subdomain', () => expect(normalizeDomainHost('sub.app.example.com')).toBe('sub.app.example.com'));
 });
 
-describe('extractCollection', () => {
-  const { z } = require('zod');
-  const schema = z.object({ id: z.string() });
-  const arraySchema = z.array(schema);
+// ─── extractCollection ──────────────────────────────────────────────────────
 
-  function extractCollection(data: unknown) {
-    if (Array.isArray(data)) return arraySchema.parse(data);
-    if (data && typeof data === 'object') {
-      const record = data as Record<string, unknown>;
-      for (const key of ['data', 'applications', 'github_apps', 'repositories', 'deployments', 'envs', 'projects', 'environments', 'servers', 'branches']) {
-        if (Array.isArray(record[key])) return arraySchema.parse(record[key]);
-      }
-    }
-    return [];
-  }
+describe('extractCollection', () => {
+  const schema = z.object({ id: z.string() });
 
   it('returns array as-is', () => {
-    const result = extractCollection([{ id: '1' }, { id: '2' }]);
+    const result = extractCollection([{ id: '1' }, { id: '2' }], schema);
     expect(result).toHaveLength(2);
   });
 
   it('extracts from "data" key', () => {
-    const result = extractCollection({ data: [{ id: 'a' }, { id: 'b' }] });
+    const result = extractCollection({ data: [{ id: 'a' }, { id: 'b' }] }, schema);
     expect(result).toHaveLength(2);
   });
 
   it('extracts from "applications" key', () => {
-    const result = extractCollection({ applications: [{ id: 'x' }] });
+    const result = extractCollection({ applications: [{ id: 'x' }] }, schema);
     expect(result).toHaveLength(1);
   });
 
   it('extracts from "github_apps" key', () => {
-    const result = extractCollection({ github_apps: [{ id: 'y' }] });
+    const result = extractCollection({ github_apps: [{ id: 'y' }] }, schema);
+    expect(result).toHaveLength(1);
+  });
+
+  it('extracts from "repositories" key', () => {
+    const result = extractCollection({ repositories: [{ id: 'r' }] }, schema);
     expect(result).toHaveLength(1);
   });
 
   it('returns empty array when no collection found', () => {
-    const result = extractCollection({ something: 'else' });
+    const result = extractCollection({ something: 'else' }, schema);
     expect(result).toEqual([]);
   });
 
   it('returns empty array for non-object', () => {
-    const result = extractCollection('not an object');
+    const result = extractCollection('not an object', schema);
     expect(result).toEqual([]);
   });
 });
 
+// ─── extractItem ──────────────────────────────────────────────────────────
+
 describe('extractItem', () => {
-  const { z } = require('zod');
   const schema = z.object({ name: z.string() });
 
-  function extractItem(data: unknown) {
-    if (data && typeof data === 'object') {
-      const parsed = schema.safeParse(data);
-      if (parsed.success) return parsed.data;
-
-      const record = data as Record<string, unknown>;
-      for (const key of ['data', 'application', 'github_app', 'deployment', 'server', 'project', 'environment', 'env']) {
-        const value = record[key];
-        if (value && typeof value === 'object') return schema.parse(value);
-      }
-    }
-    return schema.parse(data);
-  }
-
   it('returns parsed object directly', () => {
-    const result = extractItem({ name: 'test' });
+    const result = extractItem({ name: 'test' }, schema);
     expect(result).toEqual({ name: 'test' });
   });
 
   it('extracts from "data" key', () => {
-    const result = extractItem({ data: { name: 'from-data' } });
+    const result = extractItem({ data: { name: 'from-data' } }, schema);
     expect(result).toEqual({ name: 'from-data' });
   });
 
   it('extracts from "application" key', () => {
-    const result = extractItem({ application: { name: 'app-name' } });
+    const result = extractItem({ application: { name: 'app-name' } }, schema);
     expect(result).toEqual({ name: 'app-name' });
   });
 
   it('extracts from "github_app" key', () => {
-    const result = extractItem({ github_app: { name: 'gh-app' } });
+    const result = extractItem({ github_app: { name: 'gh-app' } }, schema);
     expect(result).toEqual({ name: 'gh-app' });
   });
 
   it('falls back to root if no nested key found', () => {
-    const result = extractItem({ name: 'root-item' });
+    const result = extractItem({ name: 'root-item' }, schema);
     expect(result).toEqual({ name: 'root-item' });
   });
 });
 
-describe('extractLogs', () => {
-  function extractLogs(data: unknown) {
-    if (typeof data === 'string') return data;
-    if (data && typeof data === 'object') {
-      const record = data as Record<string, unknown>;
-      for (const key of ['logs', 'data', 'output']) {
-        if (typeof record[key] === 'string') return record[key] as string;
-      }
-    }
-    return '';
-  }
+// ─── extractLogs ─────────────────────────────────────────────────────────────
 
+describe('extractLogs', () => {
   it('returns string as-is', () => expect(extractLogs('raw log text')).toBe('raw log text'));
   it('extracts from "logs" key', () => expect(extractLogs({ logs: 'from logs' })).toBe('from logs'));
   it('extracts from "data" key', () => expect(extractLogs({ data: 'from data' })).toBe('from data'));
@@ -142,15 +117,9 @@ describe('extractLogs', () => {
   it('returns "" for number', () => expect(extractLogs(123)).toBe(''));
 });
 
-describe('safeJsonParse', () => {
-  function safeJsonParse(text: string): unknown {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return text;
-    }
-  }
+// ─── safeJsonParse ─────────────────────────────────────────────────────────
 
+describe('safeJsonParse', () => {
   it('parses valid JSON', () => {
     const result = safeJsonParse('{"key":"value"}');
     expect(result).toEqual({ key: 'value' });
@@ -169,12 +138,9 @@ describe('safeJsonParse', () => {
   });
 });
 
-describe('buildRequestError', () => {
-  function buildRequestError(method: string, path: string, status: number, data: unknown) {
-    const payload = typeof data === 'string' ? data : JSON.stringify(data);
-    return `Coolify API ${method} ${path} failed with ${status}: ${payload}`;
-  }
+// ─── buildRequestError ──────────────────────────────────────────────────────
 
+describe('buildRequestError', () => {
   it('formats with string data', () => {
     const msg = buildRequestError('GET', '/apps', 404, 'Not found');
     expect(msg).toBe('Coolify API GET /apps failed with 404: Not found');
@@ -193,24 +159,31 @@ describe('buildRequestError', () => {
   });
 });
 
-describe('toTimestamp', () => {
-  function toTimestamp(value: string | number | null) {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-      const numeric = Number(value);
-      if (Number.isFinite(numeric)) return numeric;
-      const parsed = Date.parse(value);
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-    return 0;
-  }
+// ─── toApplicationSummary ──────────────────────────────────────────────────
 
-  it('returns number as-is', () => expect(toTimestamp(1700000000000)).toBe(1700000000000));
-  it('returns numeric string as number', () => expect(toTimestamp('1700000000000')).toBe(1700000000000));
-  it('parses ISO date string', () => {
-    const result = toTimestamp('2024-01-01T00:00:00.000Z');
-    expect(result).toBeGreaterThan(0);
+describe('toApplicationSummary', () => {
+  it('maps all fields correctly', () => {
+    const input = {
+      uuid: 'app-1',
+      name: 'My App',
+      fqdn: 'https://myapp.com',
+      status: 'running',
+      repository: 'org/repo',
+      git_branch: 'main',
+    };
+    const result = toApplicationSummary(input);
+    expect(result.applicationUuid).toBe('app-1');
+    expect(result.name).toBe('My App');
+    expect(result.fqdn).toBe('https://myapp.com');
+    expect(result.status).toBe('running');
+    expect(result.repository).toBe('org/repo');
+    expect(result.branch).toBe('main');
   });
-  it('returns 0 for null', () => expect(toTimestamp(null)).toBe(0));
-  it('returns 0 for non-numeric string', () => expect(toTimestamp('not-a-date')).toBe(0));
+
+  it('treats missing fields as null', () => {
+    const result = toApplicationSummary({ uuid: 'app-1' });
+    expect(result.name).toBeNull();
+    expect(result.fqdn).toBeNull();
+    expect(result.status).toBeNull();
+  });
 });
