@@ -1,5 +1,5 @@
 import { gracefulShutdown, scheduleJob, cancelJob as cancelScheduledJob, type Job, type RecurrenceSpecDateRange } from 'node-schedule';
-import { parseExpression as validateCronExpression } from 'cron-parser';
+import cronParser from 'cron-parser';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
@@ -536,7 +536,7 @@ export function createAgentScheduleManager(input: {
     // Validate cron expression syntax before scheduling — node-schedule silently
     // accepts malformed expressions and creates a job that never fires.
     try {
-      validateCronExpression(scheduleRecord.cronExpression);
+      (cronParser.parseExpression as any)(scheduleRecord.cronExpression);
     } catch {
       throw new Error(`Invalid cron expression for schedule ${scheduleRecord.scheduleId}: ${scheduleRecord.cronExpression}`);
     }
