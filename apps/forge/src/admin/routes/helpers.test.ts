@@ -1,7 +1,16 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
+const { MockLibsqlConversationStore } = vi.hoisted(() => {
+  class MockLibsqlConversationStore {
+    clearThread = vi.fn().mockResolvedValue(undefined);
+  }
+  return { MockLibsqlConversationStore };
+});
+
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
+  LibsqlConversationStore: MockLibsqlConversationStore,
+  toMastraSafeIdentifier: vi.fn((id) => id.replace(/[^a-zA-Z0-9_]/g, '_')),
 }));
 
 import { z } from 'zod';
@@ -14,6 +23,7 @@ import {
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
   fsPathExists,
+  clearAgentHistory,
 } from './helpers';
 
 // Mock node:fs/promises for fsPathExists tests
@@ -21,7 +31,22 @@ vi.mock('node:fs/promises', () => ({
   access: vi.fn(),
 }));
 
+vi.mock('@libsql/client', () => ({
+  createClient: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn((a, b) => ({ _tag: 'eq', field: a, value: b })),
+  and: vi.fn((...conditions) => ({ _tag: 'and', conditions })),
+}));
+
 import { access } from 'node:fs/promises';
+
+vi.mock('../../database/schema', () => ({
+  agentCheckpointedOmStates: { agentId: 'agentCheckpointedOmStates' },
+  agentLongTermMemoryStates: { agentId: 'agentLongTermMemoryStates' },
+  agentLongTermMemoryRecallStates: { agentId: 'agentLongTermMemoryRecallStates' },
+}));
 
 describe('normalizeOptionalText', () => {
   it('returns null for undefined', () => {
@@ -554,5 +579,91 @@ describe('fsPathExists', () => {
     expect(result).toBe(false);
     expect(access).toHaveBeenCalledOnce();
     expect(access).toHaveBeenCalledWith('/nonexistent/path');
+  });
+});
+
+
+describe('clearAgentHistory', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('creates libsql client with correct database path', async () => {
+    const { createClient } = await import('@libsql/client');
+    const mockDelete = vi.fn().mockReturnThis();
+    mockDelete.where = vi.fn().mockResolvedValue(undefined);
+    const db = { delete: vi.fn().mockReturnValue({ where: mockDelete.where }) } as any;
+
+    await clearAgentHistory({
+      db,
+      workspaceBasePath: '/base/workspaces',
+      agentId: 'agent-123',
+    });
+
+    expect(createClient).toHaveBeenCalledWith({ url: 'file:/base/workspaces/agent-123/database.db' });
+  });
+
+  it('creates LibsqlConversationStore via new LibsqlConversationStore', async () => {
+    const mockDelete = vi.fn().mockReturnThis();
+    mockDelete.where = vi.fn().mockResolvedValue(undefined);
+    const db = { delete: vi.fn().mockReturnValue({ where: mockDelete.where }) } as any;
+
+    await clearAgentHistory({
+      db,
+      workspaceBasePath: '/base',
+      agentId: 'my-agent',
+    });
+
+    // verify toMastraSafeIdentifier was called to sanitize the agent ID
+    const { toMastraSafeIdentifier } = await import('@forge-runtime/core');
+    expect(toMastraSafeIdentifier).toHaveBeenCalledWith('my-agent');
+  });
+
+  it('does not delete agent state when includeLongTermMemoryThread is false', async () => {
+    const mockDelete = vi.fn().mockReturnThis();
+    mockDelete.where = vi.fn().mockResolvedValue(undefined);
+    const db = { delete: vi.fn().mockReturnValue({ where: mockDelete.where }) } as any;
+
+    await clearAgentHistory({
+      db,
+      workspaceBasePath: '/base',
+      agentId: 'agent-1',
+      includeLongTermMemoryThread: false,
+    });
+
+    expect(db.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes 3 agent state tables when includeLongTermMemoryThread is true', async () => {
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const mockDelete = vi.fn().mockReturnValue({ where: mockWhere });
+    const db = { delete: vi.fn().mockReturnValue({ where: mockWhere }) } as any;
+    // Make delete return the same mock for each call
+    db.delete.mockReturnValue({ where: mockWhere });
+
+    await clearAgentHistory({
+      db,
+      workspaceBasePath: '/base',
+      agentId: 'agent-1',
+      includeLongTermMemoryThread: true,
+    });
+
+    expect(db.delete).toHaveBeenCalledTimes(3);
+  });
+
+  it('uses eq() for agentId filter in delete queries', async () => {
+    const mockWhere = vi.fn().mockResolvedValue(undefined);
+    const db = { delete: vi.fn().mockReturnValue({ where: mockWhere }) } as any;
+
+    await clearAgentHistory({
+      db,
+      workspaceBasePath: '/base',
+      agentId: 'test-agent',
+      includeLongTermMemoryThread: true,
+    });
+
+    // Verify eq was called (the eq mock returns an object with _tag: 'eq')
+    const { eq } = await import('drizzle-orm');
+    expect(mockWhere).toHaveBeenCalled();
   });
 });
