@@ -518,4 +518,6 @@ export const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
 });
-
+export const discordProviderDeleteSignalSchema = z.object({
+  token: z.string(),
+});

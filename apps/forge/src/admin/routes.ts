@@ -71,7 +71,7 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-export * from './schemas.js';
+import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
 import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes } from './routes/agents/index.js';
 import {
@@ -121,7 +121,9 @@ import {
   roleWorkflowPermissionSchema,
   createScheduleSchema,
   updateScheduleSchema,
-  deleteScheduleSchema
+  deleteScheduleSchema,
+  mcpServerFieldsSchema,
+  discordProviderDeleteSignalSchema,
 } from './routes/schemas.js';
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
 
@@ -399,33 +401,11 @@ const upsertAgentProviderSchema = z.object({
   credentials: z.unknown(),
 });
 
-const discordProviderDeleteSignalSchema = z.object({
-  token: z.string(),
-});
 
 const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
 });
-
-const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
-  z.object({
-    transport: z.literal('stdio'),
-    command: z.string().trim().min(1),
-    argsText: z.string().optional().default(''),
-    envVarsText: z.string().optional().default(''),
-    url: z.string().optional().default(''),
-    headersText: z.string().optional().default(''),
-  }),
-  z.object({
-    transport: z.literal('http_streamable'),
-    url: z.string().trim().url(),
-    headersText: z.string().optional().default(''),
-    command: z.string().optional().default(''),
-    argsText: z.string().optional().default(''),
-    envVarsText: z.string().optional().default(''),
-  }),
-]);
 
 const createAgentMcpServerSchema = z
   .object({
