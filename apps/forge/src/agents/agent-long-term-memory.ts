@@ -132,7 +132,13 @@ async function sleep(ms: number) {
 
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);
-  const exists = await fs.access(absoluteRoot).then(() => true).catch((err) => { forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: '[safe-catch] access check', context: { error: err } }); return false; });
+  let exists = false;
+  try {
+    await fs.access(absoluteRoot);
+    exists = true;
+  } catch (err) {
+    forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: '[safe-catch] access check', context: { error: err } });
+  }
 
   if (!exists) {
     return [];
