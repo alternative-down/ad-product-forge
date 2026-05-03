@@ -47,6 +47,7 @@ import {
 } from '../database/schema';
 import { encryptSecret } from '../encryption/crypto';
 import { parseProviderCredentials } from '../communication/provider-loader';
+import { decryptSecret } from '../encryption/crypto';
 import { createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
@@ -181,7 +182,7 @@ export function registerAdminRoutes(input: {
         }
       }
 
-      const credentials = parseProviderCredentials(body.providerType, body.credentials);
+      const credentials = parseProviderCredentials(body.providerType, body.credentials, decryptSecret);
       const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
       const existing = await input.db.query.agentProviders.findFirst({
         where: and(

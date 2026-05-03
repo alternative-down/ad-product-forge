@@ -152,7 +152,12 @@ export async function loadCommunicationProviders(
 export function parseProviderCredentials(
   providerType: keyof ProviderCredentialsMap,
   credentials: unknown,
+  decryptFn?: (encrypted: string) => string,
 ) {
+  if (typeof credentials === 'string' && decryptFn) {
+    credentials = JSON.parse(decryptFn(credentials));
+  }
+
   if (providerType === 'internal-chat') {
     return internalChatCredentialsSchema.parse(credentials);
   }
