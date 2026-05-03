@@ -91,8 +91,9 @@ describe('system-integrations/store', () => {
       expect(result[0]).toMatchObject({
         providerType: 'migadu',
         isEnabled: true,
-        config: expect.objectContaining({ apiUser: 'test@example.com', apiKey: 'key123' }),
+        config: expect.objectContaining({ apiUser: 'test@example.com' }),
       });
+      expect((result[0].config as Record<string, unknown>).apiKey).toBeNull();
     });
 
     it('excludes rows with invalid providerType', async () => {
@@ -297,10 +298,10 @@ describe('system-integrations/store', () => {
 
       expect(result[0].config).toMatchObject({
         baseUrl: 'https://coolify.io',
-        adminToken: 'tok',
         serverId: 's1',
         destinationId: 'd1',
       });
+      expect((result[0].config as Record<string, unknown>).adminToken).toBeNull();
     });
 
     it('correctly parses github config via listIntegrations', async () => {
@@ -329,7 +330,9 @@ describe('system-integrations/store', () => {
       const store = createSystemIntegrationStore(db);
       const result = await store.listIntegrations();
 
-      expect(result[0].config).toMatchObject({ apiKey: 'minimax-api-key' });
+      // apiKey is stripped by sanitizeForList in list output
+      expect((result[0].config as Record<string, unknown>).apiKey).toBeNull();
+      expect(result[0].config).toMatchObject({});
     });
   });
 

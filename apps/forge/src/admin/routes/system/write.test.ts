@@ -13,6 +13,7 @@ vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
   oauthStore: {
     read: vi.fn().mockResolvedValue({}),
+    getDefaultPath: vi.fn().mockReturnValue('/tmp/oauth-store.json'),
   },
   syncOpenAICodexCredential: vi.fn().mockResolvedValue(undefined),
   syncAnthropicCredential: vi.fn().mockResolvedValue(undefined),
