@@ -14,6 +14,7 @@ import {
   createHeartbeatWakeInstruction,
   toToolOutput,
 } from './schedule-helpers';
+import { normalizeScheduleUpdate } from './schedule-normalize-helpers';
 import {
   requireScheduleEditor,
   requireScheduleDeleter,
@@ -198,42 +199,15 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    const scheduleType = parsed.scheduleType ?? existing.scheduleType;
-    const cronExpression = parsed.cronExpression === undefined
-      ? existing.cronExpression
-      : parsed.cronExpression ?? undefined;
-    const scheduledDate = parsed.scheduledDate === undefined
-      ? existing.scheduledDate
-      : parsed.scheduledDate === null
-        ? undefined
-        : parseScheduleDate(parsed.scheduledDate);
-
-    validateScheduleShape({
-      scheduleType,
-      cronExpression,
-      scheduledDate,
-    });
-    const shouldRequireFutureDate =
-      scheduleType === 'date' &&
-      (
-        parsed.scheduledDate !== undefined ||
-        parsed.scheduleType !== undefined ||
-        parsed.isActive === true
-      );
-
-    if (shouldRequireFutureDate) {
-      assertFutureScheduledDate(scheduleType, scheduledDate);
+    const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
+    const { scheduleType, cronExpression, scheduledDate } = normalized;
+    validateScheduleShape({ scheduleType, cronExpression, scheduledDate });
+    if (normalized.shouldRequireFutureDate) {
+      assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
-
-    const normalizedCronExpression = scheduleType === 'cron'
-      ? cronExpression ?? null
-      : null;
-    const normalizedScheduledDate = scheduleType === 'date'
-      ? scheduledDate ?? null
-      : null;
-    const normalizedWakeWhenRunning = scheduleType === 'cron'
-      ? parsed.wakeWhenRunning ?? existing.wakeWhenRunning
-      : true;
+    const normalizedCronExpression = normalized.cronExpression;
+    const normalizedScheduledDate = normalized.scheduledDate;
+    const normalizedWakeWhenRunning = normalized.wakeWhenRunning;
     const rollbackInput = {
       name: existing.name,
       description: existing.description ?? null,
@@ -296,42 +270,15 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    const scheduleType = parsed.scheduleType ?? existing.scheduleType;
-    const cronExpression = parsed.cronExpression === undefined
-      ? existing.cronExpression
-      : parsed.cronExpression ?? undefined;
-    const scheduledDate = parsed.scheduledDate === undefined
-      ? existing.scheduledDate
-      : parsed.scheduledDate === null
-        ? undefined
-        : parseScheduleDate(parsed.scheduledDate);
-
-    validateScheduleShape({
-      scheduleType,
-      cronExpression,
-      scheduledDate,
-    });
-    const shouldRequireFutureDate =
-      scheduleType === 'date' &&
-      (
-        parsed.scheduledDate !== undefined ||
-        parsed.scheduleType !== undefined ||
-        parsed.isActive === true
-      );
-
-    if (shouldRequireFutureDate) {
-      assertFutureScheduledDate(scheduleType, scheduledDate);
+    const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
+    const { scheduleType, cronExpression, scheduledDate } = normalized;
+    validateScheduleShape({ scheduleType, cronExpression, scheduledDate });
+    if (normalized.shouldRequireFutureDate) {
+      assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
-
-    const normalizedCronExpression = scheduleType === 'cron'
-      ? cronExpression ?? null
-      : null;
-    const normalizedScheduledDate = scheduleType === 'date'
-      ? scheduledDate ?? null
-      : null;
-    const normalizedWakeWhenRunning = scheduleType === 'cron'
-      ? parsed.wakeWhenRunning ?? existing.wakeWhenRunning
-      : true;
+    const normalizedCronExpression = normalized.cronExpression;
+    const normalizedScheduledDate = normalized.scheduledDate;
+    const normalizedWakeWhenRunning = normalized.wakeWhenRunning;
     const rollbackInput = {
       name: existing.name,
       description: existing.description ?? null,
