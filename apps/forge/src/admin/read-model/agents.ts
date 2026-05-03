@@ -399,10 +399,10 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     });
     // Build role map (agentRoles rows were already fetched in Promise.all)
     const roleMap = new Map(
-      agentRoles.rows?.map((r) => [r.id, r]) ?? []
+      agentRoles?.map((r) => [r.id, r]) ?? []
     );
     const profileMap = new Map(
-      llmProfiles.rows?.map((p) => [p.id, p]) ?? []
+      llmProfiles?.map((p) => [p.id, p]) ?? []
     );
 
     const roleRow = agent.roleId ? roleMap.get(agent.roleId) : null;
