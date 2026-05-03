@@ -5,7 +5,7 @@
 
 import type { HttpHandler } from '../../../http/server.js';
 import { z } from 'zod';
-import type { InternalChatService } from '../../communication/internal-chat-service.js';
+import type { InternalChatService } from '../../../communication/internal-chat-service.js';
 import {
   createExternalInternalChatAccountSchema,
   updateExternalInternalChatAccountSchema,
