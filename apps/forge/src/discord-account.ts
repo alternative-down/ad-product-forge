@@ -202,6 +202,7 @@ export function createDiscordProvider(config: {
       return await run();
     } finally {
       clearInterval(typingTimer);
+      pendingTypingTimers.delete(typingTimer);
     }
   }
 
