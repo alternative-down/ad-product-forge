@@ -13,7 +13,7 @@ export type StepModelJsonValue =
 export type RuntimeInput<TPayload = unknown> = {
   id: string;
   type: string;
-  payload: TPayload;
+  payload?: TPayload;
   receivedAt: string;
 };
 
@@ -50,7 +50,7 @@ export type ActionRequest = {
 export type ActionResult = {
   name: string;
   input: Record<string, unknown>;
-  output: unknown;
+  output?: unknown;
 };
 
 export type StepContinuation = 'stop' | 'continue' | 'wait';

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const runtimeInputSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
-  payload: z.unknown(),
+  payload: z.unknown().optional(),
   receivedAt: z.string().min(1),
 });
 
