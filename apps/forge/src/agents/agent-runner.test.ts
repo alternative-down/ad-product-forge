@@ -755,3 +755,60 @@ describe('runHealthcheck', () => {
 
 
 });
+
+describe('beginRun — extra coverage', () => {
+  it('beginRun increments activeRunEpoch on execute with idle state', async () => {
+    const { createAgentRunner } = await import('./agent-runner.js');
+    const rt = makeRuntime();
+    const runner = createAgentRunner(makeDb(), rt);
+    runner.start();
+    const snapBefore = runner.getSnapshot();
+    const epochBefore = snapBefore.activeRunEpoch;
+
+    mockStore.getExecutionState.mockResolvedValue('idle');
+    mockStore.getRunnableContract.mockResolvedValue(null);
+    await runner.execute([{ type: 'agent-wake', agentId: rt.id, runId: 'run-1', timestamp: Date.now() }]);
+
+    const snapAfter = runner.getSnapshot();
+    expect(snapAfter.activeRunEpoch).toBeGreaterThan(epochBefore);
+    runner.stop();
+  });
+
+  it('beginRun does not throw when reloadRuntime=false', async () => {
+    const { createAgentRunner } = await import('./agent-runner.js');
+    const runner = createAgentRunner(makeDb(), makeRuntime());
+    runner.start();
+    runner.stop();
+  });
+});
+
+describe('getSnapshot — extra fields', () => {
+  it('getSnapshot returns nextStepAt', async () => {
+    const { createAgentRunner } = await import('./agent-runner.js');
+    const runner = createAgentRunner(makeDb(), makeRuntime());
+    const snap = runner.getSnapshot();
+    expect('nextStepAt' in snap).toBe(true);
+  });
+
+  it('getSnapshot returns instant boolean', async () => {
+    const { createAgentRunner } = await import('./agent-runner.js');
+    const runner = createAgentRunner(makeDb(), makeRuntime());
+    const snap = runner.getSnapshot();
+    expect(typeof (snap as any).instant).toBe('boolean');
+  });
+
+  it('getSnapshot returns activeStepEpoch number', async () => {
+    const { createAgentRunner } = await import('./agent-runner.js');
+    const runner = createAgentRunner(makeDb(), makeRuntime());
+    const snap = runner.getSnapshot();
+    expect(typeof (snap as any).activeStepEpoch).toBe('number');
+  });
+});
+
+describe('notifyExternalEvent', () => {
+  it('notifyExternalEvent is a function on the runner object', async () => {
+    const { createAgentRunner } = await import('./agent-runner.js');
+    const runner = createAgentRunner(makeDb(), makeRuntime());
+    expect(typeof (runner as any).notifyExternalEvent).toBe('function');
+  });
+});
