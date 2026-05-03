@@ -1,20 +1,38 @@
 import crypto from 'node:crypto';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+/**
+ * Environment-level cache — set once on module load.
+ */
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
 
 /**
- * Encrypt a plaintext string using AES-256-GCM
- * Returns base64-encoded result containing: IV + ciphertext + authTag
+ * Throws if ENCRYPTION_KEY is absent or not 32 bytes base64.
+ * Called by both encryptSecret and decryptSecret so error handling is
+ * guaranteed to be identical from both paths.
  */
-export function encryptSecret(plaintext: string): string {
+function requireEncryptionKey(): Buffer {
   if (!ENCRYPTION_KEY) {
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }
 
   const key = Buffer.from(ENCRYPTION_KEY, 'base64');
+
   if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be 256-bit (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"');
+    throw new Error(
+      'ENCRYPTION_KEY must be 256-bit (32 bytes). ' +
+        'Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"',
+    );
   }
+
+  return key;
+}
+
+/**
+ * Encrypt a plaintext string using AES-256-GCM.
+ * Returns base64-encoded result containing: IV + ciphertext + authTag.
+ */
+export function encryptSecret(plaintext: string): string {
+  const key = requireEncryptionKey();
 
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
@@ -29,18 +47,11 @@ export function encryptSecret(plaintext: string): string {
 }
 
 /**
- * Decrypt a base64-encoded secret encrypted with encryptSecret
- * Extracts: IV (16 bytes) + ciphertext + authTag (16 bytes)
+ * Decrypt a base64-encoded secret encrypted with encryptSecret.
+ * Extracts: IV (16 bytes) + ciphertext + authTag (16 bytes).
  */
 export function decryptSecret(encrypted: string): string {
-  if (!ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY environment variable is required');
-  }
-
-  const key = Buffer.from(ENCRYPTION_KEY, 'base64');
-  if (key.length !== 32) {
-    throw new Error('ENCRYPTION_KEY must be 256-bit (32 bytes)');
-  }
+  const key = requireEncryptionKey();
 
   const combined = Buffer.from(encrypted, 'base64');
 
