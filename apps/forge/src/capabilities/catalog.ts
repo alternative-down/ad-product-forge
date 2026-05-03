@@ -13,6 +13,8 @@ export const forgeCustomToolIds = [
   'adjust_agent_contract_budget',
   'list_agent_notifications',
   'get_github_git_credentials',
+  'get_github_provisioning_status',
+  'start_github_app_provisioning',
   'get_coolify_credentials',
   'list_self_crons',
   'manage_self_crons',
