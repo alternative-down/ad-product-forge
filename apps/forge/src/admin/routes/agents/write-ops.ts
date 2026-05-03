@@ -8,6 +8,9 @@ import type { HttpHandler } from '../../../http/server.js';
 import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema.js';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime.js';
+import { createCapabilityStore } from '../../../capabilities/store.js';
+import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema.js';
+import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills.js';
 import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
 
 
@@ -444,7 +447,17 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/skills/publish-to-global',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-      return jsonResponse({ success: true, skillName: body.skillName });
+      const agent = await (input.db as any).query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+        columns: { id: true, workspaceFilesystem: true },
+      });
+      if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+      const result = await publishAgentWorkspaceSkillToGlobalCatalog({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+      return jsonResponse({ success: true, skillName: body.skillName, destPath: result.destPath });
     },
   });
 
@@ -454,7 +467,17 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/skills/install-global',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-      return jsonResponse({ success: true });
+      const agent = await (input.db as any).query.agents.findFirst({
+        where: eq(agents.id, body.agentId),
+        columns: { id: true, workspaceFilesystem: true },
+      });
+      if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+      await installGlobalSkillToAgentWorkspace({
+        workspaceBasePath: input.workspaceBasePath,
+        agent,
+        skillName: body.skillName,
+      });
+      return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
     },
   });
 
@@ -464,7 +487,11 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/skills/upload',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
-      return jsonResponse({ success: true });
+      const installedSkillNames = await installGlobalSkillsFromZip({
+        workspaceBasePath: input.workspaceBasePath,
+        zipBase64: body.skillsZipBase64,
+      });
+      return jsonResponse({ success: true, skillNames: installedSkillNames });
     },
   });
 
@@ -474,7 +501,8 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/skills/delete',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
-      return jsonResponse({ success: true });
+      await deleteGlobalSkill({ workspaceBasePath: input.workspaceBasePath, skillName: body.skillName });
+      return jsonResponse({ success: true, skillName: body.skillName });
     },
   });
 
@@ -484,7 +512,8 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/roles/create',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, createRoleSchema);
-      return jsonResponse({ success: true, roleId: 'placeholder' });
+      const result = await capabilities.createRole({ name: body.name, description: body.description });
+      return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
     },
   });
 
@@ -494,7 +523,14 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/roles/update',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateRoleSchema);
-      return jsonResponse({ success: true });
+      try {
+        const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
+        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.startsWith('Role not found')) return jsonResponse({ error: msg }, 404);
+        throw err;
+      }
     },
   });
 
@@ -504,7 +540,14 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/roles/delete',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, deleteRoleSchema);
-      return jsonResponse({ success: true });
+      try {
+        await capabilities.deleteRole(body.roleId);
+        return jsonResponse({ success: true, roleId: body.roleId });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
+        throw err;
+      }
     },
   });
 
@@ -514,7 +557,13 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/roles/capabilities',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
-      return jsonResponse({ success: true });
+      const toolId = resolvePermissionId(body.capabilityName);
+      if (body.capabilityValue) {
+        await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+      } else {
+        await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+      }
+      return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.capabilityValue });
     },
   });
 
@@ -524,7 +573,13 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/roles/tool-permissions',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      return jsonResponse({ success: true });
+      const toolId = resolvePermissionId(body.toolName);
+      if (body.allowed) {
+        await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+      } else {
+        await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+      }
+      return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
     },
   });
 
@@ -534,7 +589,13 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/roles/workflow-permissions',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-      return jsonResponse({ success: true });
+      const workflowId = resolvePermissionId(body.workflowName);
+      if (body.allowed) {
+        await capabilities.addRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+      } else {
+        await capabilities.removeRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+      }
+      return jsonResponse({ success: true, roleId: body.roleId, workflowId, allowed: body.allowed });
     },
   });
 }
