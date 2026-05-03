@@ -14,6 +14,15 @@ import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
 
 import {
+  AGENT_CONTEXT_WARNING_CHAR_LIMIT,
+  WORKING_MEMORY_WARNING_CHAR_LIMIT,
+  AGENT_CONTEXT_FILE_PATH,
+} from './constants';
+
+const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
+const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
+
+import {
   delay,
   withTimeout,
   buildIterationLoopSignature,
@@ -43,12 +52,6 @@ const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
-const AGENT_CONTEXT_FILE_PATH = 'AGENT_CONTEXT.md';
-
-const WORKING_MEMORY_WARNING_CHAR_LIMIT = 4_000;
-const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
-const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
-
 export function createAgentRunner(
   db: Database,
   runtime: InternalAgentRuntime,

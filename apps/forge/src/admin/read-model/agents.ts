@@ -258,7 +258,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
         : null;
 
       return {
-        id: agent.id,
+        agentId: agent.id,
         name: agent.name ?? '',
         description: agent.description ?? undefined,
         role: agent.role ?? null,
@@ -314,8 +314,9 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     if (!agent) return null;
 
     const loadedAgent = registry.get(agentId);
+    const runnerSnapshot = loadedAgent?.runner.getSnapshot() ?? null;
 
-    const [agentMcpRows, agentScheduleRows, recentSteps, recentNotifications, activeContractRows] = await Promise.all([
+    const [agentMcpRows, agentScheduleRows, recentSteps, recentNotifications, activeContractRows, agentRoles, llmProfiles] = await Promise.all([
       db.query.agentMcpConfigs.findMany({ where: eq(agentMcpConfigs.agentId, agentId) }),
       db.query.agentSchedules.findMany({ where: eq(agentSchedules.agentId, agentId) }),
       db.query.agentExecutionSteps.findMany({
@@ -329,8 +330,10 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
         limit: RECENT_NOTIFICATION_LIMIT,
       }),
       db.query.agentExecutionContracts.findMany({
-        where: and(eq(agentExecutionContracts.agentId, agentId), eq(agentExecutionContracts.isActive, true)),
+        where: eq(agentExecutionContracts.agentId, agentId),
       }),
+      db.query.agentRoles.findMany({ columns: { id: true, name: true, description: true } }),
+      db.query.llmProfiles.findMany({ columns: { id: true, name: true, modelKey: true } }),
     ]);
 
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
@@ -339,28 +342,18 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       : [];
 
     let spentUsd = 0;
-    let activeContract = null;
+    // The most-recent contract drives billing; compute spentUsd over the last 7 days
     if (activeContractRows.length > 0) {
-      activeContract = activeContractRows[0];
-      const spentRows = await db.query.agentExecutionContracts.findMany({
+      const currentPeriodStart = new Date();
+      currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
+      const steps = await db.query.agentExecutionSteps.findMany({
         where: and(
-          eq(agentExecutionContracts.agentId, agentId),
-          eq(agentExecutionContracts.isActive, true),
+          eq(agentExecutionSteps.agentId, agentId),
+          gte(agentExecutionSteps.createdAt, currentPeriodStart.toISOString()),
         ),
-        columns: { id: true, weeklyValueUsd: true },
+        columns: { costUsd: true },
       });
-      if (spentRows.length > 0) {
-        const currentPeriodStart = new Date();
-        currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
-        const steps = await db.query.agentExecutionSteps.findMany({
-          where: and(
-            eq(agentExecutionSteps.agentId, agentId),
-            gte(agentExecutionSteps.createdAt, currentPeriodStart.toISOString()),
-          ),
-          columns: { costUsd: true },
-        });
-        spentUsd = steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
-      }
+      spentUsd = steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
     }
 
     const heartbeat = agentScheduleRows.find((s) => s.kind === 'heartbeat');
@@ -376,12 +369,10 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     });
 
     const recentNotifications_ = recentNotifications.map((n) => ({
-      id: n.id,
-      type: n.type,
-      title: n.title ?? null,
-      message: n.message ?? null,
-      createdAt: n.createdAt,
-      readAt: n.readAt ?? null,
+      notificationId: n.id,
+      content: n.content,
+      timestamp: n.createdAt,
+      read: n.readAt !== null,
     }));
 
     // Build serverId -> agentMcpConfig map so each server in the response
@@ -406,28 +397,76 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
         updatedAt: server.updatedAt,
       };
     });
+    // Build role map (agentRoles rows were already fetched in Promise.all)
+    const roleMap = new Map(
+      agentRoles.rows?.map((r) => [r.id, r]) ?? []
+    );
+    const profileMap = new Map(
+      llmProfiles.rows?.map((p) => [p.id, p]) ?? []
+    );
+
+    const roleRow = agent.roleId ? roleMap.get(agent.roleId) : null;
+    const modelProfileRow = agent.modelProfileId ? profileMap.get(agent.modelProfileId) : null;
+    const omModelProfileRow = agent.omModelProfileId ? profileMap.get(agent.omModelProfileId) : null;
+
+    const activeContractRow = activeContractRows[0] ?? null;
 
     return {
-      id: agent.id,
+      agentId: agent.id,
       name: agent.name ?? '',
-      role: agent.role ?? null,
+      description: agent.description ?? undefined,
+      instructions: agent.instructions ?? '',
       executionState: agent.executionState ?? 'absent',
       lastExecutionError: agent.lastExecutionError ?? null,
       lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
+      role: roleRow ? {
+        roleId: roleRow.id,
+        name: roleRow.name,
+        description: roleRow.description ?? null,
+      } : null,
+      modelProfile: modelProfileRow ? {
+        profileId: modelProfileRow.id,
+        name: modelProfileRow.name,
+        modelKey: modelProfileRow.modelKey,
+      } : null,
+      omModelProfile: omModelProfileRow ? {
+        profileId: omModelProfileRow.id,
+        name: omModelProfileRow.name,
+        modelKey: omModelProfileRow.modelKey,
+      } : null,
+      workspace: {
+        autoSync: Boolean(agent.workspaceAutoSync),
+        bm25: Boolean(agent.workspaceBm25),
+        embedder: agent.workspaceEmbedder ?? null,
+        filesystem: typeof agent.workspaceFilesystem === 'object' && agent.workspaceFilesystem !== null
+          ? JSON.stringify(agent.workspaceFilesystem)
+          : null,
+        sandbox: typeof agent.workspaceSandbox === 'object' && agent.workspaceSandbox !== null
+          ? JSON.stringify(agent.workspaceSandbox)
+          : null,
+      },
+      loaded: Boolean(loadedAgent),
+      runner: runnerSnapshot,
+      providers: [],
       mcpConfigIds: agentMcpRows.map((r) => r.id),
       mcpServers,
       recentExecutionSteps: recentSteps_,
       recentNotifications: recentNotifications_,
       githubProvisioning,
       skills: await listAgentWorkspaceSkills(workspaceBasePath, agent),
-      activeContract: activeContract && {
-        ...activeContract,
+      activeContract: activeContractRow ? {
+        contractId: activeContractRow.id,
+        agentId: activeContractRow.agentId,
+        agentName: agent.name ?? '',
+        startsAt: activeContractRow.startsAt,
+        endsAt: activeContractRow.endsAt,
+        weeklyValueUsd: activeContractRow.budgetUsd,
         spentUsd,
-        spentPercent:
-          activeContract.weeklyValueUsd > 0 ? (spentUsd / activeContract.weeklyValueUsd) * 100 : 0,
-      },
+        spentPercent: activeContractRow.budgetUsd > 0 ? (spentUsd / activeContractRow.budgetUsd) * 100 : 0,
+        autoRenew: Boolean(activeContractRow.autoRenew),
+      } : null,
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummaryHelper),
