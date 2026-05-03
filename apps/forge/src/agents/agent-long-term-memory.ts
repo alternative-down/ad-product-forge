@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -355,7 +355,7 @@ export function createAgentLongTermMemory(input: {
       .length + 1;
     const packageId = `${dayKey}_${String(sequence).padStart(3, '0')}`;
     const packagePath = path.resolve(checkpointsPath, packageId);
-    const tempPackagePath = `${packagePath}.${randomUUID()}.tmp`;
+    const tempPackagePath = `${packagePath}.${createId()}.tmp`;
 
     forgeDebug('ltm', 'checkpoint package write start', {
       agentId: input.agentId,

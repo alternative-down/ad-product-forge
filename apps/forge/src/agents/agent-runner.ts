@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { createId } from '../utils/id';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
@@ -389,7 +390,7 @@ export function createAgentRunner(
     const runEpoch = startNewRunEpoch();
 
     try {
-      activeRunId = crypto.randomUUID();
+      activeRunId = createId();
       scheduler.setInstant(true);
       scheduler.resetBackoff();
       lastWakeStartedAt = input.wakeStartedAt;

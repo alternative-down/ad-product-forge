@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -94,9 +94,9 @@ async function executeHireAgentTool(input: {
 }) {
   return input.tool.execute(input.toolInput, {
     runtimeId: HIRING_RH_AGENT_ID,
-    stepId: randomUUID(),
+    stepId: createId(),
     stepNumber: 0,
-    toolCallId: randomUUID(),
+    toolCallId: createId(),
   });
 }
 
