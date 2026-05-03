@@ -799,3 +799,25 @@ export const agentMcpConfigsRelations = relations(agentMcpConfigs, ({ one }) => 
     references: [mcpServerConfigs.id],
   }),
 }));
+
+export const webhookRoutes = sqliteTable('webhook_routes', {
+  routeId: text('route_id').primaryKey(),
+  agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  secret: text('secret'), // HMAC signing secret, nullable
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export const webhookEvents = sqliteTable('webhook_events', {
+  eventId: text('event_id').primaryKey(),
+  routeId: text('route_id').notNull().references(() => webhookRoutes.routeId, { onDelete: 'cascade' }),
+  agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+  headers: text('headers', { mode: 'json' }).$type<Record<string, string>>().notNull(),
+  idempotencyKey: text('idempotency_key'),
+  status: text('status').notNull().default('pending'), // 'pending' | 'processed' | 'failed'
+  receivedAt: integer('received_at').notNull(),
+  processedAt: integer('processed_at'),
+});
