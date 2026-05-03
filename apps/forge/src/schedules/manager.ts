@@ -14,6 +14,10 @@ import {
   createHeartbeatWakeInstruction,
   toToolOutput,
 } from './schedule-helpers';
+import {
+  requireScheduleEditor,
+  requireScheduleDeleter,
+} from './schedule-impl-helpers';
 
 
 const scheduleBaseSchema = {
@@ -454,12 +458,7 @@ export function createAgentScheduleManager(input: {
     }
 
     // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
-    const isCreator = schedule.creatorId === editorAgentId;
-    const isSelfCreated = schedule.creatorId === null && schedule.agentId === editorAgentId;
-
-    if (!isCreator && !isSelfCreated) {
-      throw new Error(`Not authorized to edit schedule: ${scheduleId}`);
-    }
+    requireScheduleEditor(schedule, editorAgentId);
 
     // Delegate to updateSchedule with the target agent's ID
     return updateSchedule(schedule.agentId, scheduleId, rawInput);
@@ -474,12 +473,7 @@ export function createAgentScheduleManager(input: {
     }
 
     // Authorization: only creator can delete (or null creator = self-created, only agentId can delete)
-    const isCreator = schedule.creatorId === editorAgentId;
-    const isSelfCreated = schedule.creatorId === null && schedule.agentId === editorAgentId;
-
-    if (!isCreator && !isSelfCreated) {
-      throw new Error(`Not authorized to delete schedule: ${scheduleId}`);
-    }
+    requireScheduleDeleter(schedule, editorAgentId);
 
     cancelScheduledJob(scheduleId);
     return {
