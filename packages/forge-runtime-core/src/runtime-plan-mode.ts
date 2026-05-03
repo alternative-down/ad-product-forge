@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { readFile, writeFile, mkdir, readdir, rm as _rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
