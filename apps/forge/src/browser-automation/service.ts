@@ -1,0 +1,302 @@
+/**
+ * Browser Automation Service — Spike #1037
+ *
+ * Playwright-based browser automation with per-agent isolation.
+ * Each agent gets its own Playwright Browser instance.
+ * Each navigation task gets its own BrowserContext for cookie/storage isolation.
+ *
+ * Decision: in-process per-agent browser (not separate process or remote service).
+ * Rationale: simpler MVP, no network/IPC overhead, browser context API already
+ * provides full isolation, easier to test and iterate.
+ */
+
+import type { Browser, BrowserContext, Page } from 'playwright';
+
+const DEFAULT_TIMEOUT_MS = 30_000;
+const IDLE_BROWSER_CLEANUP_MS = 30 * 60 * 1_000; // 30 min
+const MAX_CONCURRENT_PAGES = 2;
+const MAX_PAGE_LIFETIME_MS = 5 * 60 * 1_000; // 5 min
+
+export interface BrowserPageSession {
+  pageId: string;
+  page: Page;
+  context: BrowserContext;
+  createdAt: number;
+  lastUsedAt: number;
+}
+
+export interface AgentBrowserInstance {
+  browser: Browser;
+  sessions: Map<string, BrowserPageSession>;
+  lastUsedAt: number;
+}
+
+export interface BrowserToolResult {
+  pageId: string;
+  accessibilityTree?: string;
+  screenshotPath?: string;
+  elements?: Array<{ text: string; attributes: Record<string, string>; tag: string }>;
+  url?: string;
+  error?: string;
+}
+
+export interface BrowserAutomationConfig {
+  screenshotDir?: string;
+  domDir?: string;
+  maxConcurrentPages?: number;
+  navigationTimeoutMs?: number;
+}
+
+export function createBrowserAutomationService(config: BrowserAutomationConfig = {}) {
+  // One Playwright browser instance per agent
+  const agentBrowsers = new Map<string, AgentBrowserInstance>();
+  // Track last access for idle cleanup
+  const agentLastAccess = new Map<string, number>();
+
+  async function getOrCreateBrowser(agentId: string): Promise<Browser> {
+    const existing = agentBrowsers.get(agentId);
+    if (existing) {
+      existing.lastUsedAt = Date.now();
+      agentLastAccess.set(agentId, Date.now());
+      return existing.browser;
+    }
+
+    const { chromium } = await import('playwright');
+    const browser = await chromium.launch({ headless: true });
+    agentBrowsers.set(agentId, {
+      browser,
+      sessions: new Map(),
+      lastUsedAt: Date.now(),
+    });
+    agentLastAccess.set(agentId, Date.now());
+    return browser;
+  }
+
+  function generatePageId(): string {
+    return `page-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  async function navigate(
+    agentId: string,
+    url: string,
+    options: { waitForSelector?: string; timeoutMs?: number } = {},
+  ): Promise<BrowserToolResult> {
+    const browser = await getOrCreateBrowser(agentId);
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const pageId = generatePageId();
+    const timeout = options.timeoutMs ?? config.navigationTimeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
+      if (options.waitForSelector) {
+        await page.waitForSelector(options.waitForSelector, { timeout });
+      }
+
+      const accessibilityTree = await page.accessibility.snapshot();
+
+      const result: BrowserToolResult = {
+        pageId,
+        url: page.url(),
+        accessibilityTree: serializeA11yTree(accessibilityTree),
+      };
+
+      // Store session for subsequent operations
+      const session: BrowserPageSession = {
+        pageId,
+        page,
+        context,
+        createdAt: Date.now(),
+        lastUsedAt: Date.now(),
+      };
+      agentBrowsers.get(agentId)?.sessions.set(pageId, session);
+
+      return result;
+    } catch (err) {
+      await context.close();
+      return { pageId, error: String(err) };
+    }
+  }
+
+  async function click(
+    agentId: string,
+    selector: string,
+    pageId?: string,
+  ): Promise<BrowserToolResult> {
+    const session = pageId ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    if (!session) {
+      return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
+    }
+
+    try {
+      await session.page.click(selector, { timeout: DEFAULT_TIMEOUT_MS });
+      session.lastUsedAt = Date.now();
+      const tree = await session.page.accessibility.snapshot();
+      return {
+        pageId: session.pageId,
+        accessibilityTree: serializeA11yTree(tree),
+        url: session.page.url(),
+      };
+    } catch (err) {
+      return { pageId: session.pageId, error: String(err) };
+    }
+  }
+
+  async function fill(
+    agentId: string,
+    selector: string,
+    value: string,
+    pageId?: string,
+  ): Promise<BrowserToolResult> {
+    const session = pageId ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    if (!session) {
+      return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
+    }
+
+    try {
+      await session.page.fill(selector, value, { timeout: DEFAULT_TIMEOUT_MS });
+      session.lastUsedAt = Date.now();
+      const tree = await session.page.accessibility.snapshot();
+      return {
+        pageId: session.pageId,
+        accessibilityTree: serializeA11yTree(tree),
+        url: session.page.url(),
+      };
+    } catch (err) {
+      return { pageId: session.pageId, error: String(err) };
+    }
+  }
+
+  async function screenshot(
+    agentId: string,
+    pageId?: string,
+  ): Promise<BrowserToolResult> {
+    const session = pageId ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    if (!session) {
+      return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
+    }
+
+    try {
+      const path = config.screenshotDir ?? '/tmp/browser-artifacts/screenshots';
+      const fullPath = `${path}/${agentId}/${session.pageId}-${Date.now()}.png`;
+      await session.page.screenshot({ path: fullPath });
+      session.lastUsedAt = Date.now();
+      return {
+        pageId: session.pageId,
+        screenshotPath: fullPath,
+      };
+    } catch (err) {
+      return { pageId: session.pageId, error: String(err) };
+    }
+  }
+
+  async function query(
+    agentId: string,
+    selector: string,
+    pageId?: string,
+  ): Promise<BrowserToolResult> {
+    const session = pageId ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    if (!session) {
+      return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
+    }
+
+    try {
+      const elements = await session.page.$$(selector);
+      const results = await Promise.all(
+        elements.slice(0, 50).map(async (el) => {
+          const tag = await el.evaluate((e) => e.tagName.toLowerCase());
+          const text = await el.textContent() ?? '';
+          const attrs: Record<string, string> = {};
+          const attrNames = await el.evaluate((e) => Array.from(e.attributes).map((a) => a.name));
+          for (const name of attrNames) {
+            attrs[name] = await el.getAttribute(name) ?? '';
+          }
+          return { tag, text: text.slice(0, 200), attributes: attrs };
+        }),
+      );
+      session.lastUsedAt = Date.now();
+      return { pageId: session.pageId, elements: results };
+    } catch (err) {
+      return { pageId: session.pageId, error: String(err) };
+    }
+  }
+
+  async function wait(
+    agentId: string,
+    selector: string,
+    options: { timeoutMs?: number; pageId?: string } = {},
+  ): Promise<BrowserToolResult> {
+    const session = options.pageId ? agentBrowsers.get(agentId)?.sessions.get(options.pageId) : null;
+    if (!session) {
+      return { pageId: options.pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
+    }
+
+    try {
+      await session.page.waitForSelector(selector, { timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS });
+      session.lastUsedAt = Date.now();
+      const tree = await session.page.accessibility.snapshot();
+      return {
+        pageId: session.pageId,
+        accessibilityTree: serializeA11yTree(tree),
+        url: session.page.url(),
+      };
+    } catch (err) {
+      return { pageId: session.pageId, error: String(err) };
+    }
+  }
+
+  async function closePage(agentId: string, pageId: string): Promise<void> {
+    const instance = agentBrowsers.get(agentId);
+    const session = instance?.sessions.get(pageId);
+    if (session) {
+      await session.context.close();
+      instance?.sessions.delete(pageId);
+    }
+  }
+
+  async function closeAgentBrowser(agentId: string): Promise<void> {
+    const instance = agentBrowsers.get(agentId);
+    if (instance) {
+      for (const session of instance.sessions.values()) {
+        await session.context.close();
+      }
+      await instance.browser.close();
+      agentBrowsers.delete(agentId);
+      agentLastAccess.delete(agentId);
+    }
+  }
+
+  return {
+    navigate,
+    click,
+    fill,
+    screenshot,
+    query,
+    wait,
+    closePage,
+    closeAgentBrowser,
+  };
+}
+
+/**
+ * Serialize AX tree to readable text format for agent context.
+ */
+function serializeA11yTree(node: { name?: string; role?: string; children?: unknown[] } | null): string {
+  if (!node) return '(empty page)';
+  const lines: string[] = [];
+  function walk(n: { name?: string; role?: string; children?: unknown[] }, depth: number) {
+    const indent = '  '.repeat(depth);
+    if (n.name || n.role) {
+      lines.push(`${indent}[${n.role ?? 'unknown'}]${n.name ? ` ${n.name}` : ''}`);
+    }
+    if (n.children) {
+      for (const child of n.children) {
+        walk(child as typeof n, depth + 1);
+      }
+    }
+  }
+  walk(node, 0);
+  return lines.join('\n').slice(0, 8000); // Truncate to avoid context bloat
+}
+
+export type BrowserAutomationService = ReturnType<typeof createBrowserAutomationService>;
