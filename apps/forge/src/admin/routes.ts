@@ -86,6 +86,9 @@ import {
 
 export * from './routes/schemas.js';
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
+import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
+import { createWebhookStore } from '../webhooks/store';
+import { createWebhookHandler } from '../webhooks/handler';
 
 import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/system/index.js';
 import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
@@ -783,5 +786,30 @@ export function registerAdminRoutes(input: {
     companyCash,
     companyPayables,
   });
+
+  const webhookStore = createWebhookStore(input.db);
+  const webhookHandler = createWebhookHandler({
+    store: webhookStore,
+    notifyAgent(input) {
+      const entry = registry.get(input.agentId);
+      if (!entry) { return; }
+      entry.runner.notifyExternalEvent({
+        type: input.type,
+        groupKey: input.groupKey,
+        idempotencyKey: input.idempotencyKey,
+        text: input.content,
+        timestamp: input.timestamp,
+      });
+    },
+  });
+
+  // Public webhook endpoint: POST /webhooks/:routeId
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/webhooks/:routeId',
+    handler: (req) => webhookHandler.handleWebhook(req),
+  });
+
+  registerWebhookAdminRoutes(input.httpServer, webhookStore);
 }
 
