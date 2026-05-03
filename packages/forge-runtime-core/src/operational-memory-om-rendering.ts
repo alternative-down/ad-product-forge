@@ -30,11 +30,13 @@ export function buildOperationalMemoryOmModelMessages(
 export function buildOperationalMemoryOmSystemTexts(state: OperationalMemoryOmRenderableState) {
   const blocks = getOperationalMemoryOmBlocks(state);
 
+  // When checkpointSummary exists, it supersedes activeReflectionBlocks.
+  // The summary is the consolidated view; reflections are replaced by it.
+  const showReflections = blocks.checkpointSummary.length === 0 && blocks.reflections.length > 0;
+
   return [
     blocks.checkpointSummary[0] ? renderCheckpointText(blocks.checkpointSummary[0]) : '',
-    blocks.reflections.length > 0
-      ? ['Active reflections:', blocks.reflections.join('\n\n')].join('\n')
-      : '',
+    showReflections ? ['Active reflections:', blocks.reflections.join('\n\n')].join('\n') : '',
     blocks.observations.length > 0
       ? ['Active observations:', blocks.observations.join('\n\n')].join('\n')
       : '',

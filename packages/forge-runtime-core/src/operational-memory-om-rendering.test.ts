@@ -139,13 +139,26 @@ describe('operational-memory-om-rendering', () => {
       expect(result[2]).not.toContain('Reflected obs');
     });
 
-    it('includes all three sections when all present', () => {
+    it('summary replaces reflections when both present', () => {
+      // When checkpointSummary exists, it supersedes activeReflectionBlocks.
+      // Reflections should not appear alongside the summary.
       const result = buildOperationalMemoryOmSystemTexts({
         checkpointSummary: { text: 'Summary' },
         activeReflectionBlocks: [{ text: 'Reflection' }],
         observationBlocks: [{ reflectedGeneration: null, text: 'Observation' }],
       });
       expect(result[0]).toContain('Summary');
+      expect(result[1]).not.toContain('Reflection'); // replaced by summary
+      expect(result[2]).toContain('Observation');
+    });
+
+    it('reflections shown when no checkpointSummary', () => {
+      const result = buildOperationalMemoryOmSystemTexts({
+        checkpointSummary: null,
+        activeReflectionBlocks: [{ text: 'Reflection' }],
+        observationBlocks: [{ reflectedGeneration: null, text: 'Observation' }],
+      });
+      expect(result[0]).toBe(''); // no summary
       expect(result[1]).toContain('Reflection');
       expect(result[2]).toContain('Observation');
     });
