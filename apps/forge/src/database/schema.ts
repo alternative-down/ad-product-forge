@@ -821,3 +821,15 @@ export const webhookEvents = sqliteTable('webhook_events', {
   receivedAt: integer('received_at').notNull(),
   processedAt: integer('processed_at'),
 });
+
+export const knowledgeDocuments = sqliteTable('knowledge_documents', {
+  documentId: text('document_id').primaryKey(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  ownerAgentId: text('owner_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+  source: text('source'), // e.g. "PRD-19", "meeting-notes", "engineering-decision"
+  tags: text('tags', { mode: 'json' }).$type<string[]>(), // JSON array
+  version: integer('version').notNull().default(1),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
