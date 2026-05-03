@@ -18,64 +18,18 @@ import {
   requireScheduleEditor,
   requireScheduleDeleter,
 } from './schedule-impl-helpers';
+import {
+  createScheduleSchema,
+  createScheduleForAgentSchema,
+  updateScheduleSchema,
+} from './schemas';
 
 
-const scheduleBaseSchema = {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  timezone: z.string().min(1).default('UTC'),
-  content: z.string().min(1),
-  wakeWhenRunning: z.boolean().optional(),
-} as const;
-
-const createScheduleSchema = z.discriminatedUnion('scheduleType', [
-  z.object({
-    ...scheduleBaseSchema,
-    scheduleType: z.literal('cron'),
-    cronExpression: z.string().min(1),
-    scheduledDate: z.undefined().optional(),
-  }),
-  z.object({
-    ...scheduleBaseSchema,
-    scheduleType: z.literal('date'),
-    scheduledDate: z.string().min(1),
-    cronExpression: z.undefined().optional(),
-  }),
-]);
-
-// Schema for creating schedule for another agent (cross-agent)
-const createScheduleForAgentSchema = z.discriminatedUnion('scheduleType', [
-  z.object({
-    ...scheduleBaseSchema,
-    targetAgentId: z.string().min(1),
-    scheduleType: z.literal('cron'),
-    cronExpression: z.string().min(1),
-    scheduledDate: z.undefined().optional(),
-  }),
-  z.object({
-    ...scheduleBaseSchema,
-    targetAgentId: z.string().min(1),
-    scheduleType: z.literal('date'),
-    scheduledDate: z.string().min(1),
-    cronExpression: z.undefined().optional(),
-  }),
-]);
 
 const HEARTBEAT_NAME = 'System heartbeat';
 const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
 const HEARTBEAT_TIMEZONE = 'UTC';
 
-const updateScheduleSchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-  scheduleType: z.enum(['cron', 'date']).optional(),
-  cronExpression: z.string().min(1).optional().nullable(),
-  scheduledDate: z.string().min(1).optional().nullable(),
-  timezone: z.string().min(1).optional(),
-  content: z.string().optional(),
-  wakeWhenRunning: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
 
 export function createAgentScheduleManager(input: {
   db: Database;
