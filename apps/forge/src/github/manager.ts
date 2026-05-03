@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-
 import { createId } from '../utils/id';
 import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
@@ -107,7 +105,7 @@ export function createGitHubAppManager(config: {
 
     const pendingCredentials = {
       status: 'pending' as const,
-      state: crypto.randomUUID(),
+      state: createId(),
       appName: createAppName(input.agentName, input.agentId),
       manifestConfig: DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
       createdAt: Date.now(),
