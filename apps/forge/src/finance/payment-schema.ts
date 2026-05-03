@@ -11,7 +11,7 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
 export const paymentProviders = sqliteTable('payment_providers', {
   id: text('id').primaryKey(),
-  provider: text('provider', { enum: ['stripe', 'asaas'] }).notNull().unique(),
+  provider: text('provider', { enum: ['stripe', 'asaas'] }).notNull(),
   /** Encrypted API key */
   apiKeyEncrypted: text('api_key_encrypted'),
   /** Encrypted webhook secret */
