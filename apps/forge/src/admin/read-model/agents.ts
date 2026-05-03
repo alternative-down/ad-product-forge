@@ -335,7 +335,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
     const agentMcpServerRows = mcpServerIds.length > 0
-      ? await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.serverId, mcpServerIds) })
+      ? await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, mcpServerIds) })
       : [];
 
     let spentUsd = 0;
@@ -384,21 +384,28 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       readAt: n.readAt ?? null,
     }));
 
-    const mcpServers = agentMcpServerRows.map((server) => ({
-      configId: server.serverId,
-      serverId: server.serverId,
-      name: server.name,
-      description: server.description ?? undefined,
-      transport: server.transport as 'stdio' | 'http_streamable',
-      command: server.command ?? '',
-      argsText: server.args ?? '',
-      envVarsText: server.envVars ?? '',
-      url: server.url ?? '',
-      headersText: server.headers ?? '',
-      isActive: server.isActive === 1,
-      createdAt: server.createdAt,
-      updatedAt: server.updatedAt,
-    }));
+    // Build serverId -> agentMcpConfig map so each server in the response
+    // carries the correct configId (link.id) and isActive (link.isActive)
+    const serverIdToLink = new Map(agentMcpRows.map((link) => [link.serverId, link]));
+
+    const mcpServers = agentMcpServerRows.map((server) => {
+      const link = serverIdToLink.get(server.id);
+      return {
+        configId: link?.id ?? null,
+        serverId: server.id,
+        name: server.name,
+        description: server.description ?? undefined,
+        transport: server.transport as 'stdio' | 'http_streamable',
+        command: server.command ?? '',
+        argsText: server.args ?? '',
+        envVarsText: server.envVars ?? '',
+        url: server.url ?? '',
+        headersText: server.headers ?? '',
+        isActive: link?.isActive === 1,
+        createdAt: server.createdAt,
+        updatedAt: server.updatedAt,
+      };
+    });
 
     return {
       id: agent.id,
@@ -409,7 +416,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
-      mcpConfigIds: agentMcpRows.map((r) => r.configId),
+      mcpConfigIds: agentMcpRows.map((r) => r.id),
       mcpServers,
       recentExecutionSteps: recentSteps_,
       recentNotifications: recentNotifications_,

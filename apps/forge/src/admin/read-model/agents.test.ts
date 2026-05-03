@@ -97,6 +97,7 @@ function makeMockDb(overrides = {}) {
         findMany: vi.fn().mockResolvedValue([]),
       },
       mcpServerConfigs: {
+        findMany: vi.fn().mockResolvedValue([]),
         findFirst: vi.fn().mockResolvedValue(null),
       },
       agentHomeMetricSnapshots: {
@@ -404,6 +405,67 @@ describe('createAgentReadModel', () => {
       expect(result).toEqual([]);
     });
   });
+
+
+    it('maps MCP servers with correct configId and serverId from shared config', async () => {
+      const agentRow = {
+        id: 'agent-mcp',
+        name: 'MCP Agent',
+        role: 'dev',
+        executionState: 'idle' as const,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        workspaceFilesystem: null,
+      };
+      // agentMcpRows: link record (has id and serverId pointing to shared mcpServerConfigs)
+      const agentMcpRows = [
+        {
+          id: 'link-id-1',
+          agentId: 'agent-mcp',
+          serverId: 'server-id-1',
+          isActive: 1,
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+      // mcpServerConfigs rows: shared server (has id = 'server-id-1')
+      const mcpServerRows = [
+        {
+          id: 'server-id-1',
+          name: 'Filesystem MCP',
+          description: 'File system access',
+          transport: 'stdio',
+          command: 'npx',
+          args: '["-y","@modelcontextprotocol/server-filesystem"]',
+          envVars: null,
+          url: null,
+          headers: null,
+          version: 1,
+          isActive: 1,
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+      const db = makeMockDb();
+      db.query.agents.findFirst.mockResolvedValue(agentRow);
+      db.query.agentRoles.findMany.mockResolvedValue([]);
+      db.query.llmProfiles.findMany.mockResolvedValue([]);
+      db.query.agentExecutionSteps.findMany.mockResolvedValue([]);
+      db.query.agentMcpConfigs.findMany.mockResolvedValue(agentMcpRows);
+      db.query.agentSchedules.findMany.mockResolvedValue([]);
+      db.query.mcpServerConfigs.findMany.mockResolvedValue(mcpServerRows);
+      mockListAgentWorkspaceSkills.mockResolvedValue([]);
+      const model = makeReadModel({ db });
+      const result = (await model.getAgent('agent-mcp')) as Record<string, unknown>;
+      expect(result.mcpServers).toHaveLength(1);
+      expect((result.mcpServers as Record<string, unknown>[])[0].configId).toBe('link-id-1');
+      expect((result.mcpServers as Record<string, unknown>[])[0].serverId).toBe('server-id-1');
+      expect((result.mcpServers as Record<string, unknown>[])[0].isActive).toBe(true);
+      expect((result.mcpServers as Record<string, unknown>[])[0].name).toBe('Filesystem MCP');
+      expect(result.mcpConfigIds).toEqual(['link-id-1']);
+    });
 
   describe('getAgentOmDebugExport', () => {
     it('returns null when agent not found', async () => {
