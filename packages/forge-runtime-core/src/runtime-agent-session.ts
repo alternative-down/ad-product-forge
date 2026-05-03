@@ -202,14 +202,14 @@ export async function createRuntimeAgentSession(
       return {
         async getWorkingMemory(value) {
           return (
-            await input.workingMemoryStore.read({
+            await input.workingMemoryStore!.read({
               threadId: value.threadId,
               resourceId: value.resourceId,
             })
           )?.workingMemory ?? null;
         },
         async updateWorkingMemory(value) {
-          await input.workingMemoryStore.write(value);
+          await input.workingMemoryStore!.write(value);
         },
       };
     },

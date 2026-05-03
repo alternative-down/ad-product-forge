@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { readFile, writeFile, mkdir, readdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, rm as _rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
@@ -20,6 +20,7 @@ const enterPlanModeSchema = z.object({
 });
 
 const exitPlanModeSchema = z.object({
+// exitAction uses same pattern
   plan: z.string().min(1).refine(s => s.trim().length >= 1, {
     message: 'Plan cannot be empty or whitespace only',
   }),
@@ -107,7 +108,7 @@ export class RuntimePlanMode {
     ].join('\n');
   }
 
-  private parsePlanFile(content: string, filePath: string): PlanEntry {
+  private parsePlanFile(content: string, _filePath: string): PlanEntry {
     const lines = content.split('\n');
     let createdAt = '';
     let stepNumber = 0;
@@ -249,11 +250,7 @@ export function createPlanModeActions(input: {
   const enterAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'enterPlanMode',
     description: 'Enter Plan Mode. After this, the agent operates in analysis/planning mode with a reduced tool set (read-only actions only — no write, execute, or mutation tools). Use this to analyze a situation, form an intent, and prepare a plan before taking irreversible actions.',
-    inputSchema: {
-      parse(input: unknown) {
-        return enterPlanModeSchema.parse(input);
-      },
-    },
+    inputSchema: enterPlanModeSchema as any,
     execute: async (parsedInput) => {
       const { intent } = parsedInput as z.infer<typeof enterPlanModeSchema>;
       const stepNumber = input.getCurrentStepNumber();
@@ -269,11 +266,7 @@ export function createPlanModeActions(input: {
   const exitAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'exitPlanMode',
     description: 'Exit Plan Mode and return to normal execution (exit plan mode). Provide the final plan text summarizing what was decided during the planning phase. After this, full tool access is restored.',
-    inputSchema: {
-      parse(input: unknown) {
-        return exitPlanModeSchema.parse(input);
-      },
-    },
+    inputSchema: exitPlanModeSchema as any,
     execute: async (parsedInput) => {
       const { plan } = parsedInput as z.infer<typeof exitPlanModeSchema>;
       const completed = await input.planMode.exitPlanMode(plan);

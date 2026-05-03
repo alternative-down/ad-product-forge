@@ -24,7 +24,7 @@
     "fastembed": "^2.1.0",
     "js-tiktoken": "^1.0.21",
     "sqlite-vec": "^0.1.9",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",

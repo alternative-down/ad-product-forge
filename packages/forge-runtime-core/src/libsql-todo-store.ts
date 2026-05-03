@@ -202,11 +202,7 @@ export function createUpdateTodosAction(
   return {
     name: 'updateTodos',
     description: 'Create, update, complete, or clear operational todo items. Items without id are created; items with id are updated. Empty array clears all.',
-    inputSchema: {
-      parse(input: unknown) {
-        return todoItemInputSchema.parse(input);
-      },
-    },
+    inputSchema: todoItemInputSchema as any,
     execute: async (rawInput: unknown): Promise<unknown> => {
       const { items } = todoItemInputSchema.parse(rawInput) as { items: TodoItemInput[] };
 
