@@ -141,18 +141,17 @@ export function createAgentScheduleStore(db: Database) {
 
   // Shared update logic — avoids duplicating the field-mapping block between
   // updateAgentSchedule and updateOwnedSchedule.
-
-  async function updateAgentSchedule(
+  async function _applyUpdate(
     agentId: string,
     scheduleId: string,
     input: UpdateAgentScheduleInput,
-  ) {
+  ): Promise<boolean> {
     const existing = await db.query.agentSchedules.findFirst({
       where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
     });
 
     if (!existing || existing.kind !== 'agent') {
-      return null;
+      return false;
     }
 
     await db
@@ -174,7 +173,16 @@ export function createAgentScheduleStore(db: Database) {
       })
       .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
 
-    return getAgentSchedule(agentId, scheduleId);
+    return true;
+  }
+
+  async function updateAgentSchedule(
+    agentId: string,
+    scheduleId: string,
+    input: UpdateAgentScheduleInput,
+  ) {
+    const updated = await _applyUpdate(agentId, scheduleId, input);
+    return updated ? getAgentSchedule(agentId, scheduleId) : null;
   }
 
   async function updateOwnedSchedule(
@@ -182,34 +190,8 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ) {
-    const existing = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-    });
-
-    if (!existing || existing.kind !== 'agent') {
-      return null;
-    }
-
-    await db
-      .update(agentSchedules)
-      .set({
-        name: input.name ?? existing.name,
-        description: input.description === undefined ? existing.description : input.description,
-        scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
-        cronExpression:
-          input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
-        scheduledDate:
-          input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
-        timezone: input.timezone ?? existing.timezone,
-        content: input.content ?? existing.content,
-        wakeWhenRunning:
-          input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
-        isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
-        updatedAt: Date.now(),
-      })
-      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
-
-    return getOwnedSchedule(agentId, scheduleId);
+    const updated = await _applyUpdate(agentId, scheduleId, input);
+    return updated ? getOwnedSchedule(agentId, scheduleId) : null;
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
