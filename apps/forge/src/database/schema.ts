@@ -833,3 +833,55 @@ export const knowledgeDocuments = sqliteTable('knowledge_documents', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
+// ── Ticketing ─────────────────────────────────────────────────────────────────
+
+export const tickets = sqliteTable('forge_tickets', {
+  id: text('id').primaryKey(),
+  productId: text('product_id').notNull(),
+  agentId: text('agent_id').notNull(),
+  subject: text('subject').notNull(),
+  status: text('status').notNull().default('open'), // open | in_progress | resolved | closed
+  priority: text('priority').notNull().default('medium'), // low | medium | high | urgent
+  externalId: text('external_id'), // idempotency key from app
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  resolvedAt: integer('resolved_at'),
+}, (table) => ({
+  ticketsProductIdx: index('forge_tickets_product_idx').on(table.productId),
+  ticketsAgentIdx: index('forge_tickets_agent_idx').on(table.agentId),
+  ticketsStatusIdx: index('forge_tickets_status_idx').on(table.status),
+  ticketsExternalIdIdx: uniqueIndex('forge_tickets_external_id_idx').on(table.externalId),
+}));
+
+export type Ticket = typeof tickets.$inferSelect;
+export type NewTicket = typeof tickets.$inferInsert;
+
+export const ticketMessages = sqliteTable('forge_ticket_messages', {
+  id: text('id').primaryKey(),
+  ticketId: text('ticket_id')
+    .notNull()
+    .references(() => tickets.id, { onDelete: 'cascade' }),
+  authorType: text('author_type').notNull(), // agent | end_user | system
+  authorAgentId: text('author_agent_id'),
+  content: text('content').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  ticketMessagesTicketIdx: index('forge_ticket_messages_ticket_idx').on(table.ticketId),
+  ticketMessagesCreatedAtIdx: index('forge_ticket_messages_created_at_idx').on(table.createdAt),
+}));
+
+export type TicketMessage = typeof ticketMessages.$inferSelect;
+export type NewTicketMessage = typeof ticketMessages.$inferInsert;
+
+// ── Ticketing Relations ────────────────────────────────────────────────────────
+
+export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+  messages: many(ticketMessages),
+}));
+
+export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [ticketMessages.ticketId],
+    references: [tickets.id],
+  }),
+}));
