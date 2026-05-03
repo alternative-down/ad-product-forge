@@ -6,13 +6,17 @@
 import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
 import type { HttpHandler } from '../../../http/server.js';
-import { jsonResponse, parseJsonBody } from '../index';
+import { jsonResponse } from '../index';
+import { parseJsonBody } from '../index';
+import { agentActionSchema } from '../schemas.js';
 
-const agentActionSchema = z.object({
-  agentId: z.string(),
-}).strict();
-
-const adminInternalChatSendSchema = z.object({
+/**
+ * Schema for POST /admin/agent/internal-chat/send.
+ * Different from adminInternalChatSendSchema (schemas.ts) — this one accepts
+ * senderSlug/senderDisplayName because the sender account is created dynamically
+ * from the admin panel rather than pre-registered.
+ */
+const adminInternalChatSendFromAdminSchema = z.object({
   agentId: z.string(),
   senderSlug: z.string(),
   senderDisplayName: z.string(),
@@ -82,7 +86,7 @@ export function registerAgentOperationRoutes(
     method: 'POST',
     path: '/admin/agent/internal-chat/send',
     handler: async (request) => {
-      const payload = parseJsonBody(request.bodyText, adminInternalChatSendSchema);
+      const payload = parseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
       const sender = await input.internalChat.registerExternalAccount({
         slug: payload.senderSlug,
         displayName: payload.senderDisplayName,

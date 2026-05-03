@@ -38,7 +38,7 @@ import {
   type CommunicationMessageView,
   type CommunicationProviderMessage,
 } from '@forge-runtime/core';
-import { withTimeout } from './conversation-helpers';
+import { withTimeout } from '../../utils/async';
 
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants.js';
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
