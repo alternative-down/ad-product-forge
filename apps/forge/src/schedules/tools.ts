@@ -178,29 +178,6 @@ function normalizeOptionalText(value?: string) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function getSelfCreateInput(input: z.infer<typeof manageSelfCronsInputSchema>) {
-  return input.action === 'create' ? input.create ?? null : null;
-}
-
-function getSelfUpdateInput(input: z.infer<typeof manageSelfCronsInputSchema>) {
-  return input.action === 'update' ? input.update ?? null : null;
-}
-
-function getSelfDeleteInput(input: z.infer<typeof manageSelfCronsInputSchema>) {
-  return input.action === 'delete' ? input.delete ?? null : null;
-}
-
-function getDelegatedCreateInput(input: z.infer<typeof manageCronsInputSchema>) {
-  return input.action === 'create' ? input.create ?? null : null;
-}
-
-function getDelegatedUpdateInput(input: z.infer<typeof manageCronsInputSchema>) {
-  return input.action === 'update' ? input.update ?? null : null;
-}
-
-function getDelegatedDeleteInput(input: z.infer<typeof manageCronsInputSchema>) {
-  return input.action === 'delete' ? input.delete ?? null : null;
-}
 
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
   const cronId = value.scheduleId ?? value.taskId;
@@ -248,7 +225,7 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'manage_self_crons called', { agentId, action: input.action, input });
 
         if (input.action === 'create') {
-          const createInput = getSelfCreateInput(input);
+          const createInput = input.action === 'create' ? input.create ?? null : null;
 
           if (!createInput) {
             return {
@@ -298,7 +275,7 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const updateInput = getSelfUpdateInput(input);
+          const updateInput = input.action === 'update' ? input.update ?? null : null;
 
           if (!updateInput) {
             return {
@@ -344,7 +321,7 @@ export function createAgentScheduleTools(
           }
         }
 
-        const deleteInput = getSelfDeleteInput(input);
+        const deleteInput = input.action === 'delete' ? input.delete ?? null : null;
 
         if (!deleteInput) {
           return {
@@ -415,7 +392,7 @@ export function createAgentScheduleTools(
         forgeDebug('tools:schedules', 'manage_crons called', { agentId, action: input.action, input });
 
         if (input.action === 'create') {
-          const createInput = getDelegatedCreateInput(input);
+          const createInput = input.action === 'create' ? input.create ?? null : null;
 
           if (!createInput) {
             return {
@@ -473,7 +450,7 @@ export function createAgentScheduleTools(
         }
 
         if (input.action === 'update') {
-          const updateInput = getDelegatedUpdateInput(input);
+          const updateInput = input.action === 'update' ? input.update ?? null : null;
 
           if (!updateInput) {
             return {
@@ -519,7 +496,7 @@ export function createAgentScheduleTools(
           }
         }
 
-        const deleteInput = getDelegatedDeleteInput(input);
+        const deleteInput = input.action === 'delete' ? input.delete ?? null : null;
 
         if (!deleteInput) {
           return {
