@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import 'node:process';
 import { join } from 'node:path';
 
 import { sql } from 'drizzle-orm';

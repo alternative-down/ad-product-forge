@@ -6,6 +6,7 @@
  */
 
 import fs from 'node:fs';
+import 'node:process';
 import path from 'node:path';
 
 /**
