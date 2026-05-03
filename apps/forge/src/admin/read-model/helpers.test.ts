@@ -286,48 +286,75 @@ describe('renderWorkingMemoryMarkdown', () => {
 });
 
 describe('toScheduleSummary', () => {
-  // toScheduleSummary always returns an object; it never returns a plain string
-  test('returns an object for valid row', () => {
-    const result = toScheduleSummary({
-      id: '1',
+  test('returns AgentSchedule shape with all fields mapped', () => {
+    const row = {
+      id: 'sched-1',
+      agentId: 'a1',
       kind: 'agent',
-      name: 'TestAgent',
+      name: 'Nightly job',
+      description: 'Runs nightly',
+      scheduleType: 'cron',
+      cronExpression: '0 2 * * *',
+      scheduledDate: null,
+      timezone: 'America/Sao_Paulo',
       content: '{"msg":"hello"}',
-      nextTriggerAt: '2025-01-01T00:00:00Z',
-    });
-    expect(result).toHaveProperty('id', '1');
-    expect(result).toHaveProperty('kind', 'agent');
-    expect(result).toHaveProperty('name', 'TestAgent');
-    expect(result).toHaveProperty('nextRunAt', '2025-01-01T00:00:00Z');
+      wakeWhenRunning: 1,
+      isActive: 1,
+      lastTriggeredAt: 1700000000000,
+      nextTriggerAt: 1700100000000,
+      creatorId: null,
+      createdAt: 1699000000000,
+      updatedAt: 1699100000000,
+    } as const;
+    const result = toScheduleSummary(row);
+    expect(result.scheduleId).toBe('sched-1');
+    expect(result.kind).toBe('agent');
+    expect(result.name).toBe('Nightly job');
+    expect(result.description).toBe('Runs nightly');
+    expect(result.scheduleType).toBe('cron');
+    expect(result.cronExpression).toBe('0 2 * * *');
+    expect(result.scheduledDate).toBeUndefined();
+    expect(result.timezone).toBe('America/Sao_Paulo');
+    expect(result.content).toBe('{"msg":"hello"}');
+    expect(result.wakeWhenRunning).toBe(true);
+    expect(result.isActive).toBe(true);
+    expect(result.lastTriggeredAt).toBe(1700000000000);
+    expect(result.nextTriggerAt).toBe(1700100000000);
+    expect(result.createdAt).toBe(1699000000000);
+    expect(result.updatedAt).toBe(1699100000000);
   });
 
-  test('returns null cronExpression when not set', () => {
+  test('returns undefined cronExpression when not set', () => {
     const result = toScheduleSummary({
       id: '1',
       kind: 'agent',
       name: 'Test',
-    });
-    expect(result).toHaveProperty('expression', null);
+      scheduleType: 'date',
+    } as never);
+    expect(result.cronExpression).toBeUndefined();
   });
 
-  test('parses content as JSON when present', () => {
-    const result = toScheduleSummary({
-      id: '1',
-      kind: 'agent',
-      name: 'Test',
-      content: '{"key":"value"}',
-    });
-    expect(result.input).toEqual({ key: 'value' });
-  });
-
-  test('returns null input when content is null', () => {
+  test('returns empty string content when null', () => {
     const result = toScheduleSummary({
       id: '1',
       kind: 'agent',
       name: 'Test',
       content: null,
-    });
-    expect(result.input).toBeNull();
+      scheduleType: 'cron',
+      timezone: 'UTC',
+      wakeWhenRunning: 0,
+    } as never);
+    expect(result.content).toBe('');
+  });
+
+  test('defaults timezone to UTC and scheduleType to cron', () => {
+    const result = toScheduleSummary({
+      id: '1',
+      kind: 'agent',
+      name: 'Minimal',
+    } as never);
+    expect(result.timezone).toBe('UTC');
+    expect(result.scheduleType).toBe('cron');
   });
 });
 
