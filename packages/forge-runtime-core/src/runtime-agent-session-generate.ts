@@ -367,7 +367,7 @@ async function buildRuntimeSessionSystemPrompt(input: {
 }) {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: '' || '',
+    workingMemory: '',
     agentContext: input.agentContext?.trim() || '',
     todosText: input.todosText?.trim() || '',
     planText: input.planText?.trim() || '',
