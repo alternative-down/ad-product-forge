@@ -48,7 +48,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
     const contractIds = contracts.items.map((contract) => contract.contractId);
 
     if (contractIds.length === 0) {
-      return contracts;
+      return { ...contracts, hasMore: false };
     }
 
     const spendRows = await db
@@ -67,6 +67,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
 
     return {
       ...contracts,
+      hasMore: false,
       items: contracts.items.map((contract) => {
         const spentUsd = spentUsdByContractId.get(contract.contractId) ?? 0;
 
