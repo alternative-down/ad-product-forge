@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import 'node:process';
 import { resolve } from 'node:path';
 
 import { sql } from 'drizzle-orm';
