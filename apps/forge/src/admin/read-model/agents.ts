@@ -363,7 +363,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       }
     }
 
-    const heartbeat = agentScheduleRows.find((s) => s.kind === 'agent-heartbeat');
+    const heartbeat = agentScheduleRows.find((s) => s.kind === 'heartbeat');
 
     const githubProvisioning = loadedAgent?.runtime?.github ? {
       installed: true,

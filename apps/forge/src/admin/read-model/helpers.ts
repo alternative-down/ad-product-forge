@@ -206,16 +206,20 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
 export function toScheduleSummary(row: AgentSchedule) {
   return {
     scheduleId: row.id,
-    id: row.id,
     kind: row.kind,
     name: row.name,
-    expression: row.cronExpression ?? null,
-    input: row.content ? JSON.parse(row.content) : null,
-    isActive: row.isActive != null ? Boolean(row.isActive) : null,
-    lastRunAt: row.lastTriggeredAt ?? null,
-    nextRunAt: row.nextTriggerAt ?? null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    description: row.description ?? undefined,
+    scheduleType: (row.scheduleType ?? 'cron') as 'cron' | 'date',
+    cronExpression: row.cronExpression ?? undefined,
+    scheduledDate: row.scheduledDate ?? undefined,
+    timezone: row.timezone ?? 'UTC',
+    content: row.content ?? '',
+    wakeWhenRunning: Boolean(row.wakeWhenRunning),
+    isActive: row.isActive != null ? Boolean(row.isActive) : true,
+    lastTriggeredAt: row.lastTriggeredAt ?? undefined,
+    nextTriggerAt: row.nextTriggerAt ?? undefined,
+    createdAt: row.createdAt ?? undefined,
+    updatedAt: row.updatedAt ?? undefined,
   };
 }
 
