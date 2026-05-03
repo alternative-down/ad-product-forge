@@ -3,8 +3,8 @@ import {
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 
-import type { createAgentLongTermMemoryStore } from './agent-long-term-memory-store';
-import { createAgentLongTermMemoryRecall } from './agent-long-term-memory-recall';
+import type { createAgentLongTermMemoryStore } from '../ltm/store';
+import { createAgentLongTermMemoryRecall } from '../ltm/recall';
 
 export async function createAgentRuntimeMemory(input: {
   agentId: string;
