@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 // Replicate helper implementations to validate behavior without importing
-// internal module-level functions from agents/hiring-rh.ts
+// internal module-level functions from agents/hiring-requests-handler.ts
 
 // -----------------------------------------------------------------------
 // normalizeAgentName
