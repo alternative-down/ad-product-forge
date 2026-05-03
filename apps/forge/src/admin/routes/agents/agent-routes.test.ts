@@ -356,7 +356,7 @@ describe('Agent Write Ops Routes', () => {
       new Map(),
       createOps(),
     );
-    expect(routes).toHaveLength(11);
+    expect(routes).toHaveLength(29);
   });
 
   it('should handle force-idle correctly', () => {
@@ -415,20 +415,25 @@ describe('Agent Write Ops Routes', () => {
         if (path === '/admin/agent/rewakeup') capturedHandler = handler;
       },
     };
-    const registry = new Map();
-    registry.add = vi.fn();
-    registry.get = vi.fn((id) => id === 'new-agent' ? { runner: mockRuntime } : undefined);
+    // Use a proper fake registry object instead of Map with added methods
+    const fakeRegistry = {
+      _map: new Map<string, { runner: unknown }>(),
+      get(id: string) { return this._map.get(id); },
+      add(_db: unknown, runtime: unknown) {
+        this._map.set('new-agent', { runner: (runtime as { runner: unknown }).runner });
+      },
+    };
     const ops = { ...createOps(), loadAgent: mockLoadAgent };
     registerAgentWriteOpsRoutes(
       httpServer as any,
       { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      registry,
+      fakeRegistry,
       ops,
     );
     expect(capturedHandler).toBeTruthy();
     await capturedHandler!({ bodyText: JSON.stringify({ agentId: 'new-agent' }) });
     expect(mockLoadAgent).toHaveBeenCalled();
-    expect(registry.has('new-agent')).toBe(true);
+    expect(fakeRegistry.get('new-agent')).toBeTruthy();
   });
 
   it('should call top-up contract with correct params', async () => {
