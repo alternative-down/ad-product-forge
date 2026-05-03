@@ -289,7 +289,7 @@ describe('createAgentReadModel', () => {
       const model = makeReadModel({ db });
       const result = await model.getAgent('agent-1');
       expect(result).not.toBeNull();
-      expect((result as Record<string, unknown>).id).toBe('agent-1');
+      expect((result as Record<string, unknown>).agentId).toBe('agent-1');
     });
 
     it('maps lastExecutionError when present', async () => {
@@ -411,13 +411,23 @@ describe('createAgentReadModel', () => {
       const agentRow = {
         id: 'agent-mcp',
         name: 'MCP Agent',
-        role: 'dev',
+        role: null,
+        roleId: null,
+        modelProfileId: null,
+        omModelProfileId: null,
+        instructions: 'Test instructions',
         executionState: 'idle' as const,
         lastExecutionError: null,
         lastExecutionErrorAt: null,
+        description: null,
+        workspaceAutoSync: 1,
+        workspaceBm25: 1,
+        workspaceEmbedder: 'default',
+        workspaceFilesystem: null,
+        workspaceSandbox: null,
+        workspaceSkills: null,
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        workspaceFilesystem: null,
       };
       // agentMcpRows: link record (has id and serverId pointing to shared mcpServerConfigs)
       const agentMcpRows = [
