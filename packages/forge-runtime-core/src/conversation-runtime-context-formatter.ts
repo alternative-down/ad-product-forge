@@ -65,13 +65,14 @@ export function createConversationRuntimeContextFormatter() {
         text: JSON.stringify(runtimeInput.payload, null, 2),
       });
     },
-    formatActionResults(_previousStepNumber: number, _actionResults: ActionResult[]): StepContextEntry {
-      return createTextStepContextEntry({
-        id: `action-results-${_previousStepNumber}`,
-        kind: 'output:action-results',
-        title: `Step ${_previousStepNumber} Results`,
-        text: `${_actionResults.length} action result(s)`,
-      });
+    formatActionResults(previousStepNumber: number, actionResults: unknown[]) {
+      return {
+        id: `action-results:${previousStepNumber}`,
+        kind: 'action-results',
+        title: 'Previous action results',
+        data: actionResults,
+        content: [],
+      };
     },
   };
 }
