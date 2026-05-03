@@ -72,6 +72,8 @@ export function createGitHubAppManager(config: {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
 
+
+// === App Lifecycle ===
   async function getGlobalConfig() {
     const githubConfig = await config.integrations.getGitHubConfig();
 
@@ -222,6 +224,8 @@ export function createGitHubAppManager(config: {
     };
   }
 
+
+// === Repo Ops ===
   async function listRepositories(agentId: string) {
     const octokit = await getInstallationOctokit(agentId);
     const response = await octokit.request('GET /installation/repositories', {
@@ -1047,6 +1051,8 @@ export function createGitHubAppManager(config: {
     deleteMilestone,
   };
 
+
+// === App Routing ===
   function buildProvisioning(agentId: string, credentials: GitHubAppCredentials): GitHubAppProvisioning {
     const registrationUrl = `${config.publicBaseUrl}${getRegisterPath(agentId)}`;
     const manifestConfig = credentials.manifestConfig;
@@ -1357,6 +1363,8 @@ export function createGitHubAppManager(config: {
     return { status: 202, body: 'Accepted' };
   }
 
+
+// === Credentials ===
   async function getCredentials(agentId: string) {
     const provider = await config.db.query.agentProviders.findFirst({
       where: and(eq(agentProviders.agentId, agentId), eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE)),
