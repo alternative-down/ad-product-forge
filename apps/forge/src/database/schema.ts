@@ -821,3 +821,15 @@ export const webhookEvents = sqliteTable('webhook_events', {
   receivedAt: integer('received_at').notNull(),
   processedAt: integer('processed_at'),
 });
+
+export const generatedArtifacts = sqliteTable('generated_artifacts', {
+  artifactId: text('artifact_id').primaryKey(),
+  agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  toolId: text('tool_id').notNull(), // 'minimax_tts', 'minimax_image'
+  filePath: text('file_path').notNull(),
+  mimeType: text('mime_type'),
+  inputHash: text('input_hash'), // SHA-256 of relevant input parameters
+  promptHash: text('prompt_hash'), // hash of the text/prompt used
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
+  createdAt: integer('created_at').notNull(),
+});

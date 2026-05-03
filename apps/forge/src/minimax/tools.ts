@@ -3,6 +3,8 @@ import path from 'node:path';
 import { z } from 'zod';
 
 import type { MiniMaxManager } from './manager';
+import { createArtifactStore, hashTtsInput, hashImageInput, type ArtifactType } from '../artifacts/store';
+import type { Database } from '../database/index';
 
 export const MINIMAX_TOOL_IDS = [
   'list_minimax_voices',
@@ -200,9 +202,12 @@ async function waitForVideoFile(
 export function createMiniMaxTools(
   minimax: MiniMaxManager,
   allowedToolIds?: Set<string> | null,
+  db?: Database,
+  agentId?: string,
 ) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
   const videoToolEnabled = false;
+  const artifactStore = (db && agentId) ? createArtifactStore(db) : null;
 
   if (!allowedToolIds || allowedToolIds.has('list_minimax_voices')) {
     tools.list_minimax_voices = createTool({
@@ -286,6 +291,27 @@ export function createMiniMaxTools(
             result.data.audioFormat,
             audioBuffer,
           );
+
+          if (artifactStore) {
+            const h = hashTtsInput({
+              text: input.text,
+              voiceId: input.voice_id ?? 'Portuguese_CaptivatingStoryteller',
+              speed: input.speed,
+              volume: input.volume,
+              pitch: input.pitch,
+              languageBoost: input.language_boost,
+              outputFormat: input.output_format,
+            });
+            await artifactStore.registerArtifact({
+              agentId,
+              toolId: 'minimax_tts',
+              filePath: savedPath,
+              mimeType: result.data.audioFormat === 'mp3' ? 'audio/mpeg' : result.data.audioFormat === 'wav' ? 'audio/wav' : 'audio/flac',
+              promptHash: createHash('sha256').update(input.text).digest('hex'),
+              inputHash: h,
+              metadata: { voiceId: input.voice_id ?? 'default', model: 'minimax-tts' },
+            });
+          }
 
           return {
             valid: true,
