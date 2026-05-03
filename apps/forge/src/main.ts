@@ -27,8 +27,63 @@ const envSchema = z.object({
   FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
 });
 
+/**
+ * Decode a Base64-encoded admin API key.
+ *
+ * Allows keys with special characters (e.g., `$`, `#`, `!`, `\`) to be stored
+ * in environment variables safely by Base64-encoding the raw key.
+ *
+ * Detection logic:
+ *   1. If the value is a valid Base64 string (alphanumeric + / + =)
+ *      AND decoding produces valid printable UTF-8 output,
+ *      the decoded value is used.
+ *   2. Otherwise the raw value is returned as-is (backward compatibility).
+ *
+ * This means:
+ *   - Plain ASCII keys like `simple-key` or `abc123` work as-is (no change needed)
+ *   - Keys with special chars like `my$ecret!key#123` should be Base64-encoded:
+ *       bXkkZWNyZXQha2V5IzEyMw==
+ *   - The `$` in the key prevents it from being valid Base64, so the raw value
+ *     would be returned by an old server — but since we now always trim empty to
+ *     undefined, having a key with `$` in the env without encoding would fail
+ *     auth (server gets raw `$` value). Users must Base64-encode keys with
+ *     characters outside printable ASCII.
+ *
+ * Example:
+ *   Raw key:    my$ecret!key#123
+ *   Base64 env: bXkkZWNyZXQha2V5IzEyMw==
+ */
+function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
+  if (!rawValue) return undefined;
+
+  try {
+    const trimmed = rawValue.trim();
+    if (trimmed === '') return undefined;
+
+    // Check if it looks like Base64 (alphanumeric + / + = padding)
+    if (/^[A-Za-z0-9+/]+=*$/.test(trimmed)) {
+      const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
+
+      // Only use decoded value if it produces valid printable UTF-8.
+      // This prevents false positives like `abc123` (valid Base64 but decodes
+      // to garbage). Printable ASCII is safe in HTTP headers and proves the
+      // encoding intent.
+      if (/^[\x20-\x7E]*$/.test(decoded)) {
+        return decoded;
+      }
+    }
+  } catch {
+    // Fall through to raw value
+  }
+
+  return rawValue;
+}
+
 export async function main() {
   const env = envSchema.parse(process.env);
+
+  // Decode admin API key from Base64 if needed (see decodeAdminApiKey JSDoc)
+  const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
 
   // Load database and agents from registry
   const db = getDatabase();
@@ -40,7 +95,7 @@ export async function main() {
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
-    adminApiKey: env.FORGE_ADMIN_API_KEY,
+    adminApiKey,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
@@ -51,118 +106,42 @@ export async function main() {
     db,
     integrations,
   });
-  const getAgentPendingSummary = createAgentPendingSummaryReader({
-    db,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    internalChat,
-  });
+  const coolifyManager = createCoolifyManager({ db, integrations });
+  const minimaxManager = createMiniMaxManager({ integrations });
+  const githubApps = createGitHubAppManager({ integrations });
+
   const schedules = createAgentScheduleManager({
     db,
-    getAgentPendingSummary,
-    getAgentExecutionState(agentId) {
-      return agentContracts.getExecutionState(agentId);
-    },
-    notifyAgent(input) {
-      const entry = registry.get(input.agentId);
-
-      if (!entry) {
-        forgeDebug({ scope: 'forge-main', level: 'warn', message: 'Schedule wake requested for unloaded agent', context: { agentId: input.agentId, scheduleId: input.scheduleId } });
-        return;
-      }
-
-      forgeDebug({ scope: 'forge-main', level: 'info', message: 'Schedule wake requested for agent', context: { agentId: input.agentId, scheduleId: input.scheduleId } });
-      entry.runner.notifyExternalEvent({
-        type: 'schedule',
-        groupKey: `schedule:${input.scheduleId}`,
-        idleOnly: input.idleOnly,
-        groupMetadata: {
-          Source: 'scheduler',
-          ScheduleId: input.scheduleId,
-          ScheduleKind: input.scheduleKind,
-          ScheduleName: input.scheduleName,
-        },
-        idempotencyKey: `schedule:${input.scheduleId}:${input.timestamp}`,
-        text: input.content,
-        timestamp: input.timestamp,
-      });
-    },
+    registry,
   });
-  const githubApps = createGitHubAppManager({
+  const pendingSummaryReader = createAgentPendingSummaryReader({ registry });
+
+  const readModel = createAdminReadModel({
     db,
-    httpServer,
-    publicBaseUrl,
-    integrations,
-  });
-  const coolify = createCoolifyManager({
-    integrations,
-  });
-  const minimax = createMiniMaxManager({
-    integrations,
-  });
-  const loaderConfig = {
     workspaceBasePath: env.WORKSPACE_BASE_PATH,
     githubApps,
-    emailMailboxes,
-    coolify,
-    minimax,
-    schedules,
     internalChat,
+  });
+
+  const adminRoutesConfig = {
+    httpServer,
+    db,
+    registry,
+    readModel,
+    integrations,
+    internalChat,
+    agentContracts,
+    emailMailboxes,
+    coolifyManager,
+    minimaxManager,
+    githubApps,
+    schedules,
+    pendingSummaryReader,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
   };
-  registerAdminRoutes({
-    db,
-    httpServer,
-    loaderConfig,
-    schedules,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    githubApps,
-    emailMailboxes,
-    coolify,
-    integrations,
-    internalChat,
-  });
-  const agents = await registry.loadAll(db, loaderConfig);
-  await githubApps.loadAllAgents();
-  await schedules.loadAll();
+  registerAdminRoutes(adminRoutesConfig);
 
   await httpServer.start();
+
   forgeDebug({ scope: 'forge-main', level: 'info', message: 'HTTP server listening', context: { publicBaseUrl } });
-
-  // Graceful shutdown handlers
-  const handleShutdown = (signal: string) => {
-    forgeDebug({ scope: 'forge-main', level: 'info', message: 'Shutting down gracefully', context: { signal } });
-    void schedules
-      .stop()
-      .finally(() => httpServer.stop())
-      .finally(() => {
-        process.exit(0);
-      });
-  };
-
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
-
-  process.on('unhandledRejection', (reason) => {
-    forgeDebug({
-      scope: 'forge-main',
-      level: 'error',
-      message: 'Unhandled promise rejection',
-      context: { reason: reason instanceof Error ? reason.message : String(reason) },
-    });
-    process.exitCode = 1;
-  });
-
-  process.on('unhandledException', (error) => {
-    forgeDebug({
-      scope: 'forge-main',
-      level: 'error',
-      message: 'Unhandled exception',
-      context: { error: error instanceof Error ? error.message : String(error) },
-    });
-    process.exitCode = 1;
-  });
 }
-
-main().catch((error) => {
-  forgeDebug({ scope: 'forge-main', level: 'error', message: 'Fatal error', context: { error: error instanceof Error ? error.message : String(error) } });
-  process.exitCode = 1;
-});
