@@ -16,7 +16,7 @@ import type {
   LongTermMemoryRecallHistory,
   LongTermMemoryRecallSnapshot,
   createAgentLongTermMemoryStore,
-} from './ltm/store';
+} from './store';
 
 
 import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from '../agent-ltm-helpers';
