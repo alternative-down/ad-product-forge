@@ -1,3 +1,4 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -246,7 +247,7 @@ function summarizeGenerateRequest(input: {
     toolCount: input.actions.length,
     toolDescriptionChars: input.actions.reduce((total, action) => total + action.description.length, 0),
     toolSchemaChars: input.actions.reduce(
-      (total, action) => total + JSON.stringify(z.toJSONSchema(action.inputSchema)).length,
+      (total, action) => total + JSON.stringify(zodToJsonSchema(action.inputSchema as any), null, 2).length,
       0,
     ),
   };

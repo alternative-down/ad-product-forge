@@ -1,3 +1,4 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { z } from 'zod';
 
 import type { ActionResult, StepActionDescriptor } from './types.js';
@@ -32,7 +33,7 @@ export class RuntimeActionRegistry {
       name: action.name,
       description: action.description,
       inputSchema: action.inputSchema,
-      inputSchemaText: JSON.stringify(z.toJSONSchema(action.inputSchema), null, 2),
+      inputSchemaText: JSON.stringify(zodToJsonSchema(action.inputSchema as z.ZodTypeAny), null, 2),
     }));
   }
 

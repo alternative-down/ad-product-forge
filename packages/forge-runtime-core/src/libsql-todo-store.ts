@@ -34,7 +34,7 @@ export const todoItemInputSchema = z.union([
       })),
     ]),
   }),
-]).transform((val) => {
+] as any).transform((val: any) => {
   if ('items' in val) {
     const items = val.items;
     if (Array.isArray(items)) {

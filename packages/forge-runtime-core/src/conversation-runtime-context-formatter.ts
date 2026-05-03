@@ -1,4 +1,4 @@
-import { type RuntimeInput, type ActionResult } from 'agent-runtime-core';
+import { type RuntimeInput } from 'agent-runtime-core';
 import {
   createTextStepContextEntry,
   isConversationRuntimeInputPayload,
