@@ -590,7 +590,7 @@ export function createCoolifyManager(config: {
   }
 }
 
-function normalizeDomainHost(value: string | null | undefined) {
+export function normalizeDomainHost(value: string | null | undefined) {
   if (!value) {
     return null;
   }
@@ -608,7 +608,7 @@ function normalizeDomainHost(value: string | null | undefined) {
   return normalized ?? null;
 }
 
-function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>) {
+export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>) {
   if (Array.isArray(data)) {
     return z.array(schema).parse(data);
   }
@@ -626,7 +626,7 @@ function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>) {
   return [];
 }
 
-function extractItem<T>(data: unknown, schema: z.ZodSchema<T>) {
+export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>) {
   if (data && typeof data === 'object') {
     const parsed = schema.safeParse(data);
 
@@ -648,7 +648,7 @@ function extractItem<T>(data: unknown, schema: z.ZodSchema<T>) {
   return schema.parse(data);
 }
 
-function extractLogs(data: unknown) {
+export function extractLogs(data: unknown) {
   if (typeof data === 'string') {
     return data;
   }
@@ -668,7 +668,7 @@ function extractLogs(data: unknown) {
   return '';
 }
 
-function toApplicationSummary(application: z.infer<typeof ApplicationSchema>) {
+export function toApplicationSummary(application: z.infer<typeof ApplicationSchema>) {
   return {
     applicationUuid: application.uuid,
     name: application.name ?? null,
@@ -679,7 +679,7 @@ function toApplicationSummary(application: z.infer<typeof ApplicationSchema>) {
   };
 }
 
-function toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
+export function toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
   return {
     applicationUuid: application.uuid,
     name: application.name ?? null,
@@ -691,7 +691,7 @@ function toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
   };
 }
 
-function toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
+export function toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
   return {
     envId: env.uuid ?? env.id ?? env.key,
     key: env.key,
@@ -704,11 +704,11 @@ function toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
   };
 }
 
-function removeUndefined(record: Record<string, unknown>) {
+export function removeUndefined(record: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
-function safeJsonParse(text: string) {
+export function safeJsonParse(text: string) {
   try {
     return JSON.parse(text);
   } catch (error) {
@@ -717,12 +717,12 @@ function safeJsonParse(text: string) {
   }
 }
 
-function buildRequestError(method: string, path: string, status: number, data: unknown) {
+export function buildRequestError(method: string, path: string, status: number, data: unknown) {
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
   return `Coolify API ${method} ${path} failed with ${status}: ${payload}`;
 }
 
-function toTimestamp(value: string | number | null) {
+export function toTimestamp(value: string | number | null) {
   if (typeof value === 'number') {
     return value;
   }
