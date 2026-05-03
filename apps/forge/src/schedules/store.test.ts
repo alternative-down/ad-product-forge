@@ -295,6 +295,37 @@ describe('getAgentSchedule', () => {
   });
 });
 
+
+// Tests for getScheduleById — previously not covered
+describe('getScheduleById', () => {
+  it('returns null when schedule not found', async () => {
+    const db = createMockDb([]);
+    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    const store = createAgentScheduleStore(db as never);
+    const result = await store.getScheduleById('sch_nonexistent');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for heartbeat kind', async () => {
+    const rows = [createMockRow({ id: 'sch_hb', agentId: 'ag_001', kind: 'heartbeat' })];
+    const db = createMockDb(rows);
+    db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
+    const store = createAgentScheduleStore(db as never);
+    const result = await store.getScheduleById('sch_hb');
+    expect(result).toBeNull();
+  });
+
+  it('returns schedule record for agent kind', async () => {
+    const rows = [createMockRow({ id: 'sch_001', agentId: 'ag_001', kind: 'agent', name: 'My Schedule' })];
+    const db = createMockDb(rows);
+    db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
+    const store = createAgentScheduleStore(db as never);
+    const result = await store.getScheduleById('sch_001');
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('My Schedule');
+  });
+});
+
 describe('getOwnedSchedule', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
@@ -430,6 +461,43 @@ describe('updateAgentSchedule', () => {
   });
 });
 
+
+describe('updateOwnedSchedule', () => {
+  it('returns null when schedule not found', async () => {
+    const db = createMockDb([]);
+    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    const store = createAgentScheduleStore(db as never);
+    const result = await store.updateOwnedSchedule('ag_001', 'sch_nonexistent', { name: 'New Name' });
+    expect(result).toBeNull();
+  });
+
+  it('returns null for heartbeat kind', async () => {
+    const rows = [createMockRow({ agentId: 'ag_001', kind: 'heartbeat' })];
+    const db = createMockDb(rows);
+    db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
+    const store = createAgentScheduleStore(db as never);
+    const result = await store.updateOwnedSchedule('ag_001', 'sch_hb', { name: 'New' });
+    expect(result).toBeNull();
+  });
+
+  it('calls db.update with merged fields', async () => {
+    const rows = [createMockRow({ agentId: 'ag_001', kind: 'agent', name: 'Old Name' })];
+    const db = createMockDb(rows);
+    let findFirstCallCount = 0;
+    db.query.agentSchedules.findFirst = vi.fn(async () => {
+      findFirstCallCount++;
+      return findFirstCallCount === 1 ? rows[0] : null;
+    });
+    db.update = vi.fn().mockReturnThis();
+    db.set = vi.fn().mockReturnThis();
+    db.where = vi.fn().mockResolvedValue(undefined);
+    const store = createAgentScheduleStore(db as never);
+    await store.updateOwnedSchedule('ag_001', 'sch_001', { name: 'New Name' });
+    expect(db.update).toHaveBeenCalled();
+  });
+});
+
+
 describe('deleteAgentSchedule', () => {
   it('returns false when schedule not found', async () => {
     const db = createMockDb([]);
@@ -546,6 +614,7 @@ describe('markTriggered', () => {
 
     const setCall = (db.set as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(setCall.isActive).toBe(0);
+
   });
 });
 
