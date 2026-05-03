@@ -295,7 +295,7 @@ export const deleteAgentProviderSchema = z.object({
 // MCP SERVER SCHEMAS
 // =============================================================================
 
-const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
+export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   z.object({
     transport: z.literal('stdio'),
     command: z.string().trim().min(1),
@@ -532,4 +532,8 @@ export const ledgerEntryActionSchema = z.object({
 export const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
+});
+
+export const discordProviderDeleteSignalSchema = z.object({
+  token: z.string(),
 });
