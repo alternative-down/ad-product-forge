@@ -24,7 +24,16 @@ const envSchema = z.object({
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
+  /** Admin API key. Required in production — boot fails without it when
+   *  FORGE_ADMIN_ALLOW_INSECURE_LOCAL is not set. */
   FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
+  /** Allow /admin/* to be served without authentication (local dev only).
+   *  Do NOT set in production. */
+  FORGE_ADMIN_ALLOW_INSECURE_LOCAL: z.enum(['true', '1']).optional(),
+  /** Comma-separated list of allowed CORS origins for admin routes.
+   *  When set, only these origins receive admin API responses.
+   *  Example: https://admin.example.com,https://dashboard.example.com */
+  FORGE_ADMIN_ALLOWED_ORIGINS: z.string().optional(),
 });
 
 /**
@@ -84,6 +93,19 @@ export async function main() {
 
   // Decode admin API key from Base64 if needed (see decodeAdminApiKey JSDoc)
   const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
+  const allowInsecureLocal = env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === 'true'
+    || env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === '1';
+  const allowedOrigins = env.FORGE_ADMIN_ALLOWED_ORIGINS
+    ? env.FORGE_ADMIN_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : undefined;
+
+  // Validate: require admin API key unless explicitly opting into insecure local mode
+  if (!adminApiKey && !allowInsecureLocal) {
+    throw new Error(
+      'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set'
+      + ' FORGE_ADMIN_ALLOW_INSECURE_LOCAL=true for local development only.',
+    );
+  }
 
   // Load database and agents from registry
   const db = getDatabase();
@@ -96,6 +118,8 @@ export async function main() {
   const httpServer = createForgeHttpServer({
     port: env.FORGE_HTTP_PORT,
     adminApiKey,
+    allowInsecureLocal,
+    allowedOrigins,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
@@ -118,30 +142,48 @@ export async function main() {
 
   const readModel = createAdminReadModel({
     db,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-    githubApps,
-    internalChat,
-  });
-
-  const adminRoutesConfig = {
-    httpServer,
-    db,
     registry,
-    readModel,
     integrations,
     internalChat,
     agentContracts,
-    emailMailboxes,
+    schedules,
+    pendingSummaryReader,
     coolifyManager,
     minimaxManager,
     githubApps,
+    emailMailboxes,
+  });
+
+  registerAdminRoutes({
+    httpServer,
+    readModel,
+    integrations,
+    githubApps,
+    coolifyManager,
+    minimaxManager,
+    agentContracts,
     schedules,
-    pendingSummaryReader,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-  };
-  registerAdminRoutes(adminRoutesConfig);
+    db,
+  });
 
   await httpServer.start();
+  forgeDebug('forge', `Forge HTTP server started on port ${env.FORGE_HTTP_PORT}`);
+  forgeDebug('forge', `Admin API key: ${adminApiKey ? 'configured' : 'NOT configured'}`);
+  if (allowInsecureLocal) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[forge-main] WARNING: Admin routes served WITHOUT authentication.'
+      + ' Set FORGE_ADMIN_API_KEY for production deployments.',
+    );
+  }
 
-  forgeDebug({ scope: 'forge-main', level: 'info', message: 'HTTP server listening', context: { publicBaseUrl } });
+  // Graceful shutdown
+  const shutdown = async () => {
+    forgeDebug('forge', 'Shutting down gracefully...');
+    await httpServer.stop();
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
