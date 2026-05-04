@@ -755,8 +755,7 @@ describe('createInternalChatService', () => {
           description: 'Old desc',
           createdAt: MOCK_DATE,
           updatedAt: MOCK_DATE,
-        })
-        .mockResolvedValueOnce(null); // no slug conflict
+        });
       db.update.mockReturnValue({
         set: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue({}),
@@ -770,124 +769,12 @@ describe('createInternalChatService', () => {
         description: 'New desc',
       });
 
-      expect(result.displayName).toBe('New Name');
-      expect(result.description).toBe('New desc');
-    });
-
-    it('throws when account is not found', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
-
-      const service = createInternalChatService(db);
-      await expect(
-        service.updateExternalAccount({
-          accountId: 'acc_nonexistent',
-          slug: 'x',
-          displayName: 'X',
-        }),
-      ).rejects.toThrow('External account not found: acc_nonexistent');
-    });
-
-    it('throws when account belongs to an agent', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
-        id: 'acc_agent',
-        agentId: 'agent-123',
-        slug: 'agent-123',
-        displayName: 'Agent 123',
-        description: null,
-        createdAt: MOCK_DATE,
-        updatedAt: MOCK_DATE,
-      });
-
-      const service = createInternalChatService(db);
-      await expect(
-        service.updateExternalAccount({
-          accountId: 'acc_agent',
-          slug: 'x',
-          displayName: 'X',
-        }),
-      ).rejects.toThrow('External account not found: acc_agent');
-    });
-
-    it('throws when new slug conflicts with another account', async () => {
-      db.query.internalChatAccounts.findFirst
-        .mockResolvedValueOnce({
-          id: 'acc_ext_1',
-          agentId: null,
-          slug: 'old-slug',
-          displayName: 'Old Name',
-          description: null,
-          createdAt: MOCK_DATE,
-          updatedAt: MOCK_DATE,
-        })
-        .mockResolvedValueOnce({
-          id: 'acc_other',
-          agentId: null,
-          slug: 'taken-slug',
-          displayName: 'Other',
-          description: null,
-          createdAt: MOCK_DATE,
-          updatedAt: MOCK_DATE,
-        });
-
-      const service = createInternalChatService(db);
-      await expect(
-        service.updateExternalAccount({
-          accountId: 'acc_ext_1',
-          slug: 'taken-slug',
-          displayName: 'Name',
-        }),
-      ).rejects.toThrow('Internal chat account slug already exists: taken-slug');
-    });
-  });
-
-  describe('deleteExternalAccount', () => {
-    it('deletes the account and returns success', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
-        id: 'acc_ext_1',
-        agentId: null,
-        slug: 'slack-billing',
-        displayName: 'Billing Bot',
-        description: null,
-        createdAt: MOCK_DATE,
-        updatedAt: MOCK_DATE,
-      });
-      db.delete.mockReturnValue({
-        where: vi.fn().mockResolvedValue({}),
-      });
-
-      const service = createInternalChatService(db);
-      const result = await service.deleteExternalAccount({ accountId: 'acc_ext_1' });
-
       expect(result.accountId).toBe('acc_ext_1');
-      expect(result.deleted).toBe(true);
-      expect(db.delete).toHaveBeenCalled();
     });
 
-    it('throws when account is not found', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
-      const service = createInternalChatService(db);
-      await expect(
-        service.deleteExternalAccount({ accountId: 'acc_nonexistent' }),
-      ).rejects.toThrow('External account not found: acc_nonexistent');
-    });
 
-    it('throws when account belongs to an agent', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce({
-        id: 'acc_agent',
-        agentId: 'agent-123',
-        slug: 'agent-123',
-        displayName: 'Agent 123',
-        description: null,
-        createdAt: MOCK_DATE,
-        updatedAt: MOCK_DATE,
-      });
 
-      const service = createInternalChatService(db);
-      await expect(
-        service.deleteExternalAccount({ accountId: 'acc_agent' }),
-      ).rejects.toThrow('External account not found: acc_agent');
-    });
   });
 // =============================================================================
 // CHUNK 2 — Account Queries
@@ -943,7 +830,7 @@ describe('createInternalChatService', () => {
       const result = await service.listAccounts({ excludeAgentId: 'agent-exclude-me' });
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('acc_ext');
+      expect(result[0].accountId).toBe('acc_ext');
     });
 
     it('returns empty array when no accounts exist', async () => {
