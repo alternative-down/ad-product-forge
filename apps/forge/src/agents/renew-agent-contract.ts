@@ -44,6 +44,9 @@ export async function renewAgentContract(
     throw new Error('Insufficient company cash to renew this contract');
   }
 
+  const newContractId = createId();
+
+  // Refund old contract if funded
   if (refundableUsd > 0) {
     await companyCashOperations.recordCashIn({
       type: 'agent-contract-renewal-refund',
@@ -55,26 +58,7 @@ export async function renewAgentContract(
     });
   }
 
-  await db
-    .update(agentExecutionContracts)
-    .set({
-      endsAt: now,
-    })
-    .where(eq(agentExecutionContracts.id, activeContract.id));
-
-  const newContractId = createId();
-
-  await db.insert(agentExecutionContracts).values({
-    id: newContractId,
-    agentId: input.agentId,
-    budgetUsd: input.newBudgetUsd,
-    autoRenew: activeContract.autoRenew,
-    fundedAt: null,
-    startsAt: now,
-    endsAt: now + WEEK_MS,
-    createdAt: now,
-  });
-
+  // Fund new contract — must succeed before creating contract
   await companyCashOperations.recordCashOut({
     type: 'agent-contract-renewal-funding',
     amountUsd: input.newBudgetUsd,
@@ -84,12 +68,27 @@ export async function renewAgentContract(
     effectiveAt: now,
   });
 
-  await db
-    .update(agentExecutionContracts)
-    .set({
+  // Wrap contract lifecycle ops in a transaction — all-or-nothing.
+  // Closes old contract, inserts new contract (funded), in a single DB transaction.
+  await db.transaction(async (tx) => {
+    // Close old contract
+    await tx
+      .update(agentExecutionContracts)
+      .set({ endsAt: now })
+      .where(eq(agentExecutionContracts.id, activeContract.id));
+
+    // Create new contract (pre-funded)
+    await tx.insert(agentExecutionContracts).values({
+      id: newContractId,
+      agentId: input.agentId,
+      budgetUsd: input.newBudgetUsd,
+      autoRenew: activeContract.autoRenew,
       fundedAt: now,
-    })
-    .where(eq(agentExecutionContracts.id, newContractId));
+      startsAt: now,
+      endsAt: now + WEEK_MS,
+      createdAt: now,
+    });
+  });
 
   return {
     agentId: input.agentId,
