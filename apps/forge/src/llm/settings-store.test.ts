@@ -94,7 +94,7 @@ describe('llm/settings-store', () => {
       expect(result).toEqual([]);
     });
 
-    it('maps DB rows to profile shape and decrypts apiKey', async () => {
+    it('redacts apiKey in list response for security', async () => {
       const row = createMockProfileRow({
         id: 'p-id-1',
         name: 'My Profile',
@@ -118,7 +118,7 @@ describe('llm/settings-store', () => {
         name: 'My Profile',
         modelKey: 'claude-3',
         baseUrl: 'https://api.anthropic.com',
-        apiKey: 'sk-secret123',
+        apiKey: null,
         contractCostMultiplier: 1.5,
         isEnabled: true,
         createdAt: 1700000000000,
@@ -179,7 +179,7 @@ describe('llm/settings-store', () => {
 
       expect(result.profileId).toBe('found-profile');
       expect(result.name).toBe('Found Profile');
-      expect(result.apiKey).toBe('abc123');
+      expect(result.apiKey).toBe(null);
     });
   });
 

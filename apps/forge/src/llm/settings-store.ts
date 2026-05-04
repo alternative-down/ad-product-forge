@@ -238,7 +238,7 @@ function toProfileRecord(row: LlmProfile) {
     ...rest,
     profileId: id,
     baseUrl: rest.baseUrl ?? null,
-    apiKey: encryptedApiKey ? decryptSecret(encryptedApiKey) : '',
+    apiKey: null,
     isEnabled: isEnabled === 1,
   };
 }
