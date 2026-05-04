@@ -1,4 +1,5 @@
 import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 
@@ -21,27 +22,37 @@ export function createAgentContractStore(db: Database) {
   }
 
   async function setExecutionState(agentId: string, executionState: 'idle' | 'running' | 'absent') {
-    await db
-      .update(agents)
-      .set({
-        executionState,
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        updatedAt: Date.now(),
-      })
-      .where(eq(agents.id, agentId));
+    try {
+      await db
+        .update(agents)
+        .set({
+          executionState,
+          lastExecutionError: null,
+          lastExecutionErrorAt: null,
+          updatedAt: Date.now(),
+        })
+        .where(eq(agents.id, agentId));
+    } catch (error) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'setExecutionState(' + executionState + ') failed: ' + (error instanceof Error ? error.message : String(error)) });
+      throw error;
+    }
   }
 
   async function setExecutionAbsent(agentId: string, error: string) {
-    await db
-      .update(agents)
-      .set({
-        executionState: 'absent',
-        lastExecutionError: error,
-        lastExecutionErrorAt: Date.now(),
-        updatedAt: Date.now(),
-      })
-      .where(eq(agents.id, agentId));
+    try {
+      await db
+        .update(agents)
+        .set({
+          executionState: 'absent',
+          lastExecutionError: error,
+          lastExecutionErrorAt: Date.now(),
+          updatedAt: Date.now(),
+        })
+        .where(eq(agents.id, agentId));
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'setExecutionAbsent failed: ' + (err instanceof Error ? err.message : String(err)) });
+      throw err;
+    }
   }
 
   async function getRunnableContract(agentId: string) {
@@ -181,7 +192,12 @@ export function createAgentContractStore(db: Database) {
       createdAt: Date.now(),
     } as const;
 
-    await db.insert(agentExecutionContracts).values(nextContract);
+    try {
+      await db.insert(agentExecutionContracts).values(nextContract);
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'renewContract insert failed: ' + (err instanceof Error ? err.message : String(err)) });
+      throw err;
+    }
     return nextContract;
   }
 
@@ -198,21 +214,31 @@ export function createAgentContractStore(db: Database) {
 
     const now = Date.now();
 
-    await companyCashOperations.recordCashOut({
-      type: 'agent-contract-funding',
-      amountUsd: contract.budgetUsd,
-      description: `Contract funding for ${contract.agentId}`,
-      referenceType: 'agent-execution-contract',
-      referenceId: contract.id,
-      effectiveAt: now,
-    });
+    try {
+      await companyCashOperations.recordCashOut({
+        type: 'agent-contract-funding',
+        amountUsd: contract.budgetUsd,
+        description: `Contract funding for ${contract.agentId}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: contract.id,
+        effectiveAt: now,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContract recordCashOut failed: ' + (err instanceof Error ? err.message : String(err)) });
+      throw err;
+    }
 
-    await db
-      .update(agentExecutionContracts)
-      .set({
-        fundedAt: now,
-      })
-      .where(eq(agentExecutionContracts.id, contract.id));
+    try {
+      await db
+        .update(agentExecutionContracts)
+        .set({
+          fundedAt: now,
+        })
+        .where(eq(agentExecutionContracts.id, contract.id));
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContract update failed: ' + (err instanceof Error ? err.message : String(err)) });
+      throw err;
+    }
 
     return {
       ...contract,
