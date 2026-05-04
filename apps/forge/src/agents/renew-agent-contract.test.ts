@@ -87,7 +87,10 @@ describe('renewAgentContract', () => {
   it('records cash out for new contract funding', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
     await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
-    expect(mockRecordCashOut).toHaveBeenCalledWith(expect.objectContaining({ type: 'agent-contract-renewal-funding', amountUsd: 150 }));
+    expect(mockRecordCashOut).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'agent-contract-renewal-funding', amountUsd: 150 }),
+      expect.any(Object),
+    );
   });
 
   it('wraps contract lifecycle in transaction', async () => {

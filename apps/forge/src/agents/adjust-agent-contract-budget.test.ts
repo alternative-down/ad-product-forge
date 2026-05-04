@@ -23,15 +23,16 @@ import { adjustAgentContractBudget } from './adjust-agent-contract-budget';
 import { agentExecutionContracts } from '../database/schema';
 
 function createMockDb(contract: Record<string, unknown> | null) {
+  const tx = {
+    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
+  };
   return {
-    query: {
-      agentExecutionContracts: {
-        findFirst: vi.fn().mockResolvedValue(contract),
-      },
-    },
-    update: vi.fn().mockReturnValue({
-      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
-    }),
+    query: { agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract) } },
+    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
+    transaction: vi.fn().mockImplementation(async (cb) => cb(tx)),
+    _tx: tx,
   };
 }
 
@@ -58,16 +59,17 @@ describe('adjustAgentContractBudget', () => {
   it('records cash out on budget increase', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
     await adjustAgentContractBudget(db as any, { agentId: 'agent-1', newBudgetUsd: 200 });
-    expect(mockRecordCashOut).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'agent-contract-budget-increase', amountUsd: 100,
-      referenceType: 'agent-execution-contract', referenceId: 'contract-1',
-    }));
+    expect(mockRecordCashOut).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'agent-contract-budget-increase', amountUsd: 100, referenceType: 'agent-execution-contract', referenceId: 'contract-1' }),
+      expect.any(Object),
+    );
   });
 
   it('updates contract in database on budget increase', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
     await adjustAgentContractBudget(db as any, { agentId: 'agent-1', newBudgetUsd: 200 });
-    expect(db.update).toHaveBeenCalledWith(agentExecutionContracts);
+    expect(db.transaction).toHaveBeenCalled();
+    expect((db as any)._tx.update).toHaveBeenCalledWith(agentExecutionContracts);
   });
 
   it('throws on budget increase when insufficient cash', async () => {
@@ -80,10 +82,10 @@ describe('adjustAgentContractBudget', () => {
   it('records cash in on budget decrease', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
     await adjustAgentContractBudget(db as any, { agentId: 'agent-1', newBudgetUsd: 80 });
-    expect(mockRecordCashIn).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'agent-contract-budget-decrease', amountUsd: 20,
-      referenceType: 'agent-execution-contract', referenceId: 'contract-1',
-    }));
+    expect(mockRecordCashIn).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'agent-contract-budget-decrease', amountUsd: 20, referenceType: 'agent-execution-contract', referenceId: 'contract-1' }),
+      expect.any(Object),
+    );
   });
 
   it('throws on budget decrease below spent amount', async () => {
@@ -121,7 +123,8 @@ describe('adjustAgentContractBudget', () => {
   it('updates contract with new budget amount on increase', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 50 }));
     await adjustAgentContractBudget(db as any, { agentId: 'agent-1', newBudgetUsd: 75 });
-    expect(db.update).toHaveBeenCalledWith(agentExecutionContracts);
+    expect(db.transaction).toHaveBeenCalled();
+    expect((db as any)._tx.update).toHaveBeenCalledWith(agentExecutionContracts);
   });
 
   it('calls findFirst on agentExecutionContracts', async () => {
@@ -141,6 +144,9 @@ describe('adjustAgentContractBudget', () => {
   it('calculates refund amount correctly on decrease', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
     await adjustAgentContractBudget(db as any, { agentId: 'agent-1', newBudgetUsd: 60 });
-    expect(mockRecordCashIn).toHaveBeenCalledWith(expect.objectContaining({ amountUsd: 40 }));
+    expect(mockRecordCashIn).toHaveBeenCalledWith(
+      expect.objectContaining({ amountUsd: 40 }),
+      expect.any(Object),
+    );
   });
 });
