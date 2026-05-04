@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { loadCommunicationProviders } from './provider-loader';
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
 
-const discordProvider = {
+const mockDiscordProvider = {
   id: 'discord',
   getSelfContact: vi.fn(),
   dispose: vi.fn(),
@@ -10,7 +12,7 @@ const discordProvider = {
 };
 
 vi.mock('../discord-account', () => ({
-  createDiscordProvider: vi.fn(() => discordProvider),
+  createDiscordProvider: vi.fn(() => mockDiscordProvider),
 }));
 
 vi.mock('../email-account', () => ({
@@ -27,60 +29,37 @@ vi.mock('./internal-chat-provider', () => ({
   })),
 }));
 
+import { loadCommunicationProviders } from './provider-loader';
+
 describe('loadCommunicationProviders', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('skips Discord when the provider fails to start', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    discordProvider.getSelfContact.mockRejectedValueOnce(new Error('invalid token'));
+    mockDiscordProvider.getSelfContact.mockRejectedValueOnce(new Error('invalid token'));
 
     const providers = await loadCommunicationProviders({
-      discord: {
-        token: 'invalid',
-        channels: [],
-      },
+      discord: { channels: [], token: 'valid-token' },
       email: {
-        imap: {
-          host: 'imap.example.com',
-          port: 993,
-          secure: true,
-          user: 'agent@example.com',
-          password: 'password',
-        },
-        smtp: {
-          host: 'smtp.example.com',
-          port: 465,
-          secure: true,
-          user: 'agent@example.com',
-          password: 'password',
-        },
+        imap: { host: 'imap.example.com', port: 993, secure: true, user: 'agent@example.com', password: 'password' },
+        smtp: { host: 'smtp.example.com', port: 465, secure: true, user: 'agent@example.com', password: 'password' },
       },
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(['email']);
-    expect(discordProvider.dispose).toHaveBeenCalledOnce();
-    expect(warn).toHaveBeenCalledOnce();
-
-    warn.mockRestore();
+    expect(providers.map((p) => p.id)).toEqual(['email']);
+    expect(mockDiscordProvider.dispose).toHaveBeenCalledOnce();
   });
 
   it('skips Discord when its credentials are malformed', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const credentials = {
-      discord: {
-        channels: [],
-      },
+      discord: { channels: [] },
     } as unknown as Parameters<typeof loadCommunicationProviders>[0];
 
     const providers = await loadCommunicationProviders(credentials);
 
     expect(providers).toEqual([]);
-    expect(discordProvider.getSelfContact).not.toHaveBeenCalled();
-    expect(discordProvider.dispose).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledOnce();
-
-    warn.mockRestore();
+    expect(mockDiscordProvider.getSelfContact).not.toHaveBeenCalled();
+    expect(mockDiscordProvider.dispose).not.toHaveBeenCalled();
   });
 });

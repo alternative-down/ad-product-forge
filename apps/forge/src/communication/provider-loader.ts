@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { forgeDebug } from '@forge-runtime/core';
 import type { CommunicationProvider } from '@forge-runtime/core';
 import { createDiscordProvider } from '../discord-account';
 import { createEmailProvider } from '../email-account';
@@ -131,7 +132,7 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
-      console.warn('[ProviderLoader] Skipping Discord provider because it failed to start:', error);
+      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error } });
     }
   }
 
