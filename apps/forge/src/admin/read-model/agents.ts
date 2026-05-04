@@ -28,7 +28,7 @@ import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 import type { Database } from '../../database/index';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { createMicroErpReadModel } from '../../micro-erp/read-model';
-import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/agent-long-term-memory-recall';
+import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/ltm/recall';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 import { forgeDebug } from '@forge-runtime/core';
 import {
