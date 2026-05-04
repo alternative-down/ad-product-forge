@@ -2,7 +2,8 @@ import http, { type IncomingHttpHeaders } from 'node:http';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
 
-export const MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
+export const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
+export const MAX_BODY_BYTES = parseInt(process.env.FORGE_HTTP_MAX_BODY_BYTES ?? '', 10) || DEFAULT_MAX_BODY_BYTES;
 
 type BodyResult =
   | { isRejected: true }
@@ -63,12 +64,16 @@ export type CreateForgeHttpServerConfig = {
   /** Explicit list of allowed CORS origins for admin routes. When set, only these
    *  origins receive access-control-allow-origin on admin responses. */
   allowedOrigins?: string[];
+  /** Maximum request body size in bytes. Defaults to FORGE_HTTP_MAX_BODY_BYTES env var
+   *  or 1 MB when not set. */
+  maxBodyBytes?: number;
 };
 
 export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
   const allowedOrigins = config.allowedOrigins?.length
     ? new Set(config.allowedOrigins)
     : null;
+  const limit = config.maxBodyBytes ?? MAX_BODY_BYTES;
   const routes = new Map<RouteKey, HttpHandler>();
   const server = http.createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -131,7 +136,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
       }
     }
 
-    const bodyResult = await readBodyWithLimit(req);
+    const bodyResult = await readBodyWithLimit(req, limit);
 
     if (bodyResult.isRejected) {
       res.writeHead(413, {
@@ -223,6 +228,19 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
     }
   }
 
+  let actualPort = config.port;
+
+  async function start() {
+    await new Promise<void>((resolve, reject) => {
+      server.on('error', reject);
+      server.listen(config.port, () => {
+        server.off('error', reject);
+        actualPort = (server.address() as { port: number }).port;
+        resolve();
+      });
+    });
+  }
+
   async function stop() {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => {
@@ -262,7 +280,7 @@ function getHeaderValue(value: string | string[] | undefined): string | undefine
   return undefined;
 }
 
-function readBodyWithLimit(request: http.IncomingMessage): Promise<BodyResult> {
+function readBodyWithLimit(request: http.IncomingMessage, limit: number): Promise<BodyResult> {
   return new Promise<BodyResult>((resolve) => {
     const chunks: Buffer[] = [];
     let bytesReceived = 0;
@@ -271,8 +289,12 @@ function readBodyWithLimit(request: http.IncomingMessage): Promise<BodyResult> {
       const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
       bytesReceived += buf.byteLength;
 
-      if (bytesReceived > MAX_BODY_BYTES) {
-        request.destroy();
+      if (bytesReceived > limit) {
+        // Stop pushing chunks but do NOT destroy — destroying the socket
+        // causes ECONNRESET before the 413 response can be written.
+        // Removing the data listener is sufficient to stop collection.
+        request.removeAllListeners('data');
+        request.removeAllListeners('end');
         resolve({ isRejected: true });
         return;
       }

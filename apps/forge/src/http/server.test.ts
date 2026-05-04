@@ -301,6 +301,50 @@ describe('createForgeHttpServer', () => {
       expect(res.status).toBe(200);
       expect(JSON.parse(res.body)).toBe(512 * 1024);
     });
+
+    it('returns 413 for body that exceeds the limit', async () => {
+      server.registerRoute({
+        method: 'POST',
+        path: '/size-check',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+
+      // 2MB body - exceeds the 1MB default limit
+      const body = 'x'.repeat(2 * 1024 * 1024);
+      const res = await makeRawRequest('POST', '/size-check', body);
+      expect(res.status).toBe(413);
+      expect(JSON.parse(res.body)).toEqual({ error: 'Request body too large' });
+    });
+
+    it('respects custom maxBodyBytes from server config', async () => {
+      const smallServer = createForgeHttpServer({ port: 0, maxBodyBytes: 512 * 1024 });
+      smallServer.registerRoute({
+        method: 'POST',
+        path: '/small-limit',
+        handler: async (req) => ({ status: 200, body: String(req.body.length) }),
+      });
+      await smallServer.start();
+
+      try {
+        const savedPort = testPort;
+        testPort = smallServer.port as number;
+        try {
+          const body = 'z'.repeat(256 * 1024);
+          const res = await makeRawRequest('POST', '/small-limit', body);
+          expect(res.status).toBe(200);
+          expect(JSON.parse(res.body)).toBe(256 * 1024);
+
+          const largeBody = 'z'.repeat(768 * 1024);
+          const res2 = await makeRawRequest('POST', '/small-limit', largeBody);
+          expect(res2.status).toBe(413);
+          expect(JSON.parse(res2.body)).toEqual({ error: 'Request body too large' });
+        } finally {
+          testPort = savedPort;
+        }
+      } finally {
+        await smallServer.stop();
+      }
+    });
   });
 
   describe('CORS headers', () => {
