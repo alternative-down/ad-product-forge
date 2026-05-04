@@ -187,3 +187,12 @@ export async function main() {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }
+main().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('[forge-main] Fatal error during startup:', error instanceof Error ? error.message : String(error));
+  if (error instanceof Error && error.stack) {
+    // eslint-disable-next-line no-console
+    console.error(error.stack);
+  }
+  process.exit(1);
+});
