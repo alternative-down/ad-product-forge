@@ -164,55 +164,60 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-provider/upsert',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
-      if (body.providerType === 'discord') {
-        const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
+      try {
+        const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
+        if (body.providerType === 'discord') {
+          const deleteSignal = discordProviderDeleteSignalSchema.parse(body.credentials);
 
-        if (deleteSignal.token.trim().length === 0) {
-          await input.db
-            .delete(agentProviders)
-            .where(
-              and(
-                eq(agentProviders.agentId, body.agentId),
-                eq(agentProviders.providerType, body.providerType),
-              ),
-            );
+          if (deleteSignal.token.trim().length === 0) {
+            await input.db
+              .delete(agentProviders)
+              .where(
+                and(
+                  eq(agentProviders.agentId, body.agentId),
+                  eq(agentProviders.providerType, body.providerType),
+                ),
+              );
 
-          await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+            await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
-          return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+            return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+          }
         }
-      }
 
-      const credentials = parseProviderCredentials(body.providerType, body.credentials);
-      const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
-      const existing = await input.db.query.agentProviders.findFirst({
-        where: and(
-          eq(agentProviders.agentId, body.agentId),
-          eq(agentProviders.providerType, body.providerType),
-        ),
-      });
-
-      if (existing) {
-        await input.db
-          .update(agentProviders)
-          .set({
-            encryptedCredentials,
-          })
-          .where(eq(agentProviders.id, existing.id));
-      } else {
-        await input.db.insert(agentProviders).values({
-          id: createId(),
-          agentId: body.agentId,
-          providerType: body.providerType,
-          encryptedCredentials,
-          createdAt: Date.now(),
+        const credentials = parseProviderCredentials(body.providerType, body.credentials);
+        const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
+        const existing = await input.db.query.agentProviders.findFirst({
+          where: and(
+            eq(agentProviders.agentId, body.agentId),
+            eq(agentProviders.providerType, body.providerType),
+          ),
         });
+
+        if (existing) {
+          await input.db
+            .update(agentProviders)
+            .set({
+              encryptedCredentials,
+            })
+            .where(eq(agentProviders.id, existing.id));
+        } else {
+          await input.db.insert(agentProviders).values({
+            id: createId(),
+            agentId: body.agentId,
+            providerType: body.providerType,
+            encryptedCredentials,
+            createdAt: Date.now(),
+          });
+        }
+
+        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
     },
   });
 
@@ -220,20 +225,25 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-provider/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
+      try {
+        const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
 
-      await input.db
-        .delete(agentProviders)
-        .where(
-          and(
-            eq(agentProviders.agentId, body.agentId),
-            eq(agentProviders.providerType, body.providerType),
-          ),
-        );
+        await input.db
+          .delete(agentProviders)
+          .where(
+            and(
+              eq(agentProviders.agentId, body.agentId),
+              eq(agentProviders.providerType, body.providerType),
+            ),
+          );
 
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+        return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -241,52 +251,14 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-mcp/create',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
-      const timestamp = new Date().toISOString();
-      const serverId = createId();
-      const configId = createId();
+      try {
+        const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
+        const timestamp = new Date().toISOString();
+        const serverId = createId();
+        const configId = createId();
 
-      await input.db.insert(mcpServerConfigs).values({
-        id: serverId,
-        name: body.name,
-        description: normalizeOptionalText(body.description),
-        transport: body.transport,
-        command: body.transport === 'stdio' ? body.command : null,
-        args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-        envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
-        url: body.transport === 'http_streamable' ? body.url : null,
-        headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
-        version: 1,
-        isActive: body.isActive ? 1 : 0,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-
-      await input.db.insert(agentMcpConfigs).values({
-        id: configId,
-        agentId: body.agentId,
-        serverId,
-        isActive: body.isActive ? 1 : 0,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-
-      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-mcp/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
-      const timestamp = new Date().toISOString();
-
-      await input.db
-        .update(mcpServerConfigs)
-        .set({
+        await input.db.insert(mcpServerConfigs).values({
+          id: serverId,
           name: body.name,
           description: normalizeOptionalText(body.description),
           transport: body.transport,
@@ -295,22 +267,70 @@ export function registerAdminRoutes(input: {
           envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
           url: body.transport === 'http_streamable' ? body.url : null,
           headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+          version: 1,
           isActive: body.isActive ? 1 : 0,
+          createdAt: timestamp,
           updatedAt: timestamp,
-        })
-        .where(eq(mcpServerConfigs.id, body.serverId));
+        });
 
-      await input.db
-        .update(agentMcpConfigs)
-        .set({
+        await input.db.insert(agentMcpConfigs).values({
+          id: configId,
+          agentId: body.agentId,
+          serverId,
           isActive: body.isActive ? 1 : 0,
+          createdAt: timestamp,
           updatedAt: timestamp,
-        })
-        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+        });
 
-      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+        return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Exception ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-mcp/update',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+        const timestamp = new Date().toISOString();
+
+        await input.db
+          .update(mcpServerConfigs)
+          .set({
+            name: body.name,
+            description: normalizeOptionalText(body.description),
+            transport: body.transport,
+            command: body.transport === 'stdio' ? body.command : null,
+            args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+            envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+            url: body.transport === 'http_streamable' ? body.url : null,
+            headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+            isActive: body.isActive ? 1 : 0,
+            updatedAt: timestamp,
+          })
+          .where(eq(mcpServerConfigs.id, body.serverId));
+
+        await input.db
+          .update(agentMcpConfigs)
+          .set({
+            isActive: body.isActive ? 1 : 0,
+            updatedAt: timestamp,
+          })
+          .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -318,26 +338,31 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-mcp/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+      try {
+        const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
 
-      await input.db
-        .delete(agentMcpConfigs)
-        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+        await input.db
+          .delete(agentMcpConfigs)
+          .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
 
-      const remainingLinks = await input.db.query.agentMcpConfigs.findMany({
-        where: eq(agentMcpConfigs.serverId, body.serverId),
-        columns: {
-          id: true,
-        },
-      });
+        const remainingLinks = await input.db.query.agentMcpConfigs.findMany({
+          where: eq(agentMcpConfigs.serverId, body.serverId),
+          columns: {
+            id: true,
+          },
+        });
 
-      if (remainingLinks.length === 0) {
-        await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
+        if (remainingLinks.length === 0) {
+          await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
+        }
+
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
     },
   });
 
@@ -345,48 +370,53 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-mcp/assign',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
-      const existing = await input.db.query.agentMcpConfigs.findFirst({
-        where: and(
-          eq(agentMcpConfigs.agentId, body.agentId),
-          eq(agentMcpConfigs.serverId, body.serverId),
-        ),
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+        const existing = await input.db.query.agentMcpConfigs.findFirst({
+          where: and(
+            eq(agentMcpConfigs.agentId, body.agentId),
+            eq(agentMcpConfigs.serverId, body.serverId),
+          ),
+        });
 
-      if (existing) {
-        await input.db
-          .update(agentMcpConfigs)
-          .set({
-            isActive: body.isActive ? 1 : 0,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(agentMcpConfigs.id, existing.id));
+        if (existing) {
+          await input.db
+            .update(agentMcpConfigs)
+            .set({
+              isActive: body.isActive ? 1 : 0,
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(agentMcpConfigs.id, existing.id));
+
+          await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+          return jsonResponse({
+            success: true,
+            agentId: body.agentId,
+            configId: existing.id,
+            serverId: body.serverId,
+          });
+        }
+
+        const timestamp = new Date().toISOString();
+        const configId = createId();
+
+        await input.db.insert(agentMcpConfigs).values({
+          id: configId,
+          agentId: body.agentId,
+          serverId: body.serverId,
+          isActive: body.isActive ? 1 : 0,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
 
         await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
 
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          configId: existing.id,
-          serverId: body.serverId,
-        });
+        return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      const timestamp = new Date().toISOString();
-      const configId = createId();
-
-      await input.db.insert(agentMcpConfigs).values({
-        id: configId,
-        agentId: body.agentId,
-        serverId: body.serverId,
-        isActive: body.isActive ? 1 : 0,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-
-      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
     },
   });
 
@@ -394,24 +424,29 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-mcp/set-active',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+      try {
+        const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
 
-      await input.db
-        .update(agentMcpConfigs)
-        .set({
-          isActive: body.isActive ? 1 : 0,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
+        await input.db
+          .update(agentMcpConfigs)
+          .set({
+            isActive: body.isActive ? 1 : 0,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
 
-      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
 
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        configId: body.configId,
-        isActive: body.isActive,
-      });
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          configId: body.configId,
+          isActive: body.isActive,
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -419,23 +454,28 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-mcp/detach',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
-      const config = await input.db.query.agentMcpConfigs.findFirst({
-        where: and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)),
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+        const config = await input.db.query.agentMcpConfigs.findFirst({
+          where: and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)),
+        });
 
-      if (!config) {
-        return jsonResponse({ error: `Agent MCP config not found: ${body.configId}` }, 404);
+        if (!config) {
+          return jsonResponse({ error: `Agent MCP config not found: ${body.configId}` }, 404);
+        }
+
+        await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, body.configId));
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          configId: body.configId,
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, body.configId));
-      await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        configId: body.configId,
-      });
     },
   });
 
@@ -443,31 +483,36 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-skills/upload',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
-      const agent = await input.db.query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+        const agent = await input.db.query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+        });
 
-      if (!agent) {
-        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        if (!agent) {
+          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        }
+
+        const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
+          workspaceBasePath: input.workspaceBasePath,
+          agent,
+          zipBase64: body.archiveBase64,
+        });
+
+        // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
+        // Reload is acceptable here because skill changes are rare, but this is the place to
+        // switch to explicit skill refresh if we want to avoid full runtime recreation later.
+        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          installedSkillNames,
+        }, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
-        workspaceBasePath: input.workspaceBasePath,
-        agent,
-        zipBase64: body.archiveBase64,
-      });
-
-      // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
-      // Reload is acceptable here because skill changes are rare, but this is the place to
-      // switch to explicit skill refresh if we want to avoid full runtime recreation later.
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        installedSkillNames,
-      }, 201);
     },
   });
 
@@ -475,31 +520,36 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-skills/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
-      const agent = await input.db.query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+        const agent = await input.db.query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+        });
 
-      if (!agent) {
-        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        if (!agent) {
+          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        }
+
+        await deleteAgentWorkspaceSkill({
+          workspaceBasePath: input.workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+
+        // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
+        // Reload is acceptable here because skill changes are rare, but this is the place to
+        // switch to explicit skill refresh if we want to avoid full runtime recreation later.
+        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          skillName: body.skillName,
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      await deleteAgentWorkspaceSkill({
-        workspaceBasePath: input.workspaceBasePath,
-        agent,
-        skillName: body.skillName,
-      });
-
-      // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
-      // Reload is acceptable here because skill changes are rare, but this is the place to
-      // switch to explicit skill refresh if we want to avoid full runtime recreation later.
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        skillName: body.skillName,
-      });
     },
   });
 
@@ -507,28 +557,33 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-skills/install-global',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-      const agent = await input.db.query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+        const agent = await input.db.query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+        });
 
-      if (!agent) {
-        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        if (!agent) {
+          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        }
+
+        await installGlobalSkillToAgentWorkspace({
+          workspaceBasePath: input.workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+
+        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          skillName: body.skillName,
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      await installGlobalSkillToAgentWorkspace({
-        workspaceBasePath: input.workspaceBasePath,
-        agent,
-        skillName: body.skillName,
-      });
-
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        skillName: body.skillName,
-      });
     },
   });
 
@@ -536,26 +591,31 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-skills/publish-global',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-      const agent = await input.db.query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+        const agent = await input.db.query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+        });
 
-      if (!agent) {
-        return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        if (!agent) {
+          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
+        }
+
+        await publishAgentWorkspaceSkillToGlobalCatalog({
+          workspaceBasePath: input.workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          skillName: body.skillName,
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      await publishAgentWorkspaceSkillToGlobalCatalog({
-        workspaceBasePath: input.workspaceBasePath,
-        agent,
-        skillName: body.skillName,
-      });
-
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        skillName: body.skillName,
-      });
     },
   });
 
@@ -563,28 +623,33 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-schedule/create',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createScheduleSchema);
-      const scheduleInput = body.scheduleType === 'cron'
-        ? {
-            name: body.name,
-            description: body.description,
-            scheduleType: body.scheduleType,
-            cronExpression: body.cronExpression!,
-            timezone: body.timezone,
-            content: body.content,
-            wakeWhenRunning: body.wakeWhenRunning,
-          }
-        : {
-            name: body.name,
-            description: body.description,
-            scheduleType: body.scheduleType,
-            scheduledDate: body.scheduledDate!,
-            timezone: body.timezone,
-            content: body.content,
-            wakeWhenRunning: body.wakeWhenRunning,
-          };
-      const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
-      return jsonResponse(schedule, 201);
+      try {
+        const body = parseJsonBody(request.bodyText, createScheduleSchema);
+        const scheduleInput = body.scheduleType === 'cron'
+          ? {
+              name: body.name,
+              description: body.description,
+              scheduleType: body.scheduleType,
+              cronExpression: body.cronExpression!,
+              timezone: body.timezone,
+              content: body.content,
+              wakeWhenRunning: body.wakeWhenRunning,
+            }
+          : {
+              name: body.name,
+              description: body.description,
+              scheduleType: body.scheduleType,
+              scheduledDate: body.scheduledDate!,
+              timezone: body.timezone,
+              content: body.content,
+              wakeWhenRunning: body.wakeWhenRunning,
+            };
+        const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
+        return jsonResponse(schedule, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -592,19 +657,24 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-schedule/update',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateScheduleSchema);
-      const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
-        name: body.name,
-        description: body.description,
-        scheduleType: body.scheduleType,
-        cronExpression: body.cronExpression,
-        scheduledDate: body.scheduledDate,
-        timezone: body.timezone,
-        content: body.content,
-        wakeWhenRunning: body.wakeWhenRunning,
-        isActive: body.isActive,
-      });
-      return jsonResponse(schedule);
+      try {
+        const body = parseJsonBody(request.bodyText, updateScheduleSchema);
+        const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
+          name: body.name,
+          description: body.description,
+          scheduleType: body.scheduleType,
+          cronExpression: body.cronExpression,
+          scheduledDate: body.scheduledDate,
+          timezone: body.timezone,
+          content: body.content,
+          wakeWhenRunning: body.wakeWhenRunning,
+          isActive: body.isActive,
+        });
+        return jsonResponse(schedule);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -612,9 +682,14 @@ export function registerAdminRoutes(input: {
     method: 'POST',
     path: '/admin/agent-schedule/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
-      const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
+        const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
+        return jsonResponse(result);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
