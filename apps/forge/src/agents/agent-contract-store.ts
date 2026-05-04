@@ -198,21 +198,24 @@ export function createAgentContractStore(db: Database) {
 
     const now = Date.now();
 
-    await companyCashOperations.recordCashOut({
-      type: 'agent-contract-funding',
-      amountUsd: contract.budgetUsd,
-      description: `Contract funding for ${contract.agentId}`,
-      referenceType: 'agent-execution-contract',
-      referenceId: contract.id,
-      effectiveAt: now,
-    });
+    await db.transaction(async (tx) => {
+      await companyCashOperations.recordCashOut(
+        {
+          type: 'agent-contract-funding',
+          amountUsd: contract.budgetUsd,
+          description: `Contract funding for ${contract.agentId}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: contract.id,
+          effectiveAt: now,
+        },
+        tx,
+      );
 
-    await db
-      .update(agentExecutionContracts)
-      .set({
-        fundedAt: now,
-      })
-      .where(eq(agentExecutionContracts.id, contract.id));
+      await tx
+        .update(agentExecutionContracts)
+        .set({ fundedAt: now })
+        .where(eq(agentExecutionContracts.id, contract.id));
+    });
 
     return {
       ...contract,
