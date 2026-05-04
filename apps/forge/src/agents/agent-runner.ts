@@ -22,8 +22,6 @@ import {
   AGENT_CONTEXT_FILE_PATH,
 } from './constants';
 
-const NO_ACTION_NEEDED_PREFIX = 'NO_ACTION_NEEDED';
-const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
 import {
   delay,
@@ -42,6 +40,9 @@ import {
   hasExactControlDirective,
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
+import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, nextBackoff, resetBackoffState, calculateDelayMs } from './agent-runner-state';
+import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
+
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants.js';
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
@@ -132,6 +133,9 @@ export function createAgentRunner(
   const messageManager = createMessageManager(messageManagerState, formatPendingRunEvents);
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
+
+  const epochState = { activeRunEpoch, activeStepEpoch, activeGenerateToken, activeRunId };
+  const backoffState = { backoffMs, instant, nextStepAt };
 
   async function reloadRuntimeForNewRun(runEpoch: number) {
     if (!options.reloadRuntime) {
@@ -486,7 +490,8 @@ export function createAgentRunner(
     }
 
     executing = true;
-    activeStepEpoch = runEpoch;
+    advanceStepEpoch(epochState);
+    activeStepEpoch = epochState.activeStepEpoch;
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
     let prompt = '';
@@ -1259,7 +1264,8 @@ export function createAgentRunner(
   }
 
   function startGenerateAttempt(controller: AbortController) {
-    activeGenerateToken += 1;
+    advanceGenerateToken(epochState);
+    activeGenerateToken = epochState.activeGenerateToken;
     currentGenerateAbortController = controller;
     return activeGenerateToken;
   }
