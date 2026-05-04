@@ -10,75 +10,159 @@ vi.mock('@forge-runtime/core', () => ({
 }));
 
 const mockCoolifyManager = {
-  getCredentials: vi.fn(),
-  getServers: vi.fn(),
+  listApplications: vi.fn(),
+  startApplication: vi.fn(),
+  stopApplication: vi.fn(),
+  getApplicationLogs: vi.fn(),
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
+const TOOL_IDS = [
+  'list_coolify_applications',
+  'start_coolify_application',
+  'stop_coolify_application',
+  'get_coolify_application_logs',
+] as const;
+
 describe('createCoolifyTools', () => {
-  it('returns get_coolify_credentials when permission is granted', () => {
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_credentials']));
-    expect(Object.keys(tools)).toContain('get_coolify_credentials');
+  describe('tool availability', () => {
+    for (const toolId of TOOL_IDS) {
+      it(`includes ${toolId} when permission is granted`, () => {
+        const tools = createCoolifyTools(mockCoolifyManager, new Set([toolId]));
+        expect(Object.keys(tools)).toContain(toolId);
+      });
+
+      it(`does NOT include ${toolId} when no permission`, () => {
+        const tools = createCoolifyTools(mockCoolifyManager, new Set(['other_tool']));
+        expect(Object.keys(tools)).not.toContain(toolId);
+      });
+
+      it(`includes ${toolId} when allowedToolIds is null (unrestricted)`, () => {
+        const tools = createCoolifyTools(mockCoolifyManager, null);
+        expect(Object.keys(tools)).toContain(toolId);
+      });
+
+      it(`includes ${toolId} when allowedToolIds is undefined`, () => {
+        const tools = createCoolifyTools(mockCoolifyManager, undefined);
+        expect(Object.keys(tools)).toContain(toolId);
+      });
+
+      it(`does NOT include ${toolId} when allowedToolIds is empty set`, () => {
+        const tools = createCoolifyTools(mockCoolifyManager, new Set());
+        expect(Object.keys(tools)).not.toContain(toolId);
+      });
+    }
   });
 
-  it('does NOT include tool when no permission', () => {
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['other_tool']));
-    expect(Object.keys(tools)).not.toContain('get_coolify_credentials');
+  describe('list_coolify_applications', () => {
+    it('calls coolify.listApplications()', async () => {
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['list_coolify_applications']));
+      const execute = (tools.list_coolify_applications as { execute: () => Promise<unknown> }).execute;
+      await execute();
+      expect(mockCoolifyManager.listApplications).toHaveBeenCalledOnce();
+    });
+
+    it('returns success with applications on success', async () => {
+      const applications = [{ uuid: 'app-1', name: 'Test App' }];
+      mockCoolifyManager.listApplications.mockResolvedValue(applications);
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['list_coolify_applications']));
+      const execute = (tools.list_coolify_applications as { execute: () => Promise<unknown> }).execute;
+      const result = await execute();
+      expect(result).toEqual({ success: true, applications });
+    });
+
+    it('returns success:false on error', async () => {
+      mockCoolifyManager.listApplications.mockRejectedValue(new Error('Coolify unavailable'));
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['list_coolify_applications']));
+      const execute = (tools.list_coolify_applications as { execute: () => Promise<unknown> }).execute;
+      const result = await execute();
+      expect(result).toMatchObject({ success: false, error: 'Coolify unavailable' });
+    });
   });
 
-  it('includes tool when allowedToolIds is null (unrestricted)', () => {
-    const tools = createCoolifyTools(mockCoolifyManager, null);
-    expect(Object.keys(tools)).toContain('get_coolify_credentials');
+  describe('start_coolify_application', () => {
+    it('calls coolify.startApplication() with correct UUID', async () => {
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['start_coolify_application']));
+      const execute = (tools.start_coolify_application as { execute: (input: unknown) => Promise<unknown> }).execute;
+      await execute({ applicationUuid: 'app-abc' });
+      expect(mockCoolifyManager.startApplication).toHaveBeenCalledWith('app-abc');
+    });
+
+    it('returns success:true with UUID on success', async () => {
+      mockCoolifyManager.startApplication.mockResolvedValue(undefined);
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['start_coolify_application']));
+      const execute = (tools.start_coolify_application as { execute: (input: unknown) => Promise<unknown> }).execute;
+      const result = await execute({ applicationUuid: 'app-xyz' });
+      expect(result).toEqual({ success: true, applicationUuid: 'app-xyz' });
+    });
+
+    it('returns success:false with error on exception', async () => {
+      mockCoolifyManager.startApplication.mockRejectedValue(new Error('Start failed'));
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['start_coolify_application']));
+      const execute = (tools.start_coolify_application as { execute: (input: unknown) => Promise<unknown> }).execute;
+      const result = await execute({ applicationUuid: 'app-err' });
+      expect(result).toMatchObject({ success: false, applicationUuid: 'app-err', error: 'Start failed' });
+    });
   });
 
-  it('includes tool when allowedToolIds is undefined', () => {
-    const tools = createCoolifyTools(mockCoolifyManager, undefined);
-    expect(Object.keys(tools)).toContain('get_coolify_credentials');
+  describe('stop_coolify_application', () => {
+    it('calls coolify.stopApplication() with correct UUID', async () => {
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['stop_coolify_application']));
+      const execute = (tools.stop_coolify_application as { execute: (input: unknown) => Promise<unknown> }).execute;
+      await execute({ applicationUuid: 'app-stop' });
+      expect(mockCoolifyManager.stopApplication).toHaveBeenCalledWith('app-stop');
+    });
+
+    it('returns success:true with UUID on success', async () => {
+      mockCoolifyManager.stopApplication.mockResolvedValue(undefined);
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['stop_coolify_application']));
+      const execute = (tools.stop_coolify_application as { execute: (input: unknown) => Promise<unknown> }).execute;
+      const result = await execute({ applicationUuid: 'app-stopped' });
+      expect(result).toEqual({ success: true, applicationUuid: 'app-stopped' });
+    });
+
+    it('returns success:false with error on exception', async () => {
+      mockCoolifyManager.stopApplication.mockRejectedValue(new Error('Stop failed'));
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['stop_coolify_application']));
+      const execute = (tools.stop_coolify_application as { execute: (input: unknown) => Promise<unknown> }).execute;
+      const result = await execute({ applicationUuid: 'app-err' });
+      expect(result).toMatchObject({ success: false, applicationUuid: 'app-err', error: 'Stop failed' });
+    });
   });
 
-  it('does NOT include tool when allowedToolIds is empty set', () => {
-    const tools = createCoolifyTools(mockCoolifyManager, new Set());
-    expect(Object.keys(tools)).not.toContain('get_coolify_credentials');
+  describe('get_coolify_application_logs', () => {
+    it('calls coolify.getApplicationLogs() with applicationUuid and lines', async () => {
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_application_logs']));
+      const execute = (tools.get_coolify_application_logs as { execute: (input: unknown) => Promise<unknown> }).execute;
+      await execute({ applicationUuid: 'app-logs', lines: 50 });
+      expect(mockCoolifyManager.getApplicationLogs).toHaveBeenCalledWith({ applicationUuid: 'app-logs', lines: 50 });
+    });
+
+    it('returns success:false with error on exception', async () => {
+      mockCoolifyManager.getApplicationLogs.mockRejectedValue(new Error('Logs unavailable'));
+      const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_application_logs']));
+      const execute = (tools.get_coolify_application_logs as { execute: (input: unknown) => Promise<unknown> }).execute;
+      const result = await execute({ applicationUuid: 'app-logs' });
+      expect(result).toMatchObject({ success: false, applicationUuid: 'app-logs', error: 'Logs unavailable' });
+    });
   });
 
-  it('tool has correct id', () => {
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_credentials']));
-    expect(tools.get_coolify_credentials.id).toBe('get_coolify_credentials');
-  });
+  describe('no raw credentials exposure', () => {
+    it('does NOT include get_coolify_credentials in any tool set', () => {
+      // Unrestricted
+      const toolsUnrestricted = createCoolifyTools(mockCoolifyManager, null);
+      expect(Object.keys(toolsUnrestricted)).not.toContain('get_coolify_credentials');
 
-  it('tool execute calls coolify.getCredentials()', async () => {
-    mockCoolifyManager.getCredentials.mockResolvedValue({ baseUrl: 'https://coolify.example.com', token: 'ckey_xxx' });
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_credentials']));
-    const execute = (tools.get_coolify_credentials as { execute: () => Promise<unknown> }).execute;
-    await execute();
-    expect(mockCoolifyManager.getCredentials).toHaveBeenCalledOnce();
-  });
+      // With new permissions
+      const toolsScoped = createCoolifyTools(mockCoolifyManager, new Set(TOOL_IDS));
+      expect(Object.keys(toolsScoped)).not.toContain('get_coolify_credentials');
 
-  it('tool execute returns credentials when successful', async () => {
-    const credentials = { baseUrl: 'https://coolify.example.com', token: 'ckey_test' };
-    mockCoolifyManager.getCredentials.mockResolvedValue(credentials);
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_credentials']));
-    const execute = (tools.get_coolify_credentials as { execute: () => Promise<unknown> }).execute;
-    const result = await execute();
-    expect(result).toEqual(credentials);
-  });
-
-  it('tool execute returns valid:false error object on exception', async () => {
-    mockCoolifyManager.getCredentials.mockRejectedValue(new Error('Coolify not configured'));
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_credentials']));
-    const execute = (tools.get_coolify_credentials as { execute: () => Promise<unknown> }).execute;
-    const result = await execute();
-    expect(result).toMatchObject({ valid: false, error: expect.stringContaining('Coolify not configured') });
-  });
-
-  it('tool execute uses Error.message for non-Error thrown values', async () => {
-    mockCoolifyManager.getCredentials.mockRejectedValue('string error');
-    const tools = createCoolifyTools(mockCoolifyManager, new Set(['get_coolify_credentials']));
-    const execute = (tools.get_coolify_credentials as { execute: () => Promise<unknown> }).execute;
-    const result = await execute();
-    expect(result).toMatchObject({ valid: false, error: 'string error' });
+      // Empty set
+      const toolsEmpty = createCoolifyTools(mockCoolifyManager, new Set());
+      expect(Object.keys(toolsEmpty)).not.toContain('get_coolify_credentials');
+    });
   });
 });

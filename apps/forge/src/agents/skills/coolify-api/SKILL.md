@@ -1,38 +1,37 @@
 ---
 name: coolify-api
-description: Use Coolify through Forge credentials with direct curl requests for GitHub Apps, repositories, branches, applications, deployments, logs, and environment variables.
+description: Use Coolify through scoped Forge tools for application lifecycle operations — start, stop, list, and logs. No raw token exposure.
 ---
 
 # Coolify API
 
-Use this skill when work requires direct Coolify API access with `curl`.
+Use this skill when work requires Coolify application management: listing, starting, stopping, or reading logs.
 
-## When to use
+## Available tools
 
-- The task needs to inspect or manage Coolify GitHub Apps.
-- The task needs to inspect repositories or branches visible to one Coolify GitHub App.
-- The task needs to create, update, restart, start, stop, or delete Coolify applications.
-- The task needs deployment history, deployment logs, runtime logs, or environment variables.
-- The task needs low-level API access instead of a higher-level orchestration layer.
+Forge exposes Coolify via scoped tools — **no raw API token is exposed to agents**:
+
+- `list_coolify_applications` — list all configured Coolify applications
+- `start_coolify_application` — start an application by UUID
+- `stop_coolify_application` — stop an application by UUID
+- `get_coolify_application_logs` — fetch application logs by UUID
+
+These tools route through Forge's internal Coolify manager and are audited per operation.
 
 ## Workflow
 
-1. Call `get_coolify_credentials`.
-2. Read `references/get-coolify-credentials.md` to understand the expected credential fields.
-3. Read `references/coolify-rest-api.md` for the shared `curl` pattern.
-4. Choose the reference that matches the task:
-   - GitHub Apps
-   - applications
-   - deployments and logs
-   - environment variables
-5. Keep changes scoped to the application or server actually targeted by the task.
-6. Do not expose the raw admin token back to the user unless the task explicitly requires it.
+1. Call `list_coolify_applications` to discover available applications.
+2. Note the `uuid` of the target application.
+3. Use `start_coolify_application`, `stop_coolify_application`, or `get_coolify_application_logs` as needed.
+4. Keep changes scoped to the application targeted by the task.
+
+## Security note
+
+The raw Coolify admin token is **never exposed to agents**. If a task requires capability beyond these tools, escalate to an operator. Do not attempt to retrieve raw credentials.
 
 ## References
 
-- Read `references/get-coolify-credentials.md` for the credential shape and usage rules.
-- Read `references/coolify-rest-api.md` for the shared `curl` setup.
-- Read `references/github-apps.md` for Coolify GitHub App, repository, and branch endpoints.
-- Read `references/applications.md` for application lifecycle operations.
-- Read `references/deployments-and-logs.md` for deployments and logs.
-- Read `references/environment-variables.md` for application env management.
+- `references/applications.md` — application lifecycle details
+- `references/deployments-and-logs.md` — deployment history and logs
+- `references/environment-variables.md` — application env management
+- `references/github-apps.md` — GitHub App configuration in Coolify
