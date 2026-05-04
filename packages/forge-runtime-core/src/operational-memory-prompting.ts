@@ -301,17 +301,19 @@ function detectDegenerateRepetition(text: string) {
 
 export function buildReflectorSystemPrompt() {
   return [
-    'You compress batches of observations into a smaller durable reflection.',
+    'You consolidate batches of observations into a durable reflection.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
     'Do not drop operational detail that would still matter for continuity.',
+    'Write descriptively and clearly — do not compress or truncate important context.',
     'Return XML with a single <observations>...</observations> block.',
   ].join('\n');
 }
 
 export function buildReflectorPrompt(observations: string) {
   return [
-    'Compress the observations below into a tighter reflection.',
-    'Preserve the important details while removing redundancy.',
+    'Consolidate the observations below into a clear, detailed reflection.',
+    'Preserve all facts, decisions, and operational details — do not remove content.',
+    'Write descriptively and avoid dropping important context.',
     '',
     '<observations>',
     observations,
@@ -321,8 +323,8 @@ export function buildReflectorPrompt(observations: string) {
 
 export function buildReflectorTaskUserMessage() {
   return [
-    'Compress the observations below into a tighter reflection.',
-    'Preserve the important details while removing redundancy.',
+    'Consolidate the observations below into a clear, detailed reflection.',
+    'Preserve all facts, decisions, and operational details — do not remove content.',
     'Return XML with a single <observations>...</observations> block.',
   ].join('\n');
 }
