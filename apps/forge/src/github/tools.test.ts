@@ -95,3 +95,88 @@ describe('createGitHubTools', () => {
     });
   });
 });
+
+describe('get_github_provisioning_status', () => {
+  it('returns not_configured when no provisioning exists', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue(null),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.get_github_provisioning_status.execute({});
+    expect(result).toMatchObject({ valid: true, status: 'not_configured' });
+  });
+
+  it('returns pending status with registrationUrl', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue({ status: 'pending', registrationUrl: 'https://github.com/apps/register' }),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.get_github_provisioning_status.execute({});
+    expect(result).toMatchObject({ valid: true, status: 'pending', registrationUrl: 'https://github.com/apps/register' });
+  });
+
+  it('returns created status with installUrl', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue({ status: 'created', installUrl: 'https://github.com/apps/install' }),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.get_github_provisioning_status.execute({});
+    expect(result).toMatchObject({ valid: true, status: 'created', installUrl: 'https://github.com/apps/install' });
+  });
+
+  it('returns active status when provisioning is complete', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue({ status: 'active' }),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.get_github_provisioning_status.execute({});
+    expect(result).toMatchObject({ valid: true, status: 'active' });
+  });
+
+  it('returns valid false on error', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockRejectedValue(new Error('DB error')),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.get_github_provisioning_status.execute({});
+    expect(result).toMatchObject({ valid: false });
+  });
+});
+
+describe('start_github_app_provisioning', () => {
+  it('returns active if already active', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue({ status: 'active' }),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.start_github_app_provisioning.execute({});
+    expect(result).toMatchObject({ valid: true, status: 'active' });
+  });
+
+  it('returns registrationUrl for pending provisioning', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue({ status: 'pending', registrationUrl: 'https://github.com/apps/register' }),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.start_github_app_provisioning.execute({});
+    expect(result).toMatchObject({ valid: true, registrationUrl: 'https://github.com/apps/register' });
+  });
+
+  it('returns error if integration not configured', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockResolvedValue(null),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.start_github_app_provisioning.execute({});
+    expect(result).toMatchObject({ valid: false, error: 'GitHub integration is not configured at the platform level.' });
+  });
+
+  it('returns valid false on error', async () => {
+    const mockManager = {
+      getAgentProvisioning: vi.fn().mockRejectedValue(new Error('DB error')),
+    } as any;
+    const tools = createGitHubTools('agent-1', mockManager);
+    const result = await tools.start_github_app_provisioning.execute({});
+    expect(result).toMatchObject({ valid: false, error: expect.stringContaining('DB error') });
+  });
+});
