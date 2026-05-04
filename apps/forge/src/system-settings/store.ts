@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database';
 import { systemSettings } from '../database/schema';
@@ -73,9 +74,19 @@ export type SystemSettingsValue = SystemSettingsInput & {
 
 export function createSystemSettingsStore(db: Database) {
   async function getSettings(): Promise<SystemSettingsValue> {
-    const row = await db.query.systemSettings.findFirst({
-      where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
-    });
+    let row;
+    try {
+      row = await db.query.systemSettings.findFirst({
+        where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'system-settings-store',
+        level: 'error',
+        message: 'getSettings DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return { ...DEFAULT_SYSTEM_SETTINGS, updatedAt: null };
+    }
 
     return {
       companyName: row?.companyName ?? DEFAULT_SYSTEM_SETTINGS.companyName,
