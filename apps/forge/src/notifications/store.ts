@@ -1,4 +1,5 @@
 import { createId } from '../utils/id';
+import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { Database } from '../database/index';
@@ -9,7 +10,7 @@ export function createAgentNotificationStore(db: Database) {
     agentId: string;
     content: string;
     createdAt?: number;
-  }) {
+  }): Promise<{ id: string; agentId: string; content: string; createdAt: number; readAt: null } | null> {
     const now = input.createdAt ?? Date.now();
     const notification = {
       id: createId(),
@@ -19,7 +20,17 @@ export function createAgentNotificationStore(db: Database) {
       readAt: null,
     };
 
-    await db.insert(agentNotifications).values(notification);
+    try {
+      await db.insert(agentNotifications).values(notification);
+    } catch (err) {
+      forgeDebug({
+        scope: 'notifications-store',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'createNotification DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return null;
+    }
     return notification;
   }
 
@@ -29,22 +40,42 @@ export function createAgentNotificationStore(db: Database) {
     limit: number;
     markRead?: boolean;
   }) {
-    const rows = await db.query.agentNotifications.findMany({
+    let rows;
+    try {
+      rows = await db.query.agentNotifications.findMany({
       where: and(
         eq(agentNotifications.agentId, input.agentId),
         input.unreadOnly ? isNull(agentNotifications.readAt) : undefined,
       ),
       orderBy: desc(agentNotifications.createdAt),
       limit: input.limit,
-    });
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'notifications-store',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'listNotifications DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return [];
+    }
 
     const unreadNotificationIds = rows.filter((row) => row.readAt === null).map((row) => row.id);
 
     if ((input.markRead ?? true) && unreadNotificationIds.length > 0) {
-      await db
-        .update(agentNotifications)
-        .set({ readAt: Date.now() })
-        .where(and(eq(agentNotifications.agentId, input.agentId), inArray(agentNotifications.id, unreadNotificationIds)));
+      try {
+        await db
+          .update(agentNotifications)
+          .set({ readAt: Date.now() })
+          .where(and(eq(agentNotifications.agentId, input.agentId), inArray(agentNotifications.id, unreadNotificationIds)));
+      } catch (err) {
+        forgeDebug({
+          scope: 'notifications-store',
+          level: 'error',
+          runtimeId: input.agentId,
+          message: 'listNotifications mark-read update failed: ' + (err instanceof Error ? err.message : String(err)),
+        });
+      }
     }
 
     return rows.map((row) => ({
@@ -56,9 +87,20 @@ export function createAgentNotificationStore(db: Database) {
   }
 
   async function getNotification(agentId: string, notificationId: string) {
-    const row = await db.query.agentNotifications.findFirst({
-      where: and(eq(agentNotifications.agentId, agentId), eq(agentNotifications.id, notificationId)),
-    });
+    let row;
+    try {
+      row = await db.query.agentNotifications.findFirst({
+        where: and(eq(agentNotifications.agentId, agentId), eq(agentNotifications.id, notificationId)),
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'notifications-store',
+        level: 'error',
+        runtimeId: agentId,
+        message: 'getNotification DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return null;
+    }
 
     if (!row) {
       return null;
