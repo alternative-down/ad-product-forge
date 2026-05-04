@@ -21,6 +21,33 @@ vi.mock('../../../capabilities/runtime.js', () => ({
   reloadAgentIfLoaded: mockReloadAgentIfLoaded,
 }));
 
+vi.mock('../../../agents/global-skills.js', () => ({
+  publishAgentWorkspaceSkillToGlobalCatalog: vi.fn().mockResolvedValue({ destPath: '/global/skills/my-skill' }),
+  installGlobalSkillToAgentWorkspace: vi.fn().mockResolvedValue({ installed: true }),
+  installGlobalSkillsFromZip: vi.fn().mockResolvedValue({ installedSkillNames: [] }),
+  deleteGlobalSkill: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../../agents/roles.js', () => ({
+  createAgentRole: vi.fn().mockResolvedValue({ id: 'mock-role-id' }),
+  updateAgentRole: vi.fn().mockResolvedValue({ id: 'mock-role-id' }),
+  deleteAgentRole: vi.fn().mockResolvedValue(undefined),
+  addAgentRoleCapability: vi.fn().mockResolvedValue(undefined),
+  setAgentRoleToolPermission: vi.fn().mockResolvedValue(undefined),
+  setAgentRoleWorkflowPermission: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../capabilities/store.js', () => ({
+  createCapabilityStore: vi.fn(() => ({
+    createRole: vi.fn().mockResolvedValue({ roleId: 'role-123', name: 'Developer' }),
+    updateRole: vi.fn().mockResolvedValue({ roleId: 'role-123', name: 'Updated' }),
+    deleteRole: vi.fn().mockResolvedValue(undefined),
+    addRoleToolPermission: vi.fn().mockResolvedValue(undefined),
+    removeRoleToolPermission: vi.fn().mockResolvedValue(undefined),
+    addRoleWorkflowPermission: vi.fn().mockResolvedValue(undefined),
+    removeRoleWorkflowPermission: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 function makeMockDb(): Database {
   return {
     insert: vi.fn().mockReturnThis(),
@@ -30,7 +57,7 @@ function makeMockDb(): Database {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockResolvedValue([]),
     query: {
-      agents: { findFirst: vi.fn().mockResolvedValue(null) },
+      agents: { findFirst: vi.fn().mockResolvedValue({ id: 'a1', workspaceFilesystem: '/tmp/ws' }) },
       agentContracts: { findFirst: vi.fn().mockResolvedValue(null) },
       agentRoles: { findFirst: vi.fn().mockResolvedValue(null) },
       agentProviders: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -38,11 +65,13 @@ function makeMockDb(): Database {
   } as unknown as Database;
 }
 
-function makeInput(db: Database) {
+function makeInput(db: Database, opts?: { githubApps?: any; skills?: any }) {
   return {
     db,
     workspaceBasePath: '/tmp/test-workspace',
     loaderConfig: {},
+    githubApps: opts?.githubApps,
+    skills: opts?.skills,
   };
 }
 
@@ -61,6 +90,27 @@ describe('registerAgentWriteOpsRoutes', () => {
   beforeEach(() => {
     mockReloadAgentIfLoaded.mockClear();
   });
+
+  function setup() {
+    const httpServer = { registerRoute: vi.fn() };
+    const baseMap = new Map();
+    const mockRegistry = Object.assign(baseMap, { add: vi.fn(), get: baseMap.get.bind(baseMap), set: baseMap.set.bind(baseMap), delete: baseMap.delete.bind(baseMap) });
+    const ops = {
+      loadAgent: vi.fn(),
+      topUpActiveAgentContract: vi.fn(),
+      adjustAgentContractBudget: vi.fn(),
+      renewAgentContract: vi.fn(),
+      runInternalHiring: vi.fn(),
+      runInternalTermination: vi.fn(),
+      changeAgentRoleFromAdmin: vi.fn(),
+      reloadAgentMcp: vi.fn(),
+      reloadAgentIfLoaded: mockReloadAgentIfLoaded,
+      reloadAgentsForRole: vi.fn(),
+      updateAgentGitHubManifestConfig: vi.fn(),
+      updateAgentConfig: vi.fn(),
+    };
+    return { httpServer, ops, mockRegistry };
+  }
 
   describe('POST /admin/agent/reload', () => {
     it('returns success with agentId after loading', async () => {
@@ -308,7 +358,7 @@ describe('registerAgentWriteOpsRoutes', () => {
       const httpServer = { registerRoute: vi.fn() };
       const db = makeMockDb();
 
-      registerAgentWriteOpsRoutes(httpServer as any, makeInput(db), new Map(), {} as any);
+      registerAgentWriteOpsRoutes(httpServer as any, makeInput(db, { githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) } }), new Map(), {} as any);
 
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-manifest-config/update');
       const result = await handler(
@@ -419,228 +469,227 @@ describe('registerAgentWriteOpsRoutes', () => {
 
       expect(httpServer.registerRoute).toHaveBeenCalledTimes(29);
     });
+  });
 
   describe('POST /admin/agent/providers/upsert', () => {
     it('returns success with agentId and providerType', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/providers/upsert');
       const resp = await handler(makeRequest({ agentId: 'a1', providerType: 'openai', credentials: { key: 'sk-xxx' } }));
-      expect(resp).toEqual({ success: true, agentId: 'a1' });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toEqual({ success: true, agentId: 'a1' });;
     });
 
     it('returns success even with empty credentials', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/providers/upsert');
       const resp = await handler(makeRequest({ agentId: 'a1', providerType: 'anthropic', credentials: {} }));
-      expect(resp).toEqual({ success: true, agentId: 'a1' });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toEqual({ success: true, agentId: 'a1' });;
     });
   });
 
   describe('POST /admin/agent/providers/delete', () => {
     it('returns success with agentId', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/providers/delete');
       const resp = await handler(makeRequest({ agentId: 'a2', providerType: 'openai' }));
-      expect(resp).toEqual({ success: true, agentId: 'a2' });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toEqual({ success: true, agentId: 'a2' });;
     });
   });
 
   describe('POST /admin/agent/mcp/create', () => {
     it('returns success with placeholder serverId', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
       const resp = await handler(makeRequest({ agentId: 'a1', name: 'test-server', transport: 'stdio' }));
-      expect(resp).toMatchObject({ success: true, serverId: 'placeholder' });
+      const parsed_m = JSON.parse((resp as {body:string}).body);expect(parsed_m).toMatchObject({ success: true });
     });
 
     it('parses optional description', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
       const resp = await handler(makeRequest({ agentId: 'a1', name: 'srv', transport: 'http', description: 'My MCP server' }));
-      expect(resp.serverId).toBe('placeholder');
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed.serverId).toBe('placeholder');;
     });
   });
 
   describe('POST /admin/agent/mcp/update', () => {
     it('returns success with serverId from body', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/update');
       const resp = await handler(makeRequest({ serverId: 'srv-abc', agentId: 'a1', name: 'updated-server' }));
-      expect(resp).toEqual({ success: true, serverId: 'srv-abc' });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toEqual({ success: true, serverId: 'srv-abc' });;
     });
   });
 
   describe('POST /admin/agent/mcp/delete', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/delete');
       const resp = await handler(makeRequest({ serverId: 'srv-xyz', agentId: 'a1' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/agent/mcp/assign', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/assign');
       const resp = await handler(makeRequest({ agentId: 'a1', serverId: 'srv-abc' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/agent/mcp/set-active', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/set-active');
       const resp = await handler(makeRequest({ agentId: 'a1', serverId: 'srv-abc', isActive: true }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
 
     it('works with isActive false', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/set-active');
       const resp = await handler(makeRequest({ agentId: 'a1', serverId: 'srv-abc', isActive: false }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/agent/mcp/detach', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/detach');
       const resp = await handler(makeRequest({ agentId: 'a1', serverId: 'srv-abc' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/agent/skills/publish-to-global', () => {
     it('returns success with skillName', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/publish-to-global');
       const resp = await handler(makeRequest({ agentId: 'a1', skillName: 'my-skill' }));
-      expect(resp).toEqual({ success: true, skillName: 'my-skill' });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true, skillName: 'my-skill' });
     });
   });
 
   describe('POST /admin/agent/skills/install-global', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/install-global');
       const resp = await handler(makeRequest({ agentId: 'a1', skillName: 'global-skill' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/agent/skills/upload', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/upload');
       const resp = await handler(makeRequest({ agentId: 'a1', skillsZipBase64: 'UEsDBBQ...' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/agent/skills/delete', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/delete');
       const resp = await handler(makeRequest({ agentId: 'a1', skillName: 'old-skill' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/roles/create', () => {
     it('returns success with roleId', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/create');
       const resp = await handler(makeRequest({ name: 'Developer', description: 'Dev role' }));
-      expect(resp).toMatchObject({ success: true });
-      expect(resp.roleId).toBeTruthy();
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });;
+      expect(parsed.roleId).toBeTruthy();
     });
 
     it('works without description', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/create');
       const resp = await handler(makeRequest({ name: 'Admin' }));
-      expect(resp.success).toBe(true);
+      const parsed2 = JSON.parse((resp as {body:string}).body);expect(parsed2).toMatchObject({ success: true });;
     });
   });
 
   describe('POST /admin/roles/update', () => {
     it('returns success with roleId', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/update');
       const resp = await handler(makeRequest({ roleId: 'role-123', name: 'Senior Dev' }));
-      expect(resp).toMatchObject({ success: true, roleId: 'role-123' });
+      const parsed_r = JSON.parse((resp as {body:string}).body);expect(parsed_r).toMatchObject({ success: true, roleId: 'role-123' });;
     });
   });
 
   describe('POST /admin/roles/delete', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/delete');
       const resp = await handler(makeRequest({ roleId: 'role-456' }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/roles/capabilities', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/capabilities');
       const resp = await handler(makeRequest({ roleId: 'role-789', capabilityName: 'memory', capabilityValue: true }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/roles/tool-permissions', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/tool-permissions');
       const resp = await handler(makeRequest({ roleId: 'role-abc', toolName: 'send_message', allowed: true }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
 
     it('works with allowed false', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/tool-permissions');
       const resp = await handler(makeRequest({ roleId: 'role-abc', toolName: 'send_message', allowed: false }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
   describe('POST /admin/roles/workflow-permissions', () => {
     it('returns success', async () => {
-      const { httpServer, ops } = setup();
+      const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/roles/workflow-permissions');
       const resp = await handler(makeRequest({ roleId: 'role-xyz', workflowName: 'deploy', allowed: true }));
-      expect(resp).toEqual({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed).toMatchObject({ success: true });
     });
   });
 
-});
-  });
 });

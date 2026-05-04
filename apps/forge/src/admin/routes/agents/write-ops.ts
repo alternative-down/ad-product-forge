@@ -169,6 +169,8 @@ export function registerAgentWriteOpsRoutes(
   registry: Registry,
   ops: any
 ) {
+  const capabilities = createCapabilityStore(input.db as any);
+  const resolvePermissionId = (name: string) => name;
   // POST /admin/agent/reload
   // FIX #1046: Use registry.add() to properly create the runner and update the real registry.
   // Previously this wrote to a snapshot Map, not the real registry.
