@@ -89,6 +89,14 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
 }
 
 export async function main() {
+  // Global exception handlers — must be registered before any async work
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[unhandledRejection]', reason);
+  });
+  process.on('uncaughtException', (error) => {
+    console.error('[uncaughtException]', error);
+  });
+
   const env = envSchema.parse(process.env);
 
   // Decode admin API key from Base64 if needed (see decodeAdminApiKey JSDoc)
