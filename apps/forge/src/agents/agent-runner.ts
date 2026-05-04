@@ -1,4 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { eq, and } from 'drizzle-orm';
+import { agentSchedules } from '../database/schema.js';
 import { createId } from '../utils/id';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -1057,21 +1059,85 @@ export function createAgentRunner(
   async function loadAgentContextInstructions() {
     const filesystem = currentRuntime.workspace.filesystem;
     const agentContextContent = await loadAgentContextContent(filesystem);
+    const scheduleSummary = await loadActiveScheduleSummary();
 
-    if (!agentContextContent) {
+    const sections: Array<string | null> = [
+      scheduleSummary,
+      agentContextContent,
+    ];
+
+    const filtered = sections.filter((v): v is string => Boolean(v));
+    if (filtered.length === 0) {
       return undefined;
     }
 
-    return [
-      'Automatically loaded workspace context file.',
-      `File: ${AGENT_CONTEXT_FILE_PATH}`,
-      'This file should be treated as additional runtime instructions and context.',
-      'This is the only workspace file auto-loaded into the execution context.',
-      'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
-      'If you mention or use information from this file, do not say it came from context, instructions, notes, or memory. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when appropriate.',
-      '',
-      agentContextContent,
-    ].filter(Boolean).join('\n');
+    const lines: Array<string | null> = [
+      ...(scheduleSummary ? ['Automatically loaded active schedule context.', ''] : []),
+      ...(agentContextContent
+        ? [
+            'Automatically loaded workspace context file.',
+            `File: ${AGENT_CONTEXT_FILE_PATH}`,
+            'This file should be treated as additional runtime instructions and context.',
+            'This is the only workspace file auto-loaded into the execution context.',
+            'Treat it as a concise summary layer. Keep details in other files and store only high-signal references here when needed.',
+            'If you mention or use information from this file, do not say it came from context, instructions, notes, or memory. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when appropriate.',
+            '',
+          ]
+        : []),
+      agentContextContent ?? null,
+    ].filter(Boolean);
+
+    return filtered.join('\n\n');
+  }
+
+  async function loadActiveScheduleSummary() {
+    try {
+      const rows = await withTimeout(
+        db
+          .select({
+            name: agentSchedules.name,
+            cronExpression: agentSchedules.cronExpression,
+            timezone: agentSchedules.timezone,
+          })
+          .from(agentSchedules)
+          .where(
+            and(
+              eq(agentSchedules.agentId, runtime.id),
+              eq(agentSchedules.isActive, 1),
+            )
+          )
+          .limit(20),
+        5_000,
+        'Active schedule summary lookup timed out',
+      );
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const lines = rows.map((s) => {
+        const cron = s.cronExpression ?? '';
+        const tz = s.timezone ?? 'UTC';
+        const name = s.name ?? '(unnamed)';
+        return `  ${name}: "${cron}" [${tz}]`;
+      });
+
+      return [
+        '## Active Schedules',
+        '',
+        'Your active recurring schedules (only show when triggered):',
+        '',
+        ...lines,
+      ].join('\n');
+    } catch (err) {
+      forgeDebug({
+        scope: 'agent-runner',
+        level: 'warn',
+        runtimeId: runtime.id,
+        message: 'Failed to load active schedule summary: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return null;
+    }
   }
 
   async function loadAgentContextContent(filesystem: typeof currentRuntime.workspace.filesystem) {
