@@ -21,7 +21,6 @@ vi.mock('node:fs/promises', () => ({ rm: mockRm }));
 
 import { terminateInternalAgent } from './terminate-agent';
 import { agents } from '../database/schema';
-import type { AgentEmailManager, CoolifyManager } from '../index';
 
 function createMockDb(agent?: Record<string, unknown> | null) {
   return {
@@ -31,13 +30,13 @@ function createMockDb(agent?: Record<string, unknown> | null) {
 }
 
 function mockAgent(overrides: Record<string, unknown> = {}) {
-  return { id: 'agent-1', name: 'Test Agent', createdAt: Date.now(), ...overrides };
+  return { id: 'agent-1', name: 'Test Agent', createdAt: Date.now(), updatedAt: Date.now(), ...overrides };
 }
 
 const mockSchedules = { removeAgent: mockRemoveSchedule };
-const mockEmail = { deleteAgentMailbox: mockDeleteMailbox, isConfigured: vi.fn().mockResolvedValue(true) } as unknown as AgentEmailManager;
-const mockCoolify = { deleteAgentApp: mockDeleteApp } as unknown as CoolifyManager;
-const mockGitHubApps = { deleteAgentApp: mockDeleteApp } as unknown as ReturnType<AgentEmailManager['deleteAgentMailbox']> extends never ? object : any;
+const mockEmail = { deleteAgentMailbox: mockDeleteMailbox, isConfigured: vi.fn().mockResolvedValue(true) } as any;
+const mockCoolify = { deleteAgentApp: mockDeleteApp } as any;
+const mockGitHubApps = { deleteAgentApp: mockDeleteApp } as any;
 
 const defaultInput = () => ({
   agentId: 'agent-1',
@@ -49,12 +48,22 @@ const defaultInput = () => ({
 });
 
 describe('terminateInternalAgent', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRm.mockReset();
+    mockRm.mockResolvedValue(undefined);
+    mockRefundBalance.mockReset();
+    mockRefundBalance.mockResolvedValue(undefined);
+  });
+
+  // ── Not found ───────────────────────────────────────────────────────────
 
   it('throws when agent not found', async () => {
     const db = createMockDb(null);
     await expect(terminateInternalAgent(db as any, defaultInput())).rejects.toThrow('Agent not found: agent-1');
   });
+
+  // ── All steps succeed ───────────────────────────────────────────────────
 
   it('refunds active contract balance', async () => {
     const db = createMockDb(mockAgent());
@@ -108,5 +117,92 @@ describe('terminateInternalAgent', () => {
     const db = createMockDb(mockAgent({ id: 'agent-xyz' }));
     const result = await terminateInternalAgent(db as any, { ...defaultInput(), agentId: 'agent-xyz' });
     expect(result.agentId).toBe('agent-xyz');
+  });
+
+  it('returns all completedSteps when all succeed', async () => {
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).toContain('refundContract');
+    expect(result.completedSteps).toContain('removeFromRegistry');
+    expect(result.completedSteps).toContain('removeSchedules');
+    expect(result.completedSteps).toContain('deleteMailbox');
+    expect(result.completedSteps).toContain('deleteGitHubApp');
+    expect(result.completedSteps).toContain('deleteDbRecord');
+    expect(result.completedSteps).toContain('deleteWorkspace');
+  });
+
+  // ── Partial failure ─────────────────────────────────────────────────────
+
+  it('continues cleanup when refund fails', async () => {
+    mockRefundBalance.mockRejectedValueOnce(new Error('refund failed'));
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).not.toContain('refundContract');
+    expect(result.completedSteps).toContain('removeFromRegistry');
+    expect(result.completedSteps).toContain('deleteWorkspace');
+  });
+
+  it('continues cleanup when registry.remove fails', async () => {
+    mockRemoveAgent.mockImplementationOnce(() => { throw new Error('registry error'); });
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).toContain('refundContract');
+    expect(result.completedSteps).not.toContain('removeFromRegistry');
+    expect(result.completedSteps).toContain('deleteWorkspace');
+  });
+
+  it('continues cleanup when schedule removal fails', async () => {
+    mockRemoveSchedule.mockRejectedValueOnce(new Error('schedule error'));
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).toContain('refundContract');
+    expect(result.completedSteps).toContain('removeFromRegistry');
+    expect(result.completedSteps).not.toContain('removeSchedules');
+    expect(result.completedSteps).toContain('deleteWorkspace');
+  });
+
+  it('continues cleanup when mailbox deletion fails', async () => {
+    mockDeleteMailbox.mockRejectedValueOnce(new Error('mailbox error'));
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).not.toContain('deleteMailbox');
+    expect(result.completedSteps).toContain('deleteGitHubApp');
+  });
+
+  it('continues cleanup when GitHub App deletion fails', async () => {
+    mockDeleteApp.mockRejectedValueOnce(new Error('github error'));
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).not.toContain('deleteGitHubApp');
+    expect(result.completedSteps).toContain('deleteDbRecord');
+  });
+
+  it('continues cleanup when db.delete fails', async () => {
+    const failingDb = {
+      query: { agents: { findFirst: vi.fn().mockResolvedValue(mockAgent()) } },
+      delete: vi.fn().mockReturnValue({ where: vi.fn().mockRejectedValue(new Error('db error')) }),
+    };
+    const result = await terminateInternalAgent(failingDb as any, defaultInput());
+    expect(result.completedSteps).not.toContain('deleteDbRecord');
+    expect(result.completedSteps).toContain('deleteWorkspace');
+  });
+
+  it('continues cleanup when fs.rm fails', async () => {
+    mockRm.mockRejectedValueOnce(new Error('rm error'));
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).not.toContain('deleteWorkspace');
+    expect(result.completedSteps).toContain('deleteDbRecord');
+  });
+
+  it('reports all completed steps when multiple steps fail', async () => {
+    mockRefundBalance.mockRejectedValueOnce(new Error('refund failed'));
+    mockRemoveSchedule.mockRejectedValueOnce(new Error('schedule failed'));
+    const db = createMockDb(mockAgent());
+    const result = await terminateInternalAgent(db as any, defaultInput());
+    expect(result.completedSteps).not.toContain('refundContract');
+    expect(result.completedSteps).toContain('removeFromRegistry');
+    expect(result.completedSteps).not.toContain('removeSchedules');
+    expect(result.completedSteps).toContain('deleteWorkspace');
   });
 });
