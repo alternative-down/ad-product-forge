@@ -10,7 +10,7 @@ import {
 
 describe('forgeCustomToolIds', () => {
   it('contains expected number of tool IDs', () => {
-    expect(forgeCustomToolIds).toHaveLength(30);
+    expect(forgeCustomToolIds).toHaveLength(32);
   });
 
   it('includes hire-internal-agent and terminate-internal-agent', () => {
