@@ -1,18 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { mockForgeDebug } = vi.hoisted(() => ({ mockForgeDebug: vi.fn() }));
+
 vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: vi.fn(),
+  forgeDebug: mockForgeDebug,
 }));
 
-const mockDiscordProvider = {
+const discordProvider = {
   id: 'discord',
-  getSelfContact: vi.fn(),
+  getSelfContact: vi.fn().mockRejectedValue(new Error('invalid token')),
   dispose: vi.fn(),
   sendMessage: vi.fn(),
 };
 
 vi.mock('../discord-account', () => ({
-  createDiscordProvider: vi.fn(() => mockDiscordProvider),
+  createDiscordProvider: vi.fn(() => discordProvider),
 }));
 
 vi.mock('../email-account', () => ({
@@ -34,11 +36,11 @@ import { loadCommunicationProviders } from './provider-loader';
 describe('loadCommunicationProviders', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset the persistent rejection so every test gets a fresh mock state.
+    discordProvider.getSelfContact.mockRejectedValue(new Error('invalid token'));
   });
 
-  it('skips Discord when the provider fails to start', async () => {
-    mockDiscordProvider.getSelfContact.mockRejectedValueOnce(new Error('invalid token'));
-
+  it('skips Discord when getSelfContact throws and logs via forgeDebug', async () => {
     const providers = await loadCommunicationProviders({
       discord: { channels: [], token: 'valid-token' },
       email: {
@@ -48,10 +50,18 @@ describe('loadCommunicationProviders', () => {
     });
 
     expect(providers.map((p) => p.id)).toEqual(['email']);
-    expect(mockDiscordProvider.dispose).toHaveBeenCalledOnce();
+    expect(discordProvider.getSelfContact).toHaveBeenCalledOnce();
+    expect(mockForgeDebug).toHaveBeenCalledOnce();
+    expect(mockForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'provider-loader',
+        level: 'warn',
+        message: 'Skipping Discord provider because it failed to start',
+      }),
+    );
   });
 
-  it('skips Discord when its credentials are malformed', async () => {
+  it('skips Discord when its credentials are malformed (token missing)', async () => {
     const credentials = {
       discord: { channels: [] },
     } as unknown as Parameters<typeof loadCommunicationProviders>[0];
@@ -59,7 +69,14 @@ describe('loadCommunicationProviders', () => {
     const providers = await loadCommunicationProviders(credentials);
 
     expect(providers).toEqual([]);
-    expect(mockDiscordProvider.getSelfContact).not.toHaveBeenCalled();
-    expect(mockDiscordProvider.dispose).not.toHaveBeenCalled();
+    expect(discordProvider.getSelfContact).not.toHaveBeenCalled();
+    expect(mockForgeDebug).toHaveBeenCalledOnce();
+    expect(mockForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'provider-loader',
+        level: 'warn',
+        message: 'Skipping Discord provider because it failed to start',
+      }),
+    );
   });
 });
