@@ -14,7 +14,7 @@ import {
   createHeartbeatWakeInstruction,
   toToolOutput,
 } from './schedule-helpers';
-import { normalizeScheduleUpdate } from './schedule-normalize-helpers';
+import { normalizeScheduleUpdate, buildScheduleUpdateInput, buildScheduleRollbackInput } from './schedule-normalize-helpers';
 import {
   requireScheduleEditor,
   requireScheduleDeleter,
@@ -159,31 +159,12 @@ export function createAgentScheduleManager(input: {
     if (normalized.shouldRequireFutureDate) {
       assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
-    const normalizedCronExpression = normalized.cronExpression;
-    const normalizedScheduledDate = normalized.scheduledDate;
-    const normalizedWakeWhenRunning = normalized.wakeWhenRunning;
-    const rollbackInput = {
-      name: existing.name,
-      description: existing.description ?? null,
-      scheduleType: existing.scheduleType,
-      cronExpression: existing.cronExpression ?? null,
-      scheduledDate: existing.scheduledDate ?? null,
-      timezone: existing.timezone,
-      content: existing.content,
-      wakeWhenRunning: existing.wakeWhenRunning,
-      isActive: existing.isActive,
-    } as const;
-    const updated = await store.updateAgentSchedule(agentId, scheduleId, {
-      name: parsed.name,
-      description: parsed.description,
-      scheduleType,
-      cronExpression: normalizedCronExpression,
-      scheduledDate: normalizedScheduledDate,
-      timezone: parsed.timezone,
-      content: parsed.content,
-      wakeWhenRunning: normalizedWakeWhenRunning,
-      isActive: parsed.isActive,
-    });
+    const rollbackInput = buildScheduleRollbackInput(existing);
+    const updated = await store.updateAgentSchedule(
+      agentId,
+      scheduleId,
+      buildScheduleUpdateInput(parsed, normalized),
+    );
 
     if (!updated) {
       throw new Error(`Schedule not found: ${scheduleId}`);
@@ -230,31 +211,12 @@ export function createAgentScheduleManager(input: {
     if (normalized.shouldRequireFutureDate) {
       assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
     }
-    const normalizedCronExpression = normalized.cronExpression;
-    const normalizedScheduledDate = normalized.scheduledDate;
-    const normalizedWakeWhenRunning = normalized.wakeWhenRunning;
-    const rollbackInput = {
-      name: existing.name,
-      description: existing.description ?? null,
-      scheduleType: existing.scheduleType,
-      cronExpression: existing.cronExpression ?? null,
-      scheduledDate: existing.scheduledDate ?? null,
-      timezone: existing.timezone,
-      content: existing.content,
-      wakeWhenRunning: existing.wakeWhenRunning,
-      isActive: existing.isActive,
-    } as const;
-    const updated = await store.updateOwnedSchedule(agentId, scheduleId, {
-      name: parsed.name,
-      description: parsed.description,
-      scheduleType,
-      cronExpression: normalizedCronExpression,
-      scheduledDate: normalizedScheduledDate,
-      timezone: parsed.timezone,
-      content: parsed.content,
-      wakeWhenRunning: normalizedWakeWhenRunning,
-      isActive: parsed.isActive,
-    });
+    const rollbackInput = buildScheduleRollbackInput(existing);
+    const updated = await store.updateOwnedSchedule(
+      agentId,
+      scheduleId,
+      buildScheduleUpdateInput(parsed, normalized),
+    );
 
     if (!updated) {
       throw new Error(`Schedule not found: ${scheduleId}`);
