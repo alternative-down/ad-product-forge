@@ -8,6 +8,15 @@ import { type WorkspaceEmbedderId } from '@forge-runtime/core';
 import type { Database } from '../database';
 import { agents } from '../database/schema';
 
+const CONCURRENCY_LIMIT = 4;
+
+async function withConcurrencyLimit<T>(items: T[], fn: (item: T) => Promise<void>): Promise<void> {
+  for (let i = 0; i < items.length; i += CONCURRENCY_LIMIT) {
+    const batch = items.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(batch.map(fn));
+  }
+}
+
 export const DEFAULT_WORKSPACE_EMBEDDER: WorkspaceEmbedderId =
   'transformers-multilingual-e5-small-cpu';
 
@@ -17,11 +26,11 @@ export async function prepareAgentEmbeddersForStartup(input: {
 }) {
   const agentRows = await input.db.query.agents.findMany();
 
-  for (const agent of agentRows) {
-    if (agent.workspaceEmbedder !== 'fastembed') {
-      continue;
-    }
+  const fastembedAgents = agentRows.filter(
+    (agent) => agent.workspaceEmbedder === 'fastembed',
+  );
 
+  await withConcurrencyLimit(fastembedAgents, async (agent) => {
     await resetAgentEmbedderIndexes(input.workspaceBasePath, agent.id);
     await input.db
       .update(agents)
@@ -30,7 +39,7 @@ export async function prepareAgentEmbeddersForStartup(input: {
         updatedAt: Date.now(),
       })
       .where(eq(agents.id, agent.id));
-  }
+  });
 }
 
 export async function resetAgentEmbedderIndexes(workspaceBasePath: string, agentId: string) {
