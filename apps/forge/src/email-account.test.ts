@@ -312,4 +312,55 @@ describe('email-account', () => {
       expect(mockState.client.logout).toHaveBeenCalled();
     });
   });
+// =============================================================================
+// getConversation tests
+// =============================================================================
+
+function makeThreadFetchGenerator(messages) {
+  let idx = 0;
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const msg of messages) {
+        const parts = ['From: ' + msg.from, 'Subject: ' + msg.subject, 'Message-ID: <' + msg.messageId + '>'];
+        if (msg.inReplyTo) parts.push('In-Reply-To: <' + msg.inReplyTo + '>');
+        if (msg.references) parts.push('References: ' + msg.references.map(function(r) { return '<' + r + '>'; }).join(' '));
+        parts.push('Date: ' + msg.date, '', msg.body);
+        const raw = parts.join('\r\n');
+        yield { uid: ++idx, source: raw, flags: new globalThis.Array(0) };
+      }
+    }
+  };
+}
+
+describe('getConversation', () => {
+  it('has getConversation method on provider', async () => {
+    const provider = createEmailProvider(validConfig);
+    expect(typeof provider.getConversation).toBe('function');
+  });
+
+  it('returns undefined for nonexistent threadKey', async () => {
+    mockState.client.search.mockResolvedValue([]);
+    const provider = createEmailProvider(validConfig);
+    const result = await provider.getConversation({ targetKey: 'nonexistent' });
+    expect(result).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// resolveConversation tests
+// =============================================================================
+
+describe('resolveConversation', () => {
+  it('has resolveConversation method on provider', async () => {
+    const provider = createEmailProvider(validConfig);
+    expect(typeof provider.resolveConversation).toBe('function');
+  });
+
+  it('returns undefined for nonexistent participant', async () => {
+    mockState.client.search.mockResolvedValue([]);
+    const provider = createEmailProvider(validConfig);
+    const result = await provider.resolveConversation({ participantAddress: 'alice@example.com' });
+    expect(result).toBeUndefined();
+  });
+});
 });

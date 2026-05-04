@@ -719,5 +719,62 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await transporter.close();
       }
     },
+async getConversation({ targetKey }: { targetKey: string }) {
+      const inboxEmails = await listRecentInboxEmails(50);
+      const filtered = inboxEmails.filter((email) => email.threadKey === targetKey || email.targetKey === targetKey);
+      if (filtered.length === 0) return undefined;
+      const ordered = filtered.sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+      const latest = ordered[ordered.length - 1];
+      return {
+        provider: config.id ?? 'email',
+        targetKey,
+        conversationName: latest.conversationName ?? targetKey,
+        latest,
+        messages: ordered.map((m) => ({
+          messageId: m.messageId,
+          provider: config.id ?? 'email',
+          authorId: m.authorId,
+          targetKey,
+          content: m.content,
+          attachments: m.attachments,
+          unread: m.unread,
+          createdAt: m.createdAt,
+          authorDisplayName: m.authorDisplayName,
+          threadKey: m.threadKey,
+        })),
+      };
+    },
+
+    async resolveConversation({ participantAddress }: { participantAddress: string }) {
+      const inboxEmails = await listRecentInboxEmails(50);
+      const matching = inboxEmails
+        .filter((email) => email.authorId === participantAddress)
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+      if (matching.length === 0) return undefined;
+      const latest = matching[0];
+      const threadKey = latest.threadKey;
+      const threadEmails = inboxEmails
+        .filter((email) => email.threadKey === threadKey)
+        .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+      const threadLatest = threadEmails[threadEmails.length - 1];
+      return {
+        provider: config.id ?? 'email',
+        targetKey: threadKey,
+        conversationName: threadLatest?.conversationName ?? threadKey,
+        latest: threadLatest,
+        messages: threadEmails.map((m) => ({
+          messageId: m.messageId,
+          provider: config.id ?? 'email',
+          authorId: m.authorId,
+          targetKey: threadKey,
+          content: m.content,
+          attachments: m.attachments,
+          unread: m.unread,
+          createdAt: m.createdAt,
+          authorDisplayName: m.authorDisplayName,
+          threadKey: m.threadKey,
+        })),
+      };
+    },
   };
 }
