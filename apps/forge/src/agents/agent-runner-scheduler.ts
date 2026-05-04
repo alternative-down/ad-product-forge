@@ -584,6 +584,11 @@ export function createScheduler(
     return runLastMessages;
   }
 
+  function getInstant(): boolean { return state.instant; }
+  function getBackoffMs(): number { return state.backoffMs; }
+  function getNextStepAt(): number | null { return state.nextStepAt; }
+  function getActiveRunEpoch(): number { return state.activeRunEpoch; }
+
   function getActiveStepEpoch(): number {
     return state.activeStepEpoch;
   }
@@ -654,6 +659,10 @@ export function createScheduler(
     getRunId,
     setRunId,
     getRunLastMessages,
+    getInstant,
+    getBackoffMs,
+    getNextStepAt,
+    getActiveRunEpoch,
     getActiveStepEpoch,
     advanceStepEpoch,
     setStepCallback,

@@ -474,7 +474,7 @@ export function createAgentRunner(
     } catch (error) {
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error } });
       scheduler.setInstant(false);
-      schedule(nextBackoff());
+      schedule(scheduler.nextBackoff());
     }
   }
 
@@ -710,7 +710,7 @@ export function createAgentRunner(
     return {
       execute: true as const,
       contractId: contract.id,
-      delayMs: instant
+      delayMs: scheduler.getState().instant
         || !settings.stepDelayEnabled
         ? 0
         : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
@@ -743,18 +743,19 @@ export function createAgentRunner(
   }
 
   function getSnapshot() {
+    const s = scheduler.getState();
     return {
       stopped,
-      instant,
+      instant: s.instant,
       startingRun,
       startingRunStartedAt,
       executing,
-      activeRunEpoch,
-      activeStepEpoch,
+      activeRunEpoch: s.activeRunEpoch,
+      activeStepEpoch: s.activeStepEpoch,
       scheduled: timer !== null,
-      backoffMs,
-      nextStepAt,
-      estimatedDelayMs: nextStepAt ? Math.max(nextStepAt - Date.now(), 0) : null,
+      backoffMs: s.backoffMs,
+      nextStepAt: s.nextStepAt,
+      estimatedDelayMs: s.nextStepAt ? Math.max(s.nextStepAt - Date.now(), 0) : null,
       lastStepStartedAt,
       lastStepStage,
       pendingRunEvents: Array.from(messageManagerState.pendingRunMessages.values()),
@@ -1134,7 +1135,10 @@ export function createAgentRunner(
   function startNewRunEpoch() {
     activeRunEpoch += 1;
     activeStepEpoch = 0;
+    // Keep scheduler's state in sync for snapshot consistency
     invalidateInFlightGenerate();
+    // Also update scheduler state
+    scheduler.startNewRunEpoch();
     return activeRunEpoch;
   }
 
@@ -1216,7 +1220,7 @@ export function createAgentRunner(
       `System settings lookup timed out for ${runtime.id}`,
     );
 
-    if (instant || !settings.stepDelayEnabled) {
+    if (scheduler.getState().instant || !settings.stepDelayEnabled) {
       return 0;
     }
 

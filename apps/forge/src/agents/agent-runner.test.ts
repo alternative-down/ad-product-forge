@@ -53,6 +53,12 @@ function resetAllMocks() {
       activeRunEpoch: 0, stopped: false, activeStepEpoch: 0,
     });
     mockScheduler.isStopped.mockReset().mockReturnValue(false);
+    mockScheduler.startNewRunEpoch.mockReset();
+    mockScheduler.getState.mockReset().mockReturnValue({
+      nextStepAt: null, backoffMs: 60_000, instant: false,
+      activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0,
+      isStopped: false,
+    });
   }
   if (mockLoopDetector) {
     mockLoopDetector.reset.mockReset();
@@ -165,11 +171,17 @@ vi.mock('./agent-runner-scheduler', () => ({
       setInstant: vi.fn(),
       resetBackoff: vi.fn(),
       scheduleNextStep: vi.fn(),
+      getState: vi.fn().mockReturnValue({
+        nextStepAt: null, backoffMs: 60_000, instant: false,
+        activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0,
+        isStopped: false,
+      }),
       getSnapshot: vi.fn().mockReturnValue({
         nextStepAt: null, backoffMs: 60_000, instant: false,
         activeRunEpoch: 0, stopped: false, activeStepEpoch: 0,
       }),
       isStopped: vi.fn().mockReturnValue(false),
+      startNewRunEpoch: vi.fn(() => { const s = mockScheduler.getState(); return (s as any).activeRunEpoch + 1; }),
     };
     return mockScheduler;
   }),
@@ -767,6 +779,15 @@ describe('beginRun — extra coverage', () => {
 
     mockStore.getExecutionState.mockResolvedValue('idle');
     mockStore.getRunnableContract.mockResolvedValue(null);
+    // Simulate scheduler incrementing activeRunEpoch when startNewRunEpoch is called
+    let epoch = epochBefore;
+    mockScheduler.startNewRunEpoch = vi.fn(() => { epoch += 1; return epoch; });
+    // Override getState to return current epoch
+    mockScheduler.getState = vi.fn(() => ({
+      nextStepAt: null, backoffMs: 60_000, instant: false,
+      activeRunEpoch: epoch, activeStepEpoch: 0, activeGenerateToken: 0,
+      isStopped: false,
+    }));
     await runner.execute([{ type: 'agent-wake', agentId: rt.id, runId: 'run-1', timestamp: Date.now() }]);
 
     const snapAfter = runner.getSnapshot();
