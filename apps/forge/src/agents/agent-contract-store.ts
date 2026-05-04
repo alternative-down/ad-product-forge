@@ -4,7 +4,7 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 
 import type { Database } from '../database/index';
-import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles, type AgentExecutionContract } from '../database/schema';
+import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles, type AgentExecutionContract, companyCashLedger } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
@@ -214,31 +214,29 @@ export function createAgentContractStore(db: Database) {
 
     const now = Date.now();
 
-    try {
-      await companyCashOperations.recordCashOut({
+    // Both operations succeed or both fail — no partial state left behind
+    await db.transaction(async (tx) => {
+      // Record the cash outflow
+      await tx.insert(companyCashLedger).values({
+        id: createId(),
         type: 'agent-contract-funding',
+        direction: 'out',
         amountUsd: contract.budgetUsd,
         description: `Contract funding for ${contract.agentId}`,
         referenceType: 'agent-execution-contract',
         referenceId: contract.id,
+        status: 'posted',
+        dueAt: now,
         effectiveAt: now,
+        createdAt: now,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContract recordCashOut failed: ' + (err instanceof Error ? err.message : String(err)) });
-      throw err;
-    }
 
-    try {
-      await db
+      // Mark the contract as funded
+      await tx
         .update(agentExecutionContracts)
-        .set({
-          fundedAt: now,
-        })
+        .set({ fundedAt: now })
         .where(eq(agentExecutionContracts.id, contract.id));
-    } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContract update failed: ' + (err instanceof Error ? err.message : String(err)) });
-      throw err;
-    }
+    });
 
     return {
       ...contract,
