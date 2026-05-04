@@ -50,7 +50,10 @@ vi.mock('../../../capabilities/store.js', () => ({
 
 function makeMockDb(): Database {
   return {
-    insert: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockImplementation(() => ({
+  values: vi.fn().mockImplementation(() => Promise.resolve(undefined)),
+  onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+})),
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
@@ -500,20 +503,28 @@ describe('registerAgentWriteOpsRoutes', () => {
   });
 
   describe('POST /admin/agent/mcp/create', () => {
-    it('returns success with placeholder serverId', async () => {
+    it('returns success with real serverId and configId', async () => {
       const { httpServer, ops, mockRegistry } = setup();
       registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
       const resp = await handler(makeRequest({ agentId: 'a1', name: 'test-server', transport: 'stdio' }));
-      const parsed_m = JSON.parse((resp as {body:string}).body);expect(parsed_m).toMatchObject({ success: true });
+      const parsed = JSON.parse((resp as {body:string}).body);
+      expect(parsed).toMatchObject({ success: true });
+      expect(parsed.serverId).toBeTruthy();
+      expect(parsed.serverId).not.toBe('placeholder');
+      expect(parsed.configId).toBeTruthy();
     });
 
-    it('parses optional description', async () => {
+    it('returns success and creates real MCP server entry', async () => {
+      const mockDb = makeMockDb();
       const { httpServer, ops, mockRegistry } = setup();
-      registerAgentWriteOpsRoutes(httpServer, makeInput(makeMockDb()), mockRegistry, ops);
+      registerAgentWriteOpsRoutes(httpServer, makeInput(mockDb), mockRegistry, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
       const resp = await handler(makeRequest({ agentId: 'a1', name: 'srv', transport: 'http', description: 'My MCP server' }));
-      const parsed = JSON.parse((resp as {body:string}).body);expect(parsed.serverId).toBe('placeholder');;
+      const parsed = JSON.parse((resp as {body:string}).body);
+      expect(parsed.success).toBe(true);
+      expect(parsed.serverId).toBeTruthy();
+      expect(parsed.serverId).not.toBe('placeholder');
     });
   });
 
