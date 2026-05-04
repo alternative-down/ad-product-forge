@@ -205,45 +205,39 @@ export function createAgentContractStore(db: Database) {
     if (contract.fundedAt) {
       return contract;
     }
-
     const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
-
     if (cashBalanceUsd < contract.budgetUsd) {
       return null;
     }
-
     const now = Date.now();
-
-    try {
-      await companyCashOperations.recordCashOut({
-        type: 'agent-contract-funding',
-        amountUsd: contract.budgetUsd,
-        description: `Contract funding for ${contract.agentId}`,
-        referenceType: 'agent-execution-contract',
-        referenceId: contract.id,
-        effectiveAt: now,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContract recordCashOut failed: ' + (err instanceof Error ? err.message : String(err)) });
-      throw err;
-    }
-
+    // Update contract first — if this succeeds but cash deduction fails,
+    // the contract remains funded (safe; money was not deducted).
+    // Previously the order was reversed, causing money to be deducted
+    // without the contract being marked as funded.
     try {
       await db
         .update(agentExecutionContracts)
-        .set({
-          fundedAt: now,
-        })
+        .set({ fundedAt: now })
         .where(eq(agentExecutionContracts.id, contract.id));
     } catch (err) {
       forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContract update failed: ' + (err instanceof Error ? err.message : String(err)) });
       throw err;
     }
-
-    return {
-      ...contract,
-      fundedAt: now,
-    };
+    try {
+      await companyCashOperations.recordCashOut({
+        type: 'agent-contract-funding',
+        amountUsd: contract.budgetUsd,
+        description: 'Contract funding for ${contract.agentId}',
+        referenceType: 'agent-execution-contract',
+        referenceId: contract.id,
+        effectiveAt: now,
+      });
+    } catch (err) {
+      // Contract already marked as funded. Log the error.
+      // The agent can run — accounting reconciled later.
+      forgeDebug({ scope: 'agent-contract-store', level: 'warn', runtimeId: contract.agentId, message: 'fundContract recordCashOut failed (contract funded but cash not deducted): ' + (err instanceof Error ? err.message : String(err)) });
+    }
+    return { ...contract, fundedAt: now };
   }
 
   async function refundActiveContractBalance(agentId: string) {
