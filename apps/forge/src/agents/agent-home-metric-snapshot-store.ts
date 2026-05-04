@@ -1,4 +1,5 @@
 import type { Database } from '../database';
+import { forgeDebug } from '@forge-runtime/core';
 import { agentHomeMetricSnapshots } from '../database/schema';
 import { createId } from '../utils/id';
 
@@ -11,14 +12,24 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
   }) {
     const createdAt = Date.now();
 
-    await db.insert(agentHomeMetricSnapshots).values({
-      id: createId(),
-      agentId: input.agentId,
-      stepId: input.stepId,
-      stepCreatedAt: input.stepCreatedAt,
-      snapshot: input.snapshot,
-      createdAt,
-    });
+    try {
+      await db.insert(agentHomeMetricSnapshots).values({
+        id: createId(),
+        agentId: input.agentId,
+        stepId: input.stepId,
+        stepCreatedAt: input.stepCreatedAt,
+        snapshot: input.snapshot,
+        createdAt,
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'agent-home-metric-snapshot-store',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'recordSnapshot failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
 
     return {
       createdAt,
