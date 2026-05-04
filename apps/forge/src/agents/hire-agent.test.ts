@@ -27,7 +27,16 @@ const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(u
 const mockDelete = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
 
 function createMockDb() {
-  return { insert: mockInsert, delete: mockDelete, query: { agents: { findFirst: vi.fn().mockResolvedValue(null) } } };
+  return {
+    insert: mockInsert,
+    delete: mockDelete,
+    transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
+      // Simulate drizzle transaction by calling the callback with a tx object
+      // that has the same insert/delete methods
+      await fn({ insert: mockInsert, delete: mockDelete });
+    }),
+    query: { agents: { findFirst: vi.fn().mockResolvedValue(null) } },
+  };
 }
 
 function createInput() {

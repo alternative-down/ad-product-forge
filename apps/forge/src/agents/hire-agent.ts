@@ -94,25 +94,26 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
   };
 
   try {
-    await db.insert(agents).values(agentRecord);
+    await db.transaction(async (tx) => {
+      await tx.insert(agents).values(agentRecord);
+      await tx.insert(agentExecutionContracts).values(contractRecord);
 
-    await db.insert(agentExecutionContracts).values(contractRecord);
+      for (const [providerType, credentials] of Object.entries(providerCredentials)) {
+        if (!credentials) {
+          continue;
+        }
 
-    for (const [providerType, credentials] of Object.entries(providerCredentials)) {
-      if (!credentials) {
-        continue;
+        const providerRecord: NewAgentProvider = {
+          id: createId(),
+          agentId,
+          providerType,
+          encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
+          createdAt: now,
+        };
+
+        await tx.insert(agentProviders).values(providerRecord);
       }
-
-      const providerRecord: NewAgentProvider = {
-        id: createId(),
-        agentId,
-        providerType,
-        encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
-        createdAt: now,
-      };
-
-      await db.insert(agentProviders).values(providerRecord);
-    }
+    });
 
     await input.internalChat.registerAgentAccount({
       agentId,
@@ -141,8 +142,14 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       emailAddress: provisionedMailbox?.address ?? null,
     };
   } catch (error) {
-    getInternalAgentRegistry().remove(agentId);
+    // Clean up all DB records created during the transaction.
+    // Contract and provider records were created inside the same transaction,
+    // so a rollback-style delete here is safe even if transaction committed
+    // the inserts but the external ops (loadAgent etc.) failed.
+    await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+    await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
     await db.delete(agents).where(eq(agents.id, agentId));
+    getInternalAgentRegistry().remove(agentId);
 
     if (provisionedMailbox && input.emailMailboxes) {
       await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
