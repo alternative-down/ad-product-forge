@@ -53,22 +53,24 @@ export async function adjustAgentContractBudget(
       throw new Error('Insufficient company cash for budget increase');
     }
 
-    // Deduct from company cash
-    await companyCashOperations.recordCashOut({
-      type: 'agent-contract-budget-increase',
-      amountUsd: budgetDelta,
-      description: `Budget increase for contract ${activeContract.id}`,
-      referenceType: 'agent-execution-contract',
-      referenceId: activeContract.id,
-    });
+    // Deduct from company cash and update budget atomically
+    await db.transaction(async (tx) => {
+      await companyCashOperations.recordCashOut(
+        {
+          type: 'agent-contract-budget-increase',
+          amountUsd: budgetDelta,
+          description: `Budget increase for contract ${activeContract.id}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: activeContract.id,
+        },
+        tx,
+      );
 
-    // Update contract budget
-    await db
-      .update(agentExecutionContracts)
-      .set({
-        budgetUsd: input.newBudgetUsd,
-      })
-      .where(eq(agentExecutionContracts.id, activeContract.id));
+      await tx
+        .update(agentExecutionContracts)
+        .set({ budgetUsd: input.newBudgetUsd })
+        .where(eq(agentExecutionContracts.id, activeContract.id));
+    });
 
     return {
       agentId: input.agentId,
@@ -93,22 +95,24 @@ export async function adjustAgentContractBudget(
 
   const refundAmount = Math.abs(budgetDelta);
 
-  // Return unused funds to company cash
-  await companyCashOperations.recordCashIn({
-    type: 'agent-contract-budget-decrease',
-    amountUsd: refundAmount,
-    description: `Budget decrease refund for contract ${activeContract.id}`,
-    referenceType: 'agent-execution-contract',
-    referenceId: activeContract.id,
-  });
+  // Refund unused funds and update budget atomically
+  await db.transaction(async (tx) => {
+    await companyCashOperations.recordCashIn(
+      {
+        type: 'agent-contract-budget-decrease',
+        amountUsd: refundAmount,
+        description: `Budget decrease refund for contract ${activeContract.id}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: activeContract.id,
+      },
+      tx,
+    );
 
-  // Update contract budget
-  await db
-    .update(agentExecutionContracts)
-    .set({
-      budgetUsd: input.newBudgetUsd,
-    })
-    .where(eq(agentExecutionContracts.id, activeContract.id));
+    await tx
+      .update(agentExecutionContracts)
+      .set({ budgetUsd: input.newBudgetUsd })
+      .where(eq(agentExecutionContracts.id, activeContract.id));
+  });
 
   return {
     agentId: input.agentId,

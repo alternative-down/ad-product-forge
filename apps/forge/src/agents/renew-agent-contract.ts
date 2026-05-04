@@ -58,18 +58,7 @@ export async function renewAgentContract(
     });
   }
 
-  // Fund new contract — must succeed before creating contract
-  await companyCashOperations.recordCashOut({
-    type: 'agent-contract-renewal-funding',
-    amountUsd: input.newBudgetUsd,
-    description: `Renewal funding for contract ${newContractId}`,
-    referenceType: 'agent-execution-contract',
-    referenceId: newContractId,
-    effectiveAt: now,
-  });
-
-  // Wrap contract lifecycle ops in a transaction — all-or-nothing.
-  // Closes old contract, inserts new contract (funded), in a single DB transaction.
+  // Close old contract, create new, and fund it atomically
   await db.transaction(async (tx) => {
     // Close old contract
     await tx
@@ -77,17 +66,36 @@ export async function renewAgentContract(
       .set({ endsAt: now })
       .where(eq(agentExecutionContracts.id, activeContract.id));
 
-    // Create new contract (pre-funded)
+    // Create new contract
     await tx.insert(agentExecutionContracts).values({
       id: newContractId,
       agentId: input.agentId,
       budgetUsd: input.newBudgetUsd,
       autoRenew: activeContract.autoRenew,
-      fundedAt: now,
+      fundedAt: null,
       startsAt: now,
       endsAt: now + WEEK_MS,
       createdAt: now,
     });
+
+    // Fund new contract — must be in same tx as contract creation
+    await companyCashOperations.recordCashOut(
+      {
+        type: 'agent-contract-renewal-funding',
+        amountUsd: input.newBudgetUsd,
+        description: `Renewal funding for contract ${newContractId}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: newContractId,
+        effectiveAt: now,
+      },
+      tx,
+    );
+
+    // Mark new contract as funded
+    await tx
+      .update(agentExecutionContracts)
+      .set({ fundedAt: now })
+      .where(eq(agentExecutionContracts.id, newContractId));
   });
 
   return {
