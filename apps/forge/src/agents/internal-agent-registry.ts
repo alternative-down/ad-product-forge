@@ -1,9 +1,8 @@
 import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/index';
-import { loadAgents, type AgentLoaderConfig } from './agent-loader';
+import type { AgentLoaderConfig } from './agent-loader';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
-import { loadAgent } from './agent-loader';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
@@ -16,6 +15,7 @@ function createInternalAgentRegistry() {
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
     loaderConfig = config;
+    const { loadAgents } = await import('./agent-loader');
     const existingAgentIds = new Set(agents.keys());
     const runtimes = await loadAgents(db, config);
 
@@ -51,6 +51,7 @@ function createInternalAgentRegistry() {
           throw new Error('Agent loader config is not available for runtime reload');
         }
 
+        const { loadAgent } = await import('./agent-loader');
         return loadAgent(db, {
           ...loaderConfig,
           agentId: runtime.id,
