@@ -1,27 +1,35 @@
 /**
  * Ops Context — shared dependencies available to all ops modules.
- * These are the internal functions that each ops module needs.
  */
 import type { Octokit } from 'octokit';
+import type { Database } from '../../database/index.js';
+import type { HttpServer, HttpRequest, HttpResponse } from '../../http/server.js';
+import type { createSystemIntegrationStore } from '../../system-integrations/store.js';
+import type { createAgentNotificationStore } from '../../notifications/store.js';
 import type { GitHubAppCredentials, GitHubAppManifestConfig } from '../types.js';
 
+/** Notification store returned by createAgentNotificationStore */
+export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;
+
+export interface OpsConfig {
+  db: Database;
+  httpServer: HttpServer;
+  publicBaseUrl: string;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
+}
+
 export interface OpsContext {
-  config: {
-    db: unknown;
-    httpServer: unknown;
-    publicBaseUrl: string;
-    integrations: unknown;
-  };
-  notifications: unknown;
+  config: OpsConfig;
+  notifications: AgentNotificationStore;
   routeCleanups: Map<string, Array<() => void>>;
   GITHUB_PROVIDER_TYPE: string;
-  and: unknown;
-  eq: unknown;
-  agentProviders: unknown;
-  agents: unknown;
+  and: typeof import('drizzle-orm').and;
+  eq: typeof import('drizzle-orm').eq;
+  agentProviders: typeof import('../../database/schema.js').agentProviders;
+  agents: typeof import('../../database/schema.js').agents;
   createId: () => string;
   nanoid: (size?: number) => string;
-  forgeDebug: (...args: unknown[]) => void;
+  forgeDebug: (opts: { scope: string; level: string; message: string; context?: unknown }) => void;
 
   getGlobalConfig: () => Promise<{ organization: string; appHomeUrl: string }>;
   getDefaultOwner: (owner?: string) => Promise<string>;
@@ -39,18 +47,18 @@ export interface OpsContext {
   getSetupPath: (agentId: string) => string;
   getWebhookPath: (agentId: string) => string;
   escapeHtml: (input: string) => string;
-  normalizeAssignees: (assignees: unknown[]) => string[];
-  toIssueSummary: (payload: unknown) => unknown;
-  toIssueDetails: (payload: unknown) => unknown;
+  normalizeAssignees: (assignees: string[]) => string[];
+  toIssueSummary: (payload: import('../helpers.js').IssuePayload) => import('../helpers.js').IssueSummary;
+  toIssueDetails: (payload: import('../helpers.js').IssuePayload) => import('../helpers.js').IssueDetails;
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig;
   buildManifestEvents: () => string[];
-  buildManifestPermissions: (manifestConfig: unknown) => Record<string, string>;
+  buildManifestPermissions: (manifestConfig: GitHubAppManifestConfig) => Record<string, string>;
   createAppName: (agentName: string, agentId: string) => string;
   createGitHubInstallWakeContent: (payload: unknown) => unknown;
   createGitHubWebhookWakeContent: (payload: unknown) => unknown;
   isGitHubSelfEvent: (payload: unknown) => boolean;
   isRecord: (value: unknown) => boolean;
   summarizeGitHubEvent: (payload: unknown) => string;
-  normalizeGitHubAppCredentials: (raw: unknown) => unknown;
-  normalizeManifestConfig: (raw: unknown) => unknown;
+  normalizeGitHubAppCredentials: (raw: unknown) => GitHubAppCredentials;
+  normalizeManifestConfig: (raw: unknown) => GitHubAppManifestConfig;
 }
