@@ -367,9 +367,10 @@ describe('Agent Write Ops Routes', () => {
         response = handler({ bodyText: JSON.stringify({ agentId: 'test-agent' }) });
       },
     };
-    const registry = new Map([
-      ['test-agent', { runner: { forceIdle, notifyExternalEvent: vi.fn() } } as any],
-    ]);
+    const registry = {
+      get(id: string) { return id === 'test-agent' ? { runner: { forceIdle, notifyExternalEvent: vi.fn() } } : null; },
+      add: vi.fn(), list: () => [], remove: vi.fn(),
+    };
     registerAgentWriteOpsRoutes(
       httpServer as any,
       { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
@@ -387,9 +388,10 @@ describe('Agent Write Ops Routes', () => {
         if (path === '/admin/agent/rewakeup') capturedHandler = handler;
       },
     };
-    const registry = new Map([
-      ['test-agent', { runner: { notifyExternalEvent, forceIdle: vi.fn() } } as any],
-    ]);
+    const registry = {
+      get(id: string) { return id === 'test-agent' ? { runner: { notifyExternalEvent, forceIdle: vi.fn() } } : null; },
+      add: vi.fn(), list: () => [], remove: vi.fn(),
+    };
     registerAgentWriteOpsRoutes(
       httpServer as any,
       { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
