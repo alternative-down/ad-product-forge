@@ -30,6 +30,20 @@ Current application environment is defined primarily in [main.ts](/home/nicolas/
 - `FORGE_PUBLIC_BASE_URL`
   - defaults to local server URL derived from `FORGE_HTTP_PORT`
 
+- `FORGE_HTTP_MAX_BODY_BYTES`
+  - maximum request body size the HTTP server accepts before rejecting with `413 Payload Too Large`
+  - defaults to `1048576` (1 MB)
+  - the server stops collecting the body once the limit is exceeded and returns `{"error":"Request body too large"}`
+  - all routes (Admin API, webhooks, ticketing, etc.) share this limit
+  - can be overridden per-route via the `maxBodyBytes` option when creating the server programmatically
+
+- `FORGE_HTTP_MAX_BODY_BYTES`
+  - maximum request body size the HTTP server accepts before rejecting with `413 Payload Too Large`
+  - defaults to `1048576` (1 MB)
+  - the server terminates collection once the limit is exceeded and returns a JSON error: `{"error":"Request body too large"}`
+  - all routes (Admin API, webhooks, ticketing, etc.) share this limit
+  - can be overridden per-route via the `maxBodyBytes` option when creating the server programmatically
+
 - `FORGE_ADMIN_API_KEY`
   - when set, every `/admin/*` request must include the `x-forge-admin-api-key` header
   - used by the admin UI and stored only in browser localStorage on the admin host
