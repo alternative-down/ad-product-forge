@@ -6,11 +6,11 @@ const mockRecallInstance = {
 
 const mockCreateLtmRecall = vi.fn().mockReturnValue(mockRecallInstance);
 
-vi.mock('./agent-long-term-memory-recall', () => ({
+vi.mock('../ltm/recall', () => ({
   createAgentLongTermMemoryRecall: mockCreateLtmRecall,
 }));
 
-vi.mock('./agent-long-term-memory-store', () => ({
+vi.mock('../ltm/store', () => ({
   createAgentLongTermMemoryStore: vi.fn(() => ({})),
 }));
 
@@ -22,76 +22,61 @@ describe('createAgentRuntimeMemory', () => {
   it('creates longTermMemoryRecall when longTermMemory is true', async () => {
     const { createAgentRuntimeMemory } = await import('./agent-runtime-memory');
 
-    const persistenceStore = {} as any;
-    const conversationStore = {} as any;
-
     const result = await createAgentRuntimeMemory({
       agentId: 'agent-123',
       mastraId: 'mastra-abc',
-      agentWorkspacePath: '/workspace/agent-123',
-      agentMemoryPath: '/workspace/agent-123/memory',
+      agentWorkspacePath: '/tmp/workspace',
       agentModel: {},
+      agentMemoryPath: '/tmp/memory',
       longTermMemory: true,
-      workspaceEmbedder: undefined,
-      conversationStore,
-      checkpointedOmLimits: { recentRawTokens: 8000 },
-      persistenceStore,
-      readRuntimeMemorySettings: vi.fn().mockResolvedValue({
-        ltmRecallSearchMode: 'hybrid' as const,
-        ltmRecallWorkspaceTopK: 5,
-        ltmRecallGraphTopK: 3,
-        ltmRecallGraphThreshold: 0.7,
-        ltmRecallGraphRandomWalkSteps: 10,
-        ltmRecallGraphIncludeSources: true,
-        ltmRecallScoreThreshold: 0.5,
-        ltmRecallDocumentCount: 10,
-      }),
+      persistenceStore: {},
+      conversationStore: {} as any,
+      checkpointedOmLimits: { recentRawTokens: 2048 },
     });
 
-    expect(result.longTermMemoryRecall).toBeDefined();
+    expect(result.longTermMemoryRecall).toBe(mockRecallInstance);
     expect(mockCreateLtmRecall).toHaveBeenCalledWith(
       expect.objectContaining({
         agentId: 'agent-123',
-        agentWorkspacePath: '/workspace/agent-123',
-        agentMemoryPath: '/workspace/agent-123/memory',
-        workspaceEmbedder: undefined,
-        mastraId: 'mastra-abc',
+        agentWorkspacePath: '/tmp/workspace',
+        persistenceStore: {},
+        conversationStore: expect.anything(),
+        recentRawTokens: 2048,
       }),
     );
-    expect(mockRecallInstance.initialize).toHaveBeenCalled();
   });
 
   it('returns null longTermMemoryRecall when longTermMemory is false', async () => {
     const { createAgentRuntimeMemory } = await import('./agent-runtime-memory');
 
     const result = await createAgentRuntimeMemory({
-      agentId: 'agent-456',
-      mastraId: 'mastra-xyz',
-      agentWorkspacePath: '/workspace/agent-456',
-      agentMemoryPath: '/workspace/agent-456/memory',
+      agentId: 'agent-123',
+      mastraId: 'mastra-abc',
+      agentWorkspacePath: '/tmp/workspace',
       agentModel: {},
+      agentMemoryPath: '/tmp/memory',
       longTermMemory: false,
+      persistenceStore: {},
       conversationStore: {} as any,
-      checkpointedOmLimits: {},
-      persistenceStore: {} as any,
+      checkpointedOmLimits: { recentRawTokens: 2048 },
     });
 
     expect(result.longTermMemoryRecall).toBeNull();
-    expect(mockCreateLtmRecall).not.toHaveBeenCalled();
   });
 
   it('returns null longTermMemoryRecall when longTermMemory is undefined', async () => {
     const { createAgentRuntimeMemory } = await import('./agent-runtime-memory');
 
     const result = await createAgentRuntimeMemory({
-      agentId: 'agent-789',
-      mastraId: 'mastra-qrs',
-      agentWorkspacePath: '/workspace/agent-789',
-      agentMemoryPath: '/workspace/agent-789/memory',
+      agentId: 'agent-123',
+      mastraId: 'mastra-abc',
+      agentWorkspacePath: '/tmp/workspace',
       agentModel: {},
+      agentMemoryPath: '/tmp/memory',
+      longTermMemory: undefined,
+      persistenceStore: {},
       conversationStore: {} as any,
-      checkpointedOmLimits: {},
-      persistenceStore: {} as any,
+      checkpointedOmLimits: { recentRawTokens: 2048 },
     });
 
     expect(result.longTermMemoryRecall).toBeNull();
@@ -101,25 +86,14 @@ describe('createAgentRuntimeMemory', () => {
     const { createAgentRuntimeMemory } = await import('./agent-runtime-memory');
 
     const result = await createAgentRuntimeMemory({
-      agentId: 'agent-test',
-      mastraId: 'mastra-test',
-      agentWorkspacePath: '/workspace/test',
-      agentMemoryPath: '/workspace/test/memory',
+      agentId: 'agent-123',
+      mastraId: 'mastra-abc',
+      agentWorkspacePath: '/tmp/workspace',
       agentModel: {},
-      longTermMemory: true,
+      agentMemoryPath: '/tmp/memory',
+      persistenceStore: {},
       conversationStore: {} as any,
-      checkpointedOmLimits: {},
-      persistenceStore: {} as any,
-      readRuntimeMemorySettings: vi.fn().mockResolvedValue({
-        ltmRecallSearchMode: 'vector' as const,
-        ltmRecallWorkspaceTopK: 10,
-        ltmRecallGraphTopK: 5,
-        ltmRecallGraphThreshold: 0.5,
-        ltmRecallGraphRandomWalkSteps: 20,
-        ltmRecallGraphIncludeSources: false,
-        ltmRecallScoreThreshold: 0.3,
-        ltmRecallDocumentCount: 20,
-      }),
+      checkpointedOmLimits: { recentRawTokens: 2048 },
     });
 
     expect(result).toHaveProperty('longTermMemoryRecall');

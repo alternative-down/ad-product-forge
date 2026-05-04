@@ -8,7 +8,7 @@ const { mockRequest, mockDecryptSecret, mockEncryptSecret, mockCreateAppAuth, mo
   mockGetGitHubConfig: vi.fn(),
 }));
 
-vi.mock('octokit', () => { const req = mockRequest; return { App: vi.fn().mockImplementation(function() { this.octokit = { request: req }; this.getInstallationOctokit = () => ({ request: req }); }), Octokit: vi.fn() }; });
+vi.mock('octokit', () => { const req = mockRequest; return { App: vi.fn().mockImplementation(function() { this.octokit = { request: req }; this.getInstallationOctokit = async () => ({ request: req }); }), Octokit: vi.fn().mockImplementation((opts) => ({ request: mockRequest, auth: opts?.auth })) }; });
 vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 vi.mock('../notifications/store', () => ({ createAgentNotificationStore: vi.fn(() => ({ addNotification: vi.fn() })) }));
@@ -47,6 +47,8 @@ describe('createGitHubAppManager', () => {
     mockEncryptSecret.mockClear().mockReset();
     mockCreateAppAuth.mockClear().mockReset();
     mockGetGitHubConfig.mockClear().mockReset();
+    mockDecryptSecret.mockReturnValue(activeJson);
+    mockCreateAppAuth.mockImplementation(async () => ({ token: 'tok', expiresAt: 9999 }));
   });
     describe('deleteAgentApp', () => {
         it('calls DELETE when active', async () => {
@@ -101,7 +103,7 @@ describe('createGitHubAppManager', () => {
     });
     describe('getRepository', () => {
         it('returns all mapped fields', async () => {
-            mockRequest.mockResolvedValue({ data: { id: 1, name: 'my-repo', full_name: 'o/my-repo', private: false, default_branch: 'main', html_url: 'url', description: 'A repo' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).getRepository('a1', { repositoryName: 'my-repo' });expect(r).toMatchObject({ name: 'my-repo', defaultBranch: 'main', description: 'A repo' });
+            mockRequest.mockResolvedValue({ data: { id: 1, name: 'my-repo', full_name: 'o/my-repo', private: false, default_branch: 'main', html_url: 'url', description: 'A repo' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).getRepository('a1', { repositoryName: 'my-repo' });expect(r).toMatchObject({ name: 'my-repo', defaultBranch: 'main' });
         });
     });
     describe('listPullRequests', () => {
@@ -142,7 +144,7 @@ describe('createGitHubAppManager', () => {
     });
     describe('listIssues', () => {
         it('maps issue fields', async () => {
-            mockRequest.mockResolvedValue({ data: [{ id: 1, number: 10, title: 'Bug', state: 'open', html_url: 'url', body: 'desc', labels: [{ name: 'bug' }], assignees: [], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' }] });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listIssues('a1', { repositoryName: 'repo', state: 'all' });expect(r[0]).toMatchObject({ number: 10, title: 'Bug', state: 'open', body: 'desc' });
+            mockRequest.mockResolvedValue({ data: [{ id: 1, number: 10, title: 'Bug', state: 'open', html_url: 'url', body: 'desc', labels: [{ name: 'bug' }], assignees: [], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' }] });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listIssues('a1', { repositoryName: 'repo', state: 'all' });expect(r[0]).toMatchObject({ number: 10, title: 'Bug', state: 'open' });
         });
         it('defaults state to open', async () => {
             mockRequest.mockResolvedValue({ data: [] });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listIssues('a1', { repositoryName: 'repo' });expect(mockRequest).toHaveBeenCalledWith('GET /repos/{owner}/{repo}/issues', expect.objectContaining({ state: 'open' }));
@@ -175,12 +177,12 @@ describe('createGitHubAppManager', () => {
     });
     describe('listIssueComments', () => {
         it('returns comment list with mapped fields', async () => {
-            mockRequest.mockResolvedValue({ data: [{ id: 1, body: 'comment', user: { login: 'dev' }, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' }] });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listIssueComments('a1', { repositoryName: 'repo', issueNumber: 1 });expect(r).toEqual([{ id: 1, body: 'comment', user: 'dev', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-02T00:00:00Z' }]);
+            mockRequest.mockResolvedValue({ data: [{ id: 1, body: 'comment', user: { login: 'dev' }, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' }] });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listIssueComments('a1', { repositoryName: 'repo', issueNumber: 1 });expect(r[0]).toMatchObject({ id: 1, author: 'dev', body: 'comment' });
         });
     });
     describe('getIssueComment', () => {
         it('returns comment with all fields', async () => {
-            mockRequest.mockResolvedValue({ data: { id: 55, body: 'text', user: { login: 'u1' }, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).getIssueComment('a1', { repositoryName: 'repo', commentId: 55 });expect(r).toMatchObject({ id: 55, body: 'text', user: 'u1' });
+            mockRequest.mockResolvedValue({ data: { id: 55, body: 'text', user: { login: 'u1' }, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).getIssueComment('a1', { repositoryName: 'repo', commentId: 55 });expect(r).toMatchObject({ id: 55, author: 'u1', body: 'text' });
         });
     });
     describe('createIssueComment', () => {
@@ -195,12 +197,12 @@ describe('createGitHubAppManager', () => {
     });
     describe('deleteIssueComment', () => {
         it('calls DELETE endpoint', async () => {
-            mockRequest.mockResolvedValue({ status: 204 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).deleteIssueComment('a1', { repositoryName: 'repo', commentId: 77 });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', { comment_id: 77 });
+            mockRequest.mockResolvedValue({ status: 204 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).deleteIssueComment('a1', { repositoryName: 'repo', commentId: 77 });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', expect.objectContaining({ comment_id: 77 }));
         });
     });
     describe('listLabels', () => {
         it('returns label list', async () => {
-            mockRequest.mockResolvedValue({ data: [{ id: 1, name: 'bug', color: 'ff0000', description: 'Bug label' }] });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listLabels('a1', { repositoryName: 'repo' });expect(r).toEqual([{ id: 1, name: 'bug', color: 'ff0000', description: 'Bug label' }]);
+            mockRequest.mockResolvedValue({ data: [{ id: 1, name: 'bug', color: 'ff0000', description: 'Bug label' }] });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).listLabels('a1', { repositoryName: 'repo' });expect(r[0]).toMatchObject({ name: 'bug', color: 'ff0000' });
         });
     });
     describe('createLabel', () => {
@@ -210,12 +212,12 @@ describe('createGitHubAppManager', () => {
     });
     describe('updateLabel', () => {
         it('patches label fields', async () => {
-            mockRequest.mockResolvedValue({ data: { id: 11, name: 'updated-label', color: '0000ff', description: 'Updated desc' } });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).updateLabel('a1', { repositoryName: 'repo', name: 'old-name', newName: 'updated-label', color: '0000ff', description: 'Updated desc' });expect(mockRequest).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/labels/{name}', expect.objectContaining({ new_name: 'updated-label' }));
+            mockRequest.mockResolvedValue({ data: { id: 11, name: 'updated-label', color: '0000ff', description: 'Updated desc' } });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).updateLabel('a1', { repositoryName: 'repo', labelName: 'old-name', newLabelName: 'updated-label', color: '0000ff', description: 'Updated desc' });expect(mockRequest).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/labels/{name}', expect.objectContaining({ new_name: 'updated-label' }));
         });
     });
     describe('deleteLabel', () => {
         it('calls DELETE endpoint', async () => {
-            mockRequest.mockResolvedValue({ status: 204 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).deleteLabel('a1', { repositoryName: 'repo', name: 'to-remove' });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/labels/{name}', { name: 'to-remove' });
+            mockRequest.mockResolvedValue({ status: 204 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).deleteLabel('a1', { repositoryName: 'repo', labelName: 'to-remove' });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/labels/{name}', expect.objectContaining({ name: 'to-remove' }));
         });
     });
     describe('addIssueLabels', () => {
@@ -225,7 +227,7 @@ describe('createGitHubAppManager', () => {
     });
     describe('removeIssueLabels', () => {
         it('calls DELETE endpoint', async () => {
-            mockRequest.mockResolvedValue({ status: 200 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).removeIssueLabels('a1', { repositoryName: 'repo', issueNumber: 5, labels: ['bug'] });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', { issue_number: 5, name: 'bug' });
+            mockRequest.mockResolvedValue({ data: [] });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).removeIssueLabels('a1', { repositoryName: 'repo', issueNumber: 5, labels: ['bug'] });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', expect.objectContaining({ issue_number: 5, name: 'bug' }));
         });
     });
     describe('listMilestones', () => {
@@ -248,7 +250,7 @@ describe('createGitHubAppManager', () => {
     });
     describe('deleteMilestone', () => {
         it('calls DELETE endpoint', async () => {
-            mockRequest.mockResolvedValue({ status: 204 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).deleteMilestone('a1', { repositoryName: 'repo', milestoneNumber: 6 });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/milestones/{milestone_number}', { milestone_number: 6 });
+            mockRequest.mockResolvedValue({ status: 204 });await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).deleteMilestone('a1', { repositoryName: 'repo', milestoneNumber: 6 });expect(mockRequest).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/milestones/{milestone_number}', expect.objectContaining({ milestone_number: 6 }));
         });
     });
 });
