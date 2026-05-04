@@ -35,24 +35,35 @@ export function createCompanyPayables(db: Database) {
     const now = Date.now();
     const payableId = createId();
 
-    await db.insert(companyRecurringPayables).values({
-      id: payableId,
-      name: input.name,
-      description: input.description,
-      amountUsd: input.amountUsd,
-      recurrencePeriod: input.recurrencePeriod,
-      nextDueAt: input.dueAt,
-      isActive: 1,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Wrap payable insert + planned occurrence in transaction
+    const entryId = await db.transaction(async (tx) => {
+      await tx.insert(companyRecurringPayables).values({
+        id: payableId,
+        name: input.name,
+        description: input.description,
+        amountUsd: input.amountUsd,
+        recurrencePeriod: input.recurrencePeriod,
+        nextDueAt: input.dueAt,
+        isActive: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-    const entryId = await createPlannedOccurrence({
-      payableId,
-      name: input.name,
-      description: input.description,
-      amountUsd: input.amountUsd,
-      dueAt: input.dueAt,
+      const eid = createId();
+      await tx.insert(companyCashLedger).values({
+        id: eid,
+        type: 'recurring-payable',
+        direction: 'out',
+        amountUsd: input.amountUsd,
+        description: input.description ?? input.name,
+        referenceType: 'recurring-payable',
+        referenceId: payableId,
+        status: 'planned',
+        dueAt: input.dueAt,
+        effectiveAt: null,
+        createdAt: now,
+      });
+      return eid;
     });
 
     return {
@@ -118,21 +129,31 @@ export function createCompanyPayables(db: Database) {
       return null;
     }
 
-    await createPlannedOccurrence({
-      payableId: payable.id,
-      name: payable.name,
-      description: payable.description ?? undefined,
-      amountUsd: payable.amountUsd,
-      dueAt: nextDueAt,
-    });
+    // Wrap planned occurrence + payable update in transaction
+    await db.transaction(async (tx) => {
+      const eid = createId();
+      await tx.insert(companyCashLedger).values({
+        id: eid,
+        type: 'recurring-payable',
+        direction: 'out',
+        amountUsd: payable.amountUsd,
+        description: payable.description ?? payable.name,
+        referenceType: 'recurring-payable',
+        referenceId: payable.id,
+        status: 'planned',
+        dueAt: nextDueAt,
+        effectiveAt: null,
+        createdAt: Date.now(),
+      });
 
-    await db
-      .update(companyRecurringPayables)
-      .set({
-        nextDueAt,
-        updatedAt: Date.now(),
-      })
-      .where(eq(companyRecurringPayables.id, payable.id));
+      await tx
+        .update(companyRecurringPayables)
+        .set({
+          nextDueAt,
+          updatedAt: Date.now(),
+        })
+        .where(eq(companyRecurringPayables.id, payable.id));
+    });
 
     return {
       payableId: payable.id,

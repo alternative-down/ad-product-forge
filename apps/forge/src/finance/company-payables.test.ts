@@ -125,6 +125,7 @@ interface MockPayablesDb {
       where: (condition: unknown) => Promise<{ rowCount: number }>;
     };
   };
+  transaction: (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>;
 }
 
 function createMockPayablesDb(
@@ -195,6 +196,33 @@ function createMockPayablesDb(
         },
       }),
     }),
+    transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      return fn({
+        insert: () => ({
+          values: async (values: Record<string, unknown>) => {
+            if ('recurrencePeriod' in values) {
+              payablesStore.push(values as RecurringPayableRow);
+            } else {
+              ledgerStore.push(values as CashLedgerRow);
+            }
+            return { rowCount: 1 };
+          },
+        }),
+        update: () => ({
+          set: (values: Record<string, unknown>) => ({
+            where: async (condition: unknown) => {
+              const conds = extractConditions(condition);
+              for (const row of payablesStore) {
+                if (conds.every(({ colName, value }: { colName: string; value: unknown }) => (row as Record<string, unknown>)[snakeToCamel(colName)] === value)) {
+                  Object.assign(row, values);
+                }
+              }
+              return { rowCount: 1 };
+            },
+          }),
+        }),
+      });
+    },
   };
 }
 
