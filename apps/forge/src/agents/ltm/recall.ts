@@ -718,8 +718,8 @@ export class AgentLongTermMemoryRecall {
       });
       return { formatted: '', results: searchResults };
     } catch (error) {
-
-      if (message.includes('SQLITE_ERROR: no such table') || message.includes('no such table:')) {
+      const err = error instanceof Error ? error.message : String(error);
+      if (err.includes('SQLITE_ERROR: no such table') || err.includes('no such table:')) {
         return { formatted: '', results: [] };
       }
 
