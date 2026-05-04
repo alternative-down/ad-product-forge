@@ -1,4 +1,5 @@
 import { rm } from 'node:fs/promises';
+import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 
 import { eq } from 'drizzle-orm';
@@ -29,18 +30,52 @@ export async function terminateInternalAgent(db: Database, input: {
   }
 
   const contractStore = createAgentContractStore(db);
-  await contractStore.refundActiveContractBalance(input.agentId);
-
-  getInternalAgentRegistry().remove(input.agentId);
-  await input.schedules.removeAgent(input.agentId);
-
-  if (input.emailMailboxes && (await input.emailMailboxes.isConfigured())) {
-    await input.emailMailboxes.deleteAgentMailbox(input.agentId);
+  try {
+    await contractStore.refundActiveContractBalance(input.agentId);
+  } catch (err) {
+    forgeDebug({
+      scope: 'terminate-agent',
+      level: 'warn',
+      runtimeId: input.agentId,
+      message: 'refundActiveContractBalance failed (non-fatal): ' + (err instanceof Error ? err.message : String(err)),
+    });
   }
 
-  await input.githubApps.deleteAgentApp(input.agentId);
+  // Perform external operations — rollback DB cleanup on any failure
+  try {
+    await input.schedules.removeAgent(input.agentId);
 
+    if (input.emailMailboxes && (await input.emailMailboxes.isConfigured())) {
+      await input.emailMailboxes.deleteAgentMailbox(input.agentId);
+    }
+
+    await input.githubApps.deleteAgentApp(input.agentId);
+  } catch (err) {
+    forgeDebug({
+      scope: 'terminate-agent',
+      level: 'error',
+      runtimeId: input.agentId,
+      message: 'external cleanup failed during terminate: ' + (err instanceof Error ? err.message : String(err)),
+    });
+
+    // Still clean up DB and registry even when external ops fail
+    try {
+      await db.delete(agents).where(eq(agents.id, input.agentId));
+    } catch (deleteErr) {
+      forgeDebug({
+        scope: 'terminate-agent',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'DB delete failed during rollback: ' + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr)),
+      });
+    }
+    getInternalAgentRegistry().remove(input.agentId);
+    throw err;
+  }
+
+  // External ops succeeded — now delete DB record and workspace
   await db.delete(agents).where(eq(agents.id, input.agentId));
+  getInternalAgentRegistry().remove(input.agentId);
 
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
   await rm(agentWorkspacePath, {
