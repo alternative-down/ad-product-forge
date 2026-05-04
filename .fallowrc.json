@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "apps/forge/src/index.{ts,tsx,mts}",
+    "apps/forge/src/main.{ts,tsx,mts}",
+    "packages/forge-runtime-core/src/index.{ts,tsx,mts}",
+    "packages/mastra-engine/src/index.{ts,tsx,mts}"
+  ],
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ]
+  },
+  "duplicates": {
+    "ignore": [
+      "**/dist/**",
+      "**/__generated__/**",
+      "**/generated/**"
+    ]
+  },
+  "health": {
+    "ignore": [
+      "**/dist/**"
+    ]
+  },
+  "rules": {},
+  "audit": {
+    "regressionBaselines": {
+      "health": ".fallow/baseline-health.json",
+      "dead-code": ".fallow/baseline-dead-code.json",
+      "duplicates": ".fallow/baseline-dupes.json"
+    }
+  }
+}
