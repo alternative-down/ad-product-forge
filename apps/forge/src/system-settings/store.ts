@@ -41,6 +41,44 @@ const DEFAULT_SYSTEM_SETTINGS = {
   ltmRecallDocumentCount: 3,
 } as const;
 
+function applyDefaults(row: typeof systemSettings.$inferSelect | null): SystemSettingsValue {
+  return {
+    companyName: row?.companyName ?? DEFAULT_SYSTEM_SETTINGS.companyName,
+    companyContext: row?.companyContext ?? DEFAULT_SYSTEM_SETTINGS.companyContext,
+    stepDelayEnabled: row ? row.stepDelayEnabled === 1 : DEFAULT_SYSTEM_SETTINGS.stepDelayEnabled,
+    communicationDmFlushingEnabled: row
+      ? row.communicationDmFlushingEnabled === 1
+      : DEFAULT_SYSTEM_SETTINGS.communicationDmFlushingEnabled,
+    communicationGroupFlushingEnabled: row
+      ? row.communicationGroupFlushingEnabled === 1
+      : DEFAULT_SYSTEM_SETTINGS.communicationGroupFlushingEnabled,
+    memoryLastMessagesFullEnabled: row
+      ? row.memoryLastMessagesFullEnabled === 1
+      : DEFAULT_SYSTEM_SETTINGS.memoryLastMessagesFullEnabled,
+    memoryLastMessagesCount: row?.memoryLastMessagesCount ?? DEFAULT_SYSTEM_SETTINGS.memoryLastMessagesCount,
+    tokenCountFilterEnabled: row
+      ? row.tokenCountFilterEnabled === 1
+      : DEFAULT_SYSTEM_SETTINGS.tokenCountFilterEnabled,
+    tokenCountFilterLimit: row?.tokenCountFilterLimit ?? DEFAULT_SYSTEM_SETTINGS.tokenCountFilterLimit,
+    checkpointedOmEnabled: row ? row.checkpointedOmEnabled === 1 : DEFAULT_SYSTEM_SETTINGS.checkpointedOmEnabled,
+    checkpointedOmTotalContextTokens: row?.checkpointedOmTotalContextTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmTotalContextTokens,
+    checkpointedOmRecentRawTokens: row?.checkpointedOmRecentRawTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmRecentRawTokens,
+    checkpointedOmRawObservationBatchTokens: row?.checkpointedOmRawObservationBatchTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmRawObservationBatchTokens,
+    checkpointedOmObservationReflectionBatchTokens: row?.checkpointedOmObservationReflectionBatchTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmObservationReflectionBatchTokens,
+    checkpointedOmObservationSupportTokens: row?.checkpointedOmObservationSupportTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmObservationSupportTokens,
+    checkpointedOmReflectionSupportTokens: row?.checkpointedOmReflectionSupportTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
+    ltmRecallSearchMode: resolveRecallSearchMode(row?.ltmRecallSearchMode),
+    ltmRecallWorkspaceTopK: row?.ltmRecallWorkspaceTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallWorkspaceTopK,
+    ltmRecallGraphTopK: row?.ltmRecallGraphTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphTopK,
+    ltmRecallGraphThreshold: row?.ltmRecallGraphThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphThreshold,
+    ltmRecallGraphRandomWalkSteps: row?.ltmRecallGraphRandomWalkSteps ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphRandomWalkSteps,
+    ltmRecallGraphIncludeSources: row ? row.ltmRecallGraphIncludeSources === 1 : DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphIncludeSources,
+    ltmRecallScoreThreshold: row?.ltmRecallScoreThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallScoreThreshold,
+    ltmRecallDocumentCount: row?.ltmRecallDocumentCount ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallDocumentCount,
+    updatedAt: row?.updatedAt ?? null,
+  };
+}
+
 type SystemSettingsInput = {
   companyName: string;
   companyContext: string;
@@ -74,76 +112,19 @@ export type SystemSettingsValue = SystemSettingsInput & {
 
 export function createSystemSettingsStore(db: Database) {
   async function getSettings(): Promise<SystemSettingsValue> {
-    let row;
     try {
-      row = await db.query.systemSettings.findFirst({
+      const row = await db.query.systemSettings.findFirst({
         where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
       });
+      return applyDefaults(row);
     } catch (err) {
       forgeDebug({
         scope: 'system-settings-store',
         level: 'error',
         message: 'getSettings DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      return { ...DEFAULT_SYSTEM_SETTINGS, updatedAt: null };
+      return applyDefaults(null);
     }
-
-    return {
-      companyName: row?.companyName ?? DEFAULT_SYSTEM_SETTINGS.companyName,
-      companyContext: row?.companyContext ?? DEFAULT_SYSTEM_SETTINGS.companyContext,
-      stepDelayEnabled: row ? row.stepDelayEnabled === 1 : DEFAULT_SYSTEM_SETTINGS.stepDelayEnabled,
-      communicationDmFlushingEnabled: row
-        ? row.communicationDmFlushingEnabled === 1
-        : DEFAULT_SYSTEM_SETTINGS.communicationDmFlushingEnabled,
-      communicationGroupFlushingEnabled: row
-        ? row.communicationGroupFlushingEnabled === 1
-        : DEFAULT_SYSTEM_SETTINGS.communicationGroupFlushingEnabled,
-      memoryLastMessagesFullEnabled: row
-        ? row.memoryLastMessagesFullEnabled === 1
-        : DEFAULT_SYSTEM_SETTINGS.memoryLastMessagesFullEnabled,
-      memoryLastMessagesCount:
-        row?.memoryLastMessagesCount ?? DEFAULT_SYSTEM_SETTINGS.memoryLastMessagesCount,
-      tokenCountFilterEnabled: row
-        ? row.tokenCountFilterEnabled === 1
-        : DEFAULT_SYSTEM_SETTINGS.tokenCountFilterEnabled,
-      tokenCountFilterLimit: row?.tokenCountFilterLimit ?? DEFAULT_SYSTEM_SETTINGS.tokenCountFilterLimit,
-      checkpointedOmEnabled: row
-        ? row.checkpointedOmEnabled === 1
-        : DEFAULT_SYSTEM_SETTINGS.checkpointedOmEnabled,
-      checkpointedOmTotalContextTokens:
-        row?.checkpointedOmTotalContextTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmTotalContextTokens,
-      checkpointedOmRecentRawTokens:
-        row?.checkpointedOmRecentRawTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmRecentRawTokens,
-      checkpointedOmRawObservationBatchTokens:
-        row?.checkpointedOmRawObservationBatchTokens ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmRawObservationBatchTokens,
-      checkpointedOmObservationReflectionBatchTokens:
-        row?.checkpointedOmObservationReflectionBatchTokens
-        ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmObservationReflectionBatchTokens,
-      checkpointedOmObservationSupportTokens:
-        row?.checkpointedOmObservationSupportTokens
-        ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmObservationSupportTokens,
-      checkpointedOmReflectionSupportTokens:
-        row?.checkpointedOmReflectionSupportTokens
-        ?? DEFAULT_SYSTEM_SETTINGS.checkpointedOmReflectionSupportTokens,
-      ltmRecallSearchMode:
-        resolveRecallSearchMode(row?.ltmRecallSearchMode),
-      ltmRecallWorkspaceTopK:
-        row?.ltmRecallWorkspaceTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallWorkspaceTopK,
-      ltmRecallGraphTopK:
-        row?.ltmRecallGraphTopK ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphTopK,
-      ltmRecallGraphThreshold:
-        row?.ltmRecallGraphThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphThreshold,
-      ltmRecallGraphRandomWalkSteps:
-        row?.ltmRecallGraphRandomWalkSteps ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphRandomWalkSteps,
-      ltmRecallGraphIncludeSources: row
-        ? row.ltmRecallGraphIncludeSources === 1
-        : DEFAULT_SYSTEM_SETTINGS.ltmRecallGraphIncludeSources,
-      ltmRecallScoreThreshold:
-        row?.ltmRecallScoreThreshold ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallScoreThreshold,
-      ltmRecallDocumentCount:
-        row?.ltmRecallDocumentCount ?? DEFAULT_SYSTEM_SETTINGS.ltmRecallDocumentCount,
-      updatedAt: row?.updatedAt ?? null,
-    } satisfies SystemSettingsValue;
   }
 
   async function upsertSettings(input: SystemSettingsInput): Promise<SystemSettingsValue> {
