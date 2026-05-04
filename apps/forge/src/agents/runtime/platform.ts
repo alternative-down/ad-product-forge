@@ -157,6 +157,7 @@ export async function createAgentRuntimePlatform(input: {
       pathAliases: allowedPaths,
     }),
     cwd: sandboxWorkingDirectory,
+    workspaceRoot: agentWorkspaceDir,
   });
 
   const communication: CommunicationModule = input.communication ?? await createCommunicationModule({
@@ -175,6 +176,7 @@ export async function createAgentRuntimePlatform(input: {
     workspaceGateway,
     workspaceActions: createWorkspaceActionDefinitions(workspaceGateway, {
       filesystem: workspaceFs,
+      workspaceRoot: agentWorkspaceDir,
     }),
     communication,
     agentWorkspacePath,

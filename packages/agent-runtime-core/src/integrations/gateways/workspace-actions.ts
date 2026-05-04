@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { z } from 'zod';
 
 
@@ -15,9 +17,18 @@ import type {
 export type WorkspaceActionPackOptions = {
   name?: string;
   description?: string;
+  /**
+   * Root workspace path — used to normalize output (e.g., strip absolute host paths
+   * from command output so agents see only workspace-relative paths).
+   */
+  workspaceRoot?: string;
   filesystem?: {
     readFile(path: string): Promise<Uint8Array | Buffer | string>;
     writeFile(path: string, data: Uint8Array | Buffer | string): Promise<void>;
+    /**
+     * Root workspace path — used to normalize paths returned by listDirectory
+     * so they are relative to the workspace root (not absolute host paths).
+     */
     listDirectory(path?: string): Promise<Array<{
       name: string;
       path: string;
@@ -34,6 +45,27 @@ export type WorkspaceActionPackOptions = {
 const DEFAULT_MAX_OUTPUT_TOKENS = 8000;
 const DEFAULT_TAIL_LINES = 100;
 const MAX_PATTERN_LENGTH = 1000;
+
+
+function normalizeOutputPaths(output: string, workspaceRoot?: string): string {
+  if (!workspaceRoot) return output;
+
+  // Normalize workspace root (resolve ~ and ..)
+  const normalizedRoot = path.resolve(workspaceRoot);
+
+  // Replace all occurrences of the absolute workspace root path with '.'
+  let result = output.split(normalizedRoot).join('.');
+
+  // Also try the parent of the workspace root (for paths that include parent directories)
+  // This handles cases like /tmp/agent-workspace-xxx/workspace
+  const parentOfRoot = path.dirname(normalizedRoot);
+  if (parentOfRoot !== normalizedRoot) {
+    result = result.split(parentOfRoot + '/').join('./');
+    result = result.split(parentOfRoot + '\\').join('\\');
+  }
+
+  return result;
+}
 
 // =============================================================================
 // HELPERS
@@ -183,7 +215,8 @@ Use cwd instead of "cd ... &&". Examples:
       } satisfies WorkspaceCommandRequest);
 
       const combinedOutput = result.stdout + (result.stderr ? `\n${result.stderr}` : '');
-      return truncateOutput(combinedOutput, tailLines, undefined) + `\n\nExit code: ${result.exitCode}`;
+      const normalizedOutput = normalizeOutputPaths(combinedOutput, options.workspaceRoot);
+      return truncateOutput(normalizedOutput, tailLines, undefined) + `\n\nExit code: ${result.exitCode}`;
     },
   });
 

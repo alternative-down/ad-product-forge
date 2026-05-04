@@ -53,9 +53,12 @@ export class LocalWorkspaceFilesystem {
       const entryAbsolutePath = path.join(absolutePath, entry.name);
       const stats = await fs.stat(entryAbsolutePath);
 
+      // Return paths relative to the workspace root to prevent exposing
+      // absolute host paths to agents
+      const relativePath = path.relative(this.root, entryAbsolutePath);
       return {
         name: entry.name,
-        path: entryAbsolutePath,
+        path: relativePath === '' ? '.' : relativePath,
         isDirectory: entry.isDirectory(),
         size: stats.size,
       };

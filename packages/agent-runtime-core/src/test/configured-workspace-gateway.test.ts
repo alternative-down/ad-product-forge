@@ -126,3 +126,65 @@ describe('configured workspace gateway', () => {
     });
   });
 });
+
+  it('sets HOME to workspaceRoot when provided', async () => {
+    const receivedRequests: Array<Record<string, unknown>> = [];
+    const gateway = new ConfiguredWorkspaceGateway({
+      base: {
+        async execute(request) {
+          receivedRequests.push(request);
+          return { exitCode: 0, stdout: '', stderr: '' };
+        },
+      },
+      cwd: '/agent/workspace',
+      workspaceRoot: '/agent/workspace/sandbox',
+    });
+
+    await gateway.execute({ command: 'echo $HOME' });
+
+    expect(receivedRequests[0]).toMatchObject({
+      command: 'echo $HOME',
+      cwd: '/agent/workspace',
+      env: {
+        HOME: '/agent/workspace/sandbox',
+      },
+    });
+  });
+
+  it('does not override HOME when workspaceRoot is not set', async () => {
+    const receivedRequests: Array<Record<string, unknown>> = [];
+    const gateway = new ConfiguredWorkspaceGateway({
+      base: {
+        async execute(request) {
+          receivedRequests.push(request);
+          return { exitCode: 0, stdout: '', stderr: '' };
+        },
+      },
+      cwd: '/agent/workspace',
+    });
+
+    await gateway.execute({
+      command: 'echo $HOME',
+      env: { CUSTOM: 'value' },
+    });
+
+    expect(receivedRequests[0].env).toEqual({ CUSTOM: 'value' });
+    expect(receivedRequests[0].env).not.toHaveProperty('HOME');
+  });
+
+  it('exposes workspaceRoot property', () => {
+    const gateway = new ConfiguredWorkspaceGateway({
+      base: { execute: async () => ({ exitCode: 0, stdout: '', stderr: '' }) },
+      workspaceRoot: '/agent/workspace',
+    });
+
+    expect(gateway.workspaceRoot).toBe('/agent/workspace');
+  });
+
+  it('workspaceRoot is undefined when not provided', () => {
+    const gateway = new ConfiguredWorkspaceGateway({
+      base: { execute: async () => ({ exitCode: 0, stdout: '', stderr: '' }) },
+    });
+
+    expect(gateway.workspaceRoot).toBeUndefined();
+  });
