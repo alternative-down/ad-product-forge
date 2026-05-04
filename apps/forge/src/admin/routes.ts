@@ -129,7 +129,7 @@ import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/sy
 import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
 
 
-export function registerAdminRoutes(input: {
+export interface AdminRouteContext {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;
   loaderConfig: AgentLoaderConfig;
@@ -140,7 +140,9 @@ export function registerAdminRoutes(input: {
   coolify: CoolifyManager | null;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
   internalChat: InternalChatService;
-}) {
+}
+
+export function registerAdminRoutes(input: AdminRouteContext) {
   const readModel = createAdminReadModel({
     db: input.db,
     workspaceBasePath: input.workspaceBasePath,
