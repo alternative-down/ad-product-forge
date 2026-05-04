@@ -394,7 +394,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         await deliverMessage({
           messageId: providerMessageId,
           metadata: { threadKey },
-          targetKey: participant.targetKey,
+          targetKey: threadKey,
           conversationName: parsed.subject ?? undefined,
           authorId: participant.authorId,
           authorUsername: parsed.from?.address ?? 'unknown',
@@ -474,7 +474,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         const threadKey = resolveEmailThreadKey(parsed);
         items.push({
           messageId: providerMessageId,
-          targetKey: participant.targetKey,
+          targetKey: threadKey,
           authorId: participant.authorId,
           authorDisplayName: participant.authorDisplayName,
           content: extractEmailBody(parsed),
