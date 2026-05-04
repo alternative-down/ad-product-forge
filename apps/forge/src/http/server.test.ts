@@ -14,11 +14,12 @@ async function makeRawRequest(
   path: string,
   body?: string,
   headers?: Record<string, string>,
+  portOverride?: number,
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const opts: http.RequestOptions = {
       hostname: 'localhost',
-      port: testPort,
+      port: portOverride ?? testPort,
       path,
       method,
       headers: {
@@ -473,4 +474,175 @@ describe('createForgeHttpServer', () => {
       expect(typeof server.stop).toBe('function');
     });
   });
+
+
+describe('admin authentication', () => {
+  const ADMIN_KEY = 'test-admin-key-123';
+
+  describe('when adminApiKey is configured', () => {
+    let adminServer: Awaited<ReturnType<typeof createForgeHttpServer>>;
+
+    beforeEach(async () => {
+      testPort = 30000 + Math.floor(Math.random() * 20000);
+      adminServer = createForgeHttpServer({ port: testPort, adminApiKey: ADMIN_KEY });
+      await adminServer.start();
+    });
+
+    afterEach(async () => {
+      await adminServer.stop();
+    });
+
+    it('serves /admin/* with correct API key', async () => {
+      adminServer.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'admin ok' }),
+      });
+
+      const res = await makeRawRequest('GET', '/admin/test', undefined, {
+        'x-forge-admin-api-key': ADMIN_KEY,
+      });
+      expect(res.status).toBe(200);
+      expect(res.body).toBe('admin ok');
+    });
+
+    it('returns 401 for /admin/* with wrong API key', async () => {
+      adminServer.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'admin ok' }),
+      });
+
+      const res = await makeRawRequest('GET', '/admin/test', undefined, {
+        'x-forge-admin-api-key': 'wrong-key',
+      });
+      expect(res.status).toBe(401);
+      expect(res.body).toContain('Invalid admin API key');
+    });
+
+    it('returns 401 for /admin/* without API key header', async () => {
+      adminServer.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'admin ok' }),
+      });
+
+      const res = await makeRawRequest('GET', '/admin/test');
+      expect(res.status).toBe(401);
+      expect(res.body).toContain('Invalid admin API key');
+    });
+
+    it('serves non-admin routes without API key', async () => {
+      adminServer.registerRoute({
+        method: 'GET',
+        path: '/public',
+        handler: async () => ({ status: 200, body: 'public' }),
+      });
+
+      const res = await makeRawRequest('GET', '/public');
+      expect(res.status).toBe(200);
+      expect(res.body).toBe('public');
+    });
+  });
+
+  describe('when adminApiKey is not configured', () => {
+    it('returns 503 for /admin/* when allowInsecureLocal is false', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'should not reach here' }),
+      });
+
+      await srv.start();
+      const res = await makeRawRequest('GET', '/admin/test', undefined, {}, srv.port);
+      await srv.stop();
+
+      expect(res.status).toBe(503);
+      expect(res.body).toContain('Admin authentication not configured');
+    });
+
+    it('serves /admin/* without auth when allowInsecureLocal is true', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        allowInsecureLocal: true,
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'local admin ok' }),
+      });
+
+      await srv.start();
+      const res = await makeRawRequest('GET', '/admin/test', undefined, {}, srv.port);
+      await srv.stop();
+
+      expect(res.status).toBe(200);
+      expect(res.body).toBe('local admin ok');
+    });
+
+    it('serves non-admin routes without auth even when no adminApiKey is set', async () => {
+      const srv = createForgeHttpServer({ port: 0 });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/public',
+        handler: async () => ({ status: 200, body: 'public' }),
+      });
+
+      await srv.start();
+      const res = await makeRawRequest('GET', '/public', undefined, {}, srv.port);
+      await srv.stop();
+
+      expect(res.status).toBe(200);
+      expect(res.body).toBe('public');
+    });
+  });
+
+  describe('allowedOrigins CORS', () => {
+    it('sets access-control-allow-origin to matching allowed origin', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        adminApiKey: 'key',
+        allowedOrigins: ['https://admin.example.com', 'https://dashboard.example.com'],
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+
+      await srv.start();
+      const res = await makeRawRequest('GET', '/admin/test', undefined, {
+        'x-forge-admin-api-key': 'key',
+        'origin': 'https://admin.example.com',
+      }, srv.port);
+      await srv.stop();
+
+      expect(res.headers['access-control-allow-origin']).toBe('https://admin.example.com');
+    });
+
+    it('sets wildcard CORS when allowedOrigins is configured but origin not in list', async () => {
+      const srv = createForgeHttpServer({
+        port: 0,
+        adminApiKey: 'key',
+        allowedOrigins: ['https://admin.example.com'],
+      });
+      srv.registerRoute({
+        method: 'GET',
+        path: '/admin/test',
+        handler: async () => ({ status: 200, body: 'ok' }),
+      });
+
+      await srv.start();
+      const res = await makeRawRequest('GET', '/admin/test', undefined, {
+        'x-forge-admin-api-key': 'key',
+        'origin': 'https://unknown.com',
+      }, srv.port);
+      await srv.stop();
+
+      expect(res.headers['access-control-allow-origin']).toBe('*');
+    });
+  });
+});
+
 });
