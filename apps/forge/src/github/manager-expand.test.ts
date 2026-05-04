@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockRequest, mockDecryptSecret, mockEncryptSecret, mockCreateAppAuth, mockGetGitHubConfig } = vi.hoisted(() => ({
-  mockRequest: vi.fn(),
-  mockDecryptSecret: vi.fn(),
-  mockEncryptSecret: vi.fn(),
-  mockCreateAppAuth: vi.fn(),
-  mockGetGitHubConfig: vi.fn(),
-}));
+const { mockDecryptSecret, mockEncryptSecret, mockCreateAppAuth, mockGetGitHubConfig, mockRequest, AppMock, mockAppInstance } = vi.hoisted(() => {
+  const mockRequest = vi.fn();
+  const mockDecryptSecret = vi.fn();
+  const mockEncryptSecret = vi.fn();
+  const mockCreateAppAuth = vi.fn();
+  const mockGetGitHubConfig = vi.fn();
+  const mockAppInstance = { request: mockRequest, getInstallationOctokit: vi.fn(() => ({ request: mockRequest })) };
+  function AppMock() { return mockAppInstance; }
+  AppMock.mock = { clear: vi.fn(), reset: vi.fn() };
+  AppMock.mockClear = vi.fn();
+  AppMock.mockReset = vi.fn();
+  AppMock.mockImplementation = vi.fn();
+  return { mockRequest, mockDecryptSecret, mockEncryptSecret, mockCreateAppAuth, mockGetGitHubConfig, mockAppInstance, AppMock };
+});
 
-vi.mock('octokit', () => { const req = mockRequest; return { App: vi.fn().mockImplementation(function() { this.octokit = { request: req }; this.getInstallationOctokit = async () => ({ request: req }); }), Octokit: vi.fn().mockImplementation((opts) => ({ request: mockRequest, auth: opts?.auth })) }; });
 vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 vi.mock('../notifications/store', () => ({ createAgentNotificationStore: vi.fn(() => ({ addNotification: vi.fn() })) }));
@@ -16,6 +22,8 @@ vi.mock('../system-integrations/store', () => ({ createSystemIntegrationStore: (
 vi.mock('../encryption/crypto', () => ({ decryptSecret: mockDecryptSecret, encryptSecret: mockEncryptSecret }));
 
 import { createGitHubAppManager } from './manager';
+vi.mock('octokit', () => ({ App: AppMock, Octokit: vi.fn() }));
+
 
 const MANIFEST = { permissions: { administration: true, contents: true, issues: true, metadata: false, organization_projects: false, pull_requests: true, repository_projects: false, workflows: false }, events: { push: true, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false }, callbackUrl: '', redirectUrl: '', requestUrl: '', setupUrl: '', publicHomepageUrl: '', description: '' };
 const activeJson = JSON.stringify({ status: 'active', appId: 1, privateKey: 'pk', webhookSecret: 'wh', appSlug: 'app', appName: 'App', manifestConfig: MANIFEST, installationId: 99, createdAt: 1 });
