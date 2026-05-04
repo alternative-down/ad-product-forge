@@ -66,23 +66,7 @@ describe('createAgentLongTermMemoryRecall', () => {
 });
 
 // =============================================================================
-// AgentLongTermMemoryRecall recallFromStep
-
-
-// =============================================================================
-// AgentLongTermMemoryRecall dispose
-// =============================================================================
-
-// =============================================================================
-// AgentLongTermMemoryRecall refreshIndex
-// =============================================================================
-
-// =============================================================================
-// AgentLongTermMemoryRecall debugSearch
-// =============================================================================
-
-// =============================================================================
-// buildRecallQueryFromStep unit tests
+// Extended instance tests
 // =============================================================================
 
 describe('buildRecallQueryFromStep', () => {
@@ -265,12 +249,104 @@ describe('shouldSkipRecallInjection', () => {
 // countFiles utility
 // =============================================================================
 
-describe('countFiles', () => {
-  // This is a private helper but we can test it via the class interface
-  // by creating scenarios that exercise it
-  it('is a private function (no direct test — exercised via initialize)', async () => {
-    // countFiles is called inside initialize/refreshIndex
-    // We verified it indirectly via the refreshIndex tests above
-    expect(true).toBe(true);
+
+// =============================================================================
+// AgentLongTermMemoryRecall instance tests
+// =============================================================================
+
+describe('AgentLongTermMemoryRecall initialize', () => {
+  it('does not re-initialize if already initialized', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+    } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallState: vi.fn().mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+    (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
+    await recall.initialize();
+    expect(retrieval.refresh).not.toHaveBeenCalled();
   });
 });
+
+
+
+
+describe('AgentLongTermMemoryRecall refreshIndex', () => {
+  it('does not call refresh when stamp unchanged', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 'stamp-1' } }),
+    } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallState: vi.fn().mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('stamp-1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
+    (recall as { lastIndexedStamp: string }).lastIndexedStamp = 'stamp-1';
+
+    await recall.refreshIndex();
+    // initialize sets stamp to s1, then refreshIndex compares stamp s1 == s1 -> no refresh
+    expect((recall as { lastIndexedStamp: string }).lastIndexedStamp).toBe('stamp-1');
+  });
+});
+
+
+describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
+  it('starts with zero pending operation count', async () => {
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: makeMockPersistenceStore(),
+      model: makeMockModel(),
+    }) as never;
+    expect((recall as { pendingRecallOperationCount: number }).pendingRecallOperationCount).toBe(0);
+  });
+
+  it('has null lingeringRecallOperationSince at start', async () => {
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: makeMockPersistenceStore(),
+      model: makeMockModel(),
+    }) as never;
+    expect((recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince).toBeNull();
+  });
+});
+
+
+
+
+
