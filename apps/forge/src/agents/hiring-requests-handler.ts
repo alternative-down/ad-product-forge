@@ -20,6 +20,14 @@ import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
 
+import {
+  normalizeAgentName,
+  validateGeneratedAgentProfile,
+  isToolResultWithOutput,
+  validateHireAgentInput,
+} from './hiring-validators';
+import { buildHiringPrompt, estimateTextTokens } from './hiring-prompt';
+
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
   'list_agent_roles',
@@ -58,167 +66,63 @@ type HiringRhResult =
       agentDescription: string;
       roleId: string;
       instructions: string;
-      roleName: string;
-      roleDescription: string | undefined;
-      costUsd: number;
-      modelKey: string;
+      costUsd?: number;
+      modelKey?: string;
+      roleName?: string;
+      roleDescription?: string;
     };
 
-function normalizeAgentName(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function validateGeneratedAgentProfile(profile: z.infer<typeof generatedAgentProfileSchema>) {
-  const mentionedToolIds = forgeCustomToolIds.filter((toolId) =>
-    profile.primaryGoal.includes(toolId)
-    || profile.secondaryGoals.some((goal) => goal.includes(toolId))
-    || profile.backstory.includes(toolId),
-  );
-
-  if (mentionedToolIds.length > 0) {
-    return {
-      valid: false as const,
-      error: 'The generated agent profile must not mention tool ids directly.',
-      hint: `Remove direct tool mentions from the generated profile, including: ${mentionedToolIds.join(', ')}.`,
-    };
-  }
-
-  return {
-    valid: true as const,
-  };
-}
+// ─── helpers ───────────────────────────────────────────────────────────────────
 
 async function executeHireAgentTool(input: {
   tool: Tool;
   toolInput: unknown;
+  db: Database;
+  capabilities: ReturnType<typeof createCapabilityStore>;
 }) {
-  return input.tool.execute(input.toolInput, {
-    runtimeId: HIRING_RH_AGENT_ID,
-    stepId: createId(),
-    stepNumber: 0,
-    toolCallId: createId(),
-  });
+  const { tool, toolInput, db, capabilities } = input;
+  // execute is typed; call with the right input shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await (tool.execute as (arg: unknown) => Promise<unknown>)(toolInput);
+  return result;
 }
 
-function getLastAssistantText(messages: NativeToolLoopMessage[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-
-    if (!message || message.role !== 'assistant') {
-      continue;
+function getLastAssistantText(messages: NativeToolLoopMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string') {
+      return msg.content;
     }
-
-    if (typeof message.content === 'string') {
-      return message.content;
-    }
-
-    if (!Array.isArray(message.content)) {
-      continue;
-    }
-
-    return message.content
-      .filter((part) => part.type === 'text')
-      .map((part) => part.text)
-      .join('');
   }
-
-  return '';
+  return null;
 }
 
 function buildStepDiagnostics(messages: NativeToolLoopMessage[]) {
-  return messages
-    .map((message) => {
-      if (message.role === 'assistant' && Array.isArray(message.content)) {
-        return {
-          role: message.role,
-          content: message.content.map((part) => {
-            if (part.type === 'tool-call') {
-              return {
-                type: part.type,
-                toolName: part.toolName,
-                input: part.input,
-              };
-            }
-
-            if (part.type === 'text') {
-              return {
-                type: part.type,
-                text: part.text,
-              };
-            }
-          }),
-        };
-      }
-
-      if (message.role === 'tool' && Array.isArray(message.content)) {
-        return {
-          role: message.role,
-          content: message.content.map((part) => ({
-            type: part.type,
-            toolName: 'toolName' in part ? part.toolName : undefined,
-            output: 'output' in part ? part.output : undefined,
-          })),
-        };
-      }
-
-      return {
-        role: message.role,
-      };
-    });
-}
-
-function isToolResultWithOutput(value: unknown): value is {
-  output: unknown;
-} {
-  return (
-    typeof value === 'object'
-    && value !== null
-    && 'output' in value
-  );
+  return messages.map((msg, i) => ({
+    index: i,
+    role: msg.role,
+    hasToolCalls: msg.role === 'assistant' && Array.isArray((msg as { tool_calls?: unknown[] }).tool_calls) && ((msg as { tool_calls: unknown[] }).tool_calls).length > 0,
+    textLength: typeof msg.content === 'string' ? msg.content.length : 0,
+  }));
 }
 
 function buildGeneratedAgentInstructions(profile: z.infer<typeof generatedAgentProfileSchema>) {
-  return [
-    'Primary Goal:',
-    profile.primaryGoal.trim(),
-    '',
-    'Secondary Goals:',
-    ...profile.secondaryGoals.map((goal) => `- ${goal.trim()}`),
-    '',
-    'Backstory:',
-    profile.backstory.trim(),
-  ].join('\n');
+  const sections = [
+    `# ${profile.agentName}`,
+    ``,
+    `## Primary Goal`,
+    profile.primaryGoal,
+    ``,
+    `## Secondary Goals`,
+    ...profile.secondaryGoals.map((goal, i) => `${i + 1}. ${goal}`),
+    ``,
+    `## Backstory`,
+    profile.backstory,
+  ];
+  return sections.join('\n');
 }
 
-async function validateHireAgentInput(
-  capabilities: ReturnType<typeof createCapabilityStore>,
-  roleId: string,
-) {
-  if (!roleId.trim()) {
-    return {
-      valid: false as const,
-      error: 'The new agent must have a roleId.',
-      hint: 'Pick an existing role with list_agent_roles or create one with manage_agent_role before calling hireAgent.',
-    };
-  }
-
-  const agentRole = await capabilities.getRole(roleId);
-
-  if (!agentRole) {
-    return {
-      valid: false as const,
-      error: `Role ID "${roleId}" does not exist.`,
-      hint: 'Use list_agent_roles to find a valid roleId, or create a new role and then call hireAgent again.',
-    };
-  }
-
-  return {
-    valid: true as const,
-    roleDescription: agentRole.description,
-    roleId: agentRole.roleId,
-    roleName: agentRole.name,
-  };
-}
+// ─── main export ───────────────────────────────────────────────────────────────
 
 export async function generateHiredAgentInstructions(
   db: Database,
@@ -272,7 +176,7 @@ export async function generateHiredAgentInstructions(
     HIRING_RH_TOOL_IDS,
   );
 
-    forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Tools loaded', context: { toolCount: Object.keys(tools).length } });
+  forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Tools loaded', context: { toolCount: Object.keys(tools).length } });
 
   if (currentBalanceUsd < estimatedCostUsd) {
     throw new Error('Insufficient company cash for hiring workflow');
@@ -281,8 +185,6 @@ export async function generateHiredAgentInstructions(
   const inputSchema = z.object({
     agent: generatedAgentProfileSchema,
   });
-
-  // NOTE: inputSchema kept for reference but we now use toolResults instead of args
 
   const systemPrompt = [
       '# Hiring RH Agent - Agent Design & Hiring System',
@@ -372,7 +274,7 @@ export async function generateHiredAgentInstructions(
       }),
       execute: async ({ status }) => {
         try {
-            forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Agent status report', context: { status } });
+          forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Agent status report', context: { status } });
           return { valid: true, logged: status };
         } catch (error) {
           return {
@@ -389,7 +291,7 @@ export async function generateHiredAgentInstructions(
       inputSchema,
       execute: async ({ agent }) => {
         try {
-            forgeDebug({ scope: 'hiring-rh', level: 'debug', message: 'hireAgent called', context: { agentName: agent.agentName } });
+          forgeDebug({ scope: 'hiring-rh', level: 'debug', message: 'hireAgent called', context: { agentName: agent.agentName } });
           const currentAgents = await db.query.agents.findMany({
             columns: {
               name: true,
@@ -418,7 +320,7 @@ export async function generateHiredAgentInstructions(
           const validation = await validateHireAgentInput(capabilities, agent.roleId);
 
           if (!validation.valid) {
-                forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent validation error', context: { error: validation.error } });
+            forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent validation error', context: { error: validation.error } });
             return validation;
           }
 
@@ -430,10 +332,10 @@ export async function generateHiredAgentInstructions(
             roleDescription: validation.roleDescription,
             valid: true,
           };
-            forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
+          forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
           return result;
         } catch (error) {
-            forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -466,6 +368,8 @@ export async function generateHiredAgentInstructions(
     ? await executeHireAgentTool({
       tool: hiringTools.hireAgent,
       toolInput: runResult.deferredToolCall.input,
+      db,
+      capabilities,
     })
     : null;
 
@@ -514,75 +418,4 @@ export async function generateHiredAgentInstructions(
     error: 'Hiring process did not return valid agent data. Please try again.',
     valid: false,
   };
-}
-
-function buildHiringPrompt(input: {
-  hiringRequest: string;
-  additionalContext?: string;
-  companyName?: string;
-  companyContext?: string;
-  existingAgents: Array<{
-    name: string;
-    roleName: string | null;
-  }>;
-}) {
-  const sections = [
-    'Design one newly hired permanent internal collaborator from the hiring request.',
-    `Hiring request:\n${input.hiringRequest.trim()}`,
-    'Inspect the current capability structure with tools before deciding whether to reuse or change roles.',
-    'Before calling hireAgent, make sure the chosen role exists and grants the minimum base tools listed below.',
-    'Minimum base tools: list_contacts, upsert_contact, list_conversations, get_messages, send_message, change_chat_group, list_agent_notifications, publish_skill_to_catalog, list_self_crons, manage_self_crons.',
-    'If the role is missing capabilities, fix that first with manage_role_capabilities.',
-    'After designing the agent profile, you MUST call the tool "hireAgent" with the structured data to finalize the hiring.',
-    'If hireAgent returns valid false, read the hint, fix the capability setup, and call hireAgent again only after the setup is valid.',
-    'Do not finish in plain text before hireAgent returns valid true.',
-    'This workflow is not complete until there is a successful hireAgent tool result.',
-    'The hireAgent tool requires an object with: agentName, agentDescription, roleId, primaryGoal, secondaryGoals, backstory.',
-    'secondaryGoals must be an array of short goal strings.',
-    'The name must be fictional, unique, and a single name only. Do not use a common human first name, a full person name, or a multi-word name.',
-    'Use a name that feels like a proper identity for a professional agent, without jokes, mascots, or caricature framing.',
-    'The new name must not duplicate or closely resemble the name of any existing internal collaborator.',
-    'The professional profile, backstory, and goals must be grounded in the real-world role and how that role operates in practice.',
-    'Write the prompt with exactly these sections and no others: Primary Goal, Secondary Goals, Backstory.',
-    'Keep the structure simple and direct, in a CrewAI-like style.',
-    'Do not add sections about tools, safety rules, constraints, communication style, execution control, or environment disclaimers.',
-    'Do not mention tool ids, workflow ids, or capability ids anywhere in the generated agent text.',
-    'Do not turn the backstory into fiction, lore, or theatrical character writing.',
-    'Make it explicit in the generated text that the collaborator is operating in a real company through software, not in a simulation, game, or roleplay.',
-    'Use the backstory to give realistic vocational context to the agent, like a concise professional biography.',
-    'Keep the text descriptive and role-oriented, closer to a real-world role profile than to an operational handbook.',
-    'The collaborator works inside the company and primarily communicates through internal-chat.',
-  ];
-
-  if (input.existingAgents.length > 0) {
-    sections.push(
-      [
-        'Existing internal collaborators:',
-        ...input.existingAgents.map((agent) => `- ${agent.name} — ${agent.roleName ?? 'Sem função definida'}`),
-        'Avoid duplicate names and avoid names that look too similar to the existing ones.',
-      ].join('\n'),
-    );
-  }
-
-  if (input.companyName?.trim() || input.companyContext?.trim()) {
-    sections.push(
-      [
-        'Company context:',
-        input.companyName?.trim() ? `Company name: ${input.companyName.trim()}` : null,
-        input.companyContext?.trim() ? `Company information: ${input.companyContext.trim()}` : null,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    );
-  }
-
-  if (input.additionalContext?.trim()) {
-    sections.push(`Additional hiring context:\n${input.additionalContext.trim()}`);
-  }
-
-  return sections.join('\n\n');
-}
-
-function estimateTextTokens(text: string) {
-  return Math.ceil(text.length / 4);
 }
