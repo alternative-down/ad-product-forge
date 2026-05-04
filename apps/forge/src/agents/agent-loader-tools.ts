@@ -10,6 +10,7 @@ import { createAgentScheduleTools } from '../schedules/tools';
 import { createCapabilityTools } from '../capabilities/tools';
 import { createInternalChatTools } from '../communication/internal-chat-tools';
 import { createMiniMaxTools } from '../minimax/tools';
+import { createArtifactTools } from '../artifacts/tools';
 import { createAgentSkillTools } from './skills-tools';
 import { createInternalAgentTools } from './internal-agent-tools';
 
@@ -44,8 +45,9 @@ export async function loadAgentToolset(input: {
     input.allowedToolIds,
   );
   const minimaxTools = input.loaderConfig.minimax
-    ? createMiniMaxTools(input.loaderConfig.minimax, input.allowedToolIds)
+    ? createMiniMaxTools(input.loaderConfig.minimax, input.allowedToolIds, input.db, input.agentId)
     : {};
+  const artifactTools = createArtifactTools(input.db, input.agentId);
   const skillTools = createAgentSkillTools({
     db: input.db,
     workspaceBasePath: input.loaderConfig.workspaceBasePath,
@@ -70,6 +72,7 @@ export async function loadAgentToolset(input: {
     ...capabilityTools,
     ...internalChatTools,
     ...minimaxTools,
+    ...artifactTools,
     ...skillTools,
     ...internalAgentTools,
   };
