@@ -30,20 +30,25 @@ export async function topUpActiveAgentContract(db: Database, input: {
     throw new Error('Insufficient company cash for contract top-up');
   }
 
-  await companyCashOperations.recordCashOut({
-    type: 'agent-contract-topup',
-    amountUsd: input.amountUsd,
-    description: `Contract top-up for ${input.agentId}`,
-    referenceType: 'agent-execution-contract',
-    referenceId: activeContract.id,
-  });
+  await db.transaction(async (tx) => {
+    await companyCashOperations.recordCashOut(
+      {
+        type: 'agent-contract-topup',
+        amountUsd: input.amountUsd,
+        description: `Contract top-up for ${input.agentId}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: activeContract.id,
+      },
+      tx,
+    );
 
-  await db
-    .update(agentExecutionContracts)
-    .set({
-      budgetUsd: activeContract.budgetUsd + input.amountUsd,
-    })
-    .where(eq(agentExecutionContracts.id, activeContract.id));
+    await tx
+      .update(agentExecutionContracts)
+      .set({
+        budgetUsd: activeContract.budgetUsd + input.amountUsd,
+      })
+      .where(eq(agentExecutionContracts.id, activeContract.id));
+  });
 
   return {
     agentId: input.agentId,

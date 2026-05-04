@@ -17,7 +17,6 @@ export async function adjustAgentContractBudget(
   const companyCashOperations = createCompanyCashOperations(db);
   const now = Date.now();
 
-  // Get the active contract
   const activeContract = await db.query.agentExecutionContracts.findFirst({
     where: and(
       eq(agentExecutionContracts.agentId, input.agentId),
@@ -33,7 +32,6 @@ export async function adjustAgentContractBudget(
   const currentBudget = activeContract.budgetUsd;
   const budgetDelta = input.newBudgetUsd - currentBudget;
 
-  // No change needed
   if (budgetDelta === 0) {
     return {
       agentId: input.agentId,
@@ -45,7 +43,7 @@ export async function adjustAgentContractBudget(
     };
   }
 
-  // Upward adjustment (increase budget) - requires company cash
+  // Upward adjustment — deduct from company cash and update budget atomically
   if (budgetDelta > 0) {
     const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
 
@@ -53,22 +51,25 @@ export async function adjustAgentContractBudget(
       throw new Error('Insufficient company cash for budget increase');
     }
 
-    // Deduct from company cash
-    await companyCashOperations.recordCashOut({
-      type: 'agent-contract-budget-increase',
-      amountUsd: budgetDelta,
-      description: `Budget increase for contract ${activeContract.id}`,
-      referenceType: 'agent-execution-contract',
-      referenceId: activeContract.id,
-    });
+    await db.transaction(async (tx) => {
+      await companyCashOperations.recordCashOut(
+        {
+          type: 'agent-contract-budget-increase',
+          amountUsd: budgetDelta,
+          description: `Budget increase for contract ${activeContract.id}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: activeContract.id,
+        },
+        tx,
+      );
 
-    // Update contract budget
-    await db
-      .update(agentExecutionContracts)
-      .set({
-        budgetUsd: input.newBudgetUsd,
-      })
-      .where(eq(agentExecutionContracts.id, activeContract.id));
+      await tx
+        .update(agentExecutionContracts)
+        .set({
+          budgetUsd: input.newBudgetUsd,
+        })
+        .where(eq(agentExecutionContracts.id, activeContract.id));
+    });
 
     return {
       agentId: input.agentId,
@@ -80,35 +81,37 @@ export async function adjustAgentContractBudget(
     };
   }
 
-  // Downward adjustment (decrease budget) - requires validation
+  // Downward adjustment — refund to company cash and update budget atomically
   const contractStore = createAgentContractStore(db);
   const contractSpend = await contractStore.getContractSpend(activeContract.id);
 
-  // New budget cannot be less than what's already spent
   if (input.newBudgetUsd < contractSpend) {
     throw new Error(
-      `Cannot reduce budget below spent amount (${contractSpend.toFixed(6)} USD). New budget must be at least ${contractSpend.toFixed(6)} USD.`
+      `Cannot reduce budget below spent amount (${contractSpend.toFixed(6)} USD). New budget must be at least ${contractSpend.toFixed(6)} USD.`,
     );
   }
 
   const refundAmount = Math.abs(budgetDelta);
 
-  // Return unused funds to company cash
-  await companyCashOperations.recordCashIn({
-    type: 'agent-contract-budget-decrease',
-    amountUsd: refundAmount,
-    description: `Budget decrease refund for contract ${activeContract.id}`,
-    referenceType: 'agent-execution-contract',
-    referenceId: activeContract.id,
-  });
+  await db.transaction(async (tx) => {
+    await companyCashOperations.recordCashIn(
+      {
+        type: 'agent-contract-budget-decrease',
+        amountUsd: refundAmount,
+        description: `Budget decrease refund for contract ${activeContract.id}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: activeContract.id,
+      },
+      tx,
+    );
 
-  // Update contract budget
-  await db
-    .update(agentExecutionContracts)
-    .set({
-      budgetUsd: input.newBudgetUsd,
-    })
-    .where(eq(agentExecutionContracts.id, activeContract.id));
+    await tx
+      .update(agentExecutionContracts)
+      .set({
+        budgetUsd: input.newBudgetUsd,
+      })
+      .where(eq(agentExecutionContracts.id, activeContract.id));
+  });
 
   return {
     agentId: input.agentId,

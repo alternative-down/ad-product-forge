@@ -8,7 +8,6 @@ import { createAgentContractStore } from './agent-contract-store';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 
-
 export async function renewAgentContract(
   db: Database,
   input: {
@@ -55,41 +54,47 @@ export async function renewAgentContract(
     });
   }
 
-  await db
-    .update(agentExecutionContracts)
-    .set({
-      endsAt: now,
-    })
-    .where(eq(agentExecutionContracts.id, activeContract.id));
-
+  // Close old contract, create new contract, and fund it — all atomically
   const newContractId = createId();
 
-  await db.insert(agentExecutionContracts).values({
-    id: newContractId,
-    agentId: input.agentId,
-    budgetUsd: input.newBudgetUsd,
-    autoRenew: activeContract.autoRenew,
-    fundedAt: null,
-    startsAt: now,
-    endsAt: now + WEEK_MS,
-    createdAt: now,
-  });
+  await db.transaction(async (tx) => {
+    await tx
+      .update(agentExecutionContracts)
+      .set({
+        endsAt: now,
+      })
+      .where(eq(agentExecutionContracts.id, activeContract.id));
 
-  await companyCashOperations.recordCashOut({
-    type: 'agent-contract-renewal-funding',
-    amountUsd: input.newBudgetUsd,
-    description: `Renewal funding for contract ${newContractId}`,
-    referenceType: 'agent-execution-contract',
-    referenceId: newContractId,
-    effectiveAt: now,
-  });
+    await tx.insert(agentExecutionContracts).values({
+      id: newContractId,
+      agentId: input.agentId,
+      budgetUsd: input.newBudgetUsd,
+      autoRenew: activeContract.autoRenew,
+      fundedAt: null,
+      startsAt: now,
+      endsAt: now + WEEK_MS,
+      createdAt: now,
+    });
 
-  await db
-    .update(agentExecutionContracts)
-    .set({
-      fundedAt: now,
-    })
-    .where(eq(agentExecutionContracts.id, newContractId));
+    await companyCashOperations.recordCashOut(
+      {
+        type: 'agent-contract-renewal-funding',
+        amountUsd: input.newBudgetUsd,
+        description: `Renewal funding for contract ${newContractId}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: newContractId,
+        effectiveAt: now,
+      },
+      tx,
+    );
+
+    await tx
+      .update(agentExecutionContracts)
+      .set({
+        fundedAt: now,
+      })
+      .where(eq(agentExecutionContracts.id, newContractId));
+  });
 
   return {
     agentId: input.agentId,
