@@ -96,51 +96,17 @@ import {
   AttachmentNotFoundError,
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
+import { createChatAttachments } from "./internal-chat-attachments";
 export function createInternalChatService(
 
   db: Database,
 ) {
-  // ── Attachment Storage ──────────────────────────────────────────────────
-  async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
-    if (attachments.length === 0) {
-      return;
-    }
-
-    await db.insert(internalChatMessageAttachments).values(
-      attachments.map((attachment, index) => ({
-        id: createId(),
-        messageId,
-        attachmentIndex: index,
-        name: sanitizeAttachmentName(attachment.name),
-        contentType: attachment.contentType ?? null,
-        sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
-        data: Buffer.from(attachment.data),
-        createdAt: Date.now(),
-      })),
-    );
-  }
-
-  async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
-    const rows = await db.query.internalChatMessageAttachments.findMany({
-      where: eq(internalChatMessageAttachments.messageId, messageId),
-      orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
-    });
-
-    return rows.map((row) => ({
-      name: row.name,
-      data: new Uint8Array(row.data),
-      contentType: row.contentType ?? resolveContentType(row.name),
-      sizeBytes: row.sizeBytes,
-    }));
-  }
-
-  async function readMessageAttachment(messageId: string, attachmentName: string): Promise<CommunicationFile | null> {
-    const attachments = await readMessageAttachments(messageId);
-    return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
-  }
-
-    // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
+  // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
+
+  // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
+  const attachments = createChatAttachments(db);
+  const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
 
   async function registerAgentAccount(input: Parameters<typeof accounts.registerAgentAccount>[0]) {
     return accounts.registerAgentAccount(input);
