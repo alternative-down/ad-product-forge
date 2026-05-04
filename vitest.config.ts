@@ -12,6 +12,13 @@ export default defineConfig({
       include: ['apps/forge/src/**/*.ts', 'packages/mastra-engine/src/**/*.ts'],
       exclude: ['**/*.d.ts', '**/*.test.ts'],
     },
+    // Run test files sequentially (one at a time) to prevent vi.mock() global hoisting
+    // from polluting other test files. With parallel execution (default), vitest's
+    // worker pool assigns files non-deterministically, causing intermittent failures
+    // in company-cash-ledger.test.ts when agent tests run in the same worker and
+    // call vi.mock('../finance/company-cash-ledger') at module-eval time.
+    // See: https://github.com/vitest-dev/vitest/issues/3476
+    fileParallelism: false,
   },
   resolve: {
     alias: {
