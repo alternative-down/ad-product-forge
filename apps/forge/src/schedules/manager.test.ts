@@ -1,4 +1,5 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
+
 import { createAgentScheduleManager } from './manager';
 import type { Database } from '../db/database';
 // ─── extractWhere helpers ───────────────────────────────────────────────────────
@@ -480,4 +481,39 @@ describe('createAgentScheduleManager', () => {
     const result = await manager.editCron('agent-1', 'sid-test-1', { name: 'New name' });
     expect(result).toMatchObject({ name: 'New name', cronExpression: '0 * * * *' });
   });
+
+// ── removeAgent ────────────────────────────────────────────────────────────────
+
+  test('deletes all agent schedules from DB when agent is removed', async () => {
+    const rows = [
+      makeRow({ id: 'sid-1', agentId: 'agent-1', kind: 'agent' }),
+      makeRow({ id: 'sid-2', agentId: 'agent-1', kind: 'agent' }),
+    ];
+    const manager = makeManager(rows);
+    await manager.removeAgent('agent-1');
+
+    // Both schedules should be deleted from DB
+    const result = await manager.listSchedules('agent-1');
+    expect(result).toHaveLength(0);
+  });
+
+  test('handles empty schedule list gracefully', async () => {
+    const manager = makeManager([]);
+    // Should not throw
+    await manager.removeAgent('agent-1');
+  });
+
+  test('only deletes agent-kind schedules', async () => {
+    const rows = [
+      makeRow({ id: 'sid-1', agentId: 'agent-1', kind: 'agent' }),
+      makeRow({ id: 'sid-2', agentId: 'agent-1', kind: 'heartbeat' }),
+    ];
+    const manager = makeManager(rows);
+    await manager.removeAgent('agent-1');
+
+    // Both agent-kind schedules should be deleted (heartbeat not in listAgentSchedules)
+    const result = await manager.listSchedules('agent-1');
+    expect(result).toHaveLength(0);
+  });
+
 });

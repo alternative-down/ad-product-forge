@@ -349,6 +349,7 @@ export function createAgentScheduleManager(input: {
 
     for (const scheduleRecord of schedules) {
       cancelScheduledJob(scheduleRecord.scheduleId);
+      await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
     }
   }
 
