@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { mockForgeDebug } = vi.hoisted(() => ({ mockForgeDebug: vi.fn() }));
+
 vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: vi.fn(),
+  forgeDebug: mockForgeDebug,
 }));
 
-const mockDiscordProvider = {
+const discordProvider = {
   id: 'discord',
   getSelfContact: vi.fn(),
   dispose: vi.fn(),
@@ -12,7 +14,7 @@ const mockDiscordProvider = {
 };
 
 vi.mock('../discord-account', () => ({
-  createDiscordProvider: vi.fn(() => mockDiscordProvider),
+  createDiscordProvider: vi.fn(() => discordProvider),
 }));
 
 vi.mock('../email-account', () => ({
@@ -37,7 +39,7 @@ describe('loadCommunicationProviders', () => {
   });
 
   it('skips Discord when the provider fails to start', async () => {
-    mockDiscordProvider.getSelfContact.mockRejectedValueOnce(new Error('invalid token'));
+    discordProvider.getSelfContact.mockRejectedValueOnce(new Error('invalid token'));
 
     const providers = await loadCommunicationProviders({
       discord: { channels: [], token: 'valid-token' },
@@ -47,8 +49,16 @@ describe('loadCommunicationProviders', () => {
       },
     });
 
-    expect(providers.map((p) => p.id)).toEqual(['email']);
-    expect(mockDiscordProvider.dispose).toHaveBeenCalledOnce();
+    expect(providers.map((provider) => provider.id)).toEqual(['email']);
+    expect(discordProvider.dispose).toHaveBeenCalledOnce();
+    expect(mockForgeDebug).toHaveBeenCalledOnce();
+    expect(mockForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'provider-loader',
+        level: 'warn',
+        message: 'Skipping Discord provider because it failed to start',
+      }),
+    );
   });
 
   it('skips Discord when its credentials are malformed', async () => {
@@ -59,7 +69,15 @@ describe('loadCommunicationProviders', () => {
     const providers = await loadCommunicationProviders(credentials);
 
     expect(providers).toEqual([]);
-    expect(mockDiscordProvider.getSelfContact).not.toHaveBeenCalled();
-    expect(mockDiscordProvider.dispose).not.toHaveBeenCalled();
+    expect(discordProvider.getSelfContact).not.toHaveBeenCalled();
+    expect(discordProvider.dispose).not.toHaveBeenCalled();
+    expect(mockForgeDebug).toHaveBeenCalledOnce();
+    expect(mockForgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'provider-loader',
+        level: 'warn',
+        message: 'Skipping Discord provider because it failed to start',
+      }),
+    );
   });
 });
