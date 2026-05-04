@@ -45,6 +45,11 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
 
   async function getFinanceContracts() {
     const contracts = await finance.listActiveInternalAgentContracts();
+
+    if (!contracts || !Array.isArray(contracts.items)) {
+      return { items: [], hasMore: false };
+    }
+
     const contractIds = contracts.items.map((contract) => contract.contractId);
 
     if (contractIds.length === 0) {
