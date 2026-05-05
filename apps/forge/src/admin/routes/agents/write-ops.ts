@@ -23,6 +23,14 @@ import type { AgentEmailManager } from '../../../email/migadu-manager.js';
 import type { CoolifyManager, GitHubAppManager } from '../../../coolify/manager.js';
 import type { createAgentScheduleManager } from '../../schedules/manager.js';
 
+import type { Database } from '../../../../src/database/index.js';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
+import type { GitHubAppManager } from '../../../github/manager.js';
+import type { AgentEmailManager } from '../../../email/migadu-manager.js';
+import type { CoolifyManager } from '../../../coolify/manager.js';
+import type { createAgentScheduleManager } from '../../../schedules/manager.js';
+import type { InternalChatService } from '../../communication/internal-chat-service.js';
+
 
 const upsertAgentProviderSchema = z.object({
   agentId: z.string(),
@@ -154,11 +162,11 @@ interface AgentRoutesInput {
   db: Database;
   workspaceBasePath: string;
   loaderConfig: AgentLoaderConfig;
-  githubApps?: GitHubAppManager;
-  emailMailboxes?: AgentEmailManager | null;
-  coolify?: CoolifyManager | null;
-  schedules?: ReturnType<typeof createAgentScheduleManager>;
-  internalChat?: InternalChatService;
+  githubApps: GitHubAppManager;
+  emailMailboxes: AgentEmailManager | null;
+  coolify: CoolifyManager | null;
+  schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 }
 
 interface InternalChatService {
