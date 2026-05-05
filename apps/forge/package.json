@@ -18,7 +18,6 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",
     "@forge-runtime/core": "0.1.0",
-    "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.15.15",
     "@octokit/auth-app": "^8.1.1",
     "@types/node-schedule": "^2.1.8",
@@ -31,7 +30,6 @@
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.5",
     "octokit": "^5.0.3",
-    "onnxruntime-node": "1.21.0",
     "postal-mime": "^2.7.4",
     "zod": "^4.3.6"
   },
