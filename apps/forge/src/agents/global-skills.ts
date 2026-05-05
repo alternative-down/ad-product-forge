@@ -9,6 +9,9 @@ import {
   resolveBundledSkillRoot,
 } from './bundled-workspace-skills';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
+import { parseSkillMetadata as _parseSkillMetadata, countSkillFiles as _countSkillFiles } from './skills-shared/index';
+export const parseSkillMetadata = _parseSkillMetadata;
+export const countSkillFiles = _countSkillFiles;
 
 type GlobalSkillSummary = {
   skillName: string;
@@ -19,58 +22,8 @@ type GlobalSkillSummary = {
   editable: boolean;
 };
 
-export function parseSkillMetadata(skillContent: string) {
-  if (!skillContent.startsWith('---\n')) {
-    return {};
-  }
 
-  const endIndex = skillContent.indexOf('\n---\n', 4);
 
-  if (endIndex === -1) {
-    return {};
-  }
-
-  const frontmatter = skillContent.slice(4, endIndex);
-  const lines = frontmatter.split('\n');
-  let description: string | undefined;
-
-  for (const line of lines) {
-    const separatorIndex = line.indexOf(':');
-
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
-
-    if (key === 'description' && value) {
-      description = value;
-    }
-  }
-
-  return { description };
-}
-
-async function countSkillFiles(skillRoot: string): Promise<number> {
-  const entries = await fs.readdir(skillRoot, { withFileTypes: true });
-  let fileCount = 0;
-
-  for (const entry of entries) {
-    const entryPath = path.resolve(skillRoot, entry.name);
-
-    if (entry.isDirectory()) {
-      fileCount += await countSkillFiles(entryPath);
-      continue;
-    }
-
-    if (entry.isFile()) {
-      fileCount += 1;
-    }
-  }
-
-  return fileCount;
-}
 
 export function resolveGlobalSkillsRoot(workspaceBasePath: string) {
   return path.resolve(workspaceBasePath, '_system', 'skills');
