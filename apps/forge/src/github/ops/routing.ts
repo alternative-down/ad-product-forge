@@ -2,7 +2,7 @@
  * Routing Ops — buildProvisioning, registerAgentRoutes,
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
-import type { Octokit } from 'octokit';
+import { App } from 'octokit';
 import type { OpsContext } from './context.js';
 import type { AppProvisioningOps } from '../apps.js';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types.js';
@@ -93,7 +93,7 @@ export function createRoutingOps(
     if (!code || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
-    const { App } = await import('octokit');
+
     const anonymousOctokit = new App({ userAgent: 'forge-app' });
     try {
       const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', { code });

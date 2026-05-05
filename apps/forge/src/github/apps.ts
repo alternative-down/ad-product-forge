@@ -3,7 +3,7 @@
  *
  * Part of #1371 — split createGitHubAppManager.
  */
-import type { App, Octokit } from 'octokit';
+import { App, type Octokit } from 'octokit';
 import type { OpsContext } from './ops/context.js';
 import type { GitHubAppCredentials } from './types.js';
 
@@ -103,8 +103,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
   }
 
   function createGitHubApp(credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>): App {
-    const { App: AppClass } = require('octokit') as typeof import('octokit');
-    return new AppClass({ appId: credentials.appId, privateKey: credentials.privateKey, webhooks: { secret: credentials.webhookSecret } });
+    return new App({ appId: credentials.appId, privateKey: credentials.privateKey, webhooks: { secret: credentials.webhookSecret } });
   }
 
   async function createInstallationOctokit(

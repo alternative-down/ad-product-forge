@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import {
   agentExecutionContracts,
   agentExecutionSteps,
@@ -530,8 +531,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
         ? resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
         : resolve(agentWorkspaceRoot, 'workspace');
       const agentContextPath = resolve(agentWorkspaceDir, 'AGENT_CONTEXT.md');
-      const agentContext = await import('node:fs/promises')
-        .then((fs) => fs.readFile(agentContextPath, 'utf8'))
+      const agentContext = await readFile(agentContextPath, 'utf8')
         .then((content) => content.trim() ?? null)
         .catch((err) => {
           forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { error: err } });

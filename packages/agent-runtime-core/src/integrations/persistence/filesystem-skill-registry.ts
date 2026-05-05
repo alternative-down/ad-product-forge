@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 
@@ -35,7 +35,7 @@ export class FilesystemSkillRegistry implements SkillRegistry {
   }
 
   async remove(skillId: string): Promise<void> {
-    const { rm } = await import('node:fs/promises');
+
     await rm(this.getFilePath(skillId), { force: true });
   }
 

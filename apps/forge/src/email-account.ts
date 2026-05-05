@@ -3,6 +3,7 @@
  * Pure helper functions are in email-account-helpers.ts for independent testing.
  */
 import { ImapFlow } from 'imapflow';
+import PostalMime from 'postal-mime';
 import nodemailer from 'nodemailer';
 import { forgeDebug } from '@forge-runtime/core';
 import type {
@@ -157,7 +158,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
             ? message.source
             : new TextDecoder().decode(message.source);
 
-        const PostalMime = await import('postal-mime');
+        
         const parsed = await PostalMime.default.parse(source);
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
         if (!participant) continue;
@@ -221,7 +222,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
             ? message.source
             : new TextDecoder().decode(message.source);
 
-        const PostalMime = await import('postal-mime');
+        
         const parsed = await PostalMime.default.parse(source);
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
         if (!participant) continue;

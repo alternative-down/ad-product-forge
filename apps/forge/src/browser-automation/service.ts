@@ -11,6 +11,7 @@
  */
 
 import type { Browser, BrowserContext, Page } from 'playwright';
+import { chromium } from 'playwright';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const IDLE_BROWSER_CLEANUP_MS = 30 * 60 * 1_000; // 30 min
@@ -61,7 +62,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       return existing.browser;
     }
 
-    const { chromium } = await import('playwright');
+
     const browser = await chromium.launch({ headless: true });
     agentBrowsers.set(agentId, {
       browser,
