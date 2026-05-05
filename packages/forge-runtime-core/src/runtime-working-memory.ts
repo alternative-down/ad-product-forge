@@ -111,7 +111,7 @@ export function createWorkingMemoryContextEntry(workingMemory: string): StepCont
   });
 }
 
-export async function loadWorkingMemoryContextText(input: {
+async function loadWorkingMemoryContextText(input: {
   threadId: string;
   resourceId: string;
   store: RuntimeWorkingMemoryStore;

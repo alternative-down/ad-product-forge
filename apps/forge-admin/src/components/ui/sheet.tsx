@@ -127,9 +127,11 @@ function SheetDescription({
 export {
   Sheet,
   SheetTrigger,
+// fallow-ignore-next-line unused-export
   SheetClose,
   SheetContent,
   SheetHeader,
+// fallow-ignore-next-line unused-export
   SheetFooter,
   SheetTitle,
   SheetDescription,

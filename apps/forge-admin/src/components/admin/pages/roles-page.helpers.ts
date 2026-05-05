@@ -1,6 +1,6 @@
 import type { RoleItem } from '@/lib/admin-api';
 
-export const BASE_ROLE_TOOL_IDS = [
+const BASE_ROLE_TOOL_IDS = [
   'list_contacts',
   'upsert_contact',
   'list_conversations',
@@ -48,7 +48,7 @@ export function mergeBaseRoleToolIds(toolIds: string[]) {
   return [...new Set([...BASE_ROLE_TOOL_IDS, ...toolIds])].sort((left, right) => left.localeCompare(right));
 }
 
-export function getCapabilityRequiredToolIds(toolIds: string[]) {
+function getCapabilityRequiredToolIds(toolIds: string[]) {
   const requiredToolIds = new Set<string>();
   const hasRoleInspectionTool = ROLE_INSPECTION_TOOL_IDS.some((toolId) => toolIds.includes(toolId));
 

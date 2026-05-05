@@ -33,7 +33,7 @@ export function deleteRole(roleId: string) {
   });
 }
 
-export function addRoleToolPermission(input: {
+function addRoleToolPermission(input: {
   roleId: string;
   toolId: string;
 }) {
@@ -43,7 +43,7 @@ export function addRoleToolPermission(input: {
   });
 }
 
-export function removeRoleToolPermission(input: {
+function removeRoleToolPermission(input: {
   roleId: string;
   toolId: string;
 }) {

@@ -244,8 +244,11 @@ async function listThreadMessages(
 export {
   closeLibsqlClient,
   listRecentConversations,
+// fallow-ignore-next-line unused-export
   listRecentExternalConversations,
+// fallow-ignore-next-line unused-export
   listRecentInternalChatConversations,
+// fallow-ignore-next-line unused-export
   listInternalChatGroupParticipants,
   listThreadMessages,
 };
