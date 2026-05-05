@@ -18,10 +18,10 @@ import {
   type AccountForm,
   type ConversationForm,
   type LocalConversation,
-} from './-context';
-import { AccountDialog } from './-account-dialog';
-import { ConversationListPane } from './-conversation-list-pane';
-import { NewConversationDialog } from './-new-conversation-dialog';
+} from '@/components/home/conversations/context';
+import { AccountDialog } from '@/components/home/conversations/AccountDialog';
+import { ConversationListPane } from '@/components/home/conversations/ConversationListPane';
+import { NewConversationDialog } from '@/components/home/conversations/NewConversationDialog';
 import {
   createAccountForm,
   createConversationForm,
@@ -29,7 +29,7 @@ import {
   normalizeAccount,
   normalizeConversations,
   SELECTED_ACCOUNT_STORAGE_KEY,
-} from './-route-helpers';
+} from '@/components/home/conversations/routeHelpers';
 
 export const Route = createFileRoute('/home/conversations')({
   component: HomeConversationsLayoutRoute,

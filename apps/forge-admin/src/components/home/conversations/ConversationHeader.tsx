@@ -2,7 +2,7 @@ import { Archive, ArrowLeft, Pencil, Settings2 } from 'lucide-react';
 
 import { AdminButton } from '@/components/admin';
 
-import type { LocalConversation } from '../-context';
+import type { LocalConversation } from './context';
 
 export function ConversationHeader({
   conversation,

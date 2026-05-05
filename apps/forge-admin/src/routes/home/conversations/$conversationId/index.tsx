@@ -13,9 +13,9 @@ import {
   type HomeInternalChatConversationMessage,
 } from '@/lib/admin-api';
 import { formatRecentMessageTime, useHomeConversations } from '../-context';
-import { ConversationComposer } from './-conversation-composer';
-import { ConversationHeader } from './-conversation-header';
-import { ConversationMessagesPane } from './-conversation-messages-pane';
+import { ConversationComposer } from '@/components/home/conversations/ConversationComposer';
+import { ConversationHeader } from '@/components/home/conversations/ConversationHeader';
+import { ConversationMessagesPane } from '@/components/home/conversations/ConversationMessagesPane';
 import { ParticipantsDialog } from './-participants-dialog';
 import { RenameConversationDialog } from './-rename-conversation-dialog';
 

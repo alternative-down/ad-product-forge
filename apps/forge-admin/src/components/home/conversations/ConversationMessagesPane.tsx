@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { AgentAvatar, AdminButton, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { HomeInternalChatConversationMessage } from '@/lib/admin-api';
-import { getInitials } from '../-context';
+import { getInitials } from './context';
 import { ConversationAttachment } from './-conversation-attachment';
 
 export function ConversationMessagesPane(input: {
