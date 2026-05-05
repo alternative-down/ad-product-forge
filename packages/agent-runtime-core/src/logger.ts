@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file
 export type LogContext = Record<string, unknown>;
 
 function formatLog(level: string, scope: string, message: string, context?: LogContext): string {
