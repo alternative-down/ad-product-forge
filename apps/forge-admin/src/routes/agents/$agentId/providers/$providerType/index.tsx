@@ -5,8 +5,8 @@ import { useMemo } from 'react';
 import { AdminLoadingState } from '@/components/admin';
 import { getAgent } from '@/lib/admin-api';
 
-import { DiscordProviderForm } from './-discord-provider-form';
-import { EmailProviderForm } from './-email-provider-form';
+import { DiscordProviderForm } from '../../components/agents/providers/DiscordProviderForm';
+import { EmailProviderForm } from '../../components/agents/providers/EmailProviderForm';
 
 export const Route = createFileRoute('/agents/$agentId/providers/$providerType/')({
   component: AgentProviderIndexRoute,
