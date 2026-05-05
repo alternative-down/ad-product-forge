@@ -584,6 +584,7 @@ export function registerAgentWriteOpsRoutes(
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        forgeDebug('admin', `updateRole failed: ${err}`);
         if (msg.startsWith('Role not found')) return jsonResponse({ error: msg }, 404);
         throw err;
       }
@@ -601,6 +602,7 @@ export function registerAgentWriteOpsRoutes(
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        forgeDebug('admin', `deleteRole failed: ${err}`);
         if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
         throw err;
       }
