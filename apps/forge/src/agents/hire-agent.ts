@@ -20,7 +20,6 @@ import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
-import { loadAgent } from './agent-loader';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 
@@ -125,6 +124,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     });
 
     await input.schedules.createHeartbeatSchedule(agentId);
+    const { loadAgent } = await import('./agent-loader');
     const runtime = await loadAgent(db, {
       agentId,
       workspaceBasePath: input.workspaceBasePath,
