@@ -117,8 +117,7 @@ export function resolveEmailThreadKey(parsed: Email): string {
 export function resolveCreatedAt(email: Email): string {
   if (typeof email.date === 'string') return email.date;
   if (email.date) {
-    const parsedDate = new Date(String(email.date));
-    if (!Number.isNaN(parsedDate.getTime())) return parsedDate.toISOString();
+    return new Date(email.date).toISOString();
   }
   return new Date().toISOString();
 }
