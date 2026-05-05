@@ -29,7 +29,6 @@ import {
   InternalChatAccountNotFoundError,
 } from "./internal-chat-errors";
 
-export { InternalChatAccountNotFoundError, ConversationNotFoundError, ChatGroupNotFoundError, ExternalAccountNotFoundError };
 
 export function createInternalChatAccounts(db: Database) {
 

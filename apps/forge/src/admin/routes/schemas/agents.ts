@@ -4,7 +4,7 @@ export const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
 
-export const githubManifestConfigSchema = z.object({
+const githubManifestConfigSchema = z.object({
   permissions: z.object({
     administration: z.boolean(),
     contents: z.boolean(),

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
-export const uploadAgentSkillsSchema = z.object({
+const uploadAgentSkillsSchema = z.object({
   agentId: z.string().min(1),
   archiveBase64: z.string().min(1),
 });
 
-export const deleteAgentSkillSchema = z.object({
+const deleteAgentSkillSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
@@ -18,12 +18,12 @@ export const deleteSystemSkillSchema = z.object({
   skillName: z.string().min(1),
 });
 
-export const installGlobalSkillForAgentSchema = z.object({
+const installGlobalSkillForAgentSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
 
-export const publishAgentSkillToGlobalSchema = z.object({
+const publishAgentSkillToGlobalSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });

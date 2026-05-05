@@ -18,7 +18,7 @@ const packageManifestSchema = z.object({
   observationCount: z.number().int().nonnegative(),
 });
 
-export const longTermMemoryStateSchema = z.object({
+const longTermMemoryStateSchema = z.object({
   version: z.literal(1),
   packages: z.array(packageManifestSchema),
   lastWrittenPackageId: z.string().min(1).nullable(),
@@ -29,7 +29,7 @@ export const longTermMemoryStateSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
-export const longTermMemoryRecallSnapshotSchema = z.object({
+const longTermMemoryRecallSnapshotSchema = z.object({
   status: z.enum(['hit', 'miss', 'error']),
   query: z.string(),
   resultIds: z.array(z.string()),
@@ -51,7 +51,7 @@ export const longTermMemoryRecallSnapshotSchema = z.object({
   error: z.string().nullable(),
 });
 
-export const longTermMemoryRecallHistorySchema = z.object({
+const longTermMemoryRecallHistorySchema = z.object({
   recentFingerprints: z.array(z.string()),
   updatedAt: z.string(),
 });
@@ -61,7 +61,7 @@ export type LongTermMemoryState = z.infer<typeof longTermMemoryStateSchema>;
 export type LongTermMemoryRecallSnapshot = z.infer<typeof longTermMemoryRecallSnapshotSchema>;
 export type LongTermMemoryRecallHistory = z.infer<typeof longTermMemoryRecallHistorySchema>;
 
-export function createEmptyLongTermMemoryState(): LongTermMemoryState {
+function createEmptyLongTermMemoryState(): LongTermMemoryState {
   const now = new Date().toISOString();
 
   return {
