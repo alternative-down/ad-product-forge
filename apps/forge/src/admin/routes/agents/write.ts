@@ -5,19 +5,21 @@
 
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server.js';
-import { jsonResponse, parseJsonBody } from '../index';
-import { clearAgentHistory } from '../helpers';
-import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas';
-import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
+import type { Database } from '../../../database/index.js';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
+import { jsonResponse, parseJsonBody } from '../index.js';
+import { clearAgentHistory } from '../helpers.js';
+import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas.js';
+import { reloadAgentIfLoaded } from '../../../capabilities/runtime.js';
 
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (agentId: string, opts: { query: string }) => Promise<unknown>;
 }
 
 interface AgentRoutesInput {
-  db: unknown;
+  db: Database;
   workspaceBasePath: string;
-  loaderConfig: unknown;
+  loaderConfig: AgentLoaderConfig;
 }
 
 /**
@@ -35,12 +37,12 @@ export function registerAgentWriteRoutes(
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
       await clearAgentHistory({
-        db: input.db as any,
+        db: input.db,
         workspaceBasePath: input.workspaceBasePath,
         agentId: body.agentId,
         includeLongTermMemoryThread: body.includeLongTermMemoryThread,
       });
-      await reloadAgentIfLoaded(input.db as any, input.loaderConfig as any, body.agentId);
+      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
       return jsonResponse({
         success: true,
         agentId: body.agentId,
@@ -48,7 +50,6 @@ export function registerAgentWriteRoutes(
       });
     },
   });
-
   // POST /admin/agent/ltm-recall-search
   httpServer.registerRoute({
     method: 'POST',
