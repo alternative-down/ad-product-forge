@@ -103,12 +103,14 @@ import {
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createChatAttachments } from "./internal-chat-attachments";
+import { createInternalChatReads } from "./internal-chat-reads";
 export function createInternalChatService(
 
   db: Database,
 ) {
   // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
+  const reads = createInternalChatReads(db);
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
@@ -728,25 +730,14 @@ export function createInternalChatService(
   }
 
   // === Unread / Recent ────────────────────────────────────────────────────
-  async function getUnreadSummary(agentId: string) {
-    return unread.getUnreadSummary(agentId);
-  }
+  const getUnreadSummary = reads.getUnreadSummary;
 
-  async function listRecentConversations(agentId: string, limit: number) {
-    return listConversations({
-      agentId,
-      limit,
-    });
-  }
+  const listRecentConversations = reads.listRecentConversations;
 
   // === Internal Helpers ────────────────────────────────────────────────────
-  async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
-    return participants.listGroupMembersOrDmPeers(agentId, conversationId);
-  }
+  const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
 
-  async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string) {
-    return participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
-  }
+  const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
 
   const getRequiredAccount = accounts.getRequiredAccount;
   const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
@@ -836,6 +827,7 @@ export function createInternalChatService(
 
   const participants = createInternalChatParticipants(db);
   const unread = createInternalChatUnread(db);
+  reads.init({ unread, participants, listConversations });
 
   const access = createInternalChatAccess(db, {
     getRequiredAccount: accounts.getRequiredAccount,
@@ -854,8 +846,8 @@ export function createInternalChatService(
   const listing = createInternalChatListing(db, {
     getRequiredAgentAccount,
     getRequiredExternalAccount,
-    listGroupMembersOrDmPeers: participants.listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount: participants.listGroupMembersOrDmPeersByAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
     readMessageAttachments,
   });
 
