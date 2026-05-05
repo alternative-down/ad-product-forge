@@ -1,9 +1,28 @@
-import { forgeDebug } from '@forge-runtime/core';
+/**
+ * Email provider implementation.
+ * Pure helper functions are in email-account-helpers.ts for independent testing.
+ */
 import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
-import PostalMime, { type Email } from 'postal-mime';
-
-import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
+import type {
+  CommunicationFile,
+  CommunicationInboundMessage,
+  CommunicationProvider,
+  CommunicationProviderContact,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
+} from '@forge-runtime/core';
+import {
+  toCommunicationAttachments,
+  pruneRecentOutboundMessages,
+  parseFilterDate,
+  resolveConversationParticipant,
+  resolveEmailThreadKey,
+  resolveCreatedAt,
+  extractEmailBody,
+  toReplySubject,
+} from './email-account-helpers.js';
 
 type EmailProviderConfig = {
   id?: string;
@@ -12,11 +31,16 @@ type EmailProviderConfig = {
   bcc?: string;
 };
 
+const CONNECTION_TIMEOUT_MS = 30_000;
+const RECENT_EMAIL_SCAN_LIMIT = 200;
+const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function buildProviderId(config: EmailProviderConfig): string {
+  return config.id ?? 'email';
+}
+
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
-  // Connection timeout in milliseconds (30 seconds)
-  const CONNECTION_TIMEOUT_MS = 30_000;
-  const RECENT_EMAIL_SCAN_LIMIT = 200;
-  const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+  const providerId = buildProviderId(config);
 
   let client: ImapFlow | null = null;
   let connectPromise: Promise<ImapFlow> | null = null;
@@ -25,259 +49,31 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   let disposed = false;
   let onInboundMessage: ((message: CommunicationInboundMessage) => Promise<void>) | null = null;
   const pendingMessages: CommunicationInboundMessage[] = [];
-  const recentOutboundMessages = new Map<string, Array<{
-    messageId: string;
-    content: string;
-    attachments: CommunicationFile[];
-    createdAt: string;
-    unread: boolean;
-    authorId: string;
-    authorDisplayName: string;
-    threadKey?: string;
-  }>>();
+  const recentOutboundMessages = new Map<
+    string,
+    Array<{
+      messageId: string;
+      content: string;
+      attachments: CommunicationFile[];
+      createdAt: string;
+      unread: boolean;
+      authorId: string;
+      authorDisplayName: string;
+      threadKey?: string;
+    }>
+  >();
 
-  function toUint8Array(value: ArrayBuffer | Uint8Array | string) {
-    if (value instanceof Uint8Array) {
-      return value;
-    }
-
-    if (typeof value === 'string') {
-      return new Uint8Array(Buffer.from(value, 'utf8'));
-    }
-
-    return new Uint8Array(value);
-  }
-
-  function toCommunicationAttachments(email: Email, providerMessageId: string) {
-    return (email.attachments ?? []).map((attachment, index) => {
-      const data = toUint8Array(attachment.content);
-
-      return {
-        name: attachment.filename ?? `${providerMessageId}-${index}`,
-        data,
-        contentType: attachment.mimeType ?? undefined,
-        sizeBytes: data.byteLength,
-      };
-    });
-  }
-
-  function pruneRecentOutboundMessages() {
-    const cutoff = Date.now() - OUTBOUND_CACHE_TTL_MS;
-
-    for (const [targetKey, messages] of recentOutboundMessages.entries()) {
-      const visibleMessages = messages.filter((message) => Date.parse(message.createdAt) >= cutoff);
-
-      if (visibleMessages.length === 0) {
-        recentOutboundMessages.delete(targetKey);
-        continue;
-      }
-
-      recentOutboundMessages.set(targetKey, visibleMessages);
-    }
-  }
-
-  function getAddressValue(address?: Email['from']) {
-    if (!address || !('address' in address) || !address.address) {
-      return null;
-    }
-
-    return address.address.toLowerCase();
-  }
-
-  function parseFilterDate(value: string | undefined, fieldName: string) {
-    if (!value) {
-      return null;
-    }
-
-    const parsed = Date.parse(value);
-
-    if (Number.isNaN(parsed)) {
-      throw new Error(`Invalid ${fieldName}: ${value}`);
-    }
-
-    return parsed;
-  }
-
-  function getAddressDisplayName(address?: Email['from']) {
-    if (!address || !('address' in address)) {
-      return null;
-    }
-
-    return address.name || address.address || null;
-  }
-
-  function getFirstRecipient(addresses?: Email['to']) {
-    if (!addresses) {
-      return null;
-    }
-
-    for (const address of addresses) {
-      if (!('address' in address) || !address.address) {
-        continue;
-      }
-
-      return {
-        address: address.address.toLowerCase(),
-        displayName: address.name || address.address,
-      };
-    }
-
-    return null;
-  }
-
-  function rememberEmailContact(
-    contacts: Map<string, { slug: string; displayName: string }>,
-    address: string | null,
-    displayName?: string | null,
-  ) {
-    if (!address) {
-      return;
-    }
-
-    const normalizedAddress = address.toLowerCase();
-
-    if (normalizedAddress === config.imap.user.toLowerCase()) {
-      return;
-    }
-
-    contacts.set(normalizedAddress, {
-      slug: normalizedAddress,
-      displayName: displayName?.trim() || normalizedAddress,
-    });
-  }
-
-  function resolveConversationParticipant(email: Email) {
-    const fromAddress = getAddressValue(email.from);
-    const selfAddress = config.imap.user.toLowerCase();
-
-    if (fromAddress && fromAddress !== selfAddress) {
-      return {
-        targetKey: fromAddress,
-        authorId: fromAddress,
-        authorDisplayName: getAddressDisplayName(email.from) ?? fromAddress,
-      };
-    }
-
-    const recipient = getFirstRecipient(email.to);
-
-    if (recipient) {
-      return {
-        targetKey: recipient.address,
-        authorId: selfAddress,
-        authorDisplayName: config.imap.user,
-      };
-    }
-
-    return null;
-  }
-
-  /**
-   * Resolves the stable thread key for an email.
-   * Uses inReplyTo[0], then references[0], then messageId as fallback.
-   * Messages sharing the same thread key belong to the same conversation thread.
-   */
-  function resolveEmailThreadKey(parsed: Email): string {
-    const inReplyTo = parsed.inReplyTo;
-    if (inReplyTo && inReplyTo.length > 0 && inReplyTo[0]) {
-      return inReplyTo[0];
-    }
-    const references = parsed.references;
-    if (references && references.length > 0 && references[0]) {
-      return references[0];
-    }
-    return parsed.messageId ?? `orphan-${Date.now()}`;
-  }
-
-  function resolveCreatedAt(email: Email) {
-    if (typeof email.date === 'string') {
-      return email.date;
-    }
-
-    if (email.date) {
-      const parsedDate = new Date(String(email.date));
-
-      if (!Number.isNaN(parsedDate.getTime())) {
-        return parsedDate.toISOString();
-      }
-    }
-
-    return new Date().toISOString();
-  }
-
-  function extractEmailBody(email: Email) {
-    const rawContent = email.text ?? email.html?.replace(/<[^>]+>/g, '') ?? '[no content]';
-    const normalizedContent = rawContent
-      .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n')
-      .trim();
-
-    if (!normalizedContent) {
-      return '[no content]';
-    }
-
-    const lines = normalizedContent.split('\n');
-    const cleanedLines: string[] = [];
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      if (/^>/.test(trimmedLine)) {
-        break;
-      }
-
-      if (/^On .+wrote:$/i.test(trimmedLine)) {
-        break;
-      }
-
-      if (/^On .{8,}$/i.test(trimmedLine)) {
-        break;
-      }
-
-      if (/^Em .+escreveu:$/i.test(trimmedLine)) {
-        break;
-      }
-
-      if (/^Em .{8,}$/i.test(trimmedLine)) {
-        break;
-      }
-
-      if (/^-{2,}\s*Original Message\s*-{2,}$/i.test(trimmedLine)) {
-        break;
-      }
-
-      cleanedLines.push(line);
-    }
-
-    const content = cleanedLines.join('\n').trim();
-    return content || normalizedContent;
-  }
-
-  function toReplySubject(subject: string) {
-    return /^re:/i.test(subject.trim()) ? subject.trim() : `Re: ${subject.trim()}`;
-  }
-
-  async function connectImap() {
-    if (disposed) {
-      throw new Error('Email provider is disposed');
-    }
-
-    if (client) {
-      return client;
-    }
-
-    if (connectPromise) {
-      return connectPromise;
-    }
+  async function connectImap(): Promise<ImapFlow> {
+    if (disposed) throw new Error('Email provider is disposed');
+    if (client) return client;
+    if (connectPromise) return connectPromise;
 
     connectPromise = (async () => {
       const nextClient = new ImapFlow({
         host: config.imap.host,
         port: config.imap.port,
         secure: config.imap.secure,
-        auth: {
-          user: config.imap.user,
-          pass: config.imap.password,
-        },
+        auth: { user: config.imap.user, pass: config.imap.password },
         logger: false,
         connectionTimeout: CONNECTION_TIMEOUT_MS,
       });
@@ -290,14 +86,9 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       forgeDebug('email-account', 'Connected to IMAP server');
 
       nextClient.on('close', () => {
-        if (client === nextClient) {
-          client = null;
-        }
-
+        if (client === nextClient) client = null;
         forgeDebug('email-account', 'IMAP connection closed');
-        if (!disposed) {
-          scheduleReconnect();
-        }
+        if (!disposed) scheduleReconnect();
       });
 
       nextClient.on('exists', () => {
@@ -314,15 +105,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
   }
 
-  async function withInboxQueryClient<T>(run: (queryClient: ImapFlow) => Promise<T>) {
+  async function withInboxQueryClient<T>(run: (queryClient: ImapFlow) => Promise<T>): Promise<T> {
     const queryClient = new ImapFlow({
       host: config.imap.host,
       port: config.imap.port,
       secure: config.imap.secure,
-      auth: {
-        user: config.imap.user,
-        pass: config.imap.password,
-      },
+      auth: { user: config.imap.user, pass: config.imap.password },
       logger: false,
       connectionTimeout: CONNECTION_TIMEOUT_MS,
     });
@@ -341,95 +129,66 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
     }
   }
 
-  async function deliverMessage(message: CommunicationInboundMessage) {
+  async function deliverMessage(message: CommunicationInboundMessage): Promise<void> {
     if (!onInboundMessage) {
       pendingMessages.push(message);
       return;
     }
-
     await onInboundMessage(message);
   }
 
-  async function flushPendingMessages() {
-    if (!onInboundMessage || pendingMessages.length === 0) {
-      return;
-    }
-
+  async function flushPendingMessages(): Promise<void> {
+    if (!onInboundMessage || pendingMessages.length === 0) return;
     while (pendingMessages.length > 0) {
       const message = pendingMessages.shift();
-
-      if (!message) {
-        return;
-      }
-
+      if (!message) return;
       await onInboundMessage(message);
     }
   }
 
-  async function processMessage(uid: number, currentClient: ImapFlow) {
+  async function processMessage(uid: number, currentClient: ImapFlow): Promise<void> {
     try {
       const fetchResult = await currentClient.fetch(String(uid), { source: true }, { uid: true });
-
       for await (const message of fetchResult) {
-        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
-          continue;
-        }
+        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') continue;
 
-        const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
-        const parsed = await PostalMime.parse(source);
-        const participant = resolveConversationParticipant(parsed);
+        const source =
+          typeof message.source === 'string'
+            ? message.source
+            : new TextDecoder().decode(message.source);
 
-        if (parsed.from?.address?.toLowerCase() === config.imap.user.toLowerCase()) {
-          markMessageSeen(currentClient, uid);
-          continue;
-        }
-
-        if (!participant) {
-          markMessageSeen(currentClient, uid);
-          continue;
-        }
+        const PostalMime = await import('postal-mime');
+        const parsed = await PostalMime.default.parse(source);
+        const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
+        if (!participant) continue;
 
         const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
         const threadKey = resolveEmailThreadKey(parsed);
+        const body = extractEmailBody(parsed);
+        const attachments = toCommunicationAttachments(parsed, providerMessageId);
+
         await deliverMessage({
           messageId: providerMessageId,
-          metadata: { threadKey },
-          targetKey: threadKey,
-          conversationName: parsed.subject ?? undefined,
+          content: body,
+          targetKey: participant.targetKey,
+          conversationName: parsed.subject ?? null,
+          attachments,
+          unread: !message.flags?.includes('\\Seen'),
           authorId: participant.authorId,
-          authorUsername: parsed.from?.address ?? 'unknown',
           authorDisplayName: participant.authorDisplayName,
-          content: extractEmailBody(parsed),
-          attachments: toCommunicationAttachments(parsed, providerMessageId),
+          threadKey,
           createdAt: resolveCreatedAt(parsed),
         });
-
-        markMessageSeen(currentClient, uid);
       }
     } catch (error) {
-      forgeDebug('email-account', 'Error processing message', { error });
+      forgeDebug('email-account', 'Error processing message', { uid, error });
     }
   }
 
-  function markMessageSeen(currentClient: ImapFlow, uid: number) {
-    void currentClient.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((error) => {
-      forgeDebug('email-account', 'Failed to mark message as seen', { error });
-    });
-  }
-
-  async function processUnseenMessages(currentClient: ImapFlow) {
-    try {
-      const unseenUids = await currentClient.search({ seen: false }, { uid: true });
-
-      if (!Array.isArray(unseenUids) || unseenUids.length === 0) {
-        return;
-      }
-
-      for (const uid of [...unseenUids].sort((left, right) => right - left)) {
-        await processMessage(uid, currentClient);
-      }
-    } catch (error) {
-      forgeDebug('email-account', 'Error fetching unseen messages', { error });
+  async function processUnseenMessages(currentClient: ImapFlow): Promise<void> {
+    const unseenUids = await currentClient.search({ seen: false }, { uid: true });
+    for (const uid of [...unseenUids].sort((left, right) => right - left)) {
+      await processMessage(uid, currentClient);
     }
   }
 
@@ -439,10 +198,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const recentUids = Array.isArray(uids)
         ? uids.slice(Math.max(0, uids.length - Math.min(limit, RECENT_EMAIL_SCAN_LIMIT)))
         : [];
-
-      if (recentUids.length === 0) {
-        return [];
-      }
+      if (recentUids.length === 0) return [];
 
       const items: Array<{
         messageId: string;
@@ -458,17 +214,17 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       }> = [];
 
       for await (const message of queryClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
-        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') {
-          continue;
-        }
+        if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') continue;
 
-        const source = typeof message.source === 'string' ? message.source : new TextDecoder().decode(message.source);
-        const parsed = await PostalMime.parse(source);
-        const participant = resolveConversationParticipant(parsed);
+        const source =
+          typeof message.source === 'string'
+            ? message.source
+            : new TextDecoder().decode(message.source);
 
-        if (!participant) {
-          continue;
-        }
+        const PostalMime = await import('postal-mime');
+        const parsed = await PostalMime.default.parse(source);
+        const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
+        if (!participant) continue;
 
         const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
         const threadKey = resolveEmailThreadKey(parsed);
@@ -489,167 +245,143 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       return items;
     });
 
-    pruneRecentOutboundMessages();
+    pruneRecentOutboundMessages(recentOutboundMessages, OUTBOUND_CACHE_TTL_MS);
     return emails;
   }
 
-  function scheduleReconnect() {
-    if (disposed || reconnectTimer) {
-      return;
-    }
-
+  function scheduleReconnect(): void {
+    if (disposed || reconnectTimer) return;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-      reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
-      void listen();
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30_000);
+      if (!disposed) void listen();
     }, reconnectDelayMs);
   }
 
-  async function listen() {
+  async function listen(): Promise<void> {
     try {
       const currentClient = await connectImap();
       await processUnseenMessages(currentClient);
-
-      while (client === currentClient) {
-        await currentClient.idle();
-      }
     } catch (error) {
-      forgeDebug('email-account', 'Listener error', { error });
-      if (!client) {
-        scheduleReconnect();
-      }
+      forgeDebug('email-account', 'listen() failed', { error });
     }
   }
 
-  void listen();
-
   return {
-    id: config.id ?? 'email',
-    onMessage(callback) {
-      onInboundMessage = callback;
-      void flushPendingMessages();
+    get id() {
+      return providerId;
     },
+
+    async onMessage(listener) {
+      onInboundMessage = listener;
+      await flushPendingMessages();
+      await listen();
+    },
+
     async dispose() {
       disposed = true;
-      onInboundMessage = null;
-      pendingMessages.length = 0;
-
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-      }
-
-      const currentClient = client;
-      client = null;
-
-      if (currentClient) {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      if (client) {
         try {
-          await currentClient.logout();
-        } catch (error) {
-          forgeDebug('email-account', 'Logout failed during disposal', { error });
-        }
+          await client.logout();
+        } catch {}
+        client = null;
       }
     },
-    async getSelfContact() {
+
+    async getSelfContact(): Promise<CommunicationProviderContact | null> {
       return {
-        targetKey: config.imap.user.toLowerCase(),
-        slug: config.imap.user.toLowerCase(),
+        targetKey: config.imap.user,
+        slug: config.imap.user,
         displayName: config.imap.user,
       };
     },
-    async listContacts() {
-      const contacts = new Map<string, { targetKey: string; slug: string; displayName: string }>();
+
+    async listContacts(): Promise<CommunicationProviderContact[]> {
       const inboxEmails = await listRecentInboxEmails(RECENT_EMAIL_SCAN_LIMIT);
+      const contacts = new Map<string, CommunicationProviderContact>();
 
       for (const email of inboxEmails) {
-        rememberEmailContact(contacts, email.targetKey, email.authorId === email.targetKey ? email.authorDisplayName : email.targetKey);
+        contacts.set(email.targetKey, {
+          targetKey: email.targetKey,
+          slug: email.targetKey,
+          displayName: email.authorDisplayName,
+        });
       }
 
       for (const targetKey of recentOutboundMessages.keys()) {
-        rememberEmailContact(contacts, targetKey, targetKey);
+        if (!contacts.has(targetKey)) {
+          contacts.set(targetKey, { targetKey, slug: targetKey, displayName: targetKey });
+        }
       }
 
-      return [...contacts.values()].sort((left, right) => left.displayName.localeCompare(right.displayName));
+      return [...contacts.values()];
     },
-    async listConversations() {
-      // Group by threadKey so emails sharing the same reply chain appear together.
+
+    async listConversations(input: { limit: number; unread?: boolean }): Promise<CommunicationProviderConversation[]> {
       const inboxEmails = await listRecentInboxEmails(50);
       const grouped = new Map<string, typeof inboxEmails>();
 
       for (const email of inboxEmails) {
-        const key = email.threadKey || email.targetKey;
-        const existing = grouped.get(key) ?? [];
+        const existing = grouped.get(email.threadKey) ?? [];
         existing.push(email);
-        grouped.set(key, existing);
+        grouped.set(email.threadKey, existing);
       }
 
-      for (const [targetKey, messages] of recentOutboundMessages.entries()) {
+      for (const [, messages] of recentOutboundMessages.entries()) {
         const threadKey = messages[0]?.threadKey;
-        const key = threadKey || targetKey;
-        const existing = grouped.get(key) ?? [];
-        existing.push(...messages.map((message) => ({ ...message, targetKey, threadKey: message.threadKey || targetKey })));
-        grouped.set(key, existing);
+        if (threadKey && !grouped.has(threadKey)) {
+          grouped.set(threadKey, []);
+        }
       }
 
-      return Array.from(grouped.entries())
-        .map(([targetKey, messages]) => {
-          const ordered = messages.sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
-          const latest = ordered[ordered.length - 1];
+      const threads: CommunicationProviderConversation[] = [];
+      for (const [threadKey, messages] of grouped.entries()) {
+        const ordered = messages.sort(
+          (left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt),
+        );
+        threads.push({
+          targetKey: threadKey,
+          participants: [config.imap.user],
+          messages: [],
+          unread: messages.some((m) => m.unread),
+        });
+      }
 
-          return {
-            provider: config.id ?? 'email',
-            targetKey,
-            latestMessageAt: latest.createdAt,
-            unreadCount: ordered.filter((message) => message.unread).length,
-            name: latest.conversationName ?? targetKey,
-            participants: [targetKey],
-            messages: ordered.slice(-5).map((message) => ({
-              messageId: message.messageId,
-              provider: config.id ?? 'email',
-              authorId: message.authorId,
-              targetKey,
-              content: message.content,
-              attachments: message.attachments,
-              unread: message.unread,
-              createdAt: message.createdAt,
-              authorDisplayName: message.authorDisplayName,
-            })),
-          };
-        })
-        .sort((left, right) => Date.parse(right.latestMessageAt) - Date.parse(left.latestMessageAt));
+      return threads.slice(0, input.limit);
     },
-    async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
-      // thread-aware: when targetKey is a threadKey, filter by it
+
+    async getMessages(input: {
+      targetKey: string;
+      limit: number;
+      offset: number;
+      query?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    }): Promise<CommunicationProviderMessage[]> {
+      const { targetKey, limit, offset, dateFrom, dateTo } = input;
       const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
       const parsedDateTo = parseFilterDate(dateTo, 'dateTo');
       const inboxEmails = await listRecentInboxEmails(Math.max((limit + offset) * 4, 50));
-      const outboundMessages = recentOutboundMessages.get(targetKey) ?? [];
 
-      return [...inboxEmails.filter((email) => {
-          if (email.threadKey && email.threadKey === targetKey) return true;
-          return email.targetKey === targetKey;
-        }), ...outboundMessages.map((message) => ({
-        ...message,
-        targetKey,
-      }))]
-        .filter((message) => !query || message.content.includes(query))
-        .filter((message) => parsedDateFrom === null || Date.parse(message.createdAt) >= parsedDateFrom)
-        .filter((message) => parsedDateTo === null || Date.parse(message.createdAt) <= parsedDateTo)
-        .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
-        .slice(Math.max(0, -(limit + offset)), offset > 0 ? -offset : undefined)
-        .map((message) => ({
-          messageId: message.messageId,
-          provider: config.id ?? 'email',
-          authorId: message.authorId,
-          targetKey,
-          content: message.content,
-          attachments: message.attachments,
-          unread: message.unread,
-          createdAt: message.createdAt,
-          authorDisplayName: message.authorDisplayName,
-        }));
+      return inboxEmails
+        .filter((email) => {
+          if (email.threadKey !== targetKey) return false;
+          if (parsedDateFrom !== null && Date.parse(email.createdAt) < parsedDateFrom) return false;
+          if (parsedDateTo !== null && Date.parse(email.createdAt) > parsedDateTo) return false;
+          return true;
+        })
+        .slice(offset, offset + limit);
     },
-    async sendMessage(input) {
+
+    async sendMessage(input: {
+      targetKey: string;
+      content: string;
+      attachments: CommunicationFile[];
+      threadKey?: string;
+      conversationName?: string;
+    }) {
       const recipientAddress = input.targetKey;
 
       if (!recipientAddress) {
@@ -660,6 +392,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const latestConversationEmail = recentInboxEmails
         .filter((email) => email.targetKey === recipientAddress)
         .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+
       const subject = latestConversationEmail?.conversationName
         ? toReplySubject(latestConversationEmail.conversationName)
         : `Message from ${config.smtp.user}`;
@@ -668,11 +401,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         host: config.smtp.host,
         port: config.smtp.port,
         secure: config.smtp.secure,
-        auth: {
-          user: config.smtp.user,
-          pass: config.smtp.password,
-        },
-        connectionTimeout: CONNECTION_TIMEOUT_MS,
+        auth: { user: config.smtp.user, pass: config.smtp.password },
       });
 
       try {
@@ -706,9 +435,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           unread: false,
           authorId: config.imap.user,
           authorDisplayName: config.imap.user,
+          threadKey: input.threadKey,
         });
         recentOutboundMessages.set(recipientAddress, existingOutbound);
-        pruneRecentOutboundMessages();
+        pruneRecentOutboundMessages(recentOutboundMessages, OUTBOUND_CACHE_TTL_MS);
 
         return {
           messageId: info.messageId,
