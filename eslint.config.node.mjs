@@ -62,7 +62,7 @@ export default defineConfig([
       // nullable fields; use || only when treating falsy values
       // (0, '', false) as missing is the intended behavior.
       '@typescript-eslint/strict-boolean-expressions': [
-        'warn',
+        'error',
         {
           allowString: true,
           allowNumber: true,
