@@ -14,11 +14,15 @@ export function createAgentContractStore(db: Database) {
   const companyCashOperations = createCompanyCashOperations(db);
 
   async function getExecutionState(agentId: string): Promise<'idle' | 'running' | 'absent'> {
-    const agent = await db.query.agents.findFirst({
-      where: eq(agents.id, agentId),
-    });
-
-    return (agent?.executionState as 'idle' | 'running' | 'absent' | undefined) ?? 'idle';
+    try {
+      const agent = await db.query.agents.findFirst({
+        where: eq(agents.id, agentId),
+      });
+      return (agent?.executionState as 'idle' | 'running' | 'absent' | undefined) ?? 'idle';
+    } catch (error) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'getExecutionState failed: ' + (error instanceof Error ? error.message : String(error)) });
+      throw error;
+    }
   }
 
   async function setExecutionState(agentId: string, executionState: 'idle' | 'running' | 'absent') {
@@ -72,16 +76,20 @@ export function createAgentContractStore(db: Database) {
   }
 
   async function getActiveContract(agentId: string) {
-    const now = Date.now();
-
-    return db.query.agentExecutionContracts.findFirst({
-      where: and(
-        eq(agentExecutionContracts.agentId, agentId),
-        lte(agentExecutionContracts.startsAt, now),
-        gte(agentExecutionContracts.endsAt, now),
-      ),
-      orderBy: [desc(agentExecutionContracts.endsAt)],
-    });
+    try {
+      const now = Date.now();
+      return db.query.agentExecutionContracts.findFirst({
+        where: and(
+          eq(agentExecutionContracts.agentId, agentId),
+          lte(agentExecutionContracts.startsAt, now),
+          gte(agentExecutionContracts.endsAt, now),
+        ),
+        orderBy: [desc(agentExecutionContracts.endsAt)],
+      });
+    } catch (error) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'getActiveContract failed: ' + (error instanceof Error ? error.message : String(error)) });
+      throw error;
+    }
   }
 
   async function getLatestContract(agentId: string) {
@@ -150,23 +158,28 @@ export function createAgentContractStore(db: Database) {
     const id = createId();
     const createdAt = Date.now();
 
-    await db.insert(agentExecutionSteps).values({
-      id,
-      agentId: input.agentId,
-      contractId: input.contractId,
-      llmProfileId: input.llmProfileId,
-      modelKey: input.modelKey,
-      kind: input.kind,
-      inputTokens: input.inputTokens,
-      cachedInputTokens: input.cachedInputTokens,
-      outputTokens: input.outputTokens,
-      inputPerMillionUsd: input.inputPerMillionUsd,
-      inputCachePerMillionUsd: input.inputCachePerMillionUsd,
-      outputPerMillionUsd: input.outputPerMillionUsd,
-      contractCostMultiplier: input.contractCostMultiplier,
-      costUsd: input.costUsd,
-      createdAt,
-    });
+    try {
+      await db.insert(agentExecutionSteps).values({
+        id,
+        agentId: input.agentId,
+        contractId: input.contractId,
+        llmProfileId: input.llmProfileId,
+        modelKey: input.modelKey,
+        kind: input.kind,
+        inputTokens: input.inputTokens,
+        cachedInputTokens: input.cachedInputTokens,
+        outputTokens: input.outputTokens,
+        inputPerMillionUsd: input.inputPerMillionUsd,
+        inputCachePerMillionUsd: input.inputCachePerMillionUsd,
+        outputPerMillionUsd: input.outputPerMillionUsd,
+        contractCostMultiplier: input.contractCostMultiplier,
+        costUsd: input.costUsd,
+        createdAt,
+      });
+    } catch (error) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: input.agentId, message: 'recordAgentStep failed: ' + (error instanceof Error ? error.message : String(error)) });
+      throw error;
+    }
 
     return {
       stepId: id,
@@ -205,30 +218,36 @@ export function createAgentContractStore(db: Database) {
     if (contract.fundedAt) {
       return contract;
     }
-    const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
-    if (cashBalanceUsd < contract.budgetUsd) {
-      return null;
-    }
-    const now = Date.now();
-    await db.transaction(async (tx) => {
-      await companyCashOperations.recordCashOut(
-        {
-          type: 'agent-contract-funding',
-          amountUsd: contract.budgetUsd,
-          description: `Contract funding for ${contract.agentId}`,
-          referenceType: 'agent-execution-contract',
-          referenceId: contract.id,
-          effectiveAt: now,
-        },
-        tx,
-      );
 
-      await tx
-        .update(agentExecutionContracts)
-        .set({ fundedAt: now })
-        .where(eq(agentExecutionContracts.id, contract.id));
-    });
-    return { ...contract, fundedAt: now };
+    try {
+      const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
+      if (cashBalanceUsd < contract.budgetUsd) {
+        return null;
+      }
+      const now = Date.now();
+      await db.transaction(async (tx) => {
+        await companyCashOperations.recordCashOut(
+          {
+            type: 'agent-contract-funding',
+            amountUsd: contract.budgetUsd,
+            description: `Contract funding for ${contract.agentId}`,
+            referenceType: 'agent-execution-contract',
+            referenceId: contract.id,
+            effectiveAt: now,
+          },
+          tx,
+        );
+
+        await tx
+          .update(agentExecutionContracts)
+          .set({ fundedAt: now })
+          .where(eq(agentExecutionContracts.id, contract.id));
+      });
+      return { ...contract, fundedAt: now };
+    } catch (error) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContractIfNeeded failed: ' + (error instanceof Error ? error.message : String(error)) });
+      throw error;
+    }
   }
 
   async function refundActiveContractBalance(agentId: string) {
@@ -272,7 +291,8 @@ export function createAgentContractStore(db: Database) {
     getContractSpend,
     getUsagePricing,
     recordAgentStep,
+    renewContract,
+    fundContractIfNeeded,
     refundActiveContractBalance,
   };
-
 }
