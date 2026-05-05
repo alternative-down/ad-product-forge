@@ -86,6 +86,7 @@ import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatListing } from "./internal-chat-listing";
 import { createInternalChatGroupsAccount } from "./internal-chat-groups-account";
 import { createInternalChatAccess } from "./internal-chat-access";
+import { createInternalChatGuards } from "./internal-chat-guards";
 import {
   ConversationNotFoundError,
   ChatGroupNotFoundError,
@@ -742,7 +743,9 @@ export function createInternalChatService(
   const getRequiredAccount = accounts.getRequiredAccount;
   const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
 
-
+  const guards = createInternalChatGuards(db, {
+    getRequiredAgentAccount,
+  });
 
   async function getRequiredExternalAccount(accountId: string) {
     return access.getRequiredExternalAccount(accountId);
@@ -753,60 +756,27 @@ export function createInternalChatService(
   }
 
   async function requireConversationMembership(agentId: string, conversationId: string) {
-    const account = await getRequiredAgentAccount(agentId);
-    return requireConversationMembershipByAccount(account.id, conversationId);
+    return guards.requireConversationMembership(agentId, conversationId);
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
-    const membership = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.accountId, accountId),
-        eq(internalChatConversationMembers.conversationId, conversationId),
-      ),
-    });
-
-    if (!membership) {
-      throw new ConversationNotFoundError(conversationId);
-    }
+    return guards.requireConversationMembershipByAccount(accountId, conversationId);
   }
 
   async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
-    const account = await getRequiredAgentAccount(agentId);
-    return getRequiredConversationForAccount(account.id, conversationId);
+    return guards.getRequiredConversationForAgent(agentId, conversationId);
   }
 
   async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
-    await requireConversationMembershipByAccount(accountId, conversationId);
-
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
-
-    if (!conversation) {
-      throw new ConversationNotFoundError(conversationId);
-    }
-
-    return conversation;
+    return guards.getRequiredConversationForAccount(accountId, conversationId);
   }
 
   async function getRequiredGroupForAgent(agentId: string, groupId: string) {
-    const group = await getRequiredConversationForAgent(agentId, groupId);
-
-    if (group.type !== 'group') {
-      throw new ChatGroupNotFoundError(groupId);
-    }
-
-    return group;
+    return guards.getRequiredGroupForAgent(agentId, groupId);
   }
 
   async function getRequiredGroupForAccount(accountId: string, groupId: string) {
-    const group = await getRequiredConversationForAccount(accountId, groupId);
-
-    if (group.type !== 'group') {
-      throw new ChatGroupNotFoundError(groupId);
-    }
-
-    return group;
+    return guards.getRequiredGroupForAccount(accountId, groupId);
   }
 
 
