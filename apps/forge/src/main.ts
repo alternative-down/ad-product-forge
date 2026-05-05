@@ -11,7 +11,6 @@ import { createAgentEmailManager } from './email/migadu-manager';
 import { createCoolifyManager } from './coolify/manager';
 import { createMiniMaxManager } from './minimax/manager';
 import { createAgentScheduleManager } from './schedules/manager';
-import { createAgentPendingSummaryReader } from './agents/pending-summary';
 import { registerAdminRoutes } from './admin/routes.js';
 import { createAdminReadModel } from './admin/read-model';
 import { createSystemIntegrationStore } from './system-integrations/store';
@@ -147,7 +146,6 @@ export async function main() {
     db,
     registry,
   });
-  const pendingSummaryReader = createAgentPendingSummaryReader({ registry });
 
   const readModel = createAdminReadModel({
     db,
@@ -156,7 +154,6 @@ export async function main() {
     internalChat,
     agentContracts,
     schedules,
-    pendingSummaryReader,
     coolifyManager,
     minimaxManager,
     githubApps,
