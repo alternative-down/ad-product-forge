@@ -1,26 +1,11 @@
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { CircleHelp } from 'lucide-react';
 import { AdminButton, AdminInput } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-type RuntimeSettings = {
-  memoryLastMessagesFullEnabled: boolean;
-  memoryLastMessagesCount: string;
-  tokenCountFilterEnabled: boolean;
-  tokenCountFilterLimit: string;
-  checkpointedOmEnabled: boolean;
-  checkpointedOmTotalContextTokens: string;
-  checkpointedOmRecentRawTokens: string;
-  checkpointedOmRawObservationBatchTokens: string;
-  checkpointedOmObservationReflectionBatchTokens: string;
-  checkpointedOmObservationSupportTokens: string;
-  checkpointedOmReflectionSupportTokens: string;
-  ltmRecallScoreThreshold: string;
-  ltmRecallDocumentCount: string;
-};
-
-
+import type { SettingsMutation, SettingsQuery } from './settings.types';
+import type { RuntimeDraft } from './settings.types';
+import { fromRuntimeDraft } from './settings.types';
 
 type RuntimeSettingFieldProps = {
   label: string;
@@ -54,10 +39,10 @@ function RuntimeSettingField({ label, description, tooltip, children }: RuntimeS
 }
 
 type RuntimeSettingsSectionProps = {
-  runtimeSettings: RuntimeSettings;
-  settingsQuery: { data: any };
-  settingsMutation: { mutate: (data: any) => void; isPending: boolean; error?: { message: string } | null; };
-  onRuntimeDraftChange: (draft: RuntimeSettings) => void;
+  runtimeSettings: RuntimeDraft;
+  settingsQuery: SettingsQuery;
+  settingsMutation: SettingsMutation;
+  onRuntimeDraftChange: (draft: RuntimeDraft) => void;
 };
 
 export function RuntimeSettingsSection({
@@ -71,7 +56,8 @@ export function RuntimeSettingsSection({
       <div className="space-y-1">
         <div className="text-lg font-semibold tracking-[-0.03em]">Memória e contexto</div>
         <div className="max-w-3xl text-sm text-muted-foreground">
-          Ajusta `lastMessages`, token limiter e a OM checkpointed. Aqui você controla o tamanho do contexto recente, o freio de tokens e a compressão ativa por camadas.
+          Ajusta `lastMessages`, token limiter e a OM checkpointed. Aqui você controla o tamanho do
+          contexto recente, o freio de tokens e a compressão ativa por camadas.
         </div>
       </div>
 
@@ -80,22 +66,7 @@ export function RuntimeSettingsSection({
         onSubmit={(event) => {
           event.preventDefault();
           if (!settingsQuery.data) return;
-          settingsMutation.mutate({
-            ...settingsQuery.data,
-            memoryLastMessagesFullEnabled: runtimeSettings.memoryLastMessagesFullEnabled,
-            memoryLastMessagesCount: Number(runtimeSettings.memoryLastMessagesCount),
-            tokenCountFilterEnabled: runtimeSettings.tokenCountFilterEnabled,
-            tokenCountFilterLimit: Number(runtimeSettings.tokenCountFilterLimit),
-            checkpointedOmEnabled: runtimeSettings.checkpointedOmEnabled,
-            checkpointedOmTotalContextTokens: Number(runtimeSettings.checkpointedOmTotalContextTokens),
-            checkpointedOmRecentRawTokens: Number(runtimeSettings.checkpointedOmRecentRawTokens),
-            checkpointedOmRawObservationBatchTokens: Number(runtimeSettings.checkpointedOmRawObservationBatchTokens),
-            checkpointedOmObservationReflectionBatchTokens: Number(runtimeSettings.checkpointedOmObservationReflectionBatchTokens),
-            checkpointedOmObservationSupportTokens: Number(runtimeSettings.checkpointedOmObservationSupportTokens),
-            checkpointedOmReflectionSupportTokens: Number(runtimeSettings.checkpointedOmReflectionSupportTokens),
-            ltmRecallScoreThreshold: Number(runtimeSettings.ltmRecallScoreThreshold),
-            ltmRecallDocumentCount: Number(runtimeSettings.ltmRecallDocumentCount),
-          });
+          settingsMutation.mutate(fromRuntimeDraft(runtimeSettings, settingsQuery.data));
         }}
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -107,7 +78,9 @@ export function RuntimeSettingsSection({
             <Switch
               checked={runtimeSettings.memoryLastMessagesFullEnabled}
               disabled={settingsMutation.isPending}
-              onCheckedChange={(checked) => onRuntimeDraftChange({ ...runtimeSettings, memoryLastMessagesFullEnabled: checked })}
+              onCheckedChange={(checked) =>
+                onRuntimeDraftChange({ ...runtimeSettings, memoryLastMessagesFullEnabled: checked })
+              }
             />
           </RuntimeSettingField>
 
@@ -119,7 +92,9 @@ export function RuntimeSettingsSection({
             <AdminInput
               type="number"
               value={runtimeSettings.memoryLastMessagesCount}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, memoryLastMessagesCount: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, memoryLastMessagesCount: event.target.value })
+              }
               disabled={settingsMutation.isPending || runtimeSettings.memoryLastMessagesFullEnabled}
             />
           </RuntimeSettingField>
@@ -132,7 +107,9 @@ export function RuntimeSettingsSection({
             <Switch
               checked={runtimeSettings.tokenCountFilterEnabled}
               disabled={settingsMutation.isPending}
-              onCheckedChange={(checked) => onRuntimeDraftChange({ ...runtimeSettings, tokenCountFilterEnabled: checked })}
+              onCheckedChange={(checked) =>
+                onRuntimeDraftChange({ ...runtimeSettings, tokenCountFilterEnabled: checked })
+              }
             />
           </RuntimeSettingField>
 
@@ -144,7 +121,9 @@ export function RuntimeSettingsSection({
             <AdminInput
               type="number"
               value={runtimeSettings.tokenCountFilterLimit}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, tokenCountFilterLimit: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, tokenCountFilterLimit: event.target.value })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.tokenCountFilterEnabled}
             />
           </RuntimeSettingField>
@@ -157,7 +136,9 @@ export function RuntimeSettingsSection({
             <Switch
               checked={runtimeSettings.checkpointedOmEnabled}
               disabled={settingsMutation.isPending}
-              onCheckedChange={(checked) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmEnabled: checked })}
+              onCheckedChange={(checked) =>
+                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmEnabled: checked })
+              }
             />
           </RuntimeSettingField>
 
@@ -169,103 +150,128 @@ export function RuntimeSettingsSection({
             <AdminInput
               type="number"
               value={runtimeSettings.checkpointedOmTotalContextTokens}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmTotalContextTokens: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmTotalContextTokens: event.target.value })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
-            label="OM recent tokens"
-            description="Tokens alocados para o segmento recente (window). Funciona como buffer ativo que recebe a thread."
-            tooltip="O runtime divide o budget total entre recent + reflection + support."
+            label="OM recent raw tokens"
+            description="Budget de tokens para o bloco raw recente dentro da OM. Controla quanta informação recente entra antes da compressão."
+            tooltip="É o primeiro segmento que é comprimido quando a OM se aproxima do limite total."
           >
             <AdminInput
               type="number"
               value={runtimeSettings.checkpointedOmRecentRawTokens}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmRecentRawTokens: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmRecentRawTokens: event.target.value })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
-            label="OM observation batch"
-            description="Tokens por batch de observation. Cada batch recebe até esse tamanho antes de ser refletido."
-            tooltip="Tamanho de cada chunk de ação → reflexão."
+            label="OM raw observation batch"
+            description="Tamanho do batch para o batch de observação raw. Controla quantas observations brutas entram por ciclo."
+            tooltip="Batches maiores capturam mais detalhe por ciclo; batches menores mantêm a OM mais leve."
           >
             <AdminInput
               type="number"
               value={runtimeSettings.checkpointedOmRawObservationBatchTokens}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmRawObservationBatchTokens: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  checkpointedOmRawObservationBatchTokens: event.target.value,
+                })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
-            label="OM observation reflection"
-            description="Tokens para o summary/reflection de cada batch de observation. Recebe o batch inteiro."
-            tooltip="Cada reflexão é limitada por esse teto, o batch anterior é подавается inteiramente."
+            label="OM observation reflection batch"
+            description="Tamanho do batch para o resultado da reflexão sobre a observation. Influencia o peso da compressão reflexiva."
+            tooltip="Controla o espaço alocado para a reflexão de cada batch de observation."
           >
             <AdminInput
               type="number"
               value={runtimeSettings.checkpointedOmObservationReflectionBatchTokens}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmObservationReflectionBatchTokens: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  checkpointedOmObservationReflectionBatchTokens: event.target.value,
+                })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
-            label="OM observation support"
-            description="Tokens para o context que sustenta cada batch de observation — funciona como memória de longo prazo no prompt."
-            tooltip="A OM checkpointed é alimentada com LTM e histórico aqui."
+            label="OM observation support tokens"
+            description="Tokens de suporte para a observation. Espaço adicional para contexto de suporte quando a observation é gerada."
+            tooltip="São os tokens que entram como contexto auxiliar para cada observation."
           >
             <AdminInput
               type="number"
               value={runtimeSettings.checkpointedOmObservationSupportTokens}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmObservationSupportTokens: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmObservationSupportTokens: event.target.value })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
-            label="OM reflection support"
-            description="Tokens para o context que sustenta cada reflexão. Recebe o resumo da OM (LTM + histórico condensado)."
-            tooltip="É o context de suporte para a reflexão/reflection. Não recebe o batch inteiro."
+            label="OM reflection support tokens"
+            description="Tokens de suporte para a reflexão. Espaço auxiliar para manter contexto relevante durante a reflexão."
+            tooltip="São os tokens de suporte que entram durante a fase de reflexão."
           >
             <AdminInput
               type="number"
               value={runtimeSettings.checkpointedOmReflectionSupportTokens}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmReflectionSupportTokens: event.target.value })}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmReflectionSupportTokens: event.target.value })
+              }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
             label="LTM recall score threshold"
-            description="Limiar mínimo de similaridade (0–1) para um documento ser injetado na memória de trabalho. Quanto maior, mais preciso; quanto menor, mais diverso."
-            tooltip="Score abaixo desse valor é descartado na recuperação vetorial."
+            description="Threshold mínimo de score para incluir resultados do recall LTM. Quanto maior, mais restritivo; quanto menor, mais resultados entram."
+            tooltip="Define a barreira de relevância para o recall de longo termo."
           >
             <AdminInput
               type="number"
-              step="0.01"
               value={runtimeSettings.ltmRecallScoreThreshold}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, ltmRecallScoreThreshold: event.target.value })}
-              disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, ltmRecallScoreThreshold: event.target.value })
+              }
+              disabled={settingsMutation.isPending}
             />
           </RuntimeSettingField>
 
           <RuntimeSettingField
             label="LTM recall document count"
-            description="Número máximo de documentos retornados pela pesquisa vetorial a cada batch de observation."
-            tooltip="Quantos documentos o recall injeta no contexto de suporte."
+            description="Número máximo de documentos a recuperar do LTM por generate. Controla o volume de memória de longo prazo injetada no contexto."
+            tooltip="Cada documento pode conter centenas de tokens — use com cuidado para não inflar o prompt."
           >
             <AdminInput
               type="number"
               value={runtimeSettings.ltmRecallDocumentCount}
-              onChange={(event) => onRuntimeDraftChange({ ...runtimeSettings, ltmRecallDocumentCount: event.target.value })}
-              disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
+              onChange={(event) =>
+                onRuntimeDraftChange({ ...runtimeSettings, ltmRecallDocumentCount: event.target.value })
+              }
+              disabled={settingsMutation.isPending}
             />
           </RuntimeSettingField>
         </div>
+
+        {settingsMutation.error ? (
+          <div className="text-sm text-destructive">{settingsMutation.error.message}</div>
+        ) : null}
 
         <div className="flex justify-end">
           <AdminButton type="submit" disabled={settingsMutation.isPending}>

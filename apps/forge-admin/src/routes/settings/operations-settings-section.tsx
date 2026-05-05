@@ -1,12 +1,6 @@
 import { AdminButton } from '@/components/admin';
-
-type OperationsSettings = {
-  stepDelayEnabled: boolean;
-  communicationDmFlushingEnabled: boolean;
-  communicationGroupFlushingEnabled: boolean;
-};
-
-
+import type { SettingsMutation, SettingsQuery } from './settings.types';
+import type { OperationsDraft } from './settings.types';
 
 type OperationSwitchFieldProps = {
   label: string;
@@ -41,12 +35,10 @@ function OperationSwitchField({
 }
 
 type OperationsSettingsSectionProps = {
-  operationsSettings: OperationsSettings;
-  settingsQuery: {
-    data: { stepDelayEnabled: boolean; communicationDmFlushingEnabled: boolean; communicationGroupFlushingEnabled: boolean; [key: string]: unknown } | undefined;
-  };
-  settingsMutation: { mutate: (data: any) => void; isPending: boolean; error?: { message: string } | null; };
-  onOperationsDraftChange: (draft: OperationsSettings | null) => void;
+  operationsSettings: OperationsDraft;
+  settingsQuery: SettingsQuery;
+  settingsMutation: SettingsMutation;
+  onOperationsDraftChange: (draft: OperationsDraft) => void;
 };
 
 export function OperationsSettingsSection({
@@ -56,13 +48,13 @@ export function OperationsSettingsSection({
   onOperationsDraftChange,
 }: OperationsSettingsSectionProps) {
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 border-t border-border pt-6">
       <div className="space-y-1">
-        <div className="text-lg font-semibold tracking-[-0.03em]">Operação</div>
+        <div className="text-lg font-semibold tracking-[-0.03em]">Operações</div>
       </div>
 
       <form
-        className="max-w-3xl space-y-3"
+        className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
           if (!settingsQuery.data) return;
@@ -75,44 +67,39 @@ export function OperationsSettingsSection({
         }}
       >
         <OperationSwitchField
-          label="Delay entre steps"
-          description="Ativa o intervalo padrão entre execuções do runner."
+          label="Step delay"
+          description="Adiciona um atraso configurável entre cada step do generate. Útil para debugging ou para não saturar APIs externas."
           checked={operationsSettings.stepDelayEnabled}
           disabled={settingsMutation.isPending}
           onCheckedChange={(checked) =>
-            onOperationsDraftChange({
-              stepDelayEnabled: checked,
-              communicationDmFlushingEnabled: operationsSettings.communicationDmFlushingEnabled,
-              communicationGroupFlushingEnabled: operationsSettings.communicationGroupFlushingEnabled,
-            })
+            onOperationsDraftChange({ ...operationsSettings, stepDelayEnabled: checked })
           }
         />
+
         <OperationSwitchField
-          label="Flushing de mensagens diretas"
-          description="Controla se mensagens DM dos providers acordam agentes automaticamente."
+          label="DM flushing (interno)"
+          description="Activa o flush automático de DMs no canal interno. Quando ligado, o sistema limpa buffers de DMs ao fim de cada batch."
           checked={operationsSettings.communicationDmFlushingEnabled}
           disabled={settingsMutation.isPending}
           onCheckedChange={(checked) =>
-            onOperationsDraftChange({
-              stepDelayEnabled: operationsSettings.stepDelayEnabled,
-              communicationDmFlushingEnabled: checked,
-              communicationGroupFlushingEnabled: operationsSettings.communicationGroupFlushingEnabled,
-            })
+            onOperationsDraftChange({ ...operationsSettings, communicationDmFlushingEnabled: checked })
           }
         />
+
         <OperationSwitchField
-          label="Flushing de mensagens em grupo"
-          description="Controla se mensagens de grupo dos providers acordam agentes automaticamente."
+          label="Group flushing (interno)"
+          description="Activa o flush automático de grupos no canal interno. Garante que as mensagens de grupo são libertadas em cada ciclo de generate."
           checked={operationsSettings.communicationGroupFlushingEnabled}
           disabled={settingsMutation.isPending}
           onCheckedChange={(checked) =>
-            onOperationsDraftChange({
-              stepDelayEnabled: operationsSettings.stepDelayEnabled,
-              communicationDmFlushingEnabled: operationsSettings.communicationDmFlushingEnabled,
-              communicationGroupFlushingEnabled: checked,
-            })
+            onOperationsDraftChange({ ...operationsSettings, communicationGroupFlushingEnabled: checked })
           }
         />
+
+        {settingsMutation.error ? (
+          <div className="text-sm text-destructive">{settingsMutation.error.message}</div>
+        ) : null}
+
         <div className="flex justify-end">
           <AdminButton type="submit" disabled={settingsMutation.isPending}>
             {settingsMutation.isPending ? 'Salvando...' : 'Salvar operação'}
