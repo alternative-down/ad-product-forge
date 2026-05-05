@@ -22,5 +22,4 @@ export function getDatabase(): Database {
   return db;
 }
 
-export { schema };
 export type { Database };

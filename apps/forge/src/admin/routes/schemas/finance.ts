@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const createInvestmentSchema = z.object({
+const createInvestmentSchema = z.object({
   amount: z.number().positive(),
   description: z.string().min(1),
 });
@@ -20,12 +20,12 @@ export const createPayableSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-export const ledgerEntryActionSchema = z.object({
+const ledgerEntryActionSchema = z.object({
   entryId: z.string().min(1),
   action: z.enum(['approve', 'cancel']),
 });
 
-export const recurringPayableStatusSchema = z.object({
+const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
 });

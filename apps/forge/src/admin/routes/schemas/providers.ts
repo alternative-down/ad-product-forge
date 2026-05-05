@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-export const upsertAgentProviderSchema = z.object({
+const upsertAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
   credentials: z.record(z.string(), z.string()).optional(),
 });
 
-export const deleteAgentProviderSchema = z.object({
+const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
 });
@@ -15,7 +15,7 @@ export const deleteAgentProviderSchema = z.object({
 // MCP SERVER SCHEMAS
 // =============================================================================
 
-export const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
 export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({

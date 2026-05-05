@@ -13,7 +13,7 @@ import { z } from 'zod';
 // ─── Base schemas ─────────────────────────────────────────────────────────────
 
 /** Fields common to both cron and date schedules. */
-export const scheduleBaseSchema = {
+const scheduleBaseSchema = {
   name: z.string().min(1),
   description: z.string().optional(),
   timezone: z.string().min(1).default('UTC'),
@@ -69,7 +69,7 @@ export const updateScheduleSchema = z.object({
 });
 
 /** Schema for deleting a schedule. */
-export const deleteScheduleSchema = z.object({
+const deleteScheduleSchema = z.object({
   scheduleId: z.string().min(1),
 });
 
@@ -90,7 +90,7 @@ const baseUpdate = {
 };
 
 /** Input schema for the self-schedule tool (manageSelfCrons). */
-export const manageSelfCronsInputSchema = z.object({
+const manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
   create: z.object({
     ...baseCreate,
@@ -106,7 +106,7 @@ export const manageSelfCronsInputSchema = z.object({
 });
 
 /** Input schema for the delegated-schedule tool (manageCrons). */
-export const manageCronsInputSchema = z.object({
+const manageCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
   create: z.object({
     targetAgentId: z.string().describe('Required target agent id for delegated cron creation.'),

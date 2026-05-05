@@ -2,8 +2,8 @@ import http, { type IncomingHttpHeaders } from 'node:http';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
 
-export const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
-export const MAX_BODY_BYTES = parseInt(process.env.FORGE_HTTP_MAX_BODY_BYTES ?? '', 10) || DEFAULT_MAX_BODY_BYTES;
+const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
+const MAX_BODY_BYTES = parseInt(process.env.FORGE_HTTP_MAX_BODY_BYTES ?? '', 10) || DEFAULT_MAX_BODY_BYTES;
 
 type BodyResult =
   | { isRejected: true }
