@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 async function createTestSubject() {
-  const { createAgentLongTermMemoryStore } = await import('./agent-long-term-memory-store');
+  const { createAgentLongTermMemoryStore } = await import('./ltm/store');
   return createAgentLongTermMemoryStore;
 }
 
