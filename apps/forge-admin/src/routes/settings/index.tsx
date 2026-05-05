@@ -12,7 +12,6 @@ import { OperationsSettingsSection } from './operations-settings-section';
 import { ProfileDefaultsSection } from '../integrations/-profile-defaults-section';
 import { RuntimeSettingsSection } from './runtime-settings-section';
 import {
-  fromOperationsDraft,
   fromRuntimeDraft,
   toOperationsDraft,
   toRuntimeDraft,
