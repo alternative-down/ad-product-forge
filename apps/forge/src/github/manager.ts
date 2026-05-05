@@ -1246,7 +1246,11 @@ export function createGitHubAppManager(config: {
     const metadata = appResponse.data;
 
     if (!metadata?.slug || !metadata.name) {
-      return html(500, '<h1>GitHub App metadata is incomplete after manifest conversion</h1>');
+      return {
+      status: 500,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ error: 'GitHub App metadata is incomplete after manifest conversion' }),
+    };
     }
 
     const createdCredentials = {

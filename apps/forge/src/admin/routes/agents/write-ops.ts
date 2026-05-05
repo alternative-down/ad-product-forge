@@ -5,12 +5,17 @@
 
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server.js';
+import { forgeDebug } from '@forge-runtime/core';
+import { createId } from '../../../utils/id.js';
 import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema.js';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime.js';
 import { createCapabilityStore } from '../../../capabilities/store.js';
 import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema.js';
 import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills.js';
+import { normalizeJsonText, normalizeOptionalText } from '../helpers.js';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema.js';
+import { reloadAgentMcp } from '../../routes/mcp-helpers.js';
 import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
 
 
@@ -388,8 +393,45 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/mcp/create',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
-      return jsonResponse({ success: true, serverId: 'placeholder' });
+      try {
+        const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
+        const db = input.db as any;
+        const timestamp = new Date().toISOString();
+        const serverId = createId();
+        const configId = createId();
+
+        await db.insert(mcpServerConfigs).values({
+          id: serverId,
+          name: body.name,
+          description: normalizeOptionalText(body.description),
+          transport: body.transport,
+          command: body.transport === 'stdio' ? body.command : null,
+          args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
+          envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+          url: body.transport === 'http_streamable' ? body.url : null,
+          headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+          version: 1,
+          isActive: body.isActive ? 1 : 0,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        await db.insert(agentMcpConfigs).values({
+          id: configId,
+          agentId: body.agentId,
+          serverId,
+          isActive: body.isActive ? 1 : 0,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        await reloadAgentMcp(db, input.loaderConfig as any, body.agentId);
+
+        return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
