@@ -1,3 +1,4 @@
+// fallow-ignore-file circular-dependencies
 import type { ToolsInput } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
