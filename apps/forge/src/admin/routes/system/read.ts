@@ -16,6 +16,9 @@ interface SystemReadModel {
   listSystemIntegrations: () => Promise<unknown>;
   getSystemSettings: () => Promise<unknown>;
   getSystemLlm: () => Promise<unknown>;
+  getLlmProfiles: () => Promise<unknown>;
+  getLlmDefaults: () => Promise<unknown>;
+  getLlmPrices: () => Promise<unknown>;
   getApplicationMigrations: () => Promise<unknown>;
 }
 
@@ -59,6 +62,27 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     method: 'GET',
     path: '/admin/system/llm',
     handler: async () => jsonResponse(await readModel.getSystemLlm()),
+  });
+
+  // GET /admin/system/llm/profiles
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/llm/profiles',
+    handler: async () => jsonResponse(await readModel.getLlmProfiles()),
+  });
+
+  // GET /admin/system/llm/defaults
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/llm/defaults',
+    handler: async () => jsonResponse(await readModel.getLlmDefaults()),
+  });
+
+  // GET /admin/system/llm/prices
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/system/llm/prices',
+    handler: async () => jsonResponse(await readModel.getLlmPrices()),
   });
 
   // GET /admin/system/mcp
