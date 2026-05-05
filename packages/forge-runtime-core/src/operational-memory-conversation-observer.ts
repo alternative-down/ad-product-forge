@@ -21,22 +21,42 @@ export function createOperationalMemoryConversationObserver(
 ): OperationalMemoryConversationObserver {
   return {
     async observe(request) {
-      const supportText = await input.loadSupportText?.();
-      const result = await generateText({
-        model: input.model,
-        system: buildAlignedObserverSystemPrompt(input.agentSystemPrompt),
-        prompt: buildObserverPrompt(supportText?.trim() || undefined, request.messages),
-      });
+      let supportText: string | undefined;
+      let result: Awaited<ReturnType<typeof generateText>> | null = null;
+
+      try {
+        supportText = await input.loadSupportText?.();
+      } catch (err) {
+        console.warn(
+          '[createOperationalMemoryConversationObserver] loadSupportText failed',
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+
+      try {
+        result = await generateText({
+          model: input.model,
+          system: buildAlignedObserverSystemPrompt(input.agentSystemPrompt),
+          prompt: buildObserverPrompt(supportText?.trim(), request.messages),
+        });
+      } catch (err) {
+        console.warn(
+          '[createOperationalMemoryConversationObserver] generateText failed',
+          err instanceof Error ? err.message : String(err),
+        );
+        throw err;
+      }
+
       const parsed = parseObserverOutput(result.text);
       const text = normalizeOperationalMemoryText(parsed.observations);
 
       if (!text) {
-        throw new Error('Operational conversation observer returned no observation text');
+        throw new Error(
+          'Operational conversation observer returned no observation text',
+        );
       }
 
-      return {
-        text,
-      };
+      return { text };
     },
   };
 }

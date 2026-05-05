@@ -32,37 +32,61 @@ export async function readOperationalMemoryState(input: {
   store: ConversationStore;
   recentTokenLimit: number;
 }) {
-  const messages = await input.store.listOperationalMemoryMessages({
-    threadId: input.threadId,
-  });
-  const checkpointSummaryMessage = messages.find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
-  const reflectionMessages = messages.filter((message) => message.operationalMemoryType === 'reflection');
-  const observationMessages = messages.filter((message) => message.operationalMemoryType === 'observation');
-  const rawMessages = messages.filter((message) => !message.operationalMemoryType);
-  const rawBands = splitRawMessagesByRecentReserve({
-    messages: rawMessages,
-    recentTokenLimit: input.recentTokenLimit,
-  });
+  try {
+    const messages = await input.store.listOperationalMemoryMessages({
+      threadId: input.threadId,
+    });
+    const checkpointSummaryMessage = messages.find(
+      (message) => message.operationalMemoryType === 'checkpoint-summary',
+    ) ?? null;
+    const reflectionMessages = messages.filter(
+      (message) => message.operationalMemoryType === 'reflection',
+    );
+    const observationMessages = messages.filter(
+      (message) => message.operationalMemoryType === 'observation',
+    );
+    const rawMessages = messages.filter(
+      (message) => !message.operationalMemoryType,
+    );
+    const rawBands = splitRawMessagesByRecentReserve({
+      messages: rawMessages,
+      recentTokenLimit: input.recentTokenLimit,
+    });
 
-  return {
-    checkpointSummaryMessage,
-    reflectionMessages,
-    observationMessages,
-    rawMessages,
-    recentRawMessages: rawBands.recentMessages,
-    overflowRawMessages: rawBands.overflowMessages,
-    metrics: {
-      rawMessageCount: rawMessages.length,
-      recentRawMessageCount: rawBands.recentMessages.length,
-      recentRawTokenCount: rawBands.recentTokenCount,
-      overflowMessageCount: rawBands.overflowMessages.length,
-      overflowTokenCount: rawBands.overflowTokenCount,
-      observationTokenCount: observationMessages.reduce((total, message) => total + estimateMessageUnits(message), 0),
-      reflectionTokenCount: reflectionMessages.reduce((total, message) => total + estimateMessageUnits(message), 0),
-      checkpointTokenCount: checkpointSummaryMessage ? estimateMessageUnits(checkpointSummaryMessage) : 0,
-      latestThreadMessageAt: messages.at(-1)?.createdAt ?? null,
-    },
-  } satisfies OperationalMemoryState;
+    return {
+      checkpointSummaryMessage,
+      reflectionMessages,
+      observationMessages,
+      rawMessages,
+      recentRawMessages: rawBands.recentMessages,
+      overflowRawMessages: rawBands.overflowMessages,
+      metrics: {
+        rawMessageCount: rawMessages.length,
+        recentRawMessageCount: rawBands.recentMessages.length,
+        recentRawTokenCount: rawBands.recentTokenCount,
+        overflowMessageCount: rawBands.overflowMessages.length,
+        overflowTokenCount: rawBands.overflowTokenCount,
+        observationTokenCount: observationMessages.reduce(
+          (total, message) => total + estimateMessageUnits(message),
+          0,
+        ),
+        reflectionTokenCount: reflectionMessages.reduce(
+          (total, message) => total + estimateMessageUnits(message),
+          0,
+        ),
+        checkpointTokenCount: checkpointSummaryMessage
+          ? estimateMessageUnits(checkpointSummaryMessage)
+          : 0,
+        latestThreadMessageAt: messages.at(-1)?.createdAt ?? null,
+      },
+    } satisfies OperationalMemoryState;
+  } catch (err) {
+    console.warn(
+      '[readOperationalMemoryState] Failed to read operational memory state',
+      err instanceof Error ? err.message : String(err),
+    );
+    throw err;
+  }
 }
 
 export function estimateMessageUnits(message: ConversationMessage) {
@@ -118,82 +142,68 @@ function splitRawMessagesByRecentReserve(input: {
   const overflowGroups = groups.slice(0, groups.length - recentGroups.length);
   const recentMessages = recentGroups.flatMap((group) => group.messages);
   const overflowMessages = overflowGroups.flatMap((group) => group.messages);
-  const overflowTokenCount = overflowGroups.reduce((total, group) => total + group.tokenCount, 0);
 
   return {
     recentMessages,
     recentTokenCount,
     overflowMessages,
-    overflowTokenCount,
+    overflowTokenCount: overflowGroups.reduce(
+      (total, group) => total + group.tokenCount,
+      0,
+    ),
   };
 }
 
 function groupRawConversationMessages(messages: ConversationMessage[]) {
-  const orderedGroups: GroupedRawMessages[] = [];
+  const groups: GroupedRawMessages[] = [];
+  let currentGroup: GroupedRawMessages | null = null;
 
   for (const message of messages) {
-    const toolCallIds = new Set(getMessageToolCallIds(message));
-    const previousGroup = orderedGroups.at(-1);
+    const tokenCount = estimateMessageUnits(message);
+    const toolCallIds = new Set(
+      Array.isArray(message.metadata?.toolInvocations)
+        ? message.metadata.toolInvocations
+            .filter(
+              (
+                tc,
+              ): tc is { toolCallId: string; toolName: string } =>
+                typeof tc === 'object' &&
+                tc !== null &&
+                typeof tc.toolCallId === 'string' &&
+                typeof tc.toolName === 'string',
+            )
+            .map((tc) => tc.toolCallId)
+        : [],
+    );
 
     if (
-      previousGroup
-      && toolCallIds.size > 0
-      && hasToolCallIdOverlap(previousGroup.toolCallIds, toolCallIds)
+      currentGroup !== null
+      && message.role === 'user'
+      && currentGroup.toolCallIds.size === 0
     ) {
-      previousGroup.messages.push(message);
-      previousGroup.tokenCount += estimateMessageUnits(message);
-
-      for (const toolCallId of toolCallIds) {
-        previousGroup.toolCallIds.add(toolCallId);
+      currentGroup = {
+        messages: [...currentGroup.messages, message],
+        tokenCount: currentGroup.tokenCount + tokenCount,
+        toolCallIds: new Set(),
+      };
+    } else {
+      if (currentGroup !== null) {
+        groups.push(currentGroup);
       }
 
-      continue;
-    }
-
-    const nextGroup = {
-      tokenCount: estimateMessageUnits(message),
-      messages: [message],
-      toolCallIds,
-    };
-
-    orderedGroups.push(nextGroup);
-  }
-
-  return orderedGroups;
-}
-
-function hasToolCallIdOverlap(left: Set<string>, right: Set<string>) {
-  for (const toolCallId of right) {
-    if (left.has(toolCallId)) {
-      return true;
+      currentGroup = {
+        messages: [message],
+        tokenCount,
+        toolCallIds,
+      };
     }
   }
 
-  return false;
-}
-
-function getMessageToolCallIds(message: ConversationMessage) {
-  const toolInvocations = Array.isArray(message.metadata?.toolInvocations)
-    ? message.metadata.toolInvocations
-    : [];
-  const toolResults = Array.isArray(message.metadata?.toolResults)
-    ? message.metadata.toolResults
-    : [];
-  const toolCallIds = new Set<string>();
-
-  for (const item of [...toolInvocations, ...toolResults]) {
-    if (
-      typeof item === 'object'
-      && item !== null
-      && 'toolCallId' in item
-      && typeof item.toolCallId === 'string'
-      && item.toolCallId.trim()
-    ) {
-      toolCallIds.add(item.toolCallId);
-    }
+  if (currentGroup !== null) {
+    groups.push(currentGroup);
   }
 
-  return Array.from(toolCallIds);
+  return groups;
 }
 
 function getMessageBudgetText(message: ConversationMessage) {
