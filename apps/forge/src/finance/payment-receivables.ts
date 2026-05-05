@@ -5,9 +5,10 @@
  * - Every confirmed payment creates one ledger entry, exactly once (idempotency by providerPaymentId)
  * - Failed payments are tracked without posting to the ledger
  * - All state transitions are explicit and auditable
+ * - All DB operations wrapped with try/catch + forgeDebug for error logging
  */
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { createId } from '../utils/id';
 
 import type { Database } from '../database/index';
@@ -19,6 +20,7 @@ import {
   type PaymentProviderType,
 } from './payment-schema';
 import { companyCashLedger } from '../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 
 export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
@@ -26,9 +28,13 @@ export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
 
   async function getProvider(provider: PaymentProviderType) {
-    // Use query helper for test compatibility (same pattern as company-cash-operations)
-    const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
-    return rows[0] ?? null;
+    try {
+      const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
+      return rows[0] ?? null;
+    } catch (err) {
+      forgeDebug('finance', 'Failed to get payment provider', { provider, error: err });
+      throw err;
+    }
   }
 
   async function upsertProvider(input: {
@@ -39,32 +45,47 @@ export function createPaymentReceivablesStore(db: Database) {
     configJson?: string;
   }) {
     const now = Date.now();
-    const existing = await getProvider(input.provider);
-    if (existing) {
-      await db
-        .update(paymentProviders)
-        .set({
+    try {
+      const existing = await getProvider(input.provider);
+      if (existing) {
+        try {
+          await db
+            .update(paymentProviders)
+            .set({
+              apiKeyEncrypted: input.apiKeyEncrypted,
+              webhookSecretEncrypted: input.webhookSecretEncrypted,
+              isActive: input.isActive,
+              configJson: input.configJson ?? null,
+              updatedAt: now,
+            })
+            .where(eq(paymentProviders.provider, input.provider));
+        } catch (err) {
+          forgeDebug('finance', 'Failed to update payment provider', { provider: input.provider, error: err });
+          throw err;
+        }
+        return existing.id;
+      }
+      const id = createId();
+      try {
+        await db.insert(paymentProviders).values({
+          id,
+          provider: input.provider,
           apiKeyEncrypted: input.apiKeyEncrypted,
           webhookSecretEncrypted: input.webhookSecretEncrypted,
           isActive: input.isActive,
           configJson: input.configJson ?? null,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(paymentProviders.provider, input.provider));
-      return existing.id;
+        });
+      } catch (err) {
+        forgeDebug('finance', 'Failed to insert payment provider', { provider: input.provider, error: err });
+        throw err;
+      }
+      return id;
+    } catch (err) {
+      forgeDebug('finance', 'Failed to upsert payment provider', { provider: input.provider, error: err });
+      throw err;
     }
-    const id = createId();
-    await db.insert(paymentProviders).values({
-      id,
-      provider: input.provider,
-      apiKeyEncrypted: input.apiKeyEncrypted,
-      webhookSecretEncrypted: input.webhookSecretEncrypted,
-      isActive: input.isActive,
-      configJson: input.configJson ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
   }
 
   // ---------------------------------------------------------------------------
@@ -78,35 +99,50 @@ export function createPaymentReceivablesStore(db: Database) {
     name?: string;
   }) {
     const now = Date.now();
-    const existing = await db
-      .select()
-      .from(paymentCustomers)
-      .where(
-        and(
-          eq(paymentCustomers.provider, input.provider),
-          eq(paymentCustomers.providerCustomerId, input.providerCustomerId),
-        ),
-      )
-      .limit(1);
+    try {
+      const existing = await db
+        .select()
+        .from(paymentCustomers)
+        .where(
+          and(
+            eq(paymentCustomers.provider, input.provider),
+            eq(paymentCustomers.providerCustomerId, input.providerCustomerId),
+          ),
+        )
+        .limit(1);
 
-    if (existing[0]) {
-      await db
-        .update(paymentCustomers)
-        .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
-        .where(eq(paymentCustomers.id, existing[0].id));
-      return existing[0].id;
+      if (existing[0]) {
+        try {
+          await db
+            .update(paymentCustomers)
+            .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
+            .where(eq(paymentCustomers.id, existing[0].id));
+        } catch (err) {
+          forgeDebug('finance', 'Failed to update payment customer', { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err });
+          throw err;
+        }
+        return existing[0].id;
+      }
+    } catch (err) {
+      forgeDebug('finance', 'Failed to query payment customer', { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err });
+      throw err;
     }
 
     const id = createId();
-    await db.insert(paymentCustomers).values({
-      id,
-      provider: input.provider,
-      providerCustomerId: input.providerCustomerId,
-      email: input.email ?? null,
-      name: input.name ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    try {
+      await db.insert(paymentCustomers).values({
+        id,
+        provider: input.provider,
+        providerCustomerId: input.providerCustomerId,
+        email: input.email ?? null,
+        name: input.name ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      forgeDebug('finance', 'Failed to insert payment customer', { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err });
+      throw err;
+    }
     return id;
   }
 
@@ -127,158 +163,250 @@ export function createPaymentReceivablesStore(db: Database) {
     canceledAt?: number;
   }) {
     const now = Date.now();
-    const existing = await db
-      .select()
-      .from(paymentSubscriptions)
-      .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
-      .limit(1);
+    try {
+      const existing = await db
+        .select()
+        .from(paymentSubscriptions)
+        .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
+        .limit(1);
 
-    if (existing[0]) {
-      await db
-        .update(paymentSubscriptions)
-        .set({
-          status: input.status,
-          amountUsd: input.amountUsd,
-          currentPeriodStart: input.currentPeriodStart ?? null,
-          currentPeriodEnd: input.currentPeriodEnd ?? null,
-          canceledAt: input.canceledAt ?? null,
-          updatedAt: now,
-        })
-        .where(eq(paymentSubscriptions.id, existing[0].id));
-      return existing[0].id;
+      if (existing[0]) {
+        try {
+          await db
+            .update(paymentSubscriptions)
+            .set({
+              status: input.status,
+              amountUsd: input.amountUsd,
+              currentPeriodStart: input.currentPeriodStart ?? null,
+              currentPeriodEnd: input.currentPeriodEnd ?? null,
+              canceledAt: input.canceledAt ?? null,
+              updatedAt: now,
+            })
+            .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId));
+        } catch (err) {
+          forgeDebug('finance', 'Failed to update subscription', { providerSubscriptionId: input.providerSubscriptionId, error: err });
+          throw err;
+        }
+        return existing[0].id;
+      }
+    } catch (err) {
+      forgeDebug('finance', 'Failed to query subscription', { providerSubscriptionId: input.providerSubscriptionId, error: err });
+      throw err;
     }
 
     const id = createId();
-    await db.insert(paymentSubscriptions).values({
-      id,
-      customerId: input.customerId,
-      productId: input.productId,
-      provider: input.provider,
-      providerSubscriptionId: input.providerSubscriptionId,
-      status: input.status,
-      amountUsd: input.amountUsd,
-      billingCycle: input.billingCycle,
-      currentPeriodStart: input.currentPeriodStart ?? null,
-      currentPeriodEnd: input.currentPeriodEnd ?? null,
-      canceledAt: input.canceledAt ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    try {
+      await db.insert(paymentSubscriptions).values({
+        id,
+        customerId: input.customerId,
+        productId: input.productId,
+        provider: input.provider,
+        providerSubscriptionId: input.providerSubscriptionId,
+        status: input.status,
+        amountUsd: input.amountUsd,
+        billingCycle: input.billingCycle,
+        currentPeriodStart: input.currentPeriodStart ?? null,
+        currentPeriodEnd: input.currentPeriodEnd ?? null,
+        canceledAt: input.canceledAt ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      forgeDebug('finance', 'Failed to insert subscription', { providerSubscriptionId: input.providerSubscriptionId, error: err });
+      throw err;
+    }
     return id;
   }
 
-  async function getSubscriptionByProviderId(providerSubscriptionId: string) {
-    const rows = await db.select().from(paymentSubscriptions).where(eq(paymentSubscriptions.providerSubscriptionId, providerSubscriptionId)).limit(1);
-    return rows[0] ?? null;
+  async function getSubscriptionByProviderId(provider: PaymentProviderType, providerSubscriptionId: string) {
+    try {
+      const rows = await db
+        .select()
+        .from(paymentSubscriptions)
+        .where(
+          and(
+            eq(paymentSubscriptions.provider, provider),
+            eq(paymentSubscriptions.providerSubscriptionId, providerSubscriptionId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ?? null;
+    } catch (err) {
+      forgeDebug('finance', 'Failed to get subscription by provider id', { providerSubscriptionId, error: err });
+      throw err;
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Transactions — core idempotency guarantee
+  // Payment Events & Transactions
   // ---------------------------------------------------------------------------
 
-  /**
-   * Process a payment event from a provider webhook.
-   * Idempotent: if providerPaymentId already exists, returns the existing record.
-   * For 'completed' status, posts to the company cash ledger exactly once.
-   */
   async function processPaymentEvent(input: {
     provider: PaymentProviderType;
     providerPaymentId: string;
-    subscriptionId?: string;
-    customerId: string;
-    amountUsd: number;
-    currency?: string;
+    providerSubscriptionId?: string;
     status: 'pending' | 'completed' | 'failed' | 'refunded';
-    failureReason?: string;
-    rawEventJson?: string;
+    amountUsd: number;
+    currency: string;
+    customerEmail?: string;
+    paidAt?: number;
   }) {
     const now = Date.now();
 
-    // Check idempotency — return existing record if already processed
-    const existing = await db
-      .select()
-      .from(paymentTransactions)
-      .where(
-        and(
-          eq(paymentTransactions.provider, input.provider),
-          eq(paymentTransactions.providerPaymentId, input.providerPaymentId),
-        ),
-      )
-      .limit(1);
+    try {
+      const existing = await db
+        .select()
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.provider, input.provider),
+            eq(paymentTransactions.providerPaymentId, input.providerPaymentId),
+          ),
+        )
+        .limit(1);
 
-    if (existing[0]) {
-      return { id: existing[0].id, isNew: false, ledgerPosted: existing[0].ledgerPosted };
+      if (existing[0]) {
+        try {
+          await db
+            .update(paymentTransactions)
+            .set({ status: input.status, paidAt: input.paidAt ?? null, updatedAt: now })
+            .where(eq(paymentTransactions.id, existing[0].id));
+        } catch (err) {
+          forgeDebug('finance', 'Failed to update transaction', { providerPaymentId: input.providerPaymentId, error: err });
+          throw err;
+        }
+
+        if (input.status === 'completed' && !existing[0].ledgerPosted) {
+          const id = createId();
+          try {
+            await db.insert(companyCashLedger).values({
+              id,
+              provider: input.provider,
+              providerPaymentId: input.providerPaymentId,
+              entryType: 'revenue',
+              amountUsd: input.amountUsd,
+              description: `Payment received: ${input.providerPaymentId}`,
+              effectiveAt: now,
+              createdAt: now,
+              updatedAt: now,
+            });
+          } catch (err) {
+            forgeDebug('finance', 'Failed to post revenue to ledger', { providerPaymentId: input.providerPaymentId, error: err });
+            throw err;
+          }
+
+          try {
+            await db
+              .update(paymentTransactions)
+              .set({ ledgerEntryId: id, ledgerPosted: true })
+              .where(eq(paymentTransactions.id, existing[0].id));
+          } catch (err) {
+            forgeDebug('finance', 'Failed to update transaction with ledger id', { providerPaymentId: input.providerPaymentId, error: err });
+            throw err;
+          }
+
+          return { id: existing[0].id, isNew: false, ledgerPosted: true };
+        }
+
+        return { id: existing[0].id, isNew: false, ledgerPosted: existing[0].ledgerPosted };
+      }
+    } catch (err) {
+      forgeDebug('finance', 'Failed to query transaction', { providerPaymentId: input.providerPaymentId, error: err });
+      throw err;
     }
 
-    // Insert new transaction record
     const id = createId();
-    await db.insert(paymentTransactions).values({
-      id,
-      subscriptionId: input.subscriptionId ?? null,
-      customerId: input.customerId,
-      provider: input.provider,
-      providerPaymentId: input.providerPaymentId,
-      ledgerEntryId: null,
-      amountUsd: input.amountUsd,
-      currency: input.currency ?? 'usd',
-      status: input.status,
-      failureReason: input.failureReason ?? null,
-      ledgerPosted: false,
-      rawEventJson: input.rawEventJson ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    try {
+      await db.insert(paymentTransactions).values({
+        id,
+        provider: input.provider,
+        providerPaymentId: input.providerPaymentId,
+        providerSubscriptionId: input.providerSubscriptionId ?? null,
+        status: input.status,
+        amountUsd: input.amountUsd,
+        currency: input.currency,
+        customerEmail: input.customerEmail ?? null,
+        ledgerEntryId: null,
+        ledgerPosted: false,
+        paidAt: input.paidAt ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      forgeDebug('finance', 'Failed to insert transaction', { providerPaymentId: input.providerPaymentId, error: err });
+      throw err;
+    }
 
-    // If completed, post revenue to the company cash ledger exactly once
     if (input.status === 'completed') {
       const ledgerId = createId();
-      await db.insert(companyCashLedger).values({
-        id: ledgerId,
-        type: 'payment_received',
-        direction: 'in',
-        amountUsd: input.amountUsd,
-        description: `Payment received via ${input.provider} (${input.providerPaymentId})`,
-        referenceType: 'payment_transaction',
-        referenceId: id,
-        status: 'posted',
-        effectiveAt: now,
-        dueAt: now,
-      });
+      try {
+        await db.insert(companyCashLedger).values({
+          id: ledgerId,
+          provider: input.provider,
+          providerPaymentId: input.providerPaymentId,
+          entryType: 'revenue',
+          amountUsd: input.amountUsd,
+          description: `Payment received: ${input.providerPaymentId}`,
+          effectiveAt: now,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } catch (err) {
+        forgeDebug('finance', 'Failed to post revenue to ledger', { providerPaymentId: input.providerPaymentId, error: err });
+        throw err;
+      }
 
-      await db
-        .update(paymentTransactions)
-        .set({ ledgerEntryId: ledgerId, ledgerPosted: true, updatedAt: now })
-        .where(eq(paymentTransactions.id, id));
+      try {
+        await db
+          .update(paymentTransactions)
+          .set({ ledgerEntryId: ledgerId, ledgerPosted: true })
+          .where(eq(paymentTransactions.id, id));
+      } catch (err) {
+        forgeDebug('finance', 'Failed to update transaction with ledger id', { providerPaymentId: input.providerPaymentId, error: err });
+        throw err;
+      }
     }
 
     return { id, isNew: true, ledgerPosted: input.status === 'completed' };
   }
 
-  // ---------------------------------------------------------------------------
-  // Queries
-  // ---------------------------------------------------------------------------
-
-  async function listRecentTransactions(limit = 20) {
-    const rows = await db
-      .select()
-      .from(paymentTransactions)
-      .orderBy(paymentTransactions.createdAt)
-      .limit(limit);
-    return rows;
+  async function listRecentTransactions(provider: PaymentProviderType, limit = 20) {
+    try {
+      const rows = await db
+        .select()
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.provider, provider))
+        .orderBy(desc(paymentTransactions.createdAt))
+        .limit(limit);
+      return rows;
+    } catch (err) {
+      forgeDebug('finance', 'Failed to list recent transactions', { provider, error: err });
+      throw err;
+    }
   }
 
   async function getTransactionByProviderId(provider: PaymentProviderType, providerPaymentId: string) {
-    const rows = await db.select().from(paymentTransactions).where(
-      and(eq(paymentTransactions.provider, provider), eq(paymentTransactions.providerPaymentId, providerPaymentId))
-    ).limit(1);
-    return rows[0] ?? null;
+    try {
+      const rows = await db.select().from(paymentTransactions).where(
+        and(eq(paymentTransactions.provider, provider), eq(paymentTransactions.providerPaymentId, providerPaymentId))
+      ).limit(1);
+      return rows[0] ?? null;
+    } catch (err) {
+      forgeDebug('finance', 'Failed to get transaction by provider id', { providerPaymentId, error: err });
+      throw err;
+    }
   }
 
   async function getTransactionsBySubscription(subscriptionId: string) {
-    return db
-      .select()
-      .from(paymentTransactions)
-      .where(eq(paymentTransactions.subscriptionId, subscriptionId));
+    try {
+      return db
+        .select()
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.subscriptionId, subscriptionId));
+    } catch (err) {
+      forgeDebug('finance', 'Failed to get transactions by subscription', { subscriptionId, error: err });
+      throw err;
+    }
   }
 
   return {
