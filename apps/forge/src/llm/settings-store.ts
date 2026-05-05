@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Database } from '../database/index';
 import { llmProfiles, systemLlmDefaults, type LlmProfile } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
+import { forgeDebug } from '@forge-runtime/core';
 
 const llmProfileSchema = z.object({
   name: z.string().min(1),
@@ -103,37 +104,53 @@ export function createLlmSettingsStore(db: Database) {
     const parsed = llmProfileSchema.parse(input);
     const now = Date.now();
     const profileId = input.profileId ?? createId();
-    const existing = input.profileId
-      ? await db.query.llmProfiles.findFirst({
-          where: eq(llmProfiles.id, input.profileId),
-        })
-      : null;
+    let existing: typeof llmProfiles.$inferSelect | null = null;
+    try {
+      existing = input.profileId
+        ? await db.query.llmProfiles.findFirst({
+            where: eq(llmProfiles.id, input.profileId),
+          })
+        : null;
+    } catch (err) {
+      forgeDebug('llm', 'Failed to query LLM profile', { profileId, error: err });
+      throw err;
+    }
 
     if (existing) {
-      await db
-        .update(llmProfiles)
-        .set({
+      try {
+        await db
+          .update(llmProfiles)
+          .set({
+            name: parsed.name.trim(),
+            modelKey: parsed.modelKey,
+            baseUrl: parsed.baseUrl?.trim() ?? null,
+            encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
+            contractCostMultiplier: parsed.contractCostMultiplier,
+            isEnabled: parsed.isEnabled ? 1 : 0,
+            updatedAt: now,
+          })
+          .where(eq(llmProfiles.id, input.profileId!));
+      } catch (err) {
+        forgeDebug('llm', 'Failed to update LLM profile', { profileId, error: err });
+        throw err;
+      }
+    } else {
+      try {
+        await db.insert(llmProfiles).values({
+          id: profileId,
           name: parsed.name.trim(),
           modelKey: parsed.modelKey,
           baseUrl: parsed.baseUrl?.trim() ?? null,
           encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
           contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(llmProfiles.id, input.profileId!));
-    } else {
-      await db.insert(llmProfiles).values({
-        id: profileId,
-        name: parsed.name.trim(),
-        modelKey: parsed.modelKey,
-        baseUrl: parsed.baseUrl?.trim() ?? null,
-        encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
-        contractCostMultiplier: parsed.contractCostMultiplier,
-        isEnabled: parsed.isEnabled ? 1 : 0,
-        createdAt: now,
-        updatedAt: now,
-      });
+        });
+      } catch (err) {
+        forgeDebug('llm', 'Failed to insert LLM profile', { profileId, error: err });
+        throw err;
+      }
     }
 
     return {
@@ -158,7 +175,12 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('Cannot delete an LLM profile that is currently selected as a system default');
     }
 
-    await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
+    try {
+      await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
+    } catch (err) {
+      forgeDebug('llm', 'Failed to delete LLM profile', { profileId, error: err });
+      throw err;
+    }
   }
 
   async function updateDefaults(input: {
@@ -183,36 +205,57 @@ export function createLlmSettingsStore(db: Database) {
     }
 
     const now = Date.now();
-    const existing = await getDefaultsRow();
+    let existing: typeof systemLlmDefaults.$inferSelect | null = null;
+    try {
+      existing = await getDefaultsRow();
+    } catch (err) {
+      forgeDebug('llm', 'Failed to query LLM defaults', { error: err });
+      throw err;
+    }
 
     if (existing) {
-      await db
-        .update(systemLlmDefaults)
-        .set({
+      try {
+        await db
+          .update(systemLlmDefaults)
+          .set({
+            primaryProfileId: parsed.primaryProfileId,
+            omProfileId: parsed.omProfileId,
+            hiringRhProfileId: parsed.hiringRhProfileId,
+            updatedAt: now,
+          })
+          .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
+      } catch (err) {
+        forgeDebug('llm', 'Failed to update LLM defaults', { error: err });
+        throw err;
+      }
+    } else {
+      try {
+        await db.insert(systemLlmDefaults).values({
+          id: DEFAULTS_ROW_ID,
           primaryProfileId: parsed.primaryProfileId,
           omProfileId: parsed.omProfileId,
           hiringRhProfileId: parsed.hiringRhProfileId,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
-    } else {
-      await db.insert(systemLlmDefaults).values({
-        id: DEFAULTS_ROW_ID,
-        primaryProfileId: parsed.primaryProfileId,
-        omProfileId: parsed.omProfileId,
-        hiringRhProfileId: parsed.hiringRhProfileId,
-        createdAt: now,
-        updatedAt: now,
-      });
+        });
+      } catch (err) {
+        forgeDebug("llm", "Failed to insert LLM defaults", { error: err });
+        throw err;
+      }
     }
 
     return parsed;
   }
 
   async function getDefaultsRow() {
-    return db.query.systemLlmDefaults.findFirst({
-      where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
-    });
+    try {
+      return await db.query.systemLlmDefaults.findFirst({
+        where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
+      });
+    } catch (err) {
+      forgeDebug("llm", "Failed to get LLM defaults row", { error: err });
+      throw err;
+    }
   }
 
   return {
