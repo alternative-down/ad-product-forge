@@ -2,14 +2,29 @@ import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
+import { createTimeProvider, type TimeProvider } from '../utils/time';
 
 import type { Database } from '../database/index';
 import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles, type AgentExecutionContract } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
+export interface CreateAgentContractStoreOptions {
+  db: Database;
+  timeProvider?: TimeProvider;
+}
 
-export function createAgentContractStore(db: Database) {
+/**
+ * Creates an agent contract store.
+ *
+ * @param db - Database instance
+ * @param timeProvider - Optional time source for testability. Defaults to Date.now.
+ */
+export function createAgentContractStore(
+  db: Database,
+  timeProvider?: TimeProvider,
+) {
+  const time = timeProvider ?? createTimeProvider();
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
 
@@ -33,7 +48,7 @@ export function createAgentContractStore(db: Database) {
           executionState,
           lastExecutionError: null,
           lastExecutionErrorAt: null,
-          updatedAt: Date.now(),
+          updatedAt: time.now(),
         })
         .where(eq(agents.id, agentId));
     } catch (error) {
@@ -49,8 +64,8 @@ export function createAgentContractStore(db: Database) {
         .set({
           executionState: 'absent',
           lastExecutionError: error,
-          lastExecutionErrorAt: Date.now(),
-          updatedAt: Date.now(),
+          lastExecutionErrorAt: time.now(),
+          updatedAt: time.now(),
         })
         .where(eq(agents.id, agentId));
     } catch (err) {
@@ -77,7 +92,7 @@ export function createAgentContractStore(db: Database) {
 
   async function getActiveContract(agentId: string) {
     try {
-      const now = Date.now();
+      const now = time.now();
       return db.query.agentExecutionContracts.findFirst({
         where: and(
           eq(agentExecutionContracts.agentId, agentId),
@@ -156,7 +171,7 @@ export function createAgentContractStore(db: Database) {
     costUsd: number;
   }) {
     const id = createId();
-    const createdAt = Date.now();
+    const createdAt = time.now();
 
     try {
       await db.insert(agentExecutionSteps).values({
@@ -190,10 +205,11 @@ export function createAgentContractStore(db: Database) {
   async function renewContract(agentId: string) {
     const latestContract = await getLatestContract(agentId);
 
-    if (!latestContract || !latestContract.autoRenew || latestContract.endsAt > Date.now()) {
+    if (!latestContract || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
       return null;
     }
 
+    const now = time.now();
     const nextContract = {
       id: createId(),
       agentId,
@@ -202,7 +218,7 @@ export function createAgentContractStore(db: Database) {
       fundedAt: null,
       startsAt: latestContract.endsAt,
       endsAt: latestContract.endsAt + WEEK_MS,
-      createdAt: Date.now(),
+      createdAt: now,
     } as const;
 
     try {
@@ -224,7 +240,7 @@ export function createAgentContractStore(db: Database) {
       if (cashBalanceUsd < contract.budgetUsd) {
         return null;
       }
-      const now = Date.now();
+      const now = time.now();
       await db.transaction(async (tx) => {
         await companyCashOperations.recordCashOut(
           {
@@ -273,7 +289,7 @@ export function createAgentContractStore(db: Database) {
       description: `Contract refund for terminated agent ${agentId}`,
       referenceType: 'agent-execution-contract',
       referenceId: activeContract.id,
-      effectiveAt: Date.now(),
+      effectiveAt: time.now(),
     });
 
     return {
