@@ -885,7 +885,7 @@ function resolveAmbientPose(input: {
   return { dir: input.baseDir, frame: 1 };
 }
 
-function resolveDeskAmbientPose(input: {
+export function resolveDeskAmbientPose(input: {
   agentId: string;
   tick: number;
   baseDir: SceneAgent['dir'];
