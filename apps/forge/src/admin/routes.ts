@@ -142,7 +142,14 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/overview',
-    handler: async () => jsonResponse(await readModel.getDashboard()),
+    handler: async () => {
+      try {
+        return jsonResponse(await readModel.getDashboard());
+      } catch (err) {
+        console.error('[/admin/overview] Error:', err);
+        return jsonResponse({ error: 'Internal error' }, 500);
+      }
+    },
   });
   input.httpServer.registerRoute({
     method: 'GET',
