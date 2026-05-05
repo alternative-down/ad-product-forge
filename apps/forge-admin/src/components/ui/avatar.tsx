@@ -103,7 +103,10 @@ export {
   Avatar,
   AvatarImage,
   AvatarFallback,
+// fallow-ignore-next-line unused-export
   AvatarGroup,
+// fallow-ignore-next-line unused-export
   AvatarGroupCount,
+// fallow-ignore-next-line unused-export
   AvatarBadge,
 }

@@ -190,11 +190,16 @@ function SelectScrollDownButton({
 export {
   Select,
   SelectContent,
+// fallow-ignore-next-line unused-export
   SelectGroup,
   SelectItem,
+// fallow-ignore-next-line unused-export
   SelectLabel,
+// fallow-ignore-next-line unused-export
   SelectScrollDownButton,
+// fallow-ignore-next-line unused-export
   SelectScrollUpButton,
+// fallow-ignore-next-line unused-export
   SelectSeparator,
   SelectTrigger,
   SelectValue,

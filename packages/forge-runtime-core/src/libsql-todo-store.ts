@@ -19,7 +19,7 @@ export type TodoItemInput = {
   status?: TodoItemStatus;
 };
 
-export const todoItemInputSchema = z.union([
+const todoItemInputSchema = z.union([
   z.object({
     items: z.union([
       z.object({

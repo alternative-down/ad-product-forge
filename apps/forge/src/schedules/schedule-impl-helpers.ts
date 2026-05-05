@@ -20,6 +20,7 @@ const scheduleBaseSchema = {
   wakeWhenRunning: z.boolean().optional(),
 } as const;
 
+// fallow-ignore-next-line unused-export
 export const createScheduleSchema = z.discriminatedUnion('scheduleType', [
   z.object({
     ...scheduleBaseSchema,
@@ -35,6 +36,7 @@ export const createScheduleSchema = z.discriminatedUnion('scheduleType', [
   }),
 ]);
 
+// fallow-ignore-next-line unused-export
 export const updateScheduleSchema = z.discriminatedUnion('scheduleType', [
   z.object({
     ...scheduleBaseSchema,
@@ -52,6 +54,7 @@ export const updateScheduleSchema = z.discriminatedUnion('scheduleType', [
   }),
 ]);
 
+// fallow-ignore-next-line unused-export
 export const createScheduleForAgentSchema = z.discriminatedUnion('scheduleType', [
   z.object({
     ...scheduleBaseSchema,
@@ -78,6 +81,7 @@ export const createScheduleForAgentSchema = z.discriminatedUnion('scheduleType',
  * - creatorId === null AND agentId === requester → authorized (self-created)
  * - otherwise → not authorized
  */
+// fallow-ignore-next-line unused-export
 export function isScheduleEditor(schedule: StoredSchedule, requesterAgentId: string): boolean {
   const isCreator = schedule.creatorId === requesterAgentId;
   const isSelfCreated = schedule.creatorId === null && schedule.agentId === requesterAgentId;

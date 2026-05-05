@@ -106,9 +106,11 @@ export {
   Table,
   TableHeader,
   TableBody,
+// fallow-ignore-next-line unused-export
   TableFooter,
   TableHead,
   TableRow,
   TableCell,
+// fallow-ignore-next-line unused-export
   TableCaption,
 }

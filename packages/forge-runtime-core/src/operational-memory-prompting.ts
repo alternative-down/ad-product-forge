@@ -128,7 +128,7 @@ function formatConversationMessage(message: ConversationMessage) {
   return formatObserverLines(lines);
 }
 
-export function formatMessagesForObserver(messages: ConversationMessage[]) {
+function formatMessagesForObserver(messages: ConversationMessage[]) {
   return messages
     .map((message) => formatConversationMessage(message))
     .filter(Boolean)
@@ -195,7 +195,7 @@ function buildObserverTaskPrompt(existingObservations?: string) {
   return prompt;
 }
 
-export function buildObserverTaskUserMessage(existingObservations?: string) {
+function buildObserverTaskUserMessage(existingObservations?: string) {
   return buildObserverTaskPrompt(existingObservations);
 }
 
@@ -299,7 +299,7 @@ function detectDegenerateRepetition(text: string) {
   return text.split('\n').some((line) => line.length > 50_000);
 }
 
-export function buildReflectorSystemPrompt() {
+function buildReflectorSystemPrompt() {
   return [
     'You consolidate batches of observations into a durable reflection.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
@@ -309,7 +309,7 @@ export function buildReflectorSystemPrompt() {
   ].join('\n');
 }
 
-export function buildReflectorPrompt(observations: string) {
+function buildReflectorPrompt(observations: string) {
   return [
     'Consolidate the observations below into a clear, detailed reflection.',
     'Preserve all facts, decisions, and operational details — do not remove content.',
@@ -321,7 +321,7 @@ export function buildReflectorPrompt(observations: string) {
   ].join('\n');
 }
 
-export function buildReflectorTaskUserMessage() {
+function buildReflectorTaskUserMessage() {
   return [
     'Consolidate the observations below into a clear, detailed reflection.',
     'Preserve all facts, decisions, and operational details — do not remove content.',
@@ -329,7 +329,7 @@ export function buildReflectorTaskUserMessage() {
   ].join('\n');
 }
 
-export function parseReflectorOutput(output: string) {
+function parseReflectorOutput(output: string) {
   const match = output.match(/<observations>([\s\S]*?)<\/observations>/i);
 
   return {

@@ -19,7 +19,7 @@ type GlobalSkillSummary = {
   editable: boolean;
 };
 
-export function parseSkillMetadata(skillContent: string) {
+function parseSkillMetadata(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
     return {};
   }
@@ -72,11 +72,11 @@ async function countSkillFiles(skillRoot: string): Promise<number> {
   return fileCount;
 }
 
-export function resolveGlobalSkillsRoot(workspaceBasePath: string) {
+function resolveGlobalSkillsRoot(workspaceBasePath: string) {
   return path.resolve(workspaceBasePath, '_system', 'skills');
 }
 
-export function normalizeArchiveEntryPath(entryPath: string) {
+function normalizeArchiveEntryPath(entryPath: string) {
   const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
   const isDirectory = normalizedPath.endsWith('/');
   const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
