@@ -4,14 +4,28 @@
  */
 import type { Octokit } from 'octokit';
 import type { OpsContext } from './context.js';
+import type { AppProvisioningOps } from '../apps.js';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types.js';
 
-export function createRoutingOps(ctx: OpsContext) {
+export function createRoutingOps(
+  ctx: OpsContext,
+  routingDeps?: Pick<AppProvisioningOps,
+    | 'getCredentials'
+    | 'saveCredentials'
+    | 'getGlobalConfig'
+    | 'createAppName'
+    | 'nanoid'
+    | 'normalizeManifestConfig'
+    | 'DEFAULT_GITHUB_APP_MANIFEST_CONFIG'
+    | 'routeCleanups'
+  >
+) {
   function html(status: number, body: string) {
     return { status, headers: { 'content-type': 'text/html; charset=utf-8' }, body };
   }
 
   function buildProvisioning(agentId: string, credentials: GitHubAppCredentials): GitHubAppProvisioning {
+    if (routingDeps?.buildProvisioning) return routingDeps.buildProvisioning(agentId, credentials);
     const registrationUrl = `${ctx.config.publicBaseUrl}${ctx.getRegisterPath(agentId)}`;
     const manifestConfig = credentials.manifestConfig;
     if (credentials.status === 'created' || credentials.status === 'active') {
