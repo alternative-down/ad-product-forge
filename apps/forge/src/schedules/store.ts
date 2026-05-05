@@ -1,5 +1,6 @@
 import { createId } from '../utils/id';
 import { and, asc, desc, eq } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import { agentSchedules } from '../database/schema';
@@ -56,87 +57,158 @@ export function createAgentScheduleStore(db: Database) {
       updatedAt: now,
     };
 
-    await db.insert(agentSchedules).values(record);
+    try {
+      await db.insert(agentSchedules).values(record);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'createSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
     return record;
   }
 
   async function listAgentSchedules(agentId: string) {
-    const rows = await db.query.agentSchedules.findMany({
-      where: eq(agentSchedules.agentId, agentId),
-      orderBy: [asc(agentSchedules.createdAt)],
-    });
+    try {
+      const rows = await db.query.agentSchedules.findMany({
+        where: eq(agentSchedules.agentId, agentId),
+        orderBy: [asc(agentSchedules.createdAt)],
+      });
 
-    return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
+      return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'listAgentSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return [];
+    }
   }
 
   async function listActiveSchedules() {
-    const rows = await db.query.agentSchedules.findMany({
-      where: eq(agentSchedules.isActive, 1),
-      orderBy: [asc(agentSchedules.createdAt)],
-    });
-
-    return rows.map(toScheduleRecord);
+    try {
+      const rows = await db.query.agentSchedules.findMany({
+        where: eq(agentSchedules.isActive, 1),
+        orderBy: [asc(agentSchedules.createdAt)],
+      });
+      return rows.map(toScheduleRecord);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'listActiveSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return [];
+    }
   }
 
   async function listCreatedAgentSchedules(creatorId: string, targetAgentId?: string) {
-    const rows = await db.query.agentSchedules.findMany({
-      where: targetAgentId
-        ? and(eq(agentSchedules.creatorId, creatorId), eq(agentSchedules.agentId, targetAgentId))
-        : eq(agentSchedules.creatorId, creatorId),
-      orderBy: [desc(agentSchedules.createdAt)],
-    });
+    try {
+      const rows = await db.query.agentSchedules.findMany({
+        where: targetAgentId
+          ? and(eq(agentSchedules.creatorId, creatorId), eq(agentSchedules.agentId, targetAgentId))
+          : eq(agentSchedules.creatorId, creatorId),
+        orderBy: [desc(agentSchedules.createdAt)],
+      });
 
-    return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
+      return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'listCreatedAgentSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return [];
+    }
   }
 
   async function getAgentSchedule(agentId: string, scheduleId: string) {
-    const row = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-    });
+    try {
+      const row = await db.query.agentSchedules.findFirst({
+        where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+      });
 
-    if (!row) {
+      if (!row) {
+        return null;
+      }
+
+      if (row.kind !== 'agent') {
+        return null;
+      }
+
+      return toScheduleRecord(row);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'getAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
       return null;
     }
-
-    if (row.kind !== 'agent') {
-      return null;
-    }
-
-    return toScheduleRecord(row);
   }
 
   async function getOwnedSchedule(agentId: string, scheduleId: string) {
-    const row = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-    });
+    try {
+      const row = await db.query.agentSchedules.findFirst({
+        where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+      });
 
-    if (!row || row.kind !== 'agent') {
+      if (!row || row.kind !== 'agent') {
+        return null;
+      }
+
+      return toScheduleRecord(row);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'getOwnedSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
       return null;
     }
-
-    return toScheduleRecord(row);
   }
 
   async function getScheduleByKind(agentId: string, kind: ScheduleKind) {
-    const row = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, kind)),
-    });
+    try {
+      const row = await db.query.agentSchedules.findFirst({
+        where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, kind)),
+      });
 
-    if (!row) return null;
-    return toScheduleRecord(row);
+      if (!row) return null;
+      return toScheduleRecord(row);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'getScheduleByKind DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      return null;
+    }
   }
 
   // Get schedule by ID (for cross-agent authorization)
   async function getScheduleById(scheduleId: string) {
-    const row = await db.query.agentSchedules.findFirst({
-      where: eq(agentSchedules.id, scheduleId),
-    });
+    try {
+      const row = await db.query.agentSchedules.findFirst({
+        where: eq(agentSchedules.id, scheduleId),
+      });
 
-    if (!row || row.kind !== 'agent') {
+      if (!row || row.kind !== 'agent') {
+        return null;
+      }
+
+      return toScheduleRecord(row);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'getScheduleById DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
       return null;
     }
-
-    return toScheduleRecord(row);
   }
 
   // Shared update logic — avoids duplicating the field-mapping block between
@@ -154,25 +226,33 @@ export function createAgentScheduleStore(db: Database) {
       return false;
     }
 
-    await db
-      .update(agentSchedules)
-      .set({
-        name: input.name ?? existing.name,
-        description: input.description === undefined ? existing.description : input.description,
-        scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
-        cronExpression:
-          input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
-        scheduledDate:
-          input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
-        timezone: input.timezone ?? existing.timezone,
-        content: input.content ?? existing.content,
-        wakeWhenRunning:
-          input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
-        isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
-        updatedAt: Date.now(),
-      })
-      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
-
+    try {
+      await db
+        .update(agentSchedules)
+        .set({
+          name: input.name ?? existing.name,
+          description: input.description === undefined ? existing.description : input.description,
+          scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
+          cronExpression:
+            input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
+          scheduledDate:
+            input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
+          timezone: input.timezone ?? existing.timezone,
+          content: input.content ?? existing.content,
+          wakeWhenRunning:
+            input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
+          isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
+          updatedAt: Date.now(),
+        })
+        .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: '_applyUpdate DB write failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
     return true;
   }
 
@@ -207,48 +287,74 @@ export function createAgentScheduleStore(db: Database) {
       return false;
     }
 
-    await db
-      .delete(agentSchedules)
-      .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
-
+    try {
+      await db.delete(agentSchedules).where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deleteAgentSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
     return true;
   }
 
   async function deactivateSchedule(scheduleId: string) {
-    await db
-      .update(agentSchedules)
-      .set({ isActive: 0, nextTriggerAt: null, updatedAt: Date.now() })
-      .where(eq(agentSchedules.id, scheduleId));
+    try {
+      await db
+        .update(agentSchedules)
+        .set({ isActive: 0, nextTriggerAt: null, updatedAt: Date.now() })
+        .where(eq(agentSchedules.id, scheduleId));
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deactivateSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
   }
 
   async function setNextTriggerAt(scheduleId: string, nextTriggerAt: number | null) {
-    await db
-      .update(agentSchedules)
-      .set({ nextTriggerAt, updatedAt: Date.now() })
-      .where(eq(agentSchedules.id, scheduleId));
+    try {
+      await db
+        .update(agentSchedules)
+        .set({ nextTriggerAt, updatedAt: Date.now() })
+        .where(eq(agentSchedules.id, scheduleId));
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'setNextTriggerAt DB write failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
   }
 
-  async function markTriggered(input: {
-    scheduleId: string;
-    lastTriggeredAt: number;
-    nextTriggerAt: number | null;
-    isActive: boolean;
-  }) {
-    await db
-      .update(agentSchedules)
-      .set({
-        lastTriggeredAt: input.lastTriggeredAt,
-        nextTriggerAt: input.nextTriggerAt,
-        isActive: input.isActive ? 1 : 0,
-        updatedAt: Date.now(),
-      })
-      .where(eq(agentSchedules.id, input.scheduleId));
+  async function markTriggered(input: { scheduleId: string; lastTriggeredAt: number; nextTriggerAt: number | null; isActive: boolean }) {
+    try {
+      await db
+        .update(agentSchedules)
+        .set({
+          lastTriggeredAt: input.lastTriggeredAt,
+          nextTriggerAt: input.nextTriggerAt,
+          isActive: input.isActive ? 1 : 0,
+        })
+        .where(eq(agentSchedules.id, input.scheduleId));
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'markTriggered DB write failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
   }
 
   type StoredSchedule = Awaited<ReturnType<typeof listActiveSchedules>>[number];
 
   // --- helpers ---
-
   function toScheduleRecord(row: typeof agentSchedules.$inferSelect): StoredSchedule {
     return {
       scheduleId: row.id,
