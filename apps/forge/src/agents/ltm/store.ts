@@ -6,6 +6,7 @@ import {
   agentLongTermMemoryRecallStates,
   agentLongTermMemoryStates,
 } from '../../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 
 const packageManifestSchema = z.object({
   packageId: z.string().min(1),
@@ -80,18 +81,23 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
   agentId: string;
 }) {
   async function readState() {
-    const row = await db.query.agentLongTermMemoryStates.findFirst({
-      where: eq(agentLongTermMemoryStates.agentId, input.agentId),
-    });
-    const parsed = longTermMemoryStateSchema.safeParse(row?.state);
+    try {
+      const row = await db.query.agentLongTermMemoryStates.findFirst({
+        where: eq(agentLongTermMemoryStates.agentId, input.agentId),
+      });
+      const parsed = longTermMemoryStateSchema.safeParse(row?.state);
 
-    if (parsed.success) {
-      return parsed.data;
+      if (parsed.success) {
+        return parsed.data;
+      }
+
+      const state = createEmptyLongTermMemoryState();
+      await writeState(state);
+      return state;
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to read LTM state', { agentId: input.agentId, error: err });
+      throw err;
     }
-
-    const state = createEmptyLongTermMemoryState();
-    await writeState(state);
-    return state;
   }
 
   async function writeState(state: LongTermMemoryState) {
@@ -100,87 +106,122 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
       updatedAt: new Date().toISOString(),
     } satisfies LongTermMemoryState;
     const now = Date.now();
-    const existing = await db.query.agentLongTermMemoryStates.findFirst({
-      where: eq(agentLongTermMemoryStates.agentId, input.agentId),
-    });
+    let existing: typeof agentLongTermMemoryStates.$inferSelect | null = null;
 
-    await db
-      .insert(agentLongTermMemoryStates)
-      .values({
-        agentId: input.agentId,
-        state: nextState,
-        recallIndexStamp: existing?.recallIndexStamp ?? null,
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: agentLongTermMemoryStates.agentId,
-        set: {
-          state: nextState,
-          updatedAt: now,
-        },
+    try {
+      existing = await db.query.agentLongTermMemoryStates.findFirst({
+        where: eq(agentLongTermMemoryStates.agentId, input.agentId),
       });
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to query LTM state for write', { agentId: input.agentId, error: err });
+      throw err;
+    }
+
+    try {
+      await db
+        .insert(agentLongTermMemoryStates)
+        .values({
+          agentId: input.agentId,
+          state: nextState,
+          recallIndexStamp: existing?.recallIndexStamp ?? null,
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: agentLongTermMemoryStates.agentId,
+          set: {
+            state: nextState,
+            updatedAt: now,
+          },
+        });
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to write LTM state', { agentId: input.agentId, error: err });
+      throw err;
+    }
 
     return nextState;
   }
 
   async function readRecallIndexStamp() {
-    const row = await db.query.agentLongTermMemoryStates.findFirst({
-      columns: {
-        recallIndexStamp: true,
-      },
-      where: eq(agentLongTermMemoryStates.agentId, input.agentId),
-    });
+    try {
+      const row = await db.query.agentLongTermMemoryStates.findFirst({
+        columns: {
+          recallIndexStamp: true,
+        },
+        where: eq(agentLongTermMemoryStates.agentId, input.agentId),
+      });
 
-    return row?.recallIndexStamp ?? null;
+      return row?.recallIndexStamp ?? null;
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to read recall index stamp', { agentId: input.agentId, error: err });
+      throw err;
+    }
   }
 
   async function writeRecallIndexStamp(reason: string) {
     const now = Date.now();
-    const existing = await db.query.agentLongTermMemoryStates.findFirst({
-      where: eq(agentLongTermMemoryStates.agentId, input.agentId),
-    });
-    const state = longTermMemoryStateSchema.safeParse(existing?.state).success
-      ? longTermMemoryStateSchema.parse(existing?.state)
-      : createEmptyLongTermMemoryState();
+    let existing: typeof agentLongTermMemoryStates.$inferSelect | null = null;
+    let state: LongTermMemoryState;
 
-    await db
-      .insert(agentLongTermMemoryStates)
-      .values({
-        agentId: input.agentId,
-        state,
-        recallIndexStamp: JSON.stringify({
-          updatedAt: new Date().toISOString(),
-          reason,
-        }),
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: agentLongTermMemoryStates.agentId,
-        set: {
+    try {
+      existing = await db.query.agentLongTermMemoryStates.findFirst({
+        where: eq(agentLongTermMemoryStates.agentId, input.agentId),
+      });
+      state = longTermMemoryStateSchema.safeParse(existing?.state).success
+        ? longTermMemoryStateSchema.parse(existing?.state)
+        : createEmptyLongTermMemoryState();
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to query LTM state for recall index write', { agentId: input.agentId, error: err });
+      throw err;
+    }
+
+    try {
+      await db
+        .insert(agentLongTermMemoryStates)
+        .values({
+          agentId: input.agentId,
+          state,
           recallIndexStamp: JSON.stringify({
             updatedAt: new Date().toISOString(),
             reason,
           }),
+          createdAt: existing?.createdAt ?? now,
           updatedAt: now,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: agentLongTermMemoryStates.agentId,
+          set: {
+            recallIndexStamp: JSON.stringify({
+              updatedAt: new Date().toISOString(),
+              reason,
+            }),
+            updatedAt: now,
+          },
+        });
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to write recall index stamp', { agentId: input.agentId, reason, error: err });
+      throw err;
+    }
   }
 
   async function readRecallState() {
-    const row = await db.query.agentLongTermMemoryRecallStates.findFirst({
-      where: eq(agentLongTermMemoryRecallStates.agentId, input.agentId),
-    });
-    const snapshot = longTermMemoryRecallSnapshotSchema.safeParse(row?.snapshot);
-    const history = longTermMemoryRecallHistorySchema.safeParse(row?.history);
+    try {
+      const row = await db.query.agentLongTermMemoryRecallStates.findFirst({
+        where: eq(agentLongTermMemoryRecallStates.agentId, input.agentId),
+      });
+      const snapshot = longTermMemoryRecallSnapshotSchema.safeParse(row?.snapshot);
+      const history = longTermMemoryRecallHistorySchema.safeParse(row?.history);
 
-    return {
-      threadId: row?.threadId ?? null,
-      resourceId: row?.resourceId ?? null,
-      snapshot: snapshot.success ? snapshot.data : null,
-      history: history.success ? history.data : null,
-    };
+      return {
+        threadId: row?.threadId ?? null,
+        resourceId: row?.resourceId ?? null,
+        snapshot: snapshot.success ? snapshot.data : null,
+        history: history.success ? history.data : null,
+      };
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to read recall state', { agentId: input.agentId, error: err });
+      throw err;
+    }
   }
 
   async function writeRecallState(inputState: {
@@ -190,37 +231,43 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
     history?: LongTermMemoryRecallHistory;
   }) {
     const now = Date.now();
-    const existing = await db.query.agentLongTermMemoryRecallStates.findFirst({
-      where: eq(agentLongTermMemoryRecallStates.agentId, input.agentId),
-    });
+    let existing: typeof agentLongTermMemoryRecallStates.$inferSelect | null = null;
 
-    await db
-      .insert(agentLongTermMemoryRecallStates)
-      .values({
-        agentId: input.agentId,
-        threadId: inputState.threadId,
-        resourceId: inputState.resourceId ?? null,
-        snapshot: inputState.snapshot,
-        history: inputState.history ?? existing?.history ?? null,
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: agentLongTermMemoryRecallStates.agentId,
-        set: {
-          threadId: inputState.threadId,
-          resourceId: inputState.resourceId ?? null,
-          snapshot: inputState.snapshot,
-          history: inputState.history ?? existing?.history ?? null,
-          updatedAt: now,
-        },
+    try {
+      existing = await db.query.agentLongTermMemoryRecallStates.findFirst({
+        where: eq(agentLongTermMemoryRecallStates.agentId, input.agentId),
       });
-  }
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to query LTM recall state for write', { agentId: input.agentId, error: err });
+      throw err;
+    }
 
-  async function clearRecallState() {
-    await db
-      .delete(agentLongTermMemoryRecallStates)
-      .where(eq(agentLongTermMemoryRecallStates.agentId, input.agentId));
+    try {
+      await db
+        .insert(agentLongTermMemoryRecallStates)
+        .values({
+          agentId: input.agentId,
+          threadId: inputState.threadId ?? existing?.threadId ?? null,
+          resourceId: inputState.resourceId ?? existing?.resourceId ?? null,
+          snapshot: inputState.snapshot,
+          history: inputState.history,
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: agentLongTermMemoryRecallStates.agentId,
+          set: {
+            threadId: inputState.threadId ?? existing?.threadId ?? null,
+            resourceId: inputState.resourceId ?? existing?.resourceId ?? null,
+            snapshot: inputState.snapshot,
+            history: inputState.history,
+            updatedAt: now,
+          },
+        });
+    } catch (err) {
+      forgeDebug('ltm', 'Failed to write LTM recall state', { agentId: input.agentId, error: err });
+      throw err;
+    }
   }
 
   return {
@@ -230,6 +277,5 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
     writeRecallIndexStamp,
     readRecallState,
     writeRecallState,
-    clearRecallState,
   };
 }
