@@ -73,7 +73,19 @@ import {
 
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
-import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes } from './routes/agents/index.js';
+import {
+  registerAgentReadRoutes,
+  registerAgentOperationRoutes,
+  registerAgentWriteOpsRoutes,
+  registerAgentStepsRoutes,
+  registerAgentConversationsRoutes,
+  registerAgentMemoryRoutes,
+  registerAgentMetricsRoutes,
+  registerAgentContractRoutes,
+  registerAgentMcpRoutes,
+  registerAgentSchedulesRoutes,
+  registerAgentNotificationsRoutes,
+} from './routes/agents/index.js';
 import {
   normalizeOptionalText,
   normalizeJsonText,
