@@ -184,6 +184,18 @@ export function registerAdminRoutes(input: AdminRouteContext) {
       }
     },
   });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/overview/totals',
+    handler: async () => jsonResponse(await readModel.getOverviewTotals()),
+  });
+
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/overview/cash',
+    handler: async () => jsonResponse(await readModel.getOverviewCash()),
+  });
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/roles',
