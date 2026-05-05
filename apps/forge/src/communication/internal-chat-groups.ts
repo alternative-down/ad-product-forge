@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { forgeDebug } from "@forge-runtime/core";
 import { createId } from "../utils/id";
 import {
   buildGroupRow,
@@ -168,6 +169,7 @@ export function createInternalChatGroups(
   // -----------------------------------------------------------------------
 
   async function createChatGroup(input: CreateChatGroupInput) {
+    { try {
     const existing = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, input.conversationKey),
     });
@@ -207,9 +209,19 @@ export function createInternalChatGroups(
       },
       createdAt: new Date(now).toISOString(),
     };
-  }
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `createChatGroup failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { conversationKey: input.conversationKey, agentId: input.agentId },
+      });
+      throw err;
+    }
+  } }
 
   async function addMemberToGroup(input: AddMemberToGroupInput) {
+    { try {
     const group = await getRequiredGroupForAgent(input.agentId, input.groupId);
     const participant = await deps.getRequiredAccountBySlug(input.participantSlug);
     const now = Date.now();
@@ -240,9 +252,20 @@ export function createInternalChatGroups(
       role: input.role ?? "normal",
       createdAt: new Date(now).toISOString(),
     };
-  }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('already exists')) throw err;
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `addMemberToGroup failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug },
+      });
+      throw err;
+    }
+  } }
 
   async function removeMemberFromGroup(input: RemoveMemberFromGroupInput) {
+    { try {
     await getRequiredGroupForAgent(input.agentId, input.groupId);
     const participant = await deps.getRequiredAccountBySlug(input.participantSlug);
 
@@ -260,9 +283,19 @@ export function createInternalChatGroups(
       groupId: input.groupId,
       participantSlug: participant.slug,
     };
-  }
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `removeMemberFromGroup failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug },
+      });
+      throw err;
+    }
+  } }
 
   async function changeChatGroup(input: ChangeChatGroupInput) {
+    { try {
     const actorAccount = await deps.getRequiredAgentAccount(input.agentId);
     const now = Date.now();
     const groupId = input.groupId ?? `grp_${createId()}`;
@@ -452,9 +485,20 @@ export function createInternalChatGroups(
       provider: "internal-chat",
       conversationKey: groupId,
     };
-  }
+    } catch (err) {
+      if (err instanceof Error && (err.message.includes('not found') || err.message.includes('Admin permission'))) throw err;
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `changeChatGroup failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { groupId: input.groupId, agentId: input.agentId },
+      });
+      throw err;
+    }
+  } }
 
   async function listChatGroups(input: ListChatGroupsInput) {
+    { try {
     const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
 
     const rows = await db
@@ -483,9 +527,19 @@ export function createInternalChatGroups(
       .all();
 
     return rows.map((row) => buildGroupRow(row satisfies InternalChatGroupRow));
-  }
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `listChatGroups failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { agentId: input.agentId, limit: input.limit },
+      });
+      throw err;
+    }
+  } }
 
   async function listGroupMembers(input: ListGroupMembersInput) {
+    { try {
     await getRequiredGroupForAgent(input.agentId, input.groupId);
 
     const rows = await db
@@ -511,11 +565,22 @@ export function createInternalChatGroups(
       ...row,
       createdAt: new Date(row.createdAt).toISOString(),
     }));
-  }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('not found')) throw err;
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `listGroupMembers failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { groupId: input.groupId, agentId: input.agentId },
+      });
+      throw err;
+    }
+  } }
 
   async function listGroupMembersByAccount(
     input: ListGroupMembersByAccountInput,
   ): Promise<InternalChatGroupMember[]> {
+    { try {
     await getRequiredGroupForAccount(input.accountId, input.groupId);
 
     const rows = await db
@@ -541,12 +606,23 @@ export function createInternalChatGroups(
       ...row,
       createdAt: new Date(row.createdAt).toISOString(),
     }));
-  }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('not found')) throw err;
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `listGroupMembersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { groupId: input.groupId, accountId: input.accountId },
+      });
+      throw err;
+    }
+  } }
 
   async function listGroupMembersOrDmPeersByAccount(
     accountId: string,
     conversationId: string,
   ): Promise<InternalChatGroupParticipant[]> {
+    { try {
     const rows = await db
       .select({
         accountId: internalChatConversationMembers.accountId,
@@ -564,7 +640,16 @@ export function createInternalChatGroups(
       );
 
     return sortParticipantsBySelfFirst(rows, accountId);
-  }
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-groups',
+        level: 'error',
+        message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { accountId, conversationId },
+      });
+      throw err;
+    }
+  } }
 
   return {
     createChatGroup,
