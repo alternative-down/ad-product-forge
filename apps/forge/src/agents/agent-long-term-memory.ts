@@ -356,7 +356,18 @@ export function createAgentLongTermMemory(input: {
       return existing;
     }
 
-    const dayKey = payload.checkpointSummary.updatedAt.slice(0, 10);
+    // Bugfix #1098: checkpoint timestamp must be the oldest reflection's createdAt,
+    // not the current summary.updatedAt. This ensures the checkpoint preserves the
+    // temporal ordering of the replaced block.
+    const allCreatedAts = [
+      ...payload.reflections.map(r => r.createdAt),
+      ...payload.observations.map(o => o.createdAt),
+    ];
+    const checkpointTimestamp = allCreatedAts.length > 0
+      ? allCreatedAts.reduce((earliest, ts) => ts < earliest ? ts : earliest, allCreatedAts[0])
+      : payload.checkpointSummary.updatedAt;
+
+    const dayKey = checkpointTimestamp.slice(0, 10);
     const sequence = state.packages
       .filter((entry) => entry.packageId.startsWith(`${dayKey}_`))
       .length + 1;
@@ -412,15 +423,15 @@ export function createAgentLongTermMemory(input: {
       checkpointGeneration: payload.toGeneration,
       fromGeneration: payload.fromGeneration,
       toGeneration: payload.toGeneration,
-      createdAt: payload.checkpointSummary.updatedAt,
-      checkpointSummaryUpdatedAt: payload.checkpointSummary.updatedAt,
+      createdAt: checkpointTimestamp,
+      checkpointSummaryUpdatedAt: checkpointTimestamp,
       reflectionCount: payload.reflections.length,
       observationCount: payload.observations.length,
     };
 
     state.packages.push(manifest);
     state.lastWrittenPackageId = packageId;
-    state.lastWrittenAt = payload.checkpointSummary.updatedAt;
+    state.lastWrittenAt = checkpointTimestamp;
     state.lastRunError = null;
     state.lastRunErrorAt = null;
     await writeState(state);
