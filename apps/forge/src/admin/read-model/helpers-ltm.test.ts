@@ -14,7 +14,7 @@ const mockLTMStore = {
   readState: mockReadState,
 };
 
-vi.mock('../../agents/agent-long-term-memory-store', () => ({
+vi.mock('../../agents/ltm/store', () => ({
   createAgentLongTermMemoryStore: vi.fn(() => mockLTMStore),
 }));
 

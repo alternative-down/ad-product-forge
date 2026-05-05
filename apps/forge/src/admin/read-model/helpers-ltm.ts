@@ -2,7 +2,7 @@ import type { Database } from '../../database/index';
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryState,
-} from '../../agents/agent-long-term-memory-store';
+} from '../../agents/ltm/store';
 
 export type LongTermMemoryRecallSnapshot = Awaited<
   ReturnType<ReturnType<typeof createAgentLongTermMemoryStore>['readRecallState']>
