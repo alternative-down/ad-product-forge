@@ -20,6 +20,7 @@ import type {
 
 
 import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from '../agent-ltm-helpers';
+import { buildLtmRecallSnapshot, partitionRecallResults, buildNextRecallHistory } from '../agent-ltm-snapshot';
 type SearchResult = {
   id: string;
   content: string;
@@ -249,27 +250,15 @@ export class AgentLongTermMemoryRecall {
         await this.persistRecallSnapshot({
           threadId: input.threadId,
           resourceId: input.resourceId,
+        }, buildLtmRecallSnapshot({
+          lastInitAt: this.lastInitAt,
+          steps: input.steps,
+        }, {
+          threadId: input.threadId,
+          resourceId: input.resourceId,
         }, {
           status: 'miss',
-          query: '',
-          resultIds: [],
-          resultCount: 0,
-          resultScores: [],
-          graphHit: false,
-          stepsJson: safeSerializeRecallSteps(input.steps),
-          updatedAt: new Date().toISOString(),
-          lastInitAt: this.lastInitAt,
-          searchMode: 'unknown',
-          topK: 0,
-          graphTopK: 0,
-          graphThreshold: 0,
-          graphRandomWalkSteps: 0,
-          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-          workspaceFileCount: 0,
-          memoryFileCount: 0,
-          checkpointFileCount: 0,
-          error: null,
-        }, {
+        }), {
           recentFingerprints: recallThreadState.recentFingerprints,
           updatedAt: new Date().toISOString(),
         });
@@ -278,18 +267,17 @@ export class AgentLongTermMemoryRecall {
 
       const recallConfig = await this.resolveRecallConfig();
       const recallSearch = await this.runRecallSearch(queryText, recallConfig);
-      const { results, graph, historyFingerprints } = this.partitionRecallResults({
+      const { results, graph, historyFingerprints } = partitionRecallResults({
         graph: recallSearch.graph,
         results: recallSearch.results,
         recentFingerprints: recallThreadState.recentFingerprints,
       });
-      const nextHistory = this.buildNextRecallHistory({
+      const nextHistory = buildNextRecallHistory({
         recentFingerprints: recallThreadState.recentFingerprints,
         candidateFingerprints: historyFingerprints,
         windowSize: recallThreadState.windowSize,
       });
       const indexStats = await this.getIndexStats();
-
       if (this.shouldSkipRecallInjection({
         graph,
         results,
@@ -298,27 +286,20 @@ export class AgentLongTermMemoryRecall {
         await this.persistRecallSnapshot({
           threadId: input.threadId,
           resourceId: input.resourceId,
+        }, buildLtmRecallSnapshot({
+          lastInitAt: this.lastInitAt,
+          steps: input.steps,
+          queryText,
+          recallConfig,
+          indexStats,
+          dedupedGraph: graph,
+          filteredResults: results,
+        }, {
+          threadId: input.threadId,
+          resourceId: input.resourceId,
         }, {
           status: 'hit',
-          query: queryText,
-          resultIds: recallSearch.results.map((result) => result.id),
-          resultCount: recallSearch.results.length,
-          resultScores: recallSearch.results.map((result) => result.score ?? 0),
-          graphHit: recallSearch.graph.hit,
-          stepsJson: safeSerializeRecallSteps(input.steps),
-          updatedAt: new Date().toISOString(),
-          lastInitAt: this.lastInitAt,
-          searchMode: recallConfig.searchMode,
-          topK: recallConfig.documentCount,
-          graphTopK: recallSearch.effectiveGraphTopK,
-          graphThreshold: recallSearch.effectiveGraphThreshold,
-          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-          workspaceFileCount: indexStats.workspaceFileCount,
-          memoryFileCount: indexStats.memoryFileCount,
-          checkpointFileCount: indexStats.checkpointFileCount,
-          error: null,
-        }, nextHistory);
+        }), nextHistory);
         return null;
       }
 
@@ -334,54 +315,40 @@ export class AgentLongTermMemoryRecall {
         await this.persistRecallSnapshot({
           threadId: input.threadId,
           resourceId: input.resourceId,
+        }, buildLtmRecallSnapshot({
+          lastInitAt: this.lastInitAt,
+          steps: input.steps,
+          queryText,
+          recallConfig,
+          indexStats,
+          dedupedGraph: graph,
+          filteredResults: results,
+        }, {
+          threadId: input.threadId,
+          resourceId: input.resourceId,
         }, {
           status: 'hit',
-          query: queryText,
-          resultIds: recallSearch.results.map((result) => result.id),
-          resultCount: recallSearch.results.length,
-          resultScores: recallSearch.results.map((result) => result.score ?? 0),
-          graphHit: recallSearch.graph.hit,
-          stepsJson: safeSerializeRecallSteps(input.steps),
-          updatedAt: new Date().toISOString(),
-          lastInitAt: this.lastInitAt,
-          searchMode: recallConfig.searchMode,
-          topK: recallConfig.documentCount,
-          graphTopK: recallSearch.effectiveGraphTopK,
-          graphThreshold: recallSearch.effectiveGraphThreshold,
-          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-          workspaceFileCount: indexStats.workspaceFileCount,
-          memoryFileCount: indexStats.memoryFileCount,
-          checkpointFileCount: indexStats.checkpointFileCount,
-          error: null,
-        }, nextHistory);
+        }), nextHistory);
         return null;
       }
 
       await this.persistRecallSnapshot({
         threadId: input.threadId,
         resourceId: input.resourceId,
+      }, buildLtmRecallSnapshot({
+        lastInitAt: this.lastInitAt,
+        steps: input.steps,
+        queryText,
+        recallConfig,
+        indexStats,
+        dedupedGraph: graph,
+        filteredResults: results,
+      }, {
+        threadId: input.threadId,
+        resourceId: input.resourceId,
       }, {
         status: 'hit',
-        query: queryText,
-        resultIds: graph.hit ? [] : results.map((result) => result.id),
-        resultCount: graph.hit ? 0 : results.length,
-        resultScores: graph.hit ? [] : results.map((result) => result.score ?? 0),
-        graphHit: graph.hit,
-        stepsJson: safeSerializeRecallSteps(input.steps),
-        updatedAt: new Date().toISOString(),
-        lastInitAt: this.lastInitAt,
-        searchMode: recallConfig.searchMode,
-        topK: recallConfig.documentCount,
-        graphTopK: recallSearch.effectiveGraphTopK,
-        graphThreshold: recallSearch.effectiveGraphThreshold,
-        graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-        workspaceFileCount: indexStats.workspaceFileCount,
-        memoryFileCount: indexStats.memoryFileCount,
-        checkpointFileCount: indexStats.checkpointFileCount,
-        error: null,
-      }, nextHistory);
+      }), nextHistory);
 
       forgeDebug('ltm', 'ltm recall step complete', {
         agentId: this.agentId,
@@ -401,30 +368,29 @@ export class AgentLongTermMemoryRecall {
         error: error instanceof Error ? error.message : String(error),
       });
       const persistedState = await this.persistenceStore.readRecallState();
-      await this.persistRecallSnapshot({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      }, {
-        status: 'error',
-        query: '',
-        resultIds: [],
-        resultCount: 0,
-        resultScores: [],
-        graphHit: false,
-        stepsJson: safeSerializeRecallSteps(input.steps),
-        updatedAt: new Date().toISOString(),
-        lastInitAt: this.lastInitAt,
-        searchMode: 'unknown',
-        topK: 0,
-        graphTopK: 0,
-        graphThreshold: 0,
-        graphRandomWalkSteps: 0,
-        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-        workspaceFileCount: 0,
-        memoryFileCount: 0,
-        checkpointFileCount: 0,
-        error: error instanceof Error ? error.message : String(error),
-      }, persistedState?.history ?? undefined);
+      let snapshotError: string | null = null;
+      try {
+        snapshotError = error instanceof Error ? error.message : String(error);
+      } catch {
+        snapshotError = String(error);
+      }
+      try {
+        await this.persistRecallSnapshot({
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, buildLtmRecallSnapshot({
+          lastInitAt: this.lastInitAt,
+          steps: input.steps,
+        }, {
+          threadId: input.threadId,
+          resourceId: input.resourceId,
+        }, {
+          status: 'error',
+          error: snapshotError,
+        }), persistedState?.history ?? undefined);
+      } catch {
+        // snapshot write failed — swallow so recall still returns null
+      }
       return null;
     }
   }
