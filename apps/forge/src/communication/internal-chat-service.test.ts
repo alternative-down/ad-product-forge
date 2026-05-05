@@ -57,11 +57,26 @@ const mockGroups = vi.hoisted(() => ({
   listChatGroups: vi.fn(),
   listGroupMembers: vi.fn(),
   listGroupMembersByAccount: vi.fn(),
+  ensureDirectConversation: vi.fn(),
+  getRequiredGroupForAccount: vi.fn(),
+}));
+
+const mockAccountOps = vi.hoisted(() => ({
+  createExternalChatGroup: vi.fn(),
+  ensureDirectConversationByAccount: vi.fn(),
+  addMemberToGroupByAccount: vi.fn(),
+  updateMemberRoleByAccount: vi.fn(),
+  removeMemberFromGroupByAccount: vi.fn(),
+  updateGroupByAccount: vi.fn(),
 }));
 vi.mock('./internal-chat-groups', async () => ({
   ...(await vi.importActual('./internal-chat-groups')),
   createInternalChatGroups: () => mockGroups,
   createInternalChatService: () => mockGroups,
+}));
+
+vi.mock('./internal-chat-account-ops', async () => ({
+  createInternalChatAccountOps: () => mockAccountOps,
 }));
 
 

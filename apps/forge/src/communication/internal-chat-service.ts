@@ -80,6 +80,7 @@ import {
 } from "./internal-chat-helpers";
 import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
+import { createInternalChatAccountOps } from "./internal-chat-account-ops";
 import {
   ConversationNotFoundError,
   ChatGroupNotFoundError,
@@ -621,64 +622,14 @@ export function createInternalChatService(
     conversationKey: string;
     name: string;
   }) {
-    const existing = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, input.conversationKey),
-    });
-
-    if (existing) {
-      throw new ChatGroupAlreadyExistsError(input.conversationKey);
-    }
-
-    const creatorAccount = await getRequiredExternalAccount(input.accountId);
-    const now = Date.now();
-
-    await db.insert(internalChatConversations).values({
-      id: input.conversationKey,
-      type: 'group',
-      name: input.name,
-      createdByAccountId: creatorAccount.id,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await db.insert(internalChatConversationMembers).values({
-      conversationId: input.conversationKey,
-      accountId: creatorAccount.id,
-      role: 'admin',
-      createdAt: now,
-    });
-
-    return {
-      groupId: input.conversationKey,
-      name: input.name,
-      provider: 'internal-chat',
-      conversationKey: input.conversationKey,
-      creatorMember: {
-        participantId: creatorAccount.id,
-        participantName: creatorAccount.displayName,
-        role: 'admin',
-      },
-      createdAt: new Date(now).toISOString(),
-    };
+    return accountOps.createExternalChatGroup(input);
   }
 
   async function ensureDirectConversationByAccount(input: {
     accountId: string;
     participantAccountId: string;
   }) {
-    await getRequiredExternalAccount(input.accountId);
-    await getRequiredAccount(input.participantAccountId);
-
-    const conversation = await ensureDirectConversation(input.accountId, input.participantAccountId);
-
-    if (!conversation) {
-      throw new DirectConversationFailedError();
-    }
-
-    return {
-      conversationId: conversation.id,
-      conversationKey: conversation.id,
-    };
+    return accountOps.ensureDirectConversationByAccount(input);
   }
 
   async function addMemberToGroupByAccount(input: {
@@ -687,35 +638,7 @@ export function createInternalChatService(
     participantAccountId: string;
     role?: string;
   }) {
-    const group = await getRequiredGroupForAccount(input.accountId, input.groupId);
-    const participant = await getRequiredAccount(input.participantAccountId);
-    const now = Date.now();
-
-    const existing = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.conversationId, group.id),
-        eq(internalChatConversationMembers.accountId, participant.id),
-      ),
-    });
-
-    if (existing) {
-      return listGroupMembersByAccount({
-        accountId: input.accountId,
-        groupId: input.groupId,
-      });
-    }
-
-    await db.insert(internalChatConversationMembers).values({
-      conversationId: group.id,
-      accountId: participant.id,
-      role: input.role ?? 'normal',
-      createdAt: now,
-    });
-
-    return listGroupMembersByAccount({
-      accountId: input.accountId,
-      groupId: input.groupId,
-    });
+    return accountOps.addMemberToGroupByAccount(input);
   }
 
   async function updateMemberRoleByAccount(input: {
@@ -724,22 +647,7 @@ export function createInternalChatService(
     participantAccountId: string;
     role: string;
   }) {
-    await getRequiredGroupForAccount(input.accountId, input.groupId);
-
-    await db
-      .update(internalChatConversationMembers)
-      .set({
-        role: input.role,
-      })
-      .where(and(
-        eq(internalChatConversationMembers.conversationId, input.groupId),
-        eq(internalChatConversationMembers.accountId, input.participantAccountId),
-      ));
-
-    return listGroupMembersByAccount({
-      accountId: input.accountId,
-      groupId: input.groupId,
-    });
+    return accountOps.updateMemberRoleByAccount(input);
   }
 
   async function removeMemberFromGroupByAccount(input: {
@@ -747,56 +655,18 @@ export function createInternalChatService(
     groupId: string;
     participantAccountId: string;
   }) {
-    await getRequiredGroupForAccount(input.accountId, input.groupId);
-
-    await db
-      .delete(internalChatConversationMembers)
-      .where(and(
-        eq(internalChatConversationMembers.conversationId, input.groupId),
-        eq(internalChatConversationMembers.accountId, input.participantAccountId),
-      ));
-
-    return listGroupMembersByAccount({
-      accountId: input.accountId,
-      groupId: input.groupId,
-    });
+    return accountOps.removeMemberFromGroupByAccount(input);
   }
 
   async function updateGroupByAccount(input: {
     accountId: string;
     groupId: string;
-    name: string;
+    name?: string;
+    conversationKey?: string;
   }) {
-    await getRequiredGroupForAccount(input.accountId, input.groupId);
-    const membership = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.conversationId, input.groupId),
-        eq(internalChatConversationMembers.accountId, input.accountId),
-      ),
-    });
-
-    if (!membership || membership.role !== 'admin') {
-      throw new OnlyAdminsCanUpdateGroupError();
-    }
-
-    const now = Date.now();
-
-    await db
-      .update(internalChatConversations)
-      .set({
-        name: input.name,
-        updatedAt: now,
-      })
-      .where(eq(internalChatConversations.id, input.groupId));
-
-    return getRequiredGroupForAccount(input.accountId, input.groupId);
+    return accountOps.updateGroupByAccount(input);
   }
 
-  // ── Conversation Archival ─────────────────────────────────────────────────
-
-  // ── ByAccount variant ─────────────────────────────────────────────────────
-  // archiveConversationByAccount: same as archiveConversationByAgent, but
-  // uses accountId directly for trusted admin callers.
   async function archiveConversationByAccount(input: {
     accountId: string;
     conversationId: string;
@@ -1095,6 +965,14 @@ export function createInternalChatService(
     getRequiredAgentAccount,
     getRequiredAccountBySlug,
     getAccountByTargetKey,
+  });
+
+  const accountOps = createInternalChatAccountOps(db, {
+    getRequiredAccount,
+    getRequiredExternalAccount,
+    ensureDirectConversation: groups.ensureDirectConversation,
+    listGroupMembersByAccount: groups.listGroupMembersByAccount,
+    getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
 
   const connection = createInternalChatConnection(db, {
