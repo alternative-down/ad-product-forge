@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
@@ -16,6 +17,7 @@ async function ensureDirectory(targetPath: string) {
     await fs.rm(targetPath, { force: true });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      forgeDebug('workspace-skills', `ensureDirectory failed: ${error}`);
       throw error;
     }
   }
