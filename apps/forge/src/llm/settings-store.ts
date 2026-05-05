@@ -26,32 +26,27 @@ const DEFAULTS_ROW_ID = 'default';
 
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
-    try {
-      const rows = await db.query.llmProfiles.findMany({
-        orderBy: (fields, { asc }) => [asc(fields.modelKey)],
-      });
-      return rows.map(toProfileRecord);
-    } catch (err) {
-      forgeDebug('llm', 'Failed to list LLM profiles', { error: err });
-      throw err;
-    }
+    const rows = await db.query.llmProfiles.findMany({
+      orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+    });
+
+    return rows.map(toProfileRecord);
   }
 
   async function getDefaults() {
-    try {
-      const row = await getDefaultsRow();
-      if (!row) return null;
-      return {
-        primaryProfileId: row.primaryProfileId,
-        omProfileId: row.omProfileId,
-        hiringRhProfileId: row.hiringRhProfileId,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      };
-    } catch (err) {
-      forgeDebug('llm', 'Failed to get LLM defaults', { error: err });
-      throw err;
+    const row = await getDefaultsRow();
+
+    if (!row) {
+      return null;
     }
+
+    return {
+      primaryProfileId: row.primaryProfileId,
+      omProfileId: row.omProfileId,
+      hiringRhProfileId: row.hiringRhProfileId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
   }
 
   async function getResolvedDefaults() {
@@ -86,20 +81,15 @@ export function createLlmSettingsStore(db: Database) {
   }
 
   async function getProfile(profileId: string) {
-    try {
-      const row = await db.query.llmProfiles.findFirst({
-        where: eq(llmProfiles.id, profileId),
-      });
+    const row = await db.query.llmProfiles.findFirst({
+      where: eq(llmProfiles.id, profileId),
+    });
 
-      if (!row) {
-        throw new Error(`LLM profile not found: ${profileId}`);
-      }
-
-      return toProfileRecord(row);
-    } catch (err) {
-      forgeDebug('llm', 'Failed to get LLM profile', { profileId, error: err });
-      throw err;
+    if (!row) {
+      throw new Error(`LLM profile not found: ${profileId}`);
     }
+
+    return toProfileRecord(row);
   }
 
   async function upsertProfile(input: {
@@ -115,7 +105,6 @@ export function createLlmSettingsStore(db: Database) {
     const now = Date.now();
     const profileId = input.profileId ?? createId();
     let existing: typeof llmProfiles.$inferSelect | null = null;
-
     try {
       existing = input.profileId
         ? await db.query.llmProfiles.findFirst({
@@ -140,7 +129,7 @@ export function createLlmSettingsStore(db: Database) {
             isEnabled: parsed.isEnabled ? 1 : 0,
             updatedAt: now,
           })
-          .where(eq(llmProfiles.id, profileId));
+          .where(eq(llmProfiles.id, input.profileId!));
       } catch (err) {
         forgeDebug('llm', 'Failed to update LLM profile', { profileId, error: err });
         throw err;
@@ -169,13 +158,23 @@ export function createLlmSettingsStore(db: Database) {
       name: parsed.name.trim(),
       modelKey: parsed.modelKey,
       baseUrl: parsed.baseUrl?.trim() ?? null,
-      apiKey: null,
+      apiKey: parsed.apiKey.trim(),
       contractCostMultiplier: parsed.contractCostMultiplier,
       isEnabled: parsed.isEnabled,
     };
   }
 
   async function deleteProfile(profileId: string) {
+    const defaults = await getDefaults();
+
+    if (defaults && (
+      defaults.primaryProfileId === profileId ||
+      defaults.omProfileId === profileId ||
+      defaults.hiringRhProfileId === profileId
+    )) {
+      throw new Error('Cannot delete an LLM profile that is currently selected as a system default');
+    }
+
     try {
       await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
     } catch (err) {
@@ -207,7 +206,6 @@ export function createLlmSettingsStore(db: Database) {
 
     const now = Date.now();
     let existing: typeof systemLlmDefaults.$inferSelect | null = null;
-
     try {
       existing = await getDefaultsRow();
     } catch (err) {
@@ -241,7 +239,7 @@ export function createLlmSettingsStore(db: Database) {
           updatedAt: now,
         });
       } catch (err) {
-        forgeDebug('llm', 'Failed to insert LLM defaults', { error: err });
+        forgeDebug("llm", "Failed to insert LLM defaults", { error: err });
         throw err;
       }
     }
@@ -255,7 +253,7 @@ export function createLlmSettingsStore(db: Database) {
         where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
       });
     } catch (err) {
-      forgeDebug('llm', 'Failed to get LLM defaults row', { error: err });
+      forgeDebug("llm", "Failed to get LLM defaults row", { error: err });
       throw err;
     }
   }
