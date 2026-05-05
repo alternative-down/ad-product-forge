@@ -39,7 +39,8 @@ export interface OpsContext {
   getActiveCredentials: (agentId: string) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
-  createInstallationOctokit: (installationId: number) => Promise<Octokit>;
+  createInstallationOctokit: (credentials: Extract<GitHubAppCredentials, { status: "active" }>) => Promise<Octokit>;
+  createGitHubApp: (credentials: Extract<GitHubAppCredentials, { status: "created" | "active" }>) => unknown;
 
   getHeader: (headers: Record<string, string>, key: string) => string | null;
   getRegisterPath: (agentId: string) => string;
@@ -53,7 +54,7 @@ export interface OpsContext {
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig;
   buildManifestEvents: () => string[];
   buildManifestPermissions: (manifestConfig: GitHubAppManifestConfig) => Record<string, string>;
-  createAppName: (agentName: string, agentId: string) => string;
+  createAppName: (agentId: string, agentName: string) => string;
   createGitHubInstallWakeContent: (payload: unknown) => unknown;
   createGitHubWebhookWakeContent: (payload: unknown) => unknown;
   isGitHubSelfEvent: (payload: unknown) => boolean;
@@ -61,4 +62,13 @@ export interface OpsContext {
   summarizeGitHubEvent: (payload: unknown) => string;
   normalizeGitHubAppCredentials: (raw: unknown) => GitHubAppCredentials;
   normalizeManifestConfig: (raw: unknown) => GitHubAppManifestConfig;
+
+  opsRouting: {
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => import('../types.js').GitHubAppProvisioning;
+    registerAgentRoutes: (agentId: string) => void;
+    handleRegisterPage: (agentId: string) => Promise<import('../../http/server.js').HttpResponse>;
+    handleManifestCallback: (agentId: string, code: string | null, state: string | null) => Promise<import('../../http/server.js').HttpResponse>;
+    handleSetupCallback: (agentId: string, installationIdValue: string | null) => Promise<import('../../http/server.js').HttpResponse>;
+    handleWebhook: (agentId: string, headers: Record<string, string>, bodyText: string) => Promise<import('../../http/server.js').HttpResponse>;
+  };
 }
