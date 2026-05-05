@@ -1,4 +1,5 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type {
   CommunicationFile,
@@ -77,49 +78,59 @@ export function createTicketingService(db: Database) {
     content: string;
     priority?: 'low' | 'medium' | 'high' | 'urgent';
   }): Promise<{ ticketId: string; messageId: string }> {
-    const existing = await db.query.tickets.findFirst({
-      where: eq(tickets.externalId, input.externalId),
-    });
+    try {
+      const existing = await db.query.tickets.findFirst({
+        where: eq(tickets.externalId, input.externalId),
+      });
 
-    if (existing) {
-      // Idempotent: attach message to existing ticket instead
-      const msgId = createId();
+      if (existing) {
+        // Idempotent: attach message to existing ticket instead
+        const msgId = createId();
+        await db.insert(ticketMessages).values({
+          id: msgId,
+          ticketId: existing.id,
+          authorType: 'end_user',
+          content: input.content,
+          createdAt: Date.now(),
+        });
+        await db.update(tickets).set({ updatedAt: Date.now() }).where(eq(tickets.id, existing.id));
+        return { ticketId: existing.id, messageId: msgId };
+      }
+
+      const ticketId = createId();
+      const messageId = createId();
+      const now = Date.now();
+
+      await db.insert(tickets).values({
+        id: ticketId,
+        externalId: input.externalId,
+        productId: input.productId,
+        agentId: input.agentId,
+        subject: input.subject,
+        status: 'open',
+        priority: input.priority ?? 'medium',
+        createdAt: now,
+        updatedAt: now,
+      });
+
       await db.insert(ticketMessages).values({
-        id: msgId,
-        ticketId: existing.id,
+        id: messageId,
+        ticketId,
         authorType: 'end_user',
         content: input.content,
-        createdAt: Date.now(),
+        createdAt: now,
       });
-      await db.update(tickets).set({ updatedAt: Date.now() }).where(eq(tickets.id, existing.id));
-      return { ticketId: existing.id, messageId: msgId };
+
+      return { ticketId, messageId };
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `ingestTicket failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { externalId: input.externalId },
+      });
+      throw err;
     }
-
-    const ticketId = createId();
-    const messageId = createId();
-    const now = Date.now();
-
-    await db.insert(tickets).values({
-      id: ticketId,
-      externalId: input.externalId,
-      productId: input.productId,
-      agentId: input.agentId,
-      subject: input.subject,
-      status: 'open',
-      priority: input.priority ?? 'medium',
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await db.insert(ticketMessages).values({
-      id: messageId,
-      ticketId,
-      authorType: 'end_user',
-      content: input.content,
-      createdAt: now,
-    });
-
-    return { ticketId, messageId };
   }
 
   async function ingestTicketReply(input: {
@@ -127,16 +138,26 @@ export function createTicketingService(db: Database) {
     externalId: string;
     content: string;
   }): Promise<{ messageId: string }> {
-    const messageId = createId();
-    await db.insert(ticketMessages).values({
-      id: messageId,
-      ticketId: input.ticketId,
-      authorType: 'end_user',
-      content: input.content,
-      createdAt: Date.now(),
-    });
-    await db.update(tickets).set({ updatedAt: Date.now() }).where(eq(tickets.id, input.ticketId));
-    return { messageId };
+    try {
+      const messageId = createId();
+      await db.insert(ticketMessages).values({
+        id: messageId,
+        ticketId: input.ticketId,
+        authorType: 'end_user',
+        content: input.content,
+        createdAt: Date.now(),
+      });
+      await db.update(tickets).set({ updatedAt: Date.now() }).where(eq(tickets.id, input.ticketId));
+      return { messageId };
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `ingestTicketReply failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { ticketId: input.ticketId },
+      });
+      throw err;
+    }
   }
 
   // ── Agent-facing operations ───────────────────────────────────────────
@@ -146,14 +167,24 @@ export function createTicketingService(db: Database) {
     status?: string;
     limit?: number;
   }): Promise<CommunicationProviderConversation[]> {
-    const rows = await db.query.tickets.findMany({
-      where: input.status
-        ? and(eq(tickets.agentId, input.agentId), eq(tickets.status, input.status))
-        : eq(tickets.agentId, input.agentId),
-      orderBy: [desc(tickets.updatedAt)],
-      limit: input.limit ?? 50,
-    });
-    return rows.map(buildTicketConversation);
+    try {
+      const rows = await db.query.tickets.findMany({
+        where: input.status
+          ? and(eq(tickets.agentId, input.agentId), eq(tickets.status, input.status))
+          : eq(tickets.agentId, input.agentId),
+        orderBy: [desc(tickets.updatedAt)],
+        limit: input.limit ?? 50,
+      });
+      return rows.map(buildTicketConversation);
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `listTickets failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { agentId: input.agentId, status: input.status },
+      });
+      throw err;
+    }
   }
 
   async function getMessages(input: {
@@ -161,13 +192,23 @@ export function createTicketingService(db: Database) {
     limit?: number;
     offset?: number;
   }): Promise<CommunicationProviderMessage[]> {
-    const rows = await db.query.ticketMessages.findMany({
-      where: eq(ticketMessages.ticketId, input.targetKey),
-      orderBy: [asc(ticketMessages.createdAt)],
-      limit: input.limit ?? 50,
-      offset: input.offset ?? 0,
-    });
-    return rows.map(buildTicketMessage);
+    try {
+      const rows = await db.query.ticketMessages.findMany({
+        where: eq(ticketMessages.ticketId, input.targetKey),
+        orderBy: [asc(ticketMessages.createdAt)],
+        limit: input.limit ?? 50,
+        offset: input.offset ?? 0,
+      });
+      return rows.map(buildTicketMessage);
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `getMessages failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { targetKey: input.targetKey },
+      });
+      throw err;
+    }
   }
 
   async function sendAgentReply(input: {
@@ -175,29 +216,49 @@ export function createTicketingService(db: Database) {
     agentId: string;
     content: string;
   }): Promise<{ messageId: string }> {
-    const messageId = createId();
-    await db.insert(ticketMessages).values({
-      id: messageId,
-      ticketId: input.ticketId,
-      authorType: 'agent',
-      authorAgentId: input.agentId,
-      content: input.content,
-      createdAt: Date.now(),
-    });
-    await db.update(tickets).set({ updatedAt: Date.now() }).where(eq(tickets.id, input.ticketId));
-    return { messageId };
+    try {
+      const messageId = createId();
+      await db.insert(ticketMessages).values({
+        id: messageId,
+        ticketId: input.ticketId,
+        authorType: 'agent',
+        authorAgentId: input.agentId,
+        content: input.content,
+        createdAt: Date.now(),
+      });
+      await db.update(tickets).set({ updatedAt: Date.now() }).where(eq(tickets.id, input.ticketId));
+      return { messageId };
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `sendAgentReply failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { ticketId: input.ticketId },
+      });
+      throw err;
+    }
   }
 
   async function updateTicketStatus(input: {
     ticketId: string;
     status: 'open' | 'in_progress' | 'resolved' | 'closed';
   }): Promise<void> {
-    const resolvedAt = input.status === 'resolved' || input.status === 'closed' ? Date.now() : null;
-    await db.update(tickets).set({
-      status: input.status,
-      updatedAt: Date.now(),
-      resolvedAt,
-    }).where(eq(tickets.id, input.ticketId));
+    try {
+      const resolvedAt = input.status === 'resolved' || input.status === 'closed' ? Date.now() : null;
+      await db.update(tickets).set({
+        status: input.status,
+        updatedAt: Date.now(),
+        resolvedAt,
+      }).where(eq(tickets.id, input.ticketId));
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `updateTicketStatus failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { ticketId: input.ticketId, status: input.status },
+      });
+      throw err;
+    }
   }
 
   // ── Provider hook ──────────────────────────────────────────────────────
@@ -212,30 +273,40 @@ export function createTicketingService(db: Database) {
 
   async function notifyNewMessage(ticketId: string, messageId: string) {
     if (!messageHandler) return;
-    const msgRow = await db.query.ticketMessages.findFirst({
-      where: eq(ticketMessages.id, messageId),
-    });
-    if (!msgRow) return;
-    const ticketRow = await db.query.tickets.findFirst({
-      where: eq(tickets.id, ticketId),
-    });
-    if (!ticketRow) return;
+    try {
+      const msgRow = await db.query.ticketMessages.findFirst({
+        where: eq(ticketMessages.id, messageId),
+      });
+      if (!msgRow) return;
+      const ticketRow = await db.query.tickets.findFirst({
+        where: eq(tickets.id, ticketId),
+      });
+      if (!ticketRow) return;
 
-    const inbound: CommunicationInboundMessage = {
-      providerId: 'ticketing',
-      targetKey: ticketId,
-      messageId,
-      content: msgRow.content,
-      authorTargetKey: msgRow.authorAgentId ?? 'end_user',
-      timestamp: msgRow.createdAt,
-      conversationName: ticketRow.subject,
-      metadata: {
-        authorType: msgRow.authorType,
-        status: ticketRow.status,
-        priority: ticketRow.priority,
-      },
-    };
-    await messageHandler(inbound);
+      const inbound: CommunicationInboundMessage = {
+        providerId: 'ticketing',
+        targetKey: ticketId,
+        messageId,
+        content: msgRow.content,
+        authorTargetKey: msgRow.authorAgentId ?? 'end_user',
+        timestamp: msgRow.createdAt,
+        conversationName: ticketRow.subject,
+        metadata: {
+          authorType: msgRow.authorType,
+          status: ticketRow.status,
+          priority: ticketRow.priority,
+        },
+      };
+      await messageHandler(inbound);
+    } catch (err) {
+      forgeDebug({
+        scope: 'ticketing-service',
+        level: 'error',
+        message: `notifyNewMessage failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { ticketId, messageId },
+      });
+      throw err;
+    }
   }
 
   return {
