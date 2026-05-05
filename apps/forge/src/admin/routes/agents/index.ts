@@ -6,3 +6,16 @@
 export { registerAgentReadRoutes } from './read.js';
 export { registerAgentOperationRoutes } from './operations.js';
 export { registerAgentWriteOpsRoutes } from './write-ops.js';
+// Fragmented agent detail routes (#1587)
+export {
+  registerAgentStepsRoutes,
+  registerAgentConversationsRoutes,
+  registerAgentMemoryRoutes,
+  registerAgentMetricsRoutes,
+  registerAgentContractRoutes,
+  registerAgentMcpRoutes,
+  registerAgentSchedulesRoutes,
+  registerAgentNotificationsRoutes,
+  registerAgentRolesRoutes,
+  registerAgentLlmProfilesRoutes,
+} from './detail-read.js';
