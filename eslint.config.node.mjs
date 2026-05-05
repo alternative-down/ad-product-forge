@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig([
   globalIgnores(['dist', 'node_modules', '.turbo']),
 
-  // ── Test files: non-type-checked rules only ─────────────────────────────
+  // ── Test files: non-type-checked rules only ─────────────────────────────────
   {
     files: ['**/*.test.ts', '**/*.test.tsx'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
 
-  // ── Source files ─────────────────────────────────────────────────────────
+  // ── Source files ─────────────────────────────────────────────────────────────
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
@@ -38,7 +38,6 @@ export default defineConfig([
       globals: globals.node,
       parser: tseslint.parser,
       parserOptions: {
-        // tsconfigRootDir makes each package's own tsconfig discoverable.
         tsconfigRootDir: __dirname,
         project: [
           './apps/forge/tsconfig.json',
@@ -57,10 +56,7 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      // Enforce explicit null checks over truthiness coercion.
-      // Use ?? (nullish coalescing) for null/undefined fallbacks on
-      // nullable fields; use || only when treating falsy values
-      // (0, '', false) as missing is the intended behavior.
+      // Phase 1 rules (from #1416)
       '@typescript-eslint/strict-boolean-expressions': [
         'error',
         {
@@ -71,6 +67,8 @@ export default defineConfig([
           allowAny: false,
         },
       ],
+      '@typescript-eslint/require-await': 'error',
+      '@typescript-eslint/return-await': ['error', 'always'],
     },
   },
 ]);
