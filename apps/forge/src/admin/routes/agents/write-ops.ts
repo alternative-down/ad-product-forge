@@ -17,6 +17,11 @@ import { normalizeJsonText, normalizeOptionalText } from '../helpers.js';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema.js';
 import { reloadAgentMcp } from '../../routes/mcp-helpers.js';
 import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
+import type { Database } from '../../../../src/database/index.js';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader-types.js';
+import type { AgentEmailManager } from '../../../email/migadu-manager.js';
+import type { CoolifyManager, GitHubAppManager } from '../../../coolify/manager.js';
+import type { createAgentScheduleManager } from '../../schedules/manager.js';
 
 
 const upsertAgentProviderSchema = z.object({
@@ -146,15 +151,14 @@ interface Registry {
 }
 
 interface AgentRoutesInput {
-  db: unknown;
+  db: Database;
   workspaceBasePath: string;
-  loaderConfig: unknown;
-  githubApps?: unknown;
-  email?: unknown;
-  emailMailboxes?: unknown;
-  coolify?: unknown;
-  schedules?: unknown;
-  internalChat?: unknown;
+  loaderConfig: AgentLoaderConfig;
+  githubApps?: GitHubAppManager;
+  emailMailboxes?: AgentEmailManager | null;
+  coolify?: CoolifyManager | null;
+  schedules?: ReturnType<typeof createAgentScheduleManager>;
+  internalChat?: InternalChatService;
 }
 
 interface InternalChatService {
@@ -174,7 +178,7 @@ export function registerAgentWriteOpsRoutes(
   registry: Registry,
   ops: any
 ) {
-  const capabilities = createCapabilityStore(input.db as any);
+  const capabilities = createCapabilityStore(input.db);
   const resolvePermissionId = (name: string) => name;
   // POST /admin/agent/reload
   // FIX #1046: Use registry.add() to properly create the runner and update the real registry.
@@ -184,7 +188,7 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/reload',
     handler: async (request) => {
       const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig as object), agentId });
+      const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
       await registry.add(input.db, runtime);
       return jsonResponse({ success: true, agentId });
     },
@@ -217,7 +221,7 @@ export function registerAgentWriteOpsRoutes(
       if (entry) {
         await entry.runner.forceIdle();
       } else {
-        const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig as object), agentId });
+        const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
         await registry.add(input.db, runtime);
         entry = registry.get(agentId);
       }
@@ -332,13 +336,13 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/update-config',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
-      const agent = await (input.db as any).query.agents.findFirst({
+      const agent = await (input.db).query.agents.findFirst({
         where: eq(agents.id, body.agentId),
       });
       if (!agent) {
         return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
       }
-      await (input.db as any)
+      await (input.db)
         .update(agents)
         .set({
           name: body.name,
@@ -352,11 +356,11 @@ export function registerAgentWriteOpsRoutes(
         })
         .where(eq(agents.id, body.agentId));
       const role = agent.roleId
-        ? await (input.db as any).query.agentRoles.findFirst({
+        ? await (input.db).query.agentRoles.findFirst({
             where: eq(agentRoles.id, agent.roleId),
           })
         : null;
-      await updateInternalChatProviderProfile(input.db as any, {
+      await updateInternalChatProviderProfile(input.db, {
         agentId: body.agentId,
         agentName: body.name ?? agent.name ?? '',
         agentRole: role?.name ?? 'Unknown',
@@ -395,7 +399,7 @@ export function registerAgentWriteOpsRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
-        const db = input.db as any;
+        const db = input.db;
         const timestamp = new Date().toISOString();
         const serverId = createId();
         const configId = createId();
@@ -425,7 +429,7 @@ export function registerAgentWriteOpsRoutes(
           updatedAt: timestamp,
         });
 
-        await reloadAgentMcp(db, input.loaderConfig as any, body.agentId);
+        await reloadAgentMcp(db, input.loaderConfig, body.agentId);
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
@@ -491,7 +495,7 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/skills/publish-to-global',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-      const agent = await (input.db as any).query.agents.findFirst({
+      const agent = await (input.db).query.agents.findFirst({
         where: eq(agents.id, body.agentId),
         columns: { id: true, workspaceFilesystem: true },
       });
@@ -511,7 +515,7 @@ export function registerAgentWriteOpsRoutes(
     path: '/admin/agent/skills/install-global',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-      const agent = await (input.db as any).query.agents.findFirst({
+      const agent = await (input.db).query.agents.findFirst({
         where: eq(agents.id, body.agentId),
         columns: { id: true, workspaceFilesystem: true },
       });
