@@ -1,5 +1,7 @@
 import { request } from './core';
 import type {
+  LlmDefaults,
+  LlmModelPrice,
   LlmProfile,
   SyncOauthResult,
   SystemIntegration,
@@ -38,6 +40,18 @@ export function syncSystemOauth(providerId: 'openai-codex' | 'anthropic' | 'all'
 
 export function getSystemLlm() {
   return request<SystemLlmResponse>('/admin/system/llm');
+}
+
+export function getLlmProfiles() {
+  return request<LlmProfile[]>('/admin/system/llm/profiles');
+}
+
+export function getLlmDefaults() {
+  return request<LlmDefaults>('/admin/system/llm/defaults');
+}
+
+export function getLlmPrices() {
+  return request<LlmModelPrice[]>('/admin/system/llm/prices');
 }
 
 export function upsertLlmProfile(input: UpsertLlmProfileInput) {

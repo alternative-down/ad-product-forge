@@ -128,6 +128,9 @@ export type SystemLlmResponse = {
   }>;
 };
 
+export type LlmDefaults = SystemLlmResponse['defaults'];
+export type LlmModelPrice = SystemLlmResponse['prices'][number];
+
 export type SystemHealthcheck = {
   database: boolean;
   agentRegistry: boolean;

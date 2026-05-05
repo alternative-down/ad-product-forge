@@ -30,6 +30,9 @@ export interface SystemReadModel {
     defaults: Awaited<ReturnType<ReturnType<typeof createLlmSettingsStore>['getDefaults']>>;
     prices: Awaited<ReturnType<ReturnType<typeof createLlmModelPriceStore>['listPrices']>>;
   }>;
+  getLlmProfiles: () => Promise<Awaited<ReturnType<ReturnType<typeof createLlmSettingsStore>['listProfiles']>>>;
+  getLlmDefaults: () => Promise<Awaited<ReturnType<ReturnType<typeof createLlmSettingsStore>['getDefaults']>>>;
+  getLlmPrices: () => Promise<Awaited<ReturnType<ReturnType<typeof createLlmModelPriceStore>['listPrices']>>>;
   getSystemSettings: () => Promise<ReturnType<ReturnType<typeof createSystemSettingsStore>['getSettings']>>;
   getApplicationMigrations: () => Promise<{
     applied: { id: number; hash: string; createdAt: number }[];
@@ -104,6 +107,18 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
     return { profiles, defaults, prices };
   }
 
+  async function getLlmProfiles() {
+    return llmSettings.listProfiles();
+  }
+
+  async function getLlmDefaults() {
+    return llmSettings.getDefaults();
+  }
+
+  async function getLlmPrices() {
+    return llmModelPrices.listPrices();
+  }
+
   async function getSystemSettings() {
     return systemSettings.getSettings();
   }
@@ -126,25 +141,19 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
         id,
         hash,
         created_at as createdAt
-      from __drizzle_migrations
-      order by created_at asc
+      from drizzle_meta
     `);
-    const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
-
+    const appliedMap = new Map(appliedRows.map((r) => [r.id, r.hash]));
     return {
       applied: appliedRows,
-      entries: journal.entries.map((entry) => {
-        const applied = appliedByCreatedAt.get(entry.when);
-
-        return {
-          idx: entry.idx,
-          tag: entry.tag,
-          createdAt: entry.when,
-          applied: Boolean(applied),
-          hash: applied?.hash ?? null,
-          rowId: applied?.id ?? null,
-        };
-      }),
+      entries: journal.entries.map((entry) => ({
+        idx: entry.idx,
+        tag: entry.tag,
+        createdAt: entry.when,
+        applied: appliedMap.has(entry.idx),
+        hash: appliedMap.get(entry.idx) ?? null,
+        rowId: null,
+      })),
     };
   }
 
@@ -152,6 +161,9 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
     listRoles,
     listSystemIntegrations,
     getSystemLlm,
+    getLlmProfiles,
+    getLlmDefaults,
+    getLlmPrices,
     getSystemSettings,
     getApplicationMigrations,
   };

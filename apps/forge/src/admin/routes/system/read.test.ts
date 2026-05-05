@@ -49,7 +49,7 @@ describe('registerSystemReadRoutes', () => {
       readModel: mockReadModel,
       workspaceBasePath: '/tmp',
     });
-    expect(routes).toHaveLength(8);
+    expect(routes).toHaveLength(11);
   });
 
   it('registers GET /admin/system/healthcheck', () => {
