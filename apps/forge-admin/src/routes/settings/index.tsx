@@ -5,11 +5,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AdminLoadingState } from '@/components/admin';
 import { getSystemLlm, getSystemSettings, updateLlmDefaults, upsertSystemSettings } from '@/lib/admin-api';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
+import type { LlmProfile } from '@/lib/admin-api';
 
 import { CompanySettingsSection } from './company-settings-section';
 import { OperationsSettingsSection } from './operations-settings-section';
 import { ProfileDefaultsSection } from '../integrations/-profile-defaults-section';
 import { RuntimeSettingsSection } from './runtime-settings-section';
+import {
+  fromOperationsDraft,
+  fromRuntimeDraft,
+  toOperationsDraft,
+  toRuntimeDraft,
+  type CompanyDraft,
+  type DefaultsDraft,
+  type OperationsDraft,
+  type RuntimeDraft,
+  type SettingsMutation,
+  type SettingsQuery,
+} from './settings.types';
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsGeneralRoute,
@@ -17,44 +30,27 @@ export const Route = createFileRoute('/settings/')({
 
 function SettingsGeneralRoute() {
   const queryClient = useQueryClient();
-  const settingsQuery = useQuery({
+
+  const settingsQuery: SettingsQuery = useQuery({
     queryKey: ['admin', 'system-settings'],
     queryFn: getSystemSettings,
   });
+
   const llmQuery = useQuery({
     queryKey: ['admin', 'system-llm'],
     queryFn: getSystemLlm,
   });
-  const [companyDraft, setCompanyDraft] = useState<{
-    companyName: string;
-    companyContext: string;
-  } | null>(null);
-  const [operationsDraft, setOperationsDraft] = useState<{
-    stepDelayEnabled: boolean;
-    communicationDmFlushingEnabled: boolean;
-    communicationGroupFlushingEnabled: boolean;
-  } | null>(null);
-  const [runtimeDraft, setRuntimeDraft] = useState<{
-    memoryLastMessagesFullEnabled: boolean;
-    memoryLastMessagesCount: string;
-    tokenCountFilterEnabled: boolean;
-    tokenCountFilterLimit: string;
-    checkpointedOmEnabled: boolean;
-    checkpointedOmTotalContextTokens: string;
-    checkpointedOmRecentRawTokens: string;
-    checkpointedOmRawObservationBatchTokens: string;
-    checkpointedOmObservationReflectionBatchTokens: string;
-    checkpointedOmObservationSupportTokens: string;
-    checkpointedOmReflectionSupportTokens: string;
-    ltmRecallScoreThreshold: string;
-    ltmRecallDocumentCount: string;
-  } | null>(null);
-  const [defaultsDraft, setDefaultsDraft] = useState<{
-    primaryProfileId: string;
-    omProfileId: string;
-    hiringRhProfileId: string;
-  } | null>(null);
-  const settingsMutation = useMutation({
+
+  // ── Draft state ────────────────────────────────────────────────
+
+  const [companyDraft, setCompanyDraft] = useState<CompanyDraft | null>(null);
+  const [operationsDraft, setOperationsDraft] = useState<OperationsDraft | null>(null);
+  const [runtimeDraft, setRuntimeDraft] = useState<RuntimeDraft | null>(null);
+  const [defaultsDraft, setDefaultsDraft] = useState<DefaultsDraft | null>(null);
+
+  // ── Mutations ─────────────────────────────────────────────────
+
+  const settingsMutation: SettingsMutation = useMutation({
     mutationFn: upsertSystemSettings,
     onMutate: () => startAdminAction('Salvando configurações...'),
     onSuccess: async (_data, _variables, context) => {
@@ -65,6 +61,7 @@ function SettingsGeneralRoute() {
       failAdminAction(context, error);
     },
   });
+
   const defaultsMutation = useMutation({
     mutationFn: updateLlmDefaults,
     onMutate: () => startAdminAction('Salvando perfis padrão...'),
@@ -78,44 +75,25 @@ function SettingsGeneralRoute() {
     },
   });
 
-  const companySettings = companyDraft ?? (settingsQuery.data
-    ? {
-        companyName: settingsQuery.data.companyName,
-        companyContext: settingsQuery.data.companyContext,
-      }
-    : null);
-  const operationsSettings = operationsDraft ?? (settingsQuery.data
-    ? {
-        stepDelayEnabled: settingsQuery.data.stepDelayEnabled,
-        communicationDmFlushingEnabled: settingsQuery.data.communicationDmFlushingEnabled,
-        communicationGroupFlushingEnabled: settingsQuery.data.communicationGroupFlushingEnabled,
-      }
-    : null);
-  const runtimeSettings = runtimeDraft ?? (settingsQuery.data
-    ? {
-        memoryLastMessagesFullEnabled: settingsQuery.data.memoryLastMessagesFullEnabled,
-        memoryLastMessagesCount: String(settingsQuery.data.memoryLastMessagesCount),
-        tokenCountFilterEnabled: settingsQuery.data.tokenCountFilterEnabled,
-        tokenCountFilterLimit: String(settingsQuery.data.tokenCountFilterLimit),
-        checkpointedOmEnabled: settingsQuery.data.checkpointedOmEnabled,
-        checkpointedOmTotalContextTokens: String(settingsQuery.data.checkpointedOmTotalContextTokens),
-        checkpointedOmRecentRawTokens: String(settingsQuery.data.checkpointedOmRecentRawTokens),
-        checkpointedOmRawObservationBatchTokens: String(settingsQuery.data.checkpointedOmRawObservationBatchTokens),
-        checkpointedOmObservationReflectionBatchTokens: String(settingsQuery.data.checkpointedOmObservationReflectionBatchTokens),
-        checkpointedOmObservationSupportTokens: String(settingsQuery.data.checkpointedOmObservationSupportTokens),
-        checkpointedOmReflectionSupportTokens: String(settingsQuery.data.checkpointedOmReflectionSupportTokens),
-        ltmRecallScoreThreshold: String(settingsQuery.data.ltmRecallScoreThreshold),
-        ltmRecallDocumentCount: String(settingsQuery.data.ltmRecallDocumentCount),
-      }
-    : null);
+  // ── Derived settings values ──────────────────────────────────
 
-  const enabledProfiles = (llmQuery.data?.profiles ?? []).filter((profile) => profile.isEnabled);
+  const data = settingsQuery.data;
+
+  const companySettings: CompanyDraft | null = companyDraft ?? (data ?? null);
+  const operationsSettings: OperationsDraft | null = operationsDraft ?? (data ? toOperationsDraft(data) : null);
+  const runtimeSettings: RuntimeDraft | null = runtimeDraft ?? (data ? toRuntimeDraft(data) : null);
+
+  // ── Profile defaults ─────────────────────────────────────────
+
+  const enabledProfiles = (llmQuery.data?.profiles ?? []).filter((p: LlmProfile) => p.isEnabled);
   const primaryProfileId = defaultsDraft?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '';
   const omProfileId = defaultsDraft?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '';
   const hiringRhProfileId = defaultsDraft?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '';
-  const primaryProfileName = enabledProfiles.find((profile) => profile.profileId === primaryProfileId)?.name;
-  const omProfileName = enabledProfiles.find((profile) => profile.profileId === omProfileId)?.name;
-  const hiringRhProfileName = enabledProfiles.find((profile) => profile.profileId === hiringRhProfileId)?.name;
+  const primaryProfileName = enabledProfiles.find((p: LlmProfile) => p.profileId === primaryProfileId)?.name;
+  const omProfileName = enabledProfiles.find((p: LlmProfile) => p.profileId === omProfileId)?.name;
+  const hiringRhProfileName = enabledProfiles.find((p: LlmProfile) => p.profileId === hiringRhProfileId)?.name;
+
+  const errorMessage = defaultsMutation.error?.message ?? llmQuery.error?.message;
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -130,11 +108,17 @@ function SettingsGeneralRoute() {
         <AdminLoadingState label="Carregando configurações..." />
       ) : null}
 
+      {settingsQuery.error && !settingsQuery.data ? (
+        <div className="rounded-sm border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {settingsQuery.error.message}
+        </div>
+      ) : null}
+
       {companySettings ? (
         <CompanySettingsSection
           companySettings={companySettings}
           settingsQuery={settingsQuery}
-          settingsMutation={settingsMutation as any}
+          settingsMutation={settingsMutation}
           onCompanyDraftChange={setCompanyDraft}
         />
       ) : null}
@@ -143,7 +127,7 @@ function SettingsGeneralRoute() {
         <OperationsSettingsSection
           operationsSettings={operationsSettings}
           settingsQuery={settingsQuery}
-          settingsMutation={settingsMutation as any}
+          settingsMutation={settingsMutation}
           onOperationsDraftChange={setOperationsDraft}
         />
       ) : null}
@@ -152,7 +136,7 @@ function SettingsGeneralRoute() {
         <RuntimeSettingsSection
           runtimeSettings={runtimeSettings}
           settingsQuery={settingsQuery}
-          settingsMutation={settingsMutation as any}
+          settingsMutation={settingsMutation}
           onRuntimeDraftChange={setRuntimeDraft}
         />
       ) : null}
@@ -168,7 +152,7 @@ function SettingsGeneralRoute() {
           hiringRhProfileName={hiringRhProfileName}
           loading={llmQuery.isLoading}
           pending={defaultsMutation.isPending}
-          errorMessage={defaultsMutation.error?.message ?? llmQuery.error?.message}
+          errorMessage={errorMessage}
           onPrimaryProfileChange={(value) =>
             setDefaultsDraft((current) => ({
               primaryProfileId: value,
