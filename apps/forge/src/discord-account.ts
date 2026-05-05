@@ -129,20 +129,30 @@ export function createDiscordProvider(config: {
   async function downloadDiscordAttachments(message: Message): Promise<CommunicationFile[]> {
     return Promise.all(
       Array.from(message.attachments.values()).map(async (attachment) => {
-        const response = await fetch(attachment.url);
+        try {
+          const response = await fetch(attachment.url);
 
-        if (!response.ok) {
-          throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
+          if (!response.ok) {
+            throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+
+          return {
+            name: attachment.name ?? attachment.id,
+            data: new Uint8Array(arrayBuffer),
+            contentType: attachment.contentType ?? undefined,
+            sizeBytes: attachment.size,
+          };
+        } catch (error) {
+          forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to download Discord attachment', context: { attachmentUrl: attachment.url, attachmentId: attachment.id, error } });
+          return {
+            name: attachment.name ?? attachment.id,
+            data: new Uint8Array(0),
+            contentType: undefined,
+            sizeBytes: 0,
+          };
         }
-
-        const arrayBuffer = await response.arrayBuffer();
-
-        return {
-          name: attachment.name ?? attachment.id,
-          data: new Uint8Array(arrayBuffer),
-          contentType: attachment.contentType ?? undefined,
-          sizeBytes: attachment.size,
-        };
       }),
     );
   }
@@ -163,17 +173,22 @@ export function createDiscordProvider(config: {
     let lastSentMessage: Message | null = null;
     const outboundFiles = toDiscordOutboundFiles(input.attachments);
 
-    for (const [index, chunk] of messageChunks.entries()) {
-      if (index === 0) {
-        lastSentMessage = await input.channel.send({
-          content: chunk,
-          ...(outboundFiles.length > 0 ? { files: outboundFiles } : {}),
-        });
-      } else {
-        lastSentMessage = await input.channel.send(chunk);
-      }
+    try {
+      for (const [index, chunk] of messageChunks.entries()) {
+        if (index === 0) {
+          lastSentMessage = await input.channel.send({
+            content: chunk,
+            ...(outboundFiles.length > 0 ? { files: outboundFiles } : {}),
+          });
+        } else {
+          lastSentMessage = await input.channel.send(chunk);
+        }
 
-      rememberOutboundMessage(lastSentMessage.channelId, chunk);
+        rememberOutboundMessage(lastSentMessage.channelId, chunk);
+      }
+    } catch (error) {
+      forgeDebug({ scope: 'discord-account', level: 'error', message: 'sendDiscordChunks failed', context: { channelId: input.channel.id, error } });
+      throw error;
     }
 
     if (!lastSentMessage) {
@@ -345,13 +360,17 @@ export function createDiscordProvider(config: {
     const channels: DiscordSendableChannel[] = [];
 
     for (const channelId of channelIds) {
-      const channel = await client.channels.fetch(channelId);
+      try {
+        const channel = await client.channels.fetch(channelId);
 
-      if (!channel?.isTextBased() || !channel.isSendable()) {
-        continue;
+        if (!channel?.isTextBased() || !channel.isSendable()) {
+          continue;
+        }
+
+        channels.push(channel as DiscordSendableChannel);
+      } catch (error) {
+        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch channel', context: { channelId, error } });
       }
-
-      channels.push(channel as DiscordSendableChannel);
     }
 
     return channels;
@@ -403,18 +422,22 @@ export function createDiscordProvider(config: {
         description: `@${user.username}`,
       }));
   }
-
   async function resolveDiscordTargetChannel(targetKey: string) {
     await getReadyClient();
 
     if (/^\d+$/.test(targetKey)) {
-      const channel = await client.channels.fetch(targetKey);
+      try {
+        const channel = await client.channels.fetch(targetKey);
 
-      if (!channel?.isSendable()) {
-        throw new Error(`Discord target is not sendable: ${targetKey}`);
+        if (!channel?.isSendable()) {
+          throw new Error(`Discord target is not sendable: ${targetKey}`);
+        }
+
+        return channel as DiscordSendableChannel;
+      } catch (error) {
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to fetch Discord channel by ID', context: { targetKey, error } });
+        throw error;
       }
-
-      return channel as DiscordSendableChannel;
     }
 
     const candidateUsers = await loadCandidateUsers();
@@ -424,8 +447,13 @@ export function createDiscordProvider(config: {
       throw new Error(`Discord user not found: ${targetKey}`);
     }
 
-    const channel = await matchedUser.createDM();
-    return channel as DiscordSendableChannel;
+    try {
+      const channel = await matchedUser.createDM();
+      return channel as DiscordSendableChannel;
+    } catch (error) {
+      forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to create DM with user', context: { targetKey, error } });
+      throw error;
+    }
   }
 
   async function listChannelMessages(input: {
@@ -447,10 +475,16 @@ export function createDiscordProvider(config: {
     let before: string | undefined;
 
     while (collected.size < targetCount) {
-      const batch = await input.channel.messages.fetch({
-        limit: Math.min(MEMBER_FETCH_LIMIT, targetCount - collected.size),
-        ...(before ? { before } : {}),
-      });
+      let batch;
+      try {
+        batch = await input.channel.messages.fetch({
+          limit: Math.min(MEMBER_FETCH_LIMIT, targetCount - collected.size),
+          ...(before ? { before } : {}),
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'listChannelMessages: failed to fetch message batch', context: { channelId: input.channel.id, error } });
+        break;
+      }
 
       if (batch.size === 0) {
         break;
