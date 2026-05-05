@@ -69,6 +69,20 @@ export interface AgentReadModel {
   }>;
   listAgents: () => Promise<unknown[]>;
   getAgent: (agentId: string) => Promise<unknown>;
+  getOverviewTotals: () => Promise<{
+    agents: number;
+    loadedAgents: number;
+    idleAgents: number;
+    runningAgents: number;
+    absentAgents: number;
+    roles: number;
+    activeContracts: number;
+  }>;
+  getOverviewCash: () => Promise<{
+    balanceUsd: number;
+    summary: { income: number; expenses: number; net: number };
+    recentMovements: unknown[];
+  }>;
   listAgentRecentConversations: (agentId: string) => Promise<unknown>;
   listAgentExecutionSteps: (input: { agentId: string; limit: number; offset: number }) => Promise<unknown>;
   listAgentThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
@@ -133,6 +147,40 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function getCashData() {
+    const [balanceResult, recentResult] = await Promise.all([
+      finance.getCompanyCashBalance(),
+      finance.listCompanyCashMovements({ limit: RECENT_CASH_MOVEMENT_LIMIT }),
+    ]);
+    return {
+      balanceUsd: balanceResult.balanceUsd,
+      summary: { income: 0, expenses: 0, net: 0 },
+      recentMovements: recentResult.items,
+    };
+  }
+
+  async function getOverviewTotals() {
+    const rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, role: true } });
+    const loadedAgents = registry.size;
+    const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
+    const runningAgents = rows.filter((r) => r.executionState === 'running').length;
+    const absentAgents = rows.filter((r) => !r.executionState || r.executionState === 'absent').length;
+    const activeContracts = await db.query.agentExecutionContracts.findMany({
+      where: eq(agentExecutionContracts.isActive, true),
+      columns: { id: true },
+    });
+    const roles = new Set(rows.map((r) => r.role).filter(Boolean)).size;
+    return {
+      agents: rows.length,
+      loadedAgents,
+      idleAgents,
+      runningAgents,
+      absentAgents,
+      roles,
+      activeContracts: activeContracts.length,
+    };
+  }
+
+  async function getOverviewCash() {
     const [balanceResult, recentResult] = await Promise.all([
       finance.getCompanyCashBalance(),
       finance.listCompanyCashMovements({ limit: RECENT_CASH_MOVEMENT_LIMIT }),
@@ -757,6 +805,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
   return {
     getDashboard,
+    getOverviewTotals,
+    getOverviewCash,
     listAgents,
     getAgent,
     listAgentRecentConversations,
