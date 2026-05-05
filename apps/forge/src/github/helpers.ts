@@ -272,66 +272,122 @@ export function toIssueDetails(issue: {
 /**
  * Creates human-readable summary text for a GitHub webhook event.
  */
-export function summarizeGitHubEvent(input: {
+// ── Webhook summary formatters (strategy dispatch map) ───────────────────────
+
+type GitHubEventInput = {
   event: string;
   action?: string;
   repository?: string;
   sender?: string;
   payload: unknown;
-}): string {
-  const payloadRecord = isRecord(input.payload) ? input.payload : {};
-  const issue = isRecord(payloadRecord.issue) ? payloadRecord.issue : null;
-  const pullRequest = isRecord(payloadRecord.pull_request) ? payloadRecord.pull_request : null;
-  const review = isRecord(payloadRecord.review) ? payloadRecord.review : null;
-  const actionText = input.action ? ` ${input.action}` : '';
-  const repositoryText = input.repository ? ` in ${input.repository}` : '';
-  const senderText = input.sender ? ` by ${input.sender}` : '';
+};
 
-  if (input.event === 'issues') {
-    const number = issue && typeof issue.number === 'number' ? issue.number : null;
-    const title = issue && typeof issue.title === 'string' ? issue.title : null;
-    return `Issue${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'issue_comment') {
-    const number = issue && typeof issue.number === 'number' ? issue.number : null;
-    const title = issue && typeof issue.title === 'string' ? issue.title : null;
-    return `Issue comment${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'pull_request' && pullRequest) {
-    const number = pullRequest && typeof pullRequest.number === 'number' ? pullRequest.number : null;
-    const title = pullRequest && typeof pullRequest.title === 'string' ? pullRequest.title : null;
-    return `Pull request${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'pull_request_review' && pullRequest) {
-    const number = pullRequest && typeof pullRequest.number === 'number' ? pullRequest.number : null;
-    const title = pullRequest && typeof pullRequest.title === 'string' ? pullRequest.title : null;
-    const reviewState = review && typeof review.state === 'string' ? ` (${review.state.toLowerCase()})` : '';
-    return `Pull request review${actionText}${repositoryText}: #${number ?? '?'}${title ? ` ${title}` : ''}${reviewState}${senderText}`.trim();
-  }
-
-  if (input.event === 'push') {
-    const ref = typeof payloadRecord.ref === 'string' ? payloadRecord.ref.replace('refs/heads/', '') : null;
-    return `Push${repositoryText}${ref ? ` on ${ref}` : ''}${senderText}`.trim();
-  }
-
-  if (input.event === 'create' || input.event === 'delete') {
-    const refType = typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
-    return `${refType ?? 'ref'}${actionText}${repositoryText}${senderText}`.trim();
-  }
-
-  if (input.event === 'check_run' || input.event === 'check_suite') {
-    return `${input.event}${actionText}${repositoryText}${senderText}`.trim();
-  }
-
-  return `${input.event}${repositoryText}${senderText}`.trim();
+function buildSuffix(action?: string, repository?: string, sender?: string) {
+  return {
+    actionText: action ? ' ' + action : '',
+    repositoryText: repository ? ' in ' + repository : '',
+    senderText: sender ? ' by ' + sender : '',
+  };
 }
 
+function extractIssueRef(issue: unknown): { number: number | null; title: string | null } {
+  if (!isRecord(issue)) return { number: null, title: null };
+  return {
+    number: typeof issue.number === 'number' ? issue.number : null,
+    title: typeof issue.title === 'string' ? issue.title : null,
+  };
+}
+
+function formatIssueRef(
+  prefix: string,
+  issue: unknown,
+  suffix: { actionText: string; repositoryText: string; senderText: string },
+) {
+  const { number, title } = extractIssueRef(issue);
+  const titlePart = title ? ' ' + title : '';
+  return (prefix + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + suffix.senderText).trim();
+}
+
+function formatPullRequestRef(
+  pullRequest: unknown,
+  suffix: { actionText: string; repositoryText: string; senderText: string },
+) {
+  if (!isRecord(pullRequest)) return null;
+  const { number, title } = extractIssueRef(pullRequest);
+  const titlePart = title ? ' ' + title : '';
+  return ('Pull request' + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + suffix.senderText).trim();
+}
+
+type EventFormatter = (
+  payloadRecord: Record<string, unknown>,
+  suffix: { actionText: string; repositoryText: string; senderText: string },
+) => string | null;
+
+const eventFormatters: Record<string, EventFormatter> = {
+  issues: (payloadRecord, suffix) =>
+    formatIssueRef('Issue', payloadRecord.issue, suffix),
+
+  issue_comment: (payloadRecord, suffix) =>
+    formatIssueRef('Issue comment', payloadRecord.issue, suffix),
+
+  pull_request: (payloadRecord, suffix) =>
+    formatPullRequestRef(payloadRecord.pull_request, suffix),
+
+  pull_request_review: (payloadRecord, suffix) => {
+    if (!isRecord(payloadRecord.pull_request)) return null;
+    const { number, title } = extractIssueRef(payloadRecord.pull_request);
+    const review = payloadRecord.review;
+    const reviewState =
+      isRecord(review) && typeof review.state === 'string'
+        ? ' (' + review.state.toLowerCase() + ')'
+        : '';
+    const titlePart = title ? ' ' + title : '';
+    return ('Pull request review' + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + reviewState + suffix.senderText).trim();
+  },
+
+  push: (payloadRecord, suffix) => {
+    const ref =
+      typeof payloadRecord.ref === 'string'
+        ? payloadRecord.ref.replace('refs/heads/', '')
+        : null;
+    const refPart = ref ? ' on ' + ref : '';
+    return ('Push' + suffix.repositoryText + refPart + suffix.senderText).trim();
+  },
+
+  create: (payloadRecord, suffix) => {
+    const refType =
+      typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
+    return ((refType ?? 'ref') + suffix.actionText + suffix.repositoryText + suffix.senderText).trim();
+  },
+
+  delete: (payloadRecord, suffix) => {
+    const refType =
+      typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
+    return ((refType ?? 'ref') + suffix.actionText + suffix.repositoryText + suffix.senderText).trim();
+  },
+
+  check_run: (_payloadRecord, suffix) =>
+    ('check_run' + suffix.actionText + suffix.repositoryText + suffix.senderText).trim(),
+
+  check_suite: (_payloadRecord, suffix) =>
+    ('check_suite' + suffix.actionText + suffix.repositoryText + suffix.senderText).trim(),
+};
+
 /**
- * Creates wake content for a GitHub App installation event.
+ * Creates human-readable summary text for a GitHub webhook event.
+ * Uses a strategy dispatch map — each handler has cyclomatic complexity ≤2,
+ * making the function easy to test and extend.
  */
+export function summarizeGitHubEvent(input: GitHubEventInput): string {
+  const payloadRecord = isRecord(input.payload) ? (input.payload as Record<string, unknown>) : {};
+  const suffix = buildSuffix(input.action, input.repository, input.sender);
+  const formatter = eventFormatters[input.event];
+  if (formatter) {
+    const result = formatter(payloadRecord, suffix);
+    if (result) return result;
+  }
+  return (input.event + suffix.repositoryText + suffix.senderText).trim();
+}
 export function createGitHubInstallWakeContent(input: {
   agentId: string;
   installationId: number;
