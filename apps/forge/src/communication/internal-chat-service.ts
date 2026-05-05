@@ -84,6 +84,7 @@ import { createInternalChatAccountOps } from "./internal-chat-account-ops";
 import { createInternalChatParticipants } from "./internal-chat-participants";
 import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatListing } from "./internal-chat-listing";
+import { createInternalChatGroupsAccount } from "./internal-chat-groups-account";
 import {
   ConversationNotFoundError,
   ChatGroupNotFoundError,
@@ -559,7 +560,7 @@ export function createInternalChatService(
     participantAccountId: string;
     role?: string;
   }) {
-    return accountOps.addMemberToGroupByAccount(input);
+    return groupsAccount.addMemberToGroupByAccount(input);
   }
 
   async function updateMemberRoleByAccount(input: {
@@ -568,7 +569,7 @@ export function createInternalChatService(
     participantAccountId: string;
     role: string;
   }) {
-    return accountOps.updateMemberRoleByAccount(input);
+    return groupsAccount.updateMemberRoleByAccount(input);
   }
 
   async function removeMemberFromGroupByAccount(input: {
@@ -576,7 +577,7 @@ export function createInternalChatService(
     groupId: string;
     participantAccountId: string;
   }) {
-    return accountOps.removeMemberFromGroupByAccount(input);
+    return groupsAccount.removeMemberFromGroupByAccount(input);
   }
 
   async function updateGroupByAccount(input: {
@@ -585,7 +586,7 @@ export function createInternalChatService(
     name?: string;
     conversationKey?: string;
   }) {
-    return accountOps.updateGroupByAccount(input);
+    return groupsAccount.updateGroupByAccount(input);
   }
 
   async function archiveConversationByAccount(input: {
