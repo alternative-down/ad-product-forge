@@ -1,5 +1,5 @@
 
-export function validateCronExpression(expression: string): boolean {
+function validateCronExpression(expression: string): boolean {
   try {
     parseExpression(expression, { utc: true });
     return true;

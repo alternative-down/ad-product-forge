@@ -342,7 +342,7 @@ export class OperationalMemoryConversationMemory {
 }
 
 
-export function estimateMessageUnits(message: ConversationMessage) {
+function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
   if (text) {

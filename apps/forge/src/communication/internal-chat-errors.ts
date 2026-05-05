@@ -25,6 +25,7 @@ export class ChatGroupNotFoundError extends Error {
 }
 
 
+// fallow-ignore-next-line unused-export
 export class GroupMemberAlreadyExistsError extends Error {
   readonly participantSlug: string;
 
@@ -45,6 +46,7 @@ export class ChatGroupAlreadyExistsError extends Error {
   }
 }
 
+// fallow-ignore-next-line unused-export
 export class OnlyAdminsCanUpdateGroupError extends Error {
   constructor() {
     super("Only admins can update the group.");
@@ -52,6 +54,7 @@ export class OnlyAdminsCanUpdateGroupError extends Error {
   }
 }
 
+// fallow-ignore-next-line unused-export
 export class NameRequiredForNewGroupError extends Error {
   constructor() {
     super("name is required when creating a group.");
@@ -59,6 +62,7 @@ export class NameRequiredForNewGroupError extends Error {
   }
 }
 
+// fallow-ignore-next-line unused-export
 export class InternalChatParticipantNotFoundError extends Error {
   readonly participantKey: string;
 
@@ -101,6 +105,7 @@ export class ExternalAccountNotFoundError extends Error {
   }
 }
 
+// fallow-ignore-next-line unused-export
 export class InternalChatAccountSlugAlreadyExistsError extends Error {
   readonly slug: string;
 
@@ -111,6 +116,7 @@ export class InternalChatAccountSlugAlreadyExistsError extends Error {
   }
 }
 
+// fallow-ignore-next-line unused-export
 export class DirectConversationFailedError extends Error {
   constructor() {
     super("Failed to create direct conversation.");

@@ -24,7 +24,7 @@ export function createAgentProfileForm(agent: AgentDetail): AgentProfileForm {
   };
 }
 
-export function getAgentInitials(name: string) {
+function getAgentInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {

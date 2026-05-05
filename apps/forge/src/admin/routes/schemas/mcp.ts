@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// fallow-ignore-next-line unused-export
 export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   z.object({
     transport: z.literal('stdio'),
@@ -28,6 +29,7 @@ export const createAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
+// fallow-ignore-next-line unused-export
 export const updateAgentMcpServerSchema = z
   .object({
     agentId: z.string().min(1),
@@ -39,6 +41,7 @@ export const updateAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
+// fallow-ignore-next-line unused-export
 export const deleteAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
@@ -58,18 +61,21 @@ export const deleteSystemMcpServerSchema = z.object({
   serverId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
   isActive: z.boolean().default(true),
 });
 
+// fallow-ignore-next-line unused-export
 export const setAgentMcpServerActiveSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   isActive: z.boolean(),
 });
 
+// fallow-ignore-next-line unused-export
 export const detachAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),

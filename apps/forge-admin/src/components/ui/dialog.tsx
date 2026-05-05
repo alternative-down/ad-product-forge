@@ -150,11 +150,15 @@ export {
   Dialog,
   DialogClose,
   DialogContent,
+// fallow-ignore-next-line unused-export
   DialogDescription,
   DialogFooter,
   DialogHeader,
+// fallow-ignore-next-line unused-export
   DialogOverlay,
+// fallow-ignore-next-line unused-export
   DialogPortal,
   DialogTitle,
+// fallow-ignore-next-line unused-export
   DialogTrigger,
 }

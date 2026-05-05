@@ -159,7 +159,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
   return null;
 }
 
-export function mergeToolLogMessages(messages: Array<{
+function mergeToolLogMessages(messages: Array<{
   id: string;
   role: string;
   threadId: string;
@@ -327,7 +327,7 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
   }
 }
 
-export async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
+async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
   const agent = await db.query.agents.findFirst({
     where: eq(agents.id, agentId),
   });

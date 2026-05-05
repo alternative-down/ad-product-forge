@@ -3,6 +3,7 @@ export const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const githubManifestConfigSchema = z.object({
   permissions: z.object({
     administration: z.boolean(),
@@ -25,6 +26,7 @@ export const githubManifestConfigSchema = z.object({
   }),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateAgentGitHubManifestConfigSchema = z.object({
   agentId: z.string().min(1),
   manifestConfig: githubManifestConfigSchema,
@@ -60,6 +62,7 @@ export const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const roleCapabilitySchema = z.object({
   roleId: z.string().min(1),
   capabilityId: z.string().min(1),
@@ -70,16 +73,19 @@ export const createRoleSchema = z.object({
   description: z.string().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateRoleSchema = z.object({
   roleId: z.string().min(1),
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
 });
 
+// fallow-ignore-next-line unused-export
 export const deleteRoleSchema = z.object({
   roleId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const createScheduleSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
@@ -92,6 +98,7 @@ export const createScheduleSchema = z.object({
   wakeWhenRunning: z.boolean().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateScheduleSchema = z.object({
   agentId: z.string().min(1),
   scheduleId: z.string().min(1),
@@ -106,25 +113,30 @@ export const updateScheduleSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const deleteScheduleSchema = z.object({
   agentId: z.string().min(1),
   scheduleId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const agentActionSchema = z.object({
   agentId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const clearAgentHistorySchema = z.object({
   agentId: z.string().min(1),
   includeLongTermMemoryThread: z.boolean().default(true),
 });
 
+// fallow-ignore-next-line unused-export
 export const agentLongTermMemoryRecallSearchSchema = z.object({
   agentId: z.string().min(1),
   query: z.string(),
 });
 
+// fallow-ignore-next-line unused-export
 export const adminInternalChatSendSchema = z.object({
   agentId: z.string().min(1),
   targetKey: z.string().min(1).optional(),
@@ -133,12 +145,14 @@ export const adminInternalChatSendSchema = z.object({
   content: z.string().trim().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const createExternalInternalChatAccountSchema = z.object({
   slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   displayName: z.string().trim().min(1),
   description: z.string().trim().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateExternalInternalChatAccountSchema = z.object({
   accountId: z.string().min(1),
   slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
@@ -146,14 +160,17 @@ export const updateExternalInternalChatAccountSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const deleteExternalInternalChatAccountSchema = z.object({
   accountId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const internalChatAccountIdQuerySchema = z.object({
   accountId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const internalChatMessagesQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -161,6 +178,7 @@ export const internalChatMessagesQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+// fallow-ignore-next-line unused-export
 export const internalChatMessageAttachmentQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -168,6 +186,7 @@ export const internalChatMessageAttachmentQuerySchema = z.object({
   attachmentName: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const createInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   type: z.enum(['dm', 'group']),
@@ -175,6 +194,7 @@ export const createInternalChatConversationSchema = z.object({
   participantAccountIds: z.array(z.string().min(1)).min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const sendInternalChatConversationMessageSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -191,22 +211,26 @@ export const sendInternalChatConversationMessageSchema = z.object({
   },
 );
 
+// fallow-ignore-next-line unused-export
 export const updateInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   name: z.string().trim().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const archiveInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const internalChatGroupMembersQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const addInternalChatGroupMemberSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -214,6 +238,7 @@ export const addInternalChatGroupMemberSchema = z.object({
   role: z.enum(['admin', 'normal']).default('normal'),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateInternalChatGroupMemberRoleSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -221,6 +246,7 @@ export const updateInternalChatGroupMemberRoleSchema = z.object({
   role: z.enum(['admin', 'normal']),
 });
 
+// fallow-ignore-next-line unused-export
 export const removeInternalChatGroupMemberSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -232,11 +258,13 @@ export const topUpAgentContractSchema = z.object({
   amountUsd: z.coerce.number().positive(),
 });
 
+// fallow-ignore-next-line unused-export
 export const adjustAgentContractBudgetSchema = z.object({
   agentId: z.string().min(1),
   newBudgetUsd: z.coerce.number().min(0),
 });
 
+// fallow-ignore-next-line unused-export
 export const renewAgentContractSchema = z.object({
   agentId: z.string().min(1),
   newBudgetUsd: z.coerce.number().min(0),
@@ -257,6 +285,7 @@ export const changeAgentRoleSchema = z.object({
   roleId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateAgentConfigSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
@@ -279,6 +308,7 @@ export const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
+// fallow-ignore-next-line unused-export
 export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   z.object({
     transport: z.literal('stdio'),
@@ -298,6 +328,7 @@ export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   }),
 ]);
 
+// fallow-ignore-next-line unused-export
 export const createAgentMcpServerSchema = z
   .object({
     agentId: z.string().min(1),
@@ -307,6 +338,7 @@ export const createAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
+// fallow-ignore-next-line unused-export
 export const updateAgentMcpServerSchema = z
   .object({
     agentId: z.string().min(1),
@@ -318,12 +350,14 @@ export const updateAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
+// fallow-ignore-next-line unused-export
 export const deleteAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   serverId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const upsertSystemMcpServerSchema = z
   .object({
     serverId: z.string().min(1).optional(),
@@ -333,50 +367,60 @@ export const upsertSystemMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
+// fallow-ignore-next-line unused-export
 export const deleteSystemMcpServerSchema = z.object({
   serverId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
   isActive: z.boolean().default(true),
 });
 
+// fallow-ignore-next-line unused-export
 export const setAgentMcpServerActiveSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   isActive: z.boolean(),
 });
 
+// fallow-ignore-next-line unused-export
 export const detachAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const uploadAgentSkillsSchema = z.object({
   agentId: z.string().min(1),
   archiveBase64: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const deleteAgentSkillSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const uploadSystemSkillsSchema = z.object({
   archiveBase64: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const deleteSystemSkillSchema = z.object({
   skillName: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const installGlobalSkillForAgentSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const publishAgentSkillToGlobalSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
@@ -384,6 +428,7 @@ export const publishAgentSkillToGlobalSchema = z.object({
 
 export const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
+// fallow-ignore-next-line unused-export
 export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
     providerType: z.literal('migadu'),
@@ -421,10 +466,12 @@ export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType'
   }),
 ]);
 
+// fallow-ignore-next-line unused-export
 export const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
 });
 
+// fallow-ignore-next-line unused-export
 export const upsertLlmProfileSchema = z.object({
   profileId: z.string().min(1).optional(),
   name: z.string().min(1),
@@ -435,16 +482,19 @@ export const upsertLlmProfileSchema = z.object({
   isEnabled: z.boolean().default(true),
 });
 
+// fallow-ignore-next-line unused-export
 export const deleteLlmProfileSchema = z.object({
   profileId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const updateLlmDefaultsSchema = z.object({
   primaryProfileId: z.string().min(1),
   omProfileId: z.string().min(1),
   hiringRhProfileId: z.string().min(1),
 });
 
+// fallow-ignore-next-line unused-export
 export const upsertLlmModelPriceSchema = z.object({
   modelKey: z.string().min(1),
   inputPerMillionUsd: z.coerce.number().nonnegative(),
@@ -452,6 +502,7 @@ export const upsertLlmModelPriceSchema = z.object({
   outputPerMillionUsd: z.coerce.number().nonnegative(),
 });
 
+// fallow-ignore-next-line unused-export
 export const upsertSystemSettingsSchema = z.object({
   companyName: z.string(),
   companyContext: z.string(),
@@ -481,6 +532,7 @@ export const upsertSystemSettingsSchema = z.object({
 
 export const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
 
+// fallow-ignore-next-line unused-export
 export const syncOauthSchema = z.object({
   providerId: oauthSyncProviderSchema.default('all'),
 });
@@ -491,6 +543,7 @@ export const createInvestmentSchema = z.object({
   effectiveAt: z.string().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const createPayableSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('single'),
@@ -509,11 +562,13 @@ export const createPayableSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
+// fallow-ignore-next-line unused-export
 export const ledgerEntryActionSchema = z.object({
   entryId: z.string().min(1),
   effectiveAt: z.string().optional(),
 });
 
+// fallow-ignore-next-line unused-export
 export const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),

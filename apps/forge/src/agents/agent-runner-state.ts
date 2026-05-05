@@ -10,7 +10,7 @@ export interface RunEpochState {
   activeRunId: string | null;
 }
 
-export function createRunEpochState(): RunEpochState {
+function createRunEpochState(): RunEpochState {
   return {
     activeRunEpoch: 0,
     activeStepEpoch: 0,
@@ -20,7 +20,7 @@ export function createRunEpochState(): RunEpochState {
 }
 
 /** Advances the run epoch, resetting step and generate counters. */
-export function advanceRunEpoch(state: RunEpochState): number {
+function advanceRunEpoch(state: RunEpochState): number {
   state.activeRunEpoch += 1;
   state.activeStepEpoch = 0;
   state.activeGenerateToken = 0;
@@ -29,7 +29,7 @@ export function advanceRunEpoch(state: RunEpochState): number {
 }
 
 /** Returns true if the given runEpoch is older than the current active run. */
-export function isStaleRun(state: RunEpochState, runEpoch: number): boolean {
+function isStaleRun(state: RunEpochState, runEpoch: number): boolean {
   return runEpoch !== state.activeRunEpoch;
 }
 
@@ -56,7 +56,7 @@ export interface BackoffState {
   nextStepAt: number | null;
 }
 
-export function createBackoffState(): BackoffState {
+function createBackoffState(): BackoffState {
   return {
     backoffMs: 60_000,
     instant: false,
@@ -65,13 +65,13 @@ export function createBackoffState(): BackoffState {
 }
 
 /** Doubles backoff, capped at 5 minutes. */
-export function nextBackoff(state: BackoffState): number {
+function nextBackoff(state: BackoffState): number {
   state.backoffMs = Math.min(state.backoffMs * 2, 300_000);
   return state.backoffMs;
 }
 
 /** Resets backoff to default. */
-export function resetBackoff(state: BackoffState): void {
+function resetBackoff(state: BackoffState): void {
   state.backoffMs = 60_000;
   state.instant = false;
 }
@@ -80,7 +80,7 @@ export function resetBackoff(state: BackoffState): void {
  * Calculates the delay in ms before the next step.
  * Returns 0 if no delay is needed.
  */
-export function calculateDelayMs(
+function calculateDelayMs(
   state: BackoffState,
   options: {
     hasPendingMessages: boolean;
@@ -112,24 +112,24 @@ export interface ProgressState {
   lastStepStage: string | null;
 }
 
-export function createProgressState(): ProgressState {
+function createProgressState(): ProgressState {
   return {
     lastStepStartedAt: null,
     lastStepStage: null,
   };
 }
 
-export function startStep(state: ProgressState): number {
+function startStep(state: ProgressState): number {
   state.lastStepStartedAt = Date.now();
   state.lastStepStage = 'step-started';
   return state.lastStepStartedAt;
 }
 
-export function setStepStage(state: ProgressState, stage: string): void {
+function setStepStage(state: ProgressState, stage: string): void {
   state.lastStepStage = stage;
 }
 
-export function getStepDuration(state: ProgressState): number | null {
+function getStepDuration(state: ProgressState): number | null {
   if (!state.lastStepStartedAt) return null;
   return Date.now() - state.lastStepStartedAt;
 }

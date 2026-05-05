@@ -77,7 +77,7 @@ export function useHomeConversations() {
   return value;
 }
 
-export function createLocalId(prefix: string) {
+function createLocalId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 

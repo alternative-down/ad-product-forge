@@ -679,7 +679,7 @@ export function toApplicationSummary(application: z.infer<typeof ApplicationSche
   };
 }
 
-export function toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
+function toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
   return {
     applicationUuid: application.uuid,
     name: application.name ?? null,
@@ -691,7 +691,7 @@ export function toApplicationDetails(application: z.infer<typeof ApplicationSche
   };
 }
 
-export function toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
+function toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
   return {
     envId: env.uuid ?? env.id ?? env.key,
     key: env.key,
@@ -704,7 +704,7 @@ export function toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
   };
 }
 
-export function removeUndefined(record: Record<string, unknown>) {
+function removeUndefined(record: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
@@ -722,7 +722,7 @@ export function buildRequestError(method: string, path: string, status: number, 
   return `Coolify API ${method} ${path} failed with ${status}: ${payload}`;
 }
 
-export function toTimestamp(value: string | number | null) {
+function toTimestamp(value: string | number | null) {
   if (typeof value === 'number') {
     return value;
   }
