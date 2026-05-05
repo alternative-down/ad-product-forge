@@ -81,6 +81,8 @@ import {
 import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
 import { createInternalChatAccountOps } from "./internal-chat-account-ops";
+import { createInternalChatParticipants } from "./internal-chat-participants";
+import { createInternalChatUnread } from "./internal-chat-unread";
 import {
   ConversationNotFoundError,
   ChatGroupNotFoundError,
@@ -825,25 +827,7 @@ export function createInternalChatService(
 
   // === Unread / Recent ────────────────────────────────────────────────────
   async function getUnreadSummary(agentId: string) {
-    const rows = await db
-      .select({
-        unreadMessageCount: sql<number>`count(*)`,
-        unreadConversationCount: sql<number>`count(distinct ${internalChatMessages.conversationId})`,
-      })
-      .from(internalChatMessageReads)
-      .innerJoin(
-        internalChatMessages,
-        eq(internalChatMessages.id, internalChatMessageReads.messageId),
-      )
-      .where(and(
-        eq(internalChatMessageReads.agentId, agentId),
-        isNull(internalChatMessageReads.readAt),
-      ));
-
-    return {
-      unreadMessageCount: rows[0]?.unreadMessageCount ?? 0,
-      unreadConversationCount: rows[0]?.unreadConversationCount ?? 0,
-    };
+    return unread.getUnreadSummary(agentId);
   }
 
   async function listRecentConversations(agentId: string, limit: number) {
@@ -855,26 +839,11 @@ export function createInternalChatService(
 
   // === Internal Helpers ────────────────────────────────────────────────────
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
-    const account = await getRequiredAgentAccount(agentId);
-    return listGroupMembersOrDmPeersByAccount(account.id, conversationId);
+    return participants.listGroupMembersOrDmPeers(agentId, conversationId);
   }
 
   async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string) {
-    const rows = await db
-      .select({
-        accountId: internalChatConversationMembers.accountId,
-        agentId: internalChatAccounts.agentId,
-        slug: internalChatAccounts.slug,
-        displayName: internalChatAccounts.displayName,
-      })
-      .from(internalChatConversationMembers)
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatConversationMembers.accountId),
-      )
-      .where(eq(internalChatConversationMembers.conversationId, conversationId));
-
-    return sortParticipantsBySelfFirst(rows, accountId);
+    return participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
   }
 
   const getRequiredAccount = accounts.getRequiredAccount;
@@ -974,6 +943,9 @@ export function createInternalChatService(
     listGroupMembersByAccount: groups.listGroupMembersByAccount,
     getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
+
+  const participants = createInternalChatParticipants(db);
+  const unread = createInternalChatUnread(db);
 
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
