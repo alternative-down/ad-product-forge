@@ -113,17 +113,11 @@ export function createAdminReadModel(input: {
     getSystemLlm: systemRM.getSystemLlm,
     getSystemSettings: systemRM.getSystemSettings,
     getApplicationMigrations,
-    getFinance: async () => {
-      const [overview, recurringPayables] = await Promise.all([
-        getFinanceOverview(finance),
-        getRecurringPayables(payables),
-      ]);
-
-      return {
-        ...overview,
-        recurringPayables,
-      };
-    },
+    getFinanceBalance: () => finance.getCompanyCashBalance(),
+    getFinanceSummary: () => finance.getCompanyCashSummary(),
+    getFinanceMovements: (limit: number, offset: number) =>
+      finance.listCompanyCashMovements({ limit, offset }),
+    getFinanceRecurring: () => getRecurringPayables(payables),
     getFinanceContracts: financeRM.getFinanceContracts,
   };
 }
