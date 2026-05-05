@@ -278,7 +278,6 @@ export class AgentLongTermMemoryRecall {
         windowSize: recallThreadState.windowSize,
       });
       const indexStats = await this.getIndexStats();
-
       if (this.shouldSkipRecallInjection({
         graph,
         results,
@@ -292,8 +291,9 @@ export class AgentLongTermMemoryRecall {
           steps: input.steps,
           queryText,
           recallConfig,
-          recallSearch,
           indexStats,
+          dedupedGraph: graph,
+          filteredResults: results,
         }, {
           threadId: input.threadId,
           resourceId: input.resourceId,
@@ -315,27 +315,20 @@ export class AgentLongTermMemoryRecall {
         await this.persistRecallSnapshot({
           threadId: input.threadId,
           resourceId: input.resourceId,
+        }, buildLtmRecallSnapshot({
+          lastInitAt: this.lastInitAt,
+          steps: input.steps,
+          queryText,
+          recallConfig,
+          indexStats,
+          dedupedGraph: graph,
+          filteredResults: results,
+        }, {
+          threadId: input.threadId,
+          resourceId: input.resourceId,
         }, {
           status: 'hit',
-          query: queryText,
-          resultIds: recallSearch.results.map((result) => result.id),
-          resultCount: recallSearch.results.length,
-          resultScores: recallSearch.results.map((result) => result.score ?? 0),
-          graphHit: recallSearch.graph.hit,
-          stepsJson: safeSerializeRecallSteps(input.steps),
-          updatedAt: new Date().toISOString(),
-          lastInitAt: this.lastInitAt,
-          searchMode: recallConfig.searchMode,
-          topK: recallConfig.documentCount,
-          graphTopK: recallSearch.effectiveGraphTopK,
-          graphThreshold: recallSearch.effectiveGraphThreshold,
-          graphRandomWalkSteps: recallConfig.graphRandomWalkSteps,
-          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-          workspaceFileCount: indexStats.workspaceFileCount,
-          memoryFileCount: indexStats.memoryFileCount,
-          checkpointFileCount: indexStats.checkpointFileCount,
-          error: null,
-        }, nextHistory);
+        }), nextHistory);
         return null;
       }
 
@@ -347,8 +340,9 @@ export class AgentLongTermMemoryRecall {
         steps: input.steps,
         queryText,
         recallConfig,
-        recallSearch,
         indexStats,
+        dedupedGraph: graph,
+        filteredResults: results,
       }, {
         threadId: input.threadId,
         resourceId: input.resourceId,

@@ -11,6 +11,8 @@ export interface LtmSnapshotContext {
 }
 
 export interface LtmSnapshotDeps {
+  filteredResults?: Array<{ id: string; score?: number }>;
+  dedupedGraph?: { hit: boolean; score?: number; context: string };
   lastInitAt: string | null;
   steps: unknown[];
   queryText?: string;
@@ -55,16 +57,20 @@ export function buildLtmRecallSnapshot(
 ): LongTermMemoryRecallSnapshot {
   const { status, error = null } = options;
   const { recallConfig, recallSearch, indexStats } = deps;
-  const results = recallSearch?.results ?? [];
-  const graph = recallSearch?.graph ?? { hit: false };
+  const allResults = recallSearch?.results ?? [];
+  // dedupedGraph reflects what partitionRecallResults decided; prefer it so the
+  // snapshot correctly records whether graph results were actually injected
+  // after deduplication filtering.
+  const graphHit = deps.dedupedGraph?.hit ?? recallSearch?.graph?.hit ?? false;
+  const results = deps.filteredResults ?? allResults;
 
   return {
     status,
     query: deps.queryText ?? '',
-    resultIds: graph.hit ? [] : results.map((r) => r.id),
-    resultCount: graph.hit ? 0 : results.length,
-    resultScores: graph.hit ? [] : results.map((r) => r.score ?? 0),
-    graphHit: graph.hit,
+    resultIds: graphHit ? [] : results.map((r) => r.id),
+    resultCount: graphHit ? 0 : results.length,
+    resultScores: graphHit ? [] : results.map((r) => r.score ?? 0),
+    graphHit,
     stepsJson: safeSerializeRecallSteps(deps.steps),
     updatedAt: new Date().toISOString(),
     lastInitAt: deps.lastInitAt,
@@ -83,8 +89,6 @@ export function buildLtmRecallSnapshot(
 // RecallSearchResult partition helpers
 // =============================================================================
 
-type PartitionFingerprints = { graph?: string; workspace: string[] };
-
 export interface PartitionRecallResultsInput {
   graph: { hit: boolean; context?: string };
   results: Array<{ id: string; content: string; score?: number }>;
@@ -99,13 +103,14 @@ export interface PartitionRecallResultsOutput {
 
 export function partitionRecallResults(input: PartitionRecallResultsInput): PartitionRecallResultsOutput {
   const seenFingerprints = new Set(input.recentFingerprints);
-  const workspaceFingerprints: PartitionFingerprints['workspace'] = [];
-  let workspaceResults = input.results;
-
-  for (const result of input.results) {
-    const fp = `workspace:${result.id}`;
-    workspaceFingerprints.push(fp);
-  }
+  const workspaceEntries = input.results.map((result) => ({
+    result,
+    fingerprint: `workspace:${result.id}`,
+  }));
+  const workspaceResults = workspaceEntries
+    .filter((entry) => !seenFingerprints.has(entry.fingerprint))
+    .map((entry) => entry.result);
+  const workspaceFingerprints = workspaceEntries.map((e) => e.fingerprint);
 
   const graphFingerprint =
     input.graph.hit && input.graph.context
@@ -120,7 +125,7 @@ export function partitionRecallResults(input: PartitionRecallResultsInput): Part
 
   return {
     graph: graphAllowed
-      ? { ...input.graph, score: 0 }
+      ? { hit: input.graph.hit, score: 0, context: input.graph.context ?? '' }
       : { hit: false, score: 0, context: '' },
     results: graphAllowed ? input.results : workspaceResults,
     historyFingerprints,
@@ -142,7 +147,7 @@ export function buildNextRecallHistory(input: {
     if (!seen.has(fp)) next.push(fp);
   }
   for (const fp of input.candidateFingerprints) {
-    if (!seen.has(fp) && next.length < input.windowSize) next.push(fp);
+    if (fp.length > 0 && !seen.has(fp) && next.length < input.windowSize) next.push(fp);
   }
   return {
     recentFingerprints: next,
