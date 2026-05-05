@@ -141,21 +141,37 @@ function makeCheckpointPayload(overrides?: Partial<{
   reflectionCount: number;
   observationCount: number;
 }>) {
+  // Use a fixed base time so tests can verify timestamp ordering
+  const baseTime = new Date('2025-01-15T10:00:00Z');
+  const ts = (offsetMs) => new Date(baseTime.getTime() + offsetMs).toISOString();
   return {
     threadId: 'thread-1',
     fromGeneration: overrides?.fromGeneration ?? 1,
     toGeneration: overrides?.toGeneration ?? 2,
     checkpointSummary: {
       text: 'checkpoint summary',
-      updatedAt: new Date().toISOString(),
+      updatedAt: ts(9999), // intentionally latest — manifest must NOT use this
     },
     reflections: Array.from(
       { length: overrides?.reflectionCount ?? 0 },
-      (_, i) => ({ text: `reflection ${i + 1}`, createdAt: new Date().toISOString() }),
+      (_, i) => ({
+        text: 'reflection ' + (i + 1),
+        createdAt: ts(i * 1000),
+        recordId: 'ref-' + (i + 1),
+        generationCount: i + 1,
+        tokenCount: 100,
+      }),
     ),
     observations: Array.from(
       { length: overrides?.observationCount ?? 0 },
-      (_, i) => ({ text: `observation ${i + 1}`, createdAt: new Date().toISOString() }),
+      (_, i) => ({
+        text: 'observation ' + (i + 1),
+        createdAt: ts(500 + i * 1000),
+        blockId: 'obs-' + (i + 1),
+        tokenCount: 50,
+        lastObservedAt: ts(500 + i * 1000),
+        reflectedGeneration: null,
+      }),
     ),
   };
 }
@@ -452,6 +468,42 @@ describe('createAgentLongTermMemory', () => {
       expect(persistenceStore.writeRecallIndexStamp).toHaveBeenCalledWith('checkpoint-write');
     });
   });
+    it('manifest uses oldest reflection timestamp, not checkpointSummary.updatedAt', async () => {
+      // Bugfix #1098: checkpoint package createdAt must be the oldest reflection's
+      // createdAt (not the current summary.updatedAt). This preserves temporal
+      // ordering: the checkpoint covers the block from oldest reflection onward.
+      const persistenceStore = makeDefaultPersistenceStore();
+      const workspaceBasePath = await mkdtemp(path.join(tmpdir(), 'forge-ltm-ts-'));
+      temporaryDirectories.push(workspaceBasePath);
+      const agentMemoryPath = path.join(workspaceBasePath, 'memory');
+      await mkdir(agentMemoryPath, { recursive: true });
+      await mkdir(path.join(agentMemoryPath, 'checkpoints'), { recursive: true });
+
+      const ltm = createAgentLongTermMemory({
+        agentId: 'agent-ts-test',
+        agentName: 'Timestamp Test Agent',
+        agentWorkspacePath: workspaceBasePath,
+        agentMemoryPath,
+        model: {}, instructions: 'Test', threadId: 'thread-1', resourceId: 'resource-1',
+        pricingModelKey: 'claude',
+        contractStore: makeDefaultContractStore(),
+        conversationStore: makeDefaultConversationStore(),
+        workspaceActions: makeDefaultWorkspaceActions(),
+        readRuntimeMemorySettings: makeDefaultRuntimeSettingsStore(),
+        persistenceStore,
+      });
+
+      await ltm.start();
+
+      const payload = makeCheckpointPayload({ fromGeneration: 0, toGeneration: 2, reflectionCount: 3 });
+      // reflections: oldest at +0ms, +1s, +2s; checkpointSummary.updatedAt: +9999ms
+      const oldestReflectionTs = '2025-01-15T10:00:00.000Z';
+
+      const manifest = await ltm.onCheckpointAdvanced(payload);
+
+      expect(manifest.createdAt).toBe(oldestReflectionTs);
+      expect(manifest.checkpointSummaryUpdatedAt).toBe(oldestReflectionTs);
+    });
 
   describe('readSnapshot', () => {
     it('returns snapshot with packageCount reflecting persisted packages', async () => {
