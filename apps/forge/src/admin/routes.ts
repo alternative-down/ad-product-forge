@@ -31,6 +31,11 @@ import {
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAdminReadModel } from './read-model';
+import { createFinanceReadModel } from './read-model/finance';
+import { getFinanceOverview } from './read-model/finance-overview';
+import { createCompanyPayables } from '../finance/company-payables';
+import { getRecurringPayables } from './read-model/payables-overview';
+import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
@@ -114,6 +119,22 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     githubApps: input.githubApps,
     internalChat: input.internalChat,
   });
+
+  // Inline finance read model (extracted from createAdminReadModel)
+  const finance = createMicroErpReadModel(input.db);
+  const payables = createCompanyPayables(input.db);
+  const financeRM = createFinanceReadModel({ db: input.db });
+  const financeReadModel = {
+    getFinance: async () => {
+      const [overview, recurringPayables] = await Promise.all([
+        getFinanceOverview(finance),
+        getRecurringPayables(payables),
+      ]);
+      return { ...overview, recurringPayables };
+    },
+    getFinanceContracts: financeRM.getFinanceContracts,
+  };
+
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
   const llmSettings = createLlmSettingsStore(input.db);
@@ -167,7 +188,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
-  registerFinanceReadRoutes(input.httpServer, readModel);
+  registerFinanceReadRoutes(input.httpServer, financeReadModel);
 
   input.httpServer.registerRoute({
     method: 'POST',
