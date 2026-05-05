@@ -25,7 +25,7 @@ export function createOperationalMemoryConversationObserver(
       let result: Awaited<ReturnType<typeof generateText>> | null = null;
 
       try {
-        supportText = await input.loadSupportText?.();
+        supportText = (await input.loadSupportText?.()) ?? undefined;
       } catch (err) {
         console.warn(
           '[createOperationalMemoryConversationObserver] loadSupportText failed',
