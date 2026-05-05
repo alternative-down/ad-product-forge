@@ -102,7 +102,7 @@ export function toOperationsDraft(data: SystemSettings): OperationsDraft {
   };
 }
 
-export function fromOperationsDraft(draft: OperationsDraft, base: SystemSettings): SystemSettings {
+function fromOperationsDraft(draft: OperationsDraft, base: SystemSettings): SystemSettings {
   return {
     ...base,
     stepDelayEnabled: draft.stepDelayEnabled,
