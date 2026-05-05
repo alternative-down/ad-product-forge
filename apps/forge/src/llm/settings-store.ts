@@ -190,44 +190,60 @@ export function createLlmSettingsStore(db: Database) {
     hiringRhProfileId: string;
   }) {
     const parsed = llmDefaultsSchema.parse(input);
+    const profiles = await listProfiles();
+    const profileMap = new Map(profiles.map((profile) => [profile.profileId, profile]));
+
+    for (const profileId of [parsed.primaryProfileId, parsed.omProfileId, parsed.hiringRhProfileId]) {
+      const profile = profileMap.get(profileId);
+
+      if (!profile) {
+        throw new Error(`LLM profile not found: ${profileId}`);
+      }
+
+      if (!profile.isEnabled) {
+        throw new Error(`Default LLM profile must be enabled: ${profile.profileId}`);
+      }
+    }
+
     const now = Date.now();
+    let existing: typeof systemLlmDefaults.$inferSelect | null = null;
 
     try {
-      const existing = await getDefaultsRow();
+      existing = await getDefaultsRow();
+    } catch (err) {
+      forgeDebug('llm', 'Failed to query LLM defaults', { error: err });
+      throw err;
+    }
 
-      if (existing) {
-        try {
-          await db
-            .update(systemLlmDefaults)
-            .set({
-              primaryProfileId: parsed.primaryProfileId,
-              omProfileId: parsed.omProfileId,
-              hiringRhProfileId: parsed.hiringRhProfileId,
-              updatedAt: now,
-            })
-            .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
-        } catch (err) {
-          forgeDebug('llm', 'Failed to update LLM defaults', { error: err });
-          throw err;
-        }
-      } else {
-        try {
-          await db.insert(systemLlmDefaults).values({
-            id: DEFAULTS_ROW_ID,
+    if (existing) {
+      try {
+        await db
+          .update(systemLlmDefaults)
+          .set({
             primaryProfileId: parsed.primaryProfileId,
             omProfileId: parsed.omProfileId,
             hiringRhProfileId: parsed.hiringRhProfileId,
-            createdAt: now,
             updatedAt: now,
-          });
-        } catch (err) {
-          forgeDebug('llm', 'Failed to insert LLM defaults', { error: err });
-          throw err;
-        }
+          })
+          .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
+      } catch (err) {
+        forgeDebug('llm', 'Failed to update LLM defaults', { error: err });
+        throw err;
       }
-    } catch (err) {
-      forgeDebug('llm', 'Failed to upsert LLM defaults', { error: err });
-      throw err;
+    } else {
+      try {
+        await db.insert(systemLlmDefaults).values({
+          id: DEFAULTS_ROW_ID,
+          primaryProfileId: parsed.primaryProfileId,
+          omProfileId: parsed.omProfileId,
+          hiringRhProfileId: parsed.hiringRhProfileId,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } catch (err) {
+        forgeDebug('llm', 'Failed to insert LLM defaults', { error: err });
+        throw err;
+      }
     }
 
     return parsed;
