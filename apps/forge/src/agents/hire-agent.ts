@@ -19,12 +19,13 @@ import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../datab
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
+import { createCoolifyManager } from '../coolify/manager';
+import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import { forgeDebug } from '@forge-runtime/core';
-
 
 export type HireInternalAgentInput = {
   agentId?: string;
@@ -48,9 +49,16 @@ export type HireInternalAgentInput = {
   internalChat: InternalChatService;
 };
 
+function makePerAgentCoolify(db: Database): CoolifyManager {
+  const integrations = createSystemIntegrationStore(db);
+  return createCoolifyManager({ integrations });
+}
+
 export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
   const agentId = input.agentId ?? createId();
   const now = Date.now();
+  const coolify = input.coolify ?? makePerAgentCoolify(db);
+
   const shouldProvisionEmail = input.emailMailboxes ? await input.emailMailboxes.isConfigured() : false;
   const provisionedMailbox = shouldProvisionEmail
     ? await input.emailMailboxes!.provisionMailbox({
@@ -111,7 +119,6 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
           encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
           createdAt: now,
         };
-
         await tx.insert(agentProviders).values(providerRecord);
       }
     });
@@ -138,7 +145,6 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       }
       throw err;
     }
-
     try {
       await input.schedules.createHeartbeatSchedule(agentId);
     } catch (err) {
@@ -161,7 +167,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         workspaceBasePath: input.workspaceBasePath,
         githubApps: input.githubApps,
         emailMailboxes: input.emailMailboxes,
-        coolify: input.coolify,
+        coolify,
         schedules: input.schedules,
         internalChat: input.internalChat,
       });
@@ -169,7 +175,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       // Rollback: unregister chat account and heartbeat
       try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
-      
+
       await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
       await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
       await db.delete(agents).where(eq(agents.id, agentId));
@@ -186,7 +192,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       // Try to clean up what we can — runtime was loaded but not registered
       try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
-      
+
       await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
       await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
       await db.delete(agents).where(eq(agents.id, agentId));
@@ -206,12 +212,11 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     // so a rollback-style delete here is safe even if transaction committed
     // the inserts but the external ops (loadAgent etc.) failed.
     try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
-    
+
     await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
     await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
     await db.delete(agents).where(eq(agents.id, agentId));
     getInternalAgentRegistry().remove(agentId);
-
     if (provisionedMailbox && input.emailMailboxes) {
       try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
     }
