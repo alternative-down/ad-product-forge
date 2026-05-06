@@ -3,11 +3,24 @@ import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
+import { createSystemIntegrationStore } from '../system-integrations/store';
+import { createAgentEmailManager, type AgentEmailManager } from '../email/migadu-manager';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
   runner: InternalAgentRunner;
 };
+
+/**
+ * Creates a per-agent AgentEmailManager instance.
+ * Call this for each agent to get an isolated email manager.
+ * Exported so callers (admin routes, hire/terminate) can create per-agent managers
+ * instead of sharing a single global instance.
+ */
+export function createPerAgentEmailManager(db: Database): AgentEmailManager {
+  const integrations = createSystemIntegrationStore(db);
+  return createAgentEmailManager({ db, integrations });
+}
 
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
@@ -16,7 +29,15 @@ function createInternalAgentRegistry() {
   async function loadAll(db: Database, config: AgentLoaderConfig) {
     loaderConfig = config;
     const existingAgentIds = new Set(agents.keys());
-    const runtimes = await loadAgents(db, config);
+
+    const perAgentEmailMailboxes = createPerAgentEmailManager(db);
+
+    const perAgentConfig: AgentLoaderConfig = {
+      ...config,
+      emailMailboxes: perAgentEmailMailboxes,
+    };
+
+    const runtimes = await loadAgents(db, perAgentConfig);
 
     for (const runtime of runtimes.values()) {
       await add(db, runtime);
@@ -43,14 +64,17 @@ function createInternalAgentRegistry() {
       runtime,
       runner: null as InternalAgentRunner | null,
     };
+
     const runner = createAgentRunner(db, runtime, {
       workspaceBasePath: loaderConfig?.workspaceBasePath,
       reloadRuntime: async () => {
         if (!loaderConfig) {
           throw new Error('Agent loader config is not available for runtime reload');
         }
+        const reloadEmailMailboxes = createPerAgentEmailManager(db);
         return loadAgent(db, {
           ...loaderConfig,
+          emailMailboxes: reloadEmailMailboxes,
           agentId: runtime.id,
         });
       },
@@ -58,6 +82,7 @@ function createInternalAgentRegistry() {
         entry.runtime = nextRuntime;
       },
     });
+
     entry.runner = runner;
     const nextEntry = entry as InternalAgentEntry;
 
@@ -99,7 +124,7 @@ function createInternalAgentRegistry() {
   }
 
   function get(agentId: string) {
-    return agents.get(agentId) ?? null;
+    return agents.get(AgentId) ?? null;
   }
 
   function list() {
