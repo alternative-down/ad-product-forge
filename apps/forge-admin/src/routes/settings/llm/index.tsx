@@ -13,9 +13,9 @@ import {
 } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { LlmProfileDialog } from '../../integrations/-llm-profile-form';
-import { OauthSection } from '../../integrations/-oauth-section';
-import { ProfilesSection } from '../../integrations/-profiles-section';
+import { LlmProfileDialog } from '../../../components/integrations/llm-profile-form';
+import { OauthSection } from '../../../components/integrations/oauth-section';
+import { ProfilesSection } from '../../../components/integrations/profiles-section';
 
 export const Route = createFileRoute('/settings/llm/')({
   component: SettingsLlmProfilesRoute,
