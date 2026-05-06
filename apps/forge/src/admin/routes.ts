@@ -78,7 +78,20 @@ import {
 
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
-import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes } from './routes/agents/index.js';
+import {
+  registerAgentReadRoutes,
+  registerAgentOperationRoutes,
+  registerAgentWriteOpsRoutes,
+  registerAgentStepsRoutes,
+  registerAgentConversationsRoutes,
+  registerAgentMemoryRoutes,
+  registerAgentMetricsRoutes,
+  registerAgentContractRoutes,
+  registerAgentMcpRoutes,
+  registerAgentSchedulesRoutes,
+  registerAgentNotificationsRoutes,
+  registerAgentBaseRoutes,
+} from './routes/agents/index.js';
 import {
   normalizeOptionalText,
   normalizeJsonText,
@@ -189,6 +202,47 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
   registerFinanceReadRoutes(input.httpServer, financeReadModel);
+
+  // Fragmented agent detail routes (#1587)
+  registerAgentBaseRoutes(input.httpServer, {
+    getAgent: readModel.getAgent,
+  });
+  registerAgentStepsRoutes(input.httpServer, {
+    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
+    listAgentRecentConversations: readModel.listAgentRecentConversations,
+    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
+    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
+  });
+  registerAgentConversationsRoutes(input.httpServer, {
+    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
+    listAgentRecentConversations: readModel.listAgentRecentConversations,
+    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
+    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
+  });
+  registerAgentMemoryRoutes(input.httpServer, {
+    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
+    listAgentRecentConversations: readModel.listAgentRecentConversations,
+    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
+    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
+  });
+  registerAgentMetricsRoutes(input.httpServer, {
+    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
+    listAgentRecentConversations: readModel.listAgentRecentConversations,
+    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
+    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
+  });
+  registerAgentContractRoutes(input.httpServer, {
+    listAgentContracts: readModel.listAgentContracts,
+  });
+  registerAgentMcpRoutes(input.httpServer, {
+    listAgentMcpServers: readModel.listAgentMcpServers,
+  });
+  registerAgentSchedulesRoutes(input.httpServer, {
+    listAgentSchedules: readModel.listAgentSchedules,
+  });
+  registerAgentNotificationsRoutes(input.httpServer, {
+    listAgentNotifications: readModel.listAgentNotifications,
+  });
 
   input.httpServer.registerRoute({
     method: 'POST',

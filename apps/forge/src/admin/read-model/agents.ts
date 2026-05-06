@@ -84,6 +84,12 @@ export interface AgentReadModel {
     limit: number;
     offset: number;
   }) => Promise<unknown>;
+  // Sub-resource queries for fragmented routes (#1587)
+  listAgentContracts: (agentId: string) => Promise<unknown>;
+  listAgentSchedules: (agentId: string) => Promise<unknown>;
+  listAgentNotifications: (agentId: string) => Promise<unknown>;
+  listAgentMcpServers: (agentId: string) => Promise<unknown>;
+  listAgentLlmProfiles: (agentId: string) => Promise<unknown>;
 }
 
 interface AgentsReadModelDeps {
@@ -755,6 +761,84 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     };
   }
 
+  // ─── Fragmented agent detail routes (#1587) ─────────────────────────────
+  async function listAgentContracts(agentId: string) {
+    return db.query.agentExecutionContracts.findMany({
+      where: eq(agentExecutionContracts.agentId, agentId),
+    });
+  }
+
+  async function listAgentSchedules(agentId: string) {
+    return db.query.agentSchedules.findMany({
+      where: eq(agentSchedules.agentId, agentId),
+    });
+  }
+
+  async function listAgentNotifications(agentId: string) {
+    const rows = await db.query.agentNotifications.findMany({
+      where: eq(agentNotifications.agentId, agentId),
+      orderBy: desc(agentNotifications.createdAt),
+      limit: RECENT_NOTIFICATION_LIMIT,
+    });
+    return rows.map((n) => ({
+      notificationId: n.id,
+      content: n.content,
+      timestamp: n.createdAt,
+      read: n.readAt !== null,
+    }));
+  }
+
+  async function listAgentMcpServers(agentId: string) {
+    const agentMcpRows = await db.query.agentMcpConfigs.findMany({
+      where: eq(agentMcpConfigs.agentId, agentId),
+    });
+    if (agentMcpRows.length === 0) return { servers: [] };
+
+    const serverIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
+    const agentMcpServerRows = await db.query.mcpServerConfigs.findMany({
+      where: inArray(mcpServerConfigs.id, serverIds),
+    });
+
+    const serverIdToLink = new Map(agentMcpRows.map((link) => [link.serverId, link]));
+    return {
+      servers: agentMcpServerRows.map((server) => {
+        const link = serverIdToLink.get(server.id);
+        return {
+          configId: link?.id ?? null,
+          serverId: server.id,
+          name: server.name,
+          description: server.description ?? undefined,
+          transport: server.transport as 'stdio' | 'http_streamable',
+          command: server.command ?? '',
+          argsText: server.args ?? '',
+          envVarsText: server.envVars ?? '',
+          url: server.url ?? '',
+          headersText: server.headers ?? '',
+          isActive: link?.isActive === 1,
+          createdAt: server.createdAt,
+          updatedAt: server.updatedAt,
+        };
+      }),
+    };
+  }
+
+  async function listAgentLlmProfiles(agentId: string) {
+    const agent = await db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+      columns: { modelProfileId: true, omModelProfileId: true },
+    });
+    if (!agent) return { profiles: [] };
+
+    const profileIds = [agent.modelProfileId, agent.omModelProfileId].filter(Boolean);
+    if (profileIds.length === 0) return { profiles: [] };
+
+    const profiles = await db.query.llmProfiles.findMany({
+      where: inArray(llmProfiles.id, profileIds),
+      columns: { id: true, name: true, modelKey: true },
+    });
+    return { profiles };
+  }
+
   return {
     getDashboard,
     listAgents,
@@ -768,5 +852,10 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     getAgentOmDebugExport,
     debugAgentLongTermMemoryRecallSearch,
     listAgentConversationMessages,
+    listAgentContracts,
+    listAgentSchedules,
+    listAgentNotifications,
+    listAgentMcpServers,
+    listAgentLlmProfiles,
   };
 }
