@@ -15,6 +15,7 @@ function createInternalAgentRegistry() {
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
     loaderConfig = config;
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
     const { loadAgents } = await import('./agent-loader');
     const existingAgentIds = new Set(agents.keys());
     const runtimes = await loadAgents(db, config);
@@ -51,6 +52,7 @@ function createInternalAgentRegistry() {
           throw new Error('Agent loader config is not available for runtime reload');
         }
 
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
         const { loadAgent } = await import('./agent-loader');
         return loadAgent(db, {
           ...loaderConfig,

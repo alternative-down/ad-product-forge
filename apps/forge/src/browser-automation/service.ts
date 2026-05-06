@@ -61,6 +61,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       return existing.browser;
     }
 
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
     const { chromium } = await import('playwright');
     const browser = await chromium.launch({ headless: true });
     agentBrowsers.set(agentId, {

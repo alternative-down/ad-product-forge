@@ -93,6 +93,7 @@ export function createRoutingOps(
     if (!code || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
     const { App } = await import('octokit');
     const anonymousOctokit = new App({ userAgent: 'forge-app' });
     try {

@@ -157,6 +157,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
             ? message.source
             : new TextDecoder().decode(message.source);
 
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
         const PostalMime = await import('postal-mime');
         const parsed = await PostalMime.default.parse(source);
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
@@ -221,6 +222,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
             ? message.source
             : new TextDecoder().decode(message.source);
 
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
         const PostalMime = await import('postal-mime');
         const parsed = await PostalMime.default.parse(source);
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());

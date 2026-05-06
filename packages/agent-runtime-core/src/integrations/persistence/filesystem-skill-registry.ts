@@ -35,6 +35,7 @@ export class FilesystemSkillRegistry implements SkillRegistry {
   }
 
   async remove(skillId: string): Promise<void> {
+      // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
     const { rm } = await import('node:fs/promises');
     await rm(this.getFilePath(skillId), { force: true });
   }

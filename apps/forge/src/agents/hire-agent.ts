@@ -124,6 +124,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     });
 
     await input.schedules.createHeartbeatSchedule(agentId);
+    // eslint-disable-next-line no-dynamic-imports — required for CJS/ESM module bridge
     const { loadAgent } = await import('./agent-loader');
     const runtime = await loadAgent(db, {
       agentId,
