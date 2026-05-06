@@ -26,11 +26,16 @@ const DEFAULTS_ROW_ID = 'default';
 
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
-    const rows = await db.query.llmProfiles.findMany({
-      orderBy: (fields, { asc }) => [asc(fields.modelKey)],
-    });
+    try {
+      const rows = await db.query.llmProfiles.findMany({
+        orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+      });
 
-    return rows.map(toProfileRecord);
+      return rows.map(toProfileRecord);
+    } catch (err) {
+      forgeDebug('llm', 'Failed to list LLM profiles', { error: err });
+      throw err;
+    }
   }
 
   async function getDefaults() {
