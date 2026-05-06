@@ -22,7 +22,7 @@ import {
 } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { agent-profile-dialog } from '../components/agents/agent-profile-dialog';
+import { AgentProfileDialog } from '../components/agents/agent-profile-dialog';
 import {
   createAgentProfileForm,
   formatAverageInterval,
@@ -248,7 +248,7 @@ function AgentDetailIndexRoute() {
       {forceIdleMutation.error ? <div className="text-sm text-destructive">{forceIdleMutation.error.message}</div> : null}
       {rewakeupMutation.error ? <div className="text-sm text-destructive">{rewakeupMutation.error.message}</div> : null}
 
-      <agent-profile-dialog
+      <AgentProfileDialog
         open={dialogOpen}
         pending={mutation.isPending}
         form={form}

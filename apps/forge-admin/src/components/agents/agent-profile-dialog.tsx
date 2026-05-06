@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import type { AgentProfileForm } from './-agent-detail-helpers';
 
-export function agent-profile-dialog(input: {
+export function AgentProfileDialog(input: {
   open: boolean;
   pending: boolean;
   form: AgentProfileForm | null;

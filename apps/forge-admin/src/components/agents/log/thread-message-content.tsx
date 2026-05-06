@@ -16,7 +16,7 @@ export function ThreadMessageArticle(input: {
           <div className="text-xs text-muted-foreground">{formatDateTime(input.message.createdAt)}</div>
         </header>
 
-        <thread-message-content message={input.message} />
+        <ThreadMessageContent message={input.message} />
       </div>
     </article>
   );
