@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import {
   internalChatAccounts,
@@ -70,140 +71,228 @@ export function createInternalChatConversations(db: Database) {
    * Returns the account row for a given accountId, throwing if not found.
    */
   async function getRequiredExternalAccount(accountId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.id, accountId),
-    });
-    if (!account) {
-      throw new InternalChatError('account-not-found', `No account found with id: ${accountId}`);
+    try {
+      const account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.id, accountId),
+      });
+      if (!account) {
+        throw new InternalChatError('account-not-found', `No account found with id: ${accountId}`);
+      }
+      if (account.type !== 'external') {
+        throw new InternalChatError('invalid-account-type', `Account ${accountId} is not an external account`);
+      }
+      return account;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `getRequiredExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { accountId },
+      });
+      throw err;
     }
-    if (account.type !== 'external') {
-      throw new InternalChatError('invalid-account-type', `Account ${accountId} is not an external account`);
-    }
-    return account;
   }
 
   /**
    * Returns the account row for a given slug, throwing if not found or not external.
    */
   async function getRequiredAccountBySlug(slug: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.slug, slug),
-    });
-    if (!account) {
-      throw new InternalChatError('account-not-found', `No account found with slug: ${slug}`);
+    try {
+      const account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.slug, slug),
+      });
+      if (!account) {
+        throw new InternalChatError('account-not-found', `No account found with slug: ${slug}`);
+      }
+      if (account.type !== 'external') {
+        throw new InternalChatError('invalid-account-type', `Account ${slug} is not an external account`);
+      }
+      return account;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `getRequiredAccountBySlug failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { slug },
+      });
+      throw err;
     }
-    if (account.type !== 'external') {
-      throw new InternalChatError('invalid-account-type', `Account ${slug} is not an external account`);
-    }
-    return account;
   }
 
   /**
    * Throws if the given agent is not a member of the conversation.
    */
   async function requireConversationMembership(agentId: string, conversationId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, agentId),
-    });
-    if (!account) {
-      throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
+    try {
+      const account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, agentId),
+      });
+      if (!account) {
+        throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
+      }
+      const member = await db.query.internalChatConversationMembers.findFirst({
+        where: and(
+          eq(internalChatConversationMembers.conversationId, conversationId),
+          eq(internalChatConversationMembers.accountId, account.id),
+        ),
+      });
+      if (!member) {
+        throw new InternalChatError('not-a-member', `Account ${account.id} is not a member of conversation ${conversationId}`);
+      }
+      return member;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `requireConversationMembership failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { agentId, conversationId },
+      });
+      throw err;
     }
-    const member = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.conversationId, conversationId),
-        eq(internalChatConversationMembers.accountId, account.id),
-      ),
-    });
-    if (!member) {
-      throw new InternalChatError('not-a-member', `Account ${account.id} is not a member of conversation ${conversationId}`);
-    }
-    return member;
   }
 
   /**
    * Throws if the given account is not a member of the conversation.
    */
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
-    const member = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.conversationId, conversationId),
-        eq(internalChatConversationMembers.accountId, accountId),
-      ),
-    });
-    if (!member) {
-      throw new InternalChatError('not-a-member', `Account ${accountId} is not a member of conversation ${conversationId}`);
+    try {
+      const member = await db.query.internalChatConversationMembers.findFirst({
+        where: and(
+          eq(internalChatConversationMembers.conversationId, conversationId),
+          eq(internalChatConversationMembers.accountId, accountId),
+        ),
+      });
+      if (!member) {
+        throw new InternalChatError('not-a-member', `Account ${accountId} is not a member of conversation ${conversationId}`);
+      }
+      return member;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `requireConversationMembershipByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { accountId, conversationId },
+      });
+      throw err;
     }
-    return member;
   }
 
   /**
    * Returns the conversation row for the given agent + conversationId, throwing if not found.
    */
   async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, agentId),
-    });
-    if (!account) {
-      throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
+    try {
+      const account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, agentId),
+      });
+      if (!account) {
+        throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
+      }
+      const conversation = await db.query.internalChatConversations.findFirst({
+        where: eq(internalChatConversations.id, conversationId),
+      });
+      if (!conversation) {
+        throw new InternalChatError('conversation-not-found', `Conversation ${conversationId} not found`);
+      }
+      return conversation;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `getRequiredConversationForAgent failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { agentId, conversationId },
+      });
+      throw err;
     }
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
-    if (!conversation) {
-      throw new InternalChatError('conversation-not-found', `Conversation ${conversationId} not found`);
-    }
-    return conversation;
   }
 
   /**
    * Returns the conversation row for the given account + conversationId, throwing if not found.
    */
   async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
-    if (!conversation) {
-      throw new InternalChatError('conversation-not-found', `Conversation ${conversationId} not found`);
+    try {
+      const conversation = await db.query.internalChatConversations.findFirst({
+        where: eq(internalChatConversations.id, conversationId),
+      });
+      if (!conversation) {
+        throw new InternalChatError('conversation-not-found', `Conversation ${conversationId} not found`);
+      }
+      return conversation;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `getRequiredConversationForAccount failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { accountId, conversationId },
+      });
+      throw err;
     }
-    return conversation;
   }
 
   /**
    * Returns the group row for the given agent + groupId, throwing if not found or is a DM.
    */
   async function getRequiredGroupForAgent(agentId: string, groupId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, agentId),
-    });
-    if (!account) {
-      throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
+    try {
+      const account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, agentId),
+      });
+      if (!account) {
+        throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
+      }
+      const conversation = await db.query.internalChatConversations.findFirst({
+        where: eq(internalChatConversations.id, groupId),
+      });
+      if (!conversation) {
+        throw new InternalChatError('conversation-not-found', `Group ${groupId} not found`);
+      }
+      if (conversation.type === 'dm') {
+        throw new InternalChatError('not-a-group', `Conversation ${groupId} is a direct message, not a group`);
+      }
+      return conversation;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `getRequiredGroupForAgent failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { agentId, groupId },
+      });
+      throw err;
     }
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, groupId),
-    });
-    if (!conversation) {
-      throw new InternalChatError('conversation-not-found', `Group ${groupId} not found`);
-    }
-    if (conversation.type === 'dm') {
-      throw new InternalChatError('not-a-group', `Conversation ${groupId} is a direct message, not a group`);
-    }
-    return conversation;
   }
 
   /**
    * Returns the group row for the given account + groupId, throwing if not found or is a DM.
    */
   async function getRequiredGroupForAccount(accountId: string, groupId: string) {
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, groupId),
-    });
-    if (!conversation) {
-      throw new InternalChatError('conversation-not-found', `Group ${groupId} not found`);
+    try {
+      const conversation = await db.query.internalChatConversations.findFirst({
+        where: eq(internalChatConversations.id, groupId),
+      });
+      if (!conversation) {
+        throw new InternalChatError('conversation-not-found', `Group ${groupId} not found`);
+      }
+      if (conversation.type === 'dm') {
+        throw new InternalChatError('not-a-group', `Conversation ${groupId} is a direct message, not a group`);
+      }
+      return conversation;
+    } catch (err) {
+      if (err instanceof InternalChatError) throw err;
+      forgeDebug({
+        scope: 'internal-chat-conversations',
+        level: 'error',
+        message: `getRequiredGroupForAccount failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { accountId, groupId },
+      });
+      throw err;
     }
-    if (conversation.type === 'dm') {
-      throw new InternalChatError('not-a-group', `Conversation ${groupId} is a direct message, not a group`);
-    }
-    return conversation;
   }
 
   return {
