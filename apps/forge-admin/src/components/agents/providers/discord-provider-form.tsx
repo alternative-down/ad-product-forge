@@ -14,7 +14,7 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { toDiscordCredentials } from './-provider-credentials';
 
-export function DiscordProviderForm(input: {
+export function discord-provider-form(input: {
   agentId: string;
   credentials: unknown;
   configured: boolean;

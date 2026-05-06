@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 
 import type { ScheduleForm } from './-schedule-helpers';
 
-export function ScheduleDialog(input: {
+export function schedule-dialog(input: {
   open: boolean;
   pending: boolean;
   form: ScheduleForm;

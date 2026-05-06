@@ -12,9 +12,9 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getInitials, type ConversationForm, type InternalChatContact } from './-context';
+import { getInitials, type ConversationForm, type InternalChatContact } from './context';
 
-export function NewConversationDialog(input: {
+export function new-conversation-dialog(input: {
   open: boolean;
   selectedAccount: boolean;
   form: ConversationForm;

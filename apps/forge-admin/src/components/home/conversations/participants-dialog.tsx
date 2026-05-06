@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import type { HomeInternalChatGroupMember } from '@/lib/admin-api/index';
 
-export function ParticipantsDialog(input: {
+export function participants-dialog(input: {
   open: boolean;
   members: HomeInternalChatGroupMember[];
   availableParticipantId: string;

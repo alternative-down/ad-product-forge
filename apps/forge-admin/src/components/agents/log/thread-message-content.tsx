@@ -16,13 +16,13 @@ export function ThreadMessageArticle(input: {
           <div className="text-xs text-muted-foreground">{formatDateTime(input.message.createdAt)}</div>
         </header>
 
-        <ThreadMessageContent message={input.message} />
+        <thread-message-content message={input.message} />
       </div>
     </article>
   );
 }
 
-function ThreadMessageContent(input: {
+function thread-message-content(input: {
   message: AgentThreadMessage;
 }) {
   const content = input.message.content;

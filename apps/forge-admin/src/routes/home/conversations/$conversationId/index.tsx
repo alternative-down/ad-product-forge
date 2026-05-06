@@ -13,11 +13,11 @@ import {
   type HomeInternalChatConversationMessage,
 } from '@/lib/admin-api/index';
 import { formatRecentMessageTime, useHomeConversations } from '../-context';
-import { ConversationComposer } from '@/components/home/conversations/ConversationComposer';
-import { ConversationHeader } from '@/components/home/conversations/ConversationHeader';
-import { ConversationMessagesPane } from '@/components/home/conversations/ConversationMessagesPane';
-import { ParticipantsDialog } from './-participants-dialog';
-import { RenameConversationDialog } from './-rename-conversation-dialog';
+import { conversation-composer } from '@/components/home/conversations/conversation-composer';
+import { conversation-header } from '@/components/home/conversations/conversation-header';
+import { conversation-messages-pane } from '@/components/home/conversations/conversation-messages-pane';
+import { participants-dialog } from './-participants-dialog';
+import { rename-conversation-dialog } from './-rename-conversation-dialog';
 
 export const Route = createFileRoute('/home/conversations/$conversationId/')({
   component: HomeConversationDetailIndexRoute,
@@ -43,7 +43,7 @@ function HomeConversationDetailIndexRoute() {
   const initialScrollDoneRef = useRef(false);
   const activeConversationKeyRef = useRef('');
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
-  const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
+  const [participantsDialogOpen, setparticipants-dialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [availableParticipantId, setAvailableParticipantId] = useState('');
@@ -194,12 +194,12 @@ function HomeConversationDetailIndexRoute() {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-        <ConversationHeader
+        <conversation-header
           conversation={selectedConversation}
           canManageGroup={canManageGroup}
           onBack={() => void navigate({ to: '/home/conversations' })}
           onRenameOpen={() => setRenameDialogOpen(true)}
-          onParticipantsOpen={() => setParticipantsDialogOpen(true)}
+          onParticipantsOpen={() => setparticipants-dialogOpen(true)}
           onArchive={() => {
             if (!selectedAccount) {
               return;
@@ -216,7 +216,7 @@ function HomeConversationDetailIndexRoute() {
           }}
         />
 
-        <ConversationMessagesPane
+        <conversation-messages-pane
           containerRef={scrollAreaRef}
           accountId={selectedAccount?.accountId ?? ''}
           conversationId={selectedConversation.id}
@@ -236,7 +236,7 @@ function HomeConversationDetailIndexRoute() {
           }}
         />
 
-        <ConversationComposer
+        <conversation-composer
           messageDraft={messageDraft}
           attachmentDrafts={attachmentDrafts}
           disabled={!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)}
@@ -287,7 +287,7 @@ function HomeConversationDetailIndexRoute() {
         />
       </div>
 
-      <RenameConversationDialog
+      <rename-conversation-dialog
         open={renameDialogOpen}
         groupNameDraft={groupNameDraft}
         onOpenChange={setRenameDialogOpen}
@@ -310,13 +310,13 @@ function HomeConversationDetailIndexRoute() {
       />
 
       {selectedConversation.type === 'group' ? (
-        <ParticipantsDialog
+        <participants-dialog
           open={participantsDialogOpen}
           members={members}
           availableParticipantId={availableParticipantId}
           availableParticipantRole={availableParticipantRole}
           availableParticipants={availableParticipants}
-          onOpenChange={setParticipantsDialogOpen}
+          onOpenChange={setparticipants-dialogOpen}
           onAvailableParticipantIdChange={setAvailableParticipantId}
           onAvailableParticipantRoleChange={setAvailableParticipantRole}
           onAddParticipant={() => {

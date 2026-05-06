@@ -9,7 +9,7 @@ import {
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 
-export function RenameConversationDialog(input: {
+export function rename-conversation-dialog(input: {
   open: boolean;
   groupNameDraft: string;
   onOpenChange(open: boolean): void;

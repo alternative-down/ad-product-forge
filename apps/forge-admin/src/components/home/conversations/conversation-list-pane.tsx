@@ -4,9 +4,9 @@ import { ChevronRight, Pencil, Plus } from 'lucide-react';
 import { AdminButton, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatRecentMessageTime, getInitials, type LocalConversation } from './-context';
+import { formatRecentMessageTime, getInitials, type LocalConversation } from './context';
 
-export function ConversationListPane(input: {
+export function conversation-list-pane(input: {
   accounts: Array<{ accountId: string; displayName: string; slug: string; description: string }>;
   selectedAccountId: string;
   selectedAccountLabel: string;
