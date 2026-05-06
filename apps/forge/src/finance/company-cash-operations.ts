@@ -1,5 +1,6 @@
 import { eq, type SQLiteTransaction } from 'drizzle-orm';
 import { createId } from '../utils/id';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import { companyCashLedger } from '../database/schema';
@@ -30,19 +31,24 @@ export function createCompanyCashOperations(db: Database) {
     const now = Date.now();
     const entryId = createId();
 
-    await session.insert(companyCashLedger).values({
-      id: entryId,
-      type: input.type,
-      direction: input.direction,
-      amountUsd: input.amountUsd,
-      description: input.description,
-      referenceType: input.referenceType,
-      referenceId: input.referenceId,
-      status: input.status,
-      dueAt: input.dueAt ?? now,
-      effectiveAt: input.effectiveAt ?? (input.status === 'posted' ? now : null),
-      createdAt: now,
-    });
+    try {
+      await session.insert(companyCashLedger).values({
+        id: entryId,
+        type: input.type,
+        direction: input.direction,
+        amountUsd: input.amountUsd,
+        description: input.description,
+        referenceType: input.referenceType,
+        referenceId: input.referenceId,
+        status: input.status,
+        dueAt: input.dueAt ?? now,
+        effectiveAt: input.effectiveAt ?? (input.status === 'posted' ? now : null),
+        createdAt: now,
+      });
+    } catch (err) {
+      forgeDebug('company-cash-operations', 'createEntry', { error: err instanceof Error ? err.message : String(err), type: input.type });
+      throw err;
+    }
 
     return { entryId };
   }
@@ -92,10 +98,15 @@ export function createCompanyCashOperations(db: Database) {
     if (!entry) throw new Error(`Company cash entry not found: ${entryId}`);
     if (entry.status !== 'planned') throw new Error(`Only planned company cash entries can be canceled: ${entryId}`);
 
-    await db
-      .update(companyCashLedger)
-      .set({ status: 'canceled' })
-      .where(eq(companyCashLedger.id, entryId));
+    try {
+      await db
+        .update(companyCashLedger)
+        .set({ status: 'canceled' })
+        .where(eq(companyCashLedger.id, entryId));
+    } catch (err) {
+      forgeDebug('company-cash-operations', 'cancelPlannedEntry', { error: err instanceof Error ? err.message : String(err), entryId });
+      throw err;
+    }
 
     return { entryId, status: 'canceled' as const };
   }
@@ -106,26 +117,57 @@ export function createCompanyCashOperations(db: Database) {
     if (entry.status !== 'planned') throw new Error(`Only planned company cash entries can be posted: ${entryId}`);
 
     const effectiveAt = input.effectiveAt ?? Date.now();
-    await db
-      .update(companyCashLedger)
-      .set({ status: 'posted', effectiveAt })
-      .where(eq(companyCashLedger.id, entryId));
+    try {
+      await db
+        .update(companyCashLedger)
+        .set({ status: 'posted', effectiveAt })
+        .where(eq(companyCashLedger.id, entryId));
+    } catch (err) {
+      forgeDebug('company-cash-operations', 'postPlannedEntry', { error: err instanceof Error ? err.message : String(err), entryId, effectiveAt });
+      throw err;
+    }
 
     return { entryId, status: 'posted' as const, effectiveAt };
   }
 
   async function getEntry(entryId: string) {
-    return db.query.companyCashLedger.findFirst({
-      where: eq(companyCashLedger.id, entryId),
-    });
+    try {
+      return await db.query.companyCashLedger.findFirst({
+        where: eq(companyCashLedger.id, entryId),
+      });
+    } catch (err) {
+      forgeDebug('company-cash-operations', 'getEntry', { error: err instanceof Error ? err.message : String(err), entryId });
+      throw err;
+    }
+  }
+
+  async function getCurrentBalanceUsd() {
+    try {
+      const entries = await db.query.companyCashLedger.findMany({
+        where: eq(companyCashLedger.status, 'posted'),
+      });
+
+      let balance = 0;
+      for (const entry of entries) {
+        if (entry.direction === 'in') balance += entry.amountUsd;
+        else balance -= entry.amountUsd;
+      }
+      return balance;
+    } catch (err) {
+      forgeDebug('company-cash-operations', 'getCurrentBalanceUsd', { error: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
   }
 
   return {
+    createEntry,
     recordCashIn,
     recordCashOut,
     scheduleCashIn,
     scheduleCashOut,
     cancelPlannedEntry,
     postPlannedEntry,
+    getEntry,
+    getCurrentBalanceUsd,
   };
 }
