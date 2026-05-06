@@ -38,7 +38,7 @@ export type ConversationForm = {
   selectedParticipantIds: string[];
 };
 
-export type account-dialogMode = 'create' | 'edit';
+export type AccountDialogMode = 'create' | 'edit';
 
 export type HomeConversationsContextValue = {
   accounts: InternalChatExternalAccount[];

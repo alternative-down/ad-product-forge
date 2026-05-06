@@ -43,7 +43,7 @@ function HomeConversationDetailIndexRoute() {
   const initialScrollDoneRef = useRef(false);
   const activeConversationKeyRef = useRef('');
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
-  const [participantsDialogOpen, setparticipants-dialogOpen] = useState(false);
+  const [participantsDialogOpen, setParticipantsDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [availableParticipantId, setAvailableParticipantId] = useState('');
@@ -199,7 +199,7 @@ function HomeConversationDetailIndexRoute() {
           canManageGroup={canManageGroup}
           onBack={() => void navigate({ to: '/home/conversations' })}
           onRenameOpen={() => setRenameDialogOpen(true)}
-          onParticipantsOpen={() => setparticipants-dialogOpen(true)}
+          onParticipantsOpen={() => setParticipantsDialogOpen(true)}
           onArchive={() => {
             if (!selectedAccount) {
               return;
@@ -316,7 +316,7 @@ function HomeConversationDetailIndexRoute() {
           availableParticipantId={availableParticipantId}
           availableParticipantRole={availableParticipantRole}
           availableParticipants={availableParticipants}
-          onOpenChange={setparticipants-dialogOpen}
+          onOpenChange={setParticipantsDialogOpen}
           onAvailableParticipantIdChange={setAvailableParticipantId}
           onAvailableParticipantRoleChange={setAvailableParticipantRole}
           onAddParticipant={() => {
