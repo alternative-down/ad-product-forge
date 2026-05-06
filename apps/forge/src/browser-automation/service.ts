@@ -10,6 +10,8 @@
  * provides full isolation, easier to test and iterate.
  */
 
+import { chromium } from 'playwright';
+import { forgeDebug } from '@forge-runtime/core';
 import type { Browser, BrowserContext, Page } from 'playwright';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -60,7 +62,18 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       agentLastAccess.set(agentId, Date.now());
       return existing.browser;
     }
-    const browser = await chromium.launch({ headless: true });
+    let browser;
+    try {
+      browser = await chromium.launch({ headless: true });
+    } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `chromium.launch failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      throw err;
+    }
     agentBrowsers.set(agentId, {
       browser,
       sessions: new Map(),
@@ -79,12 +92,28 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     url: string,
     options: { waitForSelector?: string; timeoutMs?: number } = {},
   ): Promise<BrowserToolResult> {
-    const browser = await getOrCreateBrowser(agentId);
-    const context = await browser.newContext();
+    let browser;
+    try {
+      browser = await getOrCreateBrowser(agentId);
+    } catch (err) {
+      return { pageId: 'unknown', error: String(err) };
+    }
+    let context: BrowserContext;
+    try {
+      context = await browser.newContext();
+    } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `newContext failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { url },
+      });
+      return { pageId: 'unknown', error: String(err) };
+    }
     const page = await context.newPage();
     const pageId = generatePageId();
     const timeout = options.timeoutMs ?? config.navigationTimeoutMs ?? DEFAULT_TIMEOUT_MS;
-
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
       if (options.waitForSelector) {
@@ -108,9 +137,15 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         lastUsedAt: Date.now(),
       };
       agentBrowsers.get(agentId)?.sessions.set(pageId, session);
-
       return result;
     } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `navigate failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { url, timeout, waitForSelector: options.waitForSelector },
+      });
       await context.close();
       return { pageId, error: String(err) };
     }
@@ -125,7 +160,6 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
-
     try {
       await session.page.click(selector, { timeout: DEFAULT_TIMEOUT_MS });
       session.lastUsedAt = Date.now();
@@ -136,6 +170,13 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `click failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { selector, pageId: session.pageId },
+      });
       return { pageId: session.pageId, error: String(err) };
     }
   }
@@ -161,6 +202,13 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `fill failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { selector, valueLength: value.length, pageId: session.pageId },
+      });
       return { pageId: session.pageId, error: String(err) };
     }
   }
@@ -173,17 +221,23 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
-
     try {
-      const path = config.screenshotDir ?? '/tmp/browser-artifacts/screenshots';
-      const fullPath = `${path}/${agentId}/${session.pageId}-${Date.now()}.png`;
-      await session.page.screenshot({ path: fullPath });
+      const screenshotPath = `${config.screenshotDir ?? '/tmp'}/screenshot-${Date.now()}.png`;
+      await session.page.screenshot({ path: screenshotPath });
       session.lastUsedAt = Date.now();
       return {
         pageId: session.pageId,
-        screenshotPath: fullPath,
+        screenshotPath,
+        url: session.page.url(),
       };
     } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `screenshot failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { pageId: session.pageId },
+      });
       return { pageId: session.pageId, error: String(err) };
     }
   }
@@ -197,24 +251,40 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
-
     try {
       const elements = await session.page.$$(selector);
-      const results = await Promise.all(
+      session.lastUsedAt = Date.now();
+      const extracted = await Promise.all(
         elements.slice(0, 50).map(async (el) => {
-          const tag = await el.evaluate((e) => e.tagName.toLowerCase());
-          const text = await el.textContent() ?? '';
-          const attrs: Record<string, string> = {};
-          const attrNames = await el.evaluate((e) => Array.from(e.attributes).map((a) => a.name));
-          for (const name of attrNames) {
-            attrs[name] = await el.getAttribute(name) ?? '';
+          const text = await el.textContent();
+          const attributes: Record<string, string> = {};
+          for (const attr of ['id', 'class', 'name', 'type', 'placeholder']) {
+            try {
+              attributes[attr] = await el.getAttribute(attr) ?? '';
+            } catch {
+              attributes[attr] = '';
+            }
           }
-          return { tag, text: text.slice(0, 200), attributes: attrs };
+          return {
+            text: text ?? '',
+            attributes,
+            tag: await el.evaluate((node) => node.tagName.toLowerCase()),
+          };
         }),
       );
-      session.lastUsedAt = Date.now();
-      return { pageId: session.pageId, elements: results };
+      return {
+        pageId: session.pageId,
+        elements: extracted,
+        url: session.page.url(),
+      };
     } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `query failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { selector, pageId: session.pageId },
+      });
       return { pageId: session.pageId, error: String(err) };
     }
   }
@@ -224,13 +294,15 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     selector: string,
     options: { timeoutMs?: number; pageId?: string } = {},
   ): Promise<BrowserToolResult> {
-    const session = options.pageId ? agentBrowsers.get(agentId)?.sessions.get(options.pageId) : null;
+    const session = options.pageId
+      ? agentBrowsers.get(agentId)?.sessions.get(options.pageId)
+      : null;
     if (!session) {
       return { pageId: options.pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
-
+    const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     try {
-      await session.page.waitForSelector(selector, { timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS });
+      await session.page.waitForSelector(selector, { timeout });
       session.lastUsedAt = Date.now();
       const tree = await session.page.accessibility.snapshot();
       return {
@@ -239,6 +311,13 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         url: session.page.url(),
       };
     } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `wait failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { selector, timeout, pageId: session.pageId },
+      });
       return { pageId: session.pageId, error: String(err) };
     }
   }
@@ -246,19 +325,40 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
   async function closePage(agentId: string, pageId: string): Promise<void> {
     const instance = agentBrowsers.get(agentId);
     const session = instance?.sessions.get(pageId);
-    if (session) {
+    if (!session) {
+      return;
+    }
+    try {
       await session.context.close();
+      instance?.sessions.delete(pageId);
+    } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `closePage failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { pageId },
+      });
       instance?.sessions.delete(pageId);
     }
   }
 
   async function closeAgentBrowser(agentId: string): Promise<void> {
     const instance = agentBrowsers.get(agentId);
-    if (instance) {
-      for (const session of instance.sessions.values()) {
-        await session.context.close();
-      }
+    if (!instance) {
+      return;
+    }
+    try {
       await instance.browser.close();
+      agentBrowsers.delete(agentId);
+      agentLastAccess.delete(agentId);
+    } catch (err) {
+      forgeDebug({
+        scope: 'browser-automation-service',
+        level: 'error',
+        agentId,
+        message: `closeAgentBrowser failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
       agentBrowsers.delete(agentId);
       agentLastAccess.delete(agentId);
     }
