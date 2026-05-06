@@ -118,6 +118,16 @@ class DirectConversationFailedError extends Error {
   }
 }
 
+export class InternalChatError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'InternalChatError';
+    this.code = code;
+  }
+}
+
 export class AttachmentNotFoundError extends Error {
   readonly attachmentName: string;
 
