@@ -2,11 +2,11 @@
  * Ops Context — shared dependencies available to all ops modules.
  */
 import type { Octokit } from 'octokit';
-import type { Database } from '../../database/index.js';
-import type { HttpServer, HttpRequest, HttpResponse } from '../../http/server.js';
-import type { createSystemIntegrationStore } from '../../system-integrations/store.js';
-import type { createAgentNotificationStore } from '../../notifications/store.js';
-import type { GitHubAppCredentials, GitHubAppManifestConfig } from '../types.js';
+import type { Database } from '../../database/index';
+import type { HttpServer, HttpRequest, HttpResponse } from '../../http/server';
+import type { createSystemIntegrationStore } from '../../system-integrations/store';
+import type { createAgentNotificationStore } from '../../notifications/store';
+import type { GitHubAppCredentials, GitHubAppManifestConfig } from '../types';
 
 /** Notification store returned by createAgentNotificationStore */
 export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;

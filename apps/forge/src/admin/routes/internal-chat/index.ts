@@ -3,9 +3,9 @@
  * Routes for internal chat management extracted from routes.ts
  */
 
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import { z } from 'zod';
-import type { InternalChatService } from '../../../communication/internal-chat-service.js';
+import type { InternalChatService } from '../../../communication/internal-chat-service';
 import {
   createExternalInternalChatAccountSchema,
   updateExternalInternalChatAccountSchema,

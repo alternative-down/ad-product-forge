@@ -6,7 +6,7 @@
  * Each route fetches only the data it needs.
  */
 
-import { jsonResponse } from '../helpers.js';
+import { jsonResponse } from '../helpers';
 
 interface LlmReadModel {
   listLlmProfiles: () => Promise<unknown>;

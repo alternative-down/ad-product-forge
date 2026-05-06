@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import {
   agentIdQuerySchema,
   agentExecutionStepsQuerySchema,

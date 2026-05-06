@@ -3,7 +3,7 @@
  * GET routes for finance overview and contracts
  */
 
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 
 interface ReadModel {

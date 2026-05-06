@@ -7,7 +7,7 @@
 
 import type { MicroErpReadModel } from '../../micro-erp/read-model';
 import type { CompanyPayablesStore } from '../../finance/company-payables';
-import { jsonResponse } from '../index.js';
+import { jsonResponse } from '../index';
 
 interface FinanceFragmentReadModel {
   getFinanceBalance: () => Promise<unknown>;

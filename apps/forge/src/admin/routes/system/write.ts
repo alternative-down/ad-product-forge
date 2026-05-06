@@ -7,14 +7,14 @@ import {
   syncOpenAICodexCredential,
   syncAnthropicCredential,
 } from '@forge-runtime/core';
-import { buildOauthState } from './oauth-state.js';
+import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
 import {
   jsonResponse,
   parseJsonBody,
   normalizeOptionalText,
   normalizeJsonText,
-} from '../helpers.js';
+} from '../helpers';
 import {
   upsertSystemSettingsSchema,
   upsertSystemMcpServerSchema,
@@ -28,21 +28,21 @@ import {
   deleteLlmProfileSchema,
   updateLlmDefaultsSchema,
   syncOauthSchema,
-} from '../schemas.js';
-import type { Database } from '../../../database/index.js';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema.js';
+} from '../schemas';
+import type { Database } from '../../../database/index';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import {
   installGlobalSkillsFromZip,
   deleteGlobalSkill,
-} from '../../../agents/global-skills.js';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
-import { createForgeHttpServer } from '../../../http/server.js';
-import type { SystemSettingsStore } from '../../../system-settings/store.js';
-import type { LlmSettingsStore } from '../../../llm/settings-store.js';
-import type { LlmModelPriceStore } from '../../../llm/model-price-store.js';
-import { createSystemIntegrationStore } from '../../../system-integrations/store.js';
-import { getInternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
-import { loadAgent } from '../../../agents/agent-loader.js';
+} from '../../../agents/global-skills';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader';
+import { createForgeHttpServer } from '../../../http/server';
+import type { SystemSettingsStore } from '../../../system-settings/store';
+import type { LlmSettingsStore } from '../../../llm/settings-store';
+import type { LlmModelPriceStore } from '../../../llm/model-price-store';
+import { createSystemIntegrationStore } from '../../../system-integrations/store';
+import { getInternalAgentRegistry } from '../../../agents/internal-agent-registry';
+import { loadAgent } from '../../../agents/agent-loader';
 
 interface SystemWriteRoutesInput {
   httpServer: ReturnType<typeof createForgeHttpServer>;

@@ -4,9 +4,9 @@
  */
 import type { Octokit } from 'octokit';
 import { App } from 'octokit';
-import type { OpsContext } from './context.js';
-import type { AppProvisioningOps } from '../apps.js';
-import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types.js';
+import type { OpsContext } from './context';
+import type { AppProvisioningOps } from '../apps';
+import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
 
 export function createRoutingOps(
   ctx: OpsContext,

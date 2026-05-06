@@ -3,14 +3,14 @@
  * GET routes extracted from routes.ts
  */
 
-import { buildOauthState } from './oauth-state.js';
-import { mcpServerConfigs } from '../../../database/schema.js';
-import { buildSystemHealthcheck } from './healthcheck.js';
-import { listGlobalSkills } from '../../../agents/global-skills.js';
-import { jsonResponse } from '../helpers.js';
-import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry.js';
-import type { createForgeHttpServer } from '../../../http/server.js';
-import type { Database } from '../../../database/index.js';
+import { buildOauthState } from './oauth-state';
+import { mcpServerConfigs } from '../../../database/schema';
+import { buildSystemHealthcheck } from './healthcheck';
+import { listGlobalSkills } from '../../../agents/global-skills';
+import { jsonResponse } from '../helpers';
+import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
+import type { createForgeHttpServer } from '../../../http/server';
+import type { Database } from '../../../database/index';
 
 interface SystemReadModel {
   listSystemIntegrations: () => Promise<unknown>;

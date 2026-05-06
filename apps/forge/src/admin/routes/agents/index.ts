@@ -3,9 +3,9 @@
  * Routes extracted from routes.ts for better maintainability
  */
 
-export { registerAgentReadRoutes } from './read.js';
-export { registerAgentOperationRoutes } from './operations.js';
-export { registerAgentWriteOpsRoutes } from './write-ops.js';
+export { registerAgentReadRoutes } from './read';
+export { registerAgentOperationRoutes } from './operations';
+export { registerAgentWriteOpsRoutes } from './write-ops';
 // Fragmented agent detail routes (#1587)
 export {
   registerAgentStepsRoutes,
@@ -17,4 +17,4 @@ export {
   registerAgentSchedulesRoutes,
   registerAgentNotificationsRoutes,
   registerAgentBaseRoutes,
-} from './detail-read.js';
+} from './detail-read';

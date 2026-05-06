@@ -1,5 +1,5 @@
-import type { InternalAgentRegistry } from '../../agents/internal-agent-registry.js';
-import type { AdminReadModel } from '../read-model.js';
+import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
+import type { AdminReadModel } from '../read-model';
 
 interface HealthcheckEntry {
   agentId: string;
