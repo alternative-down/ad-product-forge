@@ -112,6 +112,19 @@ export function createInternalChatService(
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
 
+  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
+  const participants = createInternalChatParticipants(db);
+  const helpers = createServiceHelpers({
+    db,
+    accounts: {
+      getRequiredAccount: accounts.getRequiredAccount,
+      getRequiredAgentAccount: accounts.getRequiredAgentAccount,
+      getAccountBySlug: accounts.getAccountBySlug,
+    },
+    participants,
+  });
+
+
   async function registerAgentAccount(input: Parameters<typeof accounts.registerAgentAccount>[0]) {
     return accounts.registerAgentAccount(input);
   }
@@ -757,97 +770,6 @@ export function createInternalChatService(
   }
 
   // === Internal Helpers ────────────────────────────────────────────────────
-  async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
-    return participants.listGroupMembersOrDmPeers(agentId, conversationId);
-  }
-
-  async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string) {
-    return participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
-  }
-
-  const getRequiredAccount = accounts.getRequiredAccount;
-  const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
-
-
-
-  async function getRequiredExternalAccount(accountId: string) {
-    const account = await getRequiredAccount(accountId);
-
-    if (account.agentId) {
-      throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
-    }
-
-    return account;
-  }
-
-  async function getRequiredAccountBySlug(slug: string) {
-    const account = await getAccountBySlug(slug);
-
-    if (!account) {
-      throw new InternalChatAccountNotFoundError(slug);
-    }
-
-    return account;
-  }
-
-  async function requireConversationMembership(agentId: string, conversationId: string) {
-    const account = await getRequiredAgentAccount(agentId);
-    return requireConversationMembershipByAccount(account.id, conversationId);
-  }
-
-  async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
-    const membership = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.accountId, accountId),
-        eq(internalChatConversationMembers.conversationId, conversationId),
-      ),
-    });
-
-    if (!membership) {
-      throw new ConversationNotFoundError(conversationId);
-    }
-  }
-
-  async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
-    const account = await getRequiredAgentAccount(agentId);
-    return getRequiredConversationForAccount(account.id, conversationId);
-  }
-
-  async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
-    await requireConversationMembershipByAccount(accountId, conversationId);
-
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
-
-    if (!conversation) {
-      throw new ConversationNotFoundError(conversationId);
-    }
-
-    return conversation;
-  }
-
-  async function getRequiredGroupForAgent(agentId: string, groupId: string) {
-    const group = await getRequiredConversationForAgent(agentId, groupId);
-
-    if (group.type !== 'group') {
-      throw new ChatGroupNotFoundError(groupId);
-    }
-
-    return group;
-  }
-
-  async function getRequiredGroupForAccount(accountId: string, groupId: string) {
-    const group = await getRequiredConversationForAccount(accountId, groupId);
-
-    if (group.type !== 'group') {
-      throw new ChatGroupNotFoundError(groupId);
-    }
-
-    return group;
-  }
-
-
   const groups = createInternalChatGroups(db, {
     getRequiredAccount,
     getRequiredAgentAccount,
@@ -862,9 +784,6 @@ export function createInternalChatService(
     listGroupMembersByAccount: groups.listGroupMembersByAccount,
     getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
-
-  const participants = createInternalChatParticipants(db);
-  const unread = createInternalChatUnread(db);
 
   const listing = createInternalChatListing(db, {
     getRequiredAgentAccount,
