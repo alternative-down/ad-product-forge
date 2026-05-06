@@ -11,7 +11,7 @@ export function createLlmModelPriceStore(db: Database) {
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
     } catch (err) {
-      forgeDebug('llm', 'Failed to list LLM model prices', { error: err });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM model prices', context: { error: err } });
       throw err;
     }
   }
@@ -40,7 +40,7 @@ export function createLlmModelPriceStore(db: Database) {
             })
             .where(eq(llmModelPrices.modelKey, input.modelKey));
         } catch (err) {
-          forgeDebug('llm', 'Failed to update LLM model price', { modelKey: input.modelKey, error: err });
+          forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM model price', context: { modelKey: input.modelKey, error: err } });
           throw err;
         }
       } else {
@@ -54,12 +54,12 @@ export function createLlmModelPriceStore(db: Database) {
             updatedAt: now,
           });
         } catch (err) {
-          forgeDebug('llm', 'Failed to insert LLM model price', { modelKey: input.modelKey, error: err });
+          forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to insert LLM model price', context: { modelKey: input.modelKey, error: err } });
           throw err;
         }
       }
     } catch (err) {
-      forgeDebug('llm', 'Failed to upsert LLM model price', { modelKey: input.modelKey, error: err });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to upsert LLM model price', context: { modelKey: input.modelKey, error: err } });
       throw err;
     }
 

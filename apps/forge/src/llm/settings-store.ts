@@ -33,7 +33,7 @@ export function createLlmSettingsStore(db: Database) {
 
       return rows.map(toProfileRecord);
     } catch (err) {
-      forgeDebug('llm', 'Failed to list LLM profiles', { error: err });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM profiles', context: { error: err } });
       throw err;
     }
   }
@@ -117,7 +117,7 @@ export function createLlmSettingsStore(db: Database) {
           })
         : null;
     } catch (err) {
-      forgeDebug('llm', 'Failed to query LLM profile', { profileId, error: err });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM profile', context: { profileId, error: err } });
       throw err;
     }
 
@@ -136,7 +136,7 @@ export function createLlmSettingsStore(db: Database) {
           })
           .where(eq(llmProfiles.id, input.profileId!));
       } catch (err) {
-        forgeDebug('llm', 'Failed to update LLM profile', { profileId, error: err });
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM profile', context: { profileId, error: err } });
         throw err;
       }
     } else {
@@ -153,7 +153,7 @@ export function createLlmSettingsStore(db: Database) {
           updatedAt: now,
         });
       } catch (err) {
-        forgeDebug('llm', 'Failed to insert LLM profile', { profileId, error: err });
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to insert LLM profile', context: { profileId, error: err } });
         throw err;
       }
     }
@@ -183,7 +183,7 @@ export function createLlmSettingsStore(db: Database) {
     try {
       await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
     } catch (err) {
-      forgeDebug('llm', 'Failed to delete LLM profile', { profileId, error: err });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to delete LLM profile', context: { profileId, error: err } });
       throw err;
     }
   }
@@ -214,7 +214,7 @@ export function createLlmSettingsStore(db: Database) {
     try {
       existing = await getDefaultsRow();
     } catch (err) {
-      forgeDebug('llm', 'Failed to query LLM defaults', { error: err });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM defaults', context: { error: err } });
       throw err;
     }
 
@@ -230,7 +230,7 @@ export function createLlmSettingsStore(db: Database) {
           })
           .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
       } catch (err) {
-        forgeDebug('llm', 'Failed to update LLM defaults', { error: err });
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM defaults', context: { error: err } });
         throw err;
       }
     } else {

@@ -227,22 +227,22 @@ export class AgentLongTermMemoryRecall {
 
     try {
       if (this.pendingRecallOperationCount > 0) {
-        forgeDebug('ltm', 'ltm recall skipped because a prior recall operation is still in flight', {
+        forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall skipped because a prior recall operation is still in flight', context: {
           agentId: this.agentId,
           threadId: input.threadId,
           pendingRecallOperationCount: this.pendingRecallOperationCount,
           lingeringRecallOperationSince: this.lingeringRecallOperationSince
             ? new Date(this.lingeringRecallOperationSince).toISOString()
             : null,
-        });
+        } });
         return null;
       }
 
-      forgeDebug('ltm', 'ltm recall step start', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step start', context: {
         agentId: this.agentId,
         threadId: input.threadId,
         resourceId: input.resourceId ?? null,
-      });
+      } });
       const queryText = this.buildRecallQueryFromStep(input.step);
       const recallThreadState = await this.readRecallThreadState(input.threadId);
 
@@ -350,23 +350,23 @@ export class AgentLongTermMemoryRecall {
         status: 'hit',
       }), nextHistory);
 
-      forgeDebug('ltm', 'ltm recall step complete', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step complete', context: {
         agentId: this.agentId,
         threadId: input.threadId,
         durationMs: Date.now() - recallStartedAt,
         graphHit: graph.hit,
         resultCount: graph.hit ? 0 : results.length,
-      });
+      } });
 
       return recallText;
     } catch (error) {
       forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: 'recall failed', context: { error } });
-      forgeDebug('ltm', 'ltm recall step failed', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step failed', context: {
         agentId: this.agentId,
         threadId: input.threadId,
         durationMs: Date.now() - recallStartedAt,
         error: error instanceof Error ? error.message : String(error),
-      });
+      } });
       const persistedState = await this.persistenceStore.readRecallState();
       let snapshotError: string | null = null;
       try {
@@ -407,10 +407,10 @@ export class AgentLongTermMemoryRecall {
     const stageStartedAt = Date.now();
     const currentStamp = await this.readCurrentIndexStamp();
 
-    forgeDebug('ltm', 'ltm recall workspace init start', {
+    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace init start', context: {
       agentId: this.agentId,
       stamp: currentStamp,
-    });
+    } });
     await this.runTrackedRecallOperation(
       'retrieval.refresh',
       this.retrievalWorkspace.refresh(),
@@ -420,11 +420,11 @@ export class AgentLongTermMemoryRecall {
     this.workspaceInitialized = true;
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
-    forgeDebug('ltm', 'ltm recall workspace init complete', {
+    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace init complete', context: {
       agentId: this.agentId,
       durationMs: Date.now() - stageStartedAt,
       stamp: currentStamp,
-    });
+    } });
   }
 
   async refreshIndex() {
@@ -433,19 +433,19 @@ export class AgentLongTermMemoryRecall {
     const currentStamp = await this.readCurrentIndexStamp();
 
     if (currentStamp === this.lastIndexedStamp) {
-      forgeDebug('ltm', 'ltm recall workspace index unchanged', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace index unchanged', context: {
         agentId: this.agentId,
         durationMs: Date.now() - stageStartedAt,
         stamp: currentStamp,
-      });
+      } });
       return;
     }
 
-    forgeDebug('ltm', 'ltm recall workspace reindex start', {
+    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace reindex start', context: {
       agentId: this.agentId,
       previousStamp: this.lastIndexedStamp,
       nextStamp: currentStamp,
-    });
+    } });
     await this.runTrackedRecallOperation(
       'retrieval.refresh',
       this.retrievalWorkspace.refresh(),
@@ -454,11 +454,11 @@ export class AgentLongTermMemoryRecall {
     );
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
-    forgeDebug('ltm', 'ltm recall workspace reindex complete', {
+    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace reindex complete', context: {
       agentId: this.agentId,
       durationMs: Date.now() - stageStartedAt,
       stamp: currentStamp,
-    });
+    } });
   }
 
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
@@ -645,12 +645,12 @@ export class AgentLongTermMemoryRecall {
     const stageStartedAt = Date.now();
 
     try {
-      forgeDebug('ltm', 'ltm recall workspace search start', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace search start', context: {
         agentId: this.agentId,
         queryLength: queryText.length,
         topK: options.topK,
         mode: options.mode,
-      });
+      } });
       const results = await this.runTrackedRecallOperation<Array<{
         id: string;
         text: string;
@@ -677,11 +677,11 @@ export class AgentLongTermMemoryRecall {
         content: result.text.trim(),
         score: result.score,
       }));
-      forgeDebug('ltm', 'ltm recall workspace search complete', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace search complete', context: {
         agentId: this.agentId,
         durationMs: Date.now() - stageStartedAt,
         resultCount: searchResults.length,
-      });
+      } });
       return { formatted: '', results: searchResults };
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error);
@@ -689,11 +689,11 @@ export class AgentLongTermMemoryRecall {
         return { formatted: '', results: [] };
       }
 
-      forgeDebug('ltm', 'ltm recall workspace search failed', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace search failed', context: {
         agentId: this.agentId,
         durationMs: Date.now() - stageStartedAt,
         error: error instanceof Error ? error.message : String(error),
-      });
+      } });
       throw error;
     }
   }
@@ -752,12 +752,12 @@ export class AgentLongTermMemoryRecall {
         'ltm recall graph search timed out',
       );
 
-      forgeDebug('ltm', 'ltm recall graph search complete', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall graph search complete', context: {
         agentId: this.agentId,
         durationMs: Date.now() - stageStartedAt,
         hit: result.hit,
         sourcesCount: result.sourcesCount,
-      });
+      } });
 
       return {
         queryText: graphQueryText,
@@ -773,11 +773,11 @@ export class AgentLongTermMemoryRecall {
         error: null,
       };
     } catch (error) {
-      forgeDebug('ltm', 'ltm recall graph search failed', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall graph search failed', context: {
         agentId: this.agentId,
         durationMs: Date.now() - stageStartedAt,
         error: error instanceof Error ? error.message : String(error),
-      });
+      } });
 
       return {
         queryText: graphQueryText,
@@ -866,7 +866,7 @@ export class AgentLongTermMemoryRecall {
         this.lingeringRecallOperationSince = Date.now();
       }
 
-      forgeDebug('ltm', 'ltm recall operation failed or timed out', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall operation failed or timed out', context: {
         agentId: this.agentId,
         label,
         timeoutMs,
@@ -876,7 +876,7 @@ export class AgentLongTermMemoryRecall {
           ? new Date(this.lingeringRecallOperationSince).toISOString()
           : null,
         error: error instanceof Error ? error.message : String(error),
-      });
+      } });
       throw error;
     }
   }

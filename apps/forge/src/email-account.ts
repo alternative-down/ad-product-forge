@@ -83,11 +83,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       client = nextClient;
       reconnectDelayMs = 1000;
-      forgeDebug('email-account', 'Connected to IMAP server');
+      forgeDebug({ scope: 'email-account', level: 'info', message: 'Connected to IMAP server' });
 
       nextClient.on('close', () => {
         if (client === nextClient) client = null;
-        forgeDebug('email-account', 'IMAP connection closed');
+        forgeDebug({ scope: 'email-account', level: 'info', message: 'IMAP connection closed' });
         if (!disposed) scheduleReconnect();
       });
 
@@ -124,7 +124,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       try {
         await queryClient.logout();
       } catch (error) {
-        forgeDebug('email-account', 'Logout failed (best-effort)', { error });
+        forgeDebug({ scope: 'email-account', level: 'info', message: 'Logout failed (best-effort)', context: { error } });
       }
     }
   }
@@ -179,7 +179,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         });
       }
     } catch (error) {
-      forgeDebug('email-account', 'Error processing message', { uid, error });
+      forgeDebug({ scope: 'email-account', level: 'info', message: 'Error processing message', context: { uid, error } });
     }
   }
 
@@ -259,7 +259,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const currentClient = await connectImap();
       await processUnseenMessages(currentClient);
     } catch (error) {
-      forgeDebug('email-account', 'listen() failed', { error });
+      forgeDebug({ scope: 'email-account', level: 'info', message: 'listen() failed', context: { error } });
     }
   }
 
