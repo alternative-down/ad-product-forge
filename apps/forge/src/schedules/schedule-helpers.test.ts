@@ -6,6 +6,7 @@ import {
   createNotificationContent,
   createWakeContent,
   createHeartbeatWakeInstruction,
+  toToolOutput,
 } from './schedule-helpers';
 
 describe('parseScheduleDate', () => {
@@ -62,157 +63,302 @@ describe('assertFutureScheduledDate', () => {
     );
   });
 
-  test('throws when scheduledDate is exactly now', () => {
-    expect(() => assertFutureScheduledDate('date', Date.now() - 1)).toThrow(
+  test('returns when scheduledDate is undefined', () => {
+    expect(() => assertFutureScheduledDate('date', undefined)).not.toThrow();
+  });
+
+  test('returns when scheduledDate is exactly now', () => {
+    expect(() => assertFutureScheduledDate('date', Date.now())).toThrow(
       'scheduledDate must be in the future',
     );
   });
 });
 
 describe('createNotificationContent', () => {
-  test('agent schedule includes scheduleId in title', () => {
+  const fireDate = new Date('2026-06-01T12:00:00.000Z');
+
+  test('agent schedule: includes scheduleId in title', () => {
     const result = createNotificationContent({
-      agentId: 'agent-1',
-      scheduleId: 'sched-123',
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
       kind: 'agent',
-      name: 'Morning sync',
+      name: 'My Task',
       scheduleType: 'cron',
       cronExpression: '0 9 * * *',
       timezone: 'UTC',
-      content: 'Check dashboard',
-      fireDate: new Date('2026-06-01T09:00:00.000Z'),
+      content: 'Run report',
+      fireDate,
     });
 
-    expect(result).toContain('Cron: sched-123');
-    expect(result).toContain('Task:');
-    expect(result).toContain('Check dashboard');
-    expect(result).toContain('2026-06-01T09:00:00.000Z');
+    expect(result).toContain('Cron: sched_001');
   });
 
-  test('heartbeat schedule uses simple title', () => {
+  test('heartbeat: title is just Cron', () => {
     const result = createNotificationContent({
-      agentId: 'agent-1',
-      scheduleId: 'sched-456',
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
       kind: 'heartbeat',
-      name: 'Heartbeat',
+      name: 'My Task',
       scheduleType: 'cron',
-      cronExpression: '*/15 * * * *',
-      timezone: 'America/New_York',
-      content: '',
-      fireDate: new Date('2026-06-01T09:00:00Z'),
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: 'Run report',
+      fireDate,
     });
 
-    expect(result).toContain('Cron\n');
-    expect(result).not.toContain('Cron:');
+    expect(result).toContain('Cron');
+    expect(result).not.toContain('sched_001');
   });
 
   test('includes description when provided', () => {
     const result = createNotificationContent({
-      agentId: 'agent-1',
-      scheduleId: 'sched-789',
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
       kind: 'agent',
-      name: 'Weekly review',
-      description: ' Review weekly metrics ',
-      scheduleType: 'date',
-      scheduledDate: 1717200000000,
-      timezone: 'UTC',
-      content: 'Generate report',
-      fireDate: new Date('2026-06-01T10:00:00Z'),
-    });
-
-    expect(result).toContain('Description: Review weekly metrics');
-  });
-
-  test('trims content whitespace', () => {
-    const result = createNotificationContent({
-      agentId: 'agent-1',
-      scheduleId: 'sched-abc',
-      kind: 'agent',
-      name: 'Cleanup',
+      name: 'My Task',
+      description: 'A helpful description',
       scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
+      cronExpression: '0 9 * * *',
       timezone: 'UTC',
-      content: '  Remove old files  ',
-      fireDate: new Date('2026-06-01T00:00:00Z'),
+      content: 'Run report',
+      fireDate,
     });
 
-    expect(result).toContain('Task:\nRemove old files');
-    expect(result).not.toContain('  Remove old files  ');
+    expect(result).toContain('Description: A helpful description');
   });
 
-  test('includes ISO fire date', () => {
-    const fireDate = new Date('2026-06-01T09:00:00Z');
+  test('excludes description section when not provided', () => {
     const result = createNotificationContent({
-      agentId: 'agent-1',
-      scheduleId: 'sched-fire',
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
       kind: 'agent',
-      name: 'Fire test',
-      scheduleType: 'date',
-      scheduledDate: 1717200000000,
+      name: 'My Task',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: 'Run report',
+      fireDate,
+    });
+
+    expect(result).not.toContain('Description:');
+  });
+
+  test('includes task content when provided', () => {
+    const result = createNotificationContent({
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
+      kind: 'agent',
+      name: 'My Task',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: 'Send email report',
+      fireDate,
+    });
+
+    expect(result).toContain('Task:');
+    expect(result).toContain('Send email report');
+  });
+
+  test('excludes task section when content is empty', () => {
+    const result = createNotificationContent({
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
+      kind: 'agent',
+      name: 'My Task',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
       timezone: 'UTC',
       content: '',
       fireDate,
     });
 
-    expect(result).toContain(fireDate.toISOString());
+    expect(result).not.toContain('Task:');
+  });
+
+  test('includes fire date ISO string', () => {
+    const result = createNotificationContent({
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
+      kind: 'agent',
+      name: 'My Task',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      fireDate,
+    });
+
+    expect(result).toContain('2026-06-01T12:00:00.000Z');
+  });
+
+  test('trims description whitespace', () => {
+    const result = createNotificationContent({
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
+      kind: 'agent',
+      name: 'My Task',
+      description: '  spaced description  ',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      fireDate,
+    });
+
+    expect(result).toContain('Description: spaced description');
+    expect(result).not.toContain('  spaced description  ');
+  });
+
+  test('trims content whitespace', () => {
+    const result = createNotificationContent({
+      agentId: 'agent_001',
+      scheduleId: 'sched_001',
+      kind: 'agent',
+      name: 'My Task',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '  run this  ',
+      fireDate,
+    });
+
+    expect(result).toContain('Task:\nrun this');
+    expect(result).not.toContain('  run this  ');
   });
 });
 
 describe('createWakeContent', () => {
-  test('agent schedule includes task description', () => {
+  test('agent schedule: uses correct trigger message', () => {
     const result = createWakeContent({
-      name: 'Morning check',
+      name: 'My Schedule',
       scheduleKind: 'agent',
       scheduleType: 'cron',
-      cronExpression: '0 8 * * *',
+      cronExpression: '0 9 * * *',
       timezone: 'UTC',
-      content: 'Review pending tasks',
+      content: 'Do the thing',
       wakeWhenRunning: false,
     });
 
     expect(result).toContain('Scheduled task triggered.');
-    expect(result).toContain('Morning check');
-    expect(result).toContain('Schedule kind: agent');
-    expect(result).toContain('Cron expression: 0 8 * * *');
-    expect(result).toContain('Wake while running: only when idle');
-    expect(result).toContain('Content:');
-    expect(result).toContain('Review pending tasks');
   });
 
-  test('heartbeat schedule uses heartbeat triggered', () => {
+  test('heartbeat: uses heartbeat message', () => {
     const result = createWakeContent({
-      name: 'Heartbeat check',
+      name: 'My Schedule',
       scheduleKind: 'heartbeat',
       scheduleType: 'cron',
-      cronExpression: '*/15 * * * *',
+      cronExpression: '0 9 * * *',
       timezone: 'UTC',
       content: '',
       wakeWhenRunning: true,
     });
 
     expect(result).toContain('Heartbeat triggered.');
-    expect(result).toContain('Schedule kind: heartbeat');
   });
 
-  test('includes description when trimmed is non-empty', () => {
+  test('includes schedule name', () => {
     const result = createWakeContent({
-      name: 'With description',
-      description: '  Important task  ',
+      name: 'Daily Report',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Schedule name: Daily Report');
+  });
+
+  test('includes schedule kind', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Schedule kind: agent');
+  });
+
+  test('includes schedule type', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Schedule type: cron');
+  });
+
+  test('includes timezone', () => {
+    const result = createWakeContent({
+      name: 'Test',
       scheduleKind: 'agent',
       scheduleType: 'date',
       scheduledDate: 1717200000000,
       timezone: 'America/Sao_Paulo',
-      content: 'Do work',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Timezone: America/Sao_Paulo');
+  });
+
+  test('wake while running enabled', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
       wakeWhenRunning: true,
+    });
+
+    expect(result).toContain('Wake while running: enabled');
+  });
+
+  test('wake while running only when idle', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Wake while running: only when idle');
+  });
+
+  test('includes description when provided', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      description: 'Important task',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
     });
 
     expect(result).toContain('Description: Important task');
   });
 
-  test('skips description when only whitespace', () => {
+  test('skips description when not provided', () => {
     const result = createWakeContent({
-      name: 'No description',
-      description: '   ',
+      name: 'Test',
       scheduleKind: 'agent',
       scheduleType: 'cron',
       cronExpression: '0 9 * * *',
@@ -224,51 +370,134 @@ describe('createWakeContent', () => {
     expect(result).not.toContain('Description:');
   });
 
-  test('omits cronExpression for date schedules', () => {
+  test('trims description whitespace', () => {
     const result = createWakeContent({
-      name: 'Date schedule',
-      scheduleKind: 'agent',
-      scheduleType: 'date',
-      scheduledDate: 1717200000000,
-      timezone: 'UTC',
-      content: 'One-time task',
-      wakeWhenRunning: false,
-    });
-
-    expect(result).not.toContain('Cron expression:');
-    expect(result).toContain('Scheduled date:');
-  });
-
-  test('includes nextTriggerAt when provided', () => {
-    const nextTrigger = 1717286400000;
-    const result = createWakeContent({
-      name: 'Recurring',
+      name: 'Test',
+      description: '  trimmed desc  ',
       scheduleKind: 'agent',
       scheduleType: 'cron',
       cronExpression: '0 9 * * *',
       timezone: 'UTC',
-      nextTriggerAt: nextTrigger,
       content: '',
       wakeWhenRunning: false,
     });
 
-    expect(result).toContain('Next trigger at:');
-    expect(result).toContain(new Date(nextTrigger).toISOString());
+    expect(result).toContain('Description: trimmed desc');
+    expect(result).not.toContain('  trimmed desc  ');
   });
 
-  test('omits nextTriggerAt when null', () => {
+  test('includes cron expression for cron type', () => {
     const result = createWakeContent({
-      name: 'No next trigger',
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * 1-5',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Cron expression: 0 9 * * 1-5');
+  });
+
+  test('skips cron expression for date type', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'date',
+      scheduledDate: 1717200000000,
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).not.toContain('Cron expression:');
+  });
+
+  test('includes scheduled date for date type', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'date',
+      scheduledDate: 1780272000000,
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Scheduled date: 2026-06-01T00:00:00.000Z');
+  });
+
+  test('skips scheduled date for cron type', () => {
+    const result = createWakeContent({
+      name: 'Test',
       scheduleKind: 'agent',
       scheduleType: 'cron',
       cronExpression: '0 9 * * *',
       timezone: 'UTC',
-      nextTriggerAt: null,
+      content: '',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).not.toContain('Scheduled date:');
+  });
+
+  test('includes nextTriggerAt when provided', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+      nextTriggerAt: 1780358400000,
+    });
+
+    expect(result).toContain('Next trigger at: 2026-06-02T00:00:00.000Z');
+  });
+
+  test('skips nextTriggerAt when not provided', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
       content: '',
       wakeWhenRunning: false,
     });
 
     expect(result).not.toContain('Next trigger at:');
+  });
+
+  test('includes content section', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: 'Send the report',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('\nContent:\nSend the report');
+  });
+
+  test('trims content whitespace', () => {
+    const result = createWakeContent({
+      name: 'Test',
+      scheduleKind: 'agent',
+      scheduleType: 'cron',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      content: '  do this  ',
+      wakeWhenRunning: false,
+    });
+
+    expect(result).toContain('Content:\ndo this');
+    expect(result).not.toContain('  do this  ');
   });
 });
 
@@ -319,5 +548,103 @@ describe('createHeartbeatWakeInstruction', () => {
   test('default instruction mentions reading unread notifications', () => {
     const result = createHeartbeatWakeInstruction('');
     expect(result).toContain('unread notifications');
+  });
+});
+
+describe('toToolOutput', () => {
+  test('converts a full schedule record to tool output', () => {
+    const record = {
+      scheduleId: 'sched_001',
+      name: 'My Schedule',
+      description: 'A test schedule',
+      scheduleType: 'cron' as const,
+      cronExpression: '0 9 * * *',
+      scheduledDate: undefined,
+      timezone: 'UTC',
+      content: 'Run the task',
+      wakeWhenRunning: true,
+      isActive: true,
+      lastTriggeredAt: 1780272000000,
+      nextTriggerAt: 1780358400000,
+    };
+
+    const result = toToolOutput(record);
+
+    expect(result.scheduleId).toBe('sched_001');
+    expect(result.name).toBe('My Schedule');
+    expect(result.description).toBe('A test schedule');
+    expect(result.scheduleType).toBe('cron');
+    expect(result.cronExpression).toBe('0 9 * * *');
+    expect(result.timezone).toBe('UTC');
+    expect(result.content).toBe('Run the task');
+    expect(result.wakeWhenRunning).toBe(true);
+    expect(result.isActive).toBe(true);
+    expect(result.lastTriggeredAt).toBe('2026-06-01T00:00:00.000Z');
+    expect(result.nextTriggerAt).toBe('2026-06-02T00:00:00.000Z');
+    expect(result.scheduledDate).toBeUndefined();
+  });
+
+  test('converts a date-type schedule', () => {
+    const record = {
+      scheduleId: 'sched_002',
+      name: 'One-time task',
+      scheduleType: 'date' as const,
+      scheduledDate: 1781273600000,
+      timezone: 'America/Sao_Paulo',
+      content: 'Send report',
+      wakeWhenRunning: false,
+      isActive: false,
+    };
+
+    const result = toToolOutput(record);
+
+    expect(result.scheduleId).toBe('sched_002');
+    expect(result.scheduleType).toBe('date');
+    expect(result.scheduledDate).toBe('2026-06-12T14:13:20.000Z');
+    expect(result.wakeWhenRunning).toBe(false);
+    expect(result.isActive).toBe(false);
+    expect(result.lastTriggeredAt).toBeUndefined();
+    expect(result.nextTriggerAt).toBeUndefined();
+  });
+
+  test('omits optional fields when not present', () => {
+    const record = {
+      scheduleId: 'sched_003',
+      name: 'Minimal schedule',
+      scheduleType: 'cron' as const,
+      cronExpression: '*/5 * * * *',
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+      isActive: true,
+    };
+
+    const result = toToolOutput(record);
+
+    expect(result.description).toBeUndefined();
+    expect(result.lastTriggeredAt).toBeUndefined();
+    expect(result.nextTriggerAt).toBeUndefined();
+    expect(result.scheduledDate).toBeUndefined();
+    expect(result.cronExpression).toBe('*/5 * * * *');
+  });
+
+  test('converts timestamp fields to ISO strings', () => {
+    const record = {
+      scheduleId: 'sched_004',
+      name: 'Timestamp test',
+      scheduleType: 'date' as const,
+      scheduledDate: 1719000000000,
+      timezone: 'UTC',
+      content: '',
+      wakeWhenRunning: false,
+      isActive: true,
+      lastTriggeredAt: 1782021600000,
+      nextTriggerAt: 1782152000000,
+    };
+
+    const result = toToolOutput(record);
+
+    expect(result.lastTriggeredAt).toBe('2026-06-21T06:00:00.000Z');
+    expect(result.nextTriggerAt).toBe('2026-06-22T18:13:20.000Z');
   });
 });
