@@ -20,7 +20,7 @@ import {
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { loadAgent } from '../agents/agent-loader';
-import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
+import { getInternalAgentRegistry, createPerAgentEmailManager } from '../agents/internal-agent-registry';
 import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentRoleFromAdmin,
@@ -133,6 +133,9 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     internalChat: input.internalChat,
   });
 
+  // Per-agent email manager for admin route operations (hire/terminate)
+  const emailMailboxes = createPerAgentEmailManager(input.db);
+
   // Inline finance read model (extracted from createAdminReadModel)
   const finance = createMicroErpReadModel(input.db);
   const payables = createCompanyPayables(input.db);
@@ -200,7 +203,8 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Agent operations bundle (used by write-ops routes)
   const ops = {
-    loadAgent,
+    loadAgent: (db: Database, config: AgentLoaderConfig & { agentId: string }) =>
+      loadAgent(db, { ...config, emailMailboxes }),
     topUpActiveAgentContract,
     adjustAgentContractBudget,
     renewAgentContract,
@@ -211,7 +215,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
   registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry);
-  registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
+  registerAgentWriteOpsRoutes(input.httpServer, { ...input, emailMailboxes }, registry, ops);
 
   input.httpServer.registerRoute({
     method: 'GET',

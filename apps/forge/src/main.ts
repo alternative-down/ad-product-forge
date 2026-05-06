@@ -7,7 +7,6 @@ import { getDatabase, runMigrations } from './database/index';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
-import { createAgentEmailManager } from './email/migadu-manager';
 import { createCoolifyManager } from './coolify/manager';
 import { createMiniMaxManager } from './minimax/manager';
 import { createAgentScheduleManager } from './schedules/manager';
@@ -134,10 +133,6 @@ export async function main() {
   const internalChat = createInternalChatService(db);
   const agentContracts = createAgentContractStore(db);
 
-  const emailMailboxes = createAgentEmailManager({
-    db,
-    integrations,
-  });
   const coolifyManager = createCoolifyManager({ db, integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
   const githubApps = createGitHubAppManager({ integrations });
@@ -157,7 +152,6 @@ export async function main() {
     coolifyManager,
     minimaxManager,
     githubApps,
-    emailMailboxes,
   });
 
   registerAdminRoutes({
