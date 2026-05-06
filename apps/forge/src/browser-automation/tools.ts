@@ -5,7 +5,7 @@
  * Each tool wraps the BrowserAutomationService with agent context.
  */
 
-import type { BrowserAutomationService, BrowserToolResult } from './service.js';
+import type { BrowserAutomationService, BrowserToolResult } from './service';
 
 /**
  * Tool definitions for agent consumption.

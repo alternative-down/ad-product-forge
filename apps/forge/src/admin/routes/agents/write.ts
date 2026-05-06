@@ -4,13 +4,13 @@
  */
 
 import { z } from 'zod';
-import type { HttpHandler } from '../../../http/server.js';
-import type { Database } from '../../../database/index.js';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
-import { jsonResponse, parseJsonBody } from '../index.js';
-import { clearAgentHistory } from '../helpers.js';
-import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas.js';
-import { reloadAgentIfLoaded } from '../../../capabilities/runtime.js';
+import type { HttpHandler } from '../../../http/server';
+import type { Database } from '../../../database/index';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader';
+import { jsonResponse, parseJsonBody } from '../index';
+import { clearAgentHistory } from '../helpers';
+import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas';
+import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (agentId: string, opts: { query: string }) => Promise<unknown>;

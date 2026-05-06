@@ -1,4 +1,4 @@
-import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants.js';
+import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 import { createId } from '../utils/id';
 import { withTimeout } from '../utils/async';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;

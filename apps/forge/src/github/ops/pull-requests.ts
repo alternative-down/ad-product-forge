@@ -2,7 +2,7 @@
  * Pull Requests Ops — listPullRequests, createPullRequest, getPullRequest,
  * listPullRequestComments, updatePullRequest, mergePullRequest
  */
-import type { OpsContext } from './context.js';
+import type { OpsContext } from './context';
 
 export function createPullRequestsOps(ctx: OpsContext) {
   async function listPullRequests(agentId: string, input: {

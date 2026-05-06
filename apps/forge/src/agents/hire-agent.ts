@@ -22,7 +22,7 @@ import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
-import { loadAgent } from './agent-loader.js';
+import { loadAgent } from './agent-loader';
 
 
 export type HireInternalAgentInput = {

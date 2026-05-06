@@ -4,32 +4,32 @@
  */
 
 import { z } from 'zod';
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import { forgeDebug } from '@forge-runtime/core';
-import { createId } from '../../../utils/id.js';
+import { createId } from '../../../utils/id';
 import { eq } from 'drizzle-orm';
-import { agents, agentRoles } from '../../../../src/database/schema.js';
-import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime.js';
-import { createCapabilityStore } from '../../../capabilities/store.js';
-import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema.js';
-import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills.js';
-import { normalizeJsonText, normalizeOptionalText } from '../helpers.js';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema.js';
-import { reloadAgentMcp } from '../../routes/mcp-helpers.js';
+import { agents, agentRoles } from '../../../../src/database/schema';
+import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
+import { createCapabilityStore } from '../../../capabilities/store';
+import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
+import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills';
+import { normalizeJsonText, normalizeOptionalText } from '../helpers';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
+import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
-import type { Database } from '../../../../src/database/index.js';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader-types.js';
-import type { AgentEmailManager } from '../../../email/migadu-manager.js';
-import type { CoolifyManager, GitHubAppManager } from '../../../coolify/manager.js';
-import type { createAgentScheduleManager } from '../../schedules/manager.js';
+import type { Database } from '../../../../src/database/index';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader-types';
+import type { AgentEmailManager } from '../../../email/migadu-manager';
+import type { CoolifyManager, GitHubAppManager } from '../../../coolify/manager';
+import type { createAgentScheduleManager } from '../../schedules/manager';
 
-import type { Database } from '../../../../src/database/index.js';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
-import type { GitHubAppManager } from '../../../github/manager.js';
-import type { AgentEmailManager } from '../../../email/migadu-manager.js';
-import type { CoolifyManager } from '../../../coolify/manager.js';
-import type { createAgentScheduleManager } from '../../../schedules/manager.js';
-import type { InternalChatService } from '../../communication/internal-chat-service.js';
+import type { Database } from '../../../../src/database/index';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader';
+import type { GitHubAppManager } from '../../../github/manager';
+import type { AgentEmailManager } from '../../../email/migadu-manager';
+import type { CoolifyManager } from '../../../coolify/manager';
+import type { createAgentScheduleManager } from '../../../schedules/manager';
+import type { InternalChatService } from '../../communication/internal-chat-service';
 
 
 const upsertAgentProviderSchema = z.object({

@@ -24,7 +24,7 @@ import {
   upsertSystemIntegrationSchema,
   createPayableSchema,
   createAgentMcpServerSchema,
-} from './schemas.js';
+} from './schemas';
 
 describe('Admin Route Schemas', () => {
   describe('agentIdQuerySchema', () => {

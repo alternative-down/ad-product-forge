@@ -4,8 +4,8 @@
  * createGitHubApp, createInstallationOctokit
  */
 import type { Octokit } from 'octokit';
-import type { OpsContext } from './context.js';
-import type { GitHubAppCredentials } from '../types.js';
+import type { OpsContext } from './context';
+import type { GitHubAppCredentials } from '../types';
 
 export function createCredentialsOps(ctx: OpsContext) {
   async function getCredentials(agentId: string) {

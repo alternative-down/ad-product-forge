@@ -5,10 +5,10 @@
 
 import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
-import { agentActionSchema } from '../schemas.js';
+import { agentActionSchema } from '../schemas';
 
 /**
  * Schema for POST /admin/agent/internal-chat/send.

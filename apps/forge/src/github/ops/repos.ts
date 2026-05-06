@@ -1,7 +1,7 @@
 /**
  * Repos Ops — listRepositories, createRepository, updateRepository, deleteRepository, getRepository
  */
-import type { OpsContext } from './context.js';
+import type { OpsContext } from './context';
 
 export function createReposOps(ctx: OpsContext) {
   async function listRepositories(agentId: string) {

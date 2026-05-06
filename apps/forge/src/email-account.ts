@@ -22,7 +22,7 @@ import {
   resolveCreatedAt,
   extractEmailBody,
   toReplySubject,
-} from './email-account-helpers.js';
+} from './email-account-helpers';
 
 type EmailProviderConfig = {
   id?: string;

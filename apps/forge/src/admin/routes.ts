@@ -76,8 +76,8 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
-import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
+import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas';
+import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import {
   registerAgentReadRoutes,
   registerAgentOperationRoutes,
@@ -91,7 +91,7 @@ import {
   registerAgentSchedulesRoutes,
   registerAgentNotificationsRoutes,
   registerAgentBaseRoutes,
-} from './routes/agents/index.js';
+} from './routes/agents/index';
 import {
   normalizeOptionalText,
   normalizeJsonText,
@@ -100,16 +100,16 @@ import {
   summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
-} from './routes/helpers.js';
+} from './routes/helpers';
 
-export * from './routes/schemas.js';
-import { registerFinanceReadRoutes, registerFinanceWriteRoutes, registerFinanceFragmentRoutes } from './routes/finance/index.js';
-import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
+export * from './routes/schemas';
+import { registerFinanceReadRoutes, registerFinanceWriteRoutes, registerFinanceFragmentRoutes } from './routes/finance/index';
+import { registerWebhookAdminRoutes } from './routes/webhooks/index';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
-import { registerSystemReadRoutes, registerSystemWriteRoutes, registerLlmReadRoutes } from './routes/system/index.js';
-import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
+import { registerSystemReadRoutes, registerSystemWriteRoutes, registerLlmReadRoutes } from './routes/system/index';
+import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
 
 
 export interface AdminRouteContext {

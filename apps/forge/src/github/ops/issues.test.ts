@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { OpsContext } from './context.js';
+import type { OpsContext } from './context';
 
 // Use vi.hoisted so it's initialized before mocks are processed
 const octokitMock = vi.hoisted(() => ({ request: vi.fn() }));

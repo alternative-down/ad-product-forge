@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { OpsContext } from './context.js';
-import type { GitHubAppCredentials } from '../types.js';
+import type { OpsContext } from './context';
+import type { GitHubAppCredentials } from '../types';
 
 const makeCtx = (): OpsContext => ({
   config: { db: vi.fn() as unknown as OpsContext['config']['db'], httpServer: vi.fn() as unknown as OpsContext['config']['httpServer'], publicBaseUrl: 'https://forge.example.com', integrations: vi.fn() as unknown as OpsContext['config']['integrations'] },

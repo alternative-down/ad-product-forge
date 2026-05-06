@@ -2,7 +2,7 @@
  * Labels Ops — listLabels, createLabel, updateLabel, deleteLabel,
  * addIssueLabels, removeIssueLabels
  */
-import type { OpsContext } from './context.js';
+import type { OpsContext } from './context';
 
 export function createLabelsOps(ctx: OpsContext) {
   async function listLabels(agentId: string, input: {

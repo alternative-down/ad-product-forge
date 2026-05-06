@@ -1,6 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
-import { agentSchedules } from '../database/schema.js';
+import { agentSchedules } from '../database/schema';
 import { createId } from '../utils/id';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -44,7 +44,7 @@ import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, ne
 import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
-import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants.js';
+import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
-import { createAgentNotificationStore } from './store.js';
+import { createAgentNotificationStore } from './store';
 
 interface NotificationRow {
   id: string;

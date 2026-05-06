@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createTicketingService } from './service.js';
+import { createTicketingService } from './service';
 
 // Mock createId for deterministic IDs
 vi.mock('../utils/id.js', () => ({

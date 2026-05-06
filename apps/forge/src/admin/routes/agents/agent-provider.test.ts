@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { upsertAgentProviderSchema, deleteAgentProviderSchema } from '../../schemas.js';
+import { upsertAgentProviderSchema, deleteAgentProviderSchema } from '../../schemas';
 
 // =============================================================================
 // upsertAgentProviderSchema

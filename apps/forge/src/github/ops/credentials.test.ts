@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { OpsContext } from './context.js';
-import type { GitHubAppCredentials } from '../types.js';
+import type { OpsContext } from './context';
+import type { GitHubAppCredentials } from '../types';
 
 const sharedDb = { query: { agentProviders: { findFirst: vi.fn() } } };
 

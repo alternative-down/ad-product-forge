@@ -1,5 +1,5 @@
 
-import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
+import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord';
 
 import { forgeDebug } from '@forge-runtime/core';
 

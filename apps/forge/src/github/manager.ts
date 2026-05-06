@@ -41,15 +41,15 @@ import {
   escapeHtml,
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
 } from './helpers';
-import { createReposOps } from './ops/repos.js';
-import { createPullRequestsOps } from './ops/pull-requests.js';
-import { createIssuesOps } from './ops/issues.js';
-import { createLabelsOps } from './ops/labels.js';
-import { createMilestonesOps } from './ops/milestones.js';
-import { createRoutingOps } from './ops/routing.js';
-import { createAppProvisioningOps } from './apps.js';
-import { createCredentialsOps } from './ops/credentials.js';
-import type { OpsContext } from './ops/context.js';
+import { createReposOps } from './ops/repos';
+import { createPullRequestsOps } from './ops/pull-requests';
+import { createIssuesOps } from './ops/issues';
+import { createLabelsOps } from './ops/labels';
+import { createMilestonesOps } from './ops/milestones';
+import { createRoutingOps } from './ops/routing';
+import { createAppProvisioningOps } from './apps';
+import { createCredentialsOps } from './ops/credentials';
+import type { OpsContext } from './ops/context';
 
 
 const GITHUB_PROVIDER_TYPE = 'github-app';

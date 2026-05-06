@@ -11,7 +11,7 @@ import {
   listAgentMcpConfigs,
   updateAgentMcpConfig,
   deleteAgentMcpConfig,
-} from './store.js';
+} from './store';
 
 // ─── module-level mocks ────────────────────────────────────────────────────────
 vi.mock('../../database', () => ({

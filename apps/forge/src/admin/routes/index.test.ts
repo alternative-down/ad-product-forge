@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { jsonResponse, parseJsonBody } from './index.js';
+import { jsonResponse, parseJsonBody } from './index';
 import { z, ZodError } from 'zod';
 
 describe('jsonResponse', () => {

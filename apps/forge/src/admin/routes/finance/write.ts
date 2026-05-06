@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { HttpRequest } from '../../../http/server';
 import { jsonResponse, parseJsonBody } from '../index';
-import { createId } from '../../../utils/id.js';
+import { createId } from '../../../utils/id';
 
 const createInvestmentSchema = z.object({
   amountUsd: z.number().positive(),

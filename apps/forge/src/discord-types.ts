@@ -1,4 +1,4 @@
-import { Collection, Message } from 'discord.js';
+import { Collection, Message } from 'discord';
 
 /**
  * Type definitions for Discord provider
