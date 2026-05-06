@@ -363,6 +363,7 @@ export function createInternalChatAccounts(db: Database) {
     registerAgentAccount,
     registerExternalAccount,
     updateExternalAccount,
+    deleteAgentAccount,
     deleteExternalAccount,
     listAccounts,
     getAccountBySlug,

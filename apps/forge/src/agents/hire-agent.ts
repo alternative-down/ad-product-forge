@@ -23,6 +23,7 @@ import type { createAgentScheduleManager } from '../schedules/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
+import { forgeDebug } from '@forge-runtime/core';
 
 
 export type HireInternalAgentInput = {
@@ -115,27 +116,85 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       }
     });
 
-    await input.internalChat.registerAgentAccount({
-      agentId,
-      displayName: input.name,
-      agentName: input.name,
-      agentDescription: input.description ?? undefined,
-      roleName: input.roleName,
-      roleDescription: input.roleDescription,
-    });
+    let registryAdded = false;
 
-    await input.schedules.createHeartbeatSchedule(agentId);
-    const runtime = await loadAgent(db, {
-      agentId,
-      workspaceBasePath: input.workspaceBasePath,
-      githubApps: input.githubApps,
-      emailMailboxes: input.emailMailboxes,
-      coolify: input.coolify,
-      schedules: input.schedules,
-      internalChat: input.internalChat,
-    });
+    try {
+      await input.internalChat.registerAgentAccount({
+        agentId,
+        displayName: input.name,
+        agentName: input.name,
+        agentDescription: input.description ?? undefined,
+        roleName: input.roleName,
+        roleDescription: input.roleDescription,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      // Clean up the DB records we just created
+      await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await db.delete(agents).where(eq(agents.id, agentId));
+      if (provisionedMailbox && input.emailMailboxes) {
+        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
+      }
+      throw err;
+    }
 
-    await getInternalAgentRegistry().add(db, runtime);
+    try {
+      await input.schedules.createHeartbeatSchedule(agentId);
+    } catch (err) {
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      // Rollback: unregister chat account
+      try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
+      await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await db.delete(agents).where(eq(agents.id, agentId));
+      if (provisionedMailbox && input.emailMailboxes) {
+        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
+      }
+      throw err;
+    }
+
+    let runtime;
+    try {
+      runtime = await loadAgent(db, {
+        agentId,
+        workspaceBasePath: input.workspaceBasePath,
+        githubApps: input.githubApps,
+        emailMailboxes: input.emailMailboxes,
+        coolify: input.coolify,
+        schedules: input.schedules,
+        internalChat: input.internalChat,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      // Rollback: unregister chat account and heartbeat
+      try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
+      
+      await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await db.delete(agents).where(eq(agents.id, agentId));
+      if (provisionedMailbox && input.emailMailboxes) {
+        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
+      }
+      throw err;
+    }
+
+    try {
+      await getInternalAgentRegistry().add(db, runtime);
+      registryAdded = true;
+    } catch (err) {
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      // Try to clean up what we can — runtime was loaded but not registered
+      try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
+      
+      await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await db.delete(agents).where(eq(agents.id, agentId));
+      if (provisionedMailbox && input.emailMailboxes) {
+        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
+      }
+      throw err;
+    }
 
     return {
       agentId,
@@ -146,13 +205,15 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     // Contract and provider records were created inside the same transaction,
     // so a rollback-style delete here is safe even if transaction committed
     // the inserts but the external ops (loadAgent etc.) failed.
+    try { await input.internalChat.deleteAgentAccount({ agentId }); } catch {}
+    
     await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
     await db.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
     await db.delete(agents).where(eq(agents.id, agentId));
     getInternalAgentRegistry().remove(agentId);
 
     if (provisionedMailbox && input.emailMailboxes) {
-      await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+      try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
     }
 
     throw error;
