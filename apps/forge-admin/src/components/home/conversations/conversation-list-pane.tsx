@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatRecentMessageTime, getInitials, type LocalConversation } from './context';
 
-export function conversation-list-pane(input: {
+export function ConversationListPane(input: {
   accounts: Array<{ accountId: string; displayName: string; slug: string; description: string }>;
   selectedAccountId: string;
   selectedAccountLabel: string;

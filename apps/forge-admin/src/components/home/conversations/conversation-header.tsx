@@ -4,7 +4,7 @@ import { AdminButton } from '@/components/admin';
 
 import type { LocalConversation } from './context';
 
-export function conversation-header({
+export function ConversationHeader({
   conversation,
   canManageGroup,
   onBack,

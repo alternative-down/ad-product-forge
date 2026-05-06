@@ -4,7 +4,7 @@ import { AdminDialogBody, AdminDialogContent, AdminDialogHeader, AdminDialogTitl
 import { Dialog } from '@/components/ui/dialog';
 import { getHomeInternalChatAttachmentBlob } from '@/lib/admin-api/index';
 
-export function conversation-attachment(input: {
+export function ConversationAttachment(input: {
   accountId: string;
   conversationId: string;
   messageId: string;
