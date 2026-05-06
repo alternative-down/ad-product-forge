@@ -125,7 +125,7 @@ export function createAgentScheduleManager(input: {
       await registerSchedule(scheduleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
-      forgeDebug('schedules.createSchedule: registerSchedule failed, cleaned up record', { agentId, error });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error } });
       throw error;
     }
 
@@ -182,7 +182,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug('schedules.cancelAgentSchedule: update failed, rolled back', { agentId, scheduleId, error });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'cancelAgentSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (existing.isActive && restored) {
         await registerSchedule(restored);
@@ -235,7 +235,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug('schedules.updateOwnedSchedule: update failed, rolled back', { agentId, scheduleId, error });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (existing.isActive && restored) {
         await registerSchedule(restored);
@@ -302,7 +302,7 @@ export function createAgentScheduleManager(input: {
       await registerSchedule(scheduleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
-      forgeDebug('schedules.createScheduleForAgent: registerSchedule failed, cleaned up record', { agentId: parsed.targetAgentId, error });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error } });
       throw error;
     }
 

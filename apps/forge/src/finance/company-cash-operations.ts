@@ -46,7 +46,7 @@ export function createCompanyCashOperations(db: Database) {
         createdAt: now,
       });
     } catch (err) {
-      forgeDebug('company-cash-operations', 'createEntry', { error: err instanceof Error ? err.message : String(err), type: input.type });
+      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'createEntry', context: { error: err instanceof Error ? err.message : String(err), type: input.type } });
       throw err;
     }
 
@@ -104,7 +104,7 @@ export function createCompanyCashOperations(db: Database) {
         .set({ status: 'canceled' })
         .where(eq(companyCashLedger.id, entryId));
     } catch (err) {
-      forgeDebug('company-cash-operations', 'cancelPlannedEntry', { error: err instanceof Error ? err.message : String(err), entryId });
+      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'cancelPlannedEntry', context: { error: err instanceof Error ? err.message : String(err), entryId } });
       throw err;
     }
 
@@ -123,7 +123,7 @@ export function createCompanyCashOperations(db: Database) {
         .set({ status: 'posted', effectiveAt })
         .where(eq(companyCashLedger.id, entryId));
     } catch (err) {
-      forgeDebug('company-cash-operations', 'postPlannedEntry', { error: err instanceof Error ? err.message : String(err), entryId, effectiveAt });
+      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'postPlannedEntry', context: { error: err instanceof Error ? err.message : String(err), entryId, effectiveAt } });
       throw err;
     }
 
@@ -136,7 +136,7 @@ export function createCompanyCashOperations(db: Database) {
         where: eq(companyCashLedger.id, entryId),
       });
     } catch (err) {
-      forgeDebug('company-cash-operations', 'getEntry', { error: err instanceof Error ? err.message : String(err), entryId });
+      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'getEntry', context: { error: err instanceof Error ? err.message : String(err), entryId } });
       throw err;
     }
   }
@@ -154,7 +154,7 @@ export function createCompanyCashOperations(db: Database) {
       }
       return balance;
     } catch (err) {
-      forgeDebug('company-cash-operations', 'getCurrentBalanceUsd', { error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'getCurrentBalanceUsd', context: { error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
   }
