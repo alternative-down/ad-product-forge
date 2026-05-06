@@ -167,8 +167,8 @@ export async function main() {
   });
 
   await httpServer.start();
-  forgeDebug('forge', `Forge HTTP server started on port ${env.FORGE_HTTP_PORT}`);
-  forgeDebug('forge', `Admin API key: ${adminApiKey ? 'configured' : 'NOT configured'}`);
+  forgeDebug({ scope: 'forge', level: 'info', message: `Forge HTTP server started on port ${env.FORGE_HTTP_PORT}` });
+  forgeDebug({ scope: 'forge', level: 'info', message: `Admin API key: ${adminApiKey ? 'configured' : 'NOT configured'}` });
   if (allowInsecureLocal) {
     // eslint-disable-next-line no-console
     console.warn(
@@ -179,7 +179,7 @@ export async function main() {
 
   // Graceful shutdown
   const shutdown = async () => {
-    forgeDebug('forge', 'Shutting down gracefully...');
+    forgeDebug({ scope: 'forge', level: 'info', message: 'Shutting down gracefully...' });
     await httpServer.stop();
     process.exit(0);
   };
