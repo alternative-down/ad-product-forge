@@ -12,6 +12,7 @@ import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
+import type { InternalChatService } from '../communication/internal-chat-service';
 
 export async function terminateInternalAgent(db: Database, input: {
   agentId: string;
@@ -20,6 +21,7 @@ export async function terminateInternalAgent(db: Database, input: {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   schedules: ReturnType<typeof createAgentScheduleManager>;
+  internalChat: InternalChatService;
 }) {
   const agent = await db.query.agents.findFirst({
     where: eq(agents.id, input.agentId),
@@ -50,6 +52,18 @@ export async function terminateInternalAgent(db: Database, input: {
     }
 
     await input.githubApps.deleteAgentApp(input.agentId);
+
+    // Clean up internal chat account
+    try {
+      await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
+    } catch (chatErr) {
+      forgeDebug({
+        scope: 'terminate-agent',
+        level: 'warn',
+        runtimeId: input.agentId,
+        message: 'internal chat cleanup failed (non-fatal): ' + (chatErr instanceof Error ? chatErr.message : String(chatErr)),
+      });
+    }
   } catch (err) {
     forgeDebug({
       scope: 'terminate-agent',
@@ -59,6 +73,17 @@ export async function terminateInternalAgent(db: Database, input: {
     });
 
     // Still clean up DB and registry even when external ops fail
+    try {
+      await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
+    } catch (chatErr) {
+      forgeDebug({
+        scope: 'terminate-agent',
+        level: 'warn',
+        runtimeId: input.agentId,
+        message: 'internal chat cleanup failed during rollback: ' + (chatErr instanceof Error ? chatErr.message : String(chatErr)),
+      });
+    }
+
     try {
       await db.delete(agents).where(eq(agents.id, input.agentId));
     } catch (deleteErr) {
@@ -74,6 +99,17 @@ export async function terminateInternalAgent(db: Database, input: {
   }
 
   // External ops succeeded — now delete DB record and workspace
+  try {
+    await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
+  } catch (err) {
+    forgeDebug({
+      scope: 'terminate-agent',
+      level: 'warn',
+      runtimeId: input.agentId,
+      message: 'internal chat cleanup failed (non-fatal): ' + (err instanceof Error ? err.message : String(err)),
+    });
+  }
+
   await db.delete(agents).where(eq(agents.id, input.agentId));
   getInternalAgentRegistry().remove(input.agentId);
 
