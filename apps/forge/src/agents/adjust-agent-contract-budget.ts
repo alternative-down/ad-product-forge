@@ -1,4 +1,5 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import { agentExecutionContracts } from '../database/schema';
@@ -18,13 +19,24 @@ export async function adjustAgentContractBudget(
   const now = Date.now();
 
   // Get the active contract
-  const activeContract = await db.query.agentExecutionContracts.findFirst({
-    where: and(
-      eq(agentExecutionContracts.agentId, input.agentId),
-      lte(agentExecutionContracts.startsAt, now),
-      gte(agentExecutionContracts.endsAt, now),
-    ),
-  });
+  let activeContract;
+  try {
+    activeContract = await db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, input.agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
+    });
+  } catch (err) {
+    forgeDebug({
+      scope: 'agent-contract-budget',
+      level: 'error',
+      agentId: input.agentId,
+      message: `Failed to query active contract: ${err instanceof Error ? err.message : String(err)}`,
+    });
+    throw err;
+  }
 
   if (!activeContract) {
     throw new Error(`No active contract for agent: ${input.agentId}`);
@@ -47,29 +59,61 @@ export async function adjustAgentContractBudget(
 
   // Upward adjustment (increase budget) - requires company cash
   if (budgetDelta > 0) {
-    const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    let currentBalanceUsd;
+    try {
+      currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    } catch (err) {
+      forgeDebug({
+        scope: 'agent-contract-budget',
+        level: 'error',
+        agentId: input.agentId,
+        contractId: activeContract.id,
+        message: `Failed to get company cash balance: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      throw err;
+    }
 
     if (currentBalanceUsd < budgetDelta) {
       throw new Error('Insufficient company cash for budget increase');
     }
 
     // Deduct from company cash and update budget atomically
-    await db.transaction(async (tx) => {
-      await companyCashOperations.recordCashOut(
-        {
-          type: 'agent-contract-budget-increase',
-          amountUsd: budgetDelta,
-          description: `Budget increase for contract ${activeContract.id}`,
-          referenceType: 'agent-execution-contract',
-          referenceId: activeContract.id,
-        },
-        tx,
-      );
+    try {
+      await db.transaction(async (tx) => {
+        await companyCashOperations.recordCashOut(
+          {
+            type: 'agent-contract-budget-increase',
+            amountUsd: budgetDelta,
+            description: `Budget increase for contract ${activeContract.id}`,
+            referenceType: 'agent-execution-contract',
+            referenceId: activeContract.id,
+          },
+          tx,
+        );
 
-      await tx
-        .update(agentExecutionContracts)
-        .set({ budgetUsd: input.newBudgetUsd })
-        .where(eq(agentExecutionContracts.id, activeContract.id));
+        await tx
+          .update(agentExecutionContracts)
+          .set({ budgetUsd: input.newBudgetUsd })
+          .where(eq(agentExecutionContracts.id, activeContract.id));
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'agent-contract-budget',
+        level: 'error',
+        agentId: input.agentId,
+        contractId: activeContract.id,
+        message: `Budget increase transaction failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { budgetDelta, newBudgetUsd: input.newBudgetUsd },
+      });
+      throw err;
+    }
+
+    forgeDebug({
+      scope: 'agent-contract-budget',
+      level: 'info',
+      agentId: input.agentId,
+      contractId: activeContract.id,
+      message: `Budget increased by ${budgetDelta} USD (${currentBudget} -> ${input.newBudgetUsd})`,
     });
 
     return {
@@ -84,34 +128,66 @@ export async function adjustAgentContractBudget(
 
   // Downward adjustment (decrease budget) - requires validation
   const contractStore = createAgentContractStore(db);
-  const contractSpend = await contractStore.getContractSpend(activeContract.id);
+  let contractSpend;
+  try {
+    contractSpend = await contractStore.getContractSpend(activeContract.id);
+  } catch (err) {
+    forgeDebug({
+      scope: 'agent-contract-budget',
+      level: 'error',
+      agentId: input.agentId,
+      contractId: activeContract.id,
+      message: `Failed to get contract spend: ${err instanceof Error ? err.message : String(err)}`,
+    });
+    throw err;
+  }
 
   // New budget cannot be less than what's already spent
   if (input.newBudgetUsd < contractSpend) {
     throw new Error(
-      `Cannot reduce budget below spent amount (${contractSpend.toFixed(6)} USD). New budget must be at least ${contractSpend.toFixed(6)} USD.`
+      `Cannot reduce budget below spent amount (${contractSpend.toFixed(6)} USD). New budget must be at least ${contractSpend.toFixed(6)} USD.`,
     );
   }
 
   const refundAmount = Math.abs(budgetDelta);
 
   // Refund unused funds and update budget atomically
-  await db.transaction(async (tx) => {
-    await companyCashOperations.recordCashIn(
-      {
-        type: 'agent-contract-budget-decrease',
-        amountUsd: refundAmount,
-        description: `Budget decrease refund for contract ${activeContract.id}`,
-        referenceType: 'agent-execution-contract',
-        referenceId: activeContract.id,
-      },
-      tx,
-    );
+  try {
+    await db.transaction(async (tx) => {
+      await companyCashOperations.recordCashIn(
+        {
+          type: 'agent-contract-budget-decrease',
+          amountUsd: refundAmount,
+          description: `Budget decrease refund for contract ${activeContract.id}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: activeContract.id,
+        },
+        tx,
+      );
 
-    await tx
-      .update(agentExecutionContracts)
-      .set({ budgetUsd: input.newBudgetUsd })
-      .where(eq(agentExecutionContracts.id, activeContract.id));
+      await tx
+        .update(agentExecutionContracts)
+        .set({ budgetUsd: input.newBudgetUsd })
+        .where(eq(agentExecutionContracts.id, activeContract.id));
+    });
+  } catch (err) {
+    forgeDebug({
+      scope: 'agent-contract-budget',
+      level: 'error',
+      agentId: input.agentId,
+      contractId: activeContract.id,
+      message: `Budget decrease transaction failed: ${err instanceof Error ? err.message : String(err)}`,
+      context: { refundAmount, newBudgetUsd: input.newBudgetUsd },
+    });
+    throw err;
+  }
+
+  forgeDebug({
+    scope: 'agent-contract-budget',
+    level: 'info',
+    agentId: input.agentId,
+    contractId: activeContract.id,
+    message: `Budget decreased by ${refundAmount} USD (${currentBudget} -> ${input.newBudgetUsd})`,
   });
 
   return {
@@ -119,7 +195,7 @@ export async function adjustAgentContractBudget(
     contractId: activeContract.id,
     previousBudgetUsd: currentBudget,
     newBudgetUsd: input.newBudgetUsd,
-    changeAmountUsd: -refundAmount,
+    changeAmountUsd: refundAmount,
     changeType: 'decrease' as const,
   };
 }
