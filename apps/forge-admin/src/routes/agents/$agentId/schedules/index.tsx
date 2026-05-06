@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { createSchedule, deleteSchedule, getAgent, updateSchedule } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { schedule-dialog } from '../../components/agents/schedules/schedule-dialog';
+import { ScheduleDialog } from '../../components/agents/schedules/schedule-dialog';
 import { createEmptyScheduleForm, createScheduleForm, formatDateTime, type ScheduleForm } from '../../components/agents/schedules/scheduleHelpers';
 
 export const Route = createFileRoute('/agents/$agentId/schedules/')({
@@ -215,7 +215,7 @@ function AgentSchedulesIndexRoute() {
         {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
       </section>
 
-      <schedule-dialog
+      <ScheduleDialog
         open={dialogOpen}
         pending={mutation.isPending}
         form={form}
