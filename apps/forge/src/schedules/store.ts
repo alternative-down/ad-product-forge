@@ -218,9 +218,19 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ): Promise<boolean> {
-    const existing = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-    });
+    let existing: typeof agentSchedules.$inferSelect | null | undefined;
+    try {
+      existing = await db.query.agentSchedules.findFirst({
+        where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: '_applyUpdate DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
 
     if (!existing || existing.kind !== 'agent') {
       return false;
@@ -275,9 +285,19 @@ export function createAgentScheduleStore(db: Database) {
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
-    const existing = await db.query.agentSchedules.findFirst({
-      where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-    });
+    let existing: typeof agentSchedules.$inferSelect | null | undefined;
+    try {
+      existing = await db.query.agentSchedules.findFirst({
+        where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deleteAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
 
     if (!existing) {
       return false;
