@@ -6,6 +6,7 @@ import { agentExecutionContracts } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createAgentContractStore } from './agent-contract-store';
+import { currentTimeMs } from '../utils/time';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 
@@ -20,7 +21,7 @@ export async function renewAgentContract(
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const contractStore = createAgentContractStore(db);
-  const now = Date.now();
+  const now = currentTimeMs();
 
   try {
     const activeContract = await db.query.agentExecutionContracts.findFirst({

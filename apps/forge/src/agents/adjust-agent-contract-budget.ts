@@ -6,6 +6,7 @@ import { agentExecutionContracts } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createAgentContractStore } from './agent-contract-store';
+import { currentTimeMs } from '../utils/time';
 
 export async function adjustAgentContractBudget(
   db: Database,
@@ -16,7 +17,7 @@ export async function adjustAgentContractBudget(
 ) {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
-  const now = Date.now();
+  const now = currentTimeMs();
 
   // Get the active contract
   let activeContract;
