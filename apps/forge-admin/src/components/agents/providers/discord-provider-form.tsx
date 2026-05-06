@@ -12,7 +12,7 @@ import {
 } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { toDiscordCredentials } from './-provider-credentials';
+import { toDiscordCredentials } from './provider-credentials';
 
 export function DiscordProviderForm(input: {
   agentId: string;

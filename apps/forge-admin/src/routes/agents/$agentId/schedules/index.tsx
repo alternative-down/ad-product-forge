@@ -13,7 +13,7 @@ import { createSchedule, deleteSchedule, getAgent, updateSchedule } from '@/lib/
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { ScheduleDialog } from '../../components/agents/schedules/schedule-dialog';
-import { createEmptyScheduleForm, createScheduleForm, formatDateTime, type ScheduleForm } from '../../components/agents/schedules/scheduleHelpers';
+import { createEmptyScheduleForm, createScheduleForm, formatDateTime, type ScheduleForm } from '../../components/agents/schedules/schedule-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/schedules/')({
   component: AgentSchedulesIndexRoute,
