@@ -12,7 +12,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
 }) {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
-  const now = Date.now();
+  const now = currentTimeMs();
 
   let activeContract: { id: string; budgetUsd: number } | null = null;
 
