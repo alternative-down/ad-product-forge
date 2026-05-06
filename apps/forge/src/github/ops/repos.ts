@@ -3,10 +3,24 @@
  */
 import type { OpsContext } from './context';
 
+const SCOPE = 'github-ops-repos';
+
 export function createReposOps(ctx: OpsContext) {
   async function listRepositories(agentId: string) {
-    const octokit = await ctx.getInstallationOctokit(agentId);
-    const response = await octokit.request('GET /installation/repositories', { per_page: 100 });
+    let octokit;
+    try {
+      octokit = await ctx.getInstallationOctokit(agentId);
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: 'listRepositories: getInstallationOctokit failed', context: { agentId, error: err } });
+      throw err;
+    }
+    let response;
+    try {
+      response = await octokit.request('GET /installation/repositories', { per_page: 100 });
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: `listRepositories failed: ${err}`, context: { agentId } });
+      throw err;
+    }
     return response.data.repositories.map((repository) => ({
       id: repository.id,
       name: repository.name,
@@ -24,16 +38,34 @@ export function createReposOps(ctx: OpsContext) {
     autoInit?: boolean;
     defaultBranch?: string;
   }) {
-    const octokit = await ctx.getInstallationOctokit(agentId);
-    const githubConfig = await ctx.getGlobalConfig();
-    const response = await octokit.request('POST /orgs/{org}/repos', {
-      org: githubConfig.organization,
-      name: input.name,
-      description: input.description,
-      private: input.private ?? true,
-      auto_init: input.autoInit ?? false,
-      ...(input.defaultBranch && { default_branch: input.defaultBranch }),
-    });
+    let octokit;
+    try {
+      octokit = await ctx.getInstallationOctokit(agentId);
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: 'createRepository: getInstallationOctokit failed', context: { agentId, error: err } });
+      throw err;
+    }
+    let githubConfig;
+    try {
+      githubConfig = await ctx.getGlobalConfig();
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: 'createRepository: getGlobalConfig failed', context: { agentId, error: err } });
+      throw err;
+    }
+    let response;
+    try {
+      response = await octokit.request('POST /orgs/{org}/repos', {
+        org: githubConfig.organization,
+        name: input.name,
+        description: input.description,
+        private: input.private ?? true,
+        auto_init: input.autoInit ?? false,
+        ...(input.defaultBranch && { default_branch: input.defaultBranch }),
+      });
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: `createRepository failed: ${err}`, context: { agentId, repoName: input.name } });
+      throw err;
+    }
     return {
       id: response.data.id,
       name: response.data.name,
@@ -52,16 +84,28 @@ export function createReposOps(ctx: OpsContext) {
     private?: boolean;
     defaultBranch?: string;
   }) {
-    const octokit = await ctx.getInstallationOctokit(agentId);
+    let octokit;
+    try {
+      octokit = await ctx.getInstallationOctokit(agentId);
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: 'updateRepository: getInstallationOctokit failed', context: { agentId, error: err } });
+      throw err;
+    }
     const owner = await ctx.getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}', {
-      owner,
-      repo: input.repositoryName,
-      name: input.name,
-      description: input.description,
-      private: input.private,
-      default_branch: input.defaultBranch,
-    });
+    let response;
+    try {
+      response = await octokit.request('PATCH /repos/{owner}/{repo}', {
+        owner,
+        repo: input.repositoryName,
+        name: input.name,
+        description: input.description,
+        private: input.private,
+        default_branch: input.defaultBranch,
+      });
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: `updateRepository failed: ${err}`, context: { agentId, owner, repo: input.repositoryName } });
+      throw err;
+    }
     return {
       id: response.data.id,
       name: response.data.name,
@@ -69,8 +113,6 @@ export function createReposOps(ctx: OpsContext) {
       private: response.data.private,
       defaultBranch: response.data.default_branch,
       url: response.data.html_url,
-      cloneUrl: response.data.clone_url,
-      sshUrl: response.data.ssh_url,
     };
   }
 
@@ -78,9 +120,23 @@ export function createReposOps(ctx: OpsContext) {
     owner?: string;
     repositoryName: string;
   }) {
-    const octokit = await ctx.getInstallationOctokit(agentId);
+    let octokit;
+    try {
+      octokit = await ctx.getInstallationOctokit(agentId);
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: 'deleteRepository: getInstallationOctokit failed', context: { agentId, error: err } });
+      throw err;
+    }
     const owner = await ctx.getDefaultOwner(input.owner);
-    await octokit.request('DELETE /repos/{owner}/{repo}', { owner, repo: input.repositoryName });
+    try {
+      await octokit.request('DELETE /repos/{owner}/{repo}', {
+        owner,
+        repo: input.repositoryName,
+      });
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: `deleteRepository failed: ${err}`, context: { agentId, owner, repo: input.repositoryName } });
+      throw err;
+    }
     return { success: true };
   }
 
@@ -88,9 +144,24 @@ export function createReposOps(ctx: OpsContext) {
     owner?: string;
     repositoryName: string;
   }) {
-    const octokit = await ctx.getInstallationOctokit(agentId);
+    let octokit;
+    try {
+      octokit = await ctx.getInstallationOctokit(agentId);
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: 'getRepository: getInstallationOctokit failed', context: { agentId, error: err } });
+      throw err;
+    }
     const owner = await ctx.getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}', { owner, repo: input.repositoryName });
+    let response;
+    try {
+      response = await octokit.request('GET /repos/{owner}/{repo}', {
+        owner,
+        repo: input.repositoryName,
+      });
+    } catch (err) {
+      ctx.forgeDebug({ scope: SCOPE, level: 'error', message: `getRepository failed: ${err}`, context: { agentId, owner, repo: input.repositoryName } });
+      throw err;
+    }
     return {
       id: response.data.id,
       name: response.data.name,
@@ -98,16 +169,8 @@ export function createReposOps(ctx: OpsContext) {
       private: response.data.private,
       defaultBranch: response.data.default_branch,
       url: response.data.html_url,
-      cloneUrl: response.data.clone_url,
-      sshUrl: response.data.ssh_url,
     };
   }
 
-  return {
-    listRepositories,
-    createRepository,
-    updateRepository,
-    deleteRepository,
-    getRepository,
-  };
+  return { listRepositories, createRepository, updateRepository, deleteRepository, getRepository };
 }
