@@ -48,7 +48,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       const credentials = JSON.parse(decrypted);
       providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'Failed to decrypt/parse credentials', context: { provider: providerConfig.providerType, error } });
+      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to decrypt/parse credentials for agent ' + config.agentId + ': ' + String(error), context: { provider: providerConfig.providerType } });
     }
   }
 

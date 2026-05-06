@@ -352,7 +352,7 @@ export function decryptProviderConfig(encryptedCredentials: string) {
   try {
     return JSON.parse(decrypted) as unknown;
   } catch (error) {
-    forgeDebug({ scope: 'admin/read-model', level: 'warn', message: 'Failed to parse credentials JSON', context: { error } });
+    forgeDebug({ scope: 'admin/read-model', level: 'error', message: 'Failed to parse credentials JSON: ' + String(error), context: { error } });
     return decrypted;
   }
 }
