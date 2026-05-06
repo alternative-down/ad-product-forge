@@ -1,4 +1,5 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import { agentExecutionContracts } from '../database/schema';
@@ -12,41 +13,61 @@ export async function topUpActiveAgentContract(db: Database, input: {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const now = Date.now();
-  const activeContract = await db.query.agentExecutionContracts.findFirst({
-    where: and(
-      eq(agentExecutionContracts.agentId, input.agentId),
-      lte(agentExecutionContracts.startsAt, now),
-      gte(agentExecutionContracts.endsAt, now),
-    ),
-  });
+
+  let activeContract: { id: string; budgetUsd: number } | null = null;
+
+  try {
+    activeContract = await db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, input.agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to find active contract: ' + (err instanceof Error ? err.message : String(err)) });
+    throw err;
+  }
 
   if (!activeContract) {
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
 
-  const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+  let currentBalanceUsd: number;
+
+  try {
+    currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+  } catch (err) {
+    forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to get company cash balance: ' + (err instanceof Error ? err.message : String(err)) });
+    throw err;
+  }
 
   if (currentBalanceUsd < input.amountUsd) {
     throw new Error('Insufficient company cash for contract top-up');
   }
 
-  await db.transaction(async (tx) => {
-    await companyCashOperations.recordCashOut(
-      {
-        type: 'agent-contract-topup',
-        amountUsd: input.amountUsd,
-        description: `Contract top-up for ${input.agentId}`,
-        referenceType: 'agent-execution-contract',
-        referenceId: activeContract.id,
-      },
-      tx,
-    );
+  try {
+    await db.transaction(async (tx) => {
+      await companyCashOperations.recordCashOut(
+        {
+          type: 'agent-contract-topup',
+          amountUsd: input.amountUsd,
+          description: `Contract top-up for ${input.agentId}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: activeContract!.id,
+        },
+        tx,
+      );
 
-    await tx
-      .update(agentExecutionContracts)
-      .set({ budgetUsd: activeContract.budgetUsd + input.amountUsd })
-      .where(eq(agentExecutionContracts.id, activeContract.id));
-  });
+      await tx
+        .update(agentExecutionContracts)
+        .set({ budgetUsd: activeContract!.budgetUsd + input.amountUsd })
+        .where(eq(agentExecutionContracts.id, activeContract!.id));
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to record cash out or update contract: ' + (err instanceof Error ? err.message : String(err)) });
+    throw err;
+  }
 
   return {
     agentId: input.agentId,
