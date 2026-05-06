@@ -21,7 +21,8 @@
     "release": "changeset publish",
     "lint-staged": "lint-staged",
     "verify-deps": "node scripts/verify-deps-versions.js",
-    "verify-deps:fix": "node scripts/verify-deps-versions.js --fix"
+    "verify-deps:fix": "node scripts/verify-deps-versions.js --fix",
+    "check-filenames": "node scripts/kebab-case-check.js"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",

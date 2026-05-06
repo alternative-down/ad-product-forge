@@ -33,6 +33,52 @@ function makeNoDynamicImportsRule() {
   };
 }
 
+// Rule creator function: enforce kebab-case filenames
+function makeKebabCaseFilenameRule() {
+  return {
+    meta: {
+      type: 'layout',
+      docs: { description: 'Enforce kebab-case for file and directory names' },
+      schema: [],
+    },
+    create(context) {
+      return {
+        'Program:exit'(node) {
+          const filename = context.filename;
+          // Skip if no filename (e.g., stdin)
+          if (!filename || filename === '<input>') return;
+          // Get base filename without directory
+          const parts = filename.replace(/\\/g, '/').split('/');
+          const basename = parts[parts.length - 1];
+          // Skip if no extension (likely index file handled differently) or in node_modules/dist
+          if (basename.includes('node_modules') || basename.includes('dist')) return;
+          // Allow .git/ and config files at root level
+          if (basename.startsWith('.')) return;
+          // Check if filename matches kebab-case pattern
+          // Allow: index.tsx, route.tsx, *.test.ts, config files with alphanumeric names
+          // Patterns allowed:
+          // - index.ts, index.tsx
+          // - route.ts, route.tsx
+          // - *-section.tsx, *-dialog.tsx, etc.
+          // - *.test.ts, *.test.tsx
+          // - files starting with lowercase letter followed by alphanumeric/kebab
+          const isKebab = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(\.tsx|\.ts|\.js|\.jsx)?$/.test(basename);
+          const isIndex = /^index\.(tsx?|jsx?)$/.test(basename);
+          const isRoute = /^route\.(tsx?|jsx?)$/.test(basename);
+          const isTest = /\.(test|spec)\.(tsx?|jsx?)$/.test(basename);
+          const isConfig = /^[a-z]+\.(config|types)\.(tsx?|jsx?)$/.test(basename);
+          if (!isKebab && !isIndex && !isRoute && !isTest && !isConfig) {
+            context.report({
+              node,
+              message: `Filename "${basename}" must be kebab-case (e.g., my-component.tsx, agent-log.test.ts). Allowed patterns: index.tsx, route.tsx, *.test.ts, kebab-case.tsx`,
+            });
+          }
+        },
+      };
+    },
+  };
+}
+
 export default defineConfig([
   globalIgnores(['dist', 'node_modules', '.turbo']),
 
@@ -79,6 +125,12 @@ export default defineConfig([
         },
         meta: { name: 'no-dynamic-imports', version: '1.0.0' },
       },
+      'kebab-case-filename': {
+        rules: {
+          'kebab-case-filename': makeKebabCaseFilenameRule(),
+        },
+        meta: { name: 'kebab-case-filename', version: '1.0.0' },
+      },
     },
     rules: {
       '@typescript-eslint/no-unused-vars': [
@@ -99,6 +151,8 @@ export default defineConfig([
       '@typescript-eslint/return-await': ['error', 'always'],
       // #1591: block dynamic imports without disable comment
       'no-dynamic-imports/no-dynamic-imports': 2,
+      // #1629: enforce kebab-case filenames
+      'kebab-case-filename/kebab-case-filename': 2,
     },
   },
 ]);
