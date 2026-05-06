@@ -223,7 +223,7 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       return parseIntegrationConfig(providerType, encryptedConfig);
     } catch (error) {
-      forgeDebug('system-integrations', 'Failed to parse integration config', { error });
+      forgeDebug({ scope: 'system-integrations', level: 'info', message: 'Failed to parse integration config', context: { error } });
       return null;
     }
   }

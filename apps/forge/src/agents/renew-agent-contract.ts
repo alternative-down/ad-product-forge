@@ -33,7 +33,7 @@ export async function renewAgentContract(
     });
 
     if (!activeContract) {
-      forgeDebug('renew-agent-contract', 'no-active-contract', { agentId: input.agentId });
+      forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'no-active-contract', context: { agentId: input.agentId } });
       throw new Error(`No active contract for agent: ${input.agentId}`);
     }
 
@@ -45,11 +45,11 @@ export async function renewAgentContract(
     const availableBalanceUsd = currentBalanceUsd + refundableUsd;
 
     if (availableBalanceUsd < input.newBudgetUsd) {
-      forgeDebug('renew-agent-contract', 'insufficient-balance', {
+      forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'insufficient-balance', context: {
         agentId: input.agentId,
         availableBalanceUsd,
         requiredBudgetUsd: input.newBudgetUsd,
-      });
+      } });
       throw new Error('Insufficient company cash to renew this contract');
     }
 
@@ -107,13 +107,13 @@ export async function renewAgentContract(
         .where(eq(agentExecutionContracts.id, newContractId));
     });
 
-    forgeDebug('renew-agent-contract', 'success', {
+    forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'success', context: {
       agentId: input.agentId,
       previousContractId: activeContract.id,
       newContractId,
       previousBudgetUsd: activeContract.budgetUsd,
       newBudgetUsd: input.newBudgetUsd,
-    });
+    } });
 
     return {
       agentId: input.agentId,
@@ -127,10 +127,10 @@ export async function renewAgentContract(
       endsAt: now + WEEK_MS,
     };
   } catch (err) {
-    forgeDebug('renew-agent-contract', 'error', {
+    forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'error', context: {
       error: err instanceof Error ? err.message : String(err),
       agentId: input.agentId,
-    });
+    } });
     throw err;
   }
 }

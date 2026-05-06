@@ -20,9 +20,9 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           const applications = await coolify.listApplications();
           return { success: true as const, applications };
         } catch (error) {
-          forgeDebug('tools:coolify', 'list_coolify_applications error', {
+          forgeDebug({ scope: 'tools:coolify', level: 'info', message: 'list_coolify_applications error', context: {
             error: error instanceof Error ? error.message : String(error),
-          });
+          } });
           return {
             success: false as const,
             error: error instanceof Error ? error.message : String(error),
@@ -44,9 +44,9 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           await coolify.startApplication(input.applicationUuid);
           return { success: true as const, applicationUuid: input.applicationUuid };
         } catch (error) {
-          forgeDebug('tools:coolify', 'start_coolify_application error', {
+          forgeDebug({ scope: 'tools:coolify', level: 'info', message: 'start_coolify_application error', context: {
             error: error instanceof Error ? error.message : String(error),
-          });
+          } });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
@@ -69,9 +69,9 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           await coolify.stopApplication(input.applicationUuid);
           return { success: true as const, applicationUuid: input.applicationUuid };
         } catch (error) {
-          forgeDebug('tools:coolify', 'stop_coolify_application error', {
+          forgeDebug({ scope: 'tools:coolify', level: 'info', message: 'stop_coolify_application error', context: {
             error: error instanceof Error ? error.message : String(error),
-          });
+          } });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
@@ -95,9 +95,9 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           const result = await coolify.getApplicationLogs({ applicationUuid: input.applicationUuid, lines: input.lines });
           return { success: true as const, ...result };
         } catch (error) {
-          forgeDebug('tools:coolify', 'get_coolify_application_logs error', {
+          forgeDebug({ scope: 'tools:coolify', level: 'info', message: 'get_coolify_application_logs error', context: {
             error: error instanceof Error ? error.message : String(error),
-          });
+          } });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,

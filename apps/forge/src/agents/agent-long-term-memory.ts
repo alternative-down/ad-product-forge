@@ -375,14 +375,14 @@ export function createAgentLongTermMemory(input: {
     const packagePath = path.resolve(checkpointsPath, packageId);
     const tempPackagePath = `${packagePath}.${createId()}.tmp`;
 
-    forgeDebug('ltm', 'checkpoint package write start', {
+    forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write start', context: {
       agentId: input.agentId,
       threadId: payload.threadId,
       packageId,
       checkpointGeneration: payload.toGeneration,
       reflectionCount: payload.reflections.length,
       observationCount: payload.observations.length,
-    });
+    } });
 
     await fs.rm(tempPackagePath, { recursive: true, force: true });
     await fs.mkdir(tempPackagePath, { recursive: true });
@@ -438,12 +438,12 @@ export function createAgentLongTermMemory(input: {
     await markRecallIndexDirty('checkpoint-write');
     await refreshRecallIndex?.();
 
-    forgeDebug('ltm', 'checkpoint package write complete', {
+    forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write complete', context: {
       agentId: input.agentId,
       threadId: payload.threadId,
       packageId,
       checkpointGeneration: payload.toGeneration,
-    });
+    } });
 
     return manifest;
   }
@@ -568,12 +568,12 @@ export function createAgentLongTermMemory(input: {
               await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
             onIterationComplete: async (iteration) => {
-              forgeDebug('ltm', 'memory workflow step complete', {
+              forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow step complete', context: {
                 agentId: input.agentId,
                 hasToolCalls: iteration.toolCalls.length > 0,
                 outputLength: iteration.text.length,
                 iteration: iteration.iteration,
-              });
+              } });
 
               if (iteration.toolCalls.length > 0) {
                 return {
@@ -592,12 +592,12 @@ export function createAgentLongTermMemory(input: {
         );
         break;
       } catch (error) {
-        forgeDebug('ltm', 'memory workflow attempt failed', {
+        forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow attempt failed', context: {
           agentId: input.agentId,
           attempt,
           maxAttempts: GENERATE_MAX_ATTEMPTS,
           error: error instanceof Error ? error.message : String(error),
-        });
+        } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
           throw error;
@@ -637,11 +637,11 @@ export function createAgentLongTermMemory(input: {
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
     try {
-      forgeDebug('ltm', 'memory workflow start', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow start', context: {
         agentId: input.agentId,
         packageIds: availablePackages.map((entry) => entry.packageId),
         packageCount: state.packages.length,
-      });
+      } });
 
       const changedFiles = new Set<string>();
       const nextState = await readState();
@@ -661,11 +661,11 @@ export function createAgentLongTermMemory(input: {
         changedFiles.add(filePath);
       }
 
-      forgeDebug('ltm', 'memory workflow complete', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow complete', context: {
         agentId: input.agentId,
         packageIds: state.packages.map((entry) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
-      });
+      } });
 
       if (changedFiles.size > 0) {
         await markRecallIndexDirty('ltm-run-complete');
@@ -678,10 +678,10 @@ export function createAgentLongTermMemory(input: {
       state.lastRunError = error instanceof Error ? error.message : String(error);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
-      forgeDebug('ltm', 'memory workflow failed', {
+      forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow failed', context: {
         agentId: input.agentId,
         error: state.lastRunError,
-      });
+      } });
     } finally {
       running = false;
       snapshot.running = false;
