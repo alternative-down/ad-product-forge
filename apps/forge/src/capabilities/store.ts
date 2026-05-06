@@ -150,9 +150,19 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function updateRole(input: { roleId: string; name?: string; description?: string | null }) {
-    const existing = await db.query.agentRoles.findFirst({
-      where: eq(agentRoles.id, input.roleId),
-    });
+    let existing;
+    try {
+      existing = await db.query.agentRoles.findFirst({
+        where: eq(agentRoles.id, input.roleId),
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'updateRole read existing failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
 
     if (!existing) {
       throw new Error(`Role not found: ${input.roleId}`);
@@ -184,12 +194,22 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function deleteRole(roleId: string) {
-    const assignedAgent = await db.query.agents.findFirst({
-      where: eq(agents.roleId, roleId),
-      columns: {
-        id: true,
-      },
-    });
+    let assignedAgent;
+    try {
+      assignedAgent = await db.query.agents.findFirst({
+        where: eq(agents.roleId, roleId),
+        columns: {
+          id: true,
+        },
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'deleteRole check assigned agent failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
 
     if (assignedAgent) {
       throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
