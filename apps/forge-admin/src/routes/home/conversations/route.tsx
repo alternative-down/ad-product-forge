@@ -29,7 +29,7 @@ import {
   normalizeAccount,
   normalizeConversations,
   SELECTED_ACCOUNT_STORAGE_KEY,
-} from '@/components/home/conversations/routeHelpers';
+} from '@/components/home/conversations/route-helpers';
 
 export const Route = createFileRoute('/home/conversations')({
   component: HomeConversationsLayoutRoute,

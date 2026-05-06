@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { ContractAdjustDialog, ContractForm, ContractTerminateDialog } from '../../components/agents/contract/contract-dialogs';
-import { formatDate, formatDateTime, formatInteger, formatPercent, formatUsd } from '../../components/agents/contract/contractFormat';
+import { formatDate, formatDateTime, formatInteger, formatPercent, formatUsd } from '../../components/agents/contract/contract-format';
 
 export const Route = createFileRoute('/agents/$agentId/contract/')({
   component: AgentContractIndexRoute,

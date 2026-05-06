@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Dialog } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 
-import { normalizeRoleFormToolIds, type RoleForm } from './roles-page.helpers';
+import { normalizeRoleFormToolIds, type RoleForm } from './roles-page-helpers';
 
 function toggleRoleToolIds(toolIds: string[], toolId: string, checked: boolean) {
   const nextToolIds = checked ? [...toolIds, toolId] : toolIds.filter((currentToolId) => currentToolId !== toolId);

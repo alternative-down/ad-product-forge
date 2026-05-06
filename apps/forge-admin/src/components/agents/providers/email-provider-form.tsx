@@ -10,7 +10,7 @@ import {
 } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { isEmailCredentialsValid, toEmailCredentials } from './-provider-credentials';
+import { isEmailCredentialsValid, toEmailCredentials } from './provider-credentials';
 
 export function EmailProviderForm(input: {
   agentId: string;

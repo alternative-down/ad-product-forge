@@ -30,7 +30,7 @@ import {
   formatUsd,
   humanizeAgentStatus,
   type AgentProfileForm,
-} from '../components/agents/agentDetailHelpers';
+} from '../components/agents/agent-detail-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/')({
   component: AgentDetailIndexRoute,

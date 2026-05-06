@@ -27,7 +27,7 @@ import {
   mergeBaseRoleToolIds,
   normalizeRoleFormToolIds,
   type RoleForm,
-} from './roles-page.helpers';
+} from './roles-page-helpers';
 
 export function RolesPage() {
   const queryClient = useQueryClient();
