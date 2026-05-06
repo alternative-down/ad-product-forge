@@ -5,7 +5,7 @@
  * Each route fetches only the data it needs (single focused query).
  */
 
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 
 interface AgentDetailReadModel {

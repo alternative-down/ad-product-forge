@@ -3,7 +3,7 @@
  * closeIssue, reopenIssue, listIssueComments, getIssueComment,
  * createIssueComment, updateIssueComment, deleteIssueComment
  */
-import type { OpsContext } from './context.js';
+import type { OpsContext } from './context';
 
 export function createIssuesOps(ctx: OpsContext) {
   async function listIssues(agentId: string, input: {

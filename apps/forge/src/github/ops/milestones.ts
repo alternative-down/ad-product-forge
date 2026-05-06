@@ -1,7 +1,7 @@
 /**
  * Milestones Ops — listMilestones, createMilestone, updateMilestone, deleteMilestone
  */
-import type { OpsContext } from './context.js';
+import type { OpsContext } from './context';
 
 export function createMilestonesOps(ctx: OpsContext) {
   async function listMilestones(agentId: string, input: {

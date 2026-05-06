@@ -8,7 +8,7 @@ vi.mock('@forge-runtime/core', () => ({
   withTimeout: vi.fn().mockImplementation(async (promise: Promise<unknown>) => promise),
 }));
 
-import type { Database } from '../../../../database/index.js';
+import type { Database } from '../../../../database/index';
 import { registerAgentWriteOpsRoutes } from './write-ops';
 
 const { mockReloadAgentIfLoaded } = vi.hoisted(() => ({

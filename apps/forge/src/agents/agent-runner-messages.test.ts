@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { createMessageManager, type MessageManagerState } from './agent-runner-messages.js';
+import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
 function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {

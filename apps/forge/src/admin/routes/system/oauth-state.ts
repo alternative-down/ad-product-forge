@@ -4,7 +4,7 @@
  */
 
 import { oauthStore, type OAuthCredential, type ProviderId } from '@forge-runtime/core';
-import { fsPathExists } from '../helpers.js';
+import { fsPathExists } from '../helpers';
 
 export type SystemOauthProvider = {
   providerId: ProviderId;

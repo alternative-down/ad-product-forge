@@ -5,8 +5,8 @@
  */
 import type { Octokit } from 'octokit';
 import { App } from 'octokit';
-import type { OpsContext } from './ops/context.js';
-import type { GitHubAppCredentials } from './types.js';
+import type { OpsContext } from './ops/context';
+import type { GitHubAppCredentials } from './types';
 
 export interface AppProvisioningOps {
   getGlobalConfig: OpsContext['getGlobalConfig'];

@@ -10,7 +10,7 @@
  * level so Vitest can wire the same reference into the factory.
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import type { McpServerConfig, AgentMcpConfig } from './store.js';
+import type { McpServerConfig, AgentMcpConfig } from './store';
 
 // ─── Hoisted mocks (must be defined before vi.mock runs) ─────────────────────
 

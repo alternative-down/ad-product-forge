@@ -4,8 +4,8 @@
  * Extracted schemas and utilities from the monolithic routes.ts
  */
 
-export * from './schemas.js';
-export * from './validation.js';
+export * from './schemas';
+export * from './validation';
 
 /**
  * Build a JSON response object

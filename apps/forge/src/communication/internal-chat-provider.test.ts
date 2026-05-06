@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
-import type { InternalChatService } from './internal-chat-service.js';
-import { createInternalChatProvider } from './internal-chat-provider.js';
+import type { InternalChatService } from './internal-chat-service';
+import { createInternalChatProvider } from './internal-chat-provider';
 
 // ---------------------------------------------------------------------------\n// helpers
 // -----------------------------------------------------------------------------

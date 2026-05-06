@@ -1,5 +1,5 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { createScheduler, type SchedulerState, type SchedulerDependencies } from './agent-runner-scheduler.js';
+import { createScheduler, type SchedulerState, type SchedulerDependencies } from './agent-runner-scheduler';
 
 // ─── Constants (must match scheduler source) ─────────────────────────────────
 const ONE_MINUTE_MS = 60_000;

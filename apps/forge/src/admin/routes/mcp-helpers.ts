@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
-import type { Database } from '../../database/index.js';
-import type { AgentLoaderConfig } from '../../agents/agent-loader.js';
-import { reloadAgentIfLoaded } from '../../capabilities/runtime.js';
-import { agentMcpConfigs } from '../../database/schema.js';
+import type { Database } from '../../database/index';
+import type { AgentLoaderConfig } from '../../agents/agent-loader';
+import { reloadAgentIfLoaded } from '../../capabilities/runtime';
+import { agentMcpConfigs } from '../../database/schema';
 
 export async function reloadAgentMcp(
   db: Database,
