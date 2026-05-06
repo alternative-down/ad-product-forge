@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 import '../styles/app.css';
 import { AccessGate } from '@/components/admin/access-gate';
-import { validateAdminSecret } from '@/lib/admin-api';
+import { validateAdminSecret } from '@/lib/admin-api/index';
 import {
   getStoredAdminSecret,
   getStoredAdminTheme,

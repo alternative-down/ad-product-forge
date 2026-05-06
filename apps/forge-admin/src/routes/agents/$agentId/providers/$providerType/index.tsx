@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { AdminLoadingState } from '@/components/admin';
-import { getAgent } from '@/lib/admin-api';
+import { getAgent } from '@/lib/admin-api/index';
 
 import { DiscordProviderForm } from '../../components/agents/providers/DiscordProviderForm';
 import { EmailProviderForm } from '../../components/agents/providers/EmailProviderForm';

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { AdminDialogBody, AdminDialogContent, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { getHomeInternalChatAttachmentBlob } from '@/lib/admin-api';
+import { getHomeInternalChatAttachmentBlob } from '@/lib/admin-api/index';
 
 export function ConversationAttachment(input: {
   accountId: string;

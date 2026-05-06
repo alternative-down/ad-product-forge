@@ -1,4 +1,4 @@
-import type { CreatePayableInput } from '@/lib/admin-api';
+import type { CreatePayableInput } from '@/lib/admin-api/index';
 
 export type MovementForm = {
   kind: 'single' | 'recurring';

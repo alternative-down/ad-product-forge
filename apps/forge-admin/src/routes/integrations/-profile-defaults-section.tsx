@@ -1,7 +1,7 @@
 import { AdminButton } from '@/components/admin';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import type { LlmProfile } from '@/lib/admin-api';
+import type { LlmProfile } from '@/lib/admin-api/index';
 
 export function ProfileDefaultsSection(input: {
   enabledProfiles: LlmProfile[];

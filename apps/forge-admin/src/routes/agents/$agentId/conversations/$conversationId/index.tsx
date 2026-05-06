@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { getAgentConversationMessages, getAgentRecentConversations } from '@/lib/admin-api';
+import { getAgentConversationMessages, getAgentRecentConversations } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/agents/$agentId/conversations/$conversationId/')({
   component: AgentConversationDetailIndexRoute,

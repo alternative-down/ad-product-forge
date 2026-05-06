@@ -15,7 +15,7 @@ import {
   getFinanceContracts,
   postPlannedLedgerEntry,
   setRecurringPayableActive,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import {

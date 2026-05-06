@@ -1,4 +1,4 @@
-import type { RoleItem } from '@/lib/admin-api';
+import type { RoleItem } from '@/lib/admin-api/index';
 
 const BASE_ROLE_TOOL_IDS = [
   'list_contacts',

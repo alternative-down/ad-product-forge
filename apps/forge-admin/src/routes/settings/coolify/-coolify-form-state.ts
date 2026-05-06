@@ -1,4 +1,4 @@
-import type { SystemIntegration } from '@/lib/admin-api';
+import type { SystemIntegration } from '@/lib/admin-api/index';
 
 export interface CoolifyFormValues {
   baseUrl: string;

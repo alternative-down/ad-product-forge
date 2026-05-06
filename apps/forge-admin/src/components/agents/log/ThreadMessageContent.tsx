@@ -1,7 +1,7 @@
 import { ChevronDown } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { type AgentThreadMessage } from '@/lib/admin-api';
+import { type AgentThreadMessage } from '@/lib/admin-api/index';
 
 export function ThreadMessageArticle(input: {
   message: AgentThreadMessage;

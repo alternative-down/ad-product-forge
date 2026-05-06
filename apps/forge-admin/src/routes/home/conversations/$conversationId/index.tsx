@@ -11,7 +11,7 @@ import {
   updateHomeInternalChatConversation,
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { formatRecentMessageTime, useHomeConversations } from '../-context';
 import { ConversationComposer } from '@/components/home/conversations/ConversationComposer';
 import { ConversationHeader } from '@/components/home/conversations/ConversationHeader';

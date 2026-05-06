@@ -9,7 +9,7 @@ import {
   deleteAgentProvider,
   upsertAgentProvider,
   type DiscordProviderCredentials,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { toDiscordCredentials } from './-provider-credentials';

@@ -1,4 +1,4 @@
-import type { AgentDetail } from '@/lib/admin-api';
+import type { AgentDetail } from '@/lib/admin-api/index';
 
 export type AgentProfileForm = {
   name: string;

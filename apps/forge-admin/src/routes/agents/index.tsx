@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { AgentAvatar, AdminButton, AdminLoadingState, HireAgentDialog, PageHeader } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getAgents } from '@/lib/admin-api';
+import { getAgents } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/agents/')({
   component: AgentsIndexRoute,

@@ -3,7 +3,7 @@
  * Centralises the type definitions that are shared between SettingsGeneralRoute
  * and its child section components.
  */
-import type { SystemSettings } from '@/lib/admin-api';
+import type { SystemSettings } from '@/lib/admin-api/index';
 
 /* ── Draft shapes ─────────────────────────────────────────────── */
 

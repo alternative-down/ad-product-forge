@@ -9,7 +9,7 @@ import {
   HireAgentDialog,
 } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
-import { getAgents, getSystemSettings } from '@/lib/admin-api';
+import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/home/')({
   component: HomeIndexRoute,

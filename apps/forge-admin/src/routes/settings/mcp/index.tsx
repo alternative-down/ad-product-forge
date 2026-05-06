@@ -9,7 +9,7 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteSystemMcpServer, getSystemMcpServers, upsertSystemMcpServer } from '@/lib/admin-api';
+import { deleteSystemMcpServer, getSystemMcpServers, upsertSystemMcpServer } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { createEmptyMcpForm, createMcpForm, McpDialog, toSystemMcpInput } from './-mcp-dialog';

@@ -4,7 +4,7 @@ import { AdminButton } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import type { LlmProfile, UpsertLlmProfileInput } from '@/lib/admin-api';
+import type { LlmProfile, UpsertLlmProfileInput } from '@/lib/admin-api/index';
 
 export function ProfilesSection(input: {
   statusFilter: 'active' | 'inactive';

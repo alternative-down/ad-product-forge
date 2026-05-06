@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { InternalChatContact, InternalChatExternalAccount } from '@/lib/admin-api';
+import type { InternalChatContact, InternalChatExternalAccount } from '@/lib/admin-api/index';
 
 export type LocalConversationMessage = {
   id: string;
