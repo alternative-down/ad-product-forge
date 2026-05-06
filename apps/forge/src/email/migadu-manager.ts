@@ -295,7 +295,14 @@ async function buildMigaduError(action: string, response: Response) {
   return new Error(`Migadu ${action} failed (${response.status}): ${message}`);
 }
 
+
+
 function parseStoredCredentials(encryptedCredentials: string) {
-  const decrypted = decryptSecret(encryptedCredentials);
-  return emailProviderCredentialsSchema.parse(JSON.parse(decrypted));
+  try {
+    const decrypted = decryptSecret(encryptedCredentials);
+    return emailProviderCredentialsSchema.parse(JSON.parse(decrypted));
+  } catch (error) {
+    forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'Failed to decrypt/parse email credentials: ' + String(error) });
+    throw error;
+  }
 }
