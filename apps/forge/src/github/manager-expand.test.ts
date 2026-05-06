@@ -11,7 +11,7 @@ const { mockRequest, mockDecryptSecret, mockEncryptSecret, mockCreateAppAuth, mo
 vi.mock('octokit', () => { const req = mockRequest; return { App: vi.fn().mockImplementation(function() { this.octokit = { request: req }; this.getInstallationOctokit = async () => ({ request: req }); }), Octokit: vi.fn().mockImplementation((opts) => ({ request: mockRequest, auth: opts?.auth })) }; });
 vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
-vi.mock('../notifications/store', () => ({ createAgentNotificationStore: vi.fn(() => ({ addNotification: vi.fn() })) }));
+vi.mock('../notifications/store', () => ({ createAgentNotificationStore: vi.fn(() => ({ createNotification: vi.fn() })) }));
 vi.mock('../system-integrations/store', () => ({ createSystemIntegrationStore: () => ({ getGitHubConfig: mockGetGitHubConfig }) }));
 vi.mock('../encryption/crypto', () => ({ decryptSecret: mockDecryptSecret, encryptSecret: mockEncryptSecret }));
 
