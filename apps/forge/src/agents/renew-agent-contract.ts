@@ -1,4 +1,5 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/index';
 import { agentExecutionContracts } from '../database/schema';
@@ -21,92 +22,114 @@ export async function renewAgentContract(
   const contractStore = createAgentContractStore(db);
   const now = Date.now();
 
-  const activeContract = await db.query.agentExecutionContracts.findFirst({
-    where: and(
-      eq(agentExecutionContracts.agentId, input.agentId),
-      lte(agentExecutionContracts.startsAt, now),
-      gte(agentExecutionContracts.endsAt, now),
-    ),
-  });
-
-  if (!activeContract) {
-    throw new Error(`No active contract for agent: ${input.agentId}`);
-  }
-
-  const spentUsd = await contractStore.getContractSpend(activeContract.id);
-  const refundableUsd = activeContract.fundedAt
-    ? Math.max(activeContract.budgetUsd - spentUsd, 0)
-    : 0;
-  const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
-  const availableBalanceUsd = currentBalanceUsd + refundableUsd;
-
-  if (availableBalanceUsd < input.newBudgetUsd) {
-    throw new Error('Insufficient company cash to renew this contract');
-  }
-
-  const newContractId = createId();
-
-  // Refund old contract if funded
-  if (refundableUsd > 0) {
-    await companyCashOperations.recordCashIn({
-      type: 'agent-contract-renewal-refund',
-      amountUsd: refundableUsd,
-      description: `Renewal refund for contract ${activeContract.id}`,
-      referenceType: 'agent-execution-contract',
-      referenceId: activeContract.id,
-      effectiveAt: now,
+  try {
+    const activeContract = await db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, input.agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
     });
-  }
 
-  // Close old contract, create new, and fund it atomically
-  await db.transaction(async (tx) => {
-    // Close old contract
-    await tx
-      .update(agentExecutionContracts)
-      .set({ endsAt: now })
-      .where(eq(agentExecutionContracts.id, activeContract.id));
+    if (!activeContract) {
+      forgeDebug('renew-agent-contract', 'no-active-contract', { agentId: input.agentId });
+      throw new Error(`No active contract for agent: ${input.agentId}`);
+    }
 
-    // Create new contract
-    await tx.insert(agentExecutionContracts).values({
-      id: newContractId,
+    const spentUsd = await contractStore.getContractSpend(activeContract.id);
+    const refundableUsd = activeContract.fundedAt
+      ? Math.max(activeContract.budgetUsd - spentUsd, 0)
+      : 0;
+    const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    const availableBalanceUsd = currentBalanceUsd + refundableUsd;
+
+    if (availableBalanceUsd < input.newBudgetUsd) {
+      forgeDebug('renew-agent-contract', 'insufficient-balance', {
+        agentId: input.agentId,
+        availableBalanceUsd,
+        requiredBudgetUsd: input.newBudgetUsd,
+      });
+      throw new Error('Insufficient company cash to renew this contract');
+    }
+
+    const newContractId = createId();
+
+    // Refund old contract if funded
+    if (refundableUsd > 0) {
+      await companyCashOperations.recordCashIn({
+        type: 'agent-contract-renewal-refund',
+        amountUsd: refundableUsd,
+        description: `Renewal refund for contract ${activeContract.id}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: activeContract.id,
+        effectiveAt: now,
+      });
+    }
+
+    // Close old contract, create new, and fund it atomically
+    await db.transaction(async (tx) => {
+      // Close old contract
+      await tx
+        .update(agentExecutionContracts)
+        .set({ endsAt: now })
+        .where(eq(agentExecutionContracts.id, activeContract.id));
+
+      // Create new contract
+      await tx.insert(agentExecutionContracts).values({
+        id: newContractId,
+        agentId: input.agentId,
+        budgetUsd: input.newBudgetUsd,
+        autoRenew: activeContract.autoRenew,
+        fundedAt: null,
+        startsAt: now,
+        endsAt: now + WEEK_MS,
+        createdAt: now,
+      });
+
+      // Fund new contract — must be in same tx as contract creation
+      await companyCashOperations.recordCashOut(
+        {
+          type: 'agent-contract-renewal-funding',
+          amountUsd: input.newBudgetUsd,
+          description: `Renewal funding for contract ${newContractId}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: newContractId,
+          effectiveAt: now,
+        },
+        tx,
+      );
+
+      // Mark new contract as funded
+      await tx
+        .update(agentExecutionContracts)
+        .set({ fundedAt: now })
+        .where(eq(agentExecutionContracts.id, newContractId));
+    });
+
+    forgeDebug('renew-agent-contract', 'success', {
       agentId: input.agentId,
-      budgetUsd: input.newBudgetUsd,
-      autoRenew: activeContract.autoRenew,
-      fundedAt: null,
+      previousContractId: activeContract.id,
+      newContractId,
+      previousBudgetUsd: activeContract.budgetUsd,
+      newBudgetUsd: input.newBudgetUsd,
+    });
+
+    return {
+      agentId: input.agentId,
+      previousContractId: activeContract.id,
+      newContractId,
+      previousBudgetUsd: activeContract.budgetUsd,
+      previousSpentUsd: spentUsd,
+      refundedUsd: refundableUsd,
+      newBudgetUsd: input.newBudgetUsd,
       startsAt: now,
       endsAt: now + WEEK_MS,
-      createdAt: now,
+    };
+  } catch (err) {
+    forgeDebug('renew-agent-contract', 'error', {
+      error: err instanceof Error ? err.message : String(err),
+      agentId: input.agentId,
     });
-
-    // Fund new contract — must be in same tx as contract creation
-    await companyCashOperations.recordCashOut(
-      {
-        type: 'agent-contract-renewal-funding',
-        amountUsd: input.newBudgetUsd,
-        description: `Renewal funding for contract ${newContractId}`,
-        referenceType: 'agent-execution-contract',
-        referenceId: newContractId,
-        effectiveAt: now,
-      },
-      tx,
-    );
-
-    // Mark new contract as funded
-    await tx
-      .update(agentExecutionContracts)
-      .set({ fundedAt: now })
-      .where(eq(agentExecutionContracts.id, newContractId));
-  });
-
-  return {
-    agentId: input.agentId,
-    previousContractId: activeContract.id,
-    newContractId,
-    previousBudgetUsd: activeContract.budgetUsd,
-    previousSpentUsd: spentUsd,
-    refundedUsd: refundableUsd,
-    newBudgetUsd: input.newBudgetUsd,
-    startsAt: now,
-    endsAt: now + WEEK_MS,
-  };
+    throw err;
+  }
 }

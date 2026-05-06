@@ -1,4 +1,5 @@
 import type { ConversationStore } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database';
@@ -129,6 +130,13 @@ export async function migrateLegacyCheckpointedOmState(input: {
       });
     }
   }
-
-  await input.db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, input.agentId));
+  try {
+    await input.db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, input.agentId));
+  } catch (err) {
+    forgeDebug('migrate-legacy-checkpointed-om', 'delete-error', {
+      error: err instanceof Error ? err.message : String(err),
+      agentId: input.agentId,
+    });
+    throw err;
+  }
 }
