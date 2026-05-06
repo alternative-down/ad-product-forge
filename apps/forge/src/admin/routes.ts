@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -20,7 +20,7 @@ import {
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { loadAgent } from '../agents/agent-loader';
-import { getInternalAgentRegistry, createPerAgentEmailManager } from '../agents/internal-agent-registry';
+import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentRoleFromAdmin,
@@ -31,10 +31,6 @@ import {
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAdminReadModel } from './read-model';
-import { getFinanceOverview } from './read-model/finance-overview';
-import { createCompanyPayables } from '../finance/company-payables';
-import { getRecurringPayables } from './read-model/payables-overview';
-import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
@@ -56,6 +52,7 @@ import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createCompanyPayables } from '../finance/company-payables';
+import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
@@ -75,23 +72,9 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas';
-import { agentExecutionSteps } from '../database/schema';
-import { registerInternalChatRoutes } from './routes/internal-chat/index';
-import {
-  registerAgentReadRoutes,
-  registerAgentOperationRoutes,
-  registerAgentWriteOpsRoutes,
-  registerAgentStepsRoutes,
-  registerAgentConversationsRoutes,
-  registerAgentMemoryRoutes,
-  registerAgentMetricsRoutes,
-  registerAgentContractRoutes,
-  registerAgentMcpRoutes,
-  registerAgentSchedulesRoutes,
-  registerAgentNotificationsRoutes,
-  registerAgentBaseRoutes,
-} from './routes/agents/index';
+import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
+import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
+import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes } from './routes/agents/index.js';
 import {
   normalizeOptionalText,
   normalizeJsonText,
@@ -100,16 +83,16 @@ import {
   summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
-} from './routes/helpers';
+} from './routes/helpers.js';
 
-export * from './routes/schemas';
-import { registerFinanceReadRoutes, registerFinanceWriteRoutes, registerFinanceFragmentRoutes } from './routes/finance/index';
-import { registerWebhookAdminRoutes } from './routes/webhooks/index';
+export * from './routes/schemas.js';
+import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
+import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
-import { registerSystemReadRoutes, registerSystemWriteRoutes, registerLlmReadRoutes } from './routes/system/index';
-import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
+import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/system/index.js';
+import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
 
 
 export interface AdminRouteContext {
@@ -132,65 +115,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     githubApps: input.githubApps,
     internalChat: input.internalChat,
   });
-
-  // Per-agent email manager for admin route operations (hire/terminate)
-  const emailMailboxes = createPerAgentEmailManager(input.db);
-
-  // Inline finance read model (extracted from createAdminReadModel)
-  const finance = createMicroErpReadModel(input.db);
-  const payables = createCompanyPayables(input.db);
-  const financeReadModel = {
-    getFinance: async () => {
-      const [overview, recurringPayables] = await Promise.all([
-        getFinanceOverview(finance),
-        getRecurringPayables(payables),
-      ]);
-      return { ...overview, recurringPayables };
-    },
-    getFinanceContracts: async () => {
-      const contracts = await finance.listActiveInternalAgentContracts();
-
-      if (!contracts || !Array.isArray(contracts.items)) {
-        return { items: [], hasMore: false };
-      }
-
-      const contractIds = contracts.items.map((contract) => contract.contractId);
-
-      if (contractIds.length === 0) {
-        return { ...contracts, hasMore: false };
-      }
-
-      const spendRows = await input.db
-        .select({
-          contractId: agentExecutionSteps.contractId,
-          total: sql`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
-        })
-        .from(agentExecutionSteps)
-        .where(inArray(agentExecutionSteps.contractId, contractIds))
-        .groupBy(agentExecutionSteps.contractId).all();
-
-      const spentUsdByContractId = new Map<string, number>();
-      for (const row of spendRows) {
-        spentUsdByContractId.set(row.contractId, Number(row.total));
-      }
-
-      return {
-        ...contracts,
-        hasMore: false,
-        items: contracts.items.map((contract: any) => {
-          const spentUsd = spentUsdByContractId.get(contract.contractId) ?? 0;
-          return {
-            ...contract,
-            spentUsd,
-            spentPercent: contract.weeklyValueUsd > 0
-              ? (spentUsd / contract.weeklyValueUsd) * 100
-              : 0,
-          };
-        }),
-      };
-    },
-  };
-
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
   const llmSettings = createLlmSettingsStore(input.db);
@@ -200,11 +124,11 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
+  const finance = createMicroErpReadModel(input.db);
 
   // Agent operations bundle (used by write-ops routes)
   const ops = {
-    loadAgent: (db: Database, config: AgentLoaderConfig & { agentId: string }) =>
-      loadAgent(db, { ...config, emailMailboxes }),
+    loadAgent,
     topUpActiveAgentContract,
     adjustAgentContractBudget,
     renewAgentContract,
@@ -215,19 +139,12 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
   registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry);
-  registerAgentWriteOpsRoutes(input.httpServer, { ...input, emailMailboxes }, registry, ops);
+  registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
 
   input.httpServer.registerRoute({
     method: 'GET',
     path: '/admin/overview',
-    handler: async () => {
-      try {
-        return jsonResponse(await readModel.getDashboard());
-      } catch (err) {
-        console.error('[/admin/overview] Error:', err);
-        return jsonResponse({ error: 'Internal error' }, 500);
-      }
-    },
+    handler: async () => jsonResponse(await readModel.getDashboard()),
   });
   input.httpServer.registerRoute({
     method: 'GET',
@@ -244,59 +161,8 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     workspaceBasePath: input.workspaceBasePath,
   });
 
-  // Fragmented LLM routes (#1588)
-  registerLlmReadRoutes(input.httpServer, {
-    listLlmProfiles: readModel.listLlmProfiles,
-    getLlmDefaults: readModel.getLlmDefaults,
-    listLlmPrices: readModel.listLlmPrices,
-  });
-
   // Finance GET routes (extracted to ./routes/finance/read.ts)
-  registerFinanceReadRoutes(input.httpServer, financeReadModel);
-
-  // Fragmented finance routes (#1589)
-  registerFinanceFragmentRoutes(input.httpServer, finance, payables);
-
-  // Fragmented agent detail routes (#1587)
-  registerAgentBaseRoutes(input.httpServer, {
-    getAgent: readModel.getAgent,
-  });
-  registerAgentStepsRoutes(input.httpServer, {
-    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
-    listAgentRecentConversations: readModel.listAgentRecentConversations,
-    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
-    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
-  });
-  registerAgentConversationsRoutes(input.httpServer, {
-    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
-    listAgentRecentConversations: readModel.listAgentRecentConversations,
-    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
-    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
-  });
-  registerAgentMemoryRoutes(input.httpServer, {
-    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
-    listAgentRecentConversations: readModel.listAgentRecentConversations,
-    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
-    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
-  });
-  registerAgentMetricsRoutes(input.httpServer, {
-    listAgentExecutionSteps: readModel.listAgentExecutionSteps,
-    listAgentRecentConversations: readModel.listAgentRecentConversations,
-    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
-    listRecentAgentHomeMetricSnapshots: readModel.listRecentAgentHomeMetricSnapshots,
-  });
-  registerAgentContractRoutes(input.httpServer, {
-    listAgentContracts: readModel.listAgentContracts,
-  });
-  registerAgentMcpRoutes(input.httpServer, {
-    listAgentMcpServers: readModel.listAgentMcpServers,
-  });
-  registerAgentSchedulesRoutes(input.httpServer, {
-    listAgentSchedules: readModel.listAgentSchedules,
-  });
-  registerAgentNotificationsRoutes(input.httpServer, {
-    listAgentNotifications: readModel.listAgentNotifications,
-  });
+  registerFinanceReadRoutes(input.httpServer, input.db, finance, companyPayables);
 
   input.httpServer.registerRoute({
     method: 'POST',
