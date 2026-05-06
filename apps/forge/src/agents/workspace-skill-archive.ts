@@ -17,7 +17,7 @@ async function ensureDirectory(targetPath: string) {
     await fs.rm(targetPath, { force: true });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      forgeDebug('workspace-skills', `ensureDirectory failed: ${error}`);
+      forgeDebug({ scope: 'workspace-skills', level: 'info', message: `ensureDirectory failed: ${error}` });
       throw error;
     }
   }

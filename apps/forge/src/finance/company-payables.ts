@@ -26,7 +26,7 @@ export function createCompanyPayables(db: Database) {
         };
       });
     } catch (err) {
-      forgeDebug('finance', 'Failed to list recurring payables', { error: err });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recurring payables', context: { error: err } });
       throw err;
     }
   }
@@ -78,7 +78,7 @@ export function createCompanyPayables(db: Database) {
         entryId,
       };
     } catch (err) {
-      forgeDebug('finance', 'Failed to create recurring payable', { payableId, name: input.name, error: err });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to create recurring payable', context: { payableId, name: input.name, error: err } });
       throw err;
     }
   }
@@ -106,7 +106,7 @@ export function createCompanyPayables(db: Database) {
         isActive,
       };
     } catch (err) {
-      forgeDebug('finance', 'Failed to set recurring payable active', { payableId, isActive, error: err });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to set recurring payable active', context: { payableId, isActive, error: err } });
       throw err;
     }
   }
@@ -177,7 +177,7 @@ export function createCompanyPayables(db: Database) {
         nextDueAt,
       };
     } catch (err) {
-      forgeDebug('finance', 'Failed to sync recurring payable occurrence', { entryId: input.entryId, error: err });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to sync recurring payable occurrence', context: { entryId: input.entryId, error: err } });
       throw err;
     }
   }

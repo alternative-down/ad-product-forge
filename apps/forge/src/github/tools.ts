@@ -20,17 +20,17 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
           .describe('Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:github', 'get_github_git_credentials called', { repositoryName: input.repositoryName });
+        forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials called', context: { repositoryName: input.repositoryName } });
 
         try {
           const result = await githubApps.getGitCredentials({
             agentId,
             repositoryName: input.repositoryName,
           });
-          forgeDebug('tools:github', 'get_github_git_credentials result', { hasCredentials: !!result });
+          forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials result', context: { hasCredentials: !!result } });
           return result;
         } catch (error) {
-          forgeDebug('tools:github', 'get_github_git_credentials error', { error: String(error) });
+          forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials error', context: { error: String(error) } });
           return {
             valid: false,
             error: String(error),

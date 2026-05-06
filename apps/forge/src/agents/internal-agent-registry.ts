@@ -1,10 +1,12 @@
 import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/index';
 import type { AgentLoaderConfig } from './agent-loader';
-import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
+import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
+import { loadAgents, loadAgent } from './agent-loader';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createAgentEmailManager, type AgentEmailManager } from '../email/migadu-manager';
+import { createCoolifyManager, type CoolifyManager } from '../coolify/manager';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
@@ -22,6 +24,15 @@ export function createPerAgentEmailManager(db: Database): AgentEmailManager {
   return createAgentEmailManager({ db, integrations });
 }
 
+/**
+ * Creates a per-agent CoolifyManager instance.
+ * Call this for each agent to get an isolated Coolify manager.
+ */
+export function createPerAgentCoolifyManager(db: Database): CoolifyManager {
+  const integrations = createSystemIntegrationStore(db);
+  return createCoolifyManager({ integrations });
+}
+
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
   let loaderConfig: AgentLoaderConfig | null = null;
@@ -30,14 +41,18 @@ function createInternalAgentRegistry() {
     loaderConfig = config;
     const existingAgentIds = new Set(agents.keys());
 
-    const perAgentEmailMailboxes = createPerAgentEmailManager(db);
-
-    const perAgentConfig: AgentLoaderConfig = {
-      ...config,
-      emailMailboxes: perAgentEmailMailboxes,
+    // loadAgents returns runtimes — pass a config WITHOUT coolify/emailMailboxes
+    // so loadAgents does not attach any manager. We attach per-agent managers
+    // in the loop below.
+    const cleanConfig: AgentLoaderConfig = {
+      workspaceBasePath: config.workspaceBasePath,
+      githubApps: config.githubApps,
+      minimax: config.minimax,
+      schedules: config.schedules,
+      internalChat: config.internalChat,
+      // intentionally omitted: emailMailboxes, coolify
     };
-
-    const runtimes = await loadAgents(db, perAgentConfig);
+    const runtimes = await loadAgents(db, cleanConfig);
 
     for (const runtime of runtimes.values()) {
       await add(db, runtime);
@@ -60,6 +75,10 @@ function createInternalAgentRegistry() {
         ]
       : [];
 
+    // Each running agent gets its own fresh managers — lifetime matched to this agent.
+    const emailMailboxes = createPerAgentEmailManager(db);
+    const coolify = createPerAgentCoolifyManager(db);
+
     const entry = {
       runtime,
       runner: null as InternalAgentRunner | null,
@@ -72,9 +91,11 @@ function createInternalAgentRegistry() {
           throw new Error('Agent loader config is not available for runtime reload');
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);
+        const reloadCoolify = createPerAgentCoolifyManager(db);
         return loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
+          coolify: reloadCoolify,
           agentId: runtime.id,
         });
       },
@@ -120,11 +141,12 @@ function createInternalAgentRegistry() {
     void agent.runtime.dispose().catch((error) => {
       forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
     });
+
     agents.delete(agentId);
   }
 
   function get(agentId: string) {
-    return agents.get(AgentId) ?? null;
+    return agents.get(agentId) ?? null;
   }
 
   function list() {
@@ -140,8 +162,10 @@ function createInternalAgentRegistry() {
   };
 }
 
-const internalAgentRegistry = createInternalAgentRegistry();
-
 export function getInternalAgentRegistry() {
   return internalAgentRegistry;
 }
+
+export type Registry = ReturnType<typeof createInternalAgentRegistry>;
+
+const internalAgentRegistry = createInternalAgentRegistry();

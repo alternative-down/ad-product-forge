@@ -103,7 +103,7 @@ export function createSystemSettingsStore(db: Database) {
       });
       return mapRow(row);
     } catch (err) {
-      forgeDebug('system-settings', 'getSettings failed', { error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'system-settings', level: 'info', message: 'getSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
       return { ...DEFAULTS, updatedAt: null };
     }
   }
@@ -153,7 +153,7 @@ export function createSystemSettingsStore(db: Database) {
 
       return { ...input, updatedAt: now };
     } catch (err) {
-      forgeDebug('system-settings', 'upsertSettings failed', { error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'system-settings', level: 'info', message: 'upsertSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
   }

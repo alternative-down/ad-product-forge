@@ -25,20 +25,20 @@ export function createCapabilityTools(
       description: 'List the roles available in the system.',
       inputSchema: z.object({}),
       execute: async () => {
-        forgeDebug('tools:capabilities', 'list_agent_roles called');
+        forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_roles called' });
 
         try {
           const result = await capabilities.listRoles();
-          forgeDebug('tools:capabilities', 'list_agent_roles result', {
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_roles result', context: {
             count: result.length,
             roles: result.map((role) => ({
               roleId: role.roleId,
               name: role.name,
             })),
-          });
+          } });
           return result;
         } catch (error) {
-          forgeDebug('tools:capabilities', 'list_agent_roles error', { error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_roles error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -69,7 +69,7 @@ export function createCapabilityTools(
         }).optional().describe('Provide this object only when action is delete.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'manage_agent_role called', { input });
+        forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role called', context: { input } });
 
         try {
           if (input.action === 'create') {
@@ -99,7 +99,7 @@ export function createCapabilityTools(
               await reloadAgentsForRole(db, loaderConfig, result.roleId);
             }
 
-            forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
+            forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role success', context: { result } });
             return { valid: true, ...result };
           }
 
@@ -131,7 +131,7 @@ export function createCapabilityTools(
               await reloadAgentsForRole(db, loaderConfig, result.roleId);
             }
 
-            forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
+            forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role success', context: { result } });
             return { valid: true, ...result };
           }
 
@@ -160,10 +160,10 @@ export function createCapabilityTools(
             await reloadAgentsForRole(db, loaderConfig, result.roleId);
           }
 
-          forgeDebug('tools:capabilities', 'manage_agent_role success', { result });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug('tools:capabilities', 'manage_agent_role error', { error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -183,7 +183,7 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('The new roleId that should be assigned to that agent.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'change_agent_role called', { input });
+        forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'change_agent_role called', context: { input } });
 
         try {
           const result = await changeAgentRole({
@@ -193,10 +193,10 @@ export function createCapabilityTools(
             targetAgentId: input.agentId,
             roleId: input.roleId,
           });
-          forgeDebug('tools:capabilities', 'change_agent_role success', { result });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'change_agent_role success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug('tools:capabilities', 'change_agent_role error', { error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'change_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -216,17 +216,17 @@ export function createCapabilityTools(
         executionState: z.enum(['idle', 'running']).optional().describe('Optional execution state filter. Use idle or running.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'list_agent_statuses called', { input });
+        forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_statuses called', context: { input } });
 
         try {
           const result = await capabilities.listAgentStatuses({
             agentId: input.agentId ?? undefined,
             executionState: input.executionState ?? undefined,
           });
-          forgeDebug('tools:capabilities', 'list_agent_statuses result', { count: result.length });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_statuses result', context: { count: result.length } });
           return result;
         } catch (error) {
-          forgeDebug('tools:capabilities', 'list_agent_statuses error', { error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_statuses error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -245,12 +245,12 @@ export function createCapabilityTools(
         roleId: z.string().min(1).describe('The roleId you want to inspect.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'list_role_capabilities called', { roleId: input.roleId });
+        forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_role_capabilities called', context: { roleId: input.roleId } });
 
         try {
           return await capabilities.listRoleCapabilities(input.roleId);
         } catch (error) {
-          forgeDebug('tools:capabilities', 'list_role_capabilities error', { error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -271,15 +271,15 @@ export function createCapabilityTools(
         capabilityId: capabilityIdSchema.describe('The capabilityId to grant or revoke.'),
       }),
       execute: async (input) => {
-        forgeDebug('tools:capabilities', 'manage_role_capabilities called', { input });
+        forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_role_capabilities called', context: { input } });
 
         try {
           const result = await capabilities.manageRoleCapability(input);
           await reloadAgentsForRole(db, loaderConfig, input.roleId);
-          forgeDebug('tools:capabilities', 'manage_role_capabilities success', { result });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_role_capabilities success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug('tools:capabilities', 'manage_role_capabilities error', { error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),

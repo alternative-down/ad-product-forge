@@ -133,10 +133,10 @@ export async function migrateLegacyCheckpointedOmState(input: {
   try {
     await input.db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, input.agentId));
   } catch (err) {
-    forgeDebug('migrate-legacy-checkpointed-om', 'delete-error', {
+    forgeDebug({ scope: 'migrate-legacy-checkpointed-om', level: 'info', message: 'delete-error', context: {
       error: err instanceof Error ? err.message : String(err),
       agentId: input.agentId,
-    });
+    } });
     throw err;
   }
 }

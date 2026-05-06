@@ -28,7 +28,6 @@ import {
   ConversationNotFoundError,
   ExternalAccountNotFoundError,
   InternalChatAccountNotFoundError,
-  InternalChatError,
 } from "./internal-chat-errors";
 
 
@@ -176,7 +175,6 @@ export function createInternalChatAccounts(db: Database) {
       throw err;
     }
   }
-  const deleteAgentAccount = deleteExternalAccount;
 
   // ── Account lookup ─────────────────────────────────────────────────────
 
