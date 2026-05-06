@@ -1,3 +1,4 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { gracefulShutdown, scheduleJob, cancelJob as cancelScheduledJob, type Job, type RecurrenceSpecDateRange } from 'node-schedule';
 import cronParser from 'cron-parser';
 import { z } from 'zod';
@@ -124,6 +125,7 @@ export function createAgentScheduleManager(input: {
       await registerSchedule(scheduleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
+      forgeDebug('schedules.createSchedule: registerSchedule failed, cleaned up record', { agentId, error });
       throw error;
     }
 
@@ -180,6 +182,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
+      forgeDebug('schedules.cancelAgentSchedule: update failed, rolled back', { agentId, scheduleId, error });
 
       if (existing.isActive && restored) {
         await registerSchedule(restored);
@@ -232,6 +235,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
+      forgeDebug('schedules.updateOwnedSchedule: update failed, rolled back', { agentId, scheduleId, error });
 
       if (existing.isActive && restored) {
         await registerSchedule(restored);
@@ -298,6 +302,7 @@ export function createAgentScheduleManager(input: {
       await registerSchedule(scheduleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
+      forgeDebug('schedules.createScheduleForAgent: registerSchedule failed, cleaned up record', { agentId: parsed.targetAgentId, error });
       throw error;
     }
 
