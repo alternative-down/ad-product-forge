@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { humanizeMovementStatus, humanizeMovementType, formatDateTime, formatUsdSigned } from './-finance-accounts-format';
+import { humanizeMovementStatus, humanizeMovementType, formatDateTime, formatUsdSigned } from './finance-accounts-format';
 
 export function MovementsTable(input: {
   movements: Array<{

@@ -12,12 +12,12 @@ import {
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
 } from '@/lib/admin-api/index';
-import { formatRecentMessageTime, useHomeConversations } from '../-context';
-import { ConversationComposer } from '@/components/home/conversations/ConversationComposer';
-import { ConversationHeader } from '@/components/home/conversations/ConversationHeader';
-import { ConversationMessagesPane } from '@/components/home/conversations/ConversationMessagesPane';
-import { ParticipantsDialog } from './-ParticipantsDialog';
-import { RenameConversationDialog } from './-RenameConversationDialog';
+import { formatRecentMessageTime, useHomeConversations } from '@/components/home/conversations/context';
+import { ConversationComposer } from '@/components/home/conversations/conversation-composer';
+import { ConversationHeader } from '@/components/home/conversations/conversation-header';
+import { ConversationMessagesPane } from '@/components/home/conversations/conversation-messages-pane';
+import { ParticipantsDialog } from '@/components/home/conversations/participants-dialog';
+import { RenameConversationDialog } from '@/components/home/conversations/rename-conversation-dialog';
 
 export const Route = createFileRoute('/home/conversations/$conversationId/')({
   component: HomeConversationDetailIndexRoute,

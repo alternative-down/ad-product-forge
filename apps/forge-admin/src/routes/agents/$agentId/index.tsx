@@ -22,7 +22,7 @@ import {
 } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { AgentProfileDialog } from '../components/agents/agent-profile-dialog';
+import { AgentProfileDialog } from '@/components/agents/agent-profile-dialog';
 import {
   createAgentProfileForm,
   formatAverageInterval,
@@ -30,7 +30,7 @@ import {
   formatUsd,
   humanizeAgentStatus,
   type AgentProfileForm,
-} from '../components/agents/agent-detail-helpers';
+} from '@/components/agents/agent-detail-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/')({
   component: AgentDetailIndexRoute,

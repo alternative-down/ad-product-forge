@@ -19,9 +19,9 @@ import {
   type ConversationForm,
   type LocalConversation,
 } from '@/components/home/conversations/context';
-import { AccountDialog } from '@/components/home/conversations/AccountDialog';
-import { ConversationListPane } from '@/components/home/conversations/ConversationListPane';
-import { NewConversationDialog } from '@/components/home/conversations/NewConversationDialog';
+import { AccountDialog } from '@/components/home/conversations/account-dialog';
+import { ConversationListPane } from '@/components/home/conversations/conversation-list-pane';
+import { NewConversationDialog } from '@/components/home/conversations/new-conversation-dialog';
 import {
   createAccountForm,
   createConversationForm,
