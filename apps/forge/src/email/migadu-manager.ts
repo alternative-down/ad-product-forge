@@ -8,6 +8,7 @@ import { agentProviders } from '../database/schema';
 import { decryptSecret } from '../encryption/crypto';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
+import { forgeDebug } from '@forge-runtime/core';
 
 const EMAIL_PROVIDER_TYPE = 'email';
 const MIGADU_API_BASE_URL = 'https://api.migadu.com/v1';
@@ -49,7 +50,12 @@ export function createAgentEmailManager(config: {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
   async function isConfigured() {
-    return Boolean(await getOptionalProviderConfig());
+    try {
+      return Boolean(await getOptionalProviderConfig());
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'isConfigured failed: ' + (err instanceof Error ? err.message : String(err)) });
+      return false;
+    }
   }
 
   async function provisionMailbox(input: { agentId: string; agentName: string }) {
@@ -197,15 +203,20 @@ export function createAgentEmailManager(config: {
   }
 
   async function getRequiredProviderConfig() {
-    const providerConfig = await getOptionalProviderConfig();
+    try {
+      const providerConfig = await getOptionalProviderConfig();
 
-    if (!providerConfig) {
-      throw new Error(
-        'Migadu email provisioning requires a configured admin connection in system integrations',
-      );
+      if (!providerConfig) {
+        throw new Error(
+          'Migadu email provisioning requires a configured admin connection in system integrations',
+        );
+      }
+
+      return providerConfig;
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'getRequiredProviderConfig failed: ' + (err instanceof Error ? err.message : String(err)) });
+      throw err;
     }
-
-    return providerConfig;
   }
 
   function buildProviderCredentials(address: string, password: string): ProviderCredentialsMap['email'] {
