@@ -12,8 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { createSchedule, deleteSchedule, getAgent, updateSchedule } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { ScheduleDialog } from '../../components/agents/schedules/schedule-dialog';
-import { createEmptyScheduleForm, createScheduleForm, formatDateTime, type ScheduleForm } from '../../components/agents/schedules/schedule-helpers';
+import { ScheduleDialog } from '@/components/agents/schedules/schedule-dialog';
+import { createEmptyScheduleForm, createScheduleForm, formatDateTime, type ScheduleForm } from '@/components/agents/schedules/schedule-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/schedules/')({
   component: AgentSchedulesIndexRoute,

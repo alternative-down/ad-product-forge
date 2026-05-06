@@ -9,7 +9,7 @@ import type { LlmProfile } from '@/lib/admin-api/index';
 
 import { CompanySettingsSection } from './company-settings-section';
 import { OperationsSettingsSection } from './operations-settings-section';
-import { ProfileDefaultsSection } from '../components/integrations/profile-defaults-section';
+import { ProfileDefaultsSection } from '@/components/integrations/profile-defaults-section';
 import { RuntimeSettingsSection } from './runtime-settings-section';
 import {
   fromRuntimeDraft,

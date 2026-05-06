@@ -11,7 +11,7 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { humanizeRecurrencePeriod } from './-finance-accounts-format';
+import { humanizeRecurrencePeriod } from './finance-accounts-format';
 import type { MovementForm } from './-finance-accounts-types';
 
 export function MovementDialog(input: {

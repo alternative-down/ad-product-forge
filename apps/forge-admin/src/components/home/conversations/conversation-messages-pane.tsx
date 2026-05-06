@@ -5,7 +5,7 @@ import { AgentAvatar, AdminButton, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { HomeInternalChatConversationMessage } from '@/lib/admin-api/index';
 import { getInitials } from './context';
-import { ConversationAttachment } from './ConversationAttachment';
+import { ConversationAttachment } from './conversation-attachment';
 
 export function ConversationMessagesPane(input: {
   containerRef: React.RefObject<HTMLDivElement | null>;

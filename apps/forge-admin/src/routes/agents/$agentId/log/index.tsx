@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import { AdminButton, PageHeader } from '@/components/admin';
 
-import { ThreadMessageArticle } from '../../components/agents/log/thread-message-content';
+import { ThreadMessageArticle } from '@/components/agents/log/thread-message-content';
 import { useAgentLogData } from './-use-agent-log-data';
 import { AgentRuntimeMemorySection } from './-agent-runtime-memory-section';
 

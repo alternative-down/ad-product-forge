@@ -22,7 +22,7 @@ export function ThreadMessageArticle(input: {
   );
 }
 
-function thread-message-content(input: {
+function threadMessageContent(input: {
   message: AgentThreadMessage;
 }) {
   const content = input.message.content;

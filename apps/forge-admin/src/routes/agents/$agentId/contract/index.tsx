@@ -18,8 +18,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { ContractAdjustDialog, ContractForm, ContractTerminateDialog } from '../../components/agents/contract/contract-dialogs';
-import { formatDate, formatDateTime, formatInteger, formatPercent, formatUsd } from '../../components/agents/contract/contract-format';
+import { ContractAdjustDialog, ContractForm, ContractTerminateDialog } from '@/components/agents/contract/contract-dialogs';
+import { formatDate, formatDateTime, formatInteger, formatPercent, formatUsd } from '@/components/agents/contract/contract-format';
 
 export const Route = createFileRoute('/agents/$agentId/contract/')({
   component: AgentContractIndexRoute,
