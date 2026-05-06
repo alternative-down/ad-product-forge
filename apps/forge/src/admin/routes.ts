@@ -103,7 +103,7 @@ import {
 } from './routes/helpers.js';
 
 export * from './routes/schemas.js';
-import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
+import { registerFinanceReadRoutes, registerFinanceWriteRoutes, registerFinanceFragmentRoutes } from './routes/finance/index.js';
 import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
@@ -209,6 +209,9 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
   registerFinanceReadRoutes(input.httpServer, financeReadModel);
+
+  // Fragmented finance routes (#1589)
+  registerFinanceFragmentRoutes(input.httpServer, finance, payables);
 
   // Fragmented agent detail routes (#1587)
   registerAgentBaseRoutes(input.httpServer, {
