@@ -105,6 +105,8 @@ import {
 import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createChatAttachments } from "./internal-chat-attachments";
 import { createInternalChatReads } from "./internal-chat-reads";
+import { createServiceHelpers } from "./internal-chat-service-helpers";
+
 export function createInternalChatService(
 
   db: Database,
@@ -790,37 +792,26 @@ export function createInternalChatService(
     getRequiredAgentAccount,
   });
 
-  async function getRequiredExternalAccount(accountId: string) {
-    return access.getRequiredExternalAccount(accountId);
-  }
+  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
+  const participants = createInternalChatParticipants(db);
+  const serviceHelpers = createServiceHelpers({
+    db,
+    accounts: {
+      getRequiredAccount: accounts.getRequiredAccount,
+      getRequiredAgentAccount: accounts.getRequiredAgentAccount,
+      getAccountBySlug: accounts.getAccountBySlug,
+    },
+    participants,
+  });
 
-  async function getRequiredAccountBySlug(slug: string) {
-    return access.getRequiredAccountBySlug(slug);
-  }
-
-  async function requireConversationMembership(agentId: string, conversationId: string) {
-    return guards.requireConversationMembership(agentId, conversationId);
-  }
-
-  async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
-    return guards.requireConversationMembershipByAccount(accountId, conversationId);
-  }
-
-  async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
-    return guards.getRequiredConversationForAgent(agentId, conversationId);
-  }
-
-  async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
-    return guards.getRequiredConversationForAccount(accountId, conversationId);
-  }
-
-  async function getRequiredGroupForAgent(agentId: string, groupId: string) {
-    return guards.getRequiredGroupForAgent(agentId, groupId);
-  }
-
-  async function getRequiredGroupForAccount(accountId: string, groupId: string) {
-    return guards.getRequiredGroupForAccount(accountId, groupId);
-  }
+  const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
+  const getRequiredAccountBySlug = serviceHelpers.getRequiredAccountBySlug;
+  const requireConversationMembership = serviceHelpers.requireConversationMembership;
+  const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
+  const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
+  const getRequiredConversationForAccount = serviceHelpers.getRequiredConversationForAccount;
+  const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
+  const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
 
 
   const groups = createInternalChatGroups(db, {
