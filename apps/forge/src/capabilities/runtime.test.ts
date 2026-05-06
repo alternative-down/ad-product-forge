@@ -477,5 +477,47 @@ describe('capabilities/runtime', () => {
       const call = vi.mocked(encryptSecret).mock.calls[0][0] as string;
       expect(call).toContain('"customField":"keepThis"');
     });
+
+    it('logs and returns early when decryptSecret throws', async () => {
+      const provider = makeProvider('prov_001', 'ag_001', 'encrypted');
+
+      const db = makeDb();
+      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+
+      const { decryptSecret } = await import('../encryption/crypto');
+      vi.mocked(decryptSecret).mockImplementationOnce(() => {
+        throw new Error('decryption failed');
+      });
+
+      await updateInternalChatProviderProfile(db, {
+        agentId: 'ag_001',
+        displayName: 'Name',
+        description: 'Desc',
+      });
+
+      expect(db.update).not.toHaveBeenCalled();
+    });
+
+    it('logs and returns early when DB update throws', async () => {
+      const storedCredentials = JSON.stringify({ agentId: 'ag_001', displayName: 'Old' });
+      const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
+
+      const db = makeDb();
+      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+
+      const updateChain = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockRejectedValue(new Error('db update failed')),
+      };
+      db.update = vi.fn().mockReturnValue(updateChain);
+
+      await updateInternalChatProviderProfile(db, {
+        agentId: 'ag_001',
+        displayName: 'New Name',
+        description: 'Desc',
+      });
+
+      expect(updateChain.set).toHaveBeenCalled();
+    });
   });
 });

@@ -234,32 +234,37 @@ export async function updateInternalChatProviderProfile(
     return;
   }
 
+  let credentials: { agentId: string; displayName?: string; description?: string };
   try {
     const decryptedCredentials = decryptSecret(provider.encryptedCredentials);
-    const credentials = JSON.parse(decryptedCredentials) as {
+    credentials = JSON.parse(decryptedCredentials) as {
       agentId: string;
       displayName?: string;
       description?: string;
     };
+  } catch (err) {
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${input.agentId}: ${String(err)}` });
+    return;
+  }
 
-    const nextCredentials = {
-      ...credentials,
-      agentId: input.agentId,
-      displayName: input.displayName,
-      description: input.description,
-    };
+  const nextCredentials = {
+    ...credentials,
+    agentId: input.agentId,
+    displayName: input.displayName,
+    description: input.description,
+  };
 
+  try {
     await db
       .update(agentProviders)
       .set({
         encryptedCredentials: encryptSecret(JSON.stringify(nextCredentials)),
       })
       .where(eq(agentProviders.id, provider.id));
-
     forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Internal chat provider profile updated', context: { agentId: input.agentId } });
-  } catch (error) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to update internal chat provider profile', context: { agentId: input.agentId, error } });
-    throw error;
+  } catch (err) {
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${String(err)}` });
+    return;
   }
 }
 
