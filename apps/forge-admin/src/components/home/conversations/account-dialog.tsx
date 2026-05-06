@@ -10,9 +10,9 @@ import {
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 
-import type { AccountDialogMode, AccountForm } from './-context';
+import type { AccountDialogMode, AccountForm } from './context';
 
-export function AccountDialog(input: {
+export function account-dialog(input: {
   open: boolean;
   mode: AccountDialogMode;
   saving: boolean;

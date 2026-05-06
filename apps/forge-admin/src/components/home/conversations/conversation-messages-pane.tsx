@@ -5,9 +5,9 @@ import { AgentAvatar, AdminButton, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { HomeInternalChatConversationMessage } from '@/lib/admin-api/index';
 import { getInitials } from './context';
-import { ConversationAttachment } from './-conversation-attachment';
+import { ConversationAttachment } from './conversation-attachment';
 
-export function ConversationMessagesPane(input: {
+export function conversation-messages-pane(input: {
   containerRef: React.RefObject<HTMLDivElement | null>;
   accountId: string;
   conversationId: string;
@@ -63,7 +63,7 @@ export function ConversationMessagesPane(input: {
                 {message.attachments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {message.attachments.map((attachment) => (
-                      <ConversationAttachment
+                      <conversation-attachment
                         key={`${message.messageId}:${attachment.name}`}
                         accountId={accountId}
                         conversationId={conversationId}

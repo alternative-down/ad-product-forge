@@ -12,7 +12,7 @@ import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/adm
 
 import { isEmailCredentialsValid, toEmailCredentials } from './-provider-credentials';
 
-export function EmailProviderForm(input: {
+export function email-provider-form(input: {
   agentId: string;
   credentials: unknown;
   configured: boolean;
