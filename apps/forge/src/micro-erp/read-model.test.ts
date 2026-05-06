@@ -415,3 +415,41 @@ describe('getActiveContractMetrics — averageStepIntervalLabel', () => {
   });
 });
 
+
+// ─── Error handling ───────────────────────────────────────────────────────────
+
+describe('listCompanyCashMovements — error handling', () => {
+  test('throws when findMany fails', async () => {
+    const db = {
+      query: { companyCashLedger: { findMany: vi.fn().mockRejectedValue(new Error('db unavailable')) } },
+    } as never;
+    const model = createMicroErpReadModel(db as never);
+
+    await expect(model.listCompanyCashMovements()).rejects.toThrow('db unavailable');
+  });
+});
+
+describe('listActiveInternalAgentContracts — error handling', () => {
+  test('throws when contracts query fails', async () => {
+    const db = {
+      query: {
+        companyCashLedger: { findMany: vi.fn() },
+        agentExecutionSteps: { findMany: vi.fn() },
+      },
+      select: vi.fn().mockImplementation(() => {
+        const chain = {
+          from: vi.fn().mockReturnThis(),
+          innerJoin: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          orderBy: vi.fn().mockReturnThis(),
+          all: vi.fn().mockRejectedValue(new Error('contracts query failed')),
+        };
+        const p = Promise.resolve([]);
+        return Object.assign(chain, { then: p.then.bind(p) });
+      }),
+    } as never;
+    const model = createMicroErpReadModel(db as never);
+
+    await expect(model.listActiveInternalAgentContracts()).rejects.toThrow('contracts query failed');
+  });
+});
