@@ -2,7 +2,7 @@ import { SendHorizontal } from 'lucide-react';
 
 import { AdminButton, AdminTextarea } from '@/components/admin';
 
-export function conversation-composer(input: {
+export function ConversationComposer(input: {
   messageDraft: string;
   attachmentDrafts: File[];
   disabled: boolean;

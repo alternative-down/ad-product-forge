@@ -19,9 +19,9 @@ import {
   type ConversationForm,
   type LocalConversation,
 } from '@/components/home/conversations/context';
-import { account-dialog } from '@/components/home/conversations/account-dialog';
-import { conversation-list-pane } from '@/components/home/conversations/conversation-list-pane';
-import { new-conversation-dialog } from '@/components/home/conversations/new-conversation-dialog';
+import { AccountDialog } from '@/components/home/conversations/AccountDialog';
+import { ConversationListPane } from '@/components/home/conversations/ConversationListPane';
+import { NewConversationDialog } from '@/components/home/conversations/NewConversationDialog';
 import {
   createAccountForm,
   createConversationForm,
@@ -155,7 +155,7 @@ function HomeConversationsLayoutRoute() {
   return (
     <HomeConversationsProvider value={contextValue}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:grid md:grid-cols-[300px_minmax(0,1fr)] md:gap-5">
-        <conversation-list-pane
+        <ConversationListPane
           accounts={accounts}
           selectedAccountId={selectedAccountId}
           selectedAccountLabel={selectedAccountLabel}
@@ -190,7 +190,7 @@ function HomeConversationsLayoutRoute() {
         </div>
       </div>
 
-      <account-dialog
+      <AccountDialog
         open={accountDialogOpen}
         mode={accountDialogMode}
         saving={accountSaving}
@@ -263,7 +263,7 @@ function HomeConversationsLayoutRoute() {
         }}
       />
 
-      <new-conversation-dialog
+      <NewConversationDialog
         open={conversationDialogOpen}
         selectedAccount={Boolean(selectedAccount)}
         form={conversationForm}
