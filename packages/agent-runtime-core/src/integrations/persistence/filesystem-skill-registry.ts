@@ -34,8 +34,7 @@ export class FilesystemSkillRegistry implements SkillRegistry {
     );
   }
 
-  async remove(skillId: string): Promise<void> {
-    const { rm } = await import('node:fs/promises');
+  async remove(skillId: string): Promise<void> {    // static import used
     await rm(this.getFilePath(skillId), { force: true });
   }
 

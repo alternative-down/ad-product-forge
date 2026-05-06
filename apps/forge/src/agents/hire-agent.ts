@@ -22,6 +22,7 @@ import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
+import { loadAgent } from './agent-loader.js';
 
 
 export type HireInternalAgentInput = {
@@ -124,7 +125,6 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     });
 
     await input.schedules.createHeartbeatSchedule(agentId);
-    const { loadAgent } = await import('./agent-loader');
     const runtime = await loadAgent(db, {
       agentId,
       workspaceBasePath: input.workspaceBasePath,

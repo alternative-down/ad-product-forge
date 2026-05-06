@@ -60,8 +60,6 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
       agentLastAccess.set(agentId, Date.now());
       return existing.browser;
     }
-
-    const { chromium } = await import('playwright');
     const browser = await chromium.launch({ headless: true });
     agentBrowsers.set(agentId, {
       browser,
