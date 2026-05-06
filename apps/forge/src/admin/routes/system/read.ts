@@ -1,34 +1,50 @@
 /**
- * System Admin Read Routes - Phase 4 of #719
- * GET routes extracted from routes.ts
+ * System Admin Read Routes
+ *
+ * Refactored from createAdminReadModel (#1575).
+ * Each route creates only the stores it needs.
+ *
+ * Stores are passed directly instead of via a read-model wrapper.
  */
+import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { sql } from 'drizzle-orm';
 
-import { buildOauthState } from './oauth-state';
 import { mcpServerConfigs } from '../../../database/schema';
+import type { Database } from '../../../database/index';
+import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
+import type { createForgeHttpServer } from '../../../http/server';
+import { buildOauthState } from './oauth-state';
 import { buildSystemHealthcheck } from './healthcheck';
 import { listGlobalSkills } from '../../../agents/global-skills';
 import { jsonResponse } from '../helpers';
-import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
-import type { createForgeHttpServer } from '../../../http/server';
-import type { Database } from '../../../database/index';
-
-interface SystemReadModel {
-  listSystemIntegrations: () => Promise<unknown>;
-  getSystemSettings: () => Promise<unknown>;
-  getSystemLlm: () => Promise<unknown>;
-  getApplicationMigrations: () => Promise<unknown>;
-}
+import type { CapabilityStore } from '../../../capabilities/store';
+import type { SystemIntegrationStore } from '../../../system-integrations/store';
+import type { LlmSettingsStore } from '../../../llm/settings-store';
+import type { LlmModelPriceStore } from '../../../llm/model-price-store';
+import type { SystemSettingsStore } from '../../../system-settings/store';
 
 interface SystemReadRoutesInput {
   httpServer: ReturnType<typeof createForgeHttpServer>;
   db: Database;
   registry: InternalAgentRegistry;
-  readModel: SystemReadModel;
   workspaceBasePath: string;
+  // Individual stores instead of a read-model wrapper
+  capabilities: CapabilityStore;
+  integrations: SystemIntegrationStore;
+  llmSettings: LlmSettingsStore;
+  llmModelPrices: LlmModelPriceStore;
+  systemSettings: SystemSettingsStore;
+  readModel: {
+    getAgent: (agentId: string) => Promise<unknown>;
+    getApplicationMigrations: () => Promise<unknown>;
+  };
 }
 
 export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
-  const { httpServer, db, registry, readModel, workspaceBasePath } = input;
+  const { httpServer, db, registry, workspaceBasePath,
+         capabilities, integrations, llmSettings, llmModelPrices,
+         systemSettings, readModel } = input;
 
   // GET /admin/system/healthcheck
   httpServer.registerRoute({
@@ -44,21 +60,28 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/integrations',
-    handler: async () => jsonResponse(await readModel.listSystemIntegrations()),
+    handler: async () => jsonResponse(await integrations.listIntegrations()),
   });
 
   // GET /admin/system/settings
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/settings',
-    handler: async () => jsonResponse(await readModel.getSystemSettings()),
+    handler: async () => jsonResponse(await systemSettings.getSettings()),
   });
 
   // GET /admin/system/llm
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/llm',
-    handler: async () => jsonResponse(await readModel.getSystemLlm()),
+    handler: async () => {
+      const [profiles, defaults, prices] = await Promise.all([
+        llmSettings.listProfiles(),
+        llmSettings.getDefaults(),
+        llmModelPrices.listPrices(),
+      ]);
+      return jsonResponse({ profiles, defaults, prices });
+    },
   });
 
   // GET /admin/system/mcp

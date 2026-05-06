@@ -31,6 +31,8 @@ import {
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAdminReadModel } from './read-model';
+import { createCompanyPayables } from '../finance/company-payables';
+import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
@@ -85,9 +87,9 @@ import {
   summarizeActiveItems,
 } from './routes/helpers.js';
 
-export * from './routes/schemas.js';
-import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
-import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
+export * from './routes/schemas';
+import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index';
+import { registerWebhookAdminRoutes } from './routes/webhooks/index';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
@@ -115,12 +117,21 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     githubApps: input.githubApps,
     internalChat: input.internalChat,
   });
+
+  // Per-agent email manager for admin route operations (hire/terminate)
+  const emailMailboxes = createPerAgentEmailManager(input.db);
+
+  // Stores created locally in route files (finance in finance/read.ts)
+  const finance = createMicroErpReadModel(input.db);
+  const payables = createCompanyPayables(input.db);
+  const companyPayables = createCompanyPayables(input.db);
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
   const llmSettings = createLlmSettingsStore(input.db);
   const llmModelPrices = createLlmModelPriceStore(input.db);
   const systemSettings = createSystemSettingsStore(input.db);
   const agentContracts = createAgentContractStore(input.db);
+  const systemRM = createSystemReadModel({ db: input.db });
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
@@ -151,18 +162,86 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     path: '/admin/roles',
     handler: async () => jsonResponse(await readModel.listRoles()),
   });
+  // GET /admin/overview — inlined from agentRM.getDashboard
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/overview',
+    handler: async () => {
+      const [balanceResult, recentResult] = await Promise.all([
+        finance.getCompanyCashBalance(),
+        finance.listCompanyCashMovements({ limit: 10 }),
+      ]);
+      const rows = await input.db.query.agents.findMany({
+        columns: { id: true, executionState: true, role: true },
+      });
+      const loadedAgents = registry.size;
+      const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
+      const runningAgents = rows.filter((r) => r.executionState === 'running').length;
+      return jsonResponse({
+        totals: {
+          agents: rows.length,
+          loadedAgents,
+          idleAgents,
+          runningAgents,
+          absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent').length,
+          roles: new Set(rows.map((r) => r.role).filter(Boolean)).size,
+          activeContracts: (await input.db.query.agentExecutionContracts.findMany({
+            where: (fields) => eq(fields.isActive, true),
+            columns: { id: true },
+          })).length,
+        },
+        cash: {
+          balanceUsd: balanceResult.balanceUsd,
+          summary: { income: 0, expenses: 0, net: 0 },
+          recentMovements: recentResult.items,
+        },
+      });
+    },
+  });
+
+  // GET /admin/roles — inlined from systemRM.listRoles
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/roles',
+    handler: async () => jsonResponse(await systemRM.listRoles()),
+  });
 
   // System GET routes (extracted to ./routes/system/read.ts)
   registerSystemReadRoutes({
     httpServer: input.httpServer,
     db: input.db,
     registry,
-    readModel,
     workspaceBasePath: input.workspaceBasePath,
+    capabilities,
+    integrations,
+    llmSettings,
+    llmModelPrices,
+    systemSettings,
+    readModel: {
+      getAgent: readModel.getAgent,
+      getApplicationMigrations: readModel.getApplicationMigrations,
+    },
   });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
   registerFinanceReadRoutes(input.httpServer, input.db, finance, companyPayables);
+
+  // Fragmented agent detail routes (#1587) — stores created directly in route files (#1574)
+  registerAgentBaseRoutes(input.httpServer, input.db, {
+    getAgent: readModel.getAgent,
+  });
+  registerAgentStepsRoutes(input.httpServer, input.db);
+  registerAgentConversationsRoutes(input.httpServer, {
+    listAgentRecentConversations: readModel.listAgentRecentConversations,
+  });
+  registerAgentMemoryRoutes(input.httpServer, {
+    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
+  });
+  registerAgentMetricsRoutes(input.httpServer, input.db);
+  registerAgentContractRoutes(input.httpServer, input.db);
+  registerAgentMcpRoutes(input.httpServer, input.db);
+  registerAgentSchedulesRoutes(input.httpServer, input.db);
+  registerAgentNotificationsRoutes(input.httpServer, input.db);
 
   input.httpServer.registerRoute({
     method: 'POST',
