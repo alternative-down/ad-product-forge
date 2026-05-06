@@ -3,7 +3,7 @@ export const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
 
-export const githubManifestConfigSchema = z.object({
+const githubManifestConfigSchema = z.object({
   permissions: z.object({
     administration: z.boolean(),
     contents: z.boolean(),
@@ -25,7 +25,7 @@ export const githubManifestConfigSchema = z.object({
   }),
 });
 
-export const updateAgentGitHubManifestConfigSchema = z.object({
+const updateAgentGitHubManifestConfigSchema = z.object({
   agentId: z.string().min(1),
   manifestConfig: githubManifestConfigSchema,
 });
@@ -60,7 +60,7 @@ export const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
-export const roleCapabilitySchema = z.object({
+const roleCapabilitySchema = z.object({
   roleId: z.string().min(1),
   capabilityId: z.string().min(1),
 });
@@ -70,17 +70,17 @@ export const createRoleSchema = z.object({
   description: z.string().optional(),
 });
 
-export const updateRoleSchema = z.object({
+const updateRoleSchema = z.object({
   roleId: z.string().min(1),
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
 });
 
-export const deleteRoleSchema = z.object({
+const deleteRoleSchema = z.object({
   roleId: z.string().min(1),
 });
 
-export const createScheduleSchema = z.object({
+const createScheduleSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional(),
@@ -92,7 +92,7 @@ export const createScheduleSchema = z.object({
   wakeWhenRunning: z.boolean().optional(),
 });
 
-export const updateScheduleSchema = z.object({
+const updateScheduleSchema = z.object({
   agentId: z.string().min(1),
   scheduleId: z.string().min(1),
   name: z.string().min(1).optional(),
@@ -106,26 +106,26 @@ export const updateScheduleSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const deleteScheduleSchema = z.object({
+const deleteScheduleSchema = z.object({
   agentId: z.string().min(1),
   scheduleId: z.string().min(1),
 });
 
-export const agentActionSchema = z.object({
+const agentActionSchema = z.object({
   agentId: z.string().min(1),
 });
 
-export const clearAgentHistorySchema = z.object({
+const clearAgentHistorySchema = z.object({
   agentId: z.string().min(1),
   includeLongTermMemoryThread: z.boolean().default(true),
 });
 
-export const agentLongTermMemoryRecallSearchSchema = z.object({
+const agentLongTermMemoryRecallSearchSchema = z.object({
   agentId: z.string().min(1),
   query: z.string(),
 });
 
-export const adminInternalChatSendSchema = z.object({
+const adminInternalChatSendSchema = z.object({
   agentId: z.string().min(1),
   targetKey: z.string().min(1).optional(),
   senderSlug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
@@ -133,49 +133,49 @@ export const adminInternalChatSendSchema = z.object({
   content: z.string().trim().min(1),
 });
 
-export const createExternalInternalChatAccountSchema = z.object({
+const createExternalInternalChatAccountSchema = z.object({
   slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   displayName: z.string().trim().min(1),
   description: z.string().trim().optional(),
 });
 
-export const updateExternalInternalChatAccountSchema = z.object({
+const updateExternalInternalChatAccountSchema = z.object({
   accountId: z.string().min(1),
   slug: z.string().trim().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   displayName: z.string().trim().min(1),
   description: z.string().trim().optional(),
 });
 
-export const deleteExternalInternalChatAccountSchema = z.object({
+const deleteExternalInternalChatAccountSchema = z.object({
   accountId: z.string().min(1),
 });
 
-export const internalChatAccountIdQuerySchema = z.object({
+const internalChatAccountIdQuerySchema = z.object({
   accountId: z.string().min(1),
 });
 
-export const internalChatMessagesQuerySchema = z.object({
+const internalChatMessagesQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const internalChatMessageAttachmentQuerySchema = z.object({
+const internalChatMessageAttachmentQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   messageId: z.string().min(1),
   attachmentName: z.string().min(1),
 });
 
-export const createInternalChatConversationSchema = z.object({
+const createInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   type: z.enum(['dm', 'group']),
   name: z.string().trim().optional(),
   participantAccountIds: z.array(z.string().min(1)).min(1),
 });
 
-export const sendInternalChatConversationMessageSchema = z.object({
+const sendInternalChatConversationMessageSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   content: z.string().trim().default(''),
@@ -191,37 +191,37 @@ export const sendInternalChatConversationMessageSchema = z.object({
   },
 );
 
-export const updateInternalChatConversationSchema = z.object({
+const updateInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   name: z.string().trim().min(1),
 });
 
-export const archiveInternalChatConversationSchema = z.object({
+const archiveInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
 });
 
-export const internalChatGroupMembersQuerySchema = z.object({
+const internalChatGroupMembersQuerySchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
 });
 
-export const addInternalChatGroupMemberSchema = z.object({
+const addInternalChatGroupMemberSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   participantAccountId: z.string().min(1),
   role: z.enum(['admin', 'normal']).default('normal'),
 });
 
-export const updateInternalChatGroupMemberRoleSchema = z.object({
+const updateInternalChatGroupMemberRoleSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   participantAccountId: z.string().min(1),
   role: z.enum(['admin', 'normal']),
 });
 
-export const removeInternalChatGroupMemberSchema = z.object({
+const removeInternalChatGroupMemberSchema = z.object({
   accountId: z.string().min(1),
   conversationId: z.string().min(1),
   participantAccountId: z.string().min(1),
@@ -232,12 +232,12 @@ export const topUpAgentContractSchema = z.object({
   amountUsd: z.coerce.number().positive(),
 });
 
-export const adjustAgentContractBudgetSchema = z.object({
+const adjustAgentContractBudgetSchema = z.object({
   agentId: z.string().min(1),
   newBudgetUsd: z.coerce.number().min(0),
 });
 
-export const renewAgentContractSchema = z.object({
+const renewAgentContractSchema = z.object({
   agentId: z.string().min(1),
   newBudgetUsd: z.coerce.number().min(0),
 });
@@ -257,7 +257,7 @@ export const changeAgentRoleSchema = z.object({
   roleId: z.string().min(1),
 });
 
-export const updateAgentConfigSchema = z.object({
+const updateAgentConfigSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -268,18 +268,18 @@ export const updateAgentConfigSchema = z.object({
   omModelProfileId: z.string().min(1),
 });
 
-export const upsertAgentProviderSchema = z.object({
+const upsertAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
   credentials: z.unknown(),
 });
 
-export const deleteAgentProviderSchema = z.object({
+const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
 });
 
-export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
+const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   z.object({
     transport: z.literal('stdio'),
     command: z.string().trim().min(1),
@@ -298,7 +298,7 @@ export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   }),
 ]);
 
-export const createAgentMcpServerSchema = z
+const createAgentMcpServerSchema = z
   .object({
     agentId: z.string().min(1),
     name: z.string().trim().min(1),
@@ -307,7 +307,7 @@ export const createAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
-export const updateAgentMcpServerSchema = z
+const updateAgentMcpServerSchema = z
   .object({
     agentId: z.string().min(1),
     configId: z.string().min(1),
@@ -318,13 +318,13 @@ export const updateAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
-export const deleteAgentMcpServerSchema = z.object({
+const deleteAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   serverId: z.string().min(1),
 });
 
-export const upsertSystemMcpServerSchema = z
+const upsertSystemMcpServerSchema = z
   .object({
     serverId: z.string().min(1).optional(),
     name: z.string().trim().min(1),
@@ -333,58 +333,58 @@ export const upsertSystemMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
-export const deleteSystemMcpServerSchema = z.object({
+const deleteSystemMcpServerSchema = z.object({
   serverId: z.string().min(1),
 });
 
-export const assignAgentMcpServerSchema = z.object({
+const assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
   isActive: z.boolean().default(true),
 });
 
-export const setAgentMcpServerActiveSchema = z.object({
+const setAgentMcpServerActiveSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   isActive: z.boolean(),
 });
 
-export const detachAgentMcpServerSchema = z.object({
+const detachAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
 });
 
-export const uploadAgentSkillsSchema = z.object({
+const uploadAgentSkillsSchema = z.object({
   agentId: z.string().min(1),
   archiveBase64: z.string().min(1),
 });
 
-export const deleteAgentSkillSchema = z.object({
+const deleteAgentSkillSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
 
-export const uploadSystemSkillsSchema = z.object({
+const uploadSystemSkillsSchema = z.object({
   archiveBase64: z.string().min(1),
 });
 
-export const deleteSystemSkillSchema = z.object({
+const deleteSystemSkillSchema = z.object({
   skillName: z.string().min(1),
 });
 
-export const installGlobalSkillForAgentSchema = z.object({
+const installGlobalSkillForAgentSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
 
-export const publishAgentSkillToGlobalSchema = z.object({
+const publishAgentSkillToGlobalSchema = z.object({
   agentId: z.string().min(1),
   skillName: z.string().min(1),
 });
 
 export const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
-export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
+const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
     providerType: z.literal('migadu'),
     isEnabled: z.boolean().default(true),
@@ -421,11 +421,11 @@ export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType'
   }),
 ]);
 
-export const deleteSystemIntegrationSchema = z.object({
+const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
 });
 
-export const upsertLlmProfileSchema = z.object({
+const upsertLlmProfileSchema = z.object({
   profileId: z.string().min(1).optional(),
   name: z.string().min(1),
   modelKey: z.string().min(1),
@@ -435,24 +435,24 @@ export const upsertLlmProfileSchema = z.object({
   isEnabled: z.boolean().default(true),
 });
 
-export const deleteLlmProfileSchema = z.object({
+const deleteLlmProfileSchema = z.object({
   profileId: z.string().min(1),
 });
 
-export const updateLlmDefaultsSchema = z.object({
+const updateLlmDefaultsSchema = z.object({
   primaryProfileId: z.string().min(1),
   omProfileId: z.string().min(1),
   hiringRhProfileId: z.string().min(1),
 });
 
-export const upsertLlmModelPriceSchema = z.object({
+const upsertLlmModelPriceSchema = z.object({
   modelKey: z.string().min(1),
   inputPerMillionUsd: z.coerce.number().nonnegative(),
   inputCachePerMillionUsd: z.coerce.number().nonnegative(),
   outputPerMillionUsd: z.coerce.number().nonnegative(),
 });
 
-export const upsertSystemSettingsSchema = z.object({
+const upsertSystemSettingsSchema = z.object({
   companyName: z.string(),
   companyContext: z.string(),
   stepDelayEnabled: z.boolean().default(true),
@@ -481,7 +481,7 @@ export const upsertSystemSettingsSchema = z.object({
 
 export const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
 
-export const syncOauthSchema = z.object({
+const syncOauthSchema = z.object({
   providerId: oauthSyncProviderSchema.default('all'),
 });
 
@@ -491,7 +491,7 @@ export const createInvestmentSchema = z.object({
   effectiveAt: z.string().optional(),
 });
 
-export const createPayableSchema = z.discriminatedUnion('kind', [
+const createPayableSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('single'),
     name: z.string().min(1),
@@ -509,12 +509,12 @@ export const createPayableSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-export const ledgerEntryActionSchema = z.object({
+const ledgerEntryActionSchema = z.object({
   entryId: z.string().min(1),
   effectiveAt: z.string().optional(),
 });
 
-export const recurringPayableStatusSchema = z.object({
+const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
 });

@@ -222,21 +222,21 @@ export function terminateAgent(agentId: string) {
   });
 }
 
-export function createAgentMcpServer(input: AgentMcpServerInput) {
+function createAgentMcpServer(input: AgentMcpServerInput) {
   return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/create', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
+function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
   return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/update', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export function deleteAgentMcpServer(input: {
+function deleteAgentMcpServer(input: {
   agentId: string;
   configId: string;
   serverId: string;
@@ -279,7 +279,7 @@ export function detachAgentMcpServer(input: {
   });
 }
 
-export function uploadAgentSkills(input: UploadAgentSkillsInput) {
+function uploadAgentSkills(input: UploadAgentSkillsInput) {
   return request<{ success: true; agentId: string; installedSkillNames: string[] }>('/admin/agent-skills/upload', {
     method: 'POST',
     body: JSON.stringify(input),

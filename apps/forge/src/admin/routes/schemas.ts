@@ -8,7 +8,7 @@ export const agentIdQuerySchema = z.object({
   agentId: z.string().min(1),
 });
 
-export const githubManifestConfigSchema = z.object({
+const githubManifestConfigSchema = z.object({
   permissions: z.object({
     administration: z.boolean(),
     contents: z.boolean(),
@@ -406,7 +406,7 @@ export const publishAgentSkillToGlobalSchema = z.object({
 // SYSTEM INTEGRATION SCHEMAS
 // =============================================================================
 
-export const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
+const systemIntegrationProviderSchema = z.enum(['migadu', 'coolify', 'github', 'minimax']);
 
 export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType', [
   z.object({
@@ -494,7 +494,7 @@ export const upsertSystemSettingsSchema = z.object({
 // OAUTH SCHEMAS
 // =============================================================================
 
-export const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
+const oauthSyncProviderSchema = z.enum(['openai-codex', 'anthropic', 'all']);
 
 export const syncOauthSchema = z.object({
   provider: oauthSyncProviderSchema,
@@ -504,7 +504,7 @@ export const syncOauthSchema = z.object({
 // FINANCE SCHEMAS
 // =============================================================================
 
-export const createInvestmentSchema = z.object({
+const createInvestmentSchema = z.object({
   amount: z.number().positive(),
   description: z.string().min(1),
 });
@@ -524,12 +524,12 @@ export const createPayableSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-export const ledgerEntryActionSchema = z.object({
+const ledgerEntryActionSchema = z.object({
   entryId: z.string().min(1),
   action: z.enum(['approve', 'cancel']),
 });
 
-export const recurringPayableStatusSchema = z.object({
+const recurringPayableStatusSchema = z.object({
   payableId: z.string().min(1),
   isActive: z.boolean(),
 });

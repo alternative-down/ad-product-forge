@@ -8,7 +8,7 @@ import { mcpServerConfigs, agentMcpConfigs, type McpServerConfig, type NewMcpSer
 import { nanoid } from 'nanoid';
 
 // MCP Server Config operations
-export async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<McpServerConfig> {
+async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<McpServerConfig> {
   const db = getDatabase();
   const now = new Date().toISOString();
   
@@ -23,7 +23,7 @@ export async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' 
   return newConfig as McpServerConfig;
 }
 
-export async function getMcpServerConfig(id: string): Promise<McpServerConfig | undefined> {
+async function getMcpServerConfig(id: string): Promise<McpServerConfig | undefined> {
   const db = getDatabase();
   const results = await db
     .select()
@@ -32,7 +32,7 @@ export async function getMcpServerConfig(id: string): Promise<McpServerConfig | 
   return results[0];
 }
 
-export async function listMcpServerConfigs(options?: { isActive?: boolean }): Promise<McpServerConfig[]> {
+async function listMcpServerConfigs(options?: { isActive?: boolean }): Promise<McpServerConfig[]> {
   const db = getDatabase();
   
   if (options?.isActive !== undefined) {
@@ -45,7 +45,7 @@ export async function listMcpServerConfigs(options?: { isActive?: boolean }): Pr
   return db.select().from(mcpServerConfigs);
 }
 
-export async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMcpServerConfig, 'id' | 'createdAt'>>): Promise<McpServerConfig | undefined> {
+async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMcpServerConfig, 'id' | 'createdAt'>>): Promise<McpServerConfig | undefined> {
   const db = getDatabase();
   
   await db
@@ -56,12 +56,12 @@ export async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMc
   return getMcpServerConfig(id);
 }
 
-export async function deleteMcpServerConfig(id: string): Promise<void> {
+async function deleteMcpServerConfig(id: string): Promise<void> {
   const db = getDatabase();
   await db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, id));
 }
 
-export async function searchMcpServerConfigs(query: string): Promise<McpServerConfig[]> {
+async function searchMcpServerConfigs(query: string): Promise<McpServerConfig[]> {
   const db = getDatabase();
   const searchPattern = `%${query}%`;
   
@@ -77,7 +77,7 @@ export async function searchMcpServerConfigs(query: string): Promise<McpServerCo
 }
 
 // Agent MCP Config operations
-export async function createAgentMcpConfig(data: Omit<NewAgentMcpConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgentMcpConfig> {
+async function createAgentMcpConfig(data: Omit<NewAgentMcpConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgentMcpConfig> {
   const db = getDatabase();
   const now = new Date().toISOString();
   
@@ -92,7 +92,7 @@ export async function createAgentMcpConfig(data: Omit<NewAgentMcpConfig, 'id' | 
   return newConfig as AgentMcpConfig;
 }
 
-export async function getAgentMcpConfig(id: string): Promise<AgentMcpConfig | undefined> {
+async function getAgentMcpConfig(id: string): Promise<AgentMcpConfig | undefined> {
   const db = getDatabase();
   const results = await db
     .select()
@@ -101,7 +101,7 @@ export async function getAgentMcpConfig(id: string): Promise<AgentMcpConfig | un
   return results[0];
 }
 
-export async function listAgentMcpConfigs(agentId: string, options?: { isActive?: boolean }): Promise<AgentMcpConfig[]> {
+async function listAgentMcpConfigs(agentId: string, options?: { isActive?: boolean }): Promise<AgentMcpConfig[]> {
   const db = getDatabase();
   const conditions = [eq(agentMcpConfigs.agentId, agentId)];
   
@@ -115,7 +115,7 @@ export async function listAgentMcpConfigs(agentId: string, options?: { isActive?
     .where(and(...conditions));
 }
 
-export async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAgentMcpConfig, 'id' | 'createdAt'>>): Promise<AgentMcpConfig | undefined> {
+async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAgentMcpConfig, 'id' | 'createdAt'>>): Promise<AgentMcpConfig | undefined> {
   const db = getDatabase();
   
   await db
@@ -126,7 +126,7 @@ export async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAge
   return getAgentMcpConfig(id);
 }
 
-export async function deleteAgentMcpConfig(id: string): Promise<void> {
+async function deleteAgentMcpConfig(id: string): Promise<void> {
   const db = getDatabase();
   await db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, id));
 }

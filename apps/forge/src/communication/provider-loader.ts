@@ -6,7 +6,7 @@ import { createEmailProvider } from '../email-account';
 import { createInternalChatProvider } from './internal-chat-provider';
 import type { InternalChatService } from './internal-chat-service';
 
-export const internalChatCredentialsSchema = z.object({
+const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
   displayName: z.string().min(1).nullish(),
   description: z.string().nullish(),
@@ -29,7 +29,7 @@ const discordLegacyCredentialsSchema = z.object({
   respondToMentionsOnly: z.boolean().nullish(),
 });
 
-export const discordCredentialsSchema = z
+const discordCredentialsSchema = z
   .union([discordChannelCredentialsSchema, discordLegacyCredentialsSchema])
   .transform((credentials) => {
     if ('allowedChannelIds' in credentials || 'respondToMentionsOnly' in credentials) {
@@ -55,7 +55,7 @@ export const discordCredentialsSchema = z
     };
   });
 
-export const emailCredentialsSchema = z.object({
+const emailCredentialsSchema = z.object({
   imap: z.object({
     host: z.string(),
     port: z.number(),
@@ -138,7 +138,7 @@ export function loadCommunicationProviders(
   return providers;
 }
 
-export function parseProviderCredentials(
+function parseProviderCredentials(
   providerType: keyof ProviderCredentialsMap,
   credentials: unknown,
 ) {

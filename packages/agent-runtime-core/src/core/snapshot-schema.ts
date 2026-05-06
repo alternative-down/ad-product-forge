@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const runtimeInputSchema = z.object({
+const runtimeInputSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
   payload: z.unknown(),
@@ -23,7 +23,7 @@ const stepContextPartSchema = z.union([
   stepContextImagePartSchema,
 ]);
 
-export const stepContextEntrySchema = z.object({
+const stepContextEntrySchema = z.object({
   id: z.string().min(1),
   kind: z.string().min(1),
   title: z.string().min(1),
@@ -31,25 +31,25 @@ export const stepContextEntrySchema = z.object({
   text: z.string().optional(),
 });
 
-export const stepContentSegmentSchema = z.object({
+const stepContentSegmentSchema = z.object({
   kind: z.enum(['message', 'reasoning', 'note']),
   text: z.string(),
 });
 
-export const actionRequestSchema = z.object({
+const actionRequestSchema = z.object({
   name: z.string().min(1),
   input: z.record(z.string(), z.unknown()),
 });
 
-export const actionResultSchema = z.object({
+const actionResultSchema = z.object({
   name: z.string().min(1),
   input: z.record(z.string(), z.unknown()),
   output: z.unknown(),
 });
 
-export const stepContinuationSchema = z.enum(['stop', 'continue', 'wait']);
+const stepContinuationSchema = z.enum(['stop', 'continue', 'wait']);
 
-export const stepModelUsageSchema = z.object({
+const stepModelUsageSchema = z.object({
   inputTokens: z.number().optional(),
   outputTokens: z.number().optional(),
   totalTokens: z.number().optional(),
@@ -57,12 +57,12 @@ export const stepModelUsageSchema = z.object({
   reasoningTokens: z.number().optional(),
 });
 
-export const stepModelMetadataSchema = z.object({
+const stepModelMetadataSchema = z.object({
   provider: z.string().optional(),
   modelId: z.string().optional(),
 });
 
-export const stepModelResponseSchema = z.object({
+const stepModelResponseSchema = z.object({
   segments: z.array(stepContentSegmentSchema),
   actionRequests: z.array(actionRequestSchema),
   continuation: stepContinuationSchema,
@@ -70,7 +70,7 @@ export const stepModelResponseSchema = z.object({
   metadata: stepModelMetadataSchema.optional(),
 });
 
-export const stepRecordSchema = z.object({
+const stepRecordSchema = z.object({
   id: z.string().min(1),
   stepNumber: z.number().int().positive(),
   inputs: z.array(runtimeInputSchema),

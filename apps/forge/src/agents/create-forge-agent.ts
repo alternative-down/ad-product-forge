@@ -56,7 +56,7 @@ function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   };
 }
 
-export async function createAgent<
+async function createAgent<
   TAgentId extends string = string,
   TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
@@ -226,7 +226,7 @@ export async function createInternalAgentRuntime<
   };
 }
 
-export async function createForgeAgent<
+async function createForgeAgent<
   TAgentId extends string = string,
   TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,

@@ -4,6 +4,5 @@
  */
 
 export { registerAgentReadRoutes } from './read.js';
-export { registerAgentWriteRoutes } from './write.js';
 export { registerAgentOperationRoutes } from './operations.js';
 export { registerAgentWriteOpsRoutes } from './write-ops.js';

@@ -25,7 +25,7 @@ export class ChatGroupNotFoundError extends Error {
 }
 
 
-export class GroupMemberAlreadyExistsError extends Error {
+class GroupMemberAlreadyExistsError extends Error {
   readonly participantSlug: string;
 
   constructor(participantSlug: string) {
@@ -42,14 +42,14 @@ export class OnlyAdminsCanUpdateGroupError extends Error {
   }
 }
 
-export class NameRequiredForNewGroupError extends Error {
+class NameRequiredForNewGroupError extends Error {
   constructor() {
     super("name is required when creating a group.");
     this.name = "NameRequiredForNewGroupError";
   }
 }
 
-export class InternalChatParticipantNotFoundError extends Error {
+class InternalChatParticipantNotFoundError extends Error {
   readonly participantKey: string;
 
   constructor(participantKey: string) {

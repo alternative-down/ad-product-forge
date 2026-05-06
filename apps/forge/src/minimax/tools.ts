@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import type { MiniMaxManager } from './manager';
 
-export const MINIMAX_TOOL_IDS = [
+const MINIMAX_TOOL_IDS = [
   'list_minimax_voices',
   'minimax_tts',
   'minimax_image',

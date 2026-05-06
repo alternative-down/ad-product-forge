@@ -104,7 +104,7 @@ const sendMessageInputSchema = z.object({
 });
 
 // Error output schema used by all tools
-export const errorOutputSchema = z.object({
+const errorOutputSchema = z.object({
   valid: z.literal(false),
   error: z.string().describe('Error message describing what went wrong.'),
   hint: z.string().optional().describe('Suggestion for how to fix the error.'),
