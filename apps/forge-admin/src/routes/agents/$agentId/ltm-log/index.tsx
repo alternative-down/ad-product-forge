@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { PageHeader } from '@/components/admin';
 
-import { ThreadMessageArticle } from '../../components/agents/log/thread-message-content.tsx';
+import { ThreadMessageArticle } from '../../components/agents/log/thread-message-content';
 import { useLtmLogData } from './-use-ltm-log-data';
 import { LongTermMemorySection } from '@/components/admin/-ltm-snapshot-section';
 
