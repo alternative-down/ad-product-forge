@@ -1,39 +1,24 @@
 /**
- * Agent Detail Sub-Resource Routes - #1587
+ * Agent Detail Sub-Resource Routes - #1587 / #1574
  * Fragmented routes for /admin/agents/:id/sub-resources
  *
- * Each route fetches only the data it needs (single focused query).
+ * Refactored to create stores directly in route files (#1574).
+ * Each route creates only the data-access functions it needs.
  */
 
+import { eq, desc, inArray } from 'drizzle-orm';
 import type { HttpHandler } from '../../../http/server';
+import type { Database } from '../../../database/index';
+import type { AgentReadModel } from '../../read-model/agents';
+import {
+  agentExecutionSteps,
+  agentSchedules,
+  agentNotifications,
+  agentMcpConfigs,
+  mcpServerConfigs,
+  agentExecutionContracts,
+} from '../../../database/schema';
 import { jsonResponse } from '../index';
-
-interface AgentDetailReadModel {
-  listAgentExecutionSteps: (query: { agentId: string; limit: number; offset: number }) => Promise<unknown>;
-  listAgentRecentConversations: (agentId: string) => Promise<unknown>;
-  getAgentRuntimeMemory: (agentId: string) => Promise<unknown>;
-  listRecentAgentHomeMetricSnapshots: (input: { agentId: string; limit: number }) => Promise<unknown>;
-}
-
-interface AgentContractsReadModel {
-  listAgentContracts: (agentId: string) => Promise<unknown>;
-}
-
-interface AgentMcpReadModel {
-  listAgentMcpServers: (agentId: string) => Promise<unknown>;
-}
-
-interface AgentSchedulesReadModel {
-  listAgentSchedules: (agentId: string) => Promise<unknown>;
-}
-
-interface AgentNotificationsReadModel {
-  listAgentNotifications: (agentId: string) => Promise<unknown>;
-}
-
-interface AgentBaseReadModel {
-  getAgent: (agentId: string) => Promise<unknown>;
-}
 
 function extractAgentId(path: string): string {
   const match = path.match(/^\/admin\/agents\/([^/]+)/);
@@ -44,7 +29,7 @@ function extractAgentId(path: string): string {
 
 export function registerAgentBaseRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentBaseReadModel,
+  getAgent: AgentReadModel['getAgent'],
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -52,7 +37,7 @@ export function registerAgentBaseRoutes(
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      const agent = await readModel.getAgent(agentId);
+      const agent = await getAgent(agentId);
       if (!agent) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(agent);
     },
@@ -63,7 +48,7 @@ export function registerAgentBaseRoutes(
 
 export function registerAgentStepsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentDetailReadModel,
+  db: Database,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -73,9 +58,13 @@ export function registerAgentStepsRoutes(
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const limit = parseInt(request.query.get('limit') ?? '10', 10);
       const offset = parseInt(request.query.get('offset') ?? '0', 10);
-      return jsonResponse(
-        await readModel.listAgentExecutionSteps({ agentId, limit, offset }),
-      );
+      const rows = await db.query.agentExecutionSteps.findMany({
+        where: eq(agentExecutionSteps.agentId, agentId),
+        orderBy: [desc(agentExecutionSteps.createdAt)],
+        limit,
+        offset,
+      });
+      return jsonResponse({ items: rows, hasMore: rows.length === limit });
     },
   });
 }
@@ -84,7 +73,7 @@ export function registerAgentStepsRoutes(
 
 export function registerAgentConversationsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentDetailReadModel,
+  listAgentRecentConversations: AgentReadModel['listAgentRecentConversations'],
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -92,7 +81,7 @@ export function registerAgentConversationsRoutes(
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      return jsonResponse(await readModel.listAgentRecentConversations(agentId));
+      return jsonResponse(await listAgentRecentConversations(agentId));
     },
   });
 }
@@ -101,7 +90,7 @@ export function registerAgentConversationsRoutes(
 
 export function registerAgentMemoryRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentDetailReadModel,
+  getAgentRuntimeMemory: AgentReadModel['getAgentRuntimeMemory'],
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -109,7 +98,7 @@ export function registerAgentMemoryRoutes(
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      return jsonResponse(await readModel.getAgentRuntimeMemory(agentId));
+      return jsonResponse(await getAgentRuntimeMemory(agentId));
     },
   });
 }
@@ -118,7 +107,7 @@ export function registerAgentMemoryRoutes(
 
 export function registerAgentMetricsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentDetailReadModel,
+  db: Database,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -127,26 +116,32 @@ export function registerAgentMetricsRoutes(
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const limit = parseInt(request.query.get('limit') ?? '10', 10);
-      return jsonResponse(
-        await readModel.listRecentAgentHomeMetricSnapshots({ agentId, limit }),
-      );
+      const rows = await db.query.agentExecutionSteps.findMany({
+        where: eq(agentExecutionSteps.agentId, agentId),
+        orderBy: [desc(agentExecutionSteps.createdAt)],
+        limit,
+      });
+      return jsonResponse({ items: rows });
     },
   });
 }
 
-// ─── Agent Contracts ────────────────────────────────────────────────────────
+// ─── Agent Contracts ───────────────────────────────────────────────────────────
 
 export function registerAgentContractRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentContractsReadModel,
+  db: Database,
 ) {
   httpServer.registerRoute({
     method: 'GET',
-    path: '/admin/agents/:agentId/contract',
+    path: '/admin/agents/:agentId/contracts',
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      return jsonResponse(await readModel.listAgentContracts(agentId));
+      const rows = await db.query.agentExecutionContracts.findMany({
+        where: eq(agentExecutionContracts.agentId, agentId),
+      });
+      return jsonResponse({ items: rows });
     },
   });
 }
@@ -155,24 +150,52 @@ export function registerAgentContractRoutes(
 
 export function registerAgentMcpRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentMcpReadModel,
+  db: Database,
 ) {
   httpServer.registerRoute({
     method: 'GET',
-    path: '/admin/agents/:agentId/mcp',
+    path: '/admin/agents/:agentId/mcp-servers',
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      return jsonResponse(await readModel.listAgentMcpServers(agentId));
+      const agentMcpRows = await db.query.agentMcpConfigs.findMany({
+        where: eq(agentMcpConfigs.agentId, agentId),
+      });
+      if (agentMcpRows.length === 0) return jsonResponse({ servers: [] });
+
+      const serverIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
+      const agentMcpServerRows = await db.query.mcpServerConfigs.findMany({
+        where: inArray(mcpServerConfigs.id, serverIds),
+      });
+
+      const serverIdToLink = new Map(agentMcpRows.map((link) => [link.serverId, link]));
+      return jsonResponse({
+        servers: agentMcpServerRows.map((server) => {
+          const link = serverIdToLink.get(server.id);
+          return {
+            configId: link?.id ?? null,
+            serverId: server.id,
+            name: server.name,
+            description: server.description ?? undefined,
+            transport: server.transport as 'stdio' | 'http_streamable',
+            command: server.command ?? '',
+            argsText: server.args ?? '',
+            envVarsText: server.envVars ?? '',
+            url: server.url ?? '',
+            headersText: server.headers ?? '',
+            
+          };
+        }),
+      });
     },
   });
 }
 
-// ─── Agent Schedules ────────────────────────────────────────────────────────
+// ─── Agent Schedules ─────────────────────────────────────────────────────────
 
 export function registerAgentSchedulesRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentSchedulesReadModel,
+  db: Database,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -180,16 +203,19 @@ export function registerAgentSchedulesRoutes(
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      return jsonResponse(await readModel.listAgentSchedules(agentId));
+      const rows = await db.query.agentSchedules.findMany({
+        where: eq(agentSchedules.agentId, agentId),
+      });
+      return jsonResponse({ items: rows });
     },
   });
 }
 
-// ─── Agent Notifications ────────────────────────────────────────────────────
+// ─── Agent Notifications ─────────────────────────────────────────────────────
 
 export function registerAgentNotificationsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: AgentNotificationsReadModel,
+  db: Database,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -197,7 +223,20 @@ export function registerAgentNotificationsRoutes(
     handler: async (request) => {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
-      return jsonResponse(await readModel.listAgentNotifications(agentId));
+      const limit = parseInt(request.query.get('limit') ?? '10', 10);
+      const rows = await db.query.agentNotifications.findMany({
+        where: eq(agentNotifications.agentId, agentId),
+        orderBy: [desc(agentNotifications.createdAt)],
+        limit,
+      });
+      return jsonResponse({
+        items: rows.map((n) => ({
+          notificationId: n.id,
+          content: n.content,
+          timestamp: n.createdAt,
+          read: n.readAt !== null,
+        })),
+      });
     },
   });
 }
