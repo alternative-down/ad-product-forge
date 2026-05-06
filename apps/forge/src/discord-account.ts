@@ -222,19 +222,19 @@ export function createDiscordProvider(config: {
   }
 
   async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
-    forgeDebug('discord', 'MessageCreate received', { authorId: message.author.id, botUserId, channelType: message.channel.type, channelId: message.channelId });
-    forgeDebug('discord', 'configuredChannels check', { size: configuredChannels.size, hasChannel: configuredChannels.has(message.channelId) });
+    forgeDebug({ scope: 'discord-account', level: 'info', message: 'MessageCreate received', context: { authorId: message.author.id, botUserId, channelType: message.channel.type, channelId: message.channelId } });
+    forgeDebug({ scope: 'discord-account', level: 'info', message: 'configuredChannels check', context: { size: configuredChannels.size, hasChannel: configuredChannels.has(message.channelId) } });
 
     // Ignore messages from the bot itself
     if (message.author.id === botUserId) {
-      forgeDebug('discord', 'filtered: message from bot');
+      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: message from bot' });
       return null;
     }
 
     // Allow DMs through regardless of configured guild channels
     if (message.channel.type !== ChannelType.DM) {
       if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
-        forgeDebug('discord', 'filtered: guild channel not in configuredChannels');
+        forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: guild channel not in configuredChannels' });
         return null;
       }
     }
@@ -244,7 +244,7 @@ export function createDiscordProvider(config: {
       configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
-      forgeDebug('discord', 'filtered: guild channel requires mention but no mention');
+      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: guild channel requires mention but no mention' });
       return null;
     }
 
@@ -252,16 +252,16 @@ export function createDiscordProvider(config: {
     const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
-      forgeDebug('discord', 'filtered: empty content and no attachments');
+      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: empty content and no attachments' });
       return null;
     }
 
     if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
-      forgeDebug('discord', 'filtered: recent outbound echo');
+      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: recent outbound echo' });
       return null;
     }
 
-    forgeDebug('discord', 'message accepted');
+    forgeDebug({ scope: 'discord-account', level: 'info', message: 'message accepted' });
 
     return {
       targetKey: message.channelId,
@@ -280,10 +280,10 @@ export function createDiscordProvider(config: {
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
-    forgeDebug('discord', 'deliverMessage called', { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length });
+    forgeDebug({ scope: 'discord-account', level: 'info', message: 'deliverMessage called', context: { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length } });
     if (!onInboundMessage) {
       pendingMessages.push(message);
-      forgeDebug('discord', 'pushed to pendingMessages', { total: pendingMessages.length });
+      forgeDebug({ scope: 'discord-account', level: 'info', message: 'pushed to pendingMessages', context: { total: pendingMessages.length } });
       return;
     }
 
@@ -306,11 +306,11 @@ export function createDiscordProvider(config: {
     }
   }
 
-  forgeDebug('discord', 'Starting login');
+  forgeDebug({ scope: 'discord-account', level: 'info', message: 'Starting login' });
   
   const ready = client.login(config.token)
     .then(() => {
-    forgeDebug('discord', 'Login succeeded');
+    forgeDebug({ scope: 'discord-account', level: 'info', message: 'Login succeeded' });
     if (!client.user) {
       throw new Error('Discord client did not become ready after login');
     }
@@ -320,25 +320,25 @@ export function createDiscordProvider(config: {
         return;
       }
 
-      forgeDebug('discord', 'MessageCreate received', { author: message.author.username, channelType: message.channel.type, guildId: message.guildId });
+      forgeDebug({ scope: 'discord-account', level: 'info', message: 'MessageCreate received', context: { author: message.author.username, channelType: message.channel.type, guildId: message.guildId } });
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
         if (!inboundMessage) {
-          forgeDebug('discord', 'toInboundMessage returned null');
+          forgeDebug({ scope: 'discord-account', level: 'info', message: 'toInboundMessage returned null' });
           return;
         }
 
-        forgeDebug('discord', 'calling deliverMessage');
+        forgeDebug({ scope: 'discord-account', level: 'info', message: 'calling deliverMessage' });
         await deliverMessage(inboundMessage);
-        forgeDebug('discord', 'deliverMessage completed');
+        forgeDebug({ scope: 'discord-account', level: 'info', message: 'deliverMessage completed' });
       } catch (error) {
         forgeDebug({ scope: 'discord-account', level: 'error', message: 'Error handling MessageCreate event', context: { error } });
       }
     });
 
-    forgeDebug('discord', 'logged in', { tag: client.user.tag });
+    forgeDebug({ scope: 'discord-account', level: 'info', message: 'logged in', context: { tag: client.user.tag } });
 
     return client.user;
   });
