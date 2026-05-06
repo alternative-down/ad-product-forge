@@ -17,11 +17,6 @@ import { normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
-import type { Database } from '../../../../src/database/index';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader-types';
-import type { AgentEmailManager } from '../../../email/migadu-manager';
-import type { CoolifyManager, GitHubAppManager } from '../../../coolify/manager';
-import type { createAgentScheduleManager } from '../../schedules/manager';
 
 import type { Database } from '../../../../src/database/index';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
@@ -29,7 +24,6 @@ import type { GitHubAppManager } from '../../../github/manager';
 import type { AgentEmailManager } from '../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../coolify/manager';
 import type { createAgentScheduleManager } from '../../../schedules/manager';
-import type { InternalChatService } from '../../communication/internal-chat-service';
 
 
 const upsertAgentProviderSchema = z.object({
@@ -589,7 +583,7 @@ export function registerAgentWriteOpsRoutes(
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        forgeDebug('admin', `updateRole failed: ${err}`);
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: `updateRole failed: ${err}` });
         if (msg.startsWith('Role not found')) return jsonResponse({ error: msg }, 404);
         throw err;
       }
@@ -607,7 +601,7 @@ export function registerAgentWriteOpsRoutes(
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        forgeDebug('admin', `deleteRole failed: ${err}`);
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
         if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
         throw err;
       }
