@@ -79,6 +79,82 @@ function makeKebabCaseFilenameRule() {
   };
 }
 
+
+// Rule creator function: prohibit unnecessary reexports
+function makeNoUnnecessaryReexportsRule() {
+  return {
+    meta: {
+      type: 'suggestion',
+      docs: {
+        description: 'Disallow unnecessary re-export statements (bare or simple re-exports that do not add value)',
+        url: 'https://github.com/alternative-down/ad-product-forge/issues/1627',
+      },
+      schema: [],
+      messages: {
+        unnecessaryReexport: 'Unnecessary re-export: "{{source}}" re-exports {{count}} item(s) from "{{specifier}}" with no transformation or aggregation. Either remove the re-export, consolidate it, or add a meaningful comment explaining its purpose.',
+        bareReexport: 'Unnecessary bare re-export: this export simply re-exports everything from "{{specifier}}" without adding any value. Remove it or consolidate imports.',
+      },
+    },
+    create(context) {
+      function hasDisableComment(node) {
+        const tokenBefore = context.sourceCode.getTokenBefore(node, { includeComments: true });
+        return tokenBefore?.value?.includes('no-reexport-check');
+      }
+
+      function getSource(spec) {
+        if (spec.type === 'ExportAllDeclaration') return spec.source?.value || '';
+        if (spec.type === 'ExportNamedDeclaration' && spec.source) {
+          return spec.source.value || '';
+        }
+        return '';
+      }
+
+      function countExports(spec, sourceValue) {
+        if (spec.type === 'ExportAllDeclaration') return 'all';
+        if (spec.type === 'ExportNamedDeclaration') {
+          if (!spec.source) return null; // local export, ok
+          if (spec.specifiers && spec.specifiers.length > 0) {
+            return spec.specifiers.length;
+          } else if (spec.specifiers?.length === 0 && spec.source) {
+            return 'all';
+          }
+        }
+        return null;
+      }
+
+      return {
+        ExportAllDeclaration(node) {
+          if (hasDisableComment(node)) return;
+          context.report({
+            node,
+            messageId: 'bareReexport',
+            data: { specifier: node.source?.value || '' },
+          });
+        },
+        ExportNamedDeclaration(node) {
+          if (!node.source) return; // local export, ok
+          if (hasDisableComment(node)) return;
+          const source = node.source.value || '';
+          const count = countExports(node, source);
+          if (count === 'all') {
+            context.report({
+              node,
+              messageId: 'bareReexport',
+              data: { specifier: source },
+            });
+          } else if (count !== null && count > 0) {
+            context.report({
+              node,
+              messageId: 'unnecessaryReexport',
+              data: { source, count: count.toString(), specifier: source },
+            });
+          }
+        },
+      };
+    },
+  };
+}
+
 export default defineConfig([
   globalIgnores(['dist', 'node_modules', '.turbo']),
 
@@ -131,6 +207,12 @@ export default defineConfig([
         },
         meta: { name: 'kebab-case-filename', version: '1.0.0' },
       },
+      'reexport-check': {
+        rules: {
+          'no-unnecessary-reexports': makeNoUnnecessaryReexportsRule(),
+        },
+        meta: { name: 'no-unnecessary-reexports', version: '1.0.0' },
+      },
     },
     rules: {
       '@typescript-eslint/no-unused-vars': [
@@ -153,6 +235,8 @@ export default defineConfig([
       'no-dynamic-imports/no-dynamic-imports': 2,
       // #1629: enforce kebab-case filenames
       'kebab-case-filename/kebab-case-filename': 2,
+      // #1627: prohibit unnecessary reexports
+      'reexport-check/no-unnecessary-reexports': 2,
     },
   },
 ]);
