@@ -25,11 +25,11 @@ import {
   formatUsdSigned,
   humanizeMovementType,
   humanizeRecurrencePeriod,
-} from './-finance-accounts-format';
-import { createEmptyMovementForm, toPayableInput, type MovementForm } from './-finance-accounts-types';
-import { MovementAgendaTable } from './-movement-agenda-table';
-import { MovementDialog } from './-movement-dialog';
-import { MovementsTable } from './-movements-table';
+} from '../../components/finance/accounts/finance-accounts-format';
+import { createEmptyMovementForm, toPayableInput, type MovementForm } from '../../components/finance/accounts/finance-accounts-types';
+import { MovementAgendaTable } from '../../components/finance/accounts/movement-agenda-table';
+import { MovementDialog } from '../../components/finance/accounts/movement-dialog';
+import { MovementsTable } from '../../components/finance/accounts/movements-table';
 
 export const Route = createFileRoute('/finance/accounts/')({
   component: FinanceAccountsIndexRoute,

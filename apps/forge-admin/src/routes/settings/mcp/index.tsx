@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { deleteSystemMcpServer, getSystemMcpServers, upsertSystemMcpServer } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
-import { createEmptyMcpForm, createMcpForm, McpDialog, toSystemMcpInput } from './-mcp-dialog';
+import { createEmptyMcpForm, createMcpForm, McpDialog, toSystemMcpInput } from '../../components/settings/mcp/mcp-dialog';
 
 export const Route = createFileRoute('/settings/mcp/')({
   component: SettingsMcpIndexRoute,
