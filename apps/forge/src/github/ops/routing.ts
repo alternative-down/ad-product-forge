@@ -139,7 +139,7 @@ export function createRoutingOps(
     };
     await ctx.saveCredentials(agentId, activeCredentials);
     const githubConfig = await ctx.getGlobalConfig();
-    await (ctx.notifications as unknown as { createNotification: (n: unknown) => Promise<void> }).createNotification({
+    await ctx.notifications.createNotification({
       agentId,
       content: ctx.createGitHubInstallWakeContent({ agentId, installationId, organization: githubConfig.organization, appName: activeCredentials.appName, appSlug: activeCredentials.appSlug, timestamp: Date.now() }),
     });
@@ -154,7 +154,7 @@ export function createRoutingOps(
     try { payload = JSON.parse(bodyText); } catch { return html(400, '<h1>Invalid JSON</h1>'); }
     if (ctx.isGitHubSelfEvent(payload)) { ctx.forgeDebug('github-manager', 'Ignoring self event', { agentId, event }); return html(200, 'ok'); }
     ctx.forgeDebug('github-manager', `Webhook ${event}`, { agentId, delivery });
-    await (ctx.notifications as unknown as { createNotification: (n: unknown) => Promise<void> }).createNotification({
+    await ctx.notifications.createNotification({
       agentId,
       content: ctx.createGitHubWebhookWakeContent({ event, delivery, payload }),
     });

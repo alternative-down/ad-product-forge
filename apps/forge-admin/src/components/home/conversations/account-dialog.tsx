@@ -12,7 +12,7 @@ import { Dialog } from '@/components/ui/dialog';
 
 import type { AccountDialogMode, AccountForm } from './context';
 
-export function account-dialog(input: {
+export function AccountDialog(input: {
   open: boolean;
   mode: AccountDialogMode;
   saving: boolean;

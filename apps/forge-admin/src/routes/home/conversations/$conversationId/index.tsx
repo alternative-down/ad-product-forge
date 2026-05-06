@@ -13,11 +13,11 @@ import {
   type HomeInternalChatConversationMessage,
 } from '@/lib/admin-api/index';
 import { formatRecentMessageTime, useHomeConversations } from '../-context';
-import { conversation-composer } from '@/components/home/conversations/conversation-composer';
-import { conversation-header } from '@/components/home/conversations/conversation-header';
-import { conversation-messages-pane } from '@/components/home/conversations/conversation-messages-pane';
-import { participants-dialog } from './-participants-dialog';
-import { rename-conversation-dialog } from './-rename-conversation-dialog';
+import { ConversationComposer } from '@/components/home/conversations/ConversationComposer';
+import { ConversationHeader } from '@/components/home/conversations/ConversationHeader';
+import { ConversationMessagesPane } from '@/components/home/conversations/ConversationMessagesPane';
+import { ParticipantsDialog } from './-ParticipantsDialog';
+import { RenameConversationDialog } from './-RenameConversationDialog';
 
 export const Route = createFileRoute('/home/conversations/$conversationId/')({
   component: HomeConversationDetailIndexRoute,
@@ -194,7 +194,7 @@ function HomeConversationDetailIndexRoute() {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-        <conversation-header
+        <ConversationHeader
           conversation={selectedConversation}
           canManageGroup={canManageGroup}
           onBack={() => void navigate({ to: '/home/conversations' })}
@@ -216,7 +216,7 @@ function HomeConversationDetailIndexRoute() {
           }}
         />
 
-        <conversation-messages-pane
+        <ConversationMessagesPane
           containerRef={scrollAreaRef}
           accountId={selectedAccount?.accountId ?? ''}
           conversationId={selectedConversation.id}
@@ -236,7 +236,7 @@ function HomeConversationDetailIndexRoute() {
           }}
         />
 
-        <conversation-composer
+        <ConversationComposer
           messageDraft={messageDraft}
           attachmentDrafts={attachmentDrafts}
           disabled={!selectedAccount || (!messageDraft.trim() && attachmentDrafts.length === 0)}
@@ -287,7 +287,7 @@ function HomeConversationDetailIndexRoute() {
         />
       </div>
 
-      <rename-conversation-dialog
+      <RenameConversationDialog
         open={renameDialogOpen}
         groupNameDraft={groupNameDraft}
         onOpenChange={setRenameDialogOpen}
@@ -310,7 +310,7 @@ function HomeConversationDetailIndexRoute() {
       />
 
       {selectedConversation.type === 'group' ? (
-        <participants-dialog
+        <ParticipantsDialog
           open={participantsDialogOpen}
           members={members}
           availableParticipantId={availableParticipantId}

@@ -14,7 +14,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInitials, type ConversationForm, type InternalChatContact } from './context';
 
-export function new-conversation-dialog(input: {
+export function NewConversationDialog(input: {
   open: boolean;
   selectedAccount: boolean;
   form: ConversationForm;
