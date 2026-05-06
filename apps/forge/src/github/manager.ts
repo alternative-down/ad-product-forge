@@ -293,19 +293,7 @@ export function createGitHubAppManager(config: {
 
 // === Repo Ops ===
   async function listRepositories(agentId: string) {
-    const octokit = await getInstallationOctokit(agentId);
-    const response = await octokit.request('GET /installation/repositories', {
-      per_page: 100,
-    });
-
-    return response.data.repositories.map((repository) => ({
-      id: repository.id,
-      name: repository.name,
-      fullName: repository.full_name,
-      private: repository.private,
-      defaultBranch: repository.default_branch,
-      url: repository.html_url,
-    }));
+    return opsRepos.listRepositories(agentId);
   }
 
   async function createRepository(agentId: string, input: {
@@ -315,25 +303,7 @@ export function createGitHubAppManager(config: {
     autoInit?: boolean;
     defaultBranch?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const githubConfig = await getGlobalConfig();
-    const response = await octokit.request('POST /orgs/{org}/repos', {
-      org: githubConfig.organization,
-      name: input.name,
-      description: input.description,
-      private: input.private ?? true,
-      auto_init: input.autoInit ?? false,
-      ...(input.defaultBranch && { default_branch: input.defaultBranch }),
-    });
-
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      fullName: response.data.full_name,
-      private: response.data.private,
-      defaultBranch: response.data.default_branch,
-      url: response.data.html_url,
-    };
+    return opsRepos.createRepository(agentId, input);
   }
 
   async function updateRepository(agentId: string, input: {
@@ -344,66 +314,21 @@ export function createGitHubAppManager(config: {
     private?: boolean;
     defaultBranch?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}', {
-      owner,
-      repo: input.repositoryName,
-      name: input.name,
-      description: input.description,
-      private: input.private,
-      default_branch: input.defaultBranch,
-    });
-
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      fullName: response.data.full_name,
-      private: response.data.private,
-      defaultBranch: response.data.default_branch,
-      url: response.data.html_url,
-      cloneUrl: response.data.clone_url,
-      sshUrl: response.data.ssh_url,
-    };
+    return opsRepos.updateRepository(agentId, input);
   }
 
   async function deleteRepository(agentId: string, input: {
     owner?: string;
     repositoryName: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    await octokit.request('DELETE /repos/{owner}/{repo}', {
-      owner,
-      repo: input.repositoryName,
-    });
-
-    return {
-      success: true,
-    };
+    return opsRepos.deleteRepository(agentId, input);
   }
 
   async function getRepository(agentId: string, input: {
     owner?: string;
     repositoryName: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}', {
-      owner,
-      repo: input.repositoryName,
-    });
-
-    return {
-      id: response.data.id,
-      name: response.data.name,
-      fullName: response.data.full_name,
-      private: response.data.private,
-      defaultBranch: response.data.default_branch,
-      url: response.data.html_url,
-      cloneUrl: response.data.clone_url,
-      sshUrl: response.data.ssh_url,
-    };
+    return opsRepos.getRepository(agentId, input);
   }
 
   async function listPullRequests(agentId: string, input: {
@@ -411,23 +336,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     state?: 'open' | 'closed' | 'all';
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
-      owner,
-      repo: input.repositoryName,
-      state: input.state ?? 'open',
-      per_page: 100,
-    });
-
-    return response.data.map((pullRequest) => ({
-      number: pullRequest.number,
-      title: pullRequest.title,
-      state: pullRequest.state,
-      url: pullRequest.html_url,
-      head: pullRequest.head.ref,
-      base: pullRequest.base.ref,
-    }));
+    return opsPullRequests.listPullRequests(agentId, input);
   }
 
   async function createPullRequest(agentId: string, input: {
@@ -438,25 +347,7 @@ export function createGitHubAppManager(config: {
     base: string;
     body?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('POST /repos/{owner}/{repo}/pulls', {
-      owner,
-      repo: input.repositoryName,
-      title: input.title,
-      head: input.head,
-      base: input.base,
-      body: input.body,
-    });
-
-    return {
-      number: response.data.number,
-      title: response.data.title,
-      state: response.data.state,
-      url: response.data.html_url,
-      head: response.data.head.ref,
-      base: response.data.base.ref,
-    };
+    return opsPullRequests.createPullRequest(agentId, input);
   }
 
   async function getPullRequest(agentId: string, input: {
@@ -464,27 +355,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     pullRequestNumber: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-      owner,
-      repo: input.repositoryName,
-      pull_number: input.pullRequestNumber,
-    });
-
-    return {
-      number: response.data.number,
-      title: response.data.title,
-      state: response.data.state,
-      url: response.data.html_url,
-      head: response.data.head.ref,
-      base: response.data.base.ref,
-      body: response.data.body ?? null,
-      merged: response.data.merged,
-      draft: response.data.draft ?? false,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+    return opsPullRequests.getPullRequest(agentId, input);
   }
 
   async function listPullRequestComments(agentId: string, input: {
@@ -494,23 +365,7 @@ export function createGitHubAppManager(config: {
     direction?: 'asc' | 'desc';
     limit?: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/comments', {
-      owner,
-      repo: input.repositoryName,
-      pull_number: input.pullRequestNumber,
-      direction: input.direction ?? 'asc',
-      per_page: Math.min(input.limit ?? 100, 100),
-    });
-
-    return response.data.map((comment) => ({
-      id: comment.id,
-      body: comment.body,
-      user: comment.user?.login ?? null,
-      createdAt: comment.created_at,
-      updatedAt: comment.updated_at,
-    }));
+    return opsPullRequests.listPullRequestComments(agentId, input);
   }
 
   async function updatePullRequest(agentId: string, input: {
@@ -522,31 +377,7 @@ export function createGitHubAppManager(config: {
     base?: string;
     state?: 'open' | 'closed';
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
-      owner,
-      repo: input.repositoryName,
-      pull_number: input.pullRequestNumber,
-      title: input.title,
-      body: input.body,
-      base: input.base,
-      state: input.state,
-    });
-
-    return {
-      number: response.data.number,
-      title: response.data.title,
-      state: response.data.state,
-      url: response.data.html_url,
-      head: response.data.head.ref,
-      base: response.data.base.ref,
-      body: response.data.body ?? null,
-      merged: response.data.merged,
-      draft: response.data.draft ?? false,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+    return opsPullRequests.updatePullRequest(agentId, input);
   }
 
   async function mergePullRequest(agentId: string, input: {
@@ -557,22 +388,7 @@ export function createGitHubAppManager(config: {
     commitTitle?: string;
     commitMessage?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', {
-      owner,
-      repo: input.repositoryName,
-      pull_number: input.pullRequestNumber,
-      merge_method: input.mergeMethod ?? 'merge',
-      commit_title: input.commitTitle,
-      commit_message: input.commitMessage,
-    });
-
-    return {
-      merged: response.data.merged,
-      message: response.data.message,
-      sha: response.data.sha,
-    };
+    return opsPullRequests.mergePullRequest(agentId, input);
   }
 
   async function listIssues(agentId: string, input: {
@@ -586,23 +402,7 @@ export function createGitHubAppManager(config: {
     direction?: 'asc' | 'desc';
     limit?: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/issues', {
-      owner,
-      repo: input.repositoryName,
-      state: input.state ?? 'open',
-      labels: input.labels?.join(','),
-      assignee: input.assignee,
-      creator: input.creator,
-      sort: input.sort,
-      direction: input.direction,
-      per_page: Math.min(input.limit ?? 50, 100),
-    });
-
-    return response.data
-      .filter((issue) => !('pull_request' in issue))
-      .map((issue) => toIssueSummary(issue as unknown as Parameters<typeof toIssueSummary>[0]));
+    return opsIssues.listIssues(agentId, input);
   }
 
   async function getIssue(agentId: string, input: {
@@ -610,15 +410,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     issueNumber: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
-      owner,
-      repo: input.repositoryName,
-      issue_number: input.issueNumber,
-    });
-
-    return toIssueDetails(response.data as unknown as Parameters<typeof toIssueDetails>[0]);
+    return opsIssues.getIssue(agentId, input);
   }
 
   async function createIssue(agentId: string, input: {
@@ -630,19 +422,7 @@ export function createGitHubAppManager(config: {
     assignees?: string[];
     milestone?: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('POST /repos/{owner}/{repo}/issues', {
-      owner,
-      repo: input.repositoryName,
-      title: input.title,
-      body: input.body,
-      labels: input.labels,
-      assignees: normalizeAssignees(input.assignees),
-      milestone: input.milestone,
-    });
-
-    return toIssueDetails(response.data as unknown as Parameters<typeof toIssueDetails>[0]);
+    return opsIssues.createIssue(agentId, input);
   }
 
   async function updateIssue(agentId: string, input: {
@@ -656,21 +436,7 @@ export function createGitHubAppManager(config: {
     assignees?: string[];
     milestone?: number | null;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
-      owner,
-      repo: input.repositoryName,
-      issue_number: input.issueNumber,
-      title: input.title,
-      body: input.body,
-      state: input.state,
-      labels: input.labels,
-      assignees: normalizeAssignees(input.assignees),
-      milestone: input.milestone,
-    });
-
-    return toIssueDetails(response.data as unknown as Parameters<typeof toIssueDetails>[0]);
+    return opsIssues.updateIssue(agentId, input);
   }
 
   async function closeIssue(agentId: string, input: {
@@ -678,10 +444,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return updateIssue(agentId, {
-      ...input,
-      state: 'closed',
-    });
+    return opsIssues.closeIssue(agentId, input);
   }
 
   async function reopenIssue(agentId: string, input: {
@@ -689,10 +452,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return updateIssue(agentId, {
-      ...input,
-      state: 'open',
-    });
+    return opsIssues.reopenIssue(agentId, input);
   }
 
   async function listIssueComments(agentId: string, input: {
@@ -701,23 +461,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     limit?: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/comments', {
-      owner,
-      repo: input.repositoryName,
-      issue_number: input.issueNumber,
-      per_page: Math.min(input.limit ?? 100, 100),
-    });
-
-    return response.data.map((comment) => ({
-      id: comment.id,
-      url: comment.html_url,
-      body: comment.body ?? '',
-      author: comment.user?.login ?? null,
-      createdAt: comment.created_at,
-      updatedAt: comment.updated_at,
-    }));
+    return opsIssues.listIssueComments(agentId, input);
   }
 
   async function getIssueComment(agentId: string, input: {
@@ -725,22 +469,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     commentId: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/comments/{comment_id}', {
-      owner,
-      repo: input.repositoryName,
-      comment_id: input.commentId,
-    });
-
-    return {
-      id: response.data.id,
-      url: response.data.html_url,
-      body: response.data.body ?? '',
-      author: response.data.user?.login ?? null,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+    return opsIssues.getIssueComment(agentId, input);
   }
 
   async function createIssueComment(agentId: string, input: {
@@ -749,23 +478,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     body: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
-      owner,
-      repo: input.repositoryName,
-      issue_number: input.issueNumber,
-      body: input.body,
-    });
-
-    return {
-      id: response.data.id,
-      url: response.data.html_url,
-      body: response.data.body ?? '',
-      author: response.data.user?.login ?? null,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+    return opsIssues.createIssueComment(agentId, input);
   }
 
   async function updateIssueComment(agentId: string, input: {
@@ -774,23 +487,7 @@ export function createGitHubAppManager(config: {
     commentId: number;
     body: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
-      owner,
-      repo: input.repositoryName,
-      comment_id: input.commentId,
-      body: input.body,
-    });
-
-    return {
-      id: response.data.id,
-      url: response.data.html_url,
-      body: response.data.body ?? '',
-      author: response.data.user?.login ?? null,
-      createdAt: response.data.created_at,
-      updatedAt: response.data.updated_at,
-    };
+    return opsIssues.updateIssueComment(agentId, input);
   }
 
   async function deleteIssueComment(agentId: string, input: {
@@ -798,17 +495,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     commentId: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    await octokit.request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
-      owner,
-      repo: input.repositoryName,
-      comment_id: input.commentId,
-    });
-
-    return {
-      success: true,
-    };
+    return opsIssues.deleteIssueComment(agentId, input);
   }
 
   async function listLabels(agentId: string, input: {
@@ -816,20 +503,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     limit?: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/labels', {
-      owner,
-      repo: input.repositoryName,
-      per_page: Math.min(input.limit ?? 100, 100),
-    });
-
-    return response.data.map((label) => ({
-      name: label.name,
-      description: label.description ?? null,
-      color: label.color,
-      default: label.default,
-    }));
+    return opsLabels.listLabels(agentId, input);
   }
 
   async function createLabel(agentId: string, input: {
@@ -839,22 +513,7 @@ export function createGitHubAppManager(config: {
     color: string;
     description?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('POST /repos/{owner}/{repo}/labels', {
-      owner,
-      repo: input.repositoryName,
-      name: input.labelName,
-      color: input.color,
-      description: input.description,
-    });
-
-    return {
-      name: response.data.name,
-      description: response.data.description ?? null,
-      color: response.data.color,
-      default: response.data.default,
-    };
+    return opsLabels.createLabel(agentId, input);
   }
 
   async function updateLabel(agentId: string, input: {
@@ -865,23 +524,7 @@ export function createGitHubAppManager(config: {
     color?: string;
     description?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}/labels/{name}', {
-      owner,
-      repo: input.repositoryName,
-      name: input.labelName,
-      new_name: input.newLabelName,
-      color: input.color,
-      description: input.description,
-    });
-
-    return {
-      name: response.data.name,
-      description: response.data.description ?? null,
-      color: response.data.color,
-      default: response.data.default,
-    };
+    return opsLabels.updateLabel(agentId, input);
   }
 
   async function deleteLabel(agentId: string, input: {
@@ -889,17 +532,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     labelName: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    await octokit.request('DELETE /repos/{owner}/{repo}/labels/{name}', {
-      owner,
-      repo: input.repositoryName,
-      name: input.labelName,
-    });
-
-    return {
-      success: true,
-    };
+    return opsLabels.deleteLabel(agentId, input);
   }
 
   async function addIssueLabels(agentId: string, input: {
@@ -908,21 +541,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     labels: string[];
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
-      owner,
-      repo: input.repositoryName,
-      issue_number: input.issueNumber,
-      labels: input.labels,
-    });
-
-    return response.data.map((label) => ({
-      name: label.name,
-      description: label.description ?? null,
-      color: label.color,
-      default: label.default,
-    }));
+    return opsLabels.addIssueLabels(agentId, input);
   }
 
   async function removeIssueLabels(agentId: string, input: {
@@ -931,41 +550,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     labels: string[];
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-
-    for (const labelName of input.labels) {
-      await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', {
-        owner,
-        repo: input.repositoryName,
-        issue_number: input.issueNumber,
-        name: labelName,
-      }).catch((error) => {
-        if (
-          typeof error === 'object'
-          && error !== null
-          && 'status' in error
-          && error.status === 404
-        ) {
-          return;
-        }
-
-        throw error;
-      });
-    }
-
-    const response = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}/labels', {
-      owner,
-      repo: input.repositoryName,
-      issue_number: input.issueNumber,
-    });
-
-    return response.data.map((label) => ({
-      name: label.name,
-      description: label.description ?? null,
-      color: label.color,
-      default: label.default,
-    }));
+    return opsLabels.removeIssueLabels(agentId, input);
   }
 
   async function listMilestones(agentId: string, input: {
@@ -974,24 +559,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed' | 'all';
     limit?: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('GET /repos/{owner}/{repo}/milestones', {
-      owner,
-      repo: input.repositoryName,
-      state: input.state ?? 'open',
-      per_page: Math.min(input.limit ?? 100, 100),
-    });
-
-    return response.data.map((milestone) => ({
-      number: milestone.number,
-      title: milestone.title,
-      description: milestone.description ?? null,
-      state: milestone.state,
-      dueOn: milestone.due_on,
-      openIssues: milestone.open_issues,
-      closedIssues: milestone.closed_issues,
-    }));
+    return opsMilestones.listMilestones(agentId, input);
   }
 
   async function createMilestone(agentId: string, input: {
@@ -1002,26 +570,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed';
     dueOn?: string;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('POST /repos/{owner}/{repo}/milestones', {
-      owner,
-      repo: input.repositoryName,
-      title: input.title,
-      description: input.description,
-      state: input.state,
-      due_on: input.dueOn ?? undefined,
-    });
-
-    return {
-      number: response.data.number,
-      title: response.data.title,
-      description: response.data.description ?? null,
-      state: response.data.state,
-      dueOn: response.data.due_on,
-      openIssues: response.data.open_issues,
-      closedIssues: response.data.closed_issues,
-    };
+    return opsMilestones.createMilestone(agentId, input);
   }
 
   async function updateMilestone(agentId: string, input: {
@@ -1033,27 +582,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed';
     dueOn?: string | null;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    const response = await octokit.request('PATCH /repos/{owner}/{repo}/milestones/{milestone_number}', {
-      owner,
-      repo: input.repositoryName,
-      milestone_number: input.milestoneNumber,
-      title: input.title,
-      description: input.description,
-      state: input.state,
-      due_on: input.dueOn ?? undefined,
-    });
-
-    return {
-      number: response.data.number,
-      title: response.data.title,
-      description: response.data.description ?? null,
-      state: response.data.state,
-      dueOn: response.data.due_on,
-      openIssues: response.data.open_issues,
-      closedIssues: response.data.closed_issues,
-    };
+    return opsMilestones.updateMilestone(agentId, input);
   }
 
   async function deleteMilestone(agentId: string, input: {
@@ -1061,17 +590,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     milestoneNumber: number;
   }) {
-    const octokit = await getInstallationOctokit(agentId);
-    const owner = await getDefaultOwner(input.owner);
-    await octokit.request('DELETE /repos/{owner}/{repo}/milestones/{milestone_number}', {
-      owner,
-      repo: input.repositoryName,
-      milestone_number: input.milestoneNumber,
-    });
-
-    return {
-      success: true,
-    };
+    return opsMilestones.deleteMilestone(agentId, input);
   }
 
   return {
