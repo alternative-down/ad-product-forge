@@ -7,7 +7,6 @@ import { getDatabase, runMigrations } from './database/index';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';
-import { createCoolifyManager } from './coolify/manager';
 import { createMiniMaxManager } from './minimax/manager';
 import { createAgentScheduleManager } from './schedules/manager';
 import { registerAdminRoutes } from './admin/routes';
@@ -18,122 +17,57 @@ import { createAgentContractStore } from './agents/agent-contract-store';
 import { prepareAgentEmbeddersForStartup } from './agents/agent-embedder-maintenance';
 
 const envSchema = z.object({
-  FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
-  FORGE_DATA_PATH: z.string().default('./data'),
-  WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
-  FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
+  FORGE_HTTP_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   FORGE_PUBLIC_BASE_URL: z.string().url().optional(),
-  /** Admin API key. Required in production — boot fails without it when
-   *  FORGE_ADMIN_ALLOW_INSECURE_LOCAL is not set. */
-  FORGE_ADMIN_API_KEY: z.string().min(1).optional(),
-  /** Allow /admin/* to be served without authentication (local dev only).
-   *  Do NOT set in production. */
-  FORGE_ADMIN_ALLOW_INSECURE_LOCAL: z.enum(['true', '1']).optional(),
-  /** Comma-separated list of allowed CORS origins for admin routes.
-   *  When set, only these origins receive admin API responses.
-   *  Example: https://admin.example.com,https://dashboard.example.com */
-  FORGE_ADMIN_ALLOWED_ORIGINS: z.string().optional(),
+  FORGE_DATABASE_URL: z.string().default('sqlite.db'),
+  FORGE_ADMIN_API_KEY: z.string().optional(),
+  FORGE_ALLOWED_ORIGINS: z.string().default(''),
+  FORGE_ALLOW_INSECURE_LOCAL: z.coerce.boolean().default(false),
+  FORGE_INSECURE_DISABLED_CSP: z.coerce.boolean().default(false),
 });
 
-/**
- * Decode a Base64-encoded admin API key.
- *
- * Allows keys with special characters (e.g., `$`, `#`, `!`, `\`) to be stored
- * in environment variables safely by Base64-encoding the raw key.
- *
- * Detection logic:
- *   1. If the value is a valid Base64 string (alphanumeric + / + =)
- *      AND decoding produces valid printable UTF-8 output,
- *      the decoded value is used.
- *   2. Otherwise the raw value is returned as-is (backward compatibility).
- *
- * This means:
- *   - Plain ASCII keys like `simple-key` or `abc123` work as-is (no change needed)
- *   - Keys with special chars like `my$ecret!key#123` should be Base64-encoded:
- *       bXkkZWNyZXQha2V5IzEyMw==
- *   - The `$` in the key prevents it from being valid Base64, so the raw value
- *     would be returned by an old server — but since we now always trim empty to
- *     undefined, having a key with `$` in the env without encoding would fail
- *     auth (server gets raw `$` value). Users must Base64-encode keys with
- *     characters outside printable ASCII.
- *
- * Example:
- *   Raw key:    my$ecret!key#123
- *   Base64 env: bXkkZWNyZXQha2V5IzEyMw==
- */
-function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
-  if (!rawValue) return undefined;
+const rawEnv = {
+  FORGE_HTTP_PORT: process.env.FORGE_HTTP_PORT,
+  FORGE_PUBLIC_BASE_URL: process.env.FORGE_PUBLIC_BASE_URL,
+  FORGE_DATABASE_URL: process.env.FORGE_DATABASE_URL,
+  FORGE_ADMIN_API_KEY: process.env.FORGE_ADMIN_API_KEY,
+  FORGE_ALLOWED_ORIGINS: process.env.FORGE_ALLOWED_ORIGINS,
+  FORGE_ALLOW_INSECURE_LOCAL: process.env.FORGE_ALLOW_INSECURE_LOCAL,
+  FORGE_INSECURE_DISABLED_CSP: process.env.FORGE_INSECURE_DISABLED_CSP,
+};
 
-  try {
-    const trimmed = rawValue.trim();
-    if (trimmed === '') return undefined;
-
-    // Check if it looks like Base64 (alphanumeric + / + = padding)
-    if (/^[A-Za-z0-9+/]+=*$/.test(trimmed)) {
-      const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
-
-      // Only use decoded value if it produces valid printable UTF-8.
-      // This prevents false positives like `abc123` (valid Base64 but decodes
-      // to garbage). Printable ASCII is safe in HTTP headers and proves the
-      // encoding intent.
-      if (/^[\x20-\x7E]*$/.test(decoded)) {
-        return decoded;
-      }
-    }
-  } catch {
-    // Fall through to raw value
-  }
-
-  return rawValue;
+const parsed = envSchema.safeParse(rawEnv);
+if (!parsed.success) {
+  // eslint-disable-next-line no-console
+  console.error('[forge-main] Invalid env:', parsed.error.format());
+  process.exit(1);
 }
 
-export async function main() {
-  // Global exception handlers — must be registered before any async work
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('[unhandledRejection]', reason);
-  });
-  process.on('uncaughtException', (error) => {
-    console.error('[uncaughtException]', error);
-  });
+const env = parsed.data;
 
-  const env = envSchema.parse(process.env);
+async function main() {
+  const adminApiKey = env.FORGE_ADMIN_API_KEY;
+  const allowInsecureLocal = env.FORGE_ALLOW_INSECURE_LOCAL;
+  const allowedOrigins = env.FORGE_ALLOWED_ORIGINS
+    ? env.FORGE_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : [];
 
-  // Decode admin API key from Base64 if needed (see decodeAdminApiKey JSDoc)
-  const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
-  const allowInsecureLocal = env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === 'true'
-    || env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === '1';
-  const allowedOrigins = env.FORGE_ADMIN_ALLOWED_ORIGINS
-    ? env.FORGE_ADMIN_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-    : undefined;
-
-  // Validate: require admin API key unless explicitly opting into insecure local mode
-  if (!adminApiKey && !allowInsecureLocal) {
-    throw new Error(
-      'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set'
-      + ' FORGE_ADMIN_ALLOW_INSECURE_LOCAL=true for local development only.',
-    );
-  }
-
-  // Load database and agents from registry
-  const db = getDatabase();
-  await runMigrations(db);
-  await prepareAgentEmbeddersForStartup({
-    db,
-    workspaceBasePath: env.WORKSPACE_BASE_PATH,
-  });
+  await runMigrations(env.FORGE_DATABASE_URL);
+  const db = getDatabase(env.FORGE_DATABASE_URL);
   const registry = getInternalAgentRegistry();
   const httpServer = createForgeHttpServer({
-    port: env.FORGE_HTTP_PORT,
+    databaseUrl: env.FORGE_DATABASE_URL,
+    publicBasePath: env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`,
     adminApiKey,
-    allowInsecureLocal,
     allowedOrigins,
+    agentRegistry: registry,
+    disabledCsp: env.FORGE_INSECURE_DISABLED_CSP,
   });
   const publicBaseUrl = env.FORGE_PUBLIC_BASE_URL ?? `http://localhost:${env.FORGE_HTTP_PORT}`;
   const integrations = createSystemIntegrationStore(db);
   const internalChat = createInternalChatService(db);
   const agentContracts = createAgentContractStore(db);
 
-  const coolifyManager = createCoolifyManager({ db, integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
   const githubApps = createGitHubAppManager({ integrations });
 
@@ -149,7 +83,6 @@ export async function main() {
     internalChat,
     agentContracts,
     schedules,
-    coolifyManager,
     minimaxManager,
     githubApps,
   });
@@ -159,7 +92,6 @@ export async function main() {
     readModel,
     integrations,
     githubApps,
-    coolifyManager,
     minimaxManager,
     agentContracts,
     schedules,
@@ -178,21 +110,23 @@ export async function main() {
   }
 
   // Graceful shutdown
-  const shutdown = async () => {
-    forgeDebug('forge', 'Shutting down gracefully...');
+  const shutdown = async (signal: string) => {
+    // eslint-disable-next-line no-console
+    console.log(`[forge-main] Received ${signal}, shutting down gracefully...`);
     await httpServer.stop();
-    process.exit(0);
+    await db.destroy();
+    // eslint-disable-next-line no-console
+    console.log('[forge-main] Shutdown complete.');
   };
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+  process.on('SIGINT', () => { void shutdown('SIGINT'); });
+
+  await prepareAgentEmbeddersForStartup(db);
 }
-main().catch((error) => {
+
+void main().catch((err) => {
   // eslint-disable-next-line no-console
-  console.error('[forge-main] Fatal error during startup:', error instanceof Error ? error.message : String(error));
-  if (error instanceof Error && error.stack) {
-    // eslint-disable-next-line no-console
-    console.error(error.stack);
-  }
+  console.error('[forge-main] Fatal error during startup:', err);
   process.exit(1);
 });

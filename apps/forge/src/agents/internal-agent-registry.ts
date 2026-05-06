@@ -5,6 +5,7 @@ import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createAgentEmailManager, type AgentEmailManager } from '../email/migadu-manager';
+import { createCoolifyManager, type CoolifyManager } from '../coolify/manager';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
@@ -14,12 +15,19 @@ type InternalAgentEntry = {
 /**
  * Creates a per-agent AgentEmailManager instance.
  * Call this for each agent to get an isolated email manager.
- * Exported so callers (admin routes, hire/terminate) can create per-agent managers
- * instead of sharing a single global instance.
  */
 export function createPerAgentEmailManager(db: Database): AgentEmailManager {
   const integrations = createSystemIntegrationStore(db);
   return createAgentEmailManager({ db, integrations });
+}
+
+/**
+ * Creates a per-agent CoolifyManager instance.
+ * Call this for each agent to get an isolated Coolify manager.
+ */
+export function createPerAgentCoolifyManager(db: Database): CoolifyManager {
+  const integrations = createSystemIntegrationStore(db);
+  return createCoolifyManager({ integrations });
 }
 
 function createInternalAgentRegistry() {
@@ -30,11 +38,14 @@ function createInternalAgentRegistry() {
     loaderConfig = config;
     const existingAgentIds = new Set(agents.keys());
 
+    // Each agent gets its own email and coolify manager at load time.
     const perAgentEmailMailboxes = createPerAgentEmailManager(db);
+    const perAgentCoolify = createPerAgentCoolifyManager(db);
 
     const perAgentConfig: AgentLoaderConfig = {
       ...config,
       emailMailboxes: perAgentEmailMailboxes,
+      coolify: perAgentCoolify,
     };
 
     const runtimes = await loadAgents(db, perAgentConfig);
@@ -72,9 +83,11 @@ function createInternalAgentRegistry() {
           throw new Error('Agent loader config is not available for runtime reload');
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);
+        const reloadCoolify = createPerAgentCoolifyManager(db);
         return loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
+          coolify: reloadCoolify,
           agentId: runtime.id,
         });
       },
@@ -118,30 +131,52 @@ function createInternalAgentRegistry() {
 
     agent.runner.stop();
     void agent.runtime.dispose().catch((error) => {
-      forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
+      forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose runtime during remove', context: { agentId, error } });
     });
+
     agents.delete(agentId);
   }
 
-  function get(agentId: string) {
-    return agents.get(AgentId) ?? null;
+  function getSnapshot() {
+    return {
+      agents: [...agents.values()].map((entry) => ({
+        id: entry.runtime.id,
+        name: entry.runtime.meta.name,
+        executionState: entry.runner.getSnapshot().executionState,
+      })),
+    };
   }
 
   function list() {
-    return Array.from(agents.values());
+    return [...agents.values()].map((entry) => entry.runtime);
+  }
+
+  function size() {
+    return agents.size;
+  }
+
+  function get(agentId: string) {
+    return agents.get(agentId)?.runtime ?? null;
   }
 
   return {
     loadAll,
     add,
     remove,
-    get,
+    getSnapshot,
     list,
+    size,
+    get,
   };
 }
 
-const internalAgentRegistry = createInternalAgentRegistry();
+export const getInternalAgentRegistry = (() => {
+  let registry: ReturnType<typeof createInternalAgentRegistry> | null = null;
 
-export function getInternalAgentRegistry() {
-  return internalAgentRegistry;
-}
+  return () => {
+    if (!registry) {
+      registry = createInternalAgentRegistry();
+    }
+    return registry;
+  };
+})();
