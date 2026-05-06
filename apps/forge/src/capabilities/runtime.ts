@@ -57,39 +57,62 @@ export async function changeAgentRole(input: {
   targetAgentId: string;
   roleId: string;
 }) {
-  const actorAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.actorAgentId),
-  });
+  let actorAgent;
+  try {
+    actorAgent = await input.db.query.agents.findFirst({
+      where: eq(agents.id, input.actorAgentId),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole read actor failed', context: { actorAgentId: input.actorAgentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
   if (!actorAgent) {
     throw new Error(`Actor agent not found: ${input.actorAgentId}`);
   }
 
-  const targetAgent = await input.db.query.agents.findFirst({
-    where: eq(agents.id, input.targetAgentId),
-  });
+  let targetAgent;
+  try {
+    targetAgent = await input.db.query.agents.findFirst({
+      where: eq(agents.id, input.targetAgentId),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole read target failed', context: { targetAgentId: input.targetAgentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
   if (!targetAgent) {
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
-  const agentRole = await input.db.query.agentRoles.findFirst({
-    where: eq(agentRoles.id, input.roleId),
-  });
+  let agentRole;
+  try {
+    agentRole = await input.db.query.agentRoles.findFirst({
+      where: eq(agentRoles.id, input.roleId),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole read role failed', context: { roleId: input.roleId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
   if (!agentRole) {
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
-  forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Changing agent role', context: { actorAgentId: input.actorAgentId, targetAgentId: input.targetAgentId, roleId: input.roleId } });
+  try {
+    await input.db
+      .update(agents)
+      .set({
+        roleId: input.roleId,
+        updatedAt: Date.now(),
+      })
+      .where(eq(agents.id, input.targetAgentId));
+  } catch (err) {
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole update failed', context: { targetAgentId: input.targetAgentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
-  await input.db
-    .update(agents)
-    .set({
-      roleId: input.roleId,
-      updatedAt: Date.now(),
-    })
-    .where(eq(agents.id, input.targetAgentId));
+  forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Changing agent role', context: { actorAgentId: input.actorAgentId, targetAgentId: input.targetAgentId, roleId: input.roleId } });
 
   await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
