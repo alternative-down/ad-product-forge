@@ -31,6 +31,8 @@ import {
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAdminReadModel } from './read-model';
+import { createCompanyPayables } from '../finance/company-payables';
+import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
@@ -85,9 +87,9 @@ import {
   summarizeActiveItems,
 } from './routes/helpers.js';
 
-export * from './routes/schemas.js';
-import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index.js';
-import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
+export * from './routes/schemas';
+import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index';
+import { registerWebhookAdminRoutes } from './routes/webhooks/index';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
@@ -115,6 +117,14 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     githubApps: input.githubApps,
     internalChat: input.internalChat,
   });
+
+  // Per-agent email manager for admin route operations (hire/terminate)
+  const emailMailboxes = createPerAgentEmailManager(input.db);
+
+  // Stores created locally in route files (finance in finance/read.ts)
+  const finance = createMicroErpReadModel(input.db);
+  const payables = createCompanyPayables(input.db);
+  const companyPayables = createCompanyPayables(input.db);
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;
   const llmSettings = createLlmSettingsStore(input.db);
@@ -215,6 +225,23 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
   registerFinanceReadRoutes(input.httpServer, input.db, finance, companyPayables);
+
+  // Fragmented agent detail routes (#1587) — stores created directly in route files (#1574)
+  registerAgentBaseRoutes(input.httpServer, input.db, {
+    getAgent: readModel.getAgent,
+  });
+  registerAgentStepsRoutes(input.httpServer, input.db);
+  registerAgentConversationsRoutes(input.httpServer, {
+    listAgentRecentConversations: readModel.listAgentRecentConversations,
+  });
+  registerAgentMemoryRoutes(input.httpServer, {
+    getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
+  });
+  registerAgentMetricsRoutes(input.httpServer, input.db);
+  registerAgentContractRoutes(input.httpServer, input.db);
+  registerAgentMcpRoutes(input.httpServer, input.db);
+  registerAgentSchedulesRoutes(input.httpServer, input.db);
+  registerAgentNotificationsRoutes(input.httpServer, input.db);
 
   input.httpServer.registerRoute({
     method: 'POST',
