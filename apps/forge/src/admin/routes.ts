@@ -108,7 +108,7 @@ import { registerWebhookAdminRoutes } from './routes/webhooks/index.js';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
-import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/system/index.js';
+import { registerSystemReadRoutes, registerSystemWriteRoutes, registerLlmReadRoutes } from './routes/system/index.js';
 import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
 
 
@@ -198,6 +198,13 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     registry,
     readModel,
     workspaceBasePath: input.workspaceBasePath,
+  });
+
+  // Fragmented LLM routes (#1588)
+  registerLlmReadRoutes(input.httpServer, {
+    listLlmProfiles: readModel.listLlmProfiles,
+    getLlmDefaults: readModel.getLlmDefaults,
+    listLlmPrices: readModel.listLlmPrices,
   });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
