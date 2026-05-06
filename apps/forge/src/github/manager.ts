@@ -1175,7 +1175,7 @@ export function createGitHubAppManager(config: {
       const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
       return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
     } catch (error) {
-      forgeDebug('github-manager', 'Failed to parse GitHub credentials', { error });
+      forgeDebug({ scope: 'github-manager', level: 'error', message: 'Failed to parse GitHub credentials: ' + String(error) });
       return null;
     }
   }
