@@ -166,12 +166,18 @@ export function createInternalChatService(
       .map(([conversationId]) => conversationId);
 
     if (candidateConversationIds.length > 0) {
-      const existing = await db.query.internalChatConversations.findFirst({
-        where: and(
-          eq(internalChatConversations.type, 'dm'),
-          inArray(internalChatConversations.id, candidateConversationIds),
-        ),
-      });
+      let existing;
+      try {
+        existing = await db.query.internalChatConversations.findFirst({
+          where: and(
+            eq(internalChatConversations.type, 'dm'),
+            inArray(internalChatConversations.id, candidateConversationIds),
+          ),
+        });
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'findOrCreateDirect findFirst failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
 
       if (existing) {
         return existing;
@@ -181,29 +187,39 @@ export function createInternalChatService(
     const now = Date.now();
     const conversationId = createId();
 
-    await db.insert(internalChatConversations).values({
-      id: conversationId,
-      type: 'dm',
-      name: null,
-      createdByAccountId: leftAccountId,
-      createdAt: now,
-      updatedAt: now,
-    });
+    try {
+      await db.insert(internalChatConversations).values({
+        id: conversationId,
+        type: 'dm',
+        name: null,
+        createdByAccountId: leftAccountId,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'findOrCreateDirect insert conversation failed', context: { conversationId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
-    await db.insert(internalChatConversationMembers).values([
-      {
-        conversationId,
-        accountId: leftAccountId,
-        role: 'normal',
-        createdAt: now,
-      },
-      {
-        conversationId,
-        accountId: rightAccountId,
-        role: 'normal',
-        createdAt: now,
-      },
-    ]);
+    try {
+      await db.insert(internalChatConversationMembers).values([
+        {
+          conversationId,
+          accountId: leftAccountId,
+          role: 'normal',
+          createdAt: now,
+        },
+        {
+          conversationId,
+          accountId: rightAccountId,
+          role: 'normal',
+          createdAt: now,
+        },
+      ]);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'findOrCreateDirect insert members failed', context: { conversationId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     return db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, conversationId),
@@ -606,15 +622,26 @@ export function createInternalChatService(
         eq(internalChatConversationMembers.accountId, input.accountId),
       ));
 
-    const remainingMembers = await db.query.internalChatConversationMembers.findMany({
-      where: eq(internalChatConversationMembers.conversationId, input.conversationId),
-      limit: 1,
-    });
+    let remainingMembers;
+    try {
+      remainingMembers = await db.query.internalChatConversationMembers.findMany({
+        where: eq(internalChatConversationMembers.conversationId, input.conversationId),
+        limit: 1,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation findMany failed', context: { conversationId: input.conversationId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (remainingMembers.length === 0) {
-      await db
-        .delete(internalChatConversations)
-        .where(eq(internalChatConversations.id, input.conversationId));
+      try {
+        await db
+          .delete(internalChatConversations)
+          .where(eq(internalChatConversations.id, input.conversationId));
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation delete failed', context: { conversationId: input.conversationId, error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
     }
 
     return {
@@ -641,18 +668,29 @@ export function createInternalChatService(
 
     const now = Date.now();
     const messageId = createId();
-    const members = await db.query.internalChatConversationMembers.findMany({
-      where: eq(internalChatConversationMembers.conversationId, conversation.id),
-    });
+    let members;
+    try {
+      members = await db.query.internalChatConversationMembers.findMany({
+        where: eq(internalChatConversationMembers.conversationId, conversation.id),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage findMany members failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
-    await db.insert(internalChatMessages).values({
-      id: messageId,
-      conversationId: conversation.id,
-      authorAccountId: input.accountId,
-      content: input.content,
-      replyToMessageId: null,
-      createdAt: now,
-    });
+    try {
+      await db.insert(internalChatMessages).values({
+        id: messageId,
+        conversationId: conversation.id,
+        authorAccountId: input.accountId,
+        content: input.content,
+        replyToMessageId: null,
+        createdAt: now,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage insert failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     await storeMessageAttachments(messageId, input.attachments);
 
     const memberAccounts = await Promise.all(
@@ -667,7 +705,12 @@ export function createInternalChatService(
       }));
 
     if (readRows.length > 0) {
-      await db.insert(internalChatMessageReads).values(readRows);
+      try {
+        await db.insert(internalChatMessageReads).values(readRows);
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage insert reads failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
     }
 
     await db
