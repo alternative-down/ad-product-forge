@@ -6,6 +6,7 @@ import { eq, and, like, or } from 'drizzle-orm';
 import { getDatabase } from '../../database';
 import { mcpServerConfigs, agentMcpConfigs, type McpServerConfig, type NewMcpServerConfig, type AgentMcpConfig, type NewAgentMcpConfig } from '../../database/schema';
 import { nanoid } from 'nanoid';
+import { forgeDebug } from '@forge-runtime/core';
 
 // MCP Server Config operations
 export async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<McpServerConfig> {
@@ -19,61 +20,92 @@ export async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' 
     updatedAt: now,
   };
   
-  await db.insert(mcpServerConfigs).values(newConfig);
+  try {
+    await db.insert(mcpServerConfigs).values(newConfig);
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'createMcpServerConfig failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   return newConfig as McpServerConfig;
 }
 
 export async function getMcpServerConfig(id: string): Promise<McpServerConfig | undefined> {
   const db = getDatabase();
-  const results = await db
-    .select()
-    .from(mcpServerConfigs)
-    .where(eq(mcpServerConfigs.id, id));
+  let results;
+  try {
+    results = await db
+      .select()
+      .from(mcpServerConfigs)
+      .where(eq(mcpServerConfigs.id, id));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'getMcpServerConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   return results[0];
 }
 
 export async function listMcpServerConfigs(options?: { isActive?: boolean }): Promise<McpServerConfig[]> {
   const db = getDatabase();
   
-  if (options?.isActive !== undefined) {
-    return db
-      .select()
-      .from(mcpServerConfigs)
-      .where(eq(mcpServerConfigs.isActive, options.isActive ? 1 : 0));
+  try {
+    if (options?.isActive !== undefined) {
+      return await db
+        .select()
+        .from(mcpServerConfigs)
+        .where(eq(mcpServerConfigs.isActive, options.isActive ? 1 : 0));
+    }
+    
+    return await db.select().from(mcpServerConfigs);
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'listMcpServerConfigs failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
   }
-  
-  return db.select().from(mcpServerConfigs);
 }
 
 export async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMcpServerConfig, 'id' | 'createdAt'>>): Promise<McpServerConfig | undefined> {
   const db = getDatabase();
   
-  await db
-    .update(mcpServerConfigs)
-    .set({ ...data, updatedAt: new Date().toISOString() })
-    .where(eq(mcpServerConfigs.id, id));
+  try {
+    await db
+      .update(mcpServerConfigs)
+      .set({ ...data, updatedAt: new Date().toISOString() })
+      .where(eq(mcpServerConfigs.id, id));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'updateMcpServerConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   
   return getMcpServerConfig(id);
 }
 
 export async function deleteMcpServerConfig(id: string): Promise<void> {
   const db = getDatabase();
-  await db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, id));
+  try {
+    await db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, id));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'deleteMcpServerConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 }
 
 export async function searchMcpServerConfigs(query: string): Promise<McpServerConfig[]> {
   const db = getDatabase();
   const searchPattern = `%${query}%`;
   
-  return db
-    .select()
-    .from(mcpServerConfigs)
-    .where(
-      or(
-        like(mcpServerConfigs.name, searchPattern),
-        like(mcpServerConfigs.description, searchPattern)
-      )
-    );
+  try {
+    return await db
+      .select()
+      .from(mcpServerConfigs)
+      .where(
+        or(
+          like(mcpServerConfigs.name, searchPattern),
+          like(mcpServerConfigs.description, searchPattern)
+        )
+      );
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'searchMcpServerConfigs failed', context: { query, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 }
 
 // Agent MCP Config operations
@@ -88,16 +120,27 @@ export async function createAgentMcpConfig(data: Omit<NewAgentMcpConfig, 'id' | 
     updatedAt: now,
   };
   
-  await db.insert(agentMcpConfigs).values(newConfig);
+  try {
+    await db.insert(agentMcpConfigs).values(newConfig);
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'createAgentMcpConfig failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   return newConfig as AgentMcpConfig;
 }
 
 export async function getAgentMcpConfig(id: string): Promise<AgentMcpConfig | undefined> {
   const db = getDatabase();
-  const results = await db
-    .select()
-    .from(agentMcpConfigs)
-    .where(eq(agentMcpConfigs.id, id));
+  let results;
+  try {
+    results = await db
+      .select()
+      .from(agentMcpConfigs)
+      .where(eq(agentMcpConfigs.id, id));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'getAgentMcpConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   return results[0];
 }
 
@@ -109,26 +152,41 @@ export async function listAgentMcpConfigs(agentId: string, options?: { isActive?
     conditions.push(eq(agentMcpConfigs.isActive, options.isActive ? 1 : 0));
   }
   
-  return db
-    .select()
-    .from(agentMcpConfigs)
-    .where(and(...conditions));
+  try {
+    return await db
+      .select()
+      .from(agentMcpConfigs)
+      .where(and(...conditions));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'listAgentMcpConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 }
 
 export async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAgentMcpConfig, 'id' | 'createdAt'>>): Promise<AgentMcpConfig | undefined> {
   const db = getDatabase();
   
-  await db
-    .update(agentMcpConfigs)
-    .set({ ...data, updatedAt: new Date().toISOString() })
-    .where(eq(agentMcpConfigs.id, id));
+  try {
+    await db
+      .update(agentMcpConfigs)
+      .set({ ...data, updatedAt: new Date().toISOString() })
+      .where(eq(agentMcpConfigs.id, id));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'updateAgentMcpConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   
   return getAgentMcpConfig(id);
 }
 
 export async function deleteAgentMcpConfig(id: string): Promise<void> {
   const db = getDatabase();
-  await db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, id));
+  try {
+    await db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, id));
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-store', level: 'error', message: 'deleteAgentMcpConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 }
 
 export async function getAgentMcpServers(agentId: string): Promise<{ config: AgentMcpConfig; server: McpServerConfig }[]> {
