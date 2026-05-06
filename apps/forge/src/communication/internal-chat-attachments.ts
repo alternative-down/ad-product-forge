@@ -7,6 +7,7 @@
  * @module
  */
 import { eq } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { CommunicationFile } from '@forge-runtime/core';
 
@@ -28,40 +29,70 @@ export function createChatAttachments(
       return;
     }
 
-    await db.insert(internalChatMessageAttachments).values(
-      attachments.map((attachment, index) => ({
-        id: createId(),
-        messageId,
-        attachmentIndex: index,
-        name: sanitizeAttachmentName(attachment.name),
-        contentType: attachment.contentType ?? null,
-        sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
-        data: Buffer.from(attachment.data),
-        createdAt: Date.now(),
-      })),
-    );
+    try {
+      await db.insert(internalChatMessageAttachments).values(
+        attachments.map((attachment, index) => ({
+          id: createId(),
+          messageId,
+          attachmentIndex: index,
+          name: sanitizeAttachmentName(attachment.name),
+          contentType: attachment.contentType ?? null,
+          sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
+          data: Buffer.from(attachment.data),
+          createdAt: Date.now(),
+        })),
+      );
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-attachments',
+        level: 'error',
+        message: `storeMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { messageId, attachmentCount: attachments.length },
+      });
+      throw err;
+    }
   }
 
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
-    const rows = await db.query.internalChatMessageAttachments.findMany({
-      where: eq(internalChatMessageAttachments.messageId, messageId),
-      orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
-    });
+    try {
+      const rows = await db.query.internalChatMessageAttachments.findMany({
+        where: eq(internalChatMessageAttachments.messageId, messageId),
+        orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
+      });
 
-    return rows.map((row) => ({
-      name: row.name,
-      data: new Uint8Array(row.data),
-      contentType: row.contentType ?? resolveContentType(row.name),
-      sizeBytes: row.sizeBytes,
-    }));
+      return rows.map((row) => ({
+        name: row.name,
+        data: new Uint8Array(row.data),
+        contentType: row.contentType ?? resolveContentType(row.name),
+        sizeBytes: row.sizeBytes,
+      }));
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-attachments',
+        level: 'error',
+        message: `readMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { messageId },
+      });
+      throw err;
+    }
   }
 
   async function readMessageAttachment(
     messageId: string,
     attachmentName: string,
   ): Promise<CommunicationFile | null> {
-    const attachments = await readMessageAttachments(messageId);
-    return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
+    try {
+      const attachments = await readMessageAttachments(messageId);
+      return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-attachments',
+        level: 'error',
+        message: `readMessageAttachment failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { messageId, attachmentName },
+      });
+      throw err;
+    }
   }
 
   return {
