@@ -121,6 +121,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   const llmModelPrices = createLlmModelPriceStore(input.db);
   const systemSettings = createSystemSettingsStore(input.db);
   const agentContracts = createAgentContractStore(input.db);
+  const systemRM = createSystemReadModel({ db: input.db });
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
   const companyPayables = createCompanyPayables(input.db);
@@ -151,14 +152,65 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     path: '/admin/roles',
     handler: async () => jsonResponse(await readModel.listRoles()),
   });
+  // GET /admin/overview — inlined from agentRM.getDashboard
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/overview',
+    handler: async () => {
+      const [balanceResult, recentResult] = await Promise.all([
+        finance.getCompanyCashBalance(),
+        finance.listCompanyCashMovements({ limit: 10 }),
+      ]);
+      const rows = await input.db.query.agents.findMany({
+        columns: { id: true, executionState: true, role: true },
+      });
+      const loadedAgents = registry.size;
+      const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
+      const runningAgents = rows.filter((r) => r.executionState === 'running').length;
+      return jsonResponse({
+        totals: {
+          agents: rows.length,
+          loadedAgents,
+          idleAgents,
+          runningAgents,
+          absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent').length,
+          roles: new Set(rows.map((r) => r.role).filter(Boolean)).size,
+          activeContracts: (await input.db.query.agentExecutionContracts.findMany({
+            where: (fields) => eq(fields.isActive, true),
+            columns: { id: true },
+          })).length,
+        },
+        cash: {
+          balanceUsd: balanceResult.balanceUsd,
+          summary: { income: 0, expenses: 0, net: 0 },
+          recentMovements: recentResult.items,
+        },
+      });
+    },
+  });
+
+  // GET /admin/roles — inlined from systemRM.listRoles
+  input.httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/roles',
+    handler: async () => jsonResponse(await systemRM.listRoles()),
+  });
 
   // System GET routes (extracted to ./routes/system/read.ts)
   registerSystemReadRoutes({
     httpServer: input.httpServer,
     db: input.db,
     registry,
-    readModel,
     workspaceBasePath: input.workspaceBasePath,
+    capabilities,
+    integrations,
+    llmSettings,
+    llmModelPrices,
+    systemSettings,
+    readModel: {
+      getAgent: readModel.getAgent,
+      getApplicationMigrations: readModel.getApplicationMigrations,
+    },
   });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
