@@ -17,7 +17,7 @@ vi.mock('@forge-runtime/core', () => ({
 }));
 
 vi.mock('../notifications/store', () => ({
-  createAgentNotificationStore: vi.fn(() => ({ addNotification: vi.fn() })),
+  createAgentNotificationStore: vi.fn(() => ({ createNotification: vi.fn() })),
 }));
 
 vi.mock('../encryption/crypto', () => ({
