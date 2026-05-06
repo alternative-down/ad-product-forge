@@ -567,9 +567,14 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/roles/create',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createRoleSchema);
-      const result = await capabilities.createRole({ name: body.name, description: body.description });
-      return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      try {
+        const body = parseJsonBody(request.bodyText, createRoleSchema);
+        const result = await capabilities.createRole({ name: body.name, description: body.description });
+        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      } catch (err) {
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'createRole failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
     },
   });
 
@@ -614,14 +619,19 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/roles/capabilities',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
-      const toolId = resolvePermissionId(body.capabilityName);
-      if (body.capabilityValue) {
-        await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-      } else {
-        await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+      try {
+        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
+        const toolId = resolvePermissionId(body.capabilityName);
+        if (body.capabilityValue) {
+          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+        } else {
+          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+        }
+        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.capabilityValue });
+      } catch (err) {
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleCapability failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
       }
-      return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.capabilityValue });
     },
   });
 
@@ -630,14 +640,19 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/roles/tool-permissions',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      const toolId = resolvePermissionId(body.toolName);
-      if (body.allowed) {
-        await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-      } else {
-        await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+      try {
+        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
+        const toolId = resolvePermissionId(body.toolName);
+        if (body.allowed) {
+          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+        } else {
+          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+        }
+        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
+      } catch (err) {
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
       }
-      return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
     },
   });
 
@@ -646,14 +661,19 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/roles/workflow-permissions',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-      const workflowId = resolvePermissionId(body.workflowName);
-      if (body.allowed) {
-        await capabilities.addRoleWorkflowPermission({ roleId: body.roleId, workflowId });
-      } else {
-        await capabilities.removeRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+      try {
+        const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
+        const workflowId = resolvePermissionId(body.workflowName);
+        if (body.allowed) {
+          await capabilities.addRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+        } else {
+          await capabilities.removeRoleWorkflowPermission({ roleId: body.roleId, workflowId });
+        }
+        return jsonResponse({ success: true, roleId: body.roleId, workflowId, allowed: body.allowed });
+      } catch (err) {
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleWorkflowPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
       }
-      return jsonResponse({ success: true, roleId: body.roleId, workflowId, allowed: body.allowed });
     },
   });
 }
