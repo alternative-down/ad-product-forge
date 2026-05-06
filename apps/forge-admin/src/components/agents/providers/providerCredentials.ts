@@ -1,4 +1,4 @@
-import type { DiscordProviderCredentials, EmailProviderCredentials } from '@/lib/admin-api';
+import type { DiscordProviderCredentials, EmailProviderCredentials } from '@/lib/admin-api/index';
 
 export function toDiscordCredentials(credentials: unknown): DiscordProviderCredentials {
   if (!isRecord(credentials)) {

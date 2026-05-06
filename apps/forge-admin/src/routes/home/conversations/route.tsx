@@ -10,7 +10,7 @@ import {
   getInternalChatContacts,
   type InternalChatExternalAccount,
   updateInternalChatAccount,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import {
   HomeConversationsProvider,
   slugify,

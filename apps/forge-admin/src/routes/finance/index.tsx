@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   getFinance,
   getFinanceContracts,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/finance/')({
   component: FinanceIndexRoute,

@@ -1,4 +1,4 @@
-import type { AgentSchedule } from '@/lib/admin-api';
+import type { AgentSchedule } from '@/lib/admin-api/index';
 
 export type ScheduleForm = {
   scheduleId?: string;

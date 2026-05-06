@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 
 import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
-import { getAgent, updateAgentGitHubManifestConfig } from '@/lib/admin-api';
+import { getAgent, updateAgentGitHubManifestConfig } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/github/')({

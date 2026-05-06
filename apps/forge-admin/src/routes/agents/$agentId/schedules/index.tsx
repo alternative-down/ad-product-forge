@@ -9,7 +9,7 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { createSchedule, deleteSchedule, getAgent, updateSchedule } from '@/lib/admin-api';
+import { createSchedule, deleteSchedule, getAgent, updateSchedule } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { ScheduleDialog } from '../../components/agents/schedules/ScheduleDialog';

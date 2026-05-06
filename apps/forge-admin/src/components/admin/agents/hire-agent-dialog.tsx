@@ -12,7 +12,7 @@ import {
   AdminTextarea,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { hireAgent } from '@/lib/admin-api';
+import { hireAgent } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 type HireAgentDialogProps = {

@@ -9,7 +9,7 @@ import {
   getAgentExecutionSteps,
   renewAgentContract,
   topUpAgentContract,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import {
   AdminButton,
   AdminLoadingState,

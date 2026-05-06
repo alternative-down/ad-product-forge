@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 
 import { AdminButton, AdminLoadingState } from '@/components/admin';
-import { getAgents, getSystemSettings } from '@/lib/admin-api';
-import type { AgentListItem } from '@/lib/admin-api/types';
+import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
+import type { AgentListItem } from '@/lib/admin-api/index/types';
 import { buildSceneAgents } from './agents/-build-scene-agents';
 
 export const Route = createFileRoute('/home/pixel/')({

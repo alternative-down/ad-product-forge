@@ -4,7 +4,7 @@ import {
   getAgentLongTermMemoryThreadMessages,
   getAgentRuntimeMemory,
   runAgentLongTermMemoryRecallSearch,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import type { AgentLongTermMemoryRecallDebugSearchResult } from '@/lib/admin-api/agent-types';
 
 const PAGE_SIZE = 20;

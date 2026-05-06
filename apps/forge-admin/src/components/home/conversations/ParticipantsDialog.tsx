@@ -12,7 +12,7 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import type { HomeInternalChatGroupMember } from '@/lib/admin-api';
+import type { HomeInternalChatGroupMember } from '@/lib/admin-api/index';
 
 export function ParticipantsDialog(input: {
   open: boolean;

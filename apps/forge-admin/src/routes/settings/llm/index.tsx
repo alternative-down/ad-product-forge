@@ -10,7 +10,7 @@ import {
   upsertLlmProfile,
   type LlmProfile,
   type UpsertLlmProfileInput,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { LlmProfileDialog } from '../../integrations/-llm-profile-form';

@@ -23,7 +23,7 @@ import {
   renewAgentContract,
   topUpAgentContract,
   type FinanceContractsResponse,
-} from '@/lib/admin-api';
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/finance/contracts/')({

@@ -7,7 +7,7 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteAgentSkill, getAgent, getSystemSkills, installGlobalSkillForAgent, publishAgentSkillToGlobalCatalog } from '@/lib/admin-api';
+import { deleteAgentSkill, getAgent, getSystemSkills, installGlobalSkillForAgent, publishAgentSkillToGlobalCatalog } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/agents/$agentId/skills/')({

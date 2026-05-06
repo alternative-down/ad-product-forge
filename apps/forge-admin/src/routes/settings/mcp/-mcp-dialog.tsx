@@ -11,7 +11,7 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import type { UpsertSystemMcpServerInput } from '@/lib/admin-api';
+import type { UpsertSystemMcpServerInput } from '@/lib/admin-api/index';
 
 type McpForm = {
   serverId?: string;

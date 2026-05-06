@@ -1,4 +1,4 @@
-import type { InternalChatExternalAccount, HomeInternalChatConversation } from '@/lib/admin-api';
+import type { InternalChatExternalAccount, HomeInternalChatConversation } from '@/lib/admin-api/index';
 
 import type { AccountForm, ConversationForm, LocalConversation } from './-context';
 

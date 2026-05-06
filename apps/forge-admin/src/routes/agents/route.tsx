@@ -2,7 +2,7 @@ import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query';
 
 import { AdminAreaLayout } from '@/components/admin';
-import { getAgent } from '@/lib/admin-api';
+import { getAgent } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/agents')({
   component: AgentsLayoutRoute,

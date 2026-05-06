@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { PageHeader } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
-import { getAgent } from '@/lib/admin-api';
+import { getAgent } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/agents/$agentId/notifications/')({
   component: AgentNotificationsIndexRoute,

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
-import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api';
+import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/settings/minimax/')({

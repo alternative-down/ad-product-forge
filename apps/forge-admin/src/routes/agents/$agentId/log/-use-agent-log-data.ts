@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { clearAgentHistory, getAgentRuntimeMemory, getAgentThreadMessages } from '@/lib/admin-api';
+import { clearAgentHistory, getAgentRuntimeMemory, getAgentThreadMessages } from '@/lib/admin-api/index';
 
 const PAGE_SIZE = 20;
 const LIVE_REFETCH_INTERVAL_MS = 5_000;
