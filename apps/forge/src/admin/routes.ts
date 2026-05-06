@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
@@ -31,7 +31,6 @@ import {
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAdminReadModel } from './read-model';
-import { createFinanceReadModel } from './read-model/finance';
 import { getFinanceOverview } from './read-model/finance-overview';
 import { createCompanyPayables } from '../finance/company-payables';
 import { getRecurringPayables } from './read-model/payables-overview';
@@ -77,6 +76,7 @@ import {
 } from '../agents/global-skills';
 
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas';
+import { agentExecutionSteps } from '../database/schema';
 import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import {
   registerAgentReadRoutes,
@@ -136,7 +136,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   // Inline finance read model (extracted from createAdminReadModel)
   const finance = createMicroErpReadModel(input.db);
   const payables = createCompanyPayables(input.db);
-  const financeRM = createFinanceReadModel({ db: input.db });
   const financeReadModel = {
     getFinance: async () => {
       const [overview, recurringPayables] = await Promise.all([
@@ -145,7 +144,48 @@ export function registerAdminRoutes(input: AdminRouteContext) {
       ]);
       return { ...overview, recurringPayables };
     },
-    getFinanceContracts: financeRM.getFinanceContracts,
+    getFinanceContracts: async () => {
+      const contracts = await finance.listActiveInternalAgentContracts();
+
+      if (!contracts || !Array.isArray(contracts.items)) {
+        return { items: [], hasMore: false };
+      }
+
+      const contractIds = contracts.items.map((contract) => contract.contractId);
+
+      if (contractIds.length === 0) {
+        return { ...contracts, hasMore: false };
+      }
+
+      const spendRows = await input.db
+        .select({
+          contractId: agentExecutionSteps.contractId,
+          total: sql`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+        })
+        .from(agentExecutionSteps)
+        .where(inArray(agentExecutionSteps.contractId, contractIds))
+        .groupBy(agentExecutionSteps.contractId).all();
+
+      const spentUsdByContractId = new Map<string, number>();
+      for (const row of spendRows) {
+        spentUsdByContractId.set(row.contractId, Number(row.total));
+      }
+
+      return {
+        ...contracts,
+        hasMore: false,
+        items: contracts.items.map((contract: any) => {
+          const spentUsd = spentUsdByContractId.get(contract.contractId) ?? 0;
+          return {
+            ...contract,
+            spentUsd,
+            spentPercent: contract.weeklyValueUsd > 0
+              ? (spentUsd / contract.weeklyValueUsd) * 100
+              : 0,
+          };
+        }),
+      };
+    },
   };
 
   const capabilities = createCapabilityStore(input.db);
