@@ -103,4 +103,3 @@ function toTimestamp(value: string | number | null): number {
 }
 
 /** Keep for internal use only — not exported from the public helpers module */
-export { toTimestamp };
