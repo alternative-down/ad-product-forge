@@ -74,3 +74,90 @@ describe('createReposOps', () => {
     expect(result.id).toBe(99);
   });
 });
+
+describe('createReposOps — updateRepository', () => {
+  beforeEach(() => octokitMock.request.mockReset());
+
+  it('updateRepository PATCHes with provided fields', async () => {
+    const { createReposOps } = await import('./repos.js');
+    octokitMock.request.mockResolvedValue({
+      data: { id: 1, name: 'updated-repo', full_name: 'org/updated-repo', private: false, default_branch: 'main', html_url: 'https://github.com/org/updated-repo', clone_url: 'https://github.com/org/updated-repo.git', ssh_url: 'git@github.com:org/updated-repo.git' },
+    });
+    const ctx = makeCtx();
+    const repos = createReposOps(ctx);
+    await repos.updateRepository('agent-1', { repositoryName: 'old-repo', name: 'updated-repo', private: false });
+    expect(octokitMock.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}', expect.objectContaining({
+      repo: 'old-repo',
+      name: 'updated-repo',
+      private: false,
+    }));
+  });
+
+  it('updateRepository returns full repository shape', async () => {
+    const { createReposOps } = await import('./repos.js');
+    octokitMock.request.mockResolvedValue({
+      data: { id: 99, name: 'my-repo', full_name: 'acme/my-repo', private: true, default_branch: 'develop', html_url: 'https://github.com/acme/my-repo', clone_url: 'https://github.com/acme/my-repo.git', ssh_url: 'git@github.com:acme/my-repo.git' },
+    });
+    const ctx = makeCtx();
+    const repos = createReposOps(ctx);
+    const result = await repos.updateRepository('agent-1', { repositoryName: 'my-repo' });
+    expect(result).toEqual({
+      id: 99, name: 'my-repo', fullName: 'acme/my-repo', private: true,
+      defaultBranch: 'develop', url: 'https://github.com/acme/my-repo',
+      cloneUrl: 'https://github.com/acme/my-repo.git',
+      sshUrl: 'git@github.com:acme/my-repo.git',
+    });
+  });
+});
+
+describe('createReposOps — deleteRepository', () => {
+  beforeEach(() => octokitMock.request.mockReset());
+
+  it('deleteRepository DELETE returns {success:true}', async () => {
+    const { createReposOps } = await import('./repos.js');
+    octokitMock.request.mockResolvedValue({ status: 204 });
+    const ctx = makeCtx();
+    const repos = createReposOps(ctx);
+    const result = await repos.deleteRepository('agent-1', { repositoryName: 'to-delete' });
+    expect(octokitMock.request).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}', {
+      owner: 'acme',
+      repo: 'to-delete',
+    });
+    expect(result).toEqual({ success: true });
+  });
+});
+
+describe('createReposOps — getRepository', () => {
+  beforeEach(() => octokitMock.request.mockReset());
+
+  it('getRepository GETs correct endpoint', async () => {
+    const { createReposOps } = await import('./repos.js');
+    octokitMock.request.mockResolvedValue({
+      data: { id: 55, name: 'target-repo', full_name: 'acme/target-repo', private: false, default_branch: 'main', html_url: 'https://github.com/acme/target-repo', clone_url: 'https://github.com/acme/target-repo.git', ssh_url: 'git@github.com:acme/target-repo.git' },
+    });
+    const ctx = makeCtx();
+    const repos = createReposOps(ctx);
+    const result = await repos.getRepository('agent-1', { owner: 'acme', repositoryName: 'target-repo' });
+    expect(octokitMock.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}', {
+      owner: 'acme',
+      repo: 'target-repo',
+    });
+    expect(result.name).toBe('target-repo');
+    expect(result.cloneUrl).toBe('https://github.com/acme/target-repo.git');
+  });
+
+  it('getRepository uses getDefaultOwner when owner omitted', async () => {
+    const { createReposOps } = await import('./repos.js');
+    octokitMock.request.mockResolvedValue({
+      data: { id: 7, name: 'solo-repo', full_name: 'acme/solo-repo', private: true, default_branch: 'main', html_url: 'https://github.com/acme/solo-repo', clone_url: 'https://github.com/acme/solo-repo.git', ssh_url: 'git@github.com:acme/solo-repo.git' },
+    });
+    const ctx = makeCtx();
+    const repos = createReposOps(ctx);
+    await repos.getRepository('agent-1', { repositoryName: 'solo-repo' });
+    expect(octokitMock.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}', {
+      owner: 'acme',
+      repo: 'solo-repo',
+    });
+  });
+});
+

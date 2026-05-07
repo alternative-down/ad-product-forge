@@ -100,3 +100,99 @@ describe('createCredentialsOps', () => {
     expect(result.appSlug).toBe('my-app');
   });
 });
+
+describe('createCredentialsOps — saveCredentials', () => {
+  beforeEach(() => {
+    sharedDb.query.agentProviders.findFirst.mockReset();
+    vi.clearAllMocks();
+  });
+
+  it('saveCredentials calls ctx.saveCredentials with agentId and credentials', async () => {
+    const { createCredentialsOps } = await import('./credentials.js');
+    const saveMock = vi.fn().mockResolvedValue(undefined);
+    const ctx = baseCtx();
+    ctx.saveCredentials = saveMock as unknown as OpsContext['saveCredentials'];
+    const creds: GitHubAppCredentials = {
+      status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x',
+    };
+    const ops = createCredentialsOps(ctx);
+    await ops.saveCredentials('agent-new', creds);
+    expect(saveMock).toHaveBeenCalledWith('agent-new', creds);
+  });
+});
+
+describe('createCredentialsOps — parseCredentials', () => {
+  beforeEach(() => {
+    sharedDb.query.agentProviders.findFirst.mockReset();
+    vi.clearAllMocks();
+  });
+
+  it('parseCredentials delegates to ctx.parseCredentials', async () => {
+    const { createCredentialsOps } = await import('./credentials.js');
+    const parseMock = vi.fn().mockReturnValue({ status: 'pending', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' });
+    const ctx = baseCtx();
+    ctx.parseCredentials = parseMock as unknown as OpsContext['parseCredentials'];
+    const ops = createCredentialsOps(ctx);
+    const result = ops.parseCredentials('encrypted-string');
+    expect(parseMock).toHaveBeenCalledWith('encrypted-string');
+    expect(result.status).toBe('pending');
+  });
+});
+
+describe('createCredentialsOps — getInstallationOctokit', () => {
+  beforeEach(() => {
+    sharedDb.query.agentProviders.findFirst.mockReset();
+    vi.clearAllMocks();
+  });
+
+  it('getInstallationOctokit returns octokit from ctx.createInstallationOctokit', async () => {
+    const { createCredentialsOps } = await import('./credentials.js');
+    const fakeOctokit = { rest: { repos: { list: vi.fn() } } };
+    const createOctoMock = vi.fn().mockResolvedValue(fakeOctokit);
+    sharedDb.query.agentProviders.findFirst.mockResolvedValue({ encryptedCredentials: 'e' });
+    const ctx = baseCtx();
+    ctx.parseCredentials = vi.fn().mockReturnValue({ status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' }) as unknown as OpsContext['parseCredentials'];
+    ctx.createInstallationOctokit = createOctoMock as unknown as OpsContext['createInstallationOctokit'];
+    const ops = createCredentialsOps(ctx);
+    const result = await ops.getInstallationOctokit('agent-1');
+    expect(createOctoMock).toHaveBeenCalled();
+  });
+});
+
+describe('createCredentialsOps — getInstallationToken', () => {
+  beforeEach(() => {
+    sharedDb.query.agentProviders.findFirst.mockReset();
+    vi.clearAllMocks();
+  });
+
+  it('getInstallationToken delegates to ctx.getInstallationToken', async () => {
+    const { createCredentialsOps } = await import('./credentials.js');
+    const tokenMock = vi.fn().mockResolvedValue('v1.ghp_xxx');
+    const ctx = baseCtx();
+    ctx.getInstallationToken = tokenMock as unknown as OpsContext['getInstallationToken'];
+    const creds = { status: 'active' as const, manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' };
+    const ops = createCredentialsOps(ctx);
+    const result = await ops.getInstallationToken(creds);
+    expect(tokenMock).toHaveBeenCalledWith(creds);
+  });
+});
+
+describe('createCredentialsOps — createInstallationOctokit', () => {
+  beforeEach(() => {
+    sharedDb.query.agentProviders.findFirst.mockReset();
+    vi.clearAllMocks();
+  });
+
+  it('createInstallationOctokit delegates to ctx.createInstallationOctokit', async () => {
+    const { createCredentialsOps } = await import('./credentials.js');
+    const fakeOctokit = { rest: { repos: { list: vi.fn() } } };
+    const createOctoMock = vi.fn().mockResolvedValue(fakeOctokit);
+    const ctx = baseCtx();
+    ctx.createInstallationOctokit = createOctoMock as unknown as OpsContext['createInstallationOctokit'];
+    const ops = createCredentialsOps(ctx);
+    const result = await ops.createInstallationOctokit(12345);
+    expect(createOctoMock).toHaveBeenCalledWith(12345);
+    expect(result).toBe(fakeOctokit);
+  });
+});
+
