@@ -283,14 +283,24 @@ export function createAgentContractStore(
       };
     }
 
-    await companyCashOperations.recordCashIn({
-      type: 'agent-contract-termination-refund',
-      amountUsd: refundableUsd,
-      description: `Contract refund for terminated agent ${agentId}`,
-      referenceType: 'agent-execution-contract',
-      referenceId: activeContract.id,
-      effectiveAt: time.now(),
-    });
+    try {
+      await companyCashOperations.recordCashIn({
+        type: 'agent-contract-termination-refund',
+        amountUsd: refundableUsd,
+        description: `Contract refund for terminated agent ${agentId}`,
+        referenceType: 'agent-execution-contract',
+        referenceId: activeContract.id,
+        effectiveAt: time.now(),
+      });
+    } catch (err) {
+      forgeDebug({
+        scope: 'agent-contract-store',
+        level: 'error',
+        runtimeId: agentId,
+        message: 'refund cash-in failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      throw err;
+    }
 
     return {
       contractId: activeContract.id,
