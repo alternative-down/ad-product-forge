@@ -5,6 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import { meta as noUselessReexports } from './src/eslint-rules/no-useless-reexports.mjs'
+import { meta as filenameKebabCase } from './src/eslint-rules/filename-kebab-case.mjs'
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -18,6 +19,7 @@ export default defineConfig([
     ],
     plugins: {
       'no-useless-reexports': { rules: { 'no-useless-reexports': noUselessReexports() } },
+      'filename-kebab-case': { rules: { 'filename-kebab-case': filenameKebabCase() } },
     },
     rules: {
       'react-refresh/only-export-components': [
@@ -25,6 +27,7 @@ export default defineConfig([
         { allowConstantExport: true, allowExportNames: ['Route'], extraHOCs: ['Route'] }
       ],
       'no-useless-reexports/no-useless-reexports': 'error',
+      'filename-kebab-case/filename-kebab-case': 'warn',
     },
   },
   // Route modules can export Route objects alongside components.

@@ -76,7 +76,7 @@ import {
 
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
-import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes } from './routes/agents/index.js';
+import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes, registerAgentSkillsWriteRoutes, registerAgentSchedulesWriteRoutes } from './routes/agents/index.js';
 import {
   normalizeOptionalText,
   normalizeJsonText,
@@ -150,6 +150,16 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
   registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry);
+
+
+  registerAgentSkillsWriteRoutes(input.httpServer, {
+    db: input.db,
+    loaderConfig: input.loaderConfig,
+    workspaceBasePath: input.workspaceBasePath,
+  });
+  registerAgentSchedulesWriteRoutes(input.httpServer, {
+    schedules: input.schedules,
+  });
   registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
 
   input.httpServer.registerRoute({
@@ -370,7 +380,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Exception ? error.message : String(error) }, 500);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
   });
@@ -563,221 +573,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
 
   input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-skills/upload',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
-
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        const installedSkillNames = await installAgentWorkspaceSkillsFromZip({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          zipBase64: body.archiveBase64,
-        });
-
-        // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
-        // Reload is acceptable here because skill changes are rare, but this is the place to
-        // switch to explicit skill refresh if we want to avoid full runtime recreation later.
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          installedSkillNames,
-        }, 201);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-skills/delete',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
-
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        await deleteAgentWorkspaceSkill({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-
-        // Mastra exposes workspace skill refresh APIs (for example workspace.skills.refresh()).
-        // Reload is acceptable here because skill changes are rare, but this is the place to
-        // switch to explicit skill refresh if we want to avoid full runtime recreation later.
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          skillName: body.skillName,
-        });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-skills/install-global',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
-
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        await installGlobalSkillToAgentWorkspace({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-
-        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          skillName: body.skillName,
-        });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-skills/publish-global',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-        const agent = await input.db.query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
-
-        if (!agent) {
-          return jsonResponse({ error: `Agent not found: ${body.agentId}` }, 404);
-        }
-
-        await publishAgentWorkspaceSkillToGlobalCatalog({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-
-        return jsonResponse({
-          success: true,
-          agentId: body.agentId,
-          skillName: body.skillName,
-        });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-schedule/create',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createScheduleSchema);
-        const scheduleInput = body.scheduleType === 'cron'
-          ? {
-              name: body.name,
-              description: body.description,
-              scheduleType: body.scheduleType,
-              cronExpression: body.cronExpression!,
-              timezone: body.timezone,
-              content: body.content,
-              wakeWhenRunning: body.wakeWhenRunning,
-            }
-          : {
-              name: body.name,
-              description: body.description,
-              scheduleType: body.scheduleType,
-              scheduledDate: body.scheduledDate!,
-              timezone: body.timezone,
-              content: body.content,
-              wakeWhenRunning: body.wakeWhenRunning,
-            };
-        const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
-        return jsonResponse(schedule, 201);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-schedule/update',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, updateScheduleSchema);
-        const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
-          name: body.name,
-          description: body.description,
-          scheduleType: body.scheduleType,
-          cronExpression: body.cronExpression,
-          scheduledDate: body.scheduledDate,
-          timezone: body.timezone,
-          content: body.content,
-          wakeWhenRunning: body.wakeWhenRunning,
-          isActive: body.isActive,
-        });
-        return jsonResponse(schedule);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent-schedule/delete',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
-        const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
-        return jsonResponse(result);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  input.httpServer.registerRoute({
-    method: 'POST',
     path: '/admin/role/create',
     handler: async (request) => {
       try {

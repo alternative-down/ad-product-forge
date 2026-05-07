@@ -61,11 +61,21 @@ export function createAgentScheduleManager(input: {
   }
 
   async function loadAll() {
-    const schedules = await store.listActiveSchedules();
+    try {
+      const schedules = await store.listActiveSchedules();
 
-    for (const scheduleRecord of schedules) {
-      cancelScheduledJob(scheduleRecord.scheduleId);
-      await registerSchedule(scheduleRecord);
+      for (const scheduleRecord of schedules) {
+        cancelScheduledJob(scheduleRecord.scheduleId);
+        await registerSchedule(scheduleRecord);
+      }
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `loadAll failed: ${error instanceof Error ? error.message : String(error)}`,
+        context: {},
+      });
+      throw error;
     }
   }
 
@@ -254,12 +264,22 @@ export function createAgentScheduleManager(input: {
   }
 
   async function deleteSchedule(agentId: string, scheduleId: string) {
-    cancelScheduledJob(scheduleId);
-    const deleted = await store.deleteAgentSchedule(agentId, scheduleId);
-    if (!deleted) {
-      throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
+    try {
+      cancelScheduledJob(scheduleId);
+      const deleted = await store.deleteAgentSchedule(agentId, scheduleId);
+      if (!deleted) {
+        throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
+      }
+      return { success: true };
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `deleteSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
+        context: { agentId, scheduleId },
+      });
+      throw error;
     }
-    return { success: true };
   }
 
   // Cross-agent: Create schedule for another agent
@@ -334,37 +354,75 @@ export function createAgentScheduleManager(input: {
 
   // Cross-agent: Delete schedule (only creator can delete)
   async function deleteCron(editorAgentId: string, scheduleId: string) {
-    const schedule = await store.getScheduleById(scheduleId);
+    try {
+      const schedule = await store.getScheduleById(scheduleId);
 
-    if (!schedule) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      if (!schedule) {
+        throw new Error(`Schedule not found: ${scheduleId}`);
+      }
+
+      // Authorization: only creator can delete (or null creator = self-created, only agentId can delete)
+      requireScheduleDeleter(schedule, editorAgentId);
+
+      cancelScheduledJob(scheduleId);
+      return {
+        success: await store.deleteAgentSchedule(schedule.agentId, scheduleId),
+      };
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `deleteCron failed: ${error instanceof Error ? error.message : String(error)}`,
+        context: { editorAgentId, scheduleId },
+      });
+      throw error;
     }
-
-    // Authorization: only creator can delete (or null creator = self-created, only agentId can delete)
-    requireScheduleDeleter(schedule, editorAgentId);
-
-    cancelScheduledJob(scheduleId);
-    return {
-      success: await store.deleteAgentSchedule(schedule.agentId, scheduleId),
-    };
   }
 
   async function removeAgent(agentId: string) {
-    const schedules = await store.listAgentSchedules(agentId);
+    try {
+      const schedules = await store.listAgentSchedules(agentId);
 
-    for (const scheduleRecord of schedules) {
-      cancelScheduledJob(scheduleRecord.scheduleId);
-      await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
+      for (const scheduleRecord of schedules) {
+        try {
+          cancelScheduledJob(scheduleRecord.scheduleId);
+          await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
+        } catch (err) {
+          forgeDebug({
+            scope: 'schedules',
+            level: 'warn',
+            message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${err instanceof Error ? err.message : String(err)}`,
+            context: { agentId, scheduleId: scheduleRecord.scheduleId },
+          });
+        }
+      }
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `removeAgent failed: ${error instanceof Error ? error.message : String(error)}`,
+        context: { agentId },
+      });
+      throw error;
     }
   }
 
   async function stop() {
-    for (const [scheduleId, job] of jobs) {
-      job.cancel();
-      jobs.delete(scheduleId);
-    }
+    try {
+      for (const [scheduleId, job] of jobs) {
+        job.cancel();
+        jobs.delete(scheduleId);
+      }
 
-    await gracefulShutdown();
+      await gracefulShutdown();
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `stop failed: ${error instanceof Error ? error.message : String(error)}`,
+        context: {},
+      });
+    }
   }
 
   async function registerSchedule(scheduleRecord: StoredSchedule | null) {
@@ -372,61 +430,71 @@ export function createAgentScheduleManager(input: {
       return;
     }
 
-    // Cancel any existing node-schedule timer for this ID to prevent duplicate
-    // registrations (e.g. from concurrent updateSchedule + loadAll). Without this,
-    // node-schedule keeps both old and new timer references and fires twice.
-    cancelScheduledJob(scheduleRecord.scheduleId);
+    try {
+      // Cancel any existing node-schedule timer for this ID to prevent duplicate
+      // registrations (e.g. from concurrent updateSchedule + loadAll). Without this,
+      // node-schedule keeps both old and new timer references and fires twice.
+      cancelScheduledJob(scheduleRecord.scheduleId);
 
-    if (scheduleRecord.scheduleType === 'date') {
-      if (!scheduleRecord.scheduledDate) {
-        throw new Error(`Date schedule ${scheduleRecord.scheduleId} is missing scheduledDate`);
-      }
+      if (scheduleRecord.scheduleType === 'date') {
+        if (!scheduleRecord.scheduledDate) {
+          throw new Error(`Date schedule ${scheduleRecord.scheduleId} is missing scheduledDate`);
+        }
 
-      const scheduledDate = new Date(scheduleRecord.scheduledDate);
+        const scheduledDate = new Date(scheduleRecord.scheduledDate);
 
-      if (scheduledDate.getTime() <= Date.now()) {
-        await store.deactivateSchedule(scheduleRecord.scheduleId);
+        if (scheduledDate.getTime() <= Date.now()) {
+          await store.deactivateSchedule(scheduleRecord.scheduleId);
+          return;
+        }
+
+        const job = scheduleJob(scheduleRecord.scheduleId, scheduledDate, async (fireDate) => {
+          await triggerSchedule(scheduleRecord, fireDate, false);
+        });
+
+        jobs.set(scheduleRecord.scheduleId, job);
+        await store.setNextTriggerAt(scheduleRecord.scheduleId, scheduledDate.getTime());
         return;
       }
 
-      const job = scheduleJob(scheduleRecord.scheduleId, scheduledDate, async (fireDate) => {
-        await triggerSchedule(scheduleRecord, fireDate, false);
+      if (!scheduleRecord.cronExpression) {
+        throw new Error(`Cron schedule ${scheduleRecord.scheduleId} is missing cronExpression`);
+      }
+
+      // Validate cron expression syntax before scheduling — node-schedule silently
+      // accepts malformed expressions and creates a job that never fires.
+      try {
+        (cronParser.parseExpression as any)(scheduleRecord.cronExpression);
+      } catch {
+        throw new Error(`Invalid cron expression for schedule ${scheduleRecord.scheduleId}: ${scheduleRecord.cronExpression}`);
+      }
+
+      const spec: RecurrenceSpecDateRange = {
+        rule: scheduleRecord.cronExpression,
+        tz: scheduleRecord.timezone,
+      };
+      const job = scheduleJob(scheduleRecord.scheduleId, spec, async (fireDate) => {
+        const nextInvocation = jobs.get(scheduleRecord.scheduleId)?.nextInvocation();
+
+        await triggerSchedule(
+          scheduleRecord,
+          fireDate,
+          true,
+          nextInvocation?.getTime() ?? null,
+        );
       });
 
       jobs.set(scheduleRecord.scheduleId, job);
-      await store.setNextTriggerAt(scheduleRecord.scheduleId, scheduledDate.getTime());
-      return;
+      await store.setNextTriggerAt(scheduleRecord.scheduleId, job.nextInvocation()?.getTime() ?? null);
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `registerSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
+        context: { scheduleId: scheduleRecord.scheduleId, kind: scheduleRecord.kind },
+      });
+      throw error;
     }
-
-    if (!scheduleRecord.cronExpression) {
-      throw new Error(`Cron schedule ${scheduleRecord.scheduleId} is missing cronExpression`);
-    }
-
-    // Validate cron expression syntax before scheduling — node-schedule silently
-    // accepts malformed expressions and creates a job that never fires.
-    try {
-      (cronParser.parseExpression as any)(scheduleRecord.cronExpression);
-    } catch {
-      throw new Error(`Invalid cron expression for schedule ${scheduleRecord.scheduleId}: ${scheduleRecord.cronExpression}`);
-    }
-
-    const spec: RecurrenceSpecDateRange = {
-      rule: scheduleRecord.cronExpression,
-      tz: scheduleRecord.timezone,
-    };
-    const job = scheduleJob(scheduleRecord.scheduleId, spec, async (fireDate) => {
-      const nextInvocation = jobs.get(scheduleRecord.scheduleId)?.nextInvocation();
-
-      await triggerSchedule(
-        scheduleRecord,
-        fireDate,
-        true,
-        nextInvocation?.getTime() ?? null,
-      );
-    });
-
-    jobs.set(scheduleRecord.scheduleId, job);
-    await store.setNextTriggerAt(scheduleRecord.scheduleId, job.nextInvocation()?.getTime() ?? null);
   }
 
   async function triggerSchedule(

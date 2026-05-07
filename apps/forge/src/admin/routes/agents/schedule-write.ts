@@ -1,0 +1,93 @@
+/**
+ * Agent Schedules Admin Routes - extracted from routes.ts (#1519)
+ * POST routes for agent schedule management
+ */
+
+import type { HttpHandler } from '../../../http/server';
+import type { AdminRouteContext } from '../../routes';
+import { forgeDebug, jsonResponse, parseJsonBody } from '../index';
+import { createScheduleSchema, updateScheduleSchema, deleteScheduleSchema } from '../schemas/schedules';
+
+export function registerAgentSchedulesWriteRoutes(
+  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  input: {
+    schedules: AdminRouteContext['schedules'];
+  },
+) {
+  // POST /admin/agent-schedule/create
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-schedule/create',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, createScheduleSchema);
+        const scheduleInput = body.scheduleType === 'cron'
+          ? {
+              name: body.name,
+              description: body.description,
+              scheduleType: body.scheduleType,
+              cronExpression: body.cronExpression!,
+              timezone: body.timezone,
+              content: body.content,
+              wakeWhenRunning: body.wakeWhenRunning,
+            }
+          : {
+              name: body.name,
+              description: body.description,
+              scheduleType: body.scheduleType,
+              scheduledDate: body.scheduledDate!,
+              timezone: body.timezone,
+              content: body.content,
+              wakeWhenRunning: body.wakeWhenRunning,
+            };
+        const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
+        return jsonResponse(schedule, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  // POST /admin/agent-schedule/update
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-schedule/update',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, updateScheduleSchema);
+        const schedule = await input.schedules.updateOwnedSchedule(body.agentId, body.scheduleId, {
+          name: body.name,
+          description: body.description,
+          scheduleType: body.scheduleType,
+          cronExpression: body.cronExpression,
+          scheduledDate: body.scheduledDate,
+          timezone: body.timezone,
+          content: body.content,
+          wakeWhenRunning: body.wakeWhenRunning,
+          isActive: body.isActive,
+        });
+        return jsonResponse(schedule);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+
+  // POST /admin/agent-schedule/delete
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/agent-schedule/delete',
+    handler: async (request) => {
+      try {
+        const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
+        const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
+        return jsonResponse(result);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
+  });
+}
