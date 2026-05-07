@@ -1,13 +1,8 @@
 /**
  * Admin Routes Module
- * 
+ *
  * Extracted schemas and utilities from the monolithic routes.ts
  */
-
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- stable public API surface
-export * from './schemas';
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- stable public API surface
-export * from './validation';
 
 /**
  * Build a JSON response object
