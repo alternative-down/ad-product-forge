@@ -69,6 +69,7 @@ export function createInternalAgentTools(config: {
           emailMailboxes: config.emailMailboxes,
           coolify: config.coolify,
           schedules: config.schedules,
+          internalChat: config.internalChat,
         });
       },
     }),
