@@ -196,7 +196,7 @@ export async function adjustAgentContractBudget(
     contractId: activeContract.id,
     previousBudgetUsd: currentBudget,
     newBudgetUsd: input.newBudgetUsd,
-    changeAmountUsd: refundAmount,
+    changeAmountUsd: -refundAmount,
     changeType: 'decrease' as const,
   };
 }

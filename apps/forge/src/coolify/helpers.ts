@@ -58,23 +58,17 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
 
 export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
   if (data && typeof data === 'object') {
-    const parsed = schema.safeParse(data);
-
-    if (parsed.success) {
-      return parsed.data;
-    }
-
     const record = data as Record<string, unknown>;
 
     for (const key of [
-      'data',
+      'deployment',
       'application',
       'github_app',
-      'deployment',
       'server',
       'project',
       'environment',
       'env',
+      'data',
     ]) {
       const value = record[key];
 
@@ -82,9 +76,16 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
         return schema.parse(value);
       }
     }
+
+    const parsed = schema.safeParse(data);
+    if (parsed.success) {
+      return parsed.data;
+    }
+
+    throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
   }
 
-  return schema.parse(data);
+  throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
 }
 
 export function extractLogs(data: unknown): string {

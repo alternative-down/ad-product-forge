@@ -191,6 +191,15 @@ describe('runInternalHiring', () => {
       agentId: 'agent-new',
     }));
   });
+  it('passes internalChat to terminateInternalAgent on rollback', async () => {
+    mockCreateAgentApp.mockRejectedValue(new Error('GitHub API error'));
+    const mockInternalChat = createMockInternalChat();
+    await expect(runInternalHiring(mockDb, makeInput({ internalChat: mockInternalChat as any }))).rejects.toThrow('GitHub API error');
+    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(mockDb, expect.objectContaining({
+      agentId: 'agent-new',
+      internalChat: mockInternalChat,
+    }));
+  });
 
   it('passes additional context to hiring instructions', async () => {
     await runInternalHiring(mockDb, makeInput({ additionalContext: 'Custom context for the agent' }));
