@@ -1,6 +1,8 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { createScheduler, type SchedulerState, type SchedulerDependencies } from './agent-runner-scheduler';
 
+vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
+
 // ─── Constants (must match scheduler source) ─────────────────────────────────
 const ONE_MINUTE_MS = 60_000;
 const TEN_MINUTES_MS = 600_000;

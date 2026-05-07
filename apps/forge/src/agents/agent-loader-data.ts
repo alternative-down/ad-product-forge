@@ -43,13 +43,23 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       continue;
     }
 
+    let decrypted: string;
     try {
-      const decrypted = decryptSecret(providerConfig.encryptedCredentials);
-      const credentials = JSON.parse(decrypted);
-      providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
+      decrypted = decryptSecret(providerConfig.encryptedCredentials);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to decrypt/parse credentials for agent ' + config.agentId + ': ' + String(error), context: { provider: providerConfig.providerType } });
+      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to decrypt credentials for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: error instanceof Error ? error.message : String(error) } });
+      throw error;
     }
+
+    let credentials: unknown;
+    try {
+      credentials = JSON.parse(decrypted);
+    } catch (error) {
+      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to parse decrypted credentials JSON for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: error instanceof Error ? error.message : String(error) } });
+      throw error;
+    }
+
+    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
   }
 
   const [primaryProfile, omProfile, companySettings, role, capabilitySet] = await Promise.all([

@@ -144,6 +144,8 @@ export const systemSettings = sqliteTable('system_settings', {
 export type SystemSettings = typeof systemSettings.$inferSelect;
 export type NewSystemSettings = typeof systemSettings.$inferInsert;
 
+
+export const systemSettingsRelations = relations(systemSettings, () => ({}));
 export const agentExecutionContracts = sqliteTable('agent_execution_contracts', {
   id: text('id').primaryKey(),
   agentId: text('agent_id')
@@ -154,6 +156,7 @@ export const agentExecutionContracts = sqliteTable('agent_execution_contracts', 
   fundedAt: integer('funded_at'),
   startsAt: integer('starts_at').notNull(),
   endsAt: integer('ends_at').notNull(),
+  isActive: integer('is_active').notNull().default(1),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   agentContractsAgentIdIdx: index('agent_execution_contracts_agent_id_idx').on(table.agentId),
@@ -231,6 +234,13 @@ export const agentCheckpointedOmStates = sqliteTable('agent_checkpointed_om_stat
 export type AgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferSelect;
 export type NewAgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferInsert;
 
+
+export const agentCheckpointedOmStatesRelations = relations(agentCheckpointedOmStates, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentCheckpointedOmStates.agentId],
+    references: [agents.id],
+  }),
+}));
 export const agentLongTermMemoryStates = sqliteTable('agent_long_term_memory_states', {
   agentId: text('agent_id')
     .primaryKey()
@@ -244,6 +254,13 @@ export const agentLongTermMemoryStates = sqliteTable('agent_long_term_memory_sta
 export type AgentLongTermMemoryState = typeof agentLongTermMemoryStates.$inferSelect;
 export type NewAgentLongTermMemoryState = typeof agentLongTermMemoryStates.$inferInsert;
 
+
+export const agentLongTermMemoryStatesRelations = relations(agentLongTermMemoryStates, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentLongTermMemoryStates.agentId],
+    references: [agents.id],
+  }),
+}));
 export const agentLongTermMemoryRecallStates = sqliteTable('agent_long_term_memory_recall_states', {
   agentId: text('agent_id')
     .primaryKey()
@@ -259,6 +276,13 @@ export const agentLongTermMemoryRecallStates = sqliteTable('agent_long_term_memo
 export type AgentLongTermMemoryRecallState = typeof agentLongTermMemoryRecallStates.$inferSelect;
 export type NewAgentLongTermMemoryRecallState = typeof agentLongTermMemoryRecallStates.$inferInsert;
 
+
+export const agentLongTermMemoryRecallStatesRelations = relations(agentLongTermMemoryRecallStates, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentLongTermMemoryRecallStates.agentId],
+    references: [agents.id],
+  }),
+}));
 export const agentNotifications = sqliteTable('agent_notifications', {
   id: text('id').primaryKey(),
   agentId: text('agent_id')
@@ -425,6 +449,8 @@ export const llmModelPrices = sqliteTable('llm_model_prices', {
 export type LlmModelPrice = typeof llmModelPrices.$inferSelect;
 export type NewLlmModelPrice = typeof llmModelPrices.$inferInsert;
 
+
+export const llmModelPricesRelations = relations(llmModelPrices, () => ({}));
 export const companyCashLedger = sqliteTable('company_cash_ledger', {
   id: text('id').primaryKey(),
   type: text('type').notNull(),
@@ -462,6 +488,8 @@ export const companyRecurringPayables = sqliteTable('company_recurring_payables'
 export type CompanyRecurringPayable = typeof companyRecurringPayables.$inferSelect;
 export type NewCompanyRecurringPayable = typeof companyRecurringPayables.$inferInsert;
 
+
+export const companyRecurringPayablesRelations = relations(companyRecurringPayables, () => ({}));
 const _MigaduSystemIntegrationConfigSchema = z.object({
   apiUser: z.string().email(),
   apiKey: z.string().min(1),
@@ -505,8 +533,12 @@ export const systemIntegrations = sqliteTable('system_integrations', {
 
 export type SystemIntegration = typeof systemIntegrations.$inferSelect;
 export type NewSystemIntegration = typeof systemIntegrations.$inferInsert;
+
+export const systemIntegrationsRelations = relations(systemIntegrations, () => ({}));
 export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
 
+
+export const companyCashLedgerRelations = relations(companyCashLedger, () => ({}));
 export const llmProfiles = sqliteTable('llm_profiles', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -538,6 +570,8 @@ export const systemLlmDefaults = sqliteTable('system_llm_defaults', {
 export type SystemLlmDefaults = typeof systemLlmDefaults.$inferSelect;
 export type NewSystemLlmDefaults = typeof systemLlmDefaults.$inferInsert;
 
+
+export const systemLlmDefaultsRelations = relations(systemLlmDefaults, () => ({}));
 /**
  * Tabela: agent_providers
  * Credenciais criptografadas de provedores por agente
@@ -809,6 +843,14 @@ export const webhookRoutes = sqliteTable('webhook_routes', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
+export const webhookRoutesRelations = relations(webhookRoutes, ({ one, many }) => ({
+  agent: one(agents, {
+    fields: [webhookRoutes.agentId],
+    references: [agents.id],
+  }),
+  events: many(webhookEvents),
+}));
+
 
 export const webhookEvents = sqliteTable('webhook_events', {
   eventId: text('event_id').primaryKey(),
@@ -833,6 +875,24 @@ export const knowledgeDocuments = sqliteTable('knowledge_documents', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
+export const knowledgeDocumentsRelations = relations(knowledgeDocuments, ({ one }) => ({
+  owner: one(agents, {
+    fields: [knowledgeDocuments.ownerAgentId],
+    references: [agents.id],
+  }),
+}));
+
+export const webhookEventsRelations = relations(webhookEvents, ({ one }) => ({
+  route: one(webhookRoutes, {
+    fields: [webhookEvents.routeId],
+    references: [webhookRoutes.routeId],
+  }),
+  agent: one(agents, {
+    fields: [webhookEvents.agentId],
+    references: [agents.id],
+  }),
+}));
+
 // ── Ticketing ─────────────────────────────────────────────────────────────────
 
 export const tickets = sqliteTable('forge_tickets', {
