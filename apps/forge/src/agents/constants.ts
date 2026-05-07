@@ -3,6 +3,7 @@
  * This module exists so existing imports from './constants' (relative to agents/)
  * keep working without changes.
  */
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- public API surface, consumers import from this path
 export {
   AGENT_CONTEXT_FILE_PATH,
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,

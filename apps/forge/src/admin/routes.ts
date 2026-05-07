@@ -87,7 +87,7 @@ import {
   summarizeActiveItems,
 } from './routes/helpers.js';
 
-export * from './routes/schemas';
+export * from './routes/schemas'; // eslint-disable-line reexport-check/no-unnecessary-reexports -- stable public API surface
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index';
 import { registerWebhookAdminRoutes } from './routes/webhooks/index';
 import { createWebhookStore } from '../webhooks/store';

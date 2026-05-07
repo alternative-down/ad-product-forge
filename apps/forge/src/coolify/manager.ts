@@ -560,10 +560,15 @@ export function createCoolifyManager(config: {
     buildApplicationDomain,
   };
 }
-
 // ── Re-export all helpers for external consumers ────────────────────────────
 
-export type {
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- stable public API surface
+export { normalizeDomainHost, toApplicationSummary, toApplicationDetails, toEnvDetails } from './helpers';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- stable public API surface
+export { extractCollection, extractItem, extractLogs } from './helpers';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- stable public API surface
+export { safeJsonParse, buildRequestError, removeUndefined, toTimestamp } from './helpers';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- type-only public API surfaceexport type {
   GitHubAppSchema,
   GitHubRepositorySchema,
   GitHubBranchSchema,
