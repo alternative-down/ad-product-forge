@@ -26,7 +26,7 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
             limit: input.limit ?? 20,
           });
         } catch (error) {
-          forgeDebug({ scope: 'notifications', level: 'error', message: 'Notification tool failed', context: { error } });
+          forgeDebug({ scope: 'notifications', level: 'error', message: '[notifications] list_agent_notifications failed', context: { error: error instanceof Error ? error.message : String(error) }});
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
