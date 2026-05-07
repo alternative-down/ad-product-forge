@@ -1,5 +1,6 @@
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
+import { forgeDebug } from '@forge-runtime/core';
 
 const RECENT_STEP_LIMIT = 10;
 
@@ -23,36 +24,40 @@ export function createAgentRunnerUsage(input: {
     if (!input.runtime.modelProfileId) {
       throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
     }
+    try {
+      const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
 
-    const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
+      if (recentSteps.length === 0) {
+        return null;
+      }
 
-    if (recentSteps.length === 0) {
-      return null;
+      const pricing = await input.store.getUsagePricing({
+        pricingModelKey: input.runtime.pricingModelKey,
+        profileId: input.runtime.modelProfileId,
+      });
+
+      if (!pricing.modelPrice) {
+        return recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
+      }
+
+      const averageInputTokens =
+        recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
+      const averageCachedInputTokens =
+        recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
+      const averageOutputTokens =
+        recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
+      const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
+
+      return (
+        ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
+          + (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
+          + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
+        * pricing.contractCostMultiplier
+      );
+    } catch (err) {
+      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: '[agent-runner-usage] estimateStepCostUsd failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    const pricing = await input.store.getUsagePricing({
-      pricingModelKey: input.runtime.pricingModelKey,
-      profileId: input.runtime.modelProfileId,
-    });
-
-    if (!pricing.modelPrice) {
-      return recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
-    }
-
-    const averageInputTokens =
-      recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
-    const averageCachedInputTokens =
-      recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
-    const averageOutputTokens =
-      recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
-    const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
-
-    return (
-      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-        + (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-        + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-      * pricing.contractCostMultiplier
-    );
   }
 
   async function recordAgentStep(
@@ -64,37 +69,41 @@ export function createAgentRunnerUsage(input: {
     if (!input.runtime.modelProfileId) {
       throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
     }
+    try {
+      const pricing = await input.store.getUsagePricing({
+        pricingModelKey: input.runtime.pricingModelKey,
+        profileId: input.runtime.modelProfileId,
+      });
+      let costUsd = 0;
 
-    const pricing = await input.store.getUsagePricing({
-      pricingModelKey: input.runtime.pricingModelKey,
-      profileId: input.runtime.modelProfileId,
-    });
-    let costUsd = 0;
+      if (pricing.modelPrice) {
+        const uncachedInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
+        costUsd =
+          ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+            (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+            (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+          pricing.contractCostMultiplier;
+      }
 
-    if (pricing.modelPrice) {
-      const uncachedInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
-      costUsd =
-        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
-          (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
-          (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
-        pricing.contractCostMultiplier;
+      return input.store.recordAgentStep({
+        agentId: input.runtime.id,
+        contractId,
+        llmProfileId: input.runtime.modelProfileId,
+        modelKey: input.runtime.pricingModelKey,
+        kind: 'agent-step',
+        inputTokens,
+        cachedInputTokens,
+        outputTokens,
+        inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
+        inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
+        outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
+        contractCostMultiplier: pricing.contractCostMultiplier,
+        costUsd,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: '[agent-runner-usage] recordAgentStep failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    return input.store.recordAgentStep({
-      agentId: input.runtime.id,
-      contractId,
-      llmProfileId: input.runtime.modelProfileId,
-      modelKey: input.runtime.pricingModelKey,
-      kind: 'agent-step',
-      inputTokens,
-      cachedInputTokens,
-      outputTokens,
-      inputPerMillionUsd: pricing.modelPrice?.inputPerMillionUsd ?? 0,
-      inputCachePerMillionUsd: pricing.modelPrice?.inputCachePerMillionUsd ?? 0,
-      outputPerMillionUsd: pricing.modelPrice?.outputPerMillionUsd ?? 0,
-      contractCostMultiplier: pricing.contractCostMultiplier,
-      costUsd,
-    });
   }
 
   async function recordObservationalMemorySteps(
@@ -107,7 +116,12 @@ export function createAgentRunnerUsage(input: {
       };
     }>,
   ) {
-    void steps;
+    try {
+      void steps;
+    } catch (err) {
+      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: '[agent-runner-usage] recordObservationalMemorySteps failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
   }
 
   function getUsageFromResult(result: { usage?: unknown }) {
