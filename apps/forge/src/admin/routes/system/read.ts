@@ -51,10 +51,14 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     method: 'GET',
     path: '/admin/system/healthcheck',
     handler: async () => {
-      const healthcheck = await buildSystemHealthcheck(registry, readModel);
-      return jsonResponse(healthcheck);
-    },
-  });
+      try {
+        const healthcheck = await buildSystemHealthcheck(registry, readModel);
+        return jsonResponse(healthcheck);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },  });
 
   // GET /admin/system/integrations
   httpServer.registerRoute({
@@ -75,40 +79,48 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     method: 'GET',
     path: '/admin/system/llm',
     handler: async () => {
-      const [profiles, defaults, prices] = await Promise.all([
-        llmSettings.listProfiles(),
-        llmSettings.getDefaults(),
-        llmModelPrices.listPrices(),
-      ]);
-      return jsonResponse({ profiles, defaults, prices });
-    },
-  });
+      try {
+        const [profiles, defaults, prices] = await Promise.all([
+          llmSettings.listProfiles(),
+          llmSettings.getDefaults(),
+          llmModelPrices.listPrices(),
+        ]);
+        return jsonResponse({ profiles, defaults, prices });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },  });
 
   // GET /admin/system/mcp
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/mcp',
     handler: async () => {
-      const servers = await db.select().from(mcpServerConfigs).all();
-      const formatted = servers
-        .map((server) => ({
-          serverId: server.id,
-          name: server.name,
-          description: server.description ?? undefined,
-          transport: server.transport as 'stdio' | 'http_streamable',
-          command: server.command ?? '',
-          argsText: server.args ?? '',
-          envVarsText: server.envVars ?? '',
-          url: server.url ?? '',
-          headersText: server.headers ?? '',
-          isActive: server.isActive === 1,
-          createdAt: server.createdAt,
-          updatedAt: server.updatedAt,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-      return jsonResponse(formatted);
-    },
-  });
+      try {
+        const servers = await db.select().from(mcpServerConfigs).all();
+        const formatted = servers
+          .map((server) => ({
+            serverId: server.id,
+            name: server.name,
+            description: server.description ?? undefined,
+            transport: server.transport as 'stdio' | 'http_streamable',
+            command: server.command ?? '',
+            argsText: server.args ?? '',
+            envVarsText: server.envVars ?? '',
+            url: server.url ?? '',
+            headersText: server.headers ?? '',
+            isActive: server.isActive === 1,
+            createdAt: server.createdAt,
+            updatedAt: server.updatedAt,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        return jsonResponse(formatted);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },  });
 
   // GET /admin/system/migrations
   httpServer.registerRoute({
