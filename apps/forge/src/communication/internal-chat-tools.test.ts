@@ -159,4 +159,38 @@ describe('createInternalChatTools', () => {
       });
     });
   });
+
+  // ─── hasToolPermission edge cases ─────────────────────────────────────────
+
+  describe('hasToolPermission edge cases', () => {
+    it('omits change_chat_group when allowedToolIds is an empty Set', () => {
+      const tools = createInternalChatTools(
+        'agent-1',
+        'Agent One',
+        makeMockService() as any,
+        new Set<string>(),
+      );
+      expect(tools).not.toHaveProperty('change_chat_group');
+    });
+
+    it('omits change_chat_group when allowedToolIds is a Set without the tool', () => {
+      const tools = createInternalChatTools(
+        'agent-1',
+        'Agent One',
+        makeMockService() as any,
+        new Set(['list_contacts', 'read_messages']),
+      );
+      expect(tools).not.toHaveProperty('change_chat_group');
+    });
+
+    it('registers change_chat_group when allowedToolIds is undefined', () => {
+      const tools = createInternalChatTools(
+        'agent-1',
+        'Agent One',
+        makeMockService() as any,
+        undefined,
+      );
+      expect(tools).toHaveProperty('change_chat_group');
+    });
+  });
 });
