@@ -1,6 +1,7 @@
 import { and, isNull, eq, sql } from 'drizzle-orm';
 import { internalChatMessageReads, internalChatMessages } from '../database/schema';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 
 // =============================================================================
 // Unread summary

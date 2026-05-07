@@ -1,4 +1,4 @@
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import { createLlmSettingsStore } from '../llm/settings-store';
 
 export async function buildHiredAgentProfile(db: Database, input: {

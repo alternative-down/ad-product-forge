@@ -1,5 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { and, eq } from 'drizzle-orm';
 
 import { agents, agentProviders, agentRoles } from '../database/schema';

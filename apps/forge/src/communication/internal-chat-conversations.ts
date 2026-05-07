@@ -11,7 +11,8 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import {
   internalChatConversations,
   internalChatConversationMembers,
