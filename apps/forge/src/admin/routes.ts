@@ -87,7 +87,6 @@ import {
   summarizeActiveItems,
 } from './routes/helpers.js';
 
-export * from './routes/schemas';
 import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index';
 import { registerWebhookAdminRoutes } from './routes/webhooks/index';
 import { createWebhookStore } from '../webhooks/store';
