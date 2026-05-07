@@ -81,11 +81,11 @@ import {
 import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
 import { createInternalChatAccountOps } from "./internal-chat-account-ops";
-import { createInternalChatParticipants } from "./internal-chat-participants";
-import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatListing } from "./internal-chat-listing";
 import { createInternalChatGroupsAccount } from "./internal-chat-groups-account";
 import { createInternalChatAccess } from "./internal-chat-access";
+import { createInternalChatParticipants } from "./internal-chat-participants";
+import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatGuards } from "./internal-chat-guards";
 import {
   ConversationNotFoundError,
@@ -583,7 +583,7 @@ export function createInternalChatService(
     participantAccountId: string;
     role?: string;
   }) {
-    return groupsAccount.addMemberToGroupByAccount(input);
+    return accountOps.addMemberToGroupByAccount(input);
   }
 
   async function updateMemberRoleByAccount(input: {
@@ -592,7 +592,7 @@ export function createInternalChatService(
     participantAccountId: string;
     role: string;
   }) {
-    return groupsAccount.updateMemberRoleByAccount(input);
+    return accountOps.updateMemberRoleByAccount(input);
   }
 
   async function removeMemberFromGroupByAccount(input: {
@@ -600,7 +600,7 @@ export function createInternalChatService(
     groupId: string;
     participantAccountId: string;
   }) {
-    return groupsAccount.removeMemberFromGroupByAccount(input);
+    return accountOps.removeMemberFromGroupByAccount(input);
   }
 
   async function updateGroupByAccount(input: {
@@ -609,7 +609,7 @@ export function createInternalChatService(
     name?: string;
     conversationKey?: string;
   }) {
-    return groupsAccount.updateGroupByAccount(input);
+    return accountOps.updateGroupByAccount(input);
   }
 
   async function archiveConversationByAccount(input: {
@@ -672,6 +672,7 @@ export function createInternalChatService(
 
   // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
   const participants = createInternalChatParticipants(db);
+
   const serviceHelpers = createServiceHelpers({
     db,
     accounts: {
@@ -710,11 +711,12 @@ export function createInternalChatService(
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
 
-  const access = createInternalChatAccess(db, {
-    getRequiredAccount: accounts.getRequiredAccount,
-    getAccountBySlug: accounts.getAccountBySlug,
-    requireConversationMembershipByAccount,
-    readMessageAttachment,
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
   });
 
   const groupsAccount = createInternalChatGroupsAccount(db, {
@@ -724,12 +726,11 @@ export function createInternalChatService(
     updateGroupByAccount: accountOps.updateGroupByAccount,
   });
 
-  const listing = createInternalChatListing(db, {
-    getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
+  const access = createInternalChatAccess(db, {
+    getRequiredAccount: accounts.getRequiredAccount,
+    getAccountBySlug: accounts.getAccountBySlug,
+    requireConversationMembershipByAccount,
+    readMessageAttachment,
   });
 
   const connection = createInternalChatConnection(db, {
