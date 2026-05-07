@@ -56,6 +56,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         return jsonResponse(healthcheck);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -87,6 +88,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         return jsonResponse({ profiles, defaults, prices });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -116,6 +118,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         return jsonResponse(formatted);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 

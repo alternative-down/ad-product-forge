@@ -33,6 +33,7 @@ export function registerWebhookAdminRoutes(
         return jsonResponse({ routeId: route.routeId, secret }, 201);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -49,6 +50,7 @@ export function registerWebhookAdminRoutes(
         return jsonResponse({ routes: routes.map((r) => ({ routeId: r.routeId, name: r.name, isActive: r.isActive, createdAt: r.createdAt })) });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -62,6 +64,7 @@ export function registerWebhookAdminRoutes(
         return jsonResponse({ success: true });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -78,6 +81,7 @@ export function registerWebhookAdminRoutes(
         return jsonResponse({ events: events.map((e) => ({ eventId: e.eventId, routeId: e.routeId, status: e.status, receivedAt: e.receivedAt })) });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -91,6 +95,7 @@ export function registerWebhookAdminRoutes(
         return jsonResponse({ success: true });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 }
