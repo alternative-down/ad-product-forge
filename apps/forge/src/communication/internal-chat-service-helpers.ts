@@ -7,9 +7,9 @@
  */
 import { and, eq } from 'drizzle-orm';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 import {
   ConversationNotFoundError,
   ChatGroupNotFoundError,
@@ -71,19 +71,29 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   }
 
   async function getRequiredExternalAccount(accountId: string): Promise<HelperAccount> {
-    const account = await accounts.getRequiredAccount(accountId);
-    if (account.agentId) {
-      throw new ExternalAccountNotFoundError(accountId, 'External internal chat account not found');
+    try {
+      const account = await accounts.getRequiredAccount(accountId);
+      if (account.agentId) {
+        throw new ExternalAccountNotFoundError(accountId, 'External internal chat account not found');
+      }
+      return account;
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] getRequiredExternalAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-    return account;
   }
 
   async function getRequiredAccountBySlug(slug: string): Promise<HelperAccount> {
-    const account = await accounts.getAccountBySlug(slug);
-    if (!account) {
-      throw new InternalChatAccountNotFoundError(slug);
+    try {
+      const account = await accounts.getAccountBySlug(slug);
+      if (!account) {
+        throw new InternalChatAccountNotFoundError(slug);
+      }
+      return account;
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] getRequiredAccountBySlug failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-    return account;
   }
 
   async function requireConversationMembership(agentId: string, conversationId: string): Promise<void> {
@@ -92,14 +102,19 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string): Promise<void> {
-    const membership = await db.query.internalChatConversationMembers.findFirst({
-      where: and(
-        eq(internalChatConversationMembers.accountId, accountId),
-        eq(internalChatConversationMembers.conversationId, conversationId),
-      ),
-    });
-    if (!membership) {
-      throw new ConversationNotFoundError(conversationId);
+    try {
+      const membership = await db.query.internalChatConversationMembers.findFirst({
+        where: and(
+          eq(internalChatConversationMembers.accountId, accountId),
+          eq(internalChatConversationMembers.conversationId, conversationId),
+        ),
+      });
+      if (!membership) {
+        throw new ConversationNotFoundError(conversationId);
+      }
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] requireConversationMembershipByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
   }
 
@@ -115,14 +130,19 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
     accountId: string,
     conversationId: string,
   ): Promise<{ id: string; type: string; name: string | null }> {
-    await requireConversationMembershipByAccount(accountId, conversationId);
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
-    if (!conversation) {
-      throw new ConversationNotFoundError(conversationId);
+    try {
+      await requireConversationMembershipByAccount(accountId, conversationId);
+      const conversation = await db.query.internalChatConversations.findFirst({
+        where: eq(internalChatConversations.id, conversationId),
+      });
+      if (!conversation) {
+        throw new ConversationNotFoundError(conversationId);
+      }
+      return conversation;
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] getRequiredConversationForAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-    return conversation;
   }
 
   async function getRequiredGroupForAgent(
