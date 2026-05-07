@@ -218,4 +218,85 @@ describe('createInternalChatConversations', () => {
 
     expect(deleteCount).toBe(2);
   });
+  // ─── ensureDirectConversation — additional error scenarios ─────────────────
+
+  describe('ensureDirectConversation (error cases)', () => {
+    const LEFT = 'alice';
+    const RIGHT = 'bob';
+
+    it('throws when member insert fails', async () => {
+      const db = makeMockDb({ memberRows: [], convRows: [] });
+      db.insert = vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockResolvedValue([{}]),
+      }));
+      // Make the second insert (members) fail
+      let insertCallCount = 0;
+      db.insert = vi.fn().mockImplementation(() => {
+        insertCallCount++;
+        if (insertCallCount === 2) {
+          return { values: vi.fn().mockRejectedValue(new Error('member insert failed')) };
+        }
+        return { values: vi.fn().mockResolvedValue([{}]) };
+      });
+      const convs = createInternalChatConversations(db as never);
+
+      await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow(
+        'member insert failed',
+      );
+    });
+
+    it('throws when findFirst fails on existing conversation lookup', async () => {
+      const db = makeMockDb({
+        memberRows: [
+          { conversationId: 'conv-1', accountId: LEFT },
+          { conversationId: 'conv-1', accountId: RIGHT },
+        ],
+        convRows: [],
+      });
+      db.query.internalChatConversations.findFirst = vi.fn().mockRejectedValue(
+        new Error('findFirst failed'),
+      );
+      const convs = createInternalChatConversations(db as never);
+
+      await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow(
+        'findFirst failed',
+      );
+    });
+  });
+
+  // ─── archiveConversationByAccount — additional error scenarios ───────────
+
+  describe('archiveConversationByAccount (error cases)', () => {
+    it('throws when db.delete fails', async () => {
+      const db = makeMockDb({ memberRows: [{ conversationId: 'conv-1', accountId: 'alice' }] });
+      db.delete = vi.fn().mockImplementation(() => ({
+        where: vi.fn().mockRejectedValue(new Error('delete failed')),
+      }));
+      const convs = createInternalChatConversations(db as never);
+
+      await expect(
+        convs.archiveConversationByAccount({
+          accountId: 'alice',
+          conversationId: 'conv-1',
+          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null }),
+        }),
+      ).rejects.toThrow('delete failed');
+    });
+
+    it('throws when findMany fails when checking remaining members', async () => {
+      const db = makeMockDb({ memberRows: [] });
+      db.query.internalChatConversationMembers.findMany = vi.fn().mockRejectedValue(
+        new Error('findMany failed'),
+      );
+      const convs = createInternalChatConversations(db as never);
+
+      await expect(
+        convs.archiveConversationByAccount({
+          accountId: 'alice',
+          conversationId: 'conv-1',
+          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null }),
+        }),
+      ).rejects.toThrow('findMany failed');
+    });
+  });
 });
