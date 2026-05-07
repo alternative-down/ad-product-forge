@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Agent } from '../database/schema';
 import {
@@ -60,6 +61,7 @@ async function ensureDirectory(targetPath: string) {
   } catch (error) {
     forgeDebug({ scope: 'global-skills', level: 'error', message: '[global-skills] ensureSkillDirectory cleared path', context: { error: error instanceof Error ? error.message : String(error) }});
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      forgeDebug({ scope: 'agents', level: 'error', message: 'Global skill operation failed', context: { error } });
       throw error;
     }
   }
@@ -114,6 +116,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
       return [];
     }
 
+    forgeDebug({ scope: 'agents', level: 'error', message: 'Global skill operation failed', context: { error } });
     throw error;
   }
 }
