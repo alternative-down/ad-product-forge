@@ -75,7 +75,7 @@ import {
 } from '../agents/global-skills';
 
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
-import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
+import { registerInternalChatRoutes } from './routes/internal-chat/index.ts';
 import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes, registerAgentSkillsWriteRoutes, registerAgentSchedulesWriteRoutes } from './routes/agents/index.js';
 import {
   normalizeOptionalText,
