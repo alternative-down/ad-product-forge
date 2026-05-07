@@ -3,11 +3,15 @@
  * Routes extracted from routes.ts for better maintainability
  */
 
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- public route registrar API, consumers depend on these names
-export { registerAgentReadRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes, registerAgentSkillsWriteRoutes, registerAgentSchedulesWriteRoutes } from './read';
+import {
+  registerAgentReadRoutes,
+  registerAgentOperationRoutes,
+  registerAgentWriteOpsRoutes,
+  registerAgentSkillsWriteRoutes,
+  registerAgentSchedulesWriteRoutes,
+} from './read';
 // Fragmented agent detail routes (#1587)
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- public route registrar API, consumers depend on these names
-export {
+import {
   registerAgentStepsRoutes,
   registerAgentConversationsRoutes,
   registerAgentMemoryRoutes,

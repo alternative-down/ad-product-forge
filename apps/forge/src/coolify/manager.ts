@@ -560,7 +560,6 @@ export function createCoolifyManager(config: {
     buildApplicationDomain,
   };
 }
-// ── Re-export all helpers for external consumers ────────────────────────────
 
 // eslint-disable-next-line reexport-check/no-unnecessary-reexports -- stable public API surface
 export { normalizeDomainHost, toApplicationSummary, toApplicationDetails, toEnvDetails } from './helpers';
@@ -579,7 +578,6 @@ export { safeJsonParse, buildRequestError, removeUndefined, toTimestamp } from '
   EnvironmentSchema,
   ServerSchema,
 } from './schemas';
-
 // ── Private-to-public shape adapters ────────────────────────────────────────
 
 function toApplicationSummary(
