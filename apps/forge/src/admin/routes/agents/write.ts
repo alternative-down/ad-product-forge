@@ -5,7 +5,8 @@
 
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
-import type { Database } from '../../../database/index';
+
+import type {Database} from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 import { clearAgentHistory } from '../helpers';

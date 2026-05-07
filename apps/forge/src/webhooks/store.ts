@@ -1,6 +1,7 @@
 import { eq, desc } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { webhookRoutes, webhookEvents } from '../database/schema';
 import { createId } from '../utils/id';
 

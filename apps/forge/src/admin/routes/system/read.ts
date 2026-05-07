@@ -11,7 +11,8 @@ import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 
 import { mcpServerConfigs } from '../../../database/schema';
-import type { Database } from '../../../database/index';
+
+import type {Database} from '../../../database/schema';
 import type { InternalAgentRegistry } from '../../../agents/internal-agent-registry';
 import type { createForgeHttpServer } from '../../../http/server';
 import { buildOauthState } from './oauth-state';

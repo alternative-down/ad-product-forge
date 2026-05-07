@@ -9,7 +9,8 @@ import type { StoredSchedule } from './store';
 import type { Job } from 'node-schedule';
 import type { RecurrenceSpecDateRange } from 'node-schedule';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { parseScheduleDate, validateScheduleShape, assertFutureScheduledDate } from './schedule-helpers';
 
 const scheduleBaseSchema = {

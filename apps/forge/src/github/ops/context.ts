@@ -2,7 +2,8 @@
  * Ops Context — shared dependencies available to all ops modules.
  */
 import type { Octokit } from 'octokit';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 import type { HttpServer, HttpRequest, HttpResponse } from '../../http/server';
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { createAgentNotificationStore } from '../../notifications/store';

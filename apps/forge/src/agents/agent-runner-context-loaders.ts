@@ -9,7 +9,8 @@ import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
 import { agentSchedules } from '../database/schema';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import type { InternalAgentRuntime } from './runtime/types';
 import {
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,

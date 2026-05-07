@@ -1,9 +1,11 @@
+import { forgeDebug } from '@forge-runtime/core';
 import { access } from 'node:fs/promises';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibsqlConversationStore, toMastraSafeIdentifier } from '@forge-runtime/core';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 import {
   agentCheckpointedOmStates,
   agentLongTermMemoryStates,
@@ -153,7 +155,8 @@ export async function fsPathExists(path: string): Promise<boolean> {
   try {
     await access(path);
     return true;
-  } catch {
+  } catch (err) {
+    forgeDebug({ scope: 'helpers', level: 'warn', message: '[helpers] fsPathExists failed', context: { error: err instanceof Error ? err.message : String(err) }});
     // Safe: path does not exist — return false to signal absence
     return false;
   }
