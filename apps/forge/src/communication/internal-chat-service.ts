@@ -82,8 +82,6 @@ import { createInternalChatConnection, type InternalChatDeliveryMessage } from "
 import { createInternalChatGroups } from "./internal-chat-groups";
 import { createInternalChatAccountOps } from "./internal-chat-account-ops";
 import { createInternalChatListing } from "./internal-chat-listing";
-import { createInternalChatGroupsAccount } from "./internal-chat-groups-account";
-import { createInternalChatAccess } from "./internal-chat-access";
 import { createInternalChatParticipants } from "./internal-chat-participants";
 import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatGuards } from "./internal-chat-guards";
@@ -722,19 +720,6 @@ export function createInternalChatService(
     readMessageAttachments,
   });
 
-  const groupsAccount = createInternalChatGroupsAccount(db, {
-    addMemberToGroupByAccount: accountOps.addMemberToGroupByAccount,
-    updateMemberRoleByAccount: accountOps.updateMemberRoleByAccount,
-    removeMemberFromGroupByAccount: accountOps.removeMemberFromGroupByAccount,
-    updateGroupByAccount: accountOps.updateGroupByAccount,
-  });
-
-  const access = createInternalChatAccess(db, {
-    getRequiredAccount: accounts.getRequiredAccount,
-    getAccountBySlug: accounts.getAccountBySlug,
-    requireConversationMembershipByAccount,
-    readMessageAttachment,
-  });
 
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
