@@ -79,3 +79,143 @@ describe('createLabelsOps', () => {
     expect(sharedOctokit.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}/labels', expect.objectContaining({ owner: 'acme' }));
   });
 });
+
+describe('createLabelsOps — createLabel', () => {
+  beforeEach(() => sharedOctokit.request.mockReset());
+
+  it('createLabel POSTs with labelName and color', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: { name: 'priority-high', description: 'High priority', color: 'd73a4a', default: false },
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    await labels.createLabel('agent-1', { repositoryName: 'repo', labelName: 'priority-high', color: 'd73a4a' });
+    expect(sharedOctokit.request).toHaveBeenCalledWith('POST /repos/{owner}/{repo}/labels', expect.objectContaining({
+      name: 'priority-high',
+      color: 'd73a4a',
+    }));
+  });
+
+  it('createLabel includes description when provided', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: { name: 'bug', description: 'Bug report label', color: 'ff0000', default: false },
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    await labels.createLabel('agent-1', { repositoryName: 'repo', labelName: 'bug', color: 'ff0000', description: 'Bug report label' });
+    expect(sharedOctokit.request).toHaveBeenCalledWith('POST /repos/{owner}/{repo}/labels', expect.objectContaining({
+      description: 'Bug report label',
+    }));
+  });
+
+  it('createLabel returns formatted label', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: { name: 'enhancement', description: null, color: '00ff00', default: true },
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    const result = await labels.createLabel('agent-1', { repositoryName: 'repo', labelName: 'enhancement', color: '00ff00' });
+    expect(result).toEqual({ name: 'enhancement', description: null, color: '00ff00', default: true });
+  });
+});
+
+describe('createLabelsOps — updateLabel', () => {
+  beforeEach(() => sharedOctokit.request.mockReset());
+
+  it('updateLabel PATCHes with new fields', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: { name: 'new-name', description: 'Updated desc', color: '0000ff', default: false },
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    await labels.updateLabel('agent-1', { repositoryName: 'repo', labelName: 'old-name', newLabelName: 'new-name', color: '0000ff' });
+    expect(sharedOctokit.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/labels/{name}', expect.objectContaining({
+      name: 'old-name',
+      new_name: 'new-name',
+      color: '0000ff',
+    }));
+  });
+
+  it('updateLabel returns formatted label', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: { name: 'updated', description: 'Updated', color: 'abc123', default: false },
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    const result = await labels.updateLabel('agent-1', { repositoryName: 'repo', labelName: 'updated', description: 'Updated' });
+    expect(result.description).toBe('Updated');
+  });
+});
+
+describe('createLabelsOps — deleteLabel', () => {
+  beforeEach(() => sharedOctokit.request.mockReset());
+
+  it('deleteLabel DELETE returns {success:true}', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({ status: 204 });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    const result = await labels.deleteLabel('agent-1', { repositoryName: 'repo', labelName: 'obsolete' });
+    expect(sharedOctokit.request).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/labels/{name}', {
+      owner: 'acme',
+      repo: 'repo',
+      name: 'obsolete',
+    });
+    expect(result).toEqual({ success: true });
+  });
+});
+
+describe('createLabelsOps — addIssueLabels', () => {
+  beforeEach(() => sharedOctokit.request.mockReset());
+
+  it('addIssueLabels POSTs labels array', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: [{ name: 'bug', description: null, color: 'ff0000', default: false }],
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    await labels.addIssueLabels('agent-1', { repositoryName: 'repo', issueNumber: 3, labels: ['bug', 'high-priority'] });
+    expect(sharedOctokit.request).toHaveBeenCalledWith('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', expect.objectContaining({
+      issue_number: 3,
+      labels: ['bug', 'high-priority'],
+    }));
+  });
+
+  it('addIssueLabels returns formatted labels', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({
+      data: [{ name: 'enhancement', description: 'Feature', color: '00ff00', default: true }],
+    });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    const result = await labels.addIssueLabels('agent-1', { repositoryName: 'repo', issueNumber: 5, labels: ['enhancement'] });
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('enhancement');
+  });
+});
+
+describe('createLabelsOps — removeIssueLabels', () => {
+  beforeEach(() => sharedOctokit.request.mockReset());
+
+  it('removeIssueLabels DELETEs with labels as comma-separated string', async () => {
+    const { createLabelsOps } = await import('./labels.js');
+    sharedOctokit.request.mockResolvedValue({ status: 200 });
+    const ctx = makeCtx();
+    const labels = createLabelsOps(ctx);
+    const result = await labels.removeIssueLabels('agent-1', { repositoryName: 'repo', issueNumber: 8, labels: ['wontfix', 'bug'] });
+    expect(sharedOctokit.request).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+      owner: 'acme',
+      repo: 'repo',
+      issue_number: 8,
+      labels: 'wontfix,bug',
+    });
+    expect(result).toEqual({ success: true });
+  });
+});
+

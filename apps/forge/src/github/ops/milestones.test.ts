@@ -89,3 +89,95 @@ describe('createMilestonesOps', () => {
     expect(octokitMock.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}/milestones', expect.objectContaining({ per_page: 50 }));
   });
 });
+
+describe('createMilestonesOps — createMilestone', () => {
+  beforeEach(() => octokitMock.request.mockReset());
+
+  it('createMilestone POSTs with correct fields', async () => {
+    const { createMilestonesOps } = await import('./milestones.js');
+    octokitMock.request.mockResolvedValue({
+      data: { number: 1, title: 'v1.0', description: 'Release v1.0', state: 'open', due_on: null, open_issues: 0, closed_issues: 0 },
+    });
+    const ctx = makeCtx();
+    const milestones = createMilestonesOps(ctx);
+    await milestones.createMilestone('agent-1', { repositoryName: 'repo', title: 'v1.0', description: 'Release v1.0' });
+    expect(octokitMock.request).toHaveBeenCalledWith('POST /repos/{owner}/{repo}/milestones', expect.objectContaining({
+      title: 'v1.0',
+      description: 'Release v1.0',
+    }));
+  });
+
+  it('createMilestone includes state and dueOn when provided', async () => {
+    const { createMilestonesOps } = await import('./milestones.js');
+    octokitMock.request.mockResolvedValue({
+      data: { number: 2, title: 'v2.0', description: null, state: 'open', due_on: '2025-12-31T00:00:00Z', open_issues: 0, closed_issues: 0 },
+    });
+    const ctx = makeCtx();
+    const milestones = createMilestonesOps(ctx);
+    await milestones.createMilestone('agent-1', { repositoryName: 'repo', title: 'v2.0', state: 'open', dueOn: '2025-12-31T00:00:00Z' });
+    expect(octokitMock.request).toHaveBeenCalledWith('POST /repos/{owner}/{repo}/milestones', expect.objectContaining({
+      state: 'open',
+      due_on: '2025-12-31T00:00:00Z',
+    }));
+  });
+
+  it('createMilestone returns formatted milestone', async () => {
+    const { createMilestonesOps } = await import('./milestones.js');
+    octokitMock.request.mockResolvedValue({
+      data: { number: 3, title: 'v3.0', description: 'Future release', state: 'open', due_on: null, open_issues: 5, closed_issues: 0 },
+    });
+    const ctx = makeCtx();
+    const milestones = createMilestonesOps(ctx);
+    const result = await milestones.createMilestone('agent-1', { repositoryName: 'repo', title: 'v3.0' });
+    expect(result).toEqual({ number: 3, title: 'v3.0', description: 'Future release', state: 'open', dueOn: null });
+  });
+});
+
+describe('createMilestonesOps — updateMilestone', () => {
+  beforeEach(() => octokitMock.request.mockReset());
+
+  it('updateMilestone PATCHes with provided fields', async () => {
+    const { createMilestonesOps } = await import('./milestones.js');
+    octokitMock.request.mockResolvedValue({
+      data: { number: 1, title: 'Updated title', description: 'New desc', state: 'closed', due_on: null, open_issues: 0, closed_issues: 1 },
+    });
+    const ctx = makeCtx();
+    const milestones = createMilestonesOps(ctx);
+    await milestones.updateMilestone('agent-1', { repositoryName: 'repo', milestoneNumber: 1, title: 'Updated title', state: 'closed' });
+    expect(octokitMock.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/milestones/{milestone_number}', expect.objectContaining({
+      milestone_number: 1,
+      title: 'Updated title',
+      state: 'closed',
+    }));
+  });
+
+  it('updateMilestone returns formatted milestone', async () => {
+    const { createMilestonesOps } = await import('./milestones.js');
+    octokitMock.request.mockResolvedValue({
+      data: { number: 4, title: 'v4.0', description: null, state: 'open', due_on: null, open_issues: 0, closed_issues: 0 },
+    });
+    const ctx = makeCtx();
+    const milestones = createMilestonesOps(ctx);
+    const result = await milestones.updateMilestone('agent-1', { repositoryName: 'repo', milestoneNumber: 4 });
+    expect(result).toEqual({ number: 4, title: 'v4.0', description: null, state: 'open', dueOn: null });
+  });
+});
+
+describe('createMilestonesOps — deleteMilestone', () => {
+  beforeEach(() => octokitMock.request.mockReset());
+
+  it('deleteMilestone DELETE returns {success:true}', async () => {
+    const { createMilestonesOps } = await import('./milestones.js');
+    octokitMock.request.mockResolvedValue({ status: 204 });
+    const ctx = makeCtx();
+    const milestones = createMilestonesOps(ctx);
+    const result = await milestones.deleteMilestone('agent-1', { repositoryName: 'repo', milestoneNumber: 2 });
+    expect(octokitMock.request).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}/milestones/{milestone_number}', {
+      owner: 'acme',
+      repo: 'repo',
+      milestone_number: 2,
+    });
+    expect(result).toEqual({ success: true });
+  });
+});
+
