@@ -90,6 +90,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       emailMailboxes: input.emailMailboxes,
       coolify: input.coolify,
       schedules: input.schedules,
+      internalChat: input.internalChat,
     });
     throw error;
   }
