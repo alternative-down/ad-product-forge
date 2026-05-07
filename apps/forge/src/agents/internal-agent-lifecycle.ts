@@ -103,6 +103,7 @@ export async function runInternalTermination(db: Database, input: {
   emailMailboxes: RunInternalHiringInput['emailMailboxes'];
   coolify: RunInternalHiringInput['coolify'];
   schedules: RunInternalHiringInput['schedules'];
+  internalChat: RunInternalHiringInput['internalChat'];
 }) {
   return terminateInternalAgent(db, input);
 }
