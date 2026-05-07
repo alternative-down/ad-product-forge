@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createId } from '../../../utils/id';
 import { parseJsonBody, jsonResponse } from '../helpers';
+import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 import type { HttpRequest } from '../../http/server';
 import type { createWebhookStore } from '../../../webhooks/store';
@@ -28,8 +29,13 @@ export function registerWebhookAdminRoutes(
     handler: async (request: HttpRequest) => {
       const body = parseJsonBody(request.bodyText, createRouteSchema);
       const secret = createHash('sha256').update(createId()).digest('hex').slice(0, 32);
-      const route = await store.createRoute({ agentId: body.agentId, name: body.name, secret });
-      return jsonResponse({ routeId: route.routeId, secret }, 201);
+      try {
+        const route = await store.createRoute({ agentId: body.agentId, name: body.name, secret });
+        return jsonResponse({ routeId: route.routeId, secret }, 201);
+      } catch (err) {
+        forgeDebug({ scope: 'webhooks', level: 'error', message: '[webhooks] createRoute failed', context: { error: err instanceof Error ? err.message : String(err) }});
+        throw err;
+      }
     },
   });
 
@@ -41,8 +47,13 @@ export function registerWebhookAdminRoutes(
       if (!agentId) {
         return jsonResponse({ error: 'agentId required' }, 400);
       }
-      const routes = await store.listRoutesByAgent(agentId);
-      return jsonResponse({ routes: routes.map((r) => ({ routeId: r.routeId, name: r.name, isActive: r.isActive, createdAt: r.createdAt })) });
+      try {
+        const routes = await store.listRoutesByAgent(agentId);
+        return jsonResponse({ routes: routes.map((r) => ({ routeId: r.routeId, name: r.name, isActive: r.isActive, createdAt: r.createdAt })) });
+      } catch (err) {
+        forgeDebug({ scope: 'webhooks', level: 'error', message: '[webhooks] listRoutes failed', context: { error: err instanceof Error ? err.message : String(err) }});
+        throw err;
+      }
     },
   });
 
@@ -51,8 +62,13 @@ export function registerWebhookAdminRoutes(
     path: '/admin/webhooks/route/deactivate',
     handler: async (request: HttpRequest) => {
       const body = parseJsonBody(request.bodyText, deactivateRouteSchema);
-      await store.deactivateRoute(body.routeId);
-      return jsonResponse({ success: true });
+      try {
+        await store.deactivateRoute(body.routeId);
+        return jsonResponse({ success: true });
+      } catch (err) {
+        forgeDebug({ scope: 'webhooks', level: 'error', message: '[webhooks] deactivateRoute failed', context: { error: err instanceof Error ? err.message : String(err) }});
+        throw err;
+      }
     },
   });
 
@@ -64,8 +80,13 @@ export function registerWebhookAdminRoutes(
       if (!agentId) {
         return jsonResponse({ error: 'agentId required' }, 400);
       }
-      const events = await store.listEventsByAgent(agentId);
-      return jsonResponse({ events: events.map((e) => ({ eventId: e.eventId, routeId: e.routeId, status: e.status, receivedAt: e.receivedAt })) });
+      try {
+        const events = await store.listEventsByAgent(agentId);
+        return jsonResponse({ events: events.map((e) => ({ eventId: e.eventId, routeId: e.routeId, status: e.status, receivedAt: e.receivedAt })) });
+      } catch (err) {
+        forgeDebug({ scope: 'webhooks', level: 'error', message: '[webhooks] listEvents failed', context: { error: err instanceof Error ? err.message : String(err) }});
+        throw err;
+      }
     },
   });
 
@@ -74,8 +95,13 @@ export function registerWebhookAdminRoutes(
     path: '/admin/webhooks/event/mark-processed',
     handler: async (request: HttpRequest) => {
       const body = parseJsonBody(request.bodyText, markProcessedSchema);
-      await store.markProcessed(body.eventId);
-      return jsonResponse({ success: true });
+      try {
+        await store.markProcessed(body.eventId);
+        return jsonResponse({ success: true });
+      } catch (err) {
+        forgeDebug({ scope: 'webhooks', level: 'error', message: '[webhooks] markProcessed failed', context: { error: err instanceof Error ? err.message : String(err) }});
+        throw err;
+      }
     },
   });
 }
