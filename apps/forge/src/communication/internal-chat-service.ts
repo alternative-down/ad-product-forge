@@ -829,7 +829,6 @@ export function createInternalChatService(
     getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
 
-  const participants = createInternalChatParticipants(db);
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
 
