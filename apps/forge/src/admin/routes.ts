@@ -17,7 +17,7 @@ import {
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { loadAgent } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
@@ -76,7 +76,12 @@ import {
 
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
-import { registerAgentReadRoutes, registerAgentWriteRoutes, registerAgentOperationRoutes, registerAgentWriteOpsRoutes, registerAgentSkillsWriteRoutes, registerAgentSchedulesWriteRoutes } from './routes/agents/index.js';
+import { registerAgentReadRoutes } from './routes/agents/read.js';
+import { registerAgentWriteRoutes } from './routes/agents/write.js';
+import { registerAgentOperationRoutes } from './routes/agents/operations.js';
+import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops.js';
+import { registerAgentSkillsWriteRoutes } from './routes/agents/skills-write.js';
+import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-write.js';
 import {
   normalizeOptionalText,
   normalizeJsonText,

@@ -1,7 +1,8 @@
 import { createId } from '../utils/id';
 import { and, asc, eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import {
   agents,
   agentRoles,

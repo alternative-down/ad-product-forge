@@ -2,7 +2,8 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { llmModelPrices } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createLlmSettingsStore } from '../llm/settings-store';

@@ -18,7 +18,8 @@ import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/sche
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
 
-import type { Database } from '../../../../src/database/index';
+
+import type {Database} from '../../../../src/database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../github/manager';
 import type { AgentEmailManager } from '../../../email/migadu-manager';

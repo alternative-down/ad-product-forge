@@ -4,7 +4,7 @@ import {
   internalChatConversationMembers,
   internalChatConversations,
 } from '../database/schema';
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import { ChatGroupAlreadyExistsError } from './internal-chat-errors';
 
 // =============================================================================

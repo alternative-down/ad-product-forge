@@ -9,7 +9,8 @@ import { createLlmModelPriceStore } from '../../llm/model-price-store';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { forgeCapabilityIds } from '../../capabilities/catalog';
 import { agents } from '../../database/schema';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 
 export interface SystemReadModel {
   listRoles: () => Promise<{

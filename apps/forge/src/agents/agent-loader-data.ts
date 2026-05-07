@@ -1,7 +1,8 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { agents, agentProviders } from '../database/schema';
 import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';

@@ -18,7 +18,7 @@ vi.mock('../../agents/ltm/store', () => ({
   createAgentLongTermMemoryStore: vi.fn(() => mockLTMStore),
 }));
 
-import type { Database } from '../../database/index';
+import type {Database} from '../../database/client'
 
 const mockDb = {} as Database;
 

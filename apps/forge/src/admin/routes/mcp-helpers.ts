@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 import type { AgentLoaderConfig } from '../../agents/agent-loader';
 import { reloadAgentIfLoaded } from '../../capabilities/runtime';
 import { agentMcpConfigs } from '../../database/schema';

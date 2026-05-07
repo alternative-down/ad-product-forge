@@ -3,7 +3,8 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
-import { getDatabase, runMigrations } from '../database/index';
+
+import {getDatabase, runMigrations} from '../database/schema';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 
 const cliInputSchema = z.object({

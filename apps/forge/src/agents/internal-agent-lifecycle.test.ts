@@ -63,7 +63,8 @@ vi.mock('../github/manager', () => ({
 }));
 
 import { runInternalHiring, runInternalTermination } from './internal-agent-lifecycle';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 
 const mockDb = {} as Database;
 
