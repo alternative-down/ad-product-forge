@@ -88,6 +88,15 @@ vi.mock('../utils/id', () => ({
   createId: vi.fn(() => 'mock-id-123'),
 }));
 
+const mockMessages = vi.hoisted(() => ({
+  getMessages: vi.fn(),
+  getMessagesByAccount: vi.fn(),
+  archiveConversationByAccount: vi.fn(),
+}));
+vi.mock('./internal-chat-messages', async () => ({
+  createInternalChatMessages: () => mockMessages,
+}));
+
 // ---------------------------------------------------------------------------
 // Query chain builder
 // ---------------------------------------------------------------------------
