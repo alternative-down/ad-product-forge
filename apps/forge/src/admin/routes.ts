@@ -17,7 +17,7 @@ import {
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { loadAgent } from '../agents/agent-loader';
 import { getInternalAgentRegistry } from '../agents/internal-agent-registry';

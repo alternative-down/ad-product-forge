@@ -4,7 +4,8 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { createTimeProvider, type TimeProvider } from '../utils/time';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles, type AgentExecutionContract } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';

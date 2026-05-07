@@ -1,7 +1,8 @@
 import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { agents, agentExecutionContracts, agentExecutionSteps, companyCashLedger } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 

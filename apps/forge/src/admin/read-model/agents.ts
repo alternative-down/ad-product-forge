@@ -25,7 +25,8 @@ import {
 } from './helpers';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { createMicroErpReadModel } from '../../micro-erp/read-model';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/ltm/recall';

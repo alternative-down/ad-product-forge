@@ -6,7 +6,8 @@ import path from 'node:path';
 import { eq, and } from 'drizzle-orm';
 
 import * as schema, { type Agent } from '../database/schema';
-import { getDatabase, runMigrations } from '../database/index';
+
+import {getDatabase, runMigrations} from '../database/schema';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { llmModelPrices } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
