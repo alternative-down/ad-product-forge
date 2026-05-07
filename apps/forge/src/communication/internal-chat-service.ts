@@ -132,6 +132,9 @@ export function createInternalChatService(
   async function deleteExternalAccount(input: Parameters<typeof accounts.deleteExternalAccount>[0]) {
     return accounts.deleteExternalAccount(input);
   }
+  async function deleteAgentAccount(input: Parameters<typeof accounts.deleteAgentAccount>[0]) {
+    return accounts.deleteAgentAccount(input);
+  }
   async function listAccounts(input: Parameters<typeof accounts.listAccounts>[0]) {
     return accounts.listAccounts(input);
   }
@@ -764,6 +767,7 @@ export function createInternalChatService(
     registerExternalAccount,
     updateExternalAccount,
     deleteExternalAccount,
+    deleteAgentAccount,
     onReceiveMessage: connection.onReceiveMessage,
     clearHandler: connection.clearHandler,
     listAccounts,
