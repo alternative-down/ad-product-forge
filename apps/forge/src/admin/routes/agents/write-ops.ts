@@ -300,6 +300,12 @@ export function registerAgentWriteOpsRoutes(
       const body = parseJsonBody(request.bodyText, terminateAgentSchema);
       return jsonResponse(await ops.runInternalTermination(input.db, {
         agentId: body.agentId,
+        workspaceBasePath: input.workspaceBasePath,
+        githubApps: input.githubApps,
+        emailMailboxes: input.emailMailboxes,
+        coolify: input.coolify,
+        schedules: input.schedules,
+        internalChat: input.internalChat,
       }));
     },
   });

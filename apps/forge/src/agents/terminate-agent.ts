@@ -114,10 +114,19 @@ export async function terminateInternalAgent(db: Database, input: {
   getInternalAgentRegistry().remove(input.agentId);
 
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
-  await rm(agentWorkspacePath, {
-    recursive: true,
-    force: true,
-  });
+  try {
+    await rm(agentWorkspacePath, {
+      recursive: true,
+      force: true,
+    });
+  } catch (rmErr) {
+    forgeDebug({
+      scope: 'terminate-agent',
+      level: 'warn',
+      runtimeId: input.agentId,
+      message: 'workspace rm failed (non-fatal): ' + (rmErr instanceof Error ? rmErr.message : String(rmErr)),
+    });
+  }
 
   return {
     agentId: input.agentId,
