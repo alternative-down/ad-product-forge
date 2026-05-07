@@ -104,6 +104,7 @@ import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createChatAttachments } from "./internal-chat-attachments";
 import { createInternalChatReads } from "./internal-chat-reads";
 import { createChatSending } from "./internal-chat-sending";
+import { createInternalChatConversations } from "./internal-chat-conversations";
 import { createServiceHelpers } from "./internal-chat-service-helpers";
 
 export function createInternalChatService(
@@ -150,84 +151,9 @@ export function createInternalChatService(
   }
 
   // ── Conversation Setup ──────────────────────
-// ── Conversation Setup ──────────────────────────────────────────────────
+  // ── Conversation Setup ────────────────────────────────────────────────
   async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
-    const rows = await db
-      .select({
-        conversationId: internalChatConversationMembers.conversationId,
-      })
-      .from(internalChatConversationMembers)
-      .where(inArray(internalChatConversationMembers.accountId, [leftAccountId, rightAccountId]));
-
-    const counts = new Map<string, number>();
-
-    for (const row of rows) {
-      counts.set(row.conversationId, (counts.get(row.conversationId) ?? 0) + 1);
-    }
-
-    const candidateConversationIds = Array.from(counts.entries())
-      .filter(([, count]) => count === 2)
-      .map(([conversationId]) => conversationId);
-
-    if (candidateConversationIds.length > 0) {
-      let existing;
-      try {
-        existing = await db.query.internalChatConversations.findFirst({
-          where: and(
-            eq(internalChatConversations.type, 'dm'),
-            inArray(internalChatConversations.id, candidateConversationIds),
-          ),
-        });
-      } catch (err) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'findOrCreateDirect findFirst failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-
-      if (existing) {
-        return existing;
-      }
-    }
-
-    const now = Date.now();
-    const conversationId = createId();
-
-    try {
-      await db.insert(internalChatConversations).values({
-        id: conversationId,
-        type: 'dm',
-        name: null,
-        createdByAccountId: leftAccountId,
-        createdAt: now,
-        updatedAt: now,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'findOrCreateDirect insert conversation failed', context: { conversationId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
-
-    try {
-      await db.insert(internalChatConversationMembers).values([
-        {
-          conversationId,
-          accountId: leftAccountId,
-          role: 'normal',
-          createdAt: now,
-        },
-        {
-          conversationId,
-          accountId: rightAccountId,
-          role: 'normal',
-          createdAt: now,
-        },
-      ]);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'findOrCreateDirect insert members failed', context: { conversationId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
-
-    return db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
+    return conversations.ensureDirectConversation(leftAccountId, rightAccountId);
   }
 
 
@@ -563,6 +489,17 @@ export function createInternalChatService(
   }
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
+  async function archiveConversationByAccount(input: {
+    accountId: string;
+    conversationId: string;
+  }) {
+    return conversations.archiveConversationByAccount({
+      accountId: input.accountId,
+      conversationId: input.conversationId,
+      getRequiredConversationForAccount,
+    });
+  }
+
   async function createExternalChatGroup(input: {
     accountId: string;
     conversationKey: string;
@@ -617,41 +554,11 @@ export function createInternalChatService(
     accountId: string;
     conversationId: string;
   }) {
-    await getRequiredConversationForAccount(input.accountId, input.conversationId);
-
-    await db
-      .delete(internalChatConversationMembers)
-      .where(and(
-        eq(internalChatConversationMembers.conversationId, input.conversationId),
-        eq(internalChatConversationMembers.accountId, input.accountId),
-      ));
-
-    let remainingMembers;
-    try {
-      remainingMembers = await db.query.internalChatConversationMembers.findMany({
-        where: eq(internalChatConversationMembers.conversationId, input.conversationId),
-        limit: 1,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation findMany failed', context: { conversationId: input.conversationId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
-
-    if (remainingMembers.length === 0) {
-      try {
-        await db
-          .delete(internalChatConversations)
-          .where(eq(internalChatConversations.id, input.conversationId));
-      } catch (err) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation delete failed', context: { conversationId: input.conversationId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-    }
-
-    return {
+    return conversations.archiveConversationByAccount({
+      accountId: input.accountId,
       conversationId: input.conversationId,
-      archived: true,
-    };
+      getRequiredConversationForAccount,
+    });
   }
 
   // === Unread / Recent ────────────────────────────────────────────────────
@@ -693,6 +600,8 @@ export function createInternalChatService(
   const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
   const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
 
+
+  const conversations = createInternalChatConversations(db);
 
   const groups = createInternalChatGroups(db, {
     getRequiredAccount,
