@@ -4,7 +4,8 @@ import { createCompanyPayables } from '../../finance/company-payables';
 import { agentExecutionSteps } from '../../database/schema';
 import { getFinanceOverview } from './finance-overview';
 import { getRecurringPayables } from './payables-overview';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 
 export interface FinanceReadModel {
   getFinance: () => Promise<Awaited<ReturnType<typeof getFinanceOverview>> & {

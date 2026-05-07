@@ -11,7 +11,8 @@
 import { eq, and, desc } from 'drizzle-orm';
 import { createId } from '../utils/id';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import {
   paymentProviders,
   paymentCustomers,

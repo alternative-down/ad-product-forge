@@ -29,7 +29,7 @@ import {
   updateLlmDefaultsSchema,
   syncOauthSchema,
 } from '../schemas';
-import type { Database } from '../../../database/index';
+import type {Database} from '../../../database/client'
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import {
   installGlobalSkillsFromZip,

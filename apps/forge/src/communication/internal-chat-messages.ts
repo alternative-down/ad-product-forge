@@ -14,7 +14,8 @@ import {
 } from '../database/schema';
 import { parseFilterDate } from './internal-chat-helpers';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 
 /**
  * Internal Chat — Messages Module

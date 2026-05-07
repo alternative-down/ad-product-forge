@@ -2,7 +2,8 @@ import { and, eq, isNotNull, lte, sql } from 'drizzle-orm';
 import { createId } from '../utils/id';
 
 import { forgeDebug } from '@forge-runtime/core';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { companyCashLedger } from '../database/schema';
 type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';

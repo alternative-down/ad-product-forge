@@ -2,7 +2,8 @@ import { eq, type SQLiteTransaction } from 'drizzle-orm';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { companyCashLedger } from '../database/schema';
 
 type CompanyCashDirection = 'in' | 'out';

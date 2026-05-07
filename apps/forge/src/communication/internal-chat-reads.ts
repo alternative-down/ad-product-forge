@@ -9,7 +9,7 @@
  * internal-chat-service.ts) to wire up real implementations.
  */
 
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import { createInternalChatUnread } from './internal-chat-unread';
 import { createInternalChatParticipants } from './internal-chat-participants';
 

@@ -6,7 +6,8 @@ import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 import { agentProviders, agents, type NewAgentProvider } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';

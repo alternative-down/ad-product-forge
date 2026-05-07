@@ -1,4 +1,4 @@
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 
 import { buildHiredAgentProfile } from './hiring-profile';
 import { generateHiredAgentInstructions } from './hiring-requests-handler';
