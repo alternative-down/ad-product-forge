@@ -75,7 +75,7 @@ export async function listAgentWorkspaceSkills(
   }
 }
 
-export async function installAgentWorkspaceSkillsFromZip(input: {
+async function installAgentWorkspaceSkillsFromZip(input: {
   workspaceBasePath: string;
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>;
   zipBase64: string;

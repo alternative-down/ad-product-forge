@@ -154,7 +154,7 @@ export function toTimestamp(value: string | number | null): number {
 
   return 0;
 }
-export function toApplicationSummary(
+function toApplicationSummary(
   application: z.infer<typeof ApplicationSchema>,
 ) {
   return {
@@ -167,7 +167,7 @@ export function toApplicationSummary(
   };
 }
 
-export function toApplicationDetails(
+function toApplicationDetails(
   application: z.infer<typeof ApplicationSchema>,
 ) {
   return {
@@ -181,7 +181,7 @@ export function toApplicationDetails(
   };
 }
 
-export function toEnvDetails(
+function toEnvDetails(
   env: z.infer<typeof ApplicationEnvSchema>,
 ) {
   return {
