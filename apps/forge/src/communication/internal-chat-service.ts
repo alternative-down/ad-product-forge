@@ -221,6 +221,7 @@ export function createInternalChatService(
     unread?: boolean;
     limit: number;
   }): Promise<CommunicationProviderConversation[]> {
+  try {
     const agentAccount = await getRequiredAgentAccount(input.agentId);
     const conversationRows = await db
       .select({
@@ -342,6 +343,10 @@ export function createInternalChatService(
     }
 
     return views.filter((view) => view.unreadCount > 0);
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'listConversations failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   }
 
   // ── Account-scoped Conversation Listing ───────────────────────────────────
@@ -368,6 +373,7 @@ export function createInternalChatService(
     dateFrom?: string;
     dateTo?: string;
   }): Promise<CommunicationProviderMessage[]> {
+  try {
     await requireConversationMembership(input.agentId, input.conversationKey);
     const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
     const dateTo = parseFilterDate(input.dateTo, 'dateTo');
@@ -429,6 +435,10 @@ export function createInternalChatService(
         authorDisplayName: row.authorDisplayName,
       })),
     );
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'getMessages failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   }
 
   // ── Account-scoped Message Retrieval ─────────────────────────────────────
@@ -445,6 +455,7 @@ export function createInternalChatService(
     dateFrom?: string;
     dateTo?: string;
   }): Promise<CommunicationProviderMessage[]> {
+  try {
     await requireConversationMembershipByAccount(input.accountId, input.conversationKey);
     const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
     const dateTo = parseFilterDate(input.dateTo, 'dateTo');
@@ -486,6 +497,10 @@ export function createInternalChatService(
         authorDisplayName: row.authorDisplayName,
       })),
     );
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'getMessagesByAccount failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   }
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
