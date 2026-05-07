@@ -1,0 +1,6 @@
+{
+  "title": "test(1797): add 21 tests for utils/async.ts and utils/time.ts",
+  "body": "## Summary\n\n21 new tests for two zero-coverage utility modules.\n\n### utils/async.ts — withTimeout utility (9 tests)\n\nRaces a promise against a timeout. Key scenarios covered:\n- Promise resolves before timeout → result returned\n- Timeout fires first → rejects with Error(message)\n- onTimeout callback called before rejecting\n- onTimeout NOT called when promise resolves first\n- Timer cleared in finally block (no memory leaks)\n- Promise rejects immediately → propagates error\n- Promise resolves immediately → result returned\n- Timeout of 0 → rejects immediately\n- Generic type T passthrough\n\n### utils/time.ts — TimeProvider + time mocking (12 tests)\n\nProvides testable time source for the entire codebase:\n- createTimeProvider with default Date.now\n- createTimeProvider with custom now function\n- TimeProvider interface compliance\n- currentTimeMs returns real system time by default\n- setCurrentTimeMs overrides the time source\n- Multiple consecutive overrides\n- resetCurrentTimeMs restores real clock after override\n- Safe to call without prior override\n- Works with fixed date values\n\nAll 31 utils tests pass.\nFixes #1797.",
+  "head": "fix/1796b-utils-test-coverage",
+  "base": "develop"
+}

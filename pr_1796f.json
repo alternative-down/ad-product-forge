@@ -1,0 +1,6 @@
+{
+  "title": "test(1796f): add 17 tests for internal-chat-account-ops.ts (6 functions, 0 prior coverage)",
+  "body": "## Summary\n\n17 new tests covering all 6 exported functions in internal-chat-account-ops.ts. Zero prior coverage.\n\n### Functions covered\n\n| Function | Tests | Key scenarios |\n|---|---|---|\n| createExternalChatGroup | 4 | creates group + admin membership, verifies external account, ChatGroupAlreadyExistsError |\n| ensureDirectConversationByAccount | 3 | returns conversation keys, verifies both accounts, throws on null return |\n| addMemberToGroupByAccount | 3 | adds new member (default role normal), returns existing list without insert when already exists |\n| updateMemberRoleByAccount | 2 | updates role via db.update, verifies group first |\n| removeMemberFromGroupByAccount | 2 | removes member via db.delete, verifies group first |\n| updateGroupByAccount | 3 | updates name, falls back to existing name if undefined, always returns members list |\n\n### Key behavioral insight\n\n`updateGroupByAccount` always calls `db.update` (using `input.name ?? group.name` as fallback) and always returns the result of `listGroupMembersByAccount` — not a `{success: true, name}` object.\n\nAll 17 tests pass.\nPart of #1796 coverage expansion.",
+  "head": "fix/1796f-internal-chat-account-ops-tests",
+  "base": "develop"
+}
