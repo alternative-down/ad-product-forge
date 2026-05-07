@@ -8,6 +8,7 @@ import { createLlmSettingsStore } from '../../llm/settings-store';
 import { createLlmModelPriceStore } from '../../llm/model-price-store';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { forgeCapabilityIds } from '../../capabilities/catalog';
+import { forgeDebug } from '@forge-runtime/core';
 import { agents } from '../../database/schema';
 
 import type {Database} from '../../database/schema';
@@ -58,41 +59,46 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   const systemSettings = createSystemSettingsStore(db);
 
   async function listRoles() {
-    const [roles, agentCounts] = await Promise.all([
-      capabilities.listRoles(),
-      db
-        .select({
-          roleId: agents.roleId,
-          count: sql<number>`count(*)`,
-        })
-        .from(agents)
-        .groupBy(agents.roleId).all(),
-    ]);
-    const capabilityPermissions = await Promise.all(
-      roles.map(async (role) => ({
-        roleId: role.roleId,
-        capabilityIds: await capabilities.listGrantedRoleCapabilities(role.roleId),
-      })),
-    );
-    const assignedAgentCountByRoleId = new Map(
-      agentCounts
-        .filter((row) => row.roleId)
-        .map((row) => [row.roleId as string, row.count]),
-    );
-    const capabilityMap = new Map(capabilityPermissions.map((row) => [row.roleId, row.capabilityIds]));
+    try {
+      const [roles, agentCounts] = await Promise.all([
+        capabilities.listRoles(),
+        db
+          .select({
+            roleId: agents.roleId,
+            count: sql<number>`count(*)`,
+          })
+          .from(agents)
+          .groupBy(agents.roleId).all(),
+      ]);
+      const capabilityPermissions = await Promise.all(
+        roles.map(async (role) => ({
+          roleId: role.roleId,
+          capabilityIds: await capabilities.listGrantedRoleCapabilities(role.roleId),
+        })),
+      );
+      const assignedAgentCountByRoleId = new Map(
+        agentCounts
+          .filter((row) => row.roleId)
+          .map((row) => [row.roleId as string, row.count]),
+      );
+      const capabilityMap = new Map(capabilityPermissions.map((row) => [row.roleId, row.capabilityIds]));
 
-    return {
-      availableCapabilityIds: forgeCapabilityIds,
-      items: roles.map((role) => ({
-        roleId: role.roleId,
-        name: role.name,
-        description: role.description,
-        assignedAgentCount: assignedAgentCountByRoleId.get(role.roleId) ?? 0,
-        capabilityIds: capabilityMap.get(role.roleId) ?? [],
-        createdAt: role.createdAt,
-        updatedAt: role.updatedAt,
-      })),
-    };
+      return {
+        availableCapabilityIds: forgeCapabilityIds,
+        items: roles.map((role) => ({
+          roleId: role.roleId,
+          name: role.name,
+          description: role.description,
+          assignedAgentCount: assignedAgentCountByRoleId.get(role.roleId) ?? 0,
+          capabilityIds: capabilityMap.get(role.roleId) ?? [],
+          createdAt: role.createdAt,
+          updatedAt: role.updatedAt,
+        })),
+      };
+    } catch (err) {
+      forgeDebug({ scope: 'admin-readmodel-system', level: 'error', message: '[admin-readmodel-system] listRoles failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
   }
 
   async function listSystemIntegrations() {
@@ -100,13 +106,18 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   }
 
   async function getSystemLlm() {
-    const [profiles, defaults, prices] = await Promise.all([
-      llmSettings.listProfiles(),
-      llmSettings.getDefaults(),
-      llmModelPrices.listPrices(),
-    ]);
+    try {
+      const [profiles, defaults, prices] = await Promise.all([
+        llmSettings.listProfiles(),
+        llmSettings.getDefaults(),
+        llmModelPrices.listPrices(),
+      ]);
 
-    return { profiles, defaults, prices };
+      return { profiles, defaults, prices };
+    } catch (err) {
+      forgeDebug({ scope: 'admin-readmodel-system', level: 'error', message: '[admin-readmodel-system] getSystemLlm failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
   }
 
   async function getSystemSettings() {
@@ -114,43 +125,48 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   }
 
   async function getApplicationMigrations() {
-    const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
-    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
-      entries: Array<{
-        idx: number;
-        when: number;
-        tag: string;
-      }>;
-    };
-    const appliedRows = await db.all<{
-      id: number;
-      hash: string;
-      createdAt: number;
-    }>(sql`
-      select
-        id,
-        hash,
-        created_at as createdAt
-      from __drizzle_migrations
-      order by created_at asc
-    `);
-    const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
+    try {
+      const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
+      const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
+        entries: Array<{
+          idx: number;
+          when: number;
+          tag: string;
+        }>;
+      };
+      const appliedRows = await db.all<{
+        id: number;
+        hash: string;
+        createdAt: number;
+      }>(sql`
+        select
+          id,
+          hash,
+          created_at as createdAt
+        from __drizzle_migrations
+        order by created_at asc
+      `);
+      const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
 
-    return {
-      applied: appliedRows,
-      entries: journal.entries.map((entry) => {
-        const applied = appliedByCreatedAt.get(entry.when);
+      return {
+        applied: appliedRows,
+        entries: journal.entries.map((entry) => {
+          const applied = appliedByCreatedAt.get(entry.when);
 
-        return {
-          idx: entry.idx,
-          tag: entry.tag,
-          createdAt: entry.when,
-          applied: Boolean(applied),
-          hash: applied?.hash ?? null,
-          rowId: applied?.id ?? null,
-        };
-      }),
-    };
+          return {
+            idx: entry.idx,
+            tag: entry.tag,
+            createdAt: entry.when,
+            applied: Boolean(applied),
+            hash: applied?.hash ?? null,
+            rowId: applied?.id ?? null,
+          };
+        }),
+      };
+    } catch (err) {
+      forgeDebug({ scope: 'admin-readmodel-system', level: 'error', message: '[admin-readmodel-system] getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
   }
 
   // ─── Fragmented LLM routes (#1588) ─────────────────────────────────────
