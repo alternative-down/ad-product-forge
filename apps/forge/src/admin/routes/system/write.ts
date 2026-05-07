@@ -78,6 +78,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/settings/upsert',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
       const result = await systemSettings.upsertSettings({
         companyName: body.companyName.trim(),
@@ -116,6 +117,10 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
       }
 
       return jsonResponse(result);
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -124,6 +129,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/mcp/upsert',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
       const timestamp = new Date().toISOString();
       const serverId = body.serverId ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -181,6 +187,10 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         createdAt: server?.createdAt ?? timestamp,
         updatedAt: server?.updatedAt ?? timestamp,
       });
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -189,6 +199,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/mcp/delete',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, deleteSystemMcpServerSchema);
       const linkedConfigs = await db.query.agentMcpConfigs.findMany({
         where: eq(agentMcpConfigs.serverId, body.serverId),
@@ -204,6 +215,10 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
       await db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
 
       return jsonResponse({ success: true, serverId: body.serverId });
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -212,12 +227,17 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/skills/upload',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, uploadSystemSkillsSchema);
       const installedSkillNames = await installGlobalSkillsFromZip({
         workspaceBasePath,
         zipBase64: body.archiveBase64,
       });
       return jsonResponse({ success: true, installedSkillNames }, 201);
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -226,12 +246,17 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/skills/delete',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, deleteSystemSkillSchema);
       await deleteGlobalSkill({
         workspaceBasePath,
         skillName: body.skillName,
       });
       return jsonResponse({ success: true, skillName: body.skillName });
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -240,8 +265,13 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/price/upsert',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
       return jsonResponse(await llmModelPrices.upsertPrice(body));
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -250,8 +280,13 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/integration/upsert',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
       return jsonResponse(await integrations.upsert(body));
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -260,9 +295,14 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/integration/delete',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
       await integrations.delete({ id: body.integrationId });
       return jsonResponse({ success: true, integrationId: body.integrationId });
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -271,8 +311,13 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/profile/upsert',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
       return jsonResponse(await llmSettings.upsertProfile(body));
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -281,9 +326,14 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/profile/delete',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
       await llmSettings.deleteProfile({ profileId: body.profileId });
       return jsonResponse({ success: true, profileId: body.profileId });
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -292,8 +342,13 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/llm/defaults/update',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
       return jsonResponse(await llmSettings.updateDefaults(body));
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 
@@ -302,6 +357,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     method: 'POST',
     path: '/admin/system/oauth/sync',
     handler: async (request) => {
+    try {
       const body = parseJsonBody(request.bodyText, syncOauthSchema);
       const providerIds: Array<'openai-codex' | 'anthropic'> =
         body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
@@ -325,6 +381,10 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
       }
 
       return jsonResponse({ state: await buildOauthState(), results });
+    } catch (err) {
+      forgeDebug({ scope: 'system-write', level: 'error', message: '[system-write] handler failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
     },
   });
 }
