@@ -1,0 +1,6 @@
+{
+  "title": "test(1796c): add 28 tests for internal-chat-errors.ts (8 classes, 0 prior coverage)",
+  "body": "## Summary\n\n28 tests covering all 8 exported error classes in internal-chat-errors.ts. Zero prior coverage for all classes except ChatGroupAlreadyExistsError (which had 3 basic tests).\n\n### Error classes covered\n\n| Class | Tests | Fields verified |\n|---|---|---|\n| ConversationNotFoundError | 3 | name, message, conversationId |\n| ChatGroupNotFoundError | 3 | name, message, groupId |\n| ChatGroupAlreadyExistsError | 3 | name, message, conversationKey |\n| InternalChatAccountNotFoundError | 4 | name, message, slug, custom message override |\n| MessageNotFoundError | 3 | name, message, messageId |\n| ExternalAccountNotFoundError | 4 | name, message, accountId, custom prefix |\n| InternalChatError | 5 | name, code field, message, defaults, instance check |\n| AttachmentNotFoundError | 3 | name, message, attachmentName |\n\n### Key insight\n\nInternalChatError constructor signature: `InternalChatError(code: string, message: string)` — the order is reversed from a typical error class.\n\nAll 28 tests pass.\nPart of #1796 coverage expansion.",
+  "head": "fix/1796c-internal-chat-errors-coverage",
+  "base": "develop"
+}
