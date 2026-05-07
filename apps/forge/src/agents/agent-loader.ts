@@ -9,6 +9,7 @@ import { buildAgentRuntimeConfig } from './agent-loader-runtime-config';
 import { createAgentContractStore } from './agent-contract-store';
 import { createSystemSettingsStore } from '../system-settings/store';
 
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports -- type-only re-export, consumers import from this module as canonical path
 export type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
 
 /**
