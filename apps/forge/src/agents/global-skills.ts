@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 
@@ -57,6 +58,7 @@ async function ensureDirectory(targetPath: string) {
 
     await fs.rm(targetPath, { force: true });
   } catch (error) {
+    forgeDebug({ scope: 'global-skills', level: 'error', message: '[global-skills] ensureSkillDirectory cleared path', context: { error: error instanceof Error ? error.message : String(error) }});
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
     }
@@ -107,6 +109,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
 
     return skills.sort((left, right) => left.skillName.localeCompare(right.skillName));
   } catch (error) {
+    forgeDebug({ scope: 'global-skills', level: 'error', message: '[global-skills] loadCustomSkills failed', context: { error: error instanceof Error ? error.message : String(error) }});
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
     }
