@@ -1,7 +1,8 @@
 import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';

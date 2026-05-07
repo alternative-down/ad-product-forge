@@ -3,7 +3,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { CommunicationFile } from "@forge-runtime/core";
 import { forgeDebug } from "@forge-runtime/core";
 
-import type { Database } from "../database/index";
+
+import type {Database} from "../database/schema";
 import {
   internalChatAccounts,
   internalChatConversationMembers,

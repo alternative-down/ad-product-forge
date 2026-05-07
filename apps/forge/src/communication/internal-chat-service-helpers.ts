@@ -7,7 +7,8 @@
  */
 import { and, eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
 import {
   ConversationNotFoundError,

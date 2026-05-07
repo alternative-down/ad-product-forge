@@ -6,7 +6,7 @@ import {
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import { buildConversationParticipantNames } from './internal-chat-helpers';
 
 // =============================================================================

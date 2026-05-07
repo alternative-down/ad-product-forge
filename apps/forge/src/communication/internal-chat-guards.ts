@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { ConversationNotFoundError, ChatGroupNotFoundError } from './internal-chat-errors';
 
 export interface InternalChatGuardsDeps {

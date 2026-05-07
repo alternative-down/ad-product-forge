@@ -1,4 +1,4 @@
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 
 export interface InternalChatGroupsAccountDeps {
   addMemberToGroupByAccount(input: {

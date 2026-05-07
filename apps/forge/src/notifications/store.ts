@@ -2,7 +2,8 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { agentNotifications } from '../database/schema';
 
 export function createAgentNotificationStore(db: Database) {

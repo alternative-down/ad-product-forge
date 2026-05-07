@@ -3,7 +3,8 @@ import { gracefulShutdown, scheduleJob, cancelJob as cancelScheduledJob, type Jo
 import cronParser from 'cron-parser';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentScheduleStore } from './store';
 import {

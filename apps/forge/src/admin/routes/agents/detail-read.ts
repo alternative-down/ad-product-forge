@@ -8,7 +8,8 @@
 
 import { eq, desc, inArray } from 'drizzle-orm';
 import type { HttpHandler } from '../../../http/server';
-import type { Database } from '../../../database/index';
+
+import type {Database} from '../../../database/schema';
 import type { AgentReadModel } from '../../read-model/agents';
 import {
   agentExecutionSteps,
