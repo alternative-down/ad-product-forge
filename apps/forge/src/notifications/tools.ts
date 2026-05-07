@@ -1,4 +1,4 @@
-import { createTool, type Tool } from '@forge-runtime/core';
+import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
@@ -25,6 +25,7 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
             limit: input.limit ?? 20,
           });
         } catch (error) {
+          forgeDebug({ scope: 'notifications', level: 'error', message: 'Notification tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),

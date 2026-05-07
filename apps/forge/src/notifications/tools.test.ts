@@ -6,6 +6,7 @@ vi.mock('@forge-runtime/core', () => ({
     ...config,
     _isTool: true,
   })),
+  forgeDebug: vi.fn(),
 }));
 
 // Mock the notifications store
