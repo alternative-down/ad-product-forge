@@ -1,4 +1,5 @@
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
+import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { withTimeout } from '../utils/async';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
@@ -117,27 +118,32 @@ export function createScheduler(
   }
 
   async function planNextStepDelay(): Promise<number> {
-    const contract = await deps.getRunnableContract(deps.runtimeId);
+    try {
+      const contract = await deps.getRunnableContract(deps.runtimeId);
 
-    if (!contract) {
-      return -1; // signal to go idle
-    }
+      if (!contract) {
+        return -1; // signal to go idle
+      }
 
-    const spentUsd = await deps.getContractSpend(contract.id);
-    const remainingBudgetUsd = contract.budgetUsd - spentUsd;
-    const estimatedStepUsd = await deps.estimateStepCostUsd();
+      const spentUsd = await deps.getContractSpend(contract.id);
+      const remainingBudgetUsd = contract.budgetUsd - spentUsd;
+      const estimatedStepUsd = await deps.estimateStepCostUsd();
 
-    if (estimatedStepUsd !== null && remainingBudgetUsd < estimatedStepUsd) {
+      if (estimatedStepUsd !== null && remainingBudgetUsd < estimatedStepUsd) {
+        return -1;
+      }
+
+      resetBackoff();
+      const settings = await deps.getSystemSettings();
+
+      return state.instant
+        || !settings.stepDelayEnabled
+        ? 0
+        : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'planNextStepDelay failed', context: { runtimeId: deps.runtimeId, error } });
       return -1;
     }
-
-    resetBackoff();
-    const settings = await deps.getSystemSettings();
-
-    return state.instant
-      || !settings.stepDelayEnabled
-      ? 0
-      : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
   }
 
   function scheduleNextStep(delayMs: number, stepFn?: () => void) {
@@ -197,36 +203,40 @@ export function createScheduler(
       return;
     }
 
-    healthcheckGetExecutionState = getExecutionState;
-    healthcheckBeginRunFn = beginRunFn;
-    startHealthcheck();
-    await refreshRunFlushSettings();
+    try {
+      healthcheckGetExecutionState = getExecutionState;
+      healthcheckBeginRunFn = beginRunFn;
+      startHealthcheck();
+      await refreshRunFlushSettings();
 
-    const executionState = await withTimeout(
-      getExecutionState(deps.runtimeId),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state lookup timed out for ${deps.runtimeId}`,
-    );
+      const executionState = await withTimeout(
+        getExecutionState(deps.runtimeId),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state lookup timed out for ${deps.runtimeId}`,
+      );
 
-    if (executionState === 'idle') {
-      await deps.onAgentIdle?.();
-      return;
-    }
+      if (executionState === 'idle') {
+        await deps.onAgentIdle?.();
+        return;
+      }
 
-    if (executionState === 'absent') {
+      if (executionState === 'absent') {
+        await beginRunFn({
+          reloadRuntime: false,
+          wakeStartedAt: Date.now(),
+          markRunning: true,
+        });
+        return;
+      }
+
       await beginRunFn({
         reloadRuntime: false,
         wakeStartedAt: Date.now(),
-        markRunning: true,
+        markRunning: false,
       });
-      return;
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'start failed', context: { runtimeId: deps.runtimeId, error } });
     }
-
-    await beginRunFn({
-      reloadRuntime: false,
-      wakeStartedAt: Date.now(),
-      markRunning: false,
-    });
   }
 
   function stop() {
@@ -255,19 +265,26 @@ export function createScheduler(
     startingRunStartedAt = null;
     executing = false;
     clearTimer();
-    // Caller clears wakeQueue if needed via returned handle
     resetFlushedRunEventKeys();
     state.instant = false;
-    await withTimeout(
-      setExecutionState(deps.runtimeId, 'idle'),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state update timed out for ${deps.runtimeId}`,
-    );
-    await withTimeout(
-      deps.onAgentIdle?.() ?? Promise.resolve(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
-    );
+    try {
+      await withTimeout(
+        setExecutionState(deps.runtimeId, 'idle'),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state update timed out for ${deps.runtimeId}`,
+      );
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'forceIdle setExecutionState failed', context: { runtimeId: deps.runtimeId, error } });
+    }
+    try {
+      await withTimeout(
+        deps.onAgentIdle?.() ?? Promise.resolve(),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
+      );
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'forceIdle onAgentIdle failed', context: { runtimeId: deps.runtimeId, error } });
+    }
 
     if (isStaleRun(runEpoch)) {
       return;
@@ -291,16 +308,24 @@ export function createScheduler(
     clearTimer();
     invalidateInFlightGenerate();
     state.instant = false;
-    await withTimeout(
-      setExecutionState(deps.runtimeId, 'idle'),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state update timed out for ${deps.runtimeId}`,
-    );
-    await withTimeout(
-      deps.onAgentIdle?.() ?? Promise.resolve(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
-    );
+    try {
+      await withTimeout(
+        setExecutionState(deps.runtimeId, 'idle'),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent execution state update timed out for ${deps.runtimeId}`,
+      );
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'transitionToIdle setExecutionState failed', context: { runtimeId: deps.runtimeId, error } });
+    }
+    try {
+      await withTimeout(
+        deps.onAgentIdle?.() ?? Promise.resolve(),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
+      );
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'transitionToIdle onAgentIdle failed', context: { runtimeId: deps.runtimeId, error } });
+    }
 
     if (isStaleRun(runEpoch)) {
       return;
@@ -310,7 +335,11 @@ export function createScheduler(
       return;
     }
 
-    await onRunnerIdle();
+    try {
+      await onRunnerIdle();
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'transitionToIdle onRunnerIdle failed', context: { runtimeId: deps.runtimeId, error } });
+    }
   }
 
   // ─── Healthcheck ────────────────────────────────────────────────────────────
@@ -387,7 +416,7 @@ export function createScheduler(
 
       await queueNextStep();
     } catch (error) {
-      // Healthcheck errors are non-fatal — log and continue
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'runHealthcheck failed', context: { runtimeId: deps.runtimeId, error } });
     }
   }
 
@@ -497,23 +526,27 @@ export function createScheduler(
   // ─── Flush settings ────────────────────────────────────────────────────────
 
   async function refreshRunFlushSettings() {
-    const settings = await withTimeout(
-      deps.getSystemSettings(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `System settings lookup timed out for ${deps.runtimeId}`,
-    );
+    try {
+      const settings = await withTimeout(
+        deps.getSystemSettings(),
+        RUNNER_AWAIT_TIMEOUT_MS,
+        `System settings lookup timed out for ${deps.runtimeId}`,
+      );
 
-    currentFlushSettings = {
-      communicationDmFlushingEnabled: settings.communicationDmFlushingEnabled,
-      communicationGroupFlushingEnabled: settings.communicationGroupFlushingEnabled,
-    };
+      currentFlushSettings = {
+        communicationDmFlushingEnabled: settings.communicationDmFlushingEnabled,
+        communicationGroupFlushingEnabled: settings.communicationGroupFlushingEnabled,
+      };
 
-    if (settings.memoryLastMessagesFullEnabled) {
-      runLastMessages = FULL_MEMORY_LOAD_LAST_MESSAGES;
-      return;
+      if (settings.memoryLastMessagesFullEnabled) {
+        runLastMessages = FULL_MEMORY_LOAD_LAST_MESSAGES;
+        return;
+      }
+
+      runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
+    } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'refreshRunFlushSettings failed', context: { runtimeId: deps.runtimeId, error } });
     }
-
-    runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
   }
 
   function resetFlushedRunEventKeys() {

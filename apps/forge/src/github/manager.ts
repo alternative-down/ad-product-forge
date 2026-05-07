@@ -71,6 +71,27 @@ export type GitHubAppProvisioning = {
 
 export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
 
+/**
+ * Creates a per-agent GitHubAppManager instance.
+ * Each agent gets its own isolated manager with:
+ * - Fresh notifications store (agent-scoped events)
+ * - Fresh routeCleanups map (no route conflicts between agents)
+ * - Shared global state: db, httpServer, publicBaseUrl, integrations
+ *
+ * Like createPerAgentCoolifyManager, the factory pattern ensures agents
+ * get isolated routing namespaces while sharing the same HTTP server.
+ */
+export function createPerAgentGitHubManager(config: {
+  db: Database;
+  httpServer: ReturnType<typeof createForgeHttpServer>;
+  publicBaseUrl: string;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
+}): GitHubAppManager {
+  return createGitHubAppManager(config);
+}
+
+
+
 export function createGitHubAppManager(config: {
   db: Database;
   httpServer: ReturnType<typeof createForgeHttpServer>;

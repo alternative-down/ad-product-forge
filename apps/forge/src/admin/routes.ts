@@ -380,7 +380,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
-        return jsonResponse({ error: error instanceof Exception ? error.message : String(error) }, 500);
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
   });
