@@ -1,7 +1,8 @@
 // fallow-ignore-file circular-dependencies
 import type { ToolsInput } from '@forge-runtime/core';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import type { AgentLoaderConfig } from './agent-loader-types';
 import { createMicroErpTools } from '../micro-erp/tools';
 import { createAgentNotificationTools } from '../notifications/tools';

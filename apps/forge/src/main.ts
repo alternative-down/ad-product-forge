@@ -3,7 +3,8 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
-import { getDatabase, runMigrations } from './database/index';
+
+import {getDatabase, runMigrations} from './database/schema';
 import { getInternalAgentRegistry } from './agents/internal-agent-registry';
 import { createForgeHttpServer } from './http/server';
 import { createGitHubAppManager } from './github/manager';

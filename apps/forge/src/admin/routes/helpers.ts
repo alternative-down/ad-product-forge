@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibsqlConversationStore, toMastraSafeIdentifier } from '@forge-runtime/core';
-import type { Database } from '../../database/index';
+
+import type {Database} from '../../database/schema';
 import {
   agentCheckpointedOmStates,
   agentLongTermMemoryStates,

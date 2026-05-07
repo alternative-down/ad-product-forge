@@ -7,7 +7,8 @@
 import { inArray, sql } from 'drizzle-orm';
 
 import type { HttpHandler } from '../../../http/server.js';
-import type { Database } from '../../../database/index';
+
+import type {Database} from '../../../database/schema';
 import { agentExecutionSteps } from '../../../database/schema';
 import type { MicroErpReadModel } from '../../../micro-erp/read-model';
 import type { CompanyPayables } from '../../../finance/company-payables';
