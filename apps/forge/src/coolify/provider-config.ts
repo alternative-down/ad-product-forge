@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { forgeDebug } from '@forge-runtime/core';
 
 import { normalizeDomainHost } from './helpers';
 import { ServerSchema } from './schemas';
@@ -60,6 +61,7 @@ export async function getApplicationsBaseDomain(
 
     return wildcardDomain;
   } catch (error) {
+    forgeDebug({ scope: 'coolify', level: 'error', message: 'Coolify provider config failed', context: { error } });
     throw new Error(
       `Failed to resolve Coolify applications base domain: ${
         error instanceof Error ? error.message : String(error)
