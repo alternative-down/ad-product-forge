@@ -1,3 +1,5 @@
+// fallow-ignore-file unused-file  // runtime-loaded by agent-runner.ts
+
 /**
  * Agent Context Loading - extracted from agent-runner.ts (#1718)
  * Functions for loading agent workspace context and schedule summaries

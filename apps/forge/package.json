@@ -17,12 +17,12 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",
-    "@forge-runtime/core": "0.1.0",
+    "zod": "^4.3.6",
     "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.15.15",
     "@octokit/auth-app": "^8.1.1",
     "@types/node-schedule": "^2.1.8",
-    "discord.js": "^14.26.2",
+    "postal-mime": "^2.7.4",
     "dotenv": "^17.4.1",
     "drizzle-orm": "^0.26.0",
     "fflate": "^0.8.2",
@@ -30,10 +30,7 @@
     "nanoid": "^5.1.7",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.5",
-    "octokit": "^5.0.3",
-    "onnxruntime-node": "1.21.0",
-    "postal-mime": "^2.7.4",
-    "zod": "^4.3.6"
+    "octokit": "^5.0.3"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
