@@ -93,7 +93,8 @@ import { registerWebhookAdminRoutes } from './routes/webhooks/index';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
-import { registerSystemReadRoutes, registerSystemWriteRoutes } from './routes/system/index.js';
+import { registerSystemReadRoutes } from './routes/system/read.js';
+import { registerSystemWriteRoutes } from './routes/system/write.js';
 import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
 
 
