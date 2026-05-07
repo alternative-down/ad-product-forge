@@ -563,9 +563,6 @@ export function createCoolifyManager(config: {
 
 // ── Re-export all helpers for external consumers ────────────────────────────
 
-export { normalizeDomainHost, toApplicationSummary, toApplicationDetails, toEnvDetails } from './helpers';
-export { extractCollection, extractItem, extractLogs } from './helpers';
-export { safeJsonParse, buildRequestError, removeUndefined, toTimestamp } from './helpers';
 export type {
   GitHubAppSchema,
   GitHubRepositorySchema,
