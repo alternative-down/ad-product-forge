@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@forge-runtime/core', () => ({
   createTool: vi.fn(({ id, description, inputSchema, execute }) => ({ id, description, inputSchema, execute })),
+  forgeDebug: vi.fn(),
 }));
 
 vi.mock('./read-model', () => ({
