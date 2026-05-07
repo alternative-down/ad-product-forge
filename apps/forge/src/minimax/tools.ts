@@ -228,6 +228,7 @@ export function createMiniMaxTools(
             ...result.data,
           };
         } catch (error) {
+      forgeDebug({ scope: 'minimax', level: 'error', message: '[minimax] tool failed', context: { error: error instanceof Error ? error.message : String(error) }});
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to list voices',
@@ -292,6 +293,7 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
+      forgeDebug({ scope: 'minimax', level: 'error', message: '[minimax] tool failed', context: { error: error instanceof Error ? error.message : String(error) }});
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate speech',
@@ -367,6 +369,7 @@ export function createMiniMaxTools(
             path: paths[0],
           };
         } catch (error) {
+      forgeDebug({ scope: 'minimax', level: 'error', message: '[minimax] tool failed', context: { error: error instanceof Error ? error.message : String(error) }});
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate image',
@@ -436,6 +439,7 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
+      forgeDebug({ scope: 'minimax', level: 'error', message: '[minimax] tool failed', context: { error: error instanceof Error ? error.message : String(error) }});
           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate video',
