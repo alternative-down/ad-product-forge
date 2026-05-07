@@ -2,6 +2,7 @@
  * Stripe payment provider adapter.
  * Handles signature verification and event parsing for Stripe webhooks.
  */
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { PaymentProviderType } from './payment-schema';
 
@@ -28,6 +29,7 @@ function verifyStripeWebhookSignature(
     const event = stripe.webhooks.constructEvent(payload, signatureHeader, webhookSecret);
     return event as unknown as StripeWebhookPayload;
   } catch (err) {
+    forgeDebug({ scope: 'stripe', level: 'error', message: 'Stripe webhook verification failed', context: { error: err } });
     throw new Error(`Stripe webhook signature verification failed: ${err instanceof Error ? err.message : err}`);
   }
 }
