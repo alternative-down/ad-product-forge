@@ -1,5 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { createMockDb, resetAgentReadModelMocks } from './shared-test-helpers';
 
 // ---------------------------------------------------------------------
 // Stable mock references via vi.hoisted so they are initialized
@@ -69,51 +70,7 @@ import { createAgentReadModel } from './agents';
 // Factory helpers
 // ---------------------------------------------------------------------
 function makeMockDb(overrides = {}) {
-  const db = {
-    query: {
-      agents: {
-        findMany: vi.fn().mockResolvedValue([]),
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-      agentNotifications: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      agentExecutionContracts: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      agentRoles: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      llmProfiles: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      agentExecutionSteps: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      agentMcpConfigs: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      agentSchedules: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      mcpServerConfigs: {
-        findMany: vi.fn().mockResolvedValue([]),
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-      agentHomeMetricSnapshots: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-    },
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          groupBy: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }),
-        }),
-      }),
-    }),
-    ...overrides,
-  };
-  return db as ReturnType<typeof createAgentReadModel> extends Promise<infer R> ? never : Parameters<typeof createAgentReadModel>[0]['db'];
+  return createMockDb(overrides) as ReturnType<typeof createAgentReadModel> extends Promise<infer R> ? never : Parameters<typeof createAgentReadModel>[0]['db'];
 }
 
 function makeMockFinance() {
@@ -157,13 +114,11 @@ function makeReadModel(deps = {}) {
 // ---------------------------------------------------------------------
 describe('createAgentReadModel', () => {
   beforeEach(() => {
-    // Reset and re-configure per-test mocks
-    mockReadOperationalMemoryState.mockReset();
-    mockReadOperationalMemoryState.mockResolvedValue(null);
-    mockListThreadMessages.mockReset();
-    mockListThreadMessages.mockResolvedValue({ items: [], hasMore: false });
-    mockReadLongTermMemoryState.mockReset();
-    mockReadLongTermMemoryState.mockResolvedValue(null);
+    resetAgentReadModelMocks({
+      mockReadOperationalMemoryState,
+      mockListThreadMessages,
+      mockReadLongTermMemoryState,
+    });
   });
 
   describe('getDashboard', () => {
