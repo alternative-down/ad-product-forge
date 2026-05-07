@@ -7,6 +7,7 @@ import { loadAgents, loadAgent } from './agent-loader';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createAgentEmailManager, type AgentEmailManager } from '../email/migadu-manager';
 import { createCoolifyManager, type CoolifyManager } from '../coolify/manager';
+import { createGitHubAppManager } from '../github/manager';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
@@ -32,10 +33,31 @@ export function createPerAgentCoolifyManager(db: Database): CoolifyManager {
   const integrations = createSystemIntegrationStore(db);
   return createCoolifyManager({ integrations });
 }
+/**
+ * Creates a per-agent GitHubAppManager instance.
+ * Each agent gets its own isolated manager with:
+ * - Fresh notifications store (agent-scoped events)
+ * - Fresh routeCleanups map (no route conflicts between agents)
+ * - Shared global state: db, httpServer, publicBaseUrl, integrations
+ */
+export function createPerAgentGitHubManager(config: {
+  db: Database;
+  httpServer: Parameters<typeof createGitHubAppManager>[0]['httpServer'];
+  publicBaseUrl: string;
+  integrations: Parameters<typeof createGitHubAppManager>[0]['integrations'];
+}) {
+  return createGitHubAppManager(config);
+}
+
+
 
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
-  let loaderConfig: AgentLoaderConfig | null = null;
+  let loaderConfig: (Omit<AgentLoaderConfig, "emailMailboxes" | "coolify" | "githubApps"> & {
+    httpServer: Parameters<typeof createGitHubAppManager>[0]["httpServer"];
+    publicBaseUrl: string;
+    integrations: Parameters<typeof createGitHubAppManager>[0]["integrations"];
+  }) | null = null;
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
     loaderConfig = config;
@@ -44,18 +66,17 @@ function createInternalAgentRegistry() {
     // loadAgents returns runtimes — pass a config WITHOUT coolify/emailMailboxes
     // so loadAgents does not attach any manager. We attach per-agent managers
     // in the loop below.
-    const cleanConfig: AgentLoaderConfig = {
+    const cleanConfig = {
       workspaceBasePath: config.workspaceBasePath,
-      githubApps: config.githubApps,
       minimax: config.minimax,
       schedules: config.schedules,
       internalChat: config.internalChat,
-      // intentionally omitted: emailMailboxes, coolify
+      // intentionally omitted: emailMailboxes, coolify, githubApps
     };
     const runtimes = await loadAgents(db, cleanConfig);
 
     for (const runtime of runtimes.values()) {
-      await add(db, runtime);
+      await add(db, runtime, config);
       existingAgentIds.delete(runtime.id);
     }
 
@@ -66,7 +87,7 @@ function createInternalAgentRegistry() {
     return list();
   }
 
-  async function add(db: Database, runtime: InternalAgentRuntime) {
+  async function add(db: Database, runtime: InternalAgentRuntime, config?: typeof loaderConfig) {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents = existingAgent
       ? [
@@ -78,6 +99,12 @@ function createInternalAgentRegistry() {
     // Each running agent gets its own fresh managers — lifetime matched to this agent.
     const emailMailboxes = createPerAgentEmailManager(db);
     const coolify = createPerAgentCoolifyManager(db);
+    const githubApps = createPerAgentGitHubManager({
+      db,
+      httpServer: loaderConfig?.httpServer,
+      publicBaseUrl: loaderConfig?.publicBaseUrl,
+      integrations: loaderConfig?.integrations,
+    });
 
     const entry = {
       runtime,
@@ -92,10 +119,17 @@ function createInternalAgentRegistry() {
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);
         const reloadCoolify = createPerAgentCoolifyManager(db);
+        const reloadGitHubApps = createPerAgentGitHubManager({
+          db,
+          httpServer: loaderConfig!.httpServer,
+          publicBaseUrl: loaderConfig!.publicBaseUrl,
+          integrations: loaderConfig!.integrations,
+        });
         return loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
           coolify: reloadCoolify,
+          githubApps: reloadGitHubApps,
           agentId: runtime.id,
         });
       },
