@@ -156,6 +156,7 @@ export const agentExecutionContracts = sqliteTable('agent_execution_contracts', 
   fundedAt: integer('funded_at'),
   startsAt: integer('starts_at').notNull(),
   endsAt: integer('ends_at').notNull(),
+  isActive: integer('is_active').notNull().default(1),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   agentContractsAgentIdIdx: index('agent_execution_contracts_agent_id_idx').on(table.agentId),
