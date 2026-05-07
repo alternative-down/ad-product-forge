@@ -73,6 +73,10 @@ const mockSending = vi.hoisted(() => ({
   sendMessage: vi.fn().mockResolvedValue({ success: true, messageId: 'mock-id-123', conversationKey: 'conv_1' }),
   getMessageAttachmentByAccount: vi.fn().mockResolvedValue({ stream: null, contentType: undefined }),
 }));
+const mockConversations = vi.hoisted(() => ({
+  ensureDirectConversation: vi.fn(),
+  archiveConversationByAccount: vi.fn().mockResolvedValue({ conversationId: 'conv_1', archived: true }),
+}));
 vi.mock('./internal-chat-groups', async () => ({
   ...(await vi.importActual('./internal-chat-groups')),
   createInternalChatGroups: () => mockGroups,
@@ -84,6 +88,9 @@ vi.mock('./internal-chat-account-ops', async () => ({
 }));
 vi.mock('./internal-chat-sending', async () => ({
   createChatSending: () => mockSending,
+}));
+vi.mock('./internal-chat-conversations', async () => ({
+  createInternalChatConversations: () => mockConversations,
 }));
 
 
