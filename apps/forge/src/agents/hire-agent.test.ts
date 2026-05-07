@@ -132,6 +132,34 @@ describe('hireInternalAgent', () => {
     expect(mockDelete).toHaveBeenCalled();
   });
 
+  it('calls deleteAgentAccount on registerAgentAccount failure', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    const deleteAgentAccount = vi.fn().mockResolvedValue(undefined);
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat registration failed')),
+      deleteAgentAccount,
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat registration failed');
+    expect(deleteAgentAccount).toHaveBeenCalledWith({ agentId: 'generated-id' });
+  });
+
+  it('calls deleteAgentAccount on createHeartbeatSchedule failure', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    const deleteAgentAccount = vi.fn().mockResolvedValue(undefined);
+    input.schedules = {
+      createHeartbeatSchedule: vi.fn().mockRejectedValue(new Error('schedule failed')),
+    } as any;
+    input.internalChat = {
+      ...input.internalChat,
+      deleteAgentAccount,
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('schedule failed');
+    expect(deleteAgentAccount).toHaveBeenCalledWith({ agentId: 'generated-id' });
+  });
+
   it('provisions mailbox when email is configured', async () => {
     const db = createMockDb();
     const input = createInput();
