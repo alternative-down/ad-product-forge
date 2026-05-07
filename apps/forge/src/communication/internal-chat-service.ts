@@ -105,6 +105,7 @@ import {
 import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createChatAttachments } from "./internal-chat-attachments";
 import { createInternalChatReads } from "./internal-chat-reads";
+import { createChatSending } from "./internal-chat-sending";
 import { createServiceHelpers } from "./internal-chat-service-helpers";
 
 export function createInternalChatService(
@@ -652,129 +653,6 @@ export function createInternalChatService(
     };
   }
 
-  // === Message Sending ───────────────────────────────────────────────────
-  async function sendMessage(input: {
-    accountId: string;
-    targetKey: string;
-    content: string;
-    attachments: CommunicationFile[];
-  }) {
-    const directAccount = await getAccountByAgentId(input.targetKey) ?? await getAccountBySlug(input.targetKey);
-    const conversation = directAccount
-      ? await ensureDirectConversation(input.accountId, directAccount.id)
-      : await getRequiredConversationForAccount(input.accountId, input.targetKey);
-
-    if (!conversation) {
-      throw new ConversationNotFoundError(input.targetKey);
-    }
-
-    const now = Date.now();
-    const messageId = createId();
-    let members;
-    try {
-      members = await db.query.internalChatConversationMembers.findMany({
-        where: eq(internalChatConversationMembers.conversationId, conversation.id),
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage findMany members failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
-
-    try {
-      await db.insert(internalChatMessages).values({
-        id: messageId,
-        conversationId: conversation.id,
-        authorAccountId: input.accountId,
-        content: input.content,
-        replyToMessageId: null,
-        createdAt: now,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage insert failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
-    await storeMessageAttachments(messageId, input.attachments);
-
-    const memberAccounts = await Promise.all(
-      members.map((member) => getRequiredAccount(member.accountId)),
-    );
-    const readRows = memberAccounts
-      .filter((memberAccount) => memberAccount.agentId)
-      .map((memberAccount) => ({
-        messageId,
-        agentId: memberAccount.agentId as string,
-        readAt: memberAccount.id === input.accountId ? now : null,
-      }));
-
-    if (readRows.length > 0) {
-      try {
-        await db.insert(internalChatMessageReads).values(readRows);
-      } catch (err) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage insert reads failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-    }
-
-    await db
-      .update(internalChatConversations)
-      .set({
-        updatedAt: now,
-      })
-      .where(eq(internalChatConversations.id, conversation.id));
-
-    const author = await getRequiredAccount(input.accountId);
-    const participants = await listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);
-
-    
-    const liveDeliveredAgentIds = connection.deliverToParticipants({
-      excludeAccountId: input.accountId,
-      participants,
-      conversation: {
-        id: conversation.id,
-        name: conversation.name,
-        type: conversation.type,
-      },
-      messageId,
-      author: {
-        id: author.id,
-        displayName: author.displayName,
-        slug: author.slug,
-      },
-      content: input.content,
-      attachments: input.attachments,
-      createdAt: new Date(now).toISOString(),
-    });
-
-    if (liveDeliveredAgentIds.length > 0) {
-      await db
-        .update(internalChatMessageReads)
-        .set({
-          readAt: now,
-        })
-        .where(and(
-          eq(internalChatMessageReads.messageId, messageId),
-          inArray(internalChatMessageReads.agentId, liveDeliveredAgentIds),
-          isNull(internalChatMessageReads.readAt),
-        ));
-    }
-
-
-    return {
-      success: true,
-      messageId,
-      conversationKey: conversation.id,
-    };
-  }
-
-  async function getMessageAttachmentByAccount(input: {
-    accountId: string;
-    conversationId: string;
-    messageId: string;
-    attachmentName: string;
-  }) {
-    return access.getMessageAttachmentByAccount(input);
-  }
-
   // === Unread / Recent ────────────────────────────────────────────────────
   const getUnreadSummary = reads.getUnreadSummary;
 
@@ -858,6 +736,26 @@ export function createInternalChatService(
     readMessageAttachments,
     getRequiredAgentAccount,
     listGroupMembersOrDmPeers,
+  });
+
+  // ── Message Sending (delegated to internal-chat-sending.ts) ─────────────
+  const { sendMessage, getMessageAttachmentByAccount } = createChatSending({
+    db,
+    accounts,
+    serviceHelpers: {
+      getRequiredConversationForAccount,
+    },
+    groups: {
+      ensureDirectConversation,
+    },
+    connection,
+    reads: {
+      listGroupMembersOrDmPeersByAccount,
+    },
+    attachments: {
+      storeMessageAttachments,
+      readMessageAttachment,
+    },
   });
 
   return {
