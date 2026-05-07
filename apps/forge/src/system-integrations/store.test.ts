@@ -4,7 +4,8 @@ vi.mock('@forge-runtime/core', () => ({
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createSystemIntegrationStore } from './store';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import type { SystemIntegration } from '../database/schema';
 
 // ─── helpers ────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { loadAgent, loadAgents } from './agent-loader';
 import type { SingleAgentLoaderConfig, AgentLoaderConfig } from './agent-loader-types';
 

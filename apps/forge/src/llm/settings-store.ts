@@ -2,7 +2,8 @@ import { createId } from '../utils/id';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { llmProfiles, systemLlmDefaults, type LlmProfile } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';

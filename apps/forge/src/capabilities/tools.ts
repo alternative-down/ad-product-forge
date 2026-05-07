@@ -3,7 +3,8 @@ import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { AgentLoaderConfig } from '../agents/agent-loader';
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { changeAgentRole, reloadAgentsForRole } from './runtime';
 import { createCapabilityStore } from './store';
 import { forgeCapabilityIds, hasToolPermission } from './catalog';

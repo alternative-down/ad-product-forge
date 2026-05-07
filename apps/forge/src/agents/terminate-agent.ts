@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import { eq } from 'drizzle-orm';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { agents } from '../database/schema';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import { createAgentContractStore } from './agent-contract-store';

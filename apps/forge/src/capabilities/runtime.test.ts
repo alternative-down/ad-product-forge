@@ -61,7 +61,7 @@ import {
   changeAgentRoleFromAdmin,
   updateInternalChatProviderProfile,
 } from './runtime';
-import type { Database } from '../database/index';
+import type {Database} from '../database/client'
 import type { InternalChatService } from '../communication/internal-chat-service';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

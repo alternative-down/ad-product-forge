@@ -1,8 +1,8 @@
 /**
  * Schema validation utilities for admin routes
  */
-import type { ZodSchema } from 'zod';
 import { forgeDebug } from '@forge-runtime/core';
+import type { ZodSchema } from 'zod';
 
 export interface ValidationResult<T> {
   success: true;
@@ -25,7 +25,7 @@ export function parseRequest<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (error) {
-    forgeDebug({ scope: 'admin', level: 'error', message: 'Schema validation failed', context: { error } });
+    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: error instanceof Error ? error.message : String(error) }});
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Validation failed',
@@ -48,7 +48,7 @@ export function parseQueryParams<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (error) {
-    forgeDebug({ scope: 'admin', level: 'error', message: 'Schema validation failed', context: { error } });
+    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: error instanceof Error ? error.message : String(error) }});
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Query validation failed',

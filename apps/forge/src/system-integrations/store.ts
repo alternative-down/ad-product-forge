@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import type {
   CoolifySystemIntegrationConfig,
   GitHubSystemIntegrationConfig,

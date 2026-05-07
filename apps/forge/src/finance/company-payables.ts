@@ -2,7 +2,8 @@ import { and, eq, gte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 
-import type { Database } from '../database/index';
+
+import type {Database} from '../database/schema';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
