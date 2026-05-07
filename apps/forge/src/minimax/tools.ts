@@ -1,4 +1,4 @@
-import { createTool } from '@forge-runtime/core';
+import { createTool, forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { z } from 'zod';
 
@@ -228,7 +228,8 @@ export function createMiniMaxTools(
             ...result.data,
           };
         } catch (error) {
-          return {
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error } });
+           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to list voices',
             hint: 'Verify the MiniMax integration is configured and the voice list API is available.',
@@ -292,7 +293,8 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
-          return {
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error } });
+           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate speech',
             hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax speech API.',
@@ -367,7 +369,8 @@ export function createMiniMaxTools(
             path: paths[0],
           };
         } catch (error) {
-          return {
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error } });
+           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate image',
             hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax image API.',
@@ -436,7 +439,8 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
-          return {
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error } });
+           return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate video',
             hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax video API.',
