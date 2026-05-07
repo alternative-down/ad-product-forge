@@ -40,7 +40,8 @@ export function createCoolifyManager(config: {
     method: string,
     path: string,
     body?: Record<string, unknown>,
-  ) {
+  ) {try {
+
     const providerConfig = await getProviderConfig(config.integrations);
     const response = await fetch(
       `${providerConfig.baseUrl}${path}`,
@@ -63,11 +64,15 @@ export function createCoolifyManager(config: {
     }
 
     return data;
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] requestJson failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── Credentials ────────────────────────────────────────────────────────────
 
-  async function getCredentials() {
+  async function getCredentials() {try {
+
     const providerConfig = await getProviderConfig(config.integrations);
 
     return {
@@ -77,11 +82,15 @@ export function createCoolifyManager(config: {
       destinationId: providerConfig.destinationId,
       applicationsBaseDomain: providerConfig.applicationsBaseDomain ?? null,
     };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getCredentials failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── GitHub Apps ────────────────────────────────────────────────────────────
 
-  async function listGitHubApps() {
+  async function listGitHubApps() {try {
+
     const data = await requestJson('GET', '/github-apps');
     const apps = extractCollection(data, GitHubAppSchema);
 
@@ -93,7 +102,10 @@ export function createCoolifyManager(config: {
       apiUrl: app.api_url ?? null,
       htmlUrl: app.html_url ?? null,
     }));
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] listGitHubApps failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function createGitHubApp(input: {
     name: string;
@@ -101,7 +113,8 @@ export function createCoolifyManager(config: {
     appId: string;
     installationId: string;
     webhookSecret: string;
-  }) {
+  }) {try {
+
     const data = await requestJson('POST', '/github-apps', {
       name: input.name,
       organization: input.organization,
@@ -111,11 +124,15 @@ export function createCoolifyManager(config: {
     });
 
     return { githubAppUuid: (data as { uuid: string }).uuid };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] createGitHubApp failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function listGitHubAppRepositories(input: {
     githubAppId: string | number;
-  }) {
+  }) {try {
+
     const data = await requestJson(
       'GET',
       `/github-apps/${encodeURIComponent(String(input.githubAppId))}/repositories`,
@@ -129,12 +146,16 @@ export function createCoolifyManager(config: {
       defaultBranch: repo.default_branch ?? null,
       isPrivate: repo.private ?? null,
     }));
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] listGitHubAppRepositories failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function listGitHubAppRepositoryBranches(input: {
     githubAppId: string | number;
     repository: string;
-  }) {
+  }) {try {
+
     const data = await requestJson(
       'GET',
       `/github-apps/${encodeURIComponent(String(input.githubAppId))}/repositories/${encodeURIComponent(input.repository)}/branches`,
@@ -142,18 +163,26 @@ export function createCoolifyManager(config: {
     const branches = extractCollection(data, GitHubBranchSchema);
 
     return branches.map((branch) => ({ name: branch.name }));
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] listGitHubAppRepositoryBranches failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── Applications ───────────────────────────────────────────────────────────
 
-  async function listApplications() {
+  async function listApplications() {try {
+
     const data = await requestJson('GET', '/applications');
     const applications = extractCollection(data, ApplicationSchema);
 
     return applications.map(toApplicationSummary);
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] listApplications failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function getApplication(applicationUuid: string) {
+  async function getApplication(applicationUuid: string) {try {
+
     const data = await requestJson(
       'GET',
       `/applications/${encodeURIComponent(applicationUuid)}`,
@@ -161,7 +190,10 @@ export function createCoolifyManager(config: {
     const application = extractItem(data, ApplicationSchema);
 
     return toApplicationDetails(application);
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function createApplication(input: {
     name: string;
@@ -172,7 +204,8 @@ export function createCoolifyManager(config: {
     port?: number;
     domain?: string;
     environmentUuid?: string;
-  }) {
+  }) {try {
+
     const payload: Record<string, unknown> = {
       name: input.name,
     };
@@ -211,7 +244,10 @@ export function createCoolifyManager(config: {
     const application = extractItem(data, ApplicationSchema);
 
     return toApplicationDetails(application);
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] createApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function updateApplication(input: {
     applicationUuid: string;
@@ -220,7 +256,8 @@ export function createCoolifyManager(config: {
     publishDirectory?: string;
     branch?: string;
     port?: number;
-  }) {
+  }) {try {
+
     const body: Record<string, unknown> = {};
 
     if (input.name !== undefined) body.name = input.name;
@@ -237,34 +274,53 @@ export function createCoolifyManager(config: {
     const application = extractItem(data, ApplicationSchema);
 
     return toApplicationDetails(application);
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] updateApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function startApplication(applicationUuid: string) {
+  async function startApplication(applicationUuid: string) {try {
+
     await requestJson('GET', `/applications/${encodeURIComponent(applicationUuid)}/start`);
 
     return { success: true };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] startApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function stopApplication(applicationUuid: string) {
+  async function stopApplication(applicationUuid: string) {try {
+
     await requestJson('GET', `/applications/${encodeURIComponent(applicationUuid)}/stop`);
 
     return { success: true };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] stopApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function restartApplication(applicationUuid: string) {
+  async function restartApplication(applicationUuid: string) {try {
+
     await requestJson('GET', `/applications/${encodeURIComponent(applicationUuid)}/restart`);
 
     return { success: true };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] restartApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function deleteApplication(applicationUuid: string) {
+  async function deleteApplication(applicationUuid: string) {try {
+
     await requestJson(
       'DELETE',
       `/applications/${encodeURIComponent(applicationUuid)}`,
     );
 
     return { success: true };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] deleteApplication failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── Logs & Deployments ────────────────────────────────────────────────────
 
@@ -272,7 +328,8 @@ export function createCoolifyManager(config: {
     applicationUuid: string;
     lines?: number;
     since?: number;
-  }) {
+  }) {try {
+
     const query = new URLSearchParams();
 
     if (input.lines) query.set('lines', String(input.lines));
@@ -289,12 +346,16 @@ export function createCoolifyManager(config: {
       applicationUuid: input.applicationUuid,
       logs: extractLogs(data),
     };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getApplicationLogs failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function listApplicationDeployments(input: {
     applicationUuid: string;
     limit?: number;
-  }) {
+  }) {try {
+
     const query = new URLSearchParams();
 
     if (input.limit) query.set('per_page', String(input.limit));
@@ -317,12 +378,16 @@ export function createCoolifyManager(config: {
       .sort(
         (left, right) => toTimestamp(right.createdAt) - toTimestamp(left.createdAt),
       );
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] listApplicationDeployments failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function getDeploymentLogs(input: {
     applicationUuid: string;
     deploymentUuid?: string;
-  }) {
+  }) {try {
+
     const deploymentUuid =
       input.deploymentUuid ?? await getLatestDeploymentUuid(input.applicationUuid);
     const data = await requestJson(
@@ -337,11 +402,15 @@ export function createCoolifyManager(config: {
       logs: deployment.logs ?? '',
       status: deployment.status ?? null,
     };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getDeploymentLogs failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── Environment Variables ──────────────────────────────────────────────────
 
-  async function listApplicationEnvs(applicationUuid: string) {
+  async function listApplicationEnvs(applicationUuid: string) {try {
+
     const data = await requestJson(
       'GET',
       `/applications/${encodeURIComponent(applicationUuid)}/envs`,
@@ -359,7 +428,10 @@ export function createCoolifyManager(config: {
       isMultiline: env.is_multiline ?? false,
       isShownOnce: env.is_shown_once ?? false,
     }));
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] listApplicationEnvs failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function setApplicationEnv(input: {
     applicationUuid: string;
@@ -369,7 +441,8 @@ export function createCoolifyManager(config: {
     isLiteral?: boolean;
     isMultiline?: boolean;
     isShownOnce?: boolean;
-  }) {
+  }) {try {
+
     const existing = await findApplicationEnv(input.applicationUuid, input.key);
     const body = {
       key: input.key,
@@ -407,12 +480,16 @@ export function createCoolifyManager(config: {
     const env = extractItem(data, ApplicationEnvSchema);
 
     return toEnvDetails(env);
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] setApplicationEnv failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function deleteApplicationEnv(input: {
     applicationUuid: string;
     key: string;
-  }) {
+  }) {try {
+
     const data = await requestJson(
       'POST',
       `/applications/${encodeURIComponent(input.applicationUuid)}/envs/delete`,
@@ -423,11 +500,15 @@ export function createCoolifyManager(config: {
     return {
       deleted: !envs.some((env) => env.key === input.key),
     };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] deleteApplicationEnv failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── Default context ────────────────────────────────────────────────────────
 
-  async function loadDefaultDeploymentContext() {
+  async function loadDefaultDeploymentContext() {try {
+
     const providerConfig = await getProviderConfig(config.integrations);
     const project = await getOrCreateDefaultProject();
     const environment = await getOrCreateDefaultEnvironment(project.projectUuid);
@@ -439,9 +520,13 @@ export function createCoolifyManager(config: {
       serverUuid: server.uuid,
       destinationId: providerConfig.destinationId,
     };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] loadDefaultDeploymentContext failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function getOrCreateDefaultProject() {
+  async function getOrCreateDefaultProject() {try {
+
     const projects = extractCollection(
       await requestJson('GET', '/projects'),
       ProjectSchema,
@@ -461,9 +546,13 @@ export function createCoolifyManager(config: {
     );
 
     return { projectUuid: created.uuid };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getOrCreateDefaultProject failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function getOrCreateDefaultEnvironment(projectUuid: string) {
+  async function getOrCreateDefaultEnvironment(projectUuid: string) {try {
+
     const environments = extractCollection(
       await requestJson(
         'GET',
@@ -490,9 +579,13 @@ export function createCoolifyManager(config: {
     );
 
     return { environmentUuid: created.uuid };
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getOrCreateDefaultEnvironment failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function getDefaultServer() {
+  async function getDefaultServer() {try {
+
     const providerConfig = await getProviderConfig(config.integrations);
     const server = extractItem(
       await requestJson(
@@ -503,39 +596,54 @@ export function createCoolifyManager(config: {
     );
 
     return server;
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getDefaultServer failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   async function findApplicationEnv(
     applicationUuid: string,
     key: string,
-  ) {
+  ) {try {
+
     const envs = await listApplicationEnvs(applicationUuid);
 
     return envs.find((env) => env.key === key) ?? null;
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] findApplicationEnv failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
-  async function getLatestDeploymentUuid(applicationUuid: string) {
+  async function getLatestDeploymentUuid(applicationUuid: string) {try {
+
     const deployments = await listApplicationDeployments({
       applicationUuid,
       limit: 1,
     });
 
     return deployments[0]?.deploymentUuid ?? applicationUuid;
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] getLatestDeploymentUuid failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   async function buildApplicationDomain(
     slug: string,
     serverUuid?: string,
-  ) {
+  ) {try {
+
     const providerConfig = await getProviderConfig(config.integrations);
     const baseDomain =
       providerConfig.applicationsBaseDomain
       ?? await getApplicationsBaseDomain(requestJson, getDefaultServer, serverUuid);
 
     return `${slug}.${baseDomain}`;
-  }
+      } catch (err) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: '[coolify-manager] buildApplicationDomain failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }}
 
   return {
     getCredentials,
