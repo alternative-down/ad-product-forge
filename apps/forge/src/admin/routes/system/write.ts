@@ -119,6 +119,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse(result);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -187,6 +188,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -213,6 +215,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse({ success: true, serverId: body.serverId });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -230,6 +233,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse({ success: true, installedSkillNames }, 201);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -247,6 +251,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse({ success: true, skillName: body.skillName });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -260,6 +265,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse(await llmModelPrices.upsertPrice(body));
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -273,6 +279,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse(await integrations.upsert(body));
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -287,6 +294,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse({ success: true, integrationId: body.integrationId });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -300,6 +308,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse(await llmSettings.upsertProfile(body));
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -314,6 +323,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse({ success: true, profileId: body.profileId });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -327,6 +337,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse(await llmSettings.updateDefaults(body));
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 
@@ -361,6 +372,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         return jsonResponse({ state: await buildOauthState(), results });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
 }
