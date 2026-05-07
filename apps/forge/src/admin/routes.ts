@@ -93,8 +93,9 @@ import {
 } from './routes/helpers.js';
 
 export * from './routes/schemas';
-import { registerFinanceReadRoutes, registerFinanceWriteRoutes } from './routes/finance/index';
-import { registerWebhookAdminRoutes } from './routes/webhooks/index';
+import { registerFinanceReadRoutes } from './routes/finance/read.js';
+import { registerFinanceWriteRoutes } from './routes/finance/write.js';
+import { registerWebhookAdminRoutes } from './routes/webhooks/register';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 

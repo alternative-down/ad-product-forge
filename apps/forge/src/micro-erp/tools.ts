@@ -1,4 +1,4 @@
-import { createTool, type Tool } from '@forge-runtime/core';
+import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { Database } from '../database/index';
@@ -76,6 +76,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.getCompanyCashBalance();
         } catch (error) {
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -95,6 +96,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.listCompanyCashMovements(input);
         } catch (error) {
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -114,6 +116,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.listActiveInternalAgentContracts();
         } catch (error) {
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -337,6 +340,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
           const result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
           return { valid: true, action: input.action, ...result };
         } catch (error) {
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -366,6 +370,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             ...result,
           };
         } catch (error) {
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),

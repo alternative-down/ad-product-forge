@@ -59,147 +59,187 @@ export function createAgentEmailManager(config: {
   }
 
   async function provisionMailbox(input: { agentId: string; agentName: string }) {
-    const localPart = buildMailboxLocalPart(input.agentId);
-    const password = createMailboxPassword();
-    const existingMailbox = await getMailbox(localPart);
+    try {
+      const localPart = buildMailboxLocalPart(input.agentId);
+      const password = createMailboxPassword();
+      const existingMailbox = await getMailbox(localPart);
 
-    if (existingMailbox) {
-      await updateMailbox(localPart, {
-        name: input.agentName,
-        password,
-      });
-    } else {
-      await createMailbox({
-        localPart,
-        name: input.agentName,
-        password,
-      });
+      if (existingMailbox) {
+        await updateMailbox(localPart, {
+          name: input.agentName,
+          password,
+        });
+      } else {
+        await createMailbox({
+          localPart,
+          name: input.agentName,
+          password,
+        });
+      }
+
+      const providerConfig = await getRequiredProviderConfig();
+      const address = `${localPart}@${providerConfig.domain}`;
+
+      return {
+        address,
+        credentials: buildProviderCredentials(address, password),
+      };
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] provisionMailbox failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    const providerConfig = await getRequiredProviderConfig();
-    const address = `${localPart}@${providerConfig.domain}`;
-
-    return {
-      address,
-      credentials: buildProviderCredentials(address, password),
-    };
   }
 
   async function deleteAgentMailbox(agentId: string) {
-    const credentials = await getStoredCredentials(agentId);
+    try {
+      const credentials = await getStoredCredentials(agentId);
 
-    if (!credentials) {
-      return;
+      if (!credentials) {
+        return;
+      }
+
+      await deleteMailboxByAddress(credentials.imap.user);
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] deleteAgentMailbox failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    await deleteMailboxByAddress(credentials.imap.user);
   }
 
   async function deleteMailboxByAddress(address: string) {
-    const localPart = getLocalPart(address);
-    const providerConfig = await getOptionalProviderConfig();
+    try {
+      const localPart = getLocalPart(address);
+      const providerConfig = await getOptionalProviderConfig();
 
-    if (!providerConfig) {
-      return;
+      if (!providerConfig) {
+        return;
+      }
+
+      const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
+        method: 'DELETE',
+        headers: buildHeaders(providerConfig),
+      });
+
+      if (response.ok || response.status === 404) {
+        return;
+      }
+
+      throw await buildMigaduError('delete mailbox', response);
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] deleteMailboxByAddress failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
-      method: 'DELETE',
-      headers: buildHeaders(providerConfig),
-    });
-
-    if (response.ok || response.status === 404) {
-      return;
-    }
-
-    throw await buildMigaduError('delete mailbox', response);
   }
 
   async function getStoredCredentials(agentId: string) {
-    const provider = await config.db.query.agentProviders.findFirst({
-      where: and(eq(agentProviders.agentId, agentId), eq(agentProviders.providerType, EMAIL_PROVIDER_TYPE)),
-    });
+    try {
+      const provider = await config.db.query.agentProviders.findFirst({
+        where: and(eq(agentProviders.agentId, agentId), eq(agentProviders.providerType, EMAIL_PROVIDER_TYPE)),
+      });
 
-    if (!provider) {
-      return null;
+      if (!provider) {
+        return null;
+      }
+
+      return parseStoredCredentials(provider.encryptedCredentials);
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] getStoredCredentials failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    return parseStoredCredentials(provider.encryptedCredentials);
   }
 
   async function getMailbox(localPart: string) {
-    const providerConfig = await getRequiredProviderConfig();
-    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
-      headers: buildHeaders(providerConfig),
-    });
+    try {
+      const providerConfig = await getRequiredProviderConfig();
+      const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
+        headers: buildHeaders(providerConfig),
+      });
 
-    if (response.ok) {
-      return migaduMailboxSchema.parse(await response.json());
+      if (response.ok) {
+        return migaduMailboxSchema.parse(await response.json());
+      }
+
+      if (response.status === 400 || response.status === 404) {
+        return null;
+      }
+
+      throw await buildMigaduError('load mailbox', response);
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] getMailbox failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    if (response.status === 400 || response.status === 404) {
-      return null;
-    }
-
-    throw await buildMigaduError('load mailbox', response);
   }
 
   async function createMailbox(input: { localPart: string; name: string; password: string }) {
-    const providerConfig = await getRequiredProviderConfig();
-    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes`), {
-      method: 'POST',
-      headers: buildHeaders(providerConfig),
-      body: JSON.stringify({
-        local_part: input.localPart,
-        name: input.name,
-        password: input.password,
-      }),
-    });
+    try {
+      const providerConfig = await getRequiredProviderConfig();
+      const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes`), {
+        method: 'POST',
+        headers: buildHeaders(providerConfig),
+        body: JSON.stringify({
+          local_part: input.localPart,
+          name: input.name,
+          password: input.password,
+        }),
+      });
 
-    if (!response.ok) {
-      throw await buildMigaduError('create mailbox', response);
+      if (!response.ok) {
+        throw await buildMigaduError('create mailbox', response);
+      }
+
+      return migaduMailboxSchema.parse(await response.json());
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] createMailbox failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    return migaduMailboxSchema.parse(await response.json());
   }
 
   async function updateMailbox(localPart: string, input: { name: string; password: string }) {
-    const providerConfig = await getRequiredProviderConfig();
-    const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
-      method: 'PUT',
-      headers: buildHeaders(providerConfig),
-      body: JSON.stringify({
-        name: input.name,
-        password: input.password,
-      }),
-    });
+    try {
+      const providerConfig = await getRequiredProviderConfig();
+      const response = await fetch(buildUrl(providerConfig, `/domains/${providerConfig.domain}/mailboxes/${localPart}`), {
+        method: 'PUT',
+        headers: buildHeaders(providerConfig),
+        body: JSON.stringify({
+          name: input.name,
+          password: input.password,
+        }),
+      });
 
-    if (!response.ok) {
-      throw await buildMigaduError('update mailbox', response);
+      if (!response.ok) {
+        throw await buildMigaduError('update mailbox', response);
+      }
+
+      return migaduMailboxSchema.parse(await response.json());
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] updateMailbox failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    return migaduMailboxSchema.parse(await response.json());
   }
 
   async function getOptionalProviderConfig() {
-    const integration = await config.integrations.getMigaduConfig();
+    try {
+      const integration = await config.integrations.getMigaduConfig();
 
-    if (!integration) {
-      return null;
+      if (!integration) {
+        return null;
+      }
+
+      const domain = integration.apiUser.split('@')[1];
+
+      if (!domain) {
+        throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
+      }
+
+      return {
+        apiBaseUrl: MIGADU_API_BASE_URL,
+        apiUser: integration.apiUser,
+        apiKey: integration.apiKey,
+        domain,
+      };
+    } catch (err) {
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] getOptionalProviderConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    const domain = integration.apiUser.split('@')[1];
-
-    if (!domain) {
-      throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
-    }
-
-    return {
-      apiBaseUrl: MIGADU_API_BASE_URL,
-      apiUser: integration.apiUser,
-      apiKey: integration.apiKey,
-      domain,
-    };
   }
 
   async function getRequiredProviderConfig() {
@@ -294,7 +334,6 @@ async function buildMigaduError(action: string, response: Response) {
   const message = bodyText || response.statusText || 'unknown error';
   return new Error(`Migadu ${action} failed (${response.status}): ${message}`);
 }
-
 
 
 function parseStoredCredentials(encryptedCredentials: string) {

@@ -1,4 +1,4 @@
-import { createTool } from '@forge-runtime/core';
+import { createTool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { InternalChatService } from './internal-chat-service';
@@ -106,6 +106,7 @@ export function createInternalChatTools(
             ...result,
           };
         } catch (error) {
+          forgeDebug({ scope: 'internal-chat', level: 'error', message: 'Internal chat tool failed', context: { error } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
