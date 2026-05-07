@@ -132,15 +132,28 @@ describe('loadAgentRuntimeData', () => {
     expect(mocks.decryptSecretMock).not.toHaveBeenCalled();
   });
 
-  it('skips decryption on parse error but continues', async () => {
+  it('propagates decrypt error (invalid ciphertext)', async () => {
     mocks.findManyMock.mockResolvedValue([
       { providerType: 'discord', encryptedCredentials: 'corrupt' },
     ]);
+    mocks.decryptSecretMock.mockImplementation(() => {
+      throw new Error('decrypt failed');
+    });
+
+    await expect(
+      loadAgentRuntimeData(createMockDb() as any, createMockConfig()),
+    ).rejects.toThrow('decrypt failed');
+  });
+
+  it('propagates JSON parse error (invalid credentials)', async () => {
+    mocks.findManyMock.mockResolvedValue([
+      { providerType: 'discord', encryptedCredentials: 'encrypted-discord-data' },
+    ]);
     mocks.decryptSecretMock.mockReturnValue('not-valid-json');
 
-    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig());
-
-    expect(result.providerCredentials.discord).toBeUndefined();
+    await expect(
+      loadAgentRuntimeData(createMockDb() as any, createMockConfig()),
+    ).rejects.toThrow();
   });
 
   it('calls loadCommunicationProviders with correct args', async () => {

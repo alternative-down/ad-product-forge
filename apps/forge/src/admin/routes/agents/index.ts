@@ -6,6 +6,8 @@
 export { registerAgentReadRoutes } from './read';
 export { registerAgentOperationRoutes } from './operations';
 export { registerAgentWriteOpsRoutes } from './write-ops';
+export { registerAgentSkillsWriteRoutes } from './skills-write';
+export { registerAgentSchedulesWriteRoutes } from './schedule-write';
 // Fragmented agent detail routes (#1587)
 export {
   registerAgentStepsRoutes,

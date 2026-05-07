@@ -69,6 +69,10 @@ const mockAccountOps = vi.hoisted(() => ({
   removeMemberFromGroupByAccount: vi.fn(),
   updateGroupByAccount: vi.fn(),
 }));
+const mockSending = vi.hoisted(() => ({
+  sendMessage: vi.fn().mockResolvedValue({ success: true, messageId: 'mock-id-123', conversationKey: 'conv_1' }),
+  getMessageAttachmentByAccount: vi.fn().mockResolvedValue({ stream: null, contentType: undefined }),
+}));
 vi.mock('./internal-chat-groups', async () => ({
   ...(await vi.importActual('./internal-chat-groups')),
   createInternalChatGroups: () => mockGroups,
@@ -78,6 +82,9 @@ vi.mock('./internal-chat-groups', async () => ({
 vi.mock('./internal-chat-account-ops', async () => ({
   createInternalChatAccountOps: () => mockAccountOps,
 }));
+vi.mock('./internal-chat-sending', async () => ({
+  createChatSending: () => mockSending,
+}));
 
 
 vi.mock('@forge-runtime/core', () => ({
@@ -86,6 +93,15 @@ vi.mock('@forge-runtime/core', () => ({
 
 vi.mock('../utils/id', () => ({
   createId: vi.fn(() => 'mock-id-123'),
+}));
+
+const mockMessages = vi.hoisted(() => ({
+  getMessages: vi.fn(),
+  getMessagesByAccount: vi.fn(),
+  archiveConversationByAccount: vi.fn(),
+}));
+vi.mock('./internal-chat-messages', async () => ({
+  createInternalChatMessages: () => mockMessages,
 }));
 
 // ---------------------------------------------------------------------------

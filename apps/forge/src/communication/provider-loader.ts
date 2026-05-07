@@ -137,14 +137,19 @@ export async function loadCommunicationProviders(
   }
 
   if (credentials.email) {
-    const email = emailCredentialsSchema.parse(credentials.email);
-    providers.push(
-      createEmailProvider({
-        imap: email.imap,
-        smtp: email.smtp,
-        bcc: email.bcc ?? undefined,
-      })
-    );
+    try {
+      const email = emailCredentialsSchema.parse(credentials.email);
+      providers.push(
+        createEmailProvider({
+          imap: email.imap,
+          smtp: email.smtp,
+          bcc: email.bcc ?? undefined,
+        })
+      );
+    } catch (error) {
+      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'Failed to load email provider', context: { error: error instanceof Error ? error.message : String(error) } });
+      throw error;
+    }
   }
 
   return providers;
