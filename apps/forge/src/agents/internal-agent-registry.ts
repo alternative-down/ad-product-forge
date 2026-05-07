@@ -20,7 +20,7 @@ type InternalAgentEntry = {
  * Exported so callers (admin routes, hire/terminate) can create per-agent managers
  * instead of sharing a single global instance.
  */
-export function createPerAgentEmailManager(db: Database): AgentEmailManager {
+function createPerAgentEmailManager(db: Database): AgentEmailManager {
   const integrations = createSystemIntegrationStore(db);
   return createAgentEmailManager({ db, integrations });
 }
@@ -29,7 +29,7 @@ export function createPerAgentEmailManager(db: Database): AgentEmailManager {
  * Creates a per-agent CoolifyManager instance.
  * Call this for each agent to get an isolated Coolify manager.
  */
-export function createPerAgentCoolifyManager(db: Database): CoolifyManager {
+function createPerAgentCoolifyManager(db: Database): CoolifyManager {
   const integrations = createSystemIntegrationStore(db);
   return createCoolifyManager({ integrations });
 }
