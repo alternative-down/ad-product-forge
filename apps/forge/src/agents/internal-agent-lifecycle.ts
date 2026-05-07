@@ -1,4 +1,5 @@
 import type {Database} from '../database/client'
+import { forgeDebug } from '@forge-runtime/core';
 
 import { buildHiredAgentProfile } from './hiring-profile';
 import { generateHiredAgentInstructions } from './hiring-requests-handler';
@@ -83,6 +84,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       githubAppRegistrationUrl: githubApp?.registrationUrl ?? null,
     };
   } catch (error) {
+    forgeDebug({ scope: 'agents', level: 'error', message: 'Internal agent lifecycle failed', context: { error } });
     await terminateInternalAgent(db, {
       agentId: hired.agentId,
       workspaceBasePath: input.workspaceBasePath,
