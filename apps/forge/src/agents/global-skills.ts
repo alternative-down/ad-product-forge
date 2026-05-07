@@ -10,8 +10,8 @@ import {
 } from './bundled-workspace-skills';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
 import { parseSkillMetadata as _parseSkillMetadata, countSkillFiles as _countSkillFiles } from './skills-shared/index';
-export const parseSkillMetadata = _parseSkillMetadata;
-export const countSkillFiles = _countSkillFiles;
+const parseSkillMetadata = _parseSkillMetadata;
+const countSkillFiles = _countSkillFiles;
 
 type GlobalSkillSummary = {
   skillName: string;
@@ -25,11 +25,11 @@ type GlobalSkillSummary = {
 
 
 
-export function resolveGlobalSkillsRoot(workspaceBasePath: string) {
+function resolveGlobalSkillsRoot(workspaceBasePath: string) {
   return path.resolve(workspaceBasePath, '_system', 'skills');
 }
 
-export function normalizeArchiveEntryPath(entryPath: string) {
+function normalizeArchiveEntryPath(entryPath: string) {
   const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
   const isDirectory = normalizedPath.endsWith('/');
   const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
