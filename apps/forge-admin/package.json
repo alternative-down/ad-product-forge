@@ -42,7 +42,7 @@
   "devDependencies": {
     "@eslint-community/eslint-utils": "^4.9.1",
     "@eslint-community/regexpp": "^4.12.2",
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@humanfs/node": "^0.16.7",
     "@humanwhocodes/module-importer": "^1.0.1",
     "@humanwhocodes/retry": "^0.4.3",
