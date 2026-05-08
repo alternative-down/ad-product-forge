@@ -717,7 +717,9 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     input: AgentLongTermMemoryRecallDebugSearchInput,
   ) {
     const loadedAgent = registry.get(agentId);
+    forgeDebug({ scope: "admin-readmodel", level: "warn", message: "debugSearchLtmRecall: agent not loaded", context: { agentId } });
     if (!loadedAgent) throw new Error(`Agent is not loaded: ${agentId}`);
+    forgeDebug({ scope: "admin-readmodel", level: "warn", message: "debugSearchLtmRecall: LTM recall not available", context: { agentId } });
     if (!loadedAgent.runtime.longTermMemoryRecall) throw new Error(`Long-term memory recall is not available for agent: ${agentId}`);
     const result = await loadedAgent.runtime.longTermMemoryRecall.debugSearch(input);
     return { ...result, lastInitAt: result.lastInitAt ? new Date(result.lastInitAt).getTime() : null };
