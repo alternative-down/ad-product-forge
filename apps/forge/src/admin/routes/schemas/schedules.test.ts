@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
+/**
+ * Unit tests for admin/routes/schemas/schedules.ts.
+ * Zod validation schemas for scheduled task management.
+ * Zero prior coverage.
+ *
+ * NOTE: schedules.ts has no named exports, so schemas are redefined here.
+ */
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+
+// ─── Inline schema definitions (mirrors schedules.ts) ──────────────────────
 
 const createScheduleSchema = z.object({
   agentId: z.string().min(1),
@@ -32,217 +41,208 @@ const deleteScheduleSchema = z.object({
   scheduleId: z.string().min(1),
 });
 
-describe('createScheduleSchema', () => {
-  it('validates cron schedule with required fields', () => {
+// ─── createScheduleSchema — cron type ───────────────────────────────────────
+
+describe('createScheduleSchema — cron type', () => {
+  it('parses minimal valid cron input', () => {
     const result = createScheduleSchema.parse({
       agentId: 'agent-1',
-      name: 'daily-check',
+      name: 'daily-report',
       scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
-      content: 'Run daily check',
+      cronExpression: '0 9 * * *',
+      content: 'Run daily report',
     });
-    expect(result.agentId).toBe('agent-1');
     expect(result.scheduleType).toBe('cron');
-    expect(result.timezone).toBe('UTC');
+    expect(result.cronExpression).toBe('0 9 * * *');
+    expect(result.timezone).toBe('UTC'); // default
   });
 
-  it('validates date schedule', () => {
+  it('parses with all optional fields', () => {
     const result = createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'one-time-task',
-      scheduleType: 'date',
-      scheduledDate: '2025-12-25T10:00:00Z',
-      content: 'Run once',
-    });
-    expect(result.scheduleType).toBe('date');
-  });
-
-  it('accepts optional description', () => {
-    const result = createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
-      content: 'content',
-      description: 'My scheduled task',
-    });
-    expect(result.description).toBe('My scheduled task');
-  });
-
-  it('accepts custom timezone', () => {
-    const result = createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
-      content: 'content',
-      timezone: 'America/Sao_Paulo',
-    });
-    expect(result.timezone).toBe('America/Sao_Paulo');
-  });
-
-  it('accepts wakeWhenRunning option', () => {
-    const result = createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
-      content: 'content',
+      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *',
+      content: 'c', description: 'A description', timezone: 'America/New_York',
       wakeWhenRunning: true,
     });
+    expect(result.description).toBe('A description');
+    expect(result.timezone).toBe('America/New_York');
     expect(result.wakeWhenRunning).toBe(true);
   });
 
   it('rejects missing agentId', () => {
     expect(() => createScheduleSchema.parse({
-      name: 'task',
-      scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
-      content: 'content',
+      name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
+    })).toThrow();
+  });
+
+  it('rejects empty agentId', () => {
+    expect(() => createScheduleSchema.parse({
+      agentId: '', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
     })).toThrow();
   });
 
   it('rejects missing name', () => {
     expect(() => createScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
-      content: 'content',
+      agentId: 'a', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
     })).toThrow();
   });
 
   it('rejects missing scheduleType', () => {
     expect(() => createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      content: 'content',
+      agentId: 'a', name: 'n', cronExpression: '* * * * *', content: 'c',
     })).toThrow();
   });
 
   it('rejects invalid scheduleType', () => {
     expect(() => createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      scheduleType: 'daily',
-      content: 'content',
-    })).toThrow();
-  });
-
-  it('rejects missing content', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      scheduleType: 'cron',
-      cronExpression: '0 0 * * *',
+      agentId: 'a', name: 'n', scheduleType: 'hourly', cronExpression: '* * * * *', content: 'c',
     })).toThrow();
   });
 
   it('rejects empty cronExpression', () => {
     expect(() => createScheduleSchema.parse({
-      agentId: 'agent-1',
-      name: 'task',
-      scheduleType: 'cron',
-      cronExpression: '',
-      content: 'content',
+      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '', content: 'c',
+    })).toThrow();
+  });
+
+  it('rejects missing content', () => {
+    expect(() => createScheduleSchema.parse({
+      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *',
+    })).toThrow();
+  });
+
+  it('rejects empty content', () => {
+    expect(() => createScheduleSchema.parse({
+      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: '',
     })).toThrow();
   });
 });
 
+// ─── createScheduleSchema — date type ───────────────────────────────────────
+
+describe('createScheduleSchema — date type', () => {
+  it('parses minimal valid date input', () => {
+    const result = createScheduleSchema.parse({
+      agentId: 'a', name: 'n', scheduleType: 'date', scheduledDate: '2025-06-01T10:00:00Z', content: 'c',
+    });
+    expect(result.scheduleType).toBe('date');
+    expect(result.scheduledDate).toBe('2025-06-01T10:00:00Z');
+  });
+
+  it('rejects empty scheduledDate', () => {
+    expect(() => createScheduleSchema.parse({
+      agentId: 'a', name: 'n', scheduleType: 'date', scheduledDate: '', content: 'c',
+    })).toThrow();
+  });
+});
+
+// ─── updateScheduleSchema ───────────────────────────────────────────────────
+
 describe('updateScheduleSchema', () => {
-  it('validates update with required fields', () => {
+  it('parses with agentId and scheduleId only (all other fields optional)', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: 'schedule-1',
+      agentId: 'agent-1', scheduleId: 'schedule-1',
     });
     expect(result.agentId).toBe('agent-1');
     expect(result.scheduleId).toBe('schedule-1');
   });
 
-  it('accepts optional fields for update', () => {
+  it('parses with all optional fields', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: 'schedule-1',
-      name: 'updated-name',
-      description: 'Updated description',
-      isActive: false,
+      agentId: 'a', scheduleId: 's', name: 'Updated', description: 'Desc',
+      scheduleType: 'date', scheduledDate: '2025-12-01T00:00:00Z',
+      timezone: 'Europe/London', content: 'New content', wakeWhenRunning: false, isActive: false,
     });
-    expect(result.name).toBe('updated-name');
+    expect(result.name).toBe('Updated');
     expect(result.isActive).toBe(false);
+    expect(result.wakeWhenRunning).toBe(false);
   });
 
   it('accepts nullable description', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: 'schedule-1',
-      description: null,
+      agentId: 'a', scheduleId: 's', description: null,
     });
-    expect(result.description).toBe(null);
+    expect(result.description).toBeNull();
   });
 
   it('accepts nullable cronExpression', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: 'schedule-1',
-      cronExpression: null,
+      agentId: 'a', scheduleId: 's', cronExpression: null,
     });
-    expect(result.cronExpression).toBe(null);
+    expect(result.cronExpression).toBeNull();
   });
 
   it('accepts nullable scheduledDate', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: 'schedule-1',
-      scheduledDate: null,
+      agentId: 'a', scheduleId: 's', scheduledDate: null,
     });
-    expect(result.scheduledDate).toBe(null);
+    expect(result.scheduledDate).toBeNull();
   });
 
   it('rejects missing agentId', () => {
-    expect(() => updateScheduleSchema.parse({
-      scheduleId: 'schedule-1',
-    })).toThrow();
+    expect(() => updateScheduleSchema.parse({ scheduleId: 's' })).toThrow();
   });
 
   it('rejects missing scheduleId', () => {
+    expect(() => updateScheduleSchema.parse({ agentId: 'a' })).toThrow();
+  });
+
+  it('rejects invalid scheduleType', () => {
     expect(() => updateScheduleSchema.parse({
-      agentId: 'agent-1',
+      agentId: 'a', scheduleId: 's', scheduleType: 'hourly',
     })).toThrow();
   });
 });
 
+// ─── deleteScheduleSchema ───────────────────────────────────────────────────
+
 describe('deleteScheduleSchema', () => {
-  it('validates delete with required fields', () => {
-    const result = deleteScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: 'schedule-1',
-    });
-    expect(result.agentId).toBe('agent-1');
-    expect(result.scheduleId).toBe('schedule-1');
+  it('parses valid input', () => {
+    expect(deleteScheduleSchema.parse({
+      agentId: 'agent-1', scheduleId: 'schedule-1',
+    })).toMatchObject({ agentId: 'agent-1', scheduleId: 'schedule-1' });
   });
 
   it('rejects missing agentId', () => {
-    expect(() => deleteScheduleSchema.parse({
-      scheduleId: 'schedule-1',
-    })).toThrow();
+    expect(() => deleteScheduleSchema.parse({ scheduleId: 's' })).toThrow();
   });
 
   it('rejects missing scheduleId', () => {
-    expect(() => deleteScheduleSchema.parse({
-      agentId: 'agent-1',
-    })).toThrow();
+    expect(() => deleteScheduleSchema.parse({ agentId: 'a' })).toThrow();
   });
 
   it('rejects empty agentId', () => {
-    expect(() => deleteScheduleSchema.parse({
-      agentId: '',
-      scheduleId: 'schedule-1',
-    })).toThrow();
+    expect(() => deleteScheduleSchema.parse({ agentId: '', scheduleId: 's' })).toThrow();
   });
 
   it('rejects empty scheduleId', () => {
-    expect(() => deleteScheduleSchema.parse({
-      agentId: 'agent-1',
-      scheduleId: '',
-    })).toThrow();
+    expect(() => deleteScheduleSchema.parse({ agentId: 'a', scheduleId: '' })).toThrow();
+  });
+});
+
+// ─── safeParse (non-throwing) ─────────────────────────────────────────────
+
+describe('schema.safeParse', () => {
+  it('createScheduleSchema safeParse returns success false for missing content', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('createScheduleSchema safeParse returns success true for valid cron input', () => {
+    const result = createScheduleSchema.safeParse({
+      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('updateScheduleSchema safeParse returns success true for agentId/scheduleId only', () => {
+    const result = updateScheduleSchema.safeParse({ agentId: 'a', scheduleId: 's' });
+    expect(result.success).toBe(true);
+  });
+
+  it('deleteScheduleSchema safeParse returns success false for missing scheduleId', () => {
+    const result = deleteScheduleSchema.safeParse({ agentId: 'a' });
+    expect(result.success).toBe(false);
   });
 });
