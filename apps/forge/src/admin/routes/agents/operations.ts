@@ -8,7 +8,7 @@ import type { CommunicationFile } from '@forge-runtime/core';
 import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
-import { agentActionSchema } from '../schemas';
+import { agentActionSchema } from '../schemas/agents';
 
 /**
  * Schema for POST /admin/agent/internal-chat/send.
