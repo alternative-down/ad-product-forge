@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
+import { forgeDebug } from '@forge-runtime/core';
 
 // ─── normalizeAgentName ───────────────────────────────────────────────────────
 
@@ -49,35 +50,40 @@ export async function validateHireAgentInput(
   | { valid: true; roleId: string; roleName: string; roleDescription: string | undefined }
   | { valid: false; error: string; hint?: string }
 > {
-  const role = await capabilities.getRole(roleId);
+  try {
+    const role = await capabilities.getRole(roleId);
 
-  if (!role) {
-    return { valid: false, error: `Role "${roleId}" does not exist.`, hint: 'Choose an existing role id from the capability store.' };
-  }
+    if (!role) {
+      return { valid: false, error: `Role "${roleId}" does not exist.`, hint: 'Choose an existing role id from the capability store.' };
+    }
 
-  const MINIMUM_BASE_TOOL_IDS = new Set([
-    'list_conversations',
-    'get_messages',
-    'send_message',
-    'list_self_crons',
-    'manage_self_crons',
-  ] as const);
+    const MINIMUM_BASE_TOOL_IDS = new Set([
+      'list_conversations',
+      'get_messages',
+      'send_message',
+      'list_self_crons',
+      'manage_self_crons',
+    ] as const);
 
-  const roleToolIds = new Set(role.toolIds ?? []);
-  const missingTools = [...MINIMUM_BASE_TOOL_IDS].filter((id) => !roleToolIds.has(id));
+    const roleToolIds = new Set(role.toolIds ?? []);
+    const missingTools = [...MINIMUM_BASE_TOOL_IDS].filter((id) => !roleToolIds.has(id));
 
-  if (missingTools.length > 0) {
+    if (missingTools.length > 0) {
+      return {
+        valid: false,
+        error: `Role "${role.name}" is missing required base tools: ${missingTools.join(', ')}.`,
+        hint: `Call manage_role_capabilities to add the missing tools, then try hireAgent again.`,
+      };
+    }
+
     return {
-      valid: false,
-      error: `Role "${role.name}" is missing required base tools: ${missingTools.join(', ')}.`,
-      hint: `Call manage_role_capabilities to add the missing tools, then try hireAgent again.`,
+      valid: true,
+      roleId: role.id,
+      roleName: role.name,
+      roleDescription: role.description ?? undefined,
     };
+  } catch (err) {
+    forgeDebug({ scope: 'hiring-validators', level: 'error', message: '[hiring-validators] validateHireAgentInput failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    throw err;
   }
-
-  return {
-    valid: true,
-    roleId: role.id,
-    roleName: role.name,
-    roleDescription: role.description ?? undefined,
-  };
 }
