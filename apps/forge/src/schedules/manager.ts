@@ -470,6 +470,7 @@ export function createAgentScheduleManager(input: {
       try {
         (cronParser.parseExpression as any)(scheduleRecord.cronExpression);
       } catch {
+        forgeDebug({ scope: 'schedules', level: 'error', message: 'Invalid cron expression for schedule', context: { scheduleId: scheduleRecord.scheduleId, cronExpression: scheduleRecord.cronExpression } });
         throw new Error(`Invalid cron expression for schedule ${scheduleRecord.scheduleId}: ${scheduleRecord.cronExpression}`);
       }
 
