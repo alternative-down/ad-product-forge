@@ -175,6 +175,7 @@ export async function createCommunicationModule(config: {
     for (const provider of selectedProviders) {
       if (!provider.listConversations) {
         if (input.provider) {
+          logger.warn("communication", "listConversations: provider does not support listing");
           throw new Error(`Provider does not support listing conversations: ${provider.id}`);
         }
 
@@ -208,6 +209,7 @@ export async function createCommunicationModule(config: {
     const provider = resolveProvider(providers, input.provider);
 
     if (!provider.getMessages) {
+      logger.warn("communication", "getMessages: provider does not support reading messages");
       throw new Error(`Provider does not support reading messages: ${input.provider}`);
     }
 
