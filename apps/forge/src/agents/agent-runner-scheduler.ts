@@ -477,6 +477,7 @@ export function createScheduler(
 
       await queueNextStep();
     } catch (error) {
+      forgeDebug({ scope: 'scheduler', level: 'error', message: 'beginRun queueNextStep failed', context: { error: error instanceof Error ? error.message : String(error), runtimeId: deps.runtimeId } });
       if (!isStaleRun(myRunEpoch)) {
         await transitionToIdle(myRunEpoch, input.setExecutionState, input.onRunnerIdle, {
           deferWakeQueueDrain: true,
