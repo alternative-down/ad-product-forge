@@ -116,6 +116,8 @@ function createInternalAgentRegistry() {
       workspaceBasePath: loaderConfig?.workspaceBasePath,
       reloadRuntime: async () => {
         if (!loaderConfig) {
+          forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'reloadAgentRuntime: config not available' });
+          forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'reloadAgentRuntime: config not available' });
           throw new Error('Agent loader config is not available for runtime reload');
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);

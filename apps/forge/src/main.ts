@@ -109,6 +109,8 @@ export async function main() {
 
   // Validate: require admin API key unless explicitly opting into insecure local mode
   if (!adminApiKey && !allowInsecureLocal) {
+    forgeDebug({ scope: 'main', level: 'error', message: 'startForge: critical error during initialization' });
+    forgeDebug({ scope: 'main', level: 'error', message: 'startForge: critical initialization error' });
     throw new Error(
       'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set'
       + ' FORGE_ADMIN_ALLOW_INSECURE_LOCAL=true for local development only.',

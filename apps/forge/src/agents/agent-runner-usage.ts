@@ -22,6 +22,8 @@ export function createAgentRunnerUsage(input: {
 }) {
   async function estimateStepCostUsd() {
     if (!input.runtime.modelProfileId) {
+      forgeDebug({ scope: 'agent-runner-usage', level: 'warn', message: 'requirePrimaryModelProfile: missing profile', context: { runtimeId: input.runtime.id } });
+      forgeDebug({ scope: 'agent-runner-usage', level: 'warn', message: 'requirePrimaryModelProfile: missing profile', context: { runtimeId: input.runtime.id } });
       throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
     }
     try {
@@ -67,6 +69,8 @@ export function createAgentRunnerUsage(input: {
     outputTokens: number,
   ) {
     if (!input.runtime.modelProfileId) {
+      forgeDebug({ scope: 'agent-runner-usage', level: 'warn', message: 'requirePrimaryModelProfile: missing profile', context: { runtimeId: input.runtime.id } });
+      forgeDebug({ scope: 'agent-runner-usage', level: 'warn', message: 'requirePrimaryModelProfile: missing profile', context: { runtimeId: input.runtime.id } });
       throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
     }
     try {

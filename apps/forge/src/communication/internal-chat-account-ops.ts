@@ -66,6 +66,8 @@ export function createInternalChatAccountOps(
       });
 
       if (existing) {
+        forgeDebug({ scope: 'internal-chat-account-ops', level: 'warn', message: 'getOrCreateDirectConversation: group already exists', context: { conversationKey: input.conversationKey } });
+        forgeDebug({ scope: 'internal-chat-account-ops', level: 'warn', message: 'getOrCreateDirect: group already exists', context: { conversationKey: input.conversationKey } });
         throw new ChatGroupAlreadyExistsError(input.conversationKey);
       }
 
@@ -115,6 +117,8 @@ export function createInternalChatAccountOps(
       await deps.getRequiredAccount(input.participantAccountId);
       const conversation = await deps.ensureDirectConversation(input.accountId, input.participantAccountId);
       if (!conversation) {
+        forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: 'getOrCreateDirectConversation: creation failed' });
+        forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: 'getOrCreateDirect: creation failed' });
         throw new Error('Direct conversation creation failed');
       }
       return { conversationId: conversation.id, conversationKey: conversation.id };

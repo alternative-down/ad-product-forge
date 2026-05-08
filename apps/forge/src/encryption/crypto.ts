@@ -12,6 +12,8 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
  */
 function requireEncryptionKey(): Buffer {
   if (!ENCRYPTION_KEY) {
+    forgeDebug({ scope: 'encryption-crypto', level: 'error', message: 'initEncryption: ENCRYPTION_KEY not set' });
+    forgeDebug({ scope: 'encryption-crypto', level: 'error', message: 'initEncryption: ENCRYPTION_KEY not set' });
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }
 

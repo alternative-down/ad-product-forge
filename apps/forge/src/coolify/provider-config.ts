@@ -24,6 +24,7 @@ export async function getProviderConfig(
   const integration = await integrations.getCoolifyConfig();
 
   if (!integration) {
+    forgeDebug({ scope: 'coolify-provider-config', level: 'error', message: 'loadCoolifyProvider: coolify integration not configured' });
     throw new Error(
       'Coolify integration requires a configured admin connection in system integrations',
     );
