@@ -167,6 +167,7 @@ export function createGitHubAppManager(config: {
     const githubConfig = await config.integrations.getGitHubConfig();
 
     if (!githubConfig) {
+      forgeDebug({ scope: 'github-manager', level: 'warn', message: 'GitHub integration not configured' });
       throw new Error('GitHub integration is not configured');
     }
 
@@ -191,6 +192,7 @@ export function createGitHubAppManager(config: {
     const existing = await getCredentials(input.agentId);
 
     if (existing) {
+      forgeDebug({ scope: 'github-manager', level: 'warn', message: 'GitHub App already exists for agent', context: { agentId: input?.agentId } });
       throw new Error(`GitHub App already exists for agent ${input.agentId}`);
     }
 
@@ -240,6 +242,7 @@ export function createGitHubAppManager(config: {
     const manifestConfig = githubAppManifestConfigSchema.parse(input.manifestConfig);
 
     if (!credentials) {
+      forgeDebug({ scope: 'github-manager', level: 'warn', message: 'GitHub App does not exist for agent', context: { agentId: input?.agentId } });
       throw new Error(`GitHub App does not exist for agent ${input.agentId}`);
     }
 
@@ -680,6 +683,7 @@ export function createGitHubAppManager(config: {
     const credentials = await getCredentials(agentId);
 
     if (!credentials || credentials.status !== 'active') {
+      forgeDebug({ scope: 'github-manager', level: 'warn', message: 'GitHub App not active for agent', context: { agentId } });
       throw new Error(`GitHub App not active for agent ${agentId}`);
     }
 
