@@ -29,6 +29,7 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     });
 
     if (!membership) {
+      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
       throw new ConversationNotFoundError(conversationId);
     }
   }
@@ -46,6 +47,7 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     });
 
     if (!conversation) {
+      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
       throw new ConversationNotFoundError(conversationId);
     }
 
@@ -56,6 +58,7 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     const group = await getRequiredConversationForAgent(agentId, groupId);
 
     if (group.type !== 'group') {
+      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireGroup: not found', context: { groupId } });
       throw new ChatGroupNotFoundError(groupId);
     }
 
@@ -66,6 +69,7 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     const group = await getRequiredConversationForAccount(accountId, groupId);
 
     if (group.type !== 'group') {
+      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireGroup: not found', context: { groupId } });
       throw new ChatGroupNotFoundError(groupId);
     }
 

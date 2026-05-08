@@ -106,6 +106,7 @@ export async function loadCommunicationProviders(
     const internalChat = internalChatCredentialsSchema.parse(credentials['internal-chat']);
 
     if (!config?.internalChat) {
+      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'loadProvider: internalChat service required' });
       throw new Error('Internal chat provider requires the internalChat service');
     }
 
