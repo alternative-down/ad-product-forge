@@ -136,6 +136,7 @@ async function downloadFileBuffer(downloadUrl: string) {
   const response = await fetch(downloadUrl);
 
   if (!response.ok) {
+    forgeDebug({ scope: 'minimax', level: 'error', message: 'downloadFileBuffer HTTP failure', context: { status: response.status, downloadUrl } });
     throw new Error(`MiniMax file download failed with status ${response.status}`);
   }
 
