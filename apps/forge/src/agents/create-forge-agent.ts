@@ -24,26 +24,32 @@ import type {
 
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmTotalContextTokens required' });
     throw new Error('checkpointedOmTotalContextTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmRecentRawTokens === undefined) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmRecentRawTokens required' });
     throw new Error('checkpointedOmRecentRawTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmRawObservationBatchTokens === undefined) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmRawObservationBatchTokens required' });
     throw new Error('checkpointedOmRawObservationBatchTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmObservationReflectionBatchTokens === undefined) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmObservationReflectionBatchTokens required' });
     throw new Error('checkpointedOmObservationReflectionBatchTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmObservationSupportTokens === undefined) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmObservationSupportTokens required' });
     throw new Error('checkpointedOmObservationSupportTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmReflectionSupportTokens === undefined) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmReflectionSupportTokens required' });
     throw new Error('checkpointedOmReflectionSupportTokens is required in agent runtime config.');
   }
 

@@ -612,6 +612,7 @@ export class AgentLongTermMemoryRecall {
     const runtimeSettings = await this.readRuntimeMemorySettings?.();
 
     if (!runtimeSettings) {
+      forgeDebug({ scope: 'ltm-recall', level: 'warn', message: 'recallFromLongTermMemory: runtime memory settings required' });
       throw new Error('LTM recall requires runtime memory settings');
     }
 
@@ -877,6 +878,7 @@ export class AgentLongTermMemoryRecall {
           : null,
         error: error instanceof Error ? error.message : String(error),
       } });
+      forgeDebug({ scope: 'ltm-recall', level: 'error', message: 'ltm-recall operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
