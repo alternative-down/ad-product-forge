@@ -228,6 +228,7 @@ export function createAgentEmailManager(config: {
       const domain = integration.apiUser.split('@')[1];
 
       if (!domain) {
+        forgeDebug({ scope: "migadu-manager", level: "warn", message: "buildMigaduConfig: cannot derive Migadu domain from API user", context: { apiUser: integration.apiUser } });
         throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
       }
 
@@ -248,6 +249,7 @@ export function createAgentEmailManager(config: {
       const providerConfig = await getOptionalProviderConfig();
 
       if (!providerConfig) {
+        forgeDebug({ scope: "migadu-manager", level: "warn", message: "getRequiredProviderConfig: Migadu email provisioning not configured" });
         throw new Error(
           'Migadu email provisioning requires a configured admin connection in system integrations',
         );
@@ -310,6 +312,7 @@ function buildMailboxLocalPart(agentId: string) {
     .replace(/^-+|-+$/g, '');
 
   if (!normalized) {
+    forgeDebug({ scope: "migadu-manager", level: "warn", message: "getRequiredProviderConfig: Migadu email provisioning not configured" });
     throw new Error(`Cannot derive mailbox local part from agent id: ${agentId}`);
   }
 
@@ -324,6 +327,7 @@ function getLocalPart(address: string) {
   const [localPart] = address.split('@');
 
   if (!localPart) {
+    forgeDebug({ scope: "migadu-manager", level: "warn", message: "getRequiredProviderConfig: Migadu email provisioning not configured" });
     throw new Error(`Invalid mailbox address: ${address}`);
   }
 
