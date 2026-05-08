@@ -147,6 +147,7 @@ export function createAgentContractStore(
     });
 
     if (!profile) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'estimateStepCost: LLM profile not found', context: { profileId: input.profileId } });
       throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
     }
 
@@ -300,6 +301,7 @@ export function createAgentContractStore(
         runtimeId: agentId,
         message: 'refund cash-in failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'agent-contract-store operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 

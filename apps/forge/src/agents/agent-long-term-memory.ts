@@ -542,7 +542,7 @@ export function createAgentLongTermMemory(input: {
     await ensureInitialized();
 
     if (!memoryAgent) {
-      forgeDebug({ scope: "agent-long-term-memory", level: "warn", runtimeId: input.agentId, message: "generateLtmRun: LTM runtime session not available" });
+      forgeDebug({ scope: 'agent-long-term-memory', level: 'warn', message: 'initializeLtmSession: runtime not available', context: { agentId: input.agentId } });
       throw new Error(`LTM runtime session is not available for ${input.agentId}`);
     }
 
@@ -601,6 +601,7 @@ export function createAgentLongTermMemory(input: {
         } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
+          forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'agent-long-term-memory operation failed', error: error instanceof Error ? error.message : String(error) });
           throw error;
         }
 
@@ -611,7 +612,7 @@ export function createAgentLongTermMemory(input: {
     }
 
     if (!result) {
-      forgeDebug({ scope: "agent-long-term-memory", level: "error", runtimeId: input.agentId, message: "generateLtmRun: LTM generate produced no result" });
+      forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'generateLtmSummary: no result produced', context: { agentId: input.agentId } });
       throw new Error(`LTM generate produced no result for ${input.agentId}`);
     }
 
