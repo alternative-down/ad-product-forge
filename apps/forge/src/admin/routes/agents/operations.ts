@@ -5,10 +5,11 @@
 
 import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
-import { agentActionSchema } from '../schemas';
+import { agentActionSchema } from '../schemas/agents';
 
 /**
  * Schema for POST /admin/agent/internal-chat/send.
@@ -58,26 +59,31 @@ export function registerAgentOperationRoutes(
     method: 'POST',
     path: '/admin/agent/wake',
     handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const entry = registry.get(agentId);
-      const timestamp = Date.now();
+      try {
+        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+        const entry = registry.get(agentId);
+        const timestamp = Date.now();
 
-      if (!entry) {
-        return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
+        if (!entry) {
+          return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
+        }
+
+        entry.runner.notifyExternalEvent({
+          type: 'manual-wake',
+          groupKey: `manual-wake:${agentId}`,
+          groupMetadata: {
+            Source: 'admin-console',
+            AgentId: agentId,
+          },
+          idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
+          text: 'Manual wake requested from admin console.',
+          timestamp,
+        });
+        return jsonResponse({ success: true });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent wake route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      entry.runner.notifyExternalEvent({
-        type: 'manual-wake',
-        groupKey: `manual-wake:${agentId}`,
-        groupMetadata: {
-          Source: 'admin-console',
-          AgentId: agentId,
-        },
-        idempotencyKey: `manual-wake:${agentId}:${timestamp}`,
-        text: 'Manual wake requested from admin console.',
-        timestamp,
-      });
-      return jsonResponse({ success: true });
     },
   });
 
@@ -86,23 +92,28 @@ export function registerAgentOperationRoutes(
     method: 'POST',
     path: '/admin/agent/internal-chat/send',
     handler: async (request) => {
-      const payload = parseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
-      const sender = await input.internalChat.registerExternalAccount({
-        slug: payload.senderSlug,
-        displayName: payload.senderDisplayName,
-      });
-      const sent = await input.internalChat.sendMessage({
-        accountId: sender.accountId,
-        targetKey: payload.targetKey ?? payload.agentId,
-        content: payload.content,
-        attachments: [],
-      });
+      try {
+        const payload = parseJsonBody(request.bodyText, adminInternalChatSendFromAdminSchema);
+        const sender = await input.internalChat.registerExternalAccount({
+          slug: payload.senderSlug,
+          displayName: payload.senderDisplayName,
+        });
+        const sent = await input.internalChat.sendMessage({
+          accountId: sender.accountId,
+          targetKey: payload.targetKey ?? payload.agentId,
+          content: payload.content,
+          attachments: [],
+        });
 
-      return jsonResponse({
-        success: true,
-        conversationKey: sent.conversationKey,
-        messageId: sent.messageId,
-      });
+        return jsonResponse({
+          success: true,
+          conversationKey: sent.conversationKey,
+          messageId: sent.messageId,
+        });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Internal chat send route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 }
