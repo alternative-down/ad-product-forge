@@ -86,6 +86,7 @@ export function createChatSending(deps: SendingDeps) {
       : await serviceHelpers.getRequiredConversationForAccount(input.accountId, input.targetKey);
 
     if (!conversation) {
+      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'internal-chat-sending: validation/requirement failed' });
       throw new Error('Conversation not found: ' + input.targetKey);
     }
 
