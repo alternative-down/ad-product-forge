@@ -96,6 +96,7 @@ export function createAgentScheduleManager(input: {
     const heartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
 
     if (!heartbeat) {
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createHeartbeatSchedule failed to load heartbeat', context: { agentId } });
       throw new Error(`Failed to load heartbeat schedule: ${record.id}`);
     }
 
@@ -163,6 +164,7 @@ export function createAgentScheduleManager(input: {
     const existing = await store.getAgentSchedule(agentId, scheduleId);
 
     if (!existing) {
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
@@ -180,6 +182,7 @@ export function createAgentScheduleManager(input: {
     );
 
     if (!updated) {
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
