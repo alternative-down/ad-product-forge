@@ -40,6 +40,7 @@ export async function resolveProfileRuntimeModel(
         `Failed to resolve OAuth runtime model: ${profile.modelKey}`,
         { error: err instanceof Error ? err.message : String(err) },
       );
+      forgeDebug({ scope: 'llm-runtime-model', level: 'error', message: 'llm-runtime-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -71,6 +72,7 @@ export async function resolveProfileRuntimeModel(
         `Failed to create MiniMax runtime model: ${profile.modelKey}`,
         { error: err instanceof Error ? err.message : String(err) },
       );
+      forgeDebug({ scope: 'llm-runtime-model', level: 'error', message: 'llm-runtime-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

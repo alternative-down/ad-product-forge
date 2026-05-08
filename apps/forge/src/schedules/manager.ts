@@ -76,6 +76,7 @@ export function createAgentScheduleManager(input: {
         message: `loadAll failed: ${error instanceof Error ? error.message : String(error)}`,
         context: {},
       });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -202,6 +203,7 @@ export function createAgentScheduleManager(input: {
         await registerSchedule(restored);
       }
 
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
 
@@ -255,6 +257,7 @@ export function createAgentScheduleManager(input: {
         await registerSchedule(restored);
       }
 
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
 
@@ -282,6 +285,7 @@ export function createAgentScheduleManager(input: {
         message: `deleteSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, scheduleId },
       });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -379,6 +383,7 @@ export function createAgentScheduleManager(input: {
         message: `deleteCron failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { editorAgentId, scheduleId },
       });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -407,6 +412,7 @@ export function createAgentScheduleManager(input: {
         message: `removeAgent failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId },
       });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -498,6 +504,7 @@ export function createAgentScheduleManager(input: {
         message: `registerSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { scheduleId: scheduleRecord.scheduleId, kind: scheduleRecord.kind },
       });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
