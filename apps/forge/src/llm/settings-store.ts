@@ -183,6 +183,7 @@ export function createLlmSettingsStore(db: Database) {
       defaults.omProfileId === profileId ||
       defaults.hiringRhProfileId === profileId
     )) {
+      forgeDebug({ scope: 'llm-settings-store', level: 'warn', message: 'deleteModelProfile: cannot delete selected system default', context: { profileId: input.profileId } });
       throw new Error('Cannot delete an LLM profile that is currently selected as a system default');
     }
 

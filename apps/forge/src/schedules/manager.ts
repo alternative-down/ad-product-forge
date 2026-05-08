@@ -167,7 +167,8 @@ export function createAgentScheduleManager(input: {
 
     if (!existing) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      forgeDebug({ scope: 'schedules-manager', level: 'warn', message: 'updateSchedule: schedule not found', context: { scheduleId } });
+    throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
     const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
@@ -185,7 +186,8 @@ export function createAgentScheduleManager(input: {
 
     if (!updated) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      forgeDebug({ scope: 'schedules-manager', level: 'warn', message: 'updateSchedule: schedule not found', context: { scheduleId } });
+    throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
     cancelScheduledJob(scheduleId);
@@ -221,7 +223,8 @@ export function createAgentScheduleManager(input: {
     const existing = await store.getOwnedSchedule(agentId, scheduleId);
 
     if (!existing) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      forgeDebug({ scope: 'schedules-manager', level: 'warn', message: 'updateSchedule: schedule not found', context: { scheduleId } });
+    throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
     const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
@@ -238,7 +241,8 @@ export function createAgentScheduleManager(input: {
     );
 
     if (!updated) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      forgeDebug({ scope: 'schedules-manager', level: 'warn', message: 'updateSchedule: schedule not found', context: { scheduleId } });
+    throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
     cancelScheduledJob(scheduleId);
@@ -349,7 +353,8 @@ export function createAgentScheduleManager(input: {
     const schedule = await store.getScheduleById(scheduleId);
 
     if (!schedule) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      forgeDebug({ scope: 'schedules-manager', level: 'warn', message: 'updateSchedule: schedule not found', context: { scheduleId } });
+    throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
     // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
@@ -365,7 +370,8 @@ export function createAgentScheduleManager(input: {
       const schedule = await store.getScheduleById(scheduleId);
 
       if (!schedule) {
-        throw new Error(`Schedule not found: ${scheduleId}`);
+        forgeDebug({ scope: 'schedules-manager', level: 'warn', message: 'updateSchedule: schedule not found', context: { scheduleId } });
+    throw new Error(`Schedule not found: ${scheduleId}`);
       }
 
       // Authorization: only creator can delete (or null creator = self-created, only agentId can delete)

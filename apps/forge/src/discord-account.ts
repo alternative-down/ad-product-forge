@@ -120,6 +120,7 @@ export function createDiscordProvider(config: {
     const parsed = Date.parse(value);
 
     if (Number.isNaN(parsed)) {
+      forgeDebug({ scope: 'discord-account', level: 'warn', message: 'parseDiscordMessageContent: invalid field', context: { fieldName, value } });
       throw new Error(`Invalid ${fieldName}: ${value}`);
     }
 
@@ -133,6 +134,7 @@ export function createDiscordProvider(config: {
           const response = await fetch(attachment.url);
 
           if (!response.ok) {
+            forgeDebug({ scope: 'discord-account', level: 'error', message: 'downloadAttachment: failed', context: { url: attachment.url, error: err instanceof Error ? err.message : String(err) } });
             throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
           }
 
@@ -430,6 +432,7 @@ export function createDiscordProvider(config: {
         const channel = await client.channels.fetch(targetKey);
 
         if (!channel?.isSendable()) {
+          forgeDebug({ scope: 'discord-account', level: 'warn', message: 'sendDiscordMessage: target not sendable', context: { targetKey } });
           throw new Error(`Discord target is not sendable: ${targetKey}`);
         }
 

@@ -189,6 +189,7 @@ async function waitForVideoFile(
     }
 
     if (videoStatus === 'failed') {
+      forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'generateMiniMaxVideo: generation failed', context: { failureReason: status.data?.failureReason } });
       throw new Error(status.data?.failureReason || 'MiniMax video generation failed');
     }
 

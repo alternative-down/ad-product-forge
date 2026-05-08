@@ -263,7 +263,8 @@ export function createInternalChatGroups(
       createdAt: new Date(now).toISOString(),
     };
     } catch (err) {
-      if (err instanceof Error && err.message.includes('already exists')) throw err;
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'createGroup: already exists error', error: err instanceof Error ? err.message : String(err) });
+    if (err instanceof Error && err.message.includes('already exists')) throw err;
       forgeDebug({
         scope: 'internal-chat-groups',
         level: 'error',
@@ -381,7 +382,8 @@ export function createInternalChatGroups(
       }
     } else {
       if (!input.name) {
-        throw new Error("name is required when creating a group.");
+        forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'createGroup: name required' });
+      throw new Error("name is required when creating a group.");
       }
     }
 
@@ -576,7 +578,8 @@ export function createInternalChatGroups(
       createdAt: new Date(row.createdAt).toISOString(),
     }));
     } catch (err) {
-      if (err instanceof Error && err.message.includes('not found')) throw err;
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'addGroupMember: not found', error: err instanceof Error ? err.message : String(err) });
+    if (err instanceof Error && err.message.includes('not found')) throw err;
       forgeDebug({
         scope: 'internal-chat-groups',
         level: 'error',
@@ -617,7 +620,8 @@ export function createInternalChatGroups(
       createdAt: new Date(row.createdAt).toISOString(),
     }));
     } catch (err) {
-      if (err instanceof Error && err.message.includes('not found')) throw err;
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'addGroupMember: not found', error: err instanceof Error ? err.message : String(err) });
+    if (err instanceof Error && err.message.includes('not found')) throw err;
       forgeDebug({
         scope: 'internal-chat-groups',
         level: 'error',

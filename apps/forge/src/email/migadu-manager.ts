@@ -228,7 +228,8 @@ export function createAgentEmailManager(config: {
       const domain = integration.apiUser.split('@')[1];
 
       if (!domain) {
-        throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
+        forgeDebug({ scope: 'migadu-manager', level: 'warn', message: 'createMailboxManager: cannot derive domain from API user', context: { apiUser: integration.apiUser } });
+      throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
       }
 
       return {
