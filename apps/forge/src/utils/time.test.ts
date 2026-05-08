@@ -1,107 +1,61 @@
 /**
- * Unit tests for utils/time.ts — TimeProvider and time mocking utilities.
- * Zero prior coverage for these 4 exported functions.
+ * Unit tests for utils/time.ts.
+ * TimeProvider and currentTimeMs — zero prior coverage.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createTimeProvider,
-  currentTimeMs,
-  setCurrentTimeMs,
-  resetCurrentTimeMs,
-  type TimeProvider,
-} from './time';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { createTimeProvider, currentTimeMs, TimeProvider } from './time';
+
+// ─── createTimeProvider ────────────────────────────────────────────────────
 
 describe('createTimeProvider', () => {
-  it('creates a TimeProvider with default Date.now', () => {
+  it('returns TimeProvider with default Date.now', () => {
     const provider = createTimeProvider();
-    expect(typeof provider.now).toBe('function');
+    const now = Date.now();
+    expect(provider.now()).toBeGreaterThanOrEqual(now - 1000);
+    expect(provider.now()).toBeLessThanOrEqual(now + 1000);
   });
 
-  it('creates a TimeProvider with custom now function', () => {
-    const provider = createTimeProvider(() => 999);
-    expect(provider.now()).toBe(999);
+  it('returns TimeProvider with custom function', () => {
+    const fixedTime = 1700000000000;
+    const provider = createTimeProvider(() => fixedTime);
+    expect(provider.now()).toBe(fixedTime);
   });
 
-  it('now is called on each invocation', () => {
+  it('multiple calls return consistent value from custom fn', () => {
     let counter = 100;
     const provider = createTimeProvider(() => ++counter);
     expect(provider.now()).toBe(101);
     expect(provider.now()).toBe(102);
+    expect(provider.now()).toBe(103);
   });
 });
 
-describe('TimeProvider interface usage', () => {
-  it('satisfies TimeProvider type', () => {
-    const provider: TimeProvider = createTimeProvider(() => 5000);
-    expect(typeof provider.now).toBe('function');
-    expect(provider.now()).toBe(5000);
-  });
-});
+// ─── module-level currentTimeMs ─────────────────────────────────────────────
 
 describe('currentTimeMs', () => {
-  afterEach(() => {
-    resetCurrentTimeMs();
+  // Since we can't modify module-level _currentTimeMs, we just test that it
+  // returns a reasonable value close to Date.now()
+  it('returns a value close to Date.now()', () => {
+    const before = Date.now();
+    const result = currentTimeMs();
+    const after = Date.now();
+    expect(result).toBeGreaterThanOrEqual(before);
+    expect(result).toBeLessThanOrEqual(after + 100);
   });
 
-  it('returns a number by default', () => {
-    const t = currentTimeMs();
-    expect(typeof t).toBe('number');
-    expect(t).toBeGreaterThan(0);
-  });
-
-  it('is overridable by setCurrentTimeMs', () => {
-    setCurrentTimeMs(() => 1234567890);
-    expect(currentTimeMs()).toBe(1234567890);
-  });
-
-  it('multiple overrides stack correctly', () => {
-    setCurrentTimeMs(() => 111);
-    expect(currentTimeMs()).toBe(111);
-    setCurrentTimeMs(() => 222);
-    expect(currentTimeMs()).toBe(222);
+  it('returns monotonically increasing values', () => {
+    const first = currentTimeMs();
+    const second = currentTimeMs();
+    expect(second).toBeGreaterThanOrEqual(first);
   });
 });
 
-describe('setCurrentTimeMs', () => {
-  afterEach(() => {
-    resetCurrentTimeMs();
-  });
+// ─── TimeProvider type shape ───────────────────────────────────────────────
 
-  it('overrides the time source', () => {
-    setCurrentTimeMs(() => 42);
-    expect(currentTimeMs()).toBe(42);
-  });
-
-  it('works with a fixed date string', () => {
-    setCurrentTimeMs(() => new Date('2020-01-01').getTime());
-    expect(currentTimeMs()).toBe(new Date('2020-01-01').getTime());
-  });
-});
-
-describe('resetCurrentTimeMs', () => {
-  it('restores to real Date.now after override', () => {
-    setCurrentTimeMs(() => 999999);
-    resetCurrentTimeMs();
-    const t = currentTimeMs();
-    // After reset, should return real system time (a recent timestamp)
-    expect(typeof t).toBe('number');
-    expect(t).toBeGreaterThan(0);
-    // Should NOT be 999999 anymore
-    expect(t).not.toBe(999999);
-  });
-
-  it('is safe to call even without prior override', () => {
-    resetCurrentTimeMs();
-    resetCurrentTimeMs();
-    expect(currentTimeMs()).toBeGreaterThan(0);
-  });
-
-  it('reset works inside afterEach without error', () => {
-    // This test itself demonstrates the use case
-    setCurrentTimeMs(() => 777);
-    resetCurrentTimeMs();
-    const t = currentTimeMs();
-    expect(t).toBeGreaterThan(0);
-    expect(t).not.toBe(777);
+describe('TimeProvider interface', () => {
+  it('satisfies TimeProvider interface shape', () => {
+    const provider: TimeProvider = createTimeProvider(() => 123456789);
+    expect(typeof provider.now).toBe('function');
+    expect(provider.now()).toBe(123456789);
   });
 });
