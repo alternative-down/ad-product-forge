@@ -97,6 +97,7 @@ export async function terminateInternalAgent(db: Database, input: {
       });
     }
     getInternalAgentRegistry().remove(input.agentId);
+    forgeDebug({ scope: 'terminate-agent', level: 'error', message: 'terminate-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 

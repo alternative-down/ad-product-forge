@@ -37,6 +37,7 @@ export async function adjustAgentContractBudget(
       agentId: input.agentId,
       message: `Failed to query active contract: ${err instanceof Error ? err.message : String(err)}`,
     });
+    forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget: operation failed', error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 
@@ -73,6 +74,7 @@ export async function adjustAgentContractBudget(
         contractId: activeContract.id,
         message: `Failed to get company cash balance: ${err instanceof Error ? err.message : String(err)}`,
       });
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -108,6 +110,7 @@ export async function adjustAgentContractBudget(
         message: `Budget increase transaction failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { budgetDelta, newBudgetUsd: input.newBudgetUsd },
       });
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -142,6 +145,7 @@ export async function adjustAgentContractBudget(
       contractId: activeContract.id,
       message: `Failed to get contract spend: ${err instanceof Error ? err.message : String(err)}`,
     });
+    forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget: operation failed', error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 
@@ -182,6 +186,7 @@ export async function adjustAgentContractBudget(
       message: `Budget decrease transaction failed: ${err instanceof Error ? err.message : String(err)}`,
       context: { refundAmount, newBudgetUsd: input.newBudgetUsd },
     });
+    forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget: operation failed', error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 
