@@ -3,7 +3,8 @@ import {
   internalChatConversations,
   internalChatMessages,
 } from '../database/schema';
-import type {Database} from '../database/client'
+import type { Database } from '../database/index';
+import { forgeDebug } from '@forge-runtime/core';
 import {
   MessageNotFoundError,
   AttachmentNotFoundError,
@@ -36,46 +37,61 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
     messageId: string;
     attachmentName: string;
   }) {
-    await deps.requireConversationMembershipByAccount(input.accountId, input.conversationId);
+    try {
+      await deps.requireConversationMembershipByAccount(input.accountId, input.conversationId);
 
-    const message = await db.query.internalChatMessages.findFirst({
-      where: and(
-        eq(internalChatMessages.id, input.messageId),
-        eq(internalChatMessages.conversationId, input.conversationId),
-      ),
-    });
+      const message = await db.query.internalChatMessages.findFirst({
+        where: and(
+          eq(internalChatMessages.id, input.messageId),
+          eq(internalChatMessages.conversationId, input.conversationId),
+        ),
+      });
 
-    if (!message) {
-      throw new MessageNotFoundError(input.messageId);
+      if (!message) {
+        throw new MessageNotFoundError(input.messageId);
+      }
+
+      const attachment = await deps.readMessageAttachment(input.messageId, input.attachmentName);
+
+      if (!attachment) {
+        throw new AttachmentNotFoundError(input.attachmentName);
+      }
+
+      return attachment;
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-access', level: 'error', message: '[internal-chat-access] getMessageAttachmentByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    const attachment = await deps.readMessageAttachment(input.messageId, input.attachmentName);
-
-    if (!attachment) {
-      throw new AttachmentNotFoundError(input.attachmentName);
-    }
-
-    return attachment;
   }
 
   async function getRequiredExternalAccount(accountId: string) {
-    const account = await deps.getRequiredAccount(accountId);
+    try {
+      const account = await deps.getRequiredAccount(accountId);
 
-    if (account.agentId) {
-      throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
+      if (account.agentId) {
+        throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
+      }
+
+      return account;
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-access', level: 'error', message: '[internal-chat-access] getRequiredExternalAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    return account;
   }
 
   async function getRequiredAccountBySlug(slug: string) {
-    const account = await deps.getAccountBySlug(slug);
+    try {
+      const account = await deps.getAccountBySlug(slug);
 
-    if (!account) {
-      throw new InternalChatAccountNotFoundError(slug);
+      if (!account) {
+        throw new InternalChatAccountNotFoundError(slug);
+      }
+
+      return account;
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-access', level: 'error', message: '[internal-chat-access] getRequiredAccountBySlug failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
     }
-
-    return account;
   }
 
   return { getMessageAttachmentByAccount, getRequiredExternalAccount, getRequiredAccountBySlug };
