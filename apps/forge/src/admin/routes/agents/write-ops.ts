@@ -190,10 +190,15 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/reload',
     handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
-      await registry.add(input.db, runtime);
-      return jsonResponse({ success: true, agentId });
+      try {
+        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+        const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
+        await registry.add(input.db, runtime);
+        return jsonResponse({ success: true, agentId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/reload route handler failed', context: { path: '/admin/agent/reload', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -202,12 +207,17 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/force-idle',
     handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      const entry = registry.get(agentId);
-      if (entry) {
-        await entry.runner.forceIdle();
+      try {
+        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+        const entry = registry.get(agentId);
+        if (entry) {
+          await entry.runner.forceIdle();
+        }
+        return jsonResponse({ success: true, agentId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/force-idle route handler failed', context: { path: '/admin/agent/force-idle', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-      return jsonResponse({ success: true, agentId });
     },
   });
 
@@ -218,27 +228,32 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/rewakeup',
     handler: async (request) => {
-      const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-      let entry = registry.get(agentId);
-
-      if (entry) {
-        await entry.runner.forceIdle();
-      } else {
-        const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
-        await registry.add(input.db, runtime);
-        entry = registry.get(agentId);
+      try {
+        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+        let entry = registry.get(agentId);
+  
+        if (entry) {
+          await entry.runner.forceIdle();
+        } else {
+          const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
+          await registry.add(input.db, runtime);
+          entry = registry.get(agentId);
+        }
+  
+        entry!.runner.notifyExternalEvent({
+          type: 'admin-rewakeup',
+          groupKey: `admin-rewakeup:${agentId}`,
+          groupMetadata: { source: 'admin' },
+          idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
+          text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
+          timestamp: Date.now(),
+        });
+  
+        return jsonResponse({ success: true, agentId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/rewakeup route handler failed', context: { path: '/admin/agent/rewakeup', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      entry!.runner.notifyExternalEvent({
-        type: 'admin-rewakeup',
-        groupKey: `admin-rewakeup:${agentId}`,
-        groupMetadata: { source: 'admin' },
-        idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
-        text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
-        timestamp: Date.now(),
-      });
-
-      return jsonResponse({ success: true, agentId });
     },
   });
 
@@ -247,8 +262,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/contract/top-up',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
-      return jsonResponse(await ops.topUpActiveAgentContract(input.db, body));
+      try {
+        const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
+        return jsonResponse(await ops.topUpActiveAgentContract(input.db, body));
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/contract/top-up route handler failed', context: { path: '/admin/agent/contract/top-up', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -257,8 +277,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/contract/adjust-budget',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
-      return jsonResponse(await ops.adjustAgentContractBudget(input.db, body));
+      try {
+        const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
+        return jsonResponse(await ops.adjustAgentContractBudget(input.db, body));
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/contract/adjust-budget route handler failed', context: { path: '/admin/agent/contract/adjust-budget', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -267,8 +292,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/contract/renew',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
-      return jsonResponse(await ops.renewAgentContract(input.db, body));
+      try {
+        const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
+        return jsonResponse(await ops.renewAgentContract(input.db, body));
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/contract/renew route handler failed', context: { path: '/admin/agent/contract/renew', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -277,19 +307,24 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/hire',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, hireAgentSchema);
-      const result = await ops.runInternalHiring(input.db, {
-        hiringRequest: body.hiringRequest,
-        additionalContext: body.additionalContext,
-        weeklyBudgetUsd: body.weeklyBudgetUsd,
-        workspaceBasePath: input.workspaceBasePath,
-        githubApps: input.githubApps,
-        emailMailboxes: input.emailMailboxes,
-        coolify: input.coolify,
-        schedules: input.schedules,
-        internalChat: input.internalChat,
-      });
-      return jsonResponse(result, 201);
+      try {
+        const body = parseJsonBody(request.bodyText, hireAgentSchema);
+        const result = await ops.runInternalHiring(input.db, {
+          hiringRequest: body.hiringRequest,
+          additionalContext: body.additionalContext,
+          weeklyBudgetUsd: body.weeklyBudgetUsd,
+          workspaceBasePath: input.workspaceBasePath,
+          githubApps: input.githubApps,
+          emailMailboxes: input.emailMailboxes,
+          coolify: input.coolify,
+          schedules: input.schedules,
+          internalChat: input.internalChat,
+        });
+        return jsonResponse(result, 201);
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -298,16 +333,21 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/terminate',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, terminateAgentSchema);
-      return jsonResponse(await ops.runInternalTermination(input.db, {
-        agentId: body.agentId,
-        workspaceBasePath: input.workspaceBasePath,
-        githubApps: input.githubApps,
-        emailMailboxes: input.emailMailboxes,
-        coolify: input.coolify,
-        schedules: input.schedules,
-        internalChat: input.internalChat,
-      }));
+      try {
+        const body = parseJsonBody(request.bodyText, terminateAgentSchema);
+        return jsonResponse(await ops.runInternalTermination(input.db, {
+          agentId: body.agentId,
+          workspaceBasePath: input.workspaceBasePath,
+          githubApps: input.githubApps,
+          emailMailboxes: input.emailMailboxes,
+          coolify: input.coolify,
+          schedules: input.schedules,
+          internalChat: input.internalChat,
+        }));
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -316,9 +356,14 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/change-role',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
-      await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
-      return jsonResponse({ success: true });
+      try {
+        const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
+        await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
+        return jsonResponse({ success: true });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -327,15 +372,20 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/github-manifest-config/update',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
-      if (!input.githubApps) {
-        return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
+      try {
+        const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
+        if (!input.githubApps) {
+          return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
+        }
+        const provisioning = await input.githubApps.updateAgentManifestConfig({
+          agentId: body.agentId,
+          manifestConfig: body.manifestConfig,
+        });
+        return jsonResponse({ success: true, agentId: body.agentId, provisioning });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/github-manifest-config/update route handler failed', context: { path: '/admin/agent/github-manifest-config/update', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-      const provisioning = await input.githubApps.updateAgentManifestConfig({
-        agentId: body.agentId,
-        manifestConfig: body.manifestConfig,
-      });
-      return jsonResponse({ success: true, agentId: body.agentId, provisioning });
     },
   });
 
@@ -344,40 +394,45 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/update-config',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
-      const agent = await (input.db).query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-      });
-      if (!agent) {
-        return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-      }
-      await (input.db)
-        .update(agents)
-        .set({
-          name: body.name,
-          description: body.description ?? null,
-          instructions: body.instructions,
-          workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
-          workspaceBm25: body.workspaceBm25 ? 1 : 0,
-          modelProfileId: body.modelProfileId,
-          omModelProfileId: body.omModelProfileId,
-          updatedAt: Date.now(),
-        })
-        .where(eq(agents.id, body.agentId));
-      const role = agent.roleId
-        ? await (input.db).query.agentRoles.findFirst({
-            where: eq(agentRoles.id, agent.roleId),
+      try {
+        const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
+        const agent = await (input.db).query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+        });
+        if (!agent) {
+          return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+        }
+        await (input.db)
+          .update(agents)
+          .set({
+            name: body.name,
+            description: body.description ?? null,
+            instructions: body.instructions,
+            workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
+            workspaceBm25: body.workspaceBm25 ? 1 : 0,
+            modelProfileId: body.modelProfileId,
+            omModelProfileId: body.omModelProfileId,
+            updatedAt: Date.now(),
           })
-        : null;
-      await updateInternalChatProviderProfile(input.db, {
-        agentId: body.agentId,
-        agentName: body.name ?? agent.name ?? '',
-        agentRole: role?.name ?? 'Unknown',
-        agentDescription: body.description ?? agent.description ?? '',
-      });
-      // Reload the agent runtime with new config
-      await reloadAgentIfLoaded(input.db, body.agentId);
-      return jsonResponse({ success: true, agentId: body.agentId });
+          .where(eq(agents.id, body.agentId));
+        const role = agent.roleId
+          ? await (input.db).query.agentRoles.findFirst({
+              where: eq(agentRoles.id, agent.roleId),
+            })
+          : null;
+        await updateInternalChatProviderProfile(input.db, {
+          agentId: body.agentId,
+          agentName: body.name ?? agent.name ?? '',
+          agentRole: role?.name ?? 'Unknown',
+          agentDescription: body.description ?? agent.description ?? '',
+        });
+        // Reload the agent runtime with new config
+        await reloadAgentIfLoaded(input.db, body.agentId);
+        return jsonResponse({ success: true, agentId: body.agentId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/update-config route handler failed', context: { path: '/admin/agent/update-config', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -386,8 +441,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/providers/upsert',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
-      return jsonResponse({ success: true, agentId: body.agentId });
+      try {
+        const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
+        return jsonResponse({ success: true, agentId: body.agentId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/upsert route handler failed', context: { path: '/admin/agent/providers/upsert', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -396,8 +456,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/providers/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
-      return jsonResponse({ success: true, agentId: body.agentId });
+      try {
+        const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
+        return jsonResponse({ success: true, agentId: body.agentId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/delete route handler failed', context: { path: '/admin/agent/providers/delete', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -453,8 +518,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/mcp/update',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
-      return jsonResponse({ success: true, serverId: body.serverId });
+      try {
+        const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+        return jsonResponse({ success: true, serverId: body.serverId });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/update route handler failed', context: { path: '/admin/agent/mcp/update', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -463,8 +533,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/mcp/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
-      return jsonResponse({ success: true });
+      try {
+        const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/delete route handler failed', context: { path: '/admin/agent/mcp/delete', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -473,8 +548,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/mcp/assign',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
-      return jsonResponse({ success: true });
+      try {
+        const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/assign route handler failed', context: { path: '/admin/agent/mcp/assign', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -483,8 +563,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/mcp/set-active',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
-      return jsonResponse({ success: true });
+      try {
+        const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/set-active route handler failed', context: { path: '/admin/agent/mcp/set-active', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -493,8 +578,13 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/mcp/detach',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
-      return jsonResponse({ success: true });
+      try {
+        const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/detach route handler failed', context: { path: '/admin/agent/mcp/detach', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -503,18 +593,23 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/skills/publish-to-global',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-      const agent = await (input.db).query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-        columns: { id: true, workspaceFilesystem: true },
-      });
-      if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-      const result = await publishAgentWorkspaceSkillToGlobalCatalog({
-        workspaceBasePath: input.workspaceBasePath,
-        agent,
-        skillName: body.skillName,
-      });
-      return jsonResponse({ success: true, skillName: body.skillName, destPath: result.destPath });
+      try {
+        const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
+        const agent = await (input.db).query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+          columns: { id: true, workspaceFilesystem: true },
+        });
+        if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+        const result = await publishAgentWorkspaceSkillToGlobalCatalog({
+          workspaceBasePath: input.workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+        return jsonResponse({ success: true, skillName: body.skillName, destPath: result.destPath });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/publish-to-global route handler failed', context: { path: '/admin/agent/skills/publish-to-global', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -523,18 +618,23 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/skills/install-global',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-      const agent = await (input.db).query.agents.findFirst({
-        where: eq(agents.id, body.agentId),
-        columns: { id: true, workspaceFilesystem: true },
-      });
-      if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-      await installGlobalSkillToAgentWorkspace({
-        workspaceBasePath: input.workspaceBasePath,
-        agent,
-        skillName: body.skillName,
-      });
-      return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
+      try {
+        const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
+        const agent = await (input.db).query.agents.findFirst({
+          where: eq(agents.id, body.agentId),
+          columns: { id: true, workspaceFilesystem: true },
+        });
+        if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
+        await installGlobalSkillToAgentWorkspace({
+          workspaceBasePath: input.workspaceBasePath,
+          agent,
+          skillName: body.skillName,
+        });
+        return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/install-global route handler failed', context: { path: '/admin/agent/skills/install-global', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -543,12 +643,17 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/skills/upload',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
-      const installedSkillNames = await installGlobalSkillsFromZip({
-        workspaceBasePath: input.workspaceBasePath,
-        zipBase64: body.skillsZipBase64,
-      });
-      return jsonResponse({ success: true, skillNames: installedSkillNames });
+      try {
+        const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
+        const installedSkillNames = await installGlobalSkillsFromZip({
+          workspaceBasePath: input.workspaceBasePath,
+          zipBase64: body.skillsZipBase64,
+        });
+        return jsonResponse({ success: true, skillNames: installedSkillNames });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/upload route handler failed', context: { path: '/admin/agent/skills/upload', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -557,9 +662,14 @@ export function registerAgentWriteOpsRoutes(
     method: 'POST',
     path: '/admin/agent/skills/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
-      await deleteGlobalSkill({ workspaceBasePath: input.workspaceBasePath, skillName: body.skillName });
-      return jsonResponse({ success: true, skillName: body.skillName });
+      try {
+        const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
+        await deleteGlobalSkill({ workspaceBasePath: input.workspaceBasePath, skillName: body.skillName });
+        return jsonResponse({ success: true, skillName: body.skillName });
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/delete route handler failed', context: { path: '/admin/agent/skills/delete', error: error instanceof Error ? error.message : String(error) } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
