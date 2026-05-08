@@ -542,6 +542,7 @@ export function createAgentLongTermMemory(input: {
     await ensureInitialized();
 
     if (!memoryAgent) {
+      forgeDebug({ scope: 'agent-long-term-memory', level: 'warn', message: 'initializeLtmSession: runtime not available', context: { agentId: input.agentId } });
       throw new Error(`LTM runtime session is not available for ${input.agentId}`);
     }
 
@@ -610,6 +611,7 @@ export function createAgentLongTermMemory(input: {
     }
 
     if (!result) {
+      forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'generateLtmSummary: no result produced', context: { agentId: input.agentId } });
       throw new Error(`LTM generate produced no result for ${input.agentId}`);
     }
 
