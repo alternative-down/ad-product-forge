@@ -96,6 +96,7 @@ export async function terminateInternalAgent(db: Database, input: {
       });
     }
     getInternalAgentRegistry().remove(input.agentId);
+    forgeDebug({ scope: "agents-terminate-agent.ts", level: "error", message: "agents-terminate-agent.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 

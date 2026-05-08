@@ -300,6 +300,7 @@ export function createAgentContractStore(
         runtimeId: agentId,
         message: 'refund cash-in failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "agents-agent-contract-store.ts", level: "error", message: "agents-agent-contract-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 

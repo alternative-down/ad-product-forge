@@ -28,6 +28,7 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
         runtimeId: input.agentId,
         message: 'recordSnapshot failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "agents-agent-home-metric-snapshot-store.ts", level: "error", message: "agents-agent-home-metric-snapshot-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 

@@ -137,6 +137,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
+      forgeDebug({ scope: "agents-hire-agent.ts", level: "error", message: "agents-hire-agent.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -152,6 +153,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
+      forgeDebug({ scope: "agents-hire-agent.ts", level: "error", message: "agents-hire-agent.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -177,6 +179,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
+      forgeDebug({ scope: "agents-hire-agent.ts", level: "error", message: "agents-hire-agent.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -194,6 +197,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
+      forgeDebug({ scope: "agents-hire-agent.ts", level: "error", message: "agents-hire-agent.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -217,6 +221,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
     }
 
+    forgeDebug({ scope: "agents-hire-agent.ts", level: "error", message: "agents-hire-agent.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
     throw error;
   }
 }

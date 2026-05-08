@@ -1042,6 +1042,7 @@ export function createAgentRunner(
         const timedOut = controller.signal.aborted;
 
         if (!timedOut || attempt === GENERATE_TIMEOUT_MAX_ATTEMPTS) {
+          forgeDebug({ scope: "agents-agent-runner.ts", level: "error", message: "agents-agent-runner.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
           throw error;
         }
 

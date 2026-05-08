@@ -694,6 +694,7 @@ export class AgentLongTermMemoryRecall {
         durationMs: Date.now() - stageStartedAt,
         error: error instanceof Error ? error.message : String(error),
       } });
+      forgeDebug({ scope: "agents-ltm-recall.ts", level: "error", message: "agents-ltm-recall.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -877,6 +878,7 @@ export class AgentLongTermMemoryRecall {
           : null,
         error: error instanceof Error ? error.message : String(error),
       } });
+      forgeDebug({ scope: "agents-ltm-recall.ts", level: "error", message: "agents-ltm-recall.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }

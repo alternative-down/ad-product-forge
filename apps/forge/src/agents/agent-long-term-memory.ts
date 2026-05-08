@@ -600,6 +600,7 @@ export function createAgentLongTermMemory(input: {
         } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
+          forgeDebug({ scope: "agents-agent-long-term-memory.ts", level: "error", message: "agents-agent-long-term-memory.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
           throw error;
         }
 

@@ -127,6 +127,7 @@ export async function loadCommunicationProviders(
         await provider.getSelfContact?.();
       } catch (error) {
         await provider.dispose?.();
+        forgeDebug({ scope: "communication-provider-loader.ts", level: "error", message: "communication-provider-loader.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
         throw error;
       }
 

@@ -137,6 +137,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       error: err instanceof Error ? err.message : String(err),
       agentId: input.agentId,
     } });
+    forgeDebug({ scope: "agents-migrate-legacy-checkpointed-om.ts", level: "error", message: "agents-migrate-legacy-checkpointed-om.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 }

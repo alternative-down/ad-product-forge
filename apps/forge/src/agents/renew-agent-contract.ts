@@ -132,6 +132,7 @@ export async function renewAgentContract(
       error: err instanceof Error ? err.message : String(err),
       agentId: input.agentId,
     } });
+    forgeDebug({ scope: "agents-renew-agent-contract.ts", level: "error", message: "agents-renew-agent-contract.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 }
