@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { forgeDebug } from '@forge-runtime/core';
 
 /**
  * Parse YAML frontmatter metadata from a skill file.
@@ -54,21 +55,26 @@ export function parseSkillMetadata(skillContent: string): { description?: string
  * Symlinks are followed. Directories themselves are not counted.
  */
 export async function countSkillFiles(skillRoot: string): Promise<number> {
-  const entries = await fs.readdir(skillRoot, { withFileTypes: true });
-  let fileCount = 0;
+  try {
+    const entries = await fs.readdir(skillRoot, { withFileTypes: true });
+    let fileCount = 0;
 
-  for (const entry of entries) {
-    const entryPath = path.resolve(skillRoot, entry.name);
+    for (const entry of entries) {
+      const entryPath = path.resolve(skillRoot, entry.name);
 
-    if (entry.isDirectory()) {
-      fileCount += await countSkillFiles(entryPath);
-      continue;
+      if (entry.isDirectory()) {
+        fileCount += await countSkillFiles(entryPath);
+        continue;
+      }
+
+      if (entry.isFile()) {
+        fileCount += 1;
+      }
     }
 
-    if (entry.isFile()) {
-      fileCount += 1;
-    }
+    return fileCount;
+  } catch (err) {
+    forgeDebug({ scope: 'skills-shared', level: 'error', message: '[skills-shared] countSkillFiles failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    throw err;
   }
-
-  return fileCount;
 }
