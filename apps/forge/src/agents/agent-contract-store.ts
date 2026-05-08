@@ -147,6 +147,7 @@ export function createAgentContractStore(
     });
 
     if (!profile) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'estimateStepCost: LLM profile not found', context: { profileId: input.profileId } });
       throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
     }
 
