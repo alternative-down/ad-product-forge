@@ -24,6 +24,7 @@ export function createAgentRunnerUsage(input: {
     try {
       if (!input.runtime.modelProfileId) {
         throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+        forgeDebug({ scope: 'agent-runner-usage', level: 'warn', message: 'requirePrimaryModelProfile: missing profile', context: { runtimeId: input.runtime.id } });
       }
 
       const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
@@ -70,6 +71,7 @@ export function createAgentRunnerUsage(input: {
     try {
       if (!input.runtime.modelProfileId) {
         throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+        forgeDebug({ scope: 'agent-runner-usage', level: 'warn', message: 'requirePrimaryModelProfile: missing profile', context: { runtimeId: input.runtime.id } });
       }
 
       const pricing = await input.store.getUsagePricing({
