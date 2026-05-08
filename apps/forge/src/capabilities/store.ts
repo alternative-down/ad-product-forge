@@ -124,6 +124,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'createRole DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -140,6 +141,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'createRole add base tools failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -162,6 +164,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'updateRole read existing failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -184,6 +187,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'updateRole DB update failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -209,6 +213,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'deleteRole check assigned agent failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -224,6 +229,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'deleteRole remove tool permissions failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -235,6 +241,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'deleteRole remove workflow permissions failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -246,6 +253,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'deleteRole DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -467,6 +475,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'getAgentCapabilities DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "capabilities-store.ts", level: "error", message: "capabilities-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 

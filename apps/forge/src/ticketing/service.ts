@@ -129,6 +129,7 @@ export function createTicketingService(db: Database) {
         message: `ingestTicket failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { externalId: input.externalId },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -156,6 +157,7 @@ export function createTicketingService(db: Database) {
         message: `ingestTicketReply failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { ticketId: input.ticketId },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -183,6 +185,7 @@ export function createTicketingService(db: Database) {
         message: `listTickets failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId: input.agentId, status: input.status },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -207,6 +210,7 @@ export function createTicketingService(db: Database) {
         message: `getMessages failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { targetKey: input.targetKey },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -235,6 +239,7 @@ export function createTicketingService(db: Database) {
         message: `sendAgentReply failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { ticketId: input.ticketId },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -257,6 +262,7 @@ export function createTicketingService(db: Database) {
         message: `updateTicketStatus failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { ticketId: input.ticketId, status: input.status },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -305,6 +311,7 @@ export function createTicketingService(db: Database) {
         message: `notifyNewMessage failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { ticketId, messageId },
       });
+      forgeDebug({ scope: "ticketing-service.ts", level: "error", message: "ticketing-service.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

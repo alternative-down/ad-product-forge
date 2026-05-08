@@ -43,6 +43,7 @@ export function createInternalChatParticipants(db: Database) {
         message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId, conversationId },
       });
+      forgeDebug({ scope: "communication-internal-chat-participants.ts", level: "error", message: "communication-internal-chat-participants.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -64,6 +65,7 @@ export function createInternalChatParticipants(db: Database) {
         message: `listGroupMembersOrDmPeers failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, conversationId },
       });
+      forgeDebug({ scope: "communication-internal-chat-participants.ts", level: "error", message: "communication-internal-chat-participants.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

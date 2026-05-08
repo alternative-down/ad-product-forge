@@ -50,6 +50,7 @@ export function createChatAttachments(
         message: `storeMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { messageId, attachmentCount: attachments.length },
       });
+      forgeDebug({ scope: "communication-internal-chat-attachments.ts", level: "error", message: "communication-internal-chat-attachments.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -74,6 +75,7 @@ export function createChatAttachments(
         message: `readMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { messageId },
       });
+      forgeDebug({ scope: "communication-internal-chat-attachments.ts", level: "error", message: "communication-internal-chat-attachments.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -92,6 +94,7 @@ export function createChatAttachments(
         message: `readMessageAttachment failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { messageId, attachmentName },
       });
+      forgeDebug({ scope: "communication-internal-chat-attachments.ts", level: "error", message: "communication-internal-chat-attachments.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

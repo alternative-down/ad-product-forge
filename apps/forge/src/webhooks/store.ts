@@ -32,6 +32,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'createRoute DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "webhooks-store.ts", level: "error", message: "webhooks-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     return route as WebhookRoute;
@@ -73,6 +74,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'deactivateRoute DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "webhooks-store.ts", level: "error", message: "webhooks-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -104,6 +106,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'createEvent DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "webhooks-store.ts", level: "error", message: "webhooks-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     return event as WebhookEvent;
@@ -131,6 +134,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'markProcessed DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "webhooks-store.ts", level: "error", message: "webhooks-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -144,6 +148,7 @@ export function createWebhookStore(db: Database) {
         level: 'error',
         message: 'markFailed DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      forgeDebug({ scope: "webhooks-store.ts", level: "error", message: "webhooks-store.ts: unhandled error", error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
