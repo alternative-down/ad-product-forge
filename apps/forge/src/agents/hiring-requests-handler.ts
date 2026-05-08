@@ -164,6 +164,7 @@ export async function generateHiredAgentInstructions(
   });
 
   if (!modelPrice) {
+    forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hiring-requests-handler: validation/requirement failed' });
     throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
   }
 

@@ -12,14 +12,13 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
  */
 function requireEncryptionKey(): Buffer {
   if (!ENCRYPTION_KEY) {
-    forgeDebug({ scope: "crypto", level: "error", message: "requireEncryptionKey: ENCRYPTION_KEY env var not set" });
+    forgeDebug({ scope: 'encryption-crypto', level: 'error', message: 'encryption-crypto: validation/requirement failed' });
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }
 
   const key = Buffer.from(ENCRYPTION_KEY, 'base64');
 
   if (key.length !== 32) {
-    forgeDebug({ scope: "crypto", level: "error", message: "requireEncryptionKey: ENCRYPTION_KEY must be 256-bit (32 bytes)" });
     throw new Error(
       'ENCRYPTION_KEY must be 256-bit (32 bytes). ' +
         'Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"',
