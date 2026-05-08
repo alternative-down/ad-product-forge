@@ -44,6 +44,7 @@ export function createCredentialsOps(ctx: OpsContext) {
     if (!credentials || credentials.status !== 'active') {
       forgeDebug({ scope: "github-ops-credentials", level: "warn", message: "getInstallationOctokit: GitHub App not active", context: { agentId } });
       throw new Error(`GitHub App not active for agent ${agentId}`);
+      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'github-ops-credentials: app not active', context: { agentId } });
     }
     return credentials;
   }

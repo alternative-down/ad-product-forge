@@ -16,7 +16,18 @@ import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgen
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
-import { jsonResponse, parseJsonBody, agentActionSchema, topUpAgentContractSchema, adjustAgentContractBudgetSchema, renewAgentContractSchema, hireAgentSchema, terminateAgentSchema, changeAgentRoleSchema, updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../index';
+import { jsonResponse, parseJsonBody } from '../index';
+import {
+  agentActionSchema,
+  topUpAgentContractSchema,
+  adjustAgentContractBudgetSchema,
+  renewAgentContractSchema,
+  hireAgentSchema,
+  terminateAgentSchema,
+  changeAgentRoleSchema,
+  updateAgentGitHubManifestConfigSchema,
+  updateAgentConfigSchema,
+} from '../schemas/agents';
 
 
 import type {Database} from '../../../../src/database/schema';
