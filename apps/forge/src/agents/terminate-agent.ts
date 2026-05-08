@@ -29,6 +29,7 @@ export async function terminateInternalAgent(db: Database, input: {
   });
 
   if (!agent) {
+    forgeDebug({ scope: "terminate-agent", level: "warn", runtimeId: input.agentId, message: "terminateAgent: agent not found" });
     throw new Error(`Agent not found: ${input.agentId}`);
   }
 

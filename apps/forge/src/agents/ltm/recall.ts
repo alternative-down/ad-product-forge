@@ -612,6 +612,7 @@ export class AgentLongTermMemoryRecall {
     const runtimeSettings = await this.readRuntimeMemorySettings?.();
 
     if (!runtimeSettings) {
+      forgeDebug({ scope: "ltm-recall", level: "warn", message: "buildRecallQuery: runtime memory settings not available" });
       throw new Error('LTM recall requires runtime memory settings');
     }
 
