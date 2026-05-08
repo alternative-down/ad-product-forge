@@ -5,6 +5,7 @@ import {
 
 import type { createAgentLongTermMemoryStore } from '../ltm/store';
 import { createAgentLongTermMemoryRecall } from '../ltm/recall';
+import { forgeDebug } from '@forge-runtime/core';
 
 export async function createAgentRuntimeMemory(input: {
   agentId: string;
@@ -39,25 +40,30 @@ export async function createAgentRuntimeMemory(input: {
     ltmRecallDocumentCount: number;
   }>;
 }) {
-  const longTermMemoryRecall = input.longTermMemory
-    ? createAgentLongTermMemoryRecall({
-        agentId: input.agentId,
-        agentWorkspacePath: input.agentWorkspacePath,
-        agentMemoryPath: input.agentMemoryPath,
-        workspaceEmbedder: input.workspaceEmbedder,
-        mastraId: input.mastraId,
-        scoreThreshold: input.ltmRecallScoreThreshold,
-        documentCount: input.ltmRecallDocumentCount,
-        conversationStore: input.conversationStore,
-        recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
-        persistenceStore: input.persistenceStore,
-        readRuntimeMemorySettings: input.readRuntimeMemorySettings,
-      })
-    : null;
+  try {
+    const longTermMemoryRecall = input.longTermMemory
+      ? createAgentLongTermMemoryRecall({
+          agentId: input.agentId,
+          agentWorkspacePath: input.agentWorkspacePath,
+          agentMemoryPath: input.agentMemoryPath,
+          workspaceEmbedder: input.workspaceEmbedder,
+          mastraId: input.mastraId,
+          scoreThreshold: input.ltmRecallScoreThreshold,
+          documentCount: input.ltmRecallDocumentCount,
+          conversationStore: input.conversationStore,
+          recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
+          persistenceStore: input.persistenceStore,
+          readRuntimeMemorySettings: input.readRuntimeMemorySettings,
+        })
+      : null;
 
-  await longTermMemoryRecall?.initialize();
+    await longTermMemoryRecall?.initialize();
 
-  return {
-    longTermMemoryRecall,
-  };
+    return {
+      longTermMemoryRecall,
+    };
+  } catch (err) {
+    forgeDebug({ scope: 'runtime-memory', level: 'error', message: '[runtime-memory] createAgentRuntimeMemory failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    throw err;
+  }
 }

@@ -69,6 +69,7 @@ export async function changeAgentRole(input: {
   }
 
   if (!actorAgent) {
+    forgeDebug({ scope: "capabilities-runtime", level: "warn", runtimeId: input.actorAgentId, message: "changeAgentRole: actor agent not found" });
     throw new Error(`Actor agent not found: ${input.actorAgentId}`);
   }
 
@@ -83,6 +84,7 @@ export async function changeAgentRole(input: {
   }
 
   if (!targetAgent) {
+    forgeDebug({ scope: "capabilities-runtime", level: "warn", runtimeId: input.targetAgentId, message: "changeAgentRole: target agent not found" });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
@@ -97,6 +99,7 @@ export async function changeAgentRole(input: {
   }
 
   if (!agentRole) {
+    forgeDebug({ scope: "capabilities-runtime", level: "warn", message: "changeAgentRole: role not found", context: { roleId: input.roleId } });
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
@@ -174,6 +177,7 @@ export async function changeAgentRoleFromAdmin(input: {
   });
 
   if (!targetAgent) {
+    forgeDebug({ scope: "capabilities-runtime", level: "warn", runtimeId: input.targetAgentId, message: "changeAgentRole: target agent not found" });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
@@ -182,6 +186,7 @@ export async function changeAgentRoleFromAdmin(input: {
   });
 
   if (!agentRole) {
+    forgeDebug({ scope: "capabilities-runtime", level: "warn", message: "changeAgentRole: role not found", context: { roleId: input.roleId } });
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
