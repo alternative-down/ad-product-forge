@@ -241,6 +241,7 @@ export function createInternalChatAccounts(db: Database) {
       where: eq(internalChatAccounts.id, accountId),
     });
     if (!account) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'warn', message: 'deleteInternalChatAccount: not found', context: { accountId } });
       throw new InternalChatAccountNotFoundError(accountId);
     }
     return account;
@@ -251,6 +252,7 @@ export function createInternalChatAccounts(db: Database) {
       where: eq(internalChatAccounts.agentId, agentId),
     });
     if (!account) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'warn', message: 'getAgentInternalChatAccount: not found', context: { agentId } });
       throw new InternalChatAccountNotFoundError(agentId, `Internal chat account not found for agent: ${agentId}`);
     }
     return account;

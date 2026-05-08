@@ -40,6 +40,7 @@ function normalizeArchiveEntryPath(entryPath: string) {
   const safePath = path.posix.normalize(isDirectory ? withoutSkillsPrefix.slice(0, -1) : withoutSkillsPrefix);
 
   if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
+    forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: invalid archive entry', context: { entryPath } });
     throw new Error(`Invalid skill archive entry: ${entryPath}`);
   }
 
@@ -185,6 +186,7 @@ export async function installGlobalSkillsFromZip(input: {
     }
 
     if (bundledSkillNames.has(skillName)) {
+      forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: name reserved by bundled skill', context: { skillName } });
       throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
     }
 
@@ -192,7 +194,8 @@ export async function installGlobalSkillsFromZip(input: {
     const relativePath = path.relative(skillsRoot, targetPath);
 
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      throw new Error(`Invalid skill archive entry: ${entryPath}`);
+      forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: invalid archive entry', context: { entryPath } });
+    throw new Error(`Invalid skill archive entry: ${entryPath}`);
     }
 
     if (isDirectory) {
@@ -206,6 +209,7 @@ export async function installGlobalSkillsFromZip(input: {
   }
 
   if (writtenSkills.size === 0) {
+    forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: archive empty' });
     throw new Error('Skill archive did not contain any files');
   }
 
