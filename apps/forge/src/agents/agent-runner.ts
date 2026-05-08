@@ -21,7 +21,7 @@ import {
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,
   WORKING_MEMORY_WARNING_CHAR_LIMIT,
   AGENT_CONTEXT_FILE_PATH,
-} from './constants';
+} from '../utils/constants';
 
 
 import {
