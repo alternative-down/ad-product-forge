@@ -178,6 +178,7 @@ export function createMiniMaxManager(config: {
     const cfg = await config.integrations.getMinimaxConfig();
 
     if (!cfg) {
+      forgeDebug({ scope: 'minimax/manager', level: 'warn', message: 'getClient MiniMax integration not configured' });
       throw new Error('MiniMax integration is not configured');
     }
 
