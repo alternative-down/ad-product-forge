@@ -41,7 +41,7 @@ export async function adjustAgentContractBudget(
   }
 
   if (!activeContract) {
-    forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: no active contract', context: { agentId: input.agentId } });
+    forgeDebug({ scope: 'agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: no active contract', context: { agentId: input.agentId } });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
 
@@ -77,8 +77,7 @@ export async function adjustAgentContractBudget(
     }
 
     if (currentBalanceUsd < budgetDelta) {
-      forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: insufficient company cash' });
-    throw new Error('Insufficient company cash for budget increase');
+      throw new Error('Insufficient company cash for budget increase');
     }
 
     // Deduct from company cash and update budget atomically
