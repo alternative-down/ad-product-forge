@@ -1,9 +1,11 @@
+import { forgeDebug } from '@forge-runtime/core';
 
 function validateCronExpression(expression: string): boolean {
   try {
     parseExpression(expression, { utc: true });
     return true;
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'schedules', level: 'error', message: 'Cron expression validation failed', context: { error } });
     return false;
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import type { PaymentProviderType } from './payment-schema';
+import { forgeDebug } from '@forge-runtime/core';
 
 /** Asaas webhook notification payload. */
 export type AsaasWebhookPayload = {
@@ -38,7 +39,8 @@ export function verifyAsaasWebhookRequest(
   }
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
-  } catch {
+  } catch (error) {
+    forgeDebug({ scope: 'asaas', level: 'error', message: 'Asaas webhook JSON parse failed', context: { error } });
     throw new Error('Asaas webhook: failed to parse JSON payload');
   }
 }
