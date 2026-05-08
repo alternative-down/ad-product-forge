@@ -70,6 +70,7 @@ export function createAgentSkillTools(input: {
       });
 
       if (!agent) {
+        forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill agent not found', context: { agentId: input.agentId } });
         throw new Error(`Agent not found: ${input.agentId}`);
       }
 
@@ -81,6 +82,7 @@ export function createAgentSkillTools(input: {
       const relativePath = path.relative(skillsRoot, skillRoot);
 
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill invalid skill name', context: { skillName: inputData.skillName } });
         throw new Error(`Invalid skill name: ${inputData.skillName}`);
       }
 
@@ -131,6 +133,7 @@ export function createAgentSkillTools(input: {
         });
 
         if (!agent) {
+          forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill agent not found', context: { agentId: input.agentId } });
           throw new Error(`Agent not found: ${input.agentId}`);
         }
 
