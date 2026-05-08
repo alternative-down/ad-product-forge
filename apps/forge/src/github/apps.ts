@@ -33,7 +33,10 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
 
   async function createAgentApp(input: { agentId: string; agentName: string }) {
     const existing = await ctx.getCredentials(input.agentId);
-    if (existing) throw new Error(`Agent ${input.agentId} already has GitHub credentials`);
+    if (existing) {
+        forgeDebug({ scope: 'github-apps', level: 'warn', message: 'GitHub App already exists for agent', context: { agentId: input?.agentId } });
+        throw new Error(`Agent ${input.agentId} already has GitHub credentials`);
+    }
     const pendingCredentials: GitHubAppCredentials = {
       status: 'pending',
       state: ctx.nanoid(16),
@@ -68,7 +71,10 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     manifestConfig: GitHubAppCredentials['manifestConfig'];
   }) {
     const existing = await ctx.getCredentials(input.agentId);
-    if (!existing) throw new Error(`Agent ${input.agentId} has no GitHub credentials to update`);
+    if (!existing) {
+        forgeDebug({ scope: 'github-apps', level: 'warn', message: 'GitHub App has no credentials to update', context: { agentId: input?.agentId } });
+        throw new Error(`Agent ${input.agentId} has no GitHub credentials to update`);
+    }
     const updated: GitHubAppCredentials = {
       ...existing,
       manifestConfig: ctx.normalizeManifestConfig(input.manifestConfig),
