@@ -21,7 +21,7 @@ import {
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,
   WORKING_MEMORY_WARNING_CHAR_LIMIT,
   AGENT_CONTEXT_FILE_PATH,
-} from '../utils/constants';
+} from './constants';
 
 
 import {
@@ -1042,7 +1042,7 @@ export function createAgentRunner(
         const timedOut = controller.signal.aborted;
 
         if (!timedOut || attempt === GENERATE_TIMEOUT_MAX_ATTEMPTS) {
-          forgeDebug({ scope: 'agent-runner', level: 'error', message: 'agent-runner operation failed', error: error instanceof Error ? error.message : String(error) });
+          forgeDebug({ scope: 'agent-runner', level: 'error', message: 'agent-runner: operation failed', error: err instanceof Error ? err.message : String(err) });
           throw error;
         }
 
