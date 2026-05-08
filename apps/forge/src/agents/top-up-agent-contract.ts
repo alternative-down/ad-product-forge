@@ -32,6 +32,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
   }
 
   if (!activeContract) {
+    forgeDebug({ scope: "top-up-agent-contract", level: "warn", runtimeId: input.agentId, message: "topUp: no active contract" });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
 
@@ -45,6 +46,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
   }
 
   if (currentBalanceUsd < input.amountUsd) {
+    forgeDebug({ scope: "top-up-agent-contract", level: "warn", runtimeId: input.agentId, message: "topUp: insufficient company cash for top-up" });
     throw new Error('Insufficient company cash for contract top-up');
   }
 
