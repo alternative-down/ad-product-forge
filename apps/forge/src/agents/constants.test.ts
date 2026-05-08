@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AGENT_CONTEXT_FILE_PATH,
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,
-} from './constants';
+} from '../utils/constants';
 
 describe('constants', () => {
   it('exports AGENT_CONTEXT_FILE_PATH', () => {

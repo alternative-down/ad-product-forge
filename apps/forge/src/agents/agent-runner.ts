@@ -1042,6 +1042,7 @@ export function createAgentRunner(
         const timedOut = controller.signal.aborted;
 
         if (!timedOut || attempt === GENERATE_TIMEOUT_MAX_ATTEMPTS) {
+          forgeDebug({ scope: 'agent-runner', level: 'error', message: 'agent-runner: operation failed', error: err instanceof Error ? err.message : String(err) });
           throw error;
         }
 
@@ -1059,6 +1060,7 @@ export function createAgentRunner(
       }
     }
 
+    forgeDebug({ scope: "agent-runner", level: "error", message: "generate timed out after all retry attempts" });
     throw new Error('Agent generate timed out after all retry attempts');
   }
 

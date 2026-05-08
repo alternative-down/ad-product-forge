@@ -5,6 +5,9 @@ import {
   agentThreadMessagesQuerySchema,
   agentConversationMessagesQuerySchema,
   agentLongTermMemoryRecallSearchSchema,
+  hireAgentSchema,
+} from './schemas/agents';
+import {
   adminInternalChatSendSchema,
   createExternalInternalChatAccountSchema,
   updateExternalInternalChatAccountSchema,
@@ -20,11 +23,16 @@ import {
   addInternalChatGroupMemberSchema,
   updateInternalChatGroupMemberRoleSchema,
   removeInternalChatGroupMemberSchema,
-  hireAgentSchema,
+} from './schemas/internal-chat';
+import {
   upsertSystemIntegrationSchema,
-  createPayableSchema,
+} from './schemas/providers';
+import {
   createAgentMcpServerSchema,
-} from './schemas';
+} from './schemas/mcp';
+import {
+  createPayableSchema,
+} from './schemas/finance';
 
 describe('Admin Route Schemas', () => {
   describe('agentIdQuerySchema', () => {

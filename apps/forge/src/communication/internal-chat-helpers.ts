@@ -47,6 +47,7 @@ export function parseFilterDate(value: string | undefined, fieldName: string): n
   const parsed = Date.parse(value);
 
   if (Number.isNaN(parsed)) {
+    forgeDebug({ scope: 'internal-chat-helpers', level: 'warn', message: 'validateChatAddress: invalid field', context: { fieldName, value } });
     throw new Error(`Invalid ${fieldName}: ${value}`);
   }
 

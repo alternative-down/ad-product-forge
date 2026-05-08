@@ -91,6 +91,7 @@ export function createCompanyPayables(db: Database) {
       });
 
       if (!payable) {
+        forgeDebug({ scope: 'company-payables', level: 'warn', message: 'cancelRecurringPayable: payable not found', context: { payableId } });
         throw new Error(`Recurring payable not found: ${payableId}`);
       }
 

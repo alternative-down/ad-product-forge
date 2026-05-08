@@ -35,6 +35,7 @@ export function normalizeJsonText(
       : typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
 
   if (!valid) {
+    forgeDebug({ scope: 'admin-routes-helpers', level: 'warn', message: 'validateJsonBody: invalid shape', context: { fieldName, expectedShape } });
     throw new Error(`${fieldName} must be a JSON ${expectedShape}`);
   }
 

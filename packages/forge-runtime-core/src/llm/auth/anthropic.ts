@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { logger } from "../../logger.js";
 
 import { z } from 'zod';
 
@@ -27,6 +28,7 @@ export function getAnthropicSetupTokenFilePath(filePath = DEFAULT_ANTHROPIC_SETU
 
 async function refresh(credential: OAuthCredential) {
   if (!credential.refresh) {
+        logger.warn("auth", "refresh: Anthropic refresh token missing");
     throw new Error('Anthropic refresh token missing.');
   }
 

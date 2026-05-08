@@ -64,7 +64,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   >();
 
   async function connectImap(): Promise<ImapFlow> {
-    if (disposed) throw new Error('Email provider is disposed');
+        forgeDebug({ scope: 'email-account', level: 'warn', message: 'connectImap: provider already disposed' });
+    if (disposed) {
+      forgeDebug({ scope: 'email-account', level: 'warn', message: 'connectImap: provider disposed' });
+      throw new Error('Email provider is disposed');
+    }
     if (client) return client;
     if (connectPromise) return connectPromise;
 
@@ -381,6 +385,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const recipientAddress = input.targetKey;
 
       if (!recipientAddress) {
+        forgeDebug({ scope: 'email-account', level: 'warn', message: 'send: targetKey missing', context: { targetKey: input.targetKey } });
+        forgeDebug({ scope: 'email-account', level: 'warn', message: 'send: targetKey missing' });
         throw new Error('[email] Cannot send without a targetKey');
       }
 

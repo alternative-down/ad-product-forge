@@ -24,10 +24,12 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
   });
 
   if (!agent) {
+    forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent not in registry', context: { agentId: config.agentId } });
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
   if (!agent.roleId) {
+    forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent missing roleId', context: { agentId: config.agentId } });
     throw new Error(`Agent is missing roleId: ${config.agentId}`);
   }
 

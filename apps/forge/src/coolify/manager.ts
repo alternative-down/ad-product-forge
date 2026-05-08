@@ -60,6 +60,7 @@ export function createCoolifyManager(config: {
     const data = text.length > 0 ? safeJsonParse(text) : null;
 
     if (!response.ok) {
+      forgeDebug({ scope: 'coolify', level: 'error', message: 'requestJson: HTTP error', context: { method, path, status: response.status } });
       throw new Error(buildRequestError(method, path, response.status, data ?? text));
     }
 
