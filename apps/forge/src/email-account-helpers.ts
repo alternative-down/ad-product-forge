@@ -83,7 +83,10 @@ export function pruneRecentOutboundMessages(
 export function parseFilterDate(value: string | undefined, fieldName: string): number | null {
   if (!value) return null;
   const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) throw new Error(`Invalid ${fieldName}: ${value}`);
+  if (Number.isNaN(parsed)) {
+    forgeDebug({ scope: 'email-account-helpers', level: 'warn', message: 'parseNumericField: invalid value', context: { fieldName, value } });
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
   return parsed;
 }
 
