@@ -137,7 +137,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -153,7 +153,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -179,7 +179,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -197,7 +197,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       if (provisionedMailbox && input.emailMailboxes) {
         try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -221,7 +221,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch {}
     }
 
-    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent operation failed', error: error instanceof Error ? error.message : String(error) });
+    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
     throw error;
   }
 }
