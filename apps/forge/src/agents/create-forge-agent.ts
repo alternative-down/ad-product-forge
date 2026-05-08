@@ -24,26 +24,32 @@ import type {
 
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {
+    forgeDebug({ scope: "create-forge-agent", level: "warn", message: "requireCheckpointedOmLimits: checkpointedOmTotalContextTokens is required in agent runtime config." });
     throw new Error('checkpointedOmTotalContextTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmRecentRawTokens === undefined) {
+    forgeDebug({ scope: "create-forge-agent", level: "warn", message: "requireCheckpointedOmLimits: checkpointedOmRecentRawTokens is required in agent runtime config." });
     throw new Error('checkpointedOmRecentRawTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmRawObservationBatchTokens === undefined) {
+    forgeDebug({ scope: "create-forge-agent", level: "warn", message: "requireCheckpointedOmLimits: checkpointedOmRawObservationBatchTokens is required in agent runtime config." });
     throw new Error('checkpointedOmRawObservationBatchTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmObservationReflectionBatchTokens === undefined) {
+    forgeDebug({ scope: "create-forge-agent", level: "warn", message: "requireCheckpointedOmLimits: checkpointedOmObservationReflectionBatchTokens is required in agent runtime config." });
     throw new Error('checkpointedOmObservationReflectionBatchTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmObservationSupportTokens === undefined) {
+    forgeDebug({ scope: "create-forge-agent", level: "warn", message: "requireCheckpointedOmLimits: checkpointedOmObservationSupportTokens is required in agent runtime config." });
     throw new Error('checkpointedOmObservationSupportTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmReflectionSupportTokens === undefined) {
+    forgeDebug({ scope: "create-forge-agent", level: "warn", message: "requireCheckpointedOmLimits: checkpointedOmReflectionSupportTokens is required in agent runtime config." });
     throw new Error('checkpointedOmReflectionSupportTokens is required in agent runtime config.');
   }
 
