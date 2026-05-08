@@ -137,6 +137,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       error: err instanceof Error ? err.message : String(err),
       agentId: input.agentId,
     } });
+    forgeDebug({ scope: 'migrate-legacy-checkpointed-om', level: 'error', message: 'migrate: failed to get legacy OM store', error: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 }

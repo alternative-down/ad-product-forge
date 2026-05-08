@@ -164,6 +164,7 @@ export async function generateHiredAgentInstructions(
   });
 
   if (!modelPrice) {
+    forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'processHiringWorkflow: missing LLM model price', context: { hiringRhModelKey } });
     throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
   }
 
@@ -180,6 +181,7 @@ export async function generateHiredAgentInstructions(
   forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Tools loaded', context: { toolCount: Object.keys(tools).length } });
 
   if (currentBalanceUsd < estimatedCostUsd) {
+    forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'processHiringWorkflow: insufficient company cash' });
     throw new Error('Insufficient company cash for hiring workflow');
   }
 

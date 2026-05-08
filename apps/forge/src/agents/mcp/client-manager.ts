@@ -156,6 +156,10 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
           return await action.execute(input, context);
         } catch (error) {
           void manager.handleServerDisconnect(serverId, error);
+          forgeDebug({ scope: 'mcp-client-manager', level: 'error', message: 'buildAgentRuntimeMcpClients: failed to list MCP server configs', error: err instanceof Error ? err.message : String(err) });
+          throw error;
+
+          forgeDebug({ scope: 'mcp-client-manager', level: 'error', message: 'buildAgentRuntimeMcpClients: failed to list MCP server configs', error: err instanceof Error ? err.message : String(err) });
           throw error;
         }
       },

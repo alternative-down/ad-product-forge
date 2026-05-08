@@ -14,6 +14,7 @@ export function parseScheduleDate(value: string) {
   const timestamp = Date.parse(value);
 
   if (Number.isNaN(timestamp)) {
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: invalid date value', context: { value } });
     throw new Error(`Invalid scheduledDate: ${value}`);
   }
 
@@ -26,10 +27,12 @@ export function validateScheduleShape(input: {
   scheduledDate?: number;
 }) {
   if (input.scheduleType === 'cron' && !input.cronExpression) {
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduleInput: cronExpression required for cron schedule' });
     throw new Error('cronExpression is required when scheduleType is cron');
   }
 
   if (input.scheduleType === 'date' && !input.scheduledDate) {
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduleInput: scheduledDate required for date schedule' });
     throw new Error('scheduledDate is required when scheduleType is date');
   }
 }
@@ -40,6 +43,7 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
   }
 
   if (scheduledDate <= Date.now()) {
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: date must be in the future', context: { value } });
     throw new Error('scheduledDate must be in the future');
   }
 }

@@ -39,6 +39,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
   });
 
   if (!hiringRh.valid) {
+    forgeDebug({ scope: 'internal-agent-lifecycle', level: 'error', message: 'hireInternalAgent: hiring process failed', context: { error: hiringRh.error } });
     throw new Error(hiringRh.error || 'Hiring process failed');
   }
 
