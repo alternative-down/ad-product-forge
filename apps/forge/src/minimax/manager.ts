@@ -165,6 +165,7 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
   const key = apiKey || process.env.MINIMAX_API_KEY;
 
   if (!key) {
+    forgeDebug({ scope: 'minimax-manager', level: 'error', message: 'createMinimaxManager: MINIMAX_API_KEY not set' });
     throw new Error('MINIMAX_API_KEY environment variable is not set');
   }
 

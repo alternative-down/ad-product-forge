@@ -94,6 +94,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       schedules: input.schedules,
       internalChat: input.internalChat,
     });
+    forgeDebug({ scope: 'internal-agent-lifecycle', level: 'error', message: 'internal-agent-lifecycle: operation failed', error: err instanceof Error ? err.message : String(err) });
     throw error;
   }
 }

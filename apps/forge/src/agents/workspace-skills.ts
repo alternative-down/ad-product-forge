@@ -91,6 +91,7 @@ export async function deleteAgentWorkspaceSkill(input: {
   const skillName = input.skillName.trim();
 
   if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
+    forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'deleteAgentWorkspaceSkill: invalid skill name', context: { skillName: input.skillName } });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
@@ -102,6 +103,7 @@ export async function deleteAgentWorkspaceSkill(input: {
   const relativePath = path.relative(skillsRoot, skillRoot);
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'deleteAgentWorkspaceSkill: invalid skill name', context: { skillName: input.skillName } });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 

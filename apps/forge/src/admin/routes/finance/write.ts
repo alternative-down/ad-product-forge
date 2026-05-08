@@ -87,6 +87,7 @@ export function registerFinanceWriteRoutes(
       const dueAt = new Date(body.dueAt).getTime();
 
       if (!Number.isFinite(dueAt)) {
+        forgeDebug({ scope: 'admin-routes-finance-write', level: 'warn', message: 'createRecurringPayable: invalid dueAt', context: { dueAt: input.dueAt } });
         throw new Error('Invalid payable dueAt');
       }
 
