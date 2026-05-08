@@ -47,6 +47,7 @@ async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown
       limit 10
     `);
   } catch (error) {
+    forgeDebug({ scope: 'migrations', level: 'error', message: 'getAppliedMigrationRows failed', context: { error: error instanceof Error ? error.message : String(error) } });
     return {
       error: error instanceof Error ? error.message : String(error),
     };
