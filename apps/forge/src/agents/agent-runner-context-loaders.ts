@@ -15,7 +15,7 @@ import type { InternalAgentRuntime } from './runtime/types';
 import {
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,
   AGENT_CONTEXT_FILE_PATH,
-} from './constants';
+} from '../utils/constants';
 
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 
