@@ -48,12 +48,14 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
       });
 
       if (!message) {
+        forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireMessage: not found', context: { messageId: input.messageId } });
         throw new MessageNotFoundError(input.messageId);
       }
 
       const attachment = await deps.readMessageAttachment(input.messageId, input.attachmentName);
 
       if (!attachment) {
+        forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireAttachment: not found', context: { attachmentName: input.attachmentName } });
         throw new AttachmentNotFoundError(input.attachmentName);
       }
 
@@ -69,6 +71,7 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
       const account = await deps.getRequiredAccount(accountId);
 
       if (account.agentId) {
+        forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireExternalAccount: not found', context: { accountId } });
         throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
       }
 
@@ -84,6 +87,7 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
       const account = await deps.getAccountBySlug(slug);
 
       if (!account) {
+        forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireInternalChatAccount: not found', context: { slug } });
         throw new InternalChatAccountNotFoundError(slug);
       }
 
