@@ -20,6 +20,7 @@ vi.mock('@forge-runtime/core', () => {
     createExternalAccountTools: vi.fn().mockReturnValue({}),
     toolsToRuntimeActions: vi.fn().mockReturnValue([]),
     toMastraSafeIdentifier: vi.fn((s: string) => s),
+    forgeDebug: vi.fn(),
   };
 });
 
