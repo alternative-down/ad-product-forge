@@ -5,7 +5,8 @@
 
 import type { HttpHandler } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
-import { forgeDebug, jsonResponse, parseJsonBody } from '../index';
+import { forgeDebug } from '@forge-runtime/core';
+import { jsonResponse, parseJsonBody } from '../index';
 import { createScheduleSchema, updateScheduleSchema, deleteScheduleSchema } from '../schemas/schedules';
 
 export function registerAgentSchedulesWriteRoutes(
