@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
-
-import type {Database} from '../../database/schema';
+import type { Database } from '../../database/index';
 import type { AgentLoaderConfig } from '../../agents/agent-loader';
 import { reloadAgentIfLoaded } from '../../capabilities/runtime';
 import { agentMcpConfigs } from '../../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 
 export async function reloadAgentMcp(
   db: Database,
@@ -18,12 +18,17 @@ export async function reloadLinkedAgentsForMcpServer(
   loaderConfig: AgentLoaderConfig,
   serverId: string,
 ): Promise<void> {
-  const linkedConfigs = await db.query.agentMcpConfigs.findMany({
-    where: eq(agentMcpConfigs.serverId, serverId),
-    columns: { agentId: true },
-  });
+  try {
+    const linkedConfigs = await db.query.agentMcpConfigs.findMany({
+      where: eq(agentMcpConfigs.serverId, serverId),
+      columns: { agentId: true },
+    });
 
-  for (const linkedConfig of linkedConfigs) {
-    await reloadAgentMcp(db, loaderConfig, linkedConfig.agentId);
+    for (const linkedConfig of linkedConfigs) {
+      await reloadAgentMcp(db, loaderConfig, linkedConfig.agentId);
+    }
+  } catch (err) {
+    forgeDebug({ scope: 'mcp-helpers', level: 'error', message: '[mcp-helpers] reloadLinkedAgentsForMcpServer failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    throw err;
   }
 }
