@@ -6,6 +6,7 @@
  *
  * Stores are passed directly instead of via a read-model wrapper.
  */
+import { forgeDebug } from '@forge-runtime/core';
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
@@ -65,14 +66,28 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/integrations',
-    handler: async () => jsonResponse(await integrations.listIntegrations()),
+    handler: async () => {
+      try {
+        return jsonResponse(await integrations.listIntegrations());
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System integrations route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
   });
 
   // GET /admin/system/settings
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/settings',
-    handler: async () => jsonResponse(await systemSettings.getSettings()),
+    handler: async () => {
+      try {
+        return jsonResponse(await systemSettings.getSettings());
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System settings route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
   });
 
   // GET /admin/system/llm
@@ -127,20 +142,41 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/migrations',
-    handler: async () => jsonResponse(await readModel.getApplicationMigrations()),
+    handler: async () => {
+      try {
+        return jsonResponse(await readModel.getApplicationMigrations());
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System migrations route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
   });
 
   // GET /admin/system/skills
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/skills',
-    handler: async () => jsonResponse(await listGlobalSkills(workspaceBasePath)),
+    handler: async () => {
+      try {
+        return jsonResponse(await listGlobalSkills(workspaceBasePath));
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System skills route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
   });
 
   // GET /admin/system/oauth
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/system/oauth',
-    handler: async () => jsonResponse(await buildOauthState()),
+    handler: async () => {
+      try {
+        return jsonResponse(await buildOauthState());
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System oauth route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    },
   });
 }
