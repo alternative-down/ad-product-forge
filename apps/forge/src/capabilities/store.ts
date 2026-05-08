@@ -166,6 +166,8 @@ export function createCapabilityStore(db: Database) {
     }
 
     if (!existing) {
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'requireRole: not found', context: { roleId: input.roleId } });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'requireRole: not found', context: { roleId: input.roleId } });
       throw new Error(`Role not found: ${input.roleId}`);
     }
 
@@ -213,6 +215,8 @@ export function createCapabilityStore(db: Database) {
     }
 
     if (assignedAgent) {
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
       throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
     }
 
@@ -406,6 +410,8 @@ export function createCapabilityStore(db: Database) {
   }) {
     if (input.action === 'create') {
       if (!input.name?.trim()) {
+        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole create: name required' });
+        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole create: name required' });
         throw new Error('Role name is required.');
       }
 
@@ -417,17 +423,24 @@ export function createCapabilityStore(db: Database) {
 
     if (input.action === 'delete') {
       if (!input.roleId) {
-        throw new Error('roleId is required.');
+        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole delete: roleId required' });
+        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: roleId required' });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: roleId required' });
+      throw new Error('roleId is required.');
       }
 
       return deleteRole(input.roleId);
     }
 
     if (!input.roleId) {
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: roleId required' });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: roleId required' });
       throw new Error('roleId is required.');
     }
 
     if (!input.name && input.description === undefined) {
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: no fields provided' });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: no fields provided' });
       throw new Error('At least one field besides roleId must be provided.');
     }
 
@@ -471,10 +484,14 @@ export function createCapabilityStore(db: Database) {
     }
 
     if (!agent) {
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent not found', context: { agentId } });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent not found', context: { agentId } });
       throw new Error(`Agent not found: ${agentId}`);
     }
 
     if (!agent.roleId) {
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent missing roleId', context: { agentId } });
+      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent missing roleId', context: { agentId } });
       throw new Error(`Agent is missing roleId: ${agentId}`);
     }
 
