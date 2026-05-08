@@ -24,7 +24,7 @@ export async function getProviderConfig(
   const integration = await integrations.getCoolifyConfig();
 
   if (!integration) {
-      forgeDebug({ scope: "coolify", level: "warn", message: "getProviderConfig: Coolify integration not configured" });
+  forgeDebug({ scope: 'coolify-provider-config', level: 'error', message: 'coolify-provider-config: configuration check failed' });
     throw new Error(
       'Coolify integration requires a configured admin connection in system integrations',
     );
@@ -55,7 +55,6 @@ export async function getApplicationsBaseDomain(
     const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
     if (!wildcardDomain) {
-      forgeDebug({ scope: "coolify", level: "warn", message: "getWildcardDomain: wildcard domain not found in server config" });
       throw new Error(
         'Coolify integration could not determine a wildcard domain from the server configuration',
       );
