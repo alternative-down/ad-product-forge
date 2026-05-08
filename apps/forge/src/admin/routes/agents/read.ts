@@ -13,7 +13,7 @@ import {
   clearAgentHistorySchema,
   agentLongTermMemoryRecallSearchSchema,
   agentActionSchema,
-} from '../schemas';
+} from '../schemas/agents';
 import { jsonResponse, parseJsonBody } from '../index';
 
 // Local schemas for routes that aren't exported
