@@ -30,6 +30,7 @@ const MOCK_PROVIDER_CONFIG = {
 describe('CoolifyManager', () => {
   let responses: Record<string, { status: number; body?: unknown }>;
   let mockFetch: ReturnType<typeof vi.fn>;
+  let mockForgeDebug: ReturnType<typeof vi.fn>;
   let integrations: ReturnType<typeof createMockIntegrations>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let manager: any;
@@ -73,6 +74,8 @@ describe('CoolifyManager', () => {
     vi.stubGlobal('fetch', mockFetch);
     integrations = createMockIntegrations(MOCK_PROVIDER_CONFIG);
     manager = createCoolifyManager({ integrations });
+    mockForgeDebug = vi.fn();
+    vi.stubGlobal('forgeDebug', mockForgeDebug);
   });
 
   afterEach(() => {
@@ -463,4 +466,30 @@ describe('CoolifyManager', () => {
       expect(result).toMatchObject({ deleted: true });
     });
   });
+
+
+  describe('listGitHubAppRepositoryBranches', () => {
+    it('returns branch names', async () => {
+      responses['GET /github-apps/1/repositories/repo/branches'] = {
+        status: 200,
+        body: { branches: [{ name: 'main', commit: { sha: 'abc123', created_at: '2025-01-01' } }] },
+      };
+
+      const result = await manager.listGitHubAppRepositoryBranches({ githubAppId: 1, repository: 'repo' });
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('main');
+    });
+  });
+
+  describe('restartApplication', () => {
+    it('calls the restart endpoint', async () => {
+      const result = await manager.restartApplication('app-001');
+      expect(result).toEqual({ success: true });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/applications/app-001/restart'),
+        expect.any(Object),
+      );
+    });
+  });
+
 });
