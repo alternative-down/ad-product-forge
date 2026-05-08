@@ -32,11 +32,11 @@ export function verifyAsaasWebhookRequest(
   authHeader: string | null,
 ): AsaasWebhookPayload {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    forgeDebug({ scope: "asaas", level: "warn", message: "verifyAsaasWebhookAuth: missing or invalid Bearer auth header" });
+    forgeDebug({ scope: 'asaas', level: 'warn', message: 'verifyAsaasWebhookAuth: missing or invalid Bearer header' });
     throw new Error('Asaas webhook: missing or invalid Bearer authorization header');
   }
   if (authHeader.slice(7) !== apiKey) {
-    forgeDebug({ scope: "asaas", level: "warn", message: "verifyAsaasWebhookAuth: invalid API key in authorization header" });
+    forgeDebug({ scope: 'asaas', level: 'warn', message: 'verifyAsaasWebhookAuth: invalid API key in header' });
     throw new Error('Asaas webhook: invalid API key in authorization header');
   }
   try {
