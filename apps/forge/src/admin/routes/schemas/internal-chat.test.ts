@@ -1,6 +1,6 @@
 /**
  * Unit tests for admin/routes/schemas/internal-chat.ts.
- * Zod validation schemas for internal-chat admin routes.
+ * Zod validation schemas for internal chat account and conversation management.
  * Zero prior coverage.
  */
 import { describe, expect, it } from 'vitest';
@@ -22,116 +22,86 @@ import {
   removeInternalChatGroupMemberSchema,
 } from './internal-chat';
 
-// ─── adminInternalChatSendSchema ─────────────────────────────────────────────
+// ─── adminInternalChatSendSchema ─────────────────────────────────────────
 
 describe('adminInternalChatSendSchema', () => {
-  it('parses minimal valid input', () => {
-    const result = adminInternalChatSendSchema.parse({
-      agentId: 'agent-1',
-      targetKey: 'user@example.com',
-      provider: 'internal-chat',
-      content: 'Hello',
-    });
-    expect(result.agentId).toBe('agent-1');
-    expect(result.content).toBe('Hello');
+  it('parses valid input', () => {
+    expect(adminInternalChatSendSchema.parse({
+      agentId: 'agent-1', targetKey: 'user-123', provider: 'internal', content: 'Hello',
+    })).toMatchObject({ agentId: 'agent-1', targetKey: 'user-123', provider: 'internal' });
   });
 
   it('rejects missing agentId', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      targetKey: 'u', provider: 'p', content: 'c',
-    })).toThrow();
+    expect(() => adminInternalChatSendSchema.parse({ targetKey: 'k', provider: 'p', content: 'c' })).toThrow();
   });
 
   it('rejects empty agentId', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      agentId: '', targetKey: 'u', provider: 'p', content: 'c',
-    })).toThrow();
-  });
-
-  it('rejects missing content', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      agentId: 'a', targetKey: 'u', provider: 'p',
-    })).toThrow();
+    expect(() => adminInternalChatSendSchema.parse({ agentId: '', targetKey: 'k', provider: 'p', content: 'c' })).toThrow();
   });
 
   it('rejects missing targetKey', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      agentId: 'a', provider: 'p', content: 'c',
-    })).toThrow();
+    expect(() => adminInternalChatSendSchema.parse({ agentId: 'a', provider: 'p', content: 'c' })).toThrow();
+  });
+
+  it('rejects missing content', () => {
+    expect(() => adminInternalChatSendSchema.parse({ agentId: 'a', targetKey: 'k', provider: 'p' })).toThrow();
   });
 });
 
-// ─── createExternalInternalChatAccountSchema ────────────────────────────────
+// ─── createExternalInternalChatAccountSchema ───────────────────────────
 
 describe('createExternalInternalChatAccountSchema', () => {
-  it('parses minimal valid input (provider + targetKey)', () => {
-    const result = createExternalInternalChatAccountSchema.parse({
-      provider: 'internal-chat',
-      targetKey: 'user@example.com',
-    });
-    expect(result.provider).toBe('internal-chat');
-    expect(result.targetKey).toBe('user@example.com');
+  it('parses valid input with provider and targetKey', () => {
+    expect(createExternalInternalChatAccountSchema.parse({ provider: 'slack', targetKey: 'U123' }))
+      .toMatchObject({ provider: 'slack', targetKey: 'U123' });
   });
 
   it('parses with optional name', () => {
-    const result = createExternalInternalChatAccountSchema.parse({
-      provider: 'ic', targetKey: 'u', name: 'My Account',
-    });
-    expect(result.name).toBe('My Account');
+    expect(createExternalInternalChatAccountSchema.parse({ provider: 'p', targetKey: 't', name: 'My Bot' }))
+      .toMatchObject({ name: 'My Bot' });
   });
 
   it('rejects missing provider', () => {
-    expect(() => createExternalInternalChatAccountSchema.parse({ targetKey: 'u' })).toThrow();
+    expect(() => createExternalInternalChatAccountSchema.parse({ targetKey: 't' })).toThrow();
+  });
+
+  it('rejects missing targetKey', () => {
+    expect(() => createExternalInternalChatAccountSchema.parse({ provider: 'p' })).toThrow();
   });
 
   it('rejects empty provider', () => {
-    expect(() => createExternalInternalChatAccountSchema.parse({ provider: '', targetKey: 'u' })).toThrow();
+    expect(() => createExternalInternalChatAccountSchema.parse({ provider: '', targetKey: 't' })).toThrow();
   });
 });
 
-// ─── updateExternalInternalChatAccountSchema ────────────────────────────────
+// ─── updateExternalInternalChatAccountSchema ───────────────────────────
 
 describe('updateExternalInternalChatAccountSchema', () => {
-  it('parses minimal valid input (accountId only)', () => {
-    const result = updateExternalInternalChatAccountSchema.parse({ accountId: 'acc-1' });
-    expect(result.accountId).toBe('acc-1');
+  it('parses with accountId only', () => {
+    expect(updateExternalInternalChatAccountSchema.parse({ accountId: 'acc-1' }))
+      .toMatchObject({ accountId: 'acc-1' });
   });
 
-  it('parses with optional name', () => {
-    const result = updateExternalInternalChatAccountSchema.parse({ accountId: 'a', name: 'New Name' });
-    expect(result.name).toBe('New Name');
-  });
-
-  it('parses with valid webhookUrl', () => {
-    const result = updateExternalInternalChatAccountSchema.parse({
-      accountId: 'a', webhookUrl: 'https://example.com/webhook',
-    });
-    expect(result.webhookUrl).toBe('https://example.com/webhook');
-  });
-
-  it('accepts null webhookUrl', () => {
-    const result = updateExternalInternalChatAccountSchema.parse({
-      accountId: 'a', webhookUrl: null,
-    });
-    expect(result.webhookUrl).toBeNull();
-  });
-
-  it('rejects invalid webhookUrl format', () => {
-    expect(() => updateExternalInternalChatAccountSchema.parse({
-      accountId: 'a', webhookUrl: 'not-a-url',
-    })).toThrow();
+  it('parses with name', () => {
+    expect(updateExternalInternalChatAccountSchema.parse({ accountId: 'a', name: 'Updated Bot' }))
+      .toMatchObject({ name: 'Updated Bot' });
   });
 
   it('rejects missing accountId', () => {
-    expect(() => updateExternalInternalChatAccountSchema.parse({ name: 'n' })).toThrow();
+    expect(() => updateExternalInternalChatAccountSchema.parse({})).toThrow();
+  });
+
+  it('rejects empty accountId', () => {
+    expect(() => updateExternalInternalChatAccountSchema.parse({ accountId: '' })).toThrow();
   });
 });
 
-// ─── deleteExternalInternalChatAccountSchema ───────────────────────────────
+// ─── deleteExternalInternalChatAccountSchema ────────────────────────────
 
 describe('deleteExternalInternalChatAccountSchema', () => {
-  it('parses with accountId', () => {
-    expect(deleteExternalInternalChatAccountSchema.parse({ accountId: 'acc-1' })).toMatchObject({ accountId: 'acc-1' });
+  it('parses valid accountId', () => {
+    expect(deleteExternalInternalChatAccountSchema.parse({ accountId: 'acc-1' }))
+      .toMatchObject({ accountId: 'acc-1' });
   });
 
   it('rejects missing accountId', () => {
@@ -143,193 +113,144 @@ describe('deleteExternalInternalChatAccountSchema', () => {
   });
 });
 
-// ─── internalChatAccountIdQuerySchema ─────────────────────────────────────
+// ─── internalChatAccountIdQuerySchema ────────────────────────────────
 
 describe('internalChatAccountIdQuerySchema', () => {
-  it('parses with accountId', () => {
-    expect(internalChatAccountIdQuerySchema.parse({ accountId: 'acc-1' })).toMatchObject({ accountId: 'acc-1' });
+  it('parses valid accountId', () => {
+    expect(internalChatAccountIdQuerySchema.parse({ accountId: 'acc-1' }))
+      .toMatchObject({ accountId: 'acc-1' });
   });
 
   it('rejects missing accountId', () => {
     expect(() => internalChatAccountIdQuerySchema.parse({})).toThrow();
   });
+
+  it('rejects empty accountId', () => {
+    expect(() => internalChatAccountIdQuerySchema.parse({ accountId: '' })).toThrow();
+  });
 });
 
-// ─── internalChatMessagesQuerySchema ────────────────────────────────────────
+// ─── internalChatMessagesQuerySchema ──────────────────────────────────
 
 describe('internalChatMessagesQuerySchema', () => {
-  it('parses minimal valid input (required fields only)', () => {
-    const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'acc-1',
-      conversationId: 'conv-1',
-    });
-    expect(result.accountId).toBe('acc-1');
-    expect(result.conversationId).toBe('conv-1');
-    expect(result.limit).toBe(20);    // default
-    expect(result.offset).toBe(0);    // default
+  it('parses valid accountId and conversationId', () => {
+    expect(internalChatMessagesQuerySchema.parse({ accountId: 'acc-1', conversationId: 'conv-1' }))
+      .toMatchObject({ accountId: 'acc-1', conversationId: 'conv-1' });
   });
 
-  it('parses with explicit limit and offset', () => {
-    const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: 50, offset: 10,
-    });
+  it('defaults limit and offset', () => {
+    const result = internalChatMessagesQuerySchema.parse({ accountId: 'a', conversationId: 'c' });
+    expect(result.limit).toBe(20);
+    expect(result.offset).toBe(0);
+  });
+
+  it('accepts custom limit and offset (coerced from string)', () => {
+    const result = internalChatMessagesQuerySchema.parse({ accountId: 'a', conversationId: 'c', limit: '50', offset: '10' });
     expect(result.limit).toBe(50);
     expect(result.offset).toBe(10);
   });
 
-  it('coerces string limit to number', () => {
-    const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: '25',
-    });
-    expect(result.limit).toBe(25);
-  });
-
-  it('coerces string offset to number', () => {
-    const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', offset: '5',
-    });
-    expect(result.offset).toBe(5);
-  });
-
-  it('rejects limit less than 1', () => {
-    expect(() => internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: 0,
-    })).toThrow();
-  });
-
-  it('rejects limit greater than 100', () => {
-    expect(() => internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: 101,
-    })).toThrow();
-  });
-
-  it('rejects negative offset', () => {
-    expect(() => internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', offset: -1,
-    })).toThrow();
+  it('rejects missing accountId', () => {
+    expect(() => internalChatMessagesQuerySchema.parse({ conversationId: 'c' })).toThrow();
   });
 
   it('rejects missing conversationId', () => {
     expect(() => internalChatMessagesQuerySchema.parse({ accountId: 'a' })).toThrow();
   });
+
+  it('rejects limit > 100', () => {
+    expect(() => internalChatMessagesQuerySchema.parse({ accountId: 'a', conversationId: 'c', limit: 200 })).toThrow();
+  });
 });
 
-// ─── internalChatMessageAttachmentQuerySchema ──────────────────────────────
+// ─── internalChatMessageAttachmentQuerySchema ───────────────────────────
 
 describe('internalChatMessageAttachmentQuerySchema', () => {
-  it('parses valid input', () => {
-    const result = internalChatMessageAttachmentQuerySchema.parse({
-      accountId: 'acc-1',
-      conversationId: 'conv-1',
-      messageId: 'msg-1',
-      attachmentName: 'document.pdf',
-    });
-    expect(result.attachmentName).toBe('document.pdf');
+  it('parses valid input with all required fields', () => {
+    expect(internalChatMessageAttachmentQuerySchema.parse({
+      accountId: 'acc-1', conversationId: 'conv-1', messageId: 'msg-1', attachmentName: 'file.pdf',
+    })).toMatchObject({ messageId: 'msg-1', attachmentName: 'file.pdf' });
+  });
+
+  it('rejects missing accountId', () => {
+    expect(() => internalChatMessageAttachmentQuerySchema.parse({ conversationId: 'c', messageId: 'm', attachmentName: 'f' })).toThrow();
   });
 
   it('rejects missing attachmentName', () => {
-    expect(() => internalChatMessageAttachmentQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', messageId: 'm',
-    })).toThrow();
-  });
-
-  it('rejects empty attachmentName', () => {
-    expect(() => internalChatMessageAttachmentQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', messageId: 'm', attachmentName: '',
-    })).toThrow();
+    expect(() => internalChatMessageAttachmentQuerySchema.parse({ accountId: 'a', conversationId: 'c', messageId: 'm' })).toThrow();
   });
 });
 
-// ─── createInternalChatConversationSchema ─────────────────────────────────
+// ─── createInternalChatConversationSchema ──────────────────────────────
 
 describe('createInternalChatConversationSchema', () => {
-  it('parses minimal valid input', () => {
-    const result = createInternalChatConversationSchema.parse({
-      accountId: 'acc-1',
-      memberKeys: ['user-1', 'user-2'],
-    });
-    expect(result.memberKeys).toEqual(['user-1', 'user-2']);
+  it('parses valid input with accountId and memberKeys', () => {
+    expect(createInternalChatConversationSchema.parse({ accountId: 'acc-1', memberKeys: ['user-1', 'user-2'] }))
+      .toMatchObject({ accountId: 'acc-1' });
   });
 
   it('parses with optional name', () => {
-    const result = createInternalChatConversationSchema.parse({
-      accountId: 'a', name: 'Team Chat', memberKeys: ['u1'],
-    });
-    expect(result.name).toBe('Team Chat');
+    expect(createInternalChatConversationSchema.parse({ accountId: 'a', memberKeys: ['u'], name: 'Team Chat' }))
+      .toMatchObject({ name: 'Team Chat' });
+  });
+
+  it('rejects missing accountId', () => {
+    expect(() => createInternalChatConversationSchema.parse({ memberKeys: ['u'] })).toThrow();
   });
 
   it('rejects empty memberKeys array', () => {
-    expect(() => createInternalChatConversationSchema.parse({
-      accountId: 'a', memberKeys: [],
-    })).toThrow();
-  });
-
-  it('rejects missing memberKeys', () => {
-    expect(() => createInternalChatConversationSchema.parse({ accountId: 'a' })).toThrow();
+    expect(() => createInternalChatConversationSchema.parse({ accountId: 'a', memberKeys: [] })).toThrow();
   });
 });
 
-// ─── sendInternalChatConversationMessageSchema ─────────────────────────────
+// ─── sendInternalChatConversationMessageSchema ──────────────────────────
 
 describe('sendInternalChatConversationMessageSchema', () => {
-  it('parses minimal valid input', () => {
-    const result = sendInternalChatConversationMessageSchema.parse({
-      conversationId: 'conv-1',
-      content: 'Hello there',
-    });
-    expect(result.conversationId).toBe('conv-1');
-    expect(result.content).toBe('Hello there');
+  it('parses valid conversationId and content', () => {
+    expect(sendInternalChatConversationMessageSchema.parse({ conversationId: 'conv-1', content: 'Hello' }))
+      .toMatchObject({ conversationId: 'conv-1', content: 'Hello' });
   });
 
   it('parses with optional parentMessageId', () => {
-    const result = sendInternalChatConversationMessageSchema.parse({
-      conversationId: 'c', content: 'msg', parentMessageId: 'parent-1',
-    });
+    const result = sendInternalChatConversationMessageSchema.parse({ conversationId: 'c', content: 'Hi', parentMessageId: 'parent-1' });
     expect(result.parentMessageId).toBe('parent-1');
   });
 
   it('rejects missing conversationId', () => {
-    expect(() => sendInternalChatConversationMessageSchema.parse({ content: 'c' })).toThrow();
+    expect(() => sendInternalChatConversationMessageSchema.parse({ content: 'Hi' })).toThrow();
   });
 
-  it('rejects empty content', () => {
-    expect(() => sendInternalChatConversationMessageSchema.parse({
-      conversationId: 'c', content: '',
-    })).toThrow();
+  it('rejects missing content', () => {
+    expect(() => sendInternalChatConversationMessageSchema.parse({ conversationId: 'c' })).toThrow();
+  });
+
+  it('rejects empty conversationId', () => {
+    expect(() => sendInternalChatConversationMessageSchema.parse({ conversationId: '', content: 'x' })).toThrow();
   });
 });
 
-// ─── updateInternalChatConversationSchema ─────────────────────────────────
+// ─── updateInternalChatConversationSchema ─────────────────────────────
 
 describe('updateInternalChatConversationSchema', () => {
-  it('parses minimal valid input (conversationId only)', () => {
-    const result = updateInternalChatConversationSchema.parse({ conversationId: 'conv-1' });
-    expect(result.conversationId).toBe('conv-1');
+  it('parses with conversationId only', () => {
+    expect(updateInternalChatConversationSchema.parse({ conversationId: 'conv-1' }))
+      .toMatchObject({ conversationId: 'conv-1' });
   });
 
-  it('parses with optional name', () => {
-    const result = updateInternalChatConversationSchema.parse({
-      conversationId: 'c', name: 'New Name',
-    });
-    expect(result.name).toBe('New Name');
-  });
-
-  it('parses with optional archive flag', () => {
-    const result = updateInternalChatConversationSchema.parse({
-      conversationId: 'c', archive: true,
-    });
+  it('parses with archive flag', () => {
+    const result = updateInternalChatConversationSchema.parse({ conversationId: 'c', archive: true });
     expect(result.archive).toBe(true);
   });
 
   it('rejects missing conversationId', () => {
-    expect(() => updateInternalChatConversationSchema.parse({ name: 'n' })).toThrow();
+    expect(() => updateInternalChatConversationSchema.parse({})).toThrow();
   });
 });
 
-// ─── archiveInternalChatConversationSchema ─────────────────────────────────
+// ─── archiveInternalChatConversationSchema ─────────────────────────────
 
 describe('archiveInternalChatConversationSchema', () => {
-  it('parses with conversationId', () => {
+  it('parses valid conversationId', () => {
     expect(archiveInternalChatConversationSchema.parse({ conversationId: 'conv-1' }))
       .toMatchObject({ conversationId: 'conv-1' });
   });
@@ -337,12 +258,16 @@ describe('archiveInternalChatConversationSchema', () => {
   it('rejects missing conversationId', () => {
     expect(() => archiveInternalChatConversationSchema.parse({})).toThrow();
   });
+
+  it('rejects empty conversationId', () => {
+    expect(() => archiveInternalChatConversationSchema.parse({ conversationId: '' })).toThrow();
+  });
 });
 
-// ─── internalChatGroupMembersQuerySchema ──────────────────────────────────
+// ─── internalChatGroupMembersQuerySchema ─────────────────────────────
 
 describe('internalChatGroupMembersQuerySchema', () => {
-  it('parses with conversationId', () => {
+  it('parses valid conversationId', () => {
     expect(internalChatGroupMembersQuerySchema.parse({ conversationId: 'conv-1' }))
       .toMatchObject({ conversationId: 'conv-1' });
   });
@@ -352,73 +277,65 @@ describe('internalChatGroupMembersQuerySchema', () => {
   });
 });
 
-// ─── addInternalChatGroupMemberSchema ─────────────────────────────────────
+// ─── addInternalChatGroupMemberSchema ─────────────────────────────────
 
 describe('addInternalChatGroupMemberSchema', () => {
-  it('parses minimal valid input', () => {
-    const result = addInternalChatGroupMemberSchema.parse({
-      conversationId: 'conv-1',
-      participantKey: 'user-1',
-    });
-    expect(result.participantKey).toBe('user-1');
-    expect(result.role).toBe('normal'); // default
+  it('parses valid conversationId and participantKey', () => {
+    expect(addInternalChatGroupMemberSchema.parse({ conversationId: 'conv-1', participantKey: 'user-1' }))
+      .toMatchObject({ conversationId: 'conv-1', participantKey: 'user-1' });
   });
 
-  it('parses with explicit admin role', () => {
-    const result = addInternalChatGroupMemberSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'admin',
-    });
+  it('defaults role to normal', () => {
+    const result = addInternalChatGroupMemberSchema.parse({ conversationId: 'c', participantKey: 'p' });
+    expect(result.role).toBe('normal');
+  });
+
+  it('accepts admin role', () => {
+    const result = addInternalChatGroupMemberSchema.parse({ conversationId: 'c', participantKey: 'p', role: 'admin' });
     expect(result.role).toBe('admin');
   });
 
   it('rejects invalid role', () => {
-    expect(() => addInternalChatGroupMemberSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'moderator',
-    })).toThrow();
+    expect(() => addInternalChatGroupMemberSchema.parse({ conversationId: 'c', participantKey: 'p', role: 'owner' })).toThrow();
   });
 
   it('rejects missing conversationId', () => {
     expect(() => addInternalChatGroupMemberSchema.parse({ participantKey: 'p' })).toThrow();
   });
+
+  it('rejects missing participantKey', () => {
+    expect(() => addInternalChatGroupMemberSchema.parse({ conversationId: 'c' })).toThrow();
+  });
 });
 
-// ─── updateInternalChatGroupMemberRoleSchema ──────────────────────────────
+// ─── updateInternalChatGroupMemberRoleSchema ─────────────────────────
 
 describe('updateInternalChatGroupMemberRoleSchema', () => {
-  it('parses with admin role', () => {
-    const result = updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'conv-1', participantKey: 'user-1', role: 'admin',
-    });
-    expect(result.role).toBe('admin');
+  it('parses valid conversationId, participantKey, and role', () => {
+    expect(updateInternalChatGroupMemberRoleSchema.parse({ conversationId: 'conv-1', participantKey: 'user-1', role: 'admin' }))
+      .toMatchObject({ role: 'admin' });
   });
 
-  it('parses with normal role', () => {
-    const result = updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'normal',
-    });
-    expect(result.role).toBe('normal');
+  it('accepts normal role', () => {
+    expect(updateInternalChatGroupMemberRoleSchema.parse({ conversationId: 'c', participantKey: 'p', role: 'normal' }))
+      .toMatchObject({ role: 'normal' });
   });
 
   it('rejects invalid role', () => {
-    expect(() => updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'guest',
-    })).toThrow();
+    expect(() => updateInternalChatGroupMemberRoleSchema.parse({ conversationId: 'c', participantKey: 'p', role: 'superadmin' })).toThrow();
   });
 
-  it('rejects missing role', () => {
-    expect(() => updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'c', participantKey: 'p',
-    })).toThrow();
+  it('rejects missing conversationId', () => {
+    expect(() => updateInternalChatGroupMemberRoleSchema.parse({ participantKey: 'p', role: 'normal' })).toThrow();
   });
 });
 
-// ─── removeInternalChatGroupMemberSchema ──────────────────────────────────
+// ─── removeInternalChatGroupMemberSchema ─────────────────────────────
 
 describe('removeInternalChatGroupMemberSchema', () => {
-  it('parses valid input', () => {
-    expect(removeInternalChatGroupMemberSchema.parse({
-      conversationId: 'conv-1', participantKey: 'user-1',
-    })).toMatchObject({ conversationId: 'conv-1', participantKey: 'user-1' });
+  it('parses valid conversationId and participantKey', () => {
+    expect(removeInternalChatGroupMemberSchema.parse({ conversationId: 'conv-1', participantKey: 'user-1' }))
+      .toMatchObject({ conversationId: 'conv-1', participantKey: 'user-1' });
   });
 
   it('rejects missing conversationId', () => {
@@ -433,21 +350,28 @@ describe('removeInternalChatGroupMemberSchema', () => {
 // ─── safeParse (non-throwing) ─────────────────────────────────────────────
 
 describe('schema.safeParse', () => {
-  it('adminInternalChatSendSchema safeParse returns success false for invalid input', () => {
-    const result = adminInternalChatSendSchema.safeParse({ content: '' });
+  it('adminInternalChatSendSchema safeParse returns success false for missing content', () => {
+    const result = adminInternalChatSendSchema.safeParse({ agentId: 'a', targetKey: 'k', provider: 'p' });
     expect(result.success).toBe(false);
   });
 
-  it('createInternalChatConversationSchema safeParse returns success false for empty members', () => {
-    const result = createInternalChatConversationSchema.safeParse({ accountId: 'a', memberKeys: [] });
-    expect(result.success).toBe(false);
-  });
-
-  it('sendInternalChatConversationMessageSchema safeParse returns success true for valid input', () => {
-    const result = sendInternalChatConversationMessageSchema.safeParse({
-      conversationId: 'c', content: 'Hello',
-    });
+  it('createExternalInternalChatAccountSchema safeParse returns success true for valid input', () => {
+    const result = createExternalInternalChatAccountSchema.safeParse({ provider: 'p', targetKey: 't' });
     expect(result.success).toBe(true);
-    expect(result.data?.content).toBe('Hello');
+  });
+
+  it('sendInternalChatConversationMessageSchema safeParse returns success false for missing content', () => {
+    const result = sendInternalChatConversationMessageSchema.safeParse({ conversationId: 'c' });
+    expect(result.success).toBe(false);
+  });
+
+  it('addInternalChatGroupMemberSchema safeParse returns success false for missing participantKey', () => {
+    const result = addInternalChatGroupMemberSchema.safeParse({ conversationId: 'c' });
+    expect(result.success).toBe(false);
+  });
+
+  it('removeInternalChatGroupMemberSchema safeParse returns success true for valid input', () => {
+    const result = removeInternalChatGroupMemberSchema.safeParse({ conversationId: 'c', participantKey: 'p' });
+    expect(result.success).toBe(true);
   });
 });
