@@ -294,6 +294,7 @@ export function createSystemIntegrationStore(db: Database) {
   ) {
     const schema = parseConfigSchemaMap[providerType];
     if (!schema) {
+      forgeDebug({ scope: 'system-integrations', level: 'warn', message: 'createIntegrationStore: unknown provider type', context: { type } });
       throw new Error('Unknown integration provider type');
     }
     return schema.parse(config);

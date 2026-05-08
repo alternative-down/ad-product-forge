@@ -82,9 +82,12 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
       return parsed.data;
     }
 
-    throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
+    forgeDebug({ scope: 'coolify-helpers', level: 'warn', message: 'extractItemData: schema validation failed', context: { data } });
+    forgeDebug({ scope: 'coolify-helpers', level: 'warn', message: 'extractItemData: all keys failed', context: { data } });
+  throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
   }
 
+  forgeDebug({ scope: 'coolify-helpers', level: 'warn', message: 'extractItemData: all keys failed', context: { data } });
   throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
 }
 
