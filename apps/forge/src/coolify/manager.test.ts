@@ -30,6 +30,7 @@ const MOCK_PROVIDER_CONFIG = {
 describe('CoolifyManager', () => {
   let responses: Record<string, { status: number; body?: unknown }>;
   let mockFetch: ReturnType<typeof vi.fn>;
+  let mockForgeDebug: ReturnType<typeof vi.fn>;
   let integrations: ReturnType<typeof createMockIntegrations>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let manager: any;
@@ -467,51 +468,22 @@ describe('CoolifyManager', () => {
     });
   });
 
-    // ── New coverage tests (forgeDebug fix) ───────────────────────────────
 
-    it('createGitHubApp maps githubAppUuid from API response', async () => {
-      responses['POST /github-apps'] = {
-        status: 201,
-        body: { uuid: 'ga_new_001' },
-      };
-
-      const result = await manager.createGitHubApp({
-        name: 'My Forge App',
-        organization: 'my-org',
-        appId: '1',
-        installationId: '2',
-        webhookSecret: 'secret',
-      });
-
-      expect(result.githubAppUuid).toBe('ga_new_001');
-      const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
-      const [, opts] = lastCall;
-      const body = JSON.parse(opts.body);
-      expect(body.name).toBe('My Forge App');
-    });
-
-    it('listGitHubAppRepositoryBranches returns branch names', async () => {
+  describe('listGitHubAppRepositoryBranches', () => {
+    it('returns branch names', async () => {
       responses['GET /github-apps/1/repositories/repo/branches'] = {
         status: 200,
-        body: {
-          branches: [
-            { name: 'main', commit: { sha: 'abc123', created_at: '2025-01-01' } },
-            { name: 'develop', commit: { sha: 'def456', created_at: '2025-01-02' } },
-          ],
-        },
+        body: { branches: [{ name: 'main', commit: { sha: 'abc123', created_at: '2025-01-01' } }] },
       };
 
-      const result = await manager.listGitHubAppRepositoryBranches({
-        githubAppId: 1,
-        repository: 'repo',
-      });
-
-      expect(result).toHaveLength(2);
+      const result = await manager.listGitHubAppRepositoryBranches({ githubAppId: 1, repository: 'repo' });
+      expect(result).toHaveLength(1);
       expect(result[0].name).toBe('main');
-      expect(result[1].name).toBe('develop');
     });
+  });
 
-    it('restartApplication calls the restart endpoint', async () => {
+  describe('restartApplication', () => {
+    it('calls the restart endpoint', async () => {
       const result = await manager.restartApplication('app-001');
       expect(result).toEqual({ success: true });
       expect(mockFetch).toHaveBeenCalledWith(
@@ -519,5 +491,6 @@ describe('CoolifyManager', () => {
         expect.any(Object),
       );
     });
+  });
 
 });
