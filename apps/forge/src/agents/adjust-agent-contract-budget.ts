@@ -41,6 +41,7 @@ export async function adjustAgentContractBudget(
   }
 
   if (!activeContract) {
+    forgeDebug({ scope: 'agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: no active contract', context: { agentId: input.agentId } });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
 
