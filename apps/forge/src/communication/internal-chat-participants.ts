@@ -43,7 +43,7 @@ export function createInternalChatParticipants(db: Database) {
         message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId, conversationId },
       });
-      forgeDebug({ scope: 'internal-chat-participants', level: 'error', message: 'internal-chat-participants operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-participants', level: 'error', message: 'internal-chat-participants: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -65,7 +65,7 @@ export function createInternalChatParticipants(db: Database) {
         message: `listGroupMembersOrDmPeers failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, conversationId },
       });
-      forgeDebug({ scope: 'internal-chat-participants', level: 'error', message: 'internal-chat-participants operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-participants', level: 'error', message: 'internal-chat-participants: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

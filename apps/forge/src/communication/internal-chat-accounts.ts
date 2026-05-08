@@ -134,7 +134,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `registerExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { slug: input.slug, displayName: input.displayName },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -161,7 +161,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `updateExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId: input.accountId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -176,7 +176,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `deleteExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId: input.accountId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -199,7 +199,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `listAccounts failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { excludeAgentId: input.excludeAgentId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -216,7 +216,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `getAccountBySlug failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { slug },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -233,7 +233,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `getAccountByAgentId failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -366,7 +366,7 @@ export function createInternalChatAccounts(db: Database) {
         message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId, conversationId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
