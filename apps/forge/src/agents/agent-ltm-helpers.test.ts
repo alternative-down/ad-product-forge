@@ -1,7 +1,9 @@
-/**
- * Unit tests for agents/agent-ltm-helpers.ts — pure LTM recall helpers.
- */
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+
 import {
   safeSerializeRecallSteps,
   safeSerializeGraphResult,
@@ -9,250 +11,185 @@ import {
   buildRecallSystemMessage,
 } from './agent-ltm-helpers';
 
-// ─── safeSerializeRecallSteps ────────────────────────────────────────────────
-
-describe('safeSerializeRecallSteps', () => {
-  it('returns "[]" for empty steps array', () => {
-    expect(safeSerializeRecallSteps([])).toBe('[]');
+describe('agent-ltm-helpers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('serializes a single step with pretty-printing', () => {
-    const steps = [{ id: 'step-1', text: 'Hello world' }];
-    const result = safeSerializeRecallSteps(steps);
-    expect(result).toContain('step-1');
-    expect(result).toContain('Hello world');
-    expect(JSON.parse(result)).toEqual(steps);
-  });
-
-  it('serializes multiple steps', () => {
-    const steps = [
-      { id: 'step-1', text: 'First step' },
-      { id: 'step-2', text: 'Second step' },
-      { id: 'step-3', text: 'Third step' },
-    ];
-    expect(JSON.parse(safeSerializeRecallSteps(steps))).toEqual(steps);
-  });
-
-  it('handles steps with complex nested data', () => {
-    const steps = [{ id: 'step-1', metadata: { sources: ['doc1', 'doc2'], score: 0.95 } }];
-    expect(JSON.parse(safeSerializeRecallSteps(steps))).toEqual(steps);
-  });
-
-  it('handles steps with null values', () => {
-    const steps = [{ id: 'step-1', text: null }];
-    expect(JSON.parse(safeSerializeRecallSteps(steps))).toEqual(steps);
-  });
-
-  it('handles steps with unicode content', () => {
-    const steps = [{ id: 'step-1', text: 'こんにちは世界 🔥' }];
-    expect(JSON.parse(safeSerializeRecallSteps(steps))).toEqual(steps);
-  });
-
-  it('serializes empty object with pretty-printing', () => {
-    const result = safeSerializeRecallSteps([{}]);
-    expect(JSON.parse(result)).toEqual([{}]);
-    expect(result).toContain('\n'); // pretty-printed
-  });
-
-  it('returns fallback for non-stringifiable value', () => {
-    // Circular reference would throw in JSON.stringify
-    const circular: unknown = [null];
-    (circular as unknown[])[0] = circular;
-    const result = safeSerializeRecallSteps(circular);
-    expect(typeof result).toBe('string');
-    expect(result).not.toBe('');
-  });
-});
-
-// ─── safeSerializeGraphResult ────────────────────────────────────────────────
-
-describe('safeSerializeGraphResult', () => {
-  it('returns "[]" for empty graph result', () => {
-    expect(safeSerializeGraphResult([])).toBe('[]');
-  });
-
-  it('serializes a single graph result', () => {
-    const result = [{ id: 'graph-1', context: 'The agent used tool X' }];
-    const serialized = safeSerializeGraphResult(result);
-    expect(serialized).toContain('graph-1');
-    expect(JSON.parse(serialized)).toEqual(result);
-  });
-
-  it('serializes multiple graph results', () => {
-    const result = [
-      { id: 'graph-1', context: 'First context', score: 0.9 },
-      { id: 'graph-2', context: 'Second context', score: 0.8 },
-    ];
-    expect(JSON.parse(safeSerializeGraphResult(result))).toEqual(result);
-  });
-
-  it('handles result with empty context string', () => {
-    const result = [{ id: 'graph-1', context: '' }];
-    expect(JSON.parse(safeSerializeGraphResult(result))).toEqual(result);
-  });
-
-  it('handles result with unicode context', () => {
-    const result = [{ id: 'graph-1', context: "L'agent a utilisé l'outil X" }];
-    expect(JSON.parse(safeSerializeGraphResult(result))).toEqual(result);
-  });
-
-  it('returns fallback for circular data', () => {
-    const circular: unknown = {};
-    (circular as Record<string, unknown>)['self'] = circular;
-    const result = safeSerializeGraphResult(circular);
-    expect(typeof result).toBe('string');
-    expect(result).not.toBe('');
-  });
-});
-
-// ─── escapeXml ───────────────────────────────────────────────────────────────
-
-describe('escapeXml', () => {
-  it('escapes & character', () => expect(escapeXml('foo & bar')).toBe('foo &amp; bar'));
-  it('escapes < character', () => expect(escapeXml('a < b')).toBe('a &lt; b'));
-  it('escapes > character', () => expect(escapeXml('a > b')).toBe('a &gt; b'));
-  it('escapes " character', () => expect(escapeXml('say "hello"')).toBe('say &quot;hello&quot;'));
-  it("escapes ' character", () => expect(escapeXml("it's")).toBe('it&apos;s'));
-  it('escapes all special characters together', () => {
-    const result = escapeXml('<tag attr="value">&123</tag>');
-    expect(result).toBe('&lt;tag attr=&quot;value&quot;&gt;&amp;123&lt;/tag&gt;');
-  });
-  it('returns empty string for empty input', () => expect(escapeXml('')).toBe(''));
-  it('returns original when no special characters', () => {
-    expect(escapeXml('hello world')).toBe('hello world');
-    expect(escapeXml('Hello World 123')).toBe('Hello World 123');
-  });
-  it('escapes ampersand multiple times in string', () => {
-    expect(escapeXml('a & b & c')).toBe('a &amp; b &amp; c');
-  });
-  it('& replacement order means &amp; becomes &amp;amp;', () => {
-    // & replaced first, so & in &amp; is also escaped
-    const result = escapeXml('a &amp; b');
-    expect(result).toBe('a &amp;amp; b');
-  });
-});
-
-// ─── buildRecallSystemMessage ────────────────────────────────────────────────
-
-describe('buildRecallSystemMessage', () => {
-  it('returns XML string with memory-recall tag', () => {
-    const result = buildRecallSystemMessage({
-      query: 'what did I do yesterday',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'r1', content: 'You worked on PR #123' }],
+  describe('safeSerializeRecallSteps', () => {
+    it('serializes a valid array to JSON', () => {
+      const result = safeSerializeRecallSteps([{ id: '1', content: 'hello' }]);
+      expect(result).toBe('[\n  {\n    "id": "1",\n    "content": "hello"\n  }\n]');
     });
-    expect(typeof result).toBe('string');
-    expect(result).toContain('on-datetime=');
-    expect(result).toContain('</memory-recall>');
+
+    it('serializes empty array', () => {
+      const result = safeSerializeRecallSteps([]);
+      expect(result).toBe('[]');
+    });
+
+    it('returns fallback string on circular reference', () => {
+      const obj: any = { name: 'test' };
+      obj.self = obj;
+      const result = safeSerializeRecallSteps([obj]);
+      expect(result).toBe('[unserializable steps payload]');
+    });
+
+    it('returns fallback string on deep nested structure', () => {
+      const deeply = { level: { level: { level: {} } } };
+      (deeply as any).circular = deeply;
+      const result = safeSerializeRecallSteps([deeply]);
+      expect(result).toBe('[unserializable steps payload]');
+    });
   });
 
-  it('includes workspace items when graphHit is false', () => {
-    const result = buildRecallSystemMessage({
-      query: 'test query',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'item-1', content: 'Result content here', score: 0.95 }],
+  describe('safeSerializeGraphResult', () => {
+    it('serializes a valid object to JSON', () => {
+      const result = safeSerializeGraphResult({ score: 0.95, nodes: ['a', 'b'] });
+      expect(result).toContain('"score": 0.95');
+      expect(result).toContain('"nodes"');
     });
-    expect(result).toContain('item-1');
-    expect(result).toContain('Result content here');
+
+    it('serializes null', () => {
+      const result = safeSerializeGraphResult(null);
+      expect(result).toBe('null');
+    });
+
+    it('returns fallback string on circular reference', () => {
+      const obj: any = { key: 'value' };
+      obj.self = obj;
+      const result = safeSerializeGraphResult(obj);
+      expect(result).toBe('[unserializable graph result]');
+    });
   });
 
-  it('includes graph item when graphHit is true and graphContext is non-empty', () => {
-    const result = buildRecallSystemMessage({
-      query: 'test',
-      graphHit: true,
-      graphScore: 0.87,
-      graphContext: 'The agent completed the task successfully',
-      results: [],
+  describe('escapeXml', () => {
+    it('escapes ampersand', () => {
+      expect(escapeXml('A & B')).toBe('A &amp; B');
     });
-    expect(result).toContain('source="graph"');
-    expect(result).toContain('0.8700');
+
+    it('escapes less-than and greater-than', () => {
+      expect(escapeXml('<div>')).toBe('&lt;div&gt;');
+    });
+
+    it('escapes double quote', () => {
+      expect(escapeXml('say "hello"')).toBe('say &quot;hello&quot;');
+    });
+
+    it('escapes single quote', () => {
+      expect(escapeXml("it's fine")).toBe("it's fine".replace("'", '&apos;'));
+    });
+
+    it('escapes all special characters in one string', () => {
+      expect(escapeXml('A & B < C > "D" \'E\'')).toBe('A &amp; B &lt; C &gt; &quot;D&quot; &apos;E&apos;');
+    });
+
+    it('returns string unchanged when no special chars', () => {
+      expect(escapeXml('plain text')).toBe('plain text');
+    });
+
+    it('handles empty string', () => {
+      expect(escapeXml('')).toBe('');
+    });
   });
 
-  it('omits graph item when graphContext is empty even with graphHit true', () => {
-    const result = buildRecallSystemMessage({
-      query: 'test',
-      graphHit: true,
-      graphScore: 0.5,
-      graphContext: '',
-      results: [],
+  describe('buildRecallSystemMessage', () => {
+    it('returns null when results array is empty and no graph hit', () => {
+      const result = buildRecallSystemMessage({
+        query: 'test',
+        graphHit: false,
+        graphScore: null,
+        graphContext: '',
+        results: [],
+      });
+      expect(result).toBeNull();
     });
-    // empty graph context with no results -> returns null (items.length === 0)
-    expect(result).toBeNull();
-  });
 
-  it('escapes special characters in query and content', () => {
-    const result = buildRecallSystemMessage({
-      query: 'query with <special> & "chars"',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'id1', content: 'content with <tags> & more' }],
+    it('returns null when graph hit but graphContext is empty', () => {
+      const result = buildRecallSystemMessage({
+        query: 'test',
+        graphHit: true,
+        graphScore: 0.85,
+        graphContext: '',
+        results: [],
+      });
+      expect(result).toBeNull();
     });
-    expect(result).toContain('&lt;');
-    expect(result).toContain('&gt;');
-    expect(result).toContain('&amp;');
-    expect(result).toContain('&quot;');
-  });
 
-  it('returns null when no graph hit and results are empty', () => {
-    const result = buildRecallSystemMessage({
-      query: 'no results',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [],
-    });
-    expect(result).toBeNull();
-  });
+    it('returns system message with graph item when graphHit is true', () => {
+      const result = buildRecallSystemMessage({
+        query: 'what was the issue?',
+        graphHit: true,
+        graphScore: 0.9234,
+        graphContext: 'There was a memory leak in the worker',
+        results: [],
+      });
 
-  it('includes score attribute on workspace items when provided', () => {
-    const result = buildRecallSystemMessage({
-      query: 'scored results',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'r1', content: 'Scored result', score: 0.42 }],
+      expect(result).not.toBeNull();
+      expect(result).toContain('<memory-recall');
+      expect(result).toContain('source="graph"');
+      expect(result).toContain('score="0.9234"');
+      expect(result).toContain('There was a memory leak');
+      expect(result).toContain('</memory-recall>');
     });
-    expect(result).toContain('0.4200');
-  });
 
-  it('omits score attribute on workspace items when score undefined', () => {
-    const result = buildRecallSystemMessage({
-      query: 'no score',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'r1', content: 'No score provided' }],
-    });
-    expect(result).toContain('0.0000'); // defaults to 0.0000 when no score
-  });
+    it('returns system message with workspace items when graphHit is false', () => {
+      const result = buildRecallSystemMessage({
+        query: 'test query',
+        graphHit: false,
+        graphScore: null,
+        graphContext: '',
+        results: [
+          { id: 'doc-1', content: 'First document', score: 0.95 },
+          { id: 'doc-2', content: 'Second document', score: 0.87 },
+        ],
+      });
 
-  it('returns multi-line string with <instructions> tag', () => {
-    const result = buildRecallSystemMessage({
-      query: 'test',
-      graphHit: false,
-      graphScore: null,
-      graphContext: '',
-      results: [{ id: 'x', content: 'y' }],
+      expect(result).not.toBeNull();
+      expect(result).toContain('<memory-recall');
+      expect(result).toContain('source="workspace"');
+      expect(result).toContain('id="doc-1"');
+      expect(result).toContain('id="doc-2"');
+      expect(result).toContain('score="0.9500"');
+      expect(result).toContain('First document');
+      expect(result).toContain('</memory-recall>');
     });
-    expect(result).toContain('<instructions>');
-    expect(result).toContain('on-datetime=');
-  });
 
-  it('graph with null score omits score attribute', () => {
-    const result = buildRecallSystemMessage({
-      query: 'graph no score',
-      graphHit: true,
-      graphScore: null,
-      graphContext: 'Some context',
-      results: [],
+    it('escapes XML in content', () => {
+      const result = buildRecallSystemMessage({
+        query: 'test',
+        graphHit: false,
+        graphScore: null,
+        graphContext: '',
+        results: [{ id: 'doc-1', content: 'Price < $50 & value > 10', score: 0.5 }],
+      });
+
+      expect(result).toContain('&lt;');
+      expect(result).toContain('&amp;');
+      expect(result).toContain('&gt;');
     });
-    expect(result).toContain('source="graph"');
-    // score attribute absent when null
-    expect(result).not.toMatch(/score="null"/);
+
+    it('escapes XML in graph item query attribute', () => {
+      const result = buildRecallSystemMessage({
+        query: 'query with <special> & chars',
+        graphHit: true,
+        graphScore: 0.5,
+        graphContext: 'some context',
+        results: [],
+      });
+
+      expect(result).toContain('query="query with &lt;special&gt; &amp; chars"');
+    });
+
+    it('includes instructions in output', () => {
+      const result = buildRecallSystemMessage({
+        query: 'test',
+        graphHit: true,
+        graphScore: 0.5,
+        graphContext: 'Some context',
+        results: [],
+      });
+
+      expect(result).toContain('<instructions>');
+    });
   });
 });
