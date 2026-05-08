@@ -19,6 +19,7 @@ import { createSystemReadModel } from './read-model/system';
 import { createFinanceReadModel } from './read-model/finance';
 import { getFinanceOverview } from './read-model/finance-overview';
 import { getRecurringPayables } from './read-model/payables-overview';
+import { forgeDebug } from '@forge-runtime/core';
 import type { GitHubAppManager } from '../github/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
@@ -57,43 +58,48 @@ export function createAdminReadModel(input: {
   const financeRM = createFinanceReadModel({ db });
 
   async function getApplicationMigrations() {
-    const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
-    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
-      entries: Array<{
-        idx: number;
-        when: number;
-        tag: string;
-      }>;
-    };
-    const appliedRows = await db.all<{
-      id: number;
-      hash: string;
-      createdAt: number;
-    }>(sql`
-      select
-        id,
-        hash,
-        created_at as createdAt
-      from __drizzle_migrations
-      order by created_at asc
-    `);
-    const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
+    try {
+      const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
+      const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
+        entries: Array<{
+          idx: number;
+          when: number;
+          tag: string;
+        }>;
+      };
+      const appliedRows = await db.all<{
+        id: number;
+        hash: string;
+        createdAt: number;
+      }>(sql`
+        select
+          id,
+          hash,
+          created_at as createdAt
+        from __drizzle_migrations
+        order by created_at asc
+      `);
+      const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
 
-    return {
-      applied: appliedRows,
-      entries: journal.entries.map((entry) => {
-        const applied = appliedByCreatedAt.get(entry.when);
+      return {
+        applied: appliedRows,
+        entries: journal.entries.map((entry) => {
+          const applied = appliedByCreatedAt.get(entry.when);
 
-        return {
-          idx: entry.idx,
-          tag: entry.tag,
-          createdAt: entry.when,
-          applied: Boolean(applied),
-          hash: applied?.hash ?? null,
-          rowId: applied?.id ?? null,
-        };
-      }),
-    };
+          return {
+            idx: entry.idx,
+            tag: entry.tag,
+            createdAt: entry.when,
+            applied: Boolean(applied),
+            hash: applied?.hash ?? null,
+            rowId: applied?.id ?? null,
+          };
+        }),
+      };
+    } catch (err) {
+      forgeDebug({ scope: 'admin-readmodel', level: 'error', message: '[admin-readmodel] getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
   }
 
   return {
