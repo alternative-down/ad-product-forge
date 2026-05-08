@@ -5,6 +5,7 @@
 
 import { oauthStore, type OAuthCredential, type ProviderId } from '@forge-runtime/core';
 import { fsPathExists } from '../helpers';
+import { forgeDebug } from '@forge-runtime/core';
 
 export type SystemOauthProvider = {
   providerId: ProviderId;
@@ -27,26 +28,31 @@ export type SystemOauthState = {
  * ms timestamps, matching the number | null declared in the client type).
  */
 export async function buildOauthState(): Promise<SystemOauthState> {
-  const store = oauthStore;
-  const storePath = store.getDefaultPath();
-  const raw = await store.read();
+  try {
+    const store = oauthStore;
+    const storePath = store.getDefaultPath();
+    const raw = await store.read();
 
-  const providers: SystemOauthProvider[] = [];
+    const providers: SystemOauthProvider[] = [];
 
-  for (const [providerId, credential] of Object.entries(raw) as [
-    ProviderId,
-    OAuthCredential | undefined,
-  ][]) {
-    providers.push({
-      providerId,
-      sourcePath: storePath,
-      sourcePresent: await fsPathExists(storePath),
-      synced: Boolean(credential?.accountId),
-      hasRefresh: Boolean(credential?.refresh),
-      expiresAt: credential?.expires ?? null,
-      accountId: credential?.accountId ?? null,
-    });
+    for (const [providerId, credential] of Object.entries(raw) as [
+      ProviderId,
+      OAuthCredential | undefined,
+    ][]) {
+      providers.push({
+        providerId,
+        sourcePath: storePath,
+        sourcePresent: await fsPathExists(storePath),
+        synced: Boolean(credential?.accountId),
+        hasRefresh: Boolean(credential?.refresh),
+        expiresAt: credential?.expires ?? null,
+        accountId: credential?.accountId ?? null,
+      });
+    }
+
+    return { storePath, providers };
+  } catch (err) {
+    forgeDebug({ scope: 'oauth-state', level: 'error', message: '[oauth-state] buildOauthState failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    throw err;
   }
-
-  return { storePath, providers };
 }
