@@ -59,6 +59,7 @@ export function createLlmSettingsStore(db: Database) {
     const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
 
     if (!defaults) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'System LLM defaults not configured' });
       throw new Error('System LLM defaults are not configured');
     }
 
@@ -68,14 +69,17 @@ export function createLlmSettingsStore(db: Database) {
     const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
 
     if (!primaryProfile || !primaryProfile.isEnabled) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default primary LLM profile missing or disabled' });
       throw new Error('Default primary LLM profile is missing or disabled');
     }
 
     if (!omProfile || !omProfile.isEnabled) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default OM LLM profile missing or disabled' });
       throw new Error('Default OM LLM profile is missing or disabled');
     }
 
     if (!hiringRhProfile || !hiringRhProfile.isEnabled) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default hiring RH LLM profile missing or disabled' });
       throw new Error('Default hiring RH LLM profile is missing or disabled');
     }
 
@@ -92,6 +96,7 @@ export function createLlmSettingsStore(db: Database) {
     });
 
     if (!row) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
       throw new Error(`LLM profile not found: ${profileId}`);
     }
 
@@ -202,6 +207,7 @@ export function createLlmSettingsStore(db: Database) {
       const profile = profileMap.get(profileId);
 
       if (!profile) {
+        forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
         throw new Error(`LLM profile not found: ${profileId}`);
       }
 
