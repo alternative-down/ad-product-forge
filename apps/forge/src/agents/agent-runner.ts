@@ -1059,6 +1059,7 @@ export function createAgentRunner(
       }
     }
 
+    forgeDebug({ scope: "agent-runner", level: "error", message: "generate timed out after all retry attempts" });
     throw new Error('Agent generate timed out after all retry attempts');
   }
 

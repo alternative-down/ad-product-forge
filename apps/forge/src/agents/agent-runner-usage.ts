@@ -21,10 +21,11 @@ export function createAgentRunnerUsage(input: {
   runtime: InternalAgentRuntime;
 }) {
   async function estimateStepCostUsd() {
-    if (!input.runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
-    }
     try {
+      if (!input.runtime.modelProfileId) {
+        throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+      }
+
       const recentSteps = await input.store.listRecentSteps(input.runtime.id, RECENT_STEP_LIMIT);
 
       if (recentSteps.length === 0) {
@@ -66,10 +67,11 @@ export function createAgentRunnerUsage(input: {
     cachedInputTokens: number,
     outputTokens: number,
   ) {
-    if (!input.runtime.modelProfileId) {
-      throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
-    }
     try {
+      if (!input.runtime.modelProfileId) {
+        throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
+      }
+
       const pricing = await input.store.getUsagePricing({
         pricingModelKey: input.runtime.pricingModelKey,
         profileId: input.runtime.modelProfileId,
@@ -116,12 +118,7 @@ export function createAgentRunnerUsage(input: {
       };
     }>,
   ) {
-    try {
-      void steps;
-    } catch (err) {
-      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: '[agent-runner-usage] recordObservationalMemorySteps failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    void steps;
   }
 
   function getUsageFromResult(result: { usage?: unknown }) {
@@ -133,8 +130,8 @@ export function createAgentRunnerUsage(input: {
 
     return {
       inputTokens: promptTokens,
-      cachedInputTokens,
       outputTokens,
+      cachedInputTokens,
     };
   }
 
