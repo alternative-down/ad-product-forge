@@ -1,5 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
+import { logger } from "../../logger.js";
 
 import { z } from 'zod';
 
@@ -38,6 +39,7 @@ function decodeExpiry(token: string) {
 
 async function refresh(credential: OAuthCredential) {
   if (!credential.refresh) {
+        logger.warn("auth", "refresh: OpenAI Codex refresh token missing");
     throw new Error('OpenAI Codex refresh token missing.');
   }
 
