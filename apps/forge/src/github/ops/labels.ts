@@ -32,6 +32,7 @@ export function createLabelsOps(ctx: OpsContext) {
         message: `listLabels failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -66,6 +67,7 @@ export function createLabelsOps(ctx: OpsContext) {
         message: `createLabel failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -102,6 +104,7 @@ export function createLabelsOps(ctx: OpsContext) {
         message: `updateLabel failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -127,6 +130,7 @@ export function createLabelsOps(ctx: OpsContext) {
         message: `deleteLabel failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -159,6 +163,7 @@ export function createLabelsOps(ctx: OpsContext) {
         message: `addIssueLabels failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
       });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -186,6 +191,7 @@ export function createLabelsOps(ctx: OpsContext) {
         message: `removeIssueLabels failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
       });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
