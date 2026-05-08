@@ -30,6 +30,7 @@ function verifyStripeWebhookSignature(
     return event as unknown as StripeWebhookPayload;
   } catch (err) {
     forgeDebug({ scope: 'stripe', level: 'error', message: 'Stripe webhook verification failed', context: { error: err } });
+    forgeDebug({ scope: 'stripe', level: 'warn', message: 'verifyStripeWebhook: signature verification failed', error: err instanceof Error ? err.message : String(err) });
     throw new Error(`Stripe webhook signature verification failed: ${err instanceof Error ? err.message : err}`);
   }
 }

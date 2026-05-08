@@ -114,6 +114,7 @@ export function createInternalChatGroups(
 
     if (!conversation) {
       forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversationForAccount conversation not found', context: { conversationId } });
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'resolveConversation: not found', context: { conversationId } });
       throw new Error(`Conversation not found: ${conversationId}`);
     }
 
@@ -125,6 +126,7 @@ export function createInternalChatGroups(
 
     if (group.type !== "group") {
       forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAgent type check failed', context: { groupId } });
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'loadGroup: not found', context: { groupId } });
       throw new Error(`Chat group not found: ${groupId}`);
     }
 
@@ -136,6 +138,7 @@ export function createInternalChatGroups(
 
     if (group.type !== "group") {
       forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAccount type check failed', context: { groupId } });
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'loadGroup: not found', context: { groupId } });
       throw new Error(`Chat group not found: ${groupId}`);
     }
 
@@ -164,6 +167,7 @@ export function createInternalChatGroups(
 
     if (!membership) {
       forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'requireConversationMembershipByAccount membership not found', context: { conversationId } });
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'resolveConversation: not found', context: { conversationId } });
       throw new Error(`Conversation not found: ${conversationId}`);
     }
   }
@@ -179,6 +183,7 @@ export function createInternalChatGroups(
     });
 
     if (existing) {
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'createGroup: already exists', context: { conversationKey: input.conversationKey } });
       throw new Error(`Chat group already exists: ${input.conversationKey}`);
     }
 
@@ -238,6 +243,7 @@ export function createInternalChatGroups(
     });
 
     if (existing) {
+      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'addGroupMember: member already exists', context: { participantSlug: input.participantSlug } });
       throw new Error(`Group member already exists: ${input.participantSlug}`);
     }
 

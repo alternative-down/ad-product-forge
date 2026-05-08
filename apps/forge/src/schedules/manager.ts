@@ -97,6 +97,7 @@ export function createAgentScheduleManager(input: {
 
     if (!heartbeat) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createHeartbeatSchedule failed to load heartbeat', context: { agentId } });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createHeartbeatSchedule: failed to load heartbeat', context: { recordId: record.id } });
       throw new Error(`Failed to load heartbeat schedule: ${record.id}`);
     }
 
@@ -130,6 +131,7 @@ export function createAgentScheduleManager(input: {
     const scheduleRecord = await store.getAgentSchedule(agentId, record.id);
 
     if (!scheduleRecord) {
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createSchedule: failed to load created schedule', context: { recordId: record.id } });
       throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
@@ -319,6 +321,7 @@ export function createAgentScheduleManager(input: {
     const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
 
     if (!scheduleRecord) {
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createSchedule: failed to load created schedule', context: { recordId: record.id } });
       throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
