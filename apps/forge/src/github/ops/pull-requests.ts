@@ -35,6 +35,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: `listPullRequests failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
+      forgeDebug({ scope: 'github-ops-pull-requests', level: 'error', message: 'GitHub PR operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -73,6 +74,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: `createPullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
+      forgeDebug({ scope: 'github-ops-pull-requests', level: 'error', message: 'GitHub PR operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -110,6 +112,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: `getPullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
+      forgeDebug({ scope: 'github-ops-pull-requests', level: 'error', message: 'GitHub PR operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -145,6 +148,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: `listPullRequestComments failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
+      forgeDebug({ scope: 'github-ops-pull-requests', level: 'error', message: 'GitHub PR operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -190,6 +194,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: `updatePullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
+      forgeDebug({ scope: 'github-ops-pull-requests', level: 'error', message: 'GitHub PR operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -225,6 +230,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: `mergePullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
+      forgeDebug({ scope: 'github-ops-pull-requests', level: 'error', message: 'GitHub PR operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
