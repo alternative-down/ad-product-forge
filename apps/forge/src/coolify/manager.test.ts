@@ -34,6 +34,7 @@ describe('CoolifyManager', () => {
   let integrations: ReturnType<typeof createMockIntegrations>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let manager: any;
+  let mockForgeDebug: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     responses = {
