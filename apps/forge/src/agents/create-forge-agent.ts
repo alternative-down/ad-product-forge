@@ -15,6 +15,7 @@ import { buildAgentSystemPrompt } from './runtime/prompt';
 import { createAgentMcpRuntimeActionSource } from './mcp/client-manager';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import { normalizeOperationalMemoryMessages } from './normalize-operational-memory-messages';
+import { forgeDebug } from '@forge-runtime/core';
 import type {
   CreateAgentConfig,
   CreateAgentOptions,
@@ -85,49 +86,50 @@ export async function createInternalAgentRuntime<
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
   options: CreateAgentOptions = {},
 ): Promise<InternalAgentRuntime<TAgentId, TTools, TOutput, TRequestContext>> {
-  const platform = await createAgentRuntimePlatform({
-    agentId: config.id,
-    workspaceBasePath: config.workspaceBasePath,
-    providers: config.providers,
-    communication: config.communication as CommunicationModule | undefined,
-    workspaceFilesystem: config.workspaceFilesystem,
-    workspaceSandbox: config.workspaceSandbox,
-    workspaceSkills: config.workspaceSkills,
-    communicationDmFlushingEnabled: config.communicationDmFlushingEnabled,
-    communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
-  });
-  const configuredTools = (config.tools ?? {}) as ToolsInput;
-  const mcpRuntimeActionSource = createAgentMcpRuntimeActionSource(config.id);
-  const allAgentTools: ToolsInput = {
-    ...createExternalAccountTools(platform.communication as CommunicationModule),
-    ...configuredTools,
-  };
-  const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
-  await migrateLegacyCheckpointedOmState({
-    db: getDatabase(),
-    agentId: config.id,
-    threadId: platform.mastraId,
-    conversationStore: platform.conversationStore,
-  });
-  await normalizeOperationalMemoryMessages({
-    threadId: platform.mastraId,
-    conversationStore: platform.conversationStore,
-  });
-  const longTermMemoryStore = createAgentLongTermMemoryStore(getDatabase(), {
-    agentId: config.id,
-  });
-  const agentSystemPrompt = buildAgentSystemPrompt({
-    agentId: config.id,
-    agentSlug: platform.mastraId,
-    agentName: config.name,
-    agentDescription: config.description,
-    roleName: config.roleName,
-    roleDescription: config.roleDescription,
-    instructions: config.instructions,
-    companyName: config.companyName,
-    companyContext: config.companyContext,
-  });
-  const longTermMemory = options.longTermMemory && options.contractStore
+  try {
+    const platform = await createAgentRuntimePlatform({
+      agentId: config.id,
+      workspaceBasePath: config.workspaceBasePath,
+      providers: config.providers,
+      communication: config.communication as CommunicationModule | undefined,
+      workspaceFilesystem: config.workspaceFilesystem,
+      workspaceSandbox: config.workspaceSandbox,
+      workspaceSkills: config.workspaceSkills,
+      communicationDmFlushingEnabled: config.communicationDmFlushingEnabled,
+      communicationGroupFlushingEnabled: config.communicationGroupFlushingEnabled,
+    });
+    const configuredTools = (config.tools ?? {}) as ToolsInput;
+    const mcpRuntimeActionSource = createAgentMcpRuntimeActionSource(config.id);
+    const allAgentTools: ToolsInput = {
+      ...createExternalAccountTools(platform.communication as CommunicationModule),
+      ...configuredTools,
+    };
+    const omPricingModelKey = config.omPricingModelKey ?? config.pricingModelKey;
+    await migrateLegacyCheckpointedOmState({
+      db: getDatabase(),
+      agentId: config.id,
+      threadId: platform.mastraId,
+      conversationStore: platform.conversationStore,
+    });
+    await normalizeOperationalMemoryMessages({
+      threadId: platform.mastraId,
+      conversationStore: platform.conversationStore,
+    });
+    const longTermMemoryStore = createAgentLongTermMemoryStore(getDatabase(), {
+      agentId: config.id,
+    });
+    const agentSystemPrompt = buildAgentSystemPrompt({
+      agentId: config.id,
+      agentSlug: platform.mastraId,
+      agentName: config.name,
+      agentDescription: config.description,
+      roleName: config.roleName,
+      roleDescription: config.roleDescription,
+      instructions: config.instructions,
+      companyName: config.companyName,
+      companyContext: config.companyContext,
+    });
+    const longTermMemory = options.longTermMemory && options.contractStore
       ? createAgentLongTermMemory({
         agentId: config.id,
         agentName: config.name,
@@ -148,91 +150,95 @@ export async function createInternalAgentRuntime<
         workspaceEmbedder: config.workspaceEmbedder,
         persistenceStore: longTermMemoryStore,
       })
-    : null;
+      : null;
 
-  const runtimeMemory = await createAgentRuntimeMemory({
-    agentId: config.id,
-    mastraId: platform.mastraId,
-    agentWorkspacePath: platform.agentWorkspacePath,
-    agentModel: config.model as never,
-    omModel: config.omModel as never,
-    agentMemoryPath: platform.agentMemoryPath,
-    longTermMemory: options.longTermMemory,
-    memoryLastMessagesFullEnabled: config.memoryLastMessagesFullEnabled,
-    memoryLastMessagesCount: config.memoryLastMessagesCount,
-    ltmRecallScoreThreshold: config.ltmRecallScoreThreshold,
-    ltmRecallDocumentCount: config.ltmRecallDocumentCount,
-    workspaceEmbedder: config.workspaceEmbedder,
-    conversationStore: platform.conversationStore,
-    checkpointedOmLimits: {
-      recentRawTokens: config.checkpointedOmRecentRawTokens,
-    },
-    persistenceStore: longTermMemoryStore,
-    readRuntimeMemorySettings: options.readRuntimeMemorySettings,
-  });
+    const runtimeMemory = await createAgentRuntimeMemory({
+      agentId: config.id,
+      mastraId: platform.mastraId,
+      agentWorkspacePath: platform.agentWorkspacePath,
+      agentModel: config.model as never,
+      omModel: config.omModel as never,
+      agentMemoryPath: platform.agentMemoryPath,
+      longTermMemory: options.longTermMemory,
+      memoryLastMessagesFullEnabled: config.memoryLastMessagesFullEnabled,
+      memoryLastMessagesCount: config.memoryLastMessagesCount,
+      ltmRecallScoreThreshold: config.ltmRecallScoreThreshold,
+      ltmRecallDocumentCount: config.ltmRecallDocumentCount,
+      workspaceEmbedder: config.workspaceEmbedder,
+      conversationStore: platform.conversationStore,
+      checkpointedOmLimits: {
+        recentRawTokens: config.checkpointedOmRecentRawTokens,
+      },
+      persistenceStore: longTermMemoryStore,
+      readRuntimeMemorySettings: options.readRuntimeMemorySettings,
+    });
 
-  longTermMemory?.attachRecallIndexRefresh(
-    runtimeMemory.longTermMemoryRecall
-      ? () => runtimeMemory.longTermMemoryRecall!.refreshIndex()
-      : null,
-  );
+    longTermMemory?.attachRecallIndexRefresh(
+      runtimeMemory.longTermMemoryRecall
+        ? () => runtimeMemory.longTermMemoryRecall!.refreshIndex()
+        : null,
+    );
 
-  mcpRuntimeActionSource.start();
-  const checkpointedOmLimits = requireCheckpointedOmLimits(config);
+    mcpRuntimeActionSource.start();
+    const checkpointedOmLimits = requireCheckpointedOmLimits(config);
 
-  const agent = await createRuntimeAgentSession({
-    agentId: config.id,
-    agentName: config.name,
-    threadId: platform.mastraId,
-    resourceId: platform.mastraId,
-    assistantAuthorId: config.id,
-    model: config.model as never,
-    system: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
-    conversationStore: platform.conversationStore,
-    checkpointedOmLimits,
-    checkpointedOmModel: (config.omModel ?? config.model) as never,
-    checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
-    onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
-    runtimeActions: [
-      ...platform.workspaceActions,
-      ...toolsToRuntimeActions(allAgentTools),
-    ],
-    loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
-    todoStore: { client: platform.client },
-    planMode: new RuntimePlanMode({ agentMemoryPath: platform.agentMemoryPath }),
-    consolidateConversationOverflow: config.checkpointedOmEnabled === true,
-  });
+    const agent = await createRuntimeAgentSession({
+      agentId: config.id,
+      agentName: config.name,
+      threadId: platform.mastraId,
+      resourceId: platform.mastraId,
+      assistantAuthorId: config.id,
+      model: config.model as never,
+      system: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
+      conversationStore: platform.conversationStore,
+      checkpointedOmLimits,
+      checkpointedOmModel: (config.omModel ?? config.model) as never,
+      checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
+      onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
+      runtimeActions: [
+        ...platform.workspaceActions,
+        ...toolsToRuntimeActions(allAgentTools),
+      ],
+      loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
+      todoStore: { client: platform.client },
+      planMode: new RuntimePlanMode({ agentMemoryPath: platform.agentMemoryPath }),
+      consolidateConversationOverflow: config.checkpointedOmEnabled === true,
+    });
 
-  await longTermMemory?.start();
+    await longTermMemory?.start();
 
-  return {
-    id: config.id,
-    mastraId: platform.mastraId,
-    pricingModelKey: config.pricingModelKey,
-    modelProfileId: config.modelProfileId,
-    omPricingModelKey,
-    omModelProfileId: config.omModelProfileId,
-    agent,
-    workspace: platform.workspace,
-    communication: platform.communication as CommunicationModule,
-    longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
-    longTermMemory,
-    onReceiveMessage: platform.communication.onReceiveMessage,
-    async dispose() {
-      const cleanupResults = await Promise.allSettled([
-        runtimeMemory.longTermMemoryRecall?.dispose?.(),
-        longTermMemory?.dispose(),
-        mcpRuntimeActionSource.dispose(),
-        platform.communication.dispose(),
-        platform.dispose(),
-      ]);
-      const rejectedResult = cleanupResults.find((result) => result.status === 'rejected');
+    return {
+      id: config.id,
+      mastraId: platform.mastraId,
+      pricingModelKey: config.pricingModelKey,
+      modelProfileId: config.modelProfileId,
+      omPricingModelKey,
+      omModelProfileId: config.omModelProfileId,
+      agent,
+      workspace: platform.workspace,
+      communication: platform.communication as CommunicationModule,
+      longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
+      longTermMemory,
+      onReceiveMessage: platform.communication.onReceiveMessage,
+      async dispose() {
+        const cleanupResults = await Promise.allSettled([
+          runtimeMemory.longTermMemoryRecall?.dispose?.(),
+          longTermMemory?.dispose(),
+          mcpRuntimeActionSource.dispose(),
+          platform.communication.dispose(),
+          platform.dispose(),
+        ]);
+        const rejectedResult = cleanupResults.find((result) => result.status === 'rejected');
 
-      if (rejectedResult?.status === 'rejected') {
-        throw rejectedResult.reason;
-      }
-    },
-  };
+        if (rejectedResult?.status === 'rejected') {
+          throw rejectedResult.reason;
+        }
+      },
+    };
+  } catch (err) {
+    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: '[create-forge-agent] createInternalAgentRuntime failed', context: { error: err instanceof Error ? err.message : String(err), agentId: config.id }});
+    throw err;
+  }
 }
 
 export async function createForgeAgent<
