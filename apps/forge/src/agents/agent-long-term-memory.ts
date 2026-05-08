@@ -601,6 +601,7 @@ export function createAgentLongTermMemory(input: {
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
           throw error;
+      forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'agent-long-term-memory operation failed', error: error instanceof Error ? error.message : String(error) });
         }
 
         await sleep(GENERATE_RETRY_BACKOFF_MS);

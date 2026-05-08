@@ -128,6 +128,7 @@ export async function loadCommunicationProviders(
       } catch (error) {
         await provider.dispose?.();
         throw error;
+      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'provider-loader operation failed', error: error instanceof Error ? error.message : String(error) });
       }
 
       providers.push(provider);

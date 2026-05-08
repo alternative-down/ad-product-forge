@@ -73,6 +73,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `chromium.launch failed: ${err instanceof Error ? err.message : String(err)}`,
       });
       throw err;
+      forgeDebug({ scope: 'browser-automation', level: 'error', message: 'browser-automation operation failed', error: err instanceof Error ? err.message : String(err) });
     }
     agentBrowsers.set(agentId, {
       browser,

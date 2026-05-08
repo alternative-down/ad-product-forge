@@ -135,6 +135,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { slug: input.slug, displayName: input.displayName },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -161,6 +162,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { accountId: input.accountId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -175,6 +177,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { accountId: input.accountId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
   const deleteAgentAccount = deleteExternalAccount;
@@ -197,6 +200,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { excludeAgentId: input.excludeAgentId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -213,6 +217,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { slug },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -229,6 +234,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { agentId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -359,6 +365,7 @@ export function createInternalChatAccounts(db: Database) {
         context: { accountId, conversationId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 

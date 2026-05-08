@@ -77,6 +77,7 @@ export function createAgentScheduleManager(input: {
         context: {},
       });
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -203,6 +204,7 @@ export function createAgentScheduleManager(input: {
       }
 
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
 
     const reloaded = await store.getAgentSchedule(agentId, scheduleId);
@@ -256,6 +258,7 @@ export function createAgentScheduleManager(input: {
       }
 
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
 
     const reloaded = await store.getOwnedSchedule(agentId, scheduleId);
@@ -283,6 +286,7 @@ export function createAgentScheduleManager(input: {
         context: { agentId, scheduleId },
       });
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -380,6 +384,7 @@ export function createAgentScheduleManager(input: {
         context: { editorAgentId, scheduleId },
       });
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -408,6 +413,7 @@ export function createAgentScheduleManager(input: {
         context: { agentId },
       });
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -499,6 +505,7 @@ export function createAgentScheduleManager(input: {
         context: { scheduleId: scheduleRecord.scheduleId, kind: scheduleRecord.kind },
       });
       throw error;
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'schedules-manager operation failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
 

@@ -44,6 +44,7 @@ export function createInternalChatParticipants(db: Database) {
         context: { accountId, conversationId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-participants', level: 'error', message: 'internal-chat-participants operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -65,6 +66,7 @@ export function createInternalChatParticipants(db: Database) {
         context: { agentId, conversationId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-participants', level: 'error', message: 'internal-chat-participants operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 

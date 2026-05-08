@@ -97,6 +97,7 @@ export async function terminateInternalAgent(db: Database, input: {
     }
     getInternalAgentRegistry().remove(input.agentId);
     throw err;
+      forgeDebug({ scope: 'terminate-agent', level: 'error', message: 'terminate-agent operation failed', error: err instanceof Error ? err.message : String(err) });
   }
 
   // External ops succeeded — now delete DB record and workspace

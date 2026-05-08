@@ -1043,6 +1043,7 @@ export function createAgentRunner(
 
         if (!timedOut || attempt === GENERATE_TIMEOUT_MAX_ATTEMPTS) {
           throw error;
+      forgeDebug({ scope: 'agent-runner', level: 'error', message: 'agent-runner operation failed', error: error instanceof Error ? error.message : String(error) });
         }
 
         const backoffMs = GENERATE_TIMEOUT_BACKOFF_MS * attempt;

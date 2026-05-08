@@ -51,6 +51,7 @@ export function createChatAttachments(
         context: { messageId, attachmentCount: attachments.length },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-attachments', level: 'error', message: 'internal-chat-attachments operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -75,6 +76,7 @@ export function createChatAttachments(
         context: { messageId },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-attachments', level: 'error', message: 'internal-chat-attachments operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -93,6 +95,7 @@ export function createChatAttachments(
         context: { messageId, attachmentName },
       });
       throw err;
+      forgeDebug({ scope: 'internal-chat-attachments', level: 'error', message: 'internal-chat-attachments operation failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 

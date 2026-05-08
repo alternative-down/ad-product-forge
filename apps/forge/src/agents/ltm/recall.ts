@@ -878,6 +878,7 @@ export class AgentLongTermMemoryRecall {
         error: error instanceof Error ? error.message : String(error),
       } });
       throw error;
+      forgeDebug({ scope: 'ltm-recall', level: 'error', message: 'ltm-recall operation failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
 

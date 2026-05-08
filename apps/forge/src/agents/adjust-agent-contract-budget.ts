@@ -38,6 +38,7 @@ export async function adjustAgentContractBudget(
       message: `Failed to query active contract: ${err instanceof Error ? err.message : String(err)}`,
     });
     throw err;
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget operation failed', error: err instanceof Error ? err.message : String(err) });
   }
 
   if (!activeContract) {
@@ -73,6 +74,7 @@ export async function adjustAgentContractBudget(
         message: `Failed to get company cash balance: ${err instanceof Error ? err.message : String(err)}`,
       });
       throw err;
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget operation failed', error: err instanceof Error ? err.message : String(err) });
     }
 
     if (currentBalanceUsd < budgetDelta) {
@@ -108,6 +110,7 @@ export async function adjustAgentContractBudget(
         context: { budgetDelta, newBudgetUsd: input.newBudgetUsd },
       });
       throw err;
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget operation failed', error: err instanceof Error ? err.message : String(err) });
     }
 
     forgeDebug({
@@ -142,6 +145,7 @@ export async function adjustAgentContractBudget(
       message: `Failed to get contract spend: ${err instanceof Error ? err.message : String(err)}`,
     });
     throw err;
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget operation failed', error: err instanceof Error ? err.message : String(err) });
   }
 
   // New budget cannot be less than what's already spent
@@ -182,6 +186,7 @@ export async function adjustAgentContractBudget(
       context: { refundAmount, newBudgetUsd: input.newBudgetUsd },
     });
     throw err;
+      forgeDebug({ scope: 'agent-contract-budget', level: 'error', message: 'agent-contract-budget operation failed', error: err instanceof Error ? err.message : String(err) });
   }
 
   forgeDebug({
