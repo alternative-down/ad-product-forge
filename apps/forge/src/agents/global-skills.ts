@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
-import { forgeDebug } from '@forge-runtime/core';
 
 import type { Agent } from '../database/schema';
 import {
@@ -169,6 +168,7 @@ export async function installGlobalSkillsFromZip(input: {
   workspaceBasePath: string;
   zipBase64: string;
 }) {
+    try {
   const skillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
   const bundledSkillNames = new Set((await listBundledGlobalSkills()).map((skill) => skill.skillName));
   const archive = unzipSync(Buffer.from(input.zipBase64, 'base64'));
@@ -209,6 +209,10 @@ export async function installGlobalSkillsFromZip(input: {
     throw new Error('Skill archive did not contain any files');
   }
 
+    } catch (error) {
+      forgeDebug({ scope: 'global-skills', level: 'error', message: 'installGlobalSkillsFromZip failed', context: { error } });
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
   return Array.from(writtenSkills).sort((left, right) => left.localeCompare(right));
 }
 
@@ -237,6 +241,7 @@ export async function installGlobalSkillToAgentWorkspace(input: {
   const skill = availableSkills.find((entry) => entry.skillName === input.skillName);
 
   if (!skill) {
+    forgeDebug({ scope: 'global-skills', level: 'error', message: 'installGlobalSkillToAgentWorkspace failed', context: { error } });
     throw new Error(`Global skill not found: ${input.skillName}`);
   }
 
@@ -267,6 +272,7 @@ export async function publishAgentWorkspaceSkillToGlobalCatalog(input: {
   const skillName = input.skillName.trim();
 
   if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
+    forgeDebug({ scope: 'global-skills', level: 'error', message: 'publishAgentWorkspaceSkillToGlobalCatalog failed', context: { error } });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
