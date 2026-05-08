@@ -3,14 +3,15 @@
  * POST routes that perform agent write operations extracted from routes.ts
  */
 
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
+import { forgeDebug } from '@forge-runtime/core';
 import type { HttpHandler } from '../../../http/server';
 
 import type {Database} from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 import { clearAgentHistory } from '../helpers';
-import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas';
+import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
 interface ReadModel {
@@ -36,32 +37,45 @@ export function registerAgentWriteRoutes(
     method: 'POST',
     path: '/admin/agent/clear-history',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
-      await clearAgentHistory({
-        db: input.db,
-        workspaceBasePath: input.workspaceBasePath,
-        agentId: body.agentId,
-        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
-      });
-      await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
-      return jsonResponse({
-        success: true,
-        agentId: body.agentId,
-        includeLongTermMemoryThread: body.includeLongTermMemoryThread,
-      });
+      try {
+        const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
+        await clearAgentHistory({
+          db: input.db,
+          workspaceBasePath: input.workspaceBasePath,
+          agentId: body.agentId,
+          includeLongTermMemoryThread: body.includeLongTermMemoryThread,
+        });
+        await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          includeLongTermMemoryThread: body.includeLongTermMemoryThread,
+        });
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
+
   // POST /admin/agent/ltm-recall-search
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/ltm-recall-search',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
-      return jsonResponse(
-        await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
-          query: body.query,
-        }),
-      );
+      try {
+        const body = parseJsonBody(request.bodyText, agentLongTermMemoryRecallSearchSchema);
+        return jsonResponse(
+          await readModel.debugAgentLongTermMemoryRecallSearch(body.agentId, {
+            query: body.query,
+          }),
+        );
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 }
