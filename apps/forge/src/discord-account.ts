@@ -587,6 +587,7 @@ export function createDiscordProvider(config: {
       const channel = await client.channels.fetch(targetKey);
 
       if (!channel?.isTextBased() || !channel.isSendable()) {
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'getMessages discord target not readable', context: { targetKey } });
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
