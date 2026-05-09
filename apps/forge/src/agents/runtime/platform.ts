@@ -120,6 +120,7 @@ export async function createAgentRuntimePlatform(input: {
   await moveLegacyMemoryDirectory(legacyAgentMemoryPath, agentMemoryPath);
 
   const client = createClient({ url: `file:${agentDatabasePath}` });
+    client.execute('PRAGMA foreign_keys = ON');
   const conversationStore = new LibsqlConversationStore({
     client,
     tablePrefix: mastraId,
