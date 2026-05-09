@@ -1,4 +1,4 @@
-import type { Database } from '../database';
+import type { Database } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 import { agentHomeMetricSnapshots } from '../database/schema';
 import { createId } from '../utils/id';

@@ -6,7 +6,7 @@ import {
   type ToolsInput,
   toolsToRuntimeActions,
 } from '@forge-runtime/core';
-import { getDatabase } from '../database';
+import { getDatabase } from '../database/client';
 import { createAgentLongTermMemoryStore } from './ltm/store';
 import { createAgentRuntimePlatform } from './runtime/platform';
 import { createAgentLongTermMemory } from './agent-long-term-memory';
