@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from './debug';
 import { access } from 'node:fs/promises';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';

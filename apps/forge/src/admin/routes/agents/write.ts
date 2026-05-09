@@ -4,7 +4,7 @@
  */
 
 import { z, ZodError } from 'zod';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 
 import type {Database} from '../../../database/schema';

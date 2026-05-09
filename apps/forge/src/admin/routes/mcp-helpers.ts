@@ -3,7 +3,7 @@ import type { Database } from '../../database/index';
 import type { AgentLoaderConfig } from '../../agents/agent-loader';
 import { reloadAgentIfLoaded } from '../../capabilities/runtime';
 import { agentMcpConfigs } from '../../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from './debug';
 
 export async function reloadAgentMcp(
   db: Database,

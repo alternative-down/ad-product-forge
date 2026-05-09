@@ -5,7 +5,7 @@
 
 import type { HttpHandler } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { eq } from 'drizzle-orm';
 import {
