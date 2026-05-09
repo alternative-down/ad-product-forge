@@ -371,7 +371,8 @@ export class AgentLongTermMemoryRecall {
       let snapshotError: string | null = null;
       try {
         snapshotError = error instanceof Error ? error.message : String(error);
-      } catch {
+      } catch (e) {
+        forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'snapshotError from error failed', context: { error: e instanceof Error ? e.message : String(e) } });
         snapshotError = String(error);
       }
       try {
@@ -388,8 +389,8 @@ export class AgentLongTermMemoryRecall {
           status: 'error',
           error: snapshotError,
         }), persistedState?.history ?? undefined);
-      } catch {
-        // snapshot write failed — swallow so recall still returns null
+      } catch (e) {
+        forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'persistRecallSnapshot failed', context: { threadId: input.threadId, resourceId: input.resourceId, error: e instanceof Error ? e.message : String(e) } });
       }
       return null;
     }
