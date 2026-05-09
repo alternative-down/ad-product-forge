@@ -1,187 +1,157 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
-  forgeAgentRuntimeConfigSchema,
+  forgeMcpStdioServerSchema,
   forgeMcpHttpServerSchema,
   forgeMcpServerSchema,
-  forgeMcpStdioServerSchema,
-} from './contracts.js';
-import type { ForgeAgentRuntimeConfig, ForgeMcpServerConfig } from './contracts.js';
+  forgeAgentRuntimeConfigSchema,
+} from './contracts';
 
-describe('contracts', () => {
-  describe('forgeMcpStdioServerSchema', () => {
-    it('validates minimal stdio config', () => {
-      const result = forgeMcpStdioServerSchema.safeParse({
-        id: 's1',
-        name: 'My Server',
-        transport: 'stdio',
-        command: 'node',
-      });
-      expect(result.success).toBe(true);
+describe('forgeMcpStdioServerSchema', () => {
+  it('parses valid stdio server config', () => {
+    const result = forgeMcpStdioServerSchema.parse({
+      id: 'server-1',
+      name: 'my-server',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['--flag'],
+      env: { DEBUG: '1' },
     });
-
-    it('accepts args and env', () => {
-      const result = forgeMcpStdioServerSchema.safeParse({
-        id: 's2',
-        name: 'Server 2',
-        transport: 'stdio',
-        command: 'python',
-        args: ['-m', 'server'],
-        env: { DEBUG: '1' },
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects empty id', () => {
-      const result = forgeMcpStdioServerSchema.safeParse({
-        id: '',
-        name: 'Server',
-        transport: 'stdio',
-        command: 'node',
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects wrong transport type', () => {
-      const result = forgeMcpStdioServerSchema.safeParse({
-        id: 's1',
-        name: 'Server',
-        transport: 'http-stream',
-        command: 'node',
-      });
-      expect(result.success).toBe(false);
+    expect(result).toEqual({
+      id: 'server-1',
+      name: 'my-server',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['--flag'],
+      env: { DEBUG: '1' },
     });
   });
 
-  describe('forgeMcpHttpServerSchema', () => {
-    it('validates minimal http config', () => {
-      const result = forgeMcpHttpServerSchema.safeParse({
-        id: 'h1',
-        name: 'HTTP Server',
-        transport: 'http-stream',
-        url: 'https://api.example.com',
-      });
-      expect(result.success).toBe(true);
+  it('applies default args and env', () => {
+    const result = forgeMcpStdioServerSchema.parse({
+      id: 's1',
+      name: 'name',
+      transport: 'stdio',
+      command: 'cmd',
     });
+    expect(result.args).toEqual([]);
+    expect(result.env).toEqual({});
+  });
 
-    it('accepts custom headers', () => {
-      const result = forgeMcpHttpServerSchema.safeParse({
-        id: 'h2',
-        name: 'Server with headers',
+  it('rejects missing required fields', () => {
+    expect(() => forgeMcpStdioServerSchema.parse({ name: 'x' })).toThrow(z.ZodError);
+    expect(() => forgeMcpStdioServerSchema.parse({ id: 'x' })).toThrow(z.ZodError);
+    expect(() => forgeMcpStdioServerSchema.parse({ id: '', name: 'x', transport: 'stdio', command: 'c' })).toThrow();
+  });
+
+  it('rejects non-stdio transport', () => {
+    expect(() =>
+      forgeMcpStdioServerSchema.parse({
+        id: 's1',
+        name: 'x',
         transport: 'http-stream',
-        url: 'https://secure.example.com',
-        headers: { Authorization: 'Bearer token' },
-      });
-      expect(result.success).toBe(true);
-    });
+        command: 'c',
+      }),
+    ).toThrow(z.ZodError);
+  });
+});
 
-    it('rejects invalid url', () => {
-      const result = forgeMcpHttpServerSchema.safeParse({
-        id: 'h3',
-        name: 'Bad URL',
+describe('forgeMcpHttpServerSchema', () => {
+  it('parses valid HTTP server config', () => {
+    const result = forgeMcpHttpServerSchema.parse({
+      id: 'http-1',
+      name: 'http-server',
+      transport: 'http-stream',
+      url: 'https://example.com/mcp',
+      headers: { Authorization: 'Bearer token' },
+    });
+    expect(result.url).toBe('https://example.com/mcp');
+  });
+
+  it('rejects invalid URL', () => {
+    expect(() =>
+      forgeMcpHttpServerSchema.parse({
+        id: 's1',
+        name: 'x',
         transport: 'http-stream',
         url: 'not-a-url',
-      });
-      expect(result.success).toBe(false);
+      }),
+    ).toThrow(z.ZodError);
+  });
+});
+
+describe('forgeMcpServerSchema', () => {
+  it('accepts stdio server', () => {
+    const result = forgeMcpServerSchema.parse({
+      id: 's1',
+      name: 'x',
+      transport: 'stdio',
+      command: 'c',
     });
+    expect(result.transport).toBe('stdio');
   });
 
-  describe('forgeMcpServerSchema', () => {
-    it('accepts stdio server', () => {
-      const result = forgeMcpServerSchema.safeParse({
+  it('accepts http server', () => {
+    const result = forgeMcpServerSchema.parse({
+      id: 's1',
+      name: 'x',
+      transport: 'http-stream',
+      url: 'https://x.com',
+    });
+    expect(result.transport).toBe('http-stream');
+  });
+
+  it('rejects mixed transport fields', () => {
+    expect(() =>
+      forgeMcpServerSchema.parse({
         id: 's1',
-        name: 'Stdio',
+        name: 'x',
         transport: 'stdio',
-        command: 'node',
-      });
-      expect(result.success).toBe(true);
-    });
+        url: 'https://x.com',
+      }),
+    ).toThrow(z.ZodError);
+  });
+});
 
-    it('accepts http server', () => {
-      const result = forgeMcpServerSchema.safeParse({
-        id: 'h1',
-        name: 'HTTP',
-        transport: 'http-stream',
-        url: 'https://example.com',
-      });
-      expect(result.success).toBe(true);
+describe('forgeAgentRuntimeConfigSchema', () => {
+  it('parses minimal valid config', () => {
+    const result = forgeAgentRuntimeConfigSchema.parse({
+      agentId: 'agent-1',
+      threadId: 'thread-1',
     });
-
-    it('rejects mixed transport', () => {
-      const result = forgeMcpServerSchema.safeParse({
-        id: 'bad',
-        name: 'Mixed',
-        transport: 'stdio',
-        url: 'https://example.com',
-      });
-      expect(result.success).toBe(false);
-    });
+    expect(result.agentId).toBe('agent-1');
+    expect(result.threadId).toBe('thread-1');
+    expect(result.runtimeId).toBeUndefined();
+    expect(result.consolidateConversationOverflow).toBe(true);
   });
 
-  describe('forgeAgentRuntimeConfigSchema', () => {
-    it('validates minimal config', () => {
-      const result = forgeAgentRuntimeConfigSchema.safeParse({
-        agentId: 'agent-1',
-        threadId: 'thread-1',
-      });
-      expect(result.success).toBe(true);
+  it('parses with all optional fields', () => {
+    const result = forgeAgentRuntimeConfigSchema.parse({
+      agentId: 'a1',
+      runtimeId: 'r1',
+      threadId: 't1',
+      assistantAuthorId: 'author-1',
+      consolidateConversationOverflow: false,
     });
+    expect(result.runtimeId).toBe('r1');
+    expect(result.consolidateConversationOverflow).toBe(false);
+  });
 
-    it('validates full config', () => {
-      const result = forgeAgentRuntimeConfigSchema.safeParse({
-        agentId: 'agent-2',
-        threadId: 'thread-2',
-        runtimeId: 'runtime-2',
-        assistantAuthorId: 'author-1',
-        consolidateConversationOverflow: false,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('uses default for consolidateConversationOverflow', () => {
-      const result = forgeAgentRuntimeConfigSchema.safeParse({
-        agentId: 'a1',
-        threadId: 't1',
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.consolidateConversationOverflow).toBe(true);
-      }
-    });
-
-    it('rejects empty agentId', () => {
-      const result = forgeAgentRuntimeConfigSchema.safeParse({
+  it('rejects empty agentId', () => {
+    expect(() =>
+      forgeAgentRuntimeConfigSchema.parse({
         agentId: '',
         threadId: 't1',
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects empty threadId', () => {
-      const result = forgeAgentRuntimeConfigSchema.safeParse({
-        agentId: 'a1',
-        threadId: '',
-      });
-      expect(result.success).toBe(false);
-    });
+      }),
+    ).toThrow(z.ZodError);
   });
 
-  describe('type exports', () => {
-    it('ForgeMcpServerConfig is assignable from valid config', () => {
-      const config: ForgeMcpServerConfig = {
-        id: 's1',
-        name: 'Test',
-        transport: 'stdio',
-        command: 'echo',
-      };
-      expect(config.id).toBe('s1');
-    });
-
-    it('ForgeAgentRuntimeConfig is assignable from valid config', () => {
-      const config: ForgeAgentRuntimeConfig = {
+  it('rejects empty threadId', () => {
+    expect(() =>
+      forgeAgentRuntimeConfigSchema.parse({
         agentId: 'a1',
-        threadId: 't1',
-      };
-      expect(config.agentId).toBe('a1');
-    });
+        threadId: '',
+      }),
+    ).toThrow(z.ZodError);
   });
 });
