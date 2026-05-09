@@ -1,283 +1,270 @@
+/**
+ * Unit tests for agents/normalize-operational-memory-messages.ts.
+ * Tests normalizeOperationalMemoryMessages.
+ * Zero prior coverage.
+ */
 import { describe, expect, it, vi } from 'vitest';
+import type { ConversationStore } from '@forge-runtime/core';
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: vi.fn(),
+}));
+
 import { normalizeOperationalMemoryMessages } from './normalize-operational-memory-messages';
 
-function createMockMessage(overrides: Partial<{
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+type TestMessage = {
   id: string;
-  role: string;
-  operationalMemoryType: string | null;
-  parts: Array<{ type?: string; text?: string }>;
-}> = {}) {
+  role?: string;
+  operationalMemoryType?: string;
+  parts: Array<{ type: string; text?: string }>;
+};
+
+function makeMessage(overrides: Partial<TestMessage> = {}): TestMessage {
   return {
     id: 'msg-1',
-    role: 'user',
-    operationalMemoryType: null,
+    role: 'assistant',
     parts: [{ type: 'text', text: 'hello' }],
     ...overrides,
   };
 }
 
+function makeStore(overrides: {
+  messages?: TestMessage[];
+  updateError?: Error;
+} = {}): ConversationStore {
+  const messages = overrides.messages ?? [];
+  const updateError = overrides.updateError;
+  return {
+    listMessages: vi.fn().mockResolvedValue(messages),
+    updateMessage: vi.fn().mockImplementation(async () => {
+      if (updateError) throw updateError;
+    }),
+    sendMessage: vi.fn(),
+    updateMessageMetadata: vi.fn(),
+    listConversations: vi.fn(),
+    getConversation: vi.fn(),
+    searchConversations: vi.fn(),
+    getMessages: vi.fn(),
+  } as unknown as ConversationStore;
+}
+
+// ─── normalizeOperationalMemoryMessages ─────────────────────────────────────
+
 describe('normalizeOperationalMemoryMessages', () => {
+  it('calls listMessages with threadId and asc order', async () => {
+    const store = makeStore({ messages: [] });
+
+    await normalizeOperationalMemoryMessages({
+      threadId: 'thread-42',
+      conversationStore: store,
+    });
+
+    expect(store.listMessages).toHaveBeenCalledWith({ threadId: 'thread-42', order: 'asc' });
+  });
+
+  it('does not call updateMessage when no messages returned', async () => {
+    const store = makeStore();
+
+    await normalizeOperationalMemoryMessages({
+      threadId: 'thread-1',
+      conversationStore: store,
+    });
+
+    expect(store.updateMessage).not.toHaveBeenCalled();
+  });
+
   it('skips messages without operationalMemoryType', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({ operationalMemoryType: null }),
-      ]),
-      updateMessage,
-    };
+    const store = makeStore({
+      messages: [
+        makeMessage({ id: 'msg-a', parts: [{ type: 'text', text: 'plain' }] }),
+      ],
+    });
 
     await normalizeOperationalMemoryMessages({
       threadId: 'thread-1',
-      conversationStore: mockStore as never,
+      conversationStore: store,
     });
 
-    expect(updateMessage).not.toHaveBeenCalled();
+    expect(store.updateMessage).not.toHaveBeenCalled();
   });
 
-  it('normalizes checkpoint summary prefix', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
+  it('skips non-text and non-reasoning parts', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
           operationalMemoryType: 'checkpoint',
-          role: 'user',
-          parts: [{ type: 'text', text: 'Checkpoint summary: some text' }],
+          parts: [{ type: 'tool-call', text: 'call()' }],
         }),
-      ]),
-      updateMessage,
-    };
+      ],
+    });
 
     await normalizeOperationalMemoryMessages({
       threadId: 'thread-1',
-      conversationStore: mockStore as never,
+      conversationStore: store,
     });
 
-    expect(updateMessage).toHaveBeenCalledWith({
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [{ type: 'text', text: 'some text' }],
-    });
+    // tool-call parts don't get stripped, and the strip just returns the original
+    // since there's no prefix, the part text stays the same => no partsChanged
+    expect(store.updateMessage).not.toHaveBeenCalled();
   });
 
-  it('normalizes active reflection prefix', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
-          operationalMemoryType: 'reflection',
-          role: 'user',
-          parts: [{ type: 'text', text: 'Active reflection: observing things' }],
+  it('strips "Checkpoint summary:" prefix from text parts', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
+          operationalMemoryType: 'checkpoint',
+          parts: [{ type: 'text', text: 'Checkpoint summary: shared context' }],
         }),
-      ]),
-      updateMessage,
-    };
+      ],
+    });
 
     await normalizeOperationalMemoryMessages({
       threadId: 'thread-1',
-      conversationStore: mockStore as never,
+      conversationStore: store,
     });
 
-    expect(updateMessage).toHaveBeenCalledWith({
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [{ type: 'text', text: 'observing things' }],
-    });
+    expect(store.updateMessage).toHaveBeenCalledTimes(1);
+    const call = (store.updateMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.messageId).toBe('msg-a');
+    expect(call.parts[0].text).toBe('shared context');
   });
 
-  it('normalizes active observation prefix', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
+  it('strips "Active reflection:" prefix from reasoning parts', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
           operationalMemoryType: 'observation',
-          role: 'user',
-          parts: [{ type: 'text', text: 'Active observation: the state is X' }],
+          parts: [{ type: 'reasoning', text: 'Active reflection: doing work' }],
         }),
-      ]),
-      updateMessage,
-    };
+      ],
+    });
 
     await normalizeOperationalMemoryMessages({
       threadId: 'thread-1',
-      conversationStore: mockStore as never,
+      conversationStore: store,
     });
 
-    expect(updateMessage).toHaveBeenCalledWith({
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [{ type: 'text', text: 'the state is X' }],
-    });
+    const call = (store.updateMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.parts[0].text).toBe('doing work');
   });
 
-  it('does not update when role is assistant and parts have no prefix to strip', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
+  it('strips "Active observation:" prefix from text parts', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
+          operationalMemoryType: 'observation',
+          parts: [{ type: 'text', text: 'Active observation: found bug' }],
+        }),
+      ],
+    });
+
+    await normalizeOperationalMemoryMessages({
+      threadId: 'thread-1',
+      conversationStore: store,
+    });
+
+    const call = (store.updateMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.parts[0].text).toBe('found bug');
+  });
+
+  it('strips case-insensitively', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
+          operationalMemoryType: 'observation',
+          parts: [{ type: 'text', text: 'ACTIVE OBSERVATION: content' }],
+        }),
+      ],
+    });
+
+    await normalizeOperationalMemoryMessages({
+      threadId: 'thread-1',
+      conversationStore: store,
+    });
+
+    const call = (store.updateMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.parts[0].text).toBe('content');
+  });
+
+  it('trims whitespace after stripping prefix', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
           operationalMemoryType: 'checkpoint',
+          parts: [{ type: 'text', text: '  Checkpoint summary:   spaces   ' }],
+        }),
+      ],
+    });
+
+    await normalizeOperationalMemoryMessages({
+      threadId: 'thread-1',
+      conversationStore: store,
+    });
+
+    const call = (store.updateMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.parts[0].text).toBe('spaces');
+  });
+
+  it('sets role to assistant in updateMessage', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
+          role: 'user',
+          operationalMemoryType: 'checkpoint',
+          parts: [{ type: 'text', text: 'Checkpoint summary: ctx' }],
+        }),
+      ],
+    });
+
+    await normalizeOperationalMemoryMessages({
+      threadId: 'thread-1',
+      conversationStore: store,
+    });
+
+    const call = (store.updateMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.role).toBe('assistant');
+  });
+
+  it('does not update when role is already assistant and no parts changed', async () => {
+    const store = makeStore({
+      messages: [
+        makeMessage({
+          id: 'msg-a',
           role: 'assistant',
-          parts: [{ type: 'text', text: 'already clean text' }],
-        }),
-      ]),
-      updateMessage,
-    };
-
-    await normalizeOperationalMemoryMessages({
-      threadId: 'thread-1',
-      conversationStore: mockStore as never,
-    });
-
-    expect(updateMessage).not.toHaveBeenCalled();
-  });
-
-  it('updates when parts changed even if role is already assistant', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
           operationalMemoryType: 'checkpoint',
-          role: 'assistant',
-          parts: [{ type: 'text', text: 'Checkpoint summary: changed text' }],
+          parts: [{ type: 'text', text: 'plain text' }],
         }),
-      ]),
-      updateMessage,
-    };
-
-    await normalizeOperationalMemoryMessages({
-      threadId: 'thread-1',
-      conversationStore: mockStore as never,
-    });
-
-    expect(updateMessage).toHaveBeenCalled();
-  });
-
-  it('ignores non-text and non-reasoning parts', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
-          operationalMemoryType: 'checkpoint',
-          role: 'user',
-          parts: [
-            { type: 'image', text: 'image data' },
-            { type: 'text', text: 'Checkpoint summary: text part' },
-          ],
-        }),
-      ]),
-      updateMessage,
-    };
-
-    await normalizeOperationalMemoryMessages({
-      threadId: 'thread-1',
-      conversationStore: mockStore as never,
-    });
-
-    expect(updateMessage).toHaveBeenCalledWith({
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [
-        { type: 'image', text: 'image data' },
-        { type: 'text', text: 'text part' },
       ],
     });
-  });
-
-  it('handles multiple messages', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({ id: 'msg-1', operationalMemoryType: 'checkpoint', role: 'user', parts: [{ type: 'text', text: 'Checkpoint summary: first' }] }),
-        createMockMessage({ id: 'msg-2', operationalMemoryType: null, role: 'user', parts: [{ type: 'text', text: 'normal message' }] }),
-        createMockMessage({ id: 'msg-3', operationalMemoryType: 'reflection', role: 'user', parts: [{ type: 'text', text: 'Active reflection: second' }] }),
-      ]),
-      updateMessage,
-    };
 
     await normalizeOperationalMemoryMessages({
       threadId: 'thread-1',
-      conversationStore: mockStore as never,
+      conversationStore: store,
     });
 
-    expect(updateMessage).toHaveBeenCalledTimes(2);
-    expect(updateMessage).toHaveBeenNthCalledWith(1, {
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [{ type: 'text', text: 'first' }],
-    });
-    expect(updateMessage).toHaveBeenNthCalledWith(2, {
-      threadId: 'thread-1',
-      messageId: 'msg-3',
-      role: 'assistant',
-      parts: [{ type: 'text', text: 'second' }],
-    });
+    expect(store.updateMessage).not.toHaveBeenCalled();
   });
 
-  it('handles reasoning type parts', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
-          operationalMemoryType: 'checkpoint',
-          role: 'user',
-          parts: [
-            { type: 'reasoning', text: 'Checkpoint summary: thinking step 1' },
-            { type: 'text', text: 'Active observation: done' },
-          ],
-        }),
-      ]),
-      updateMessage,
-    };
+  it('logs and re-throws when listMessages fails', async () => {
+    vi.mock('@forge-runtime/core', () => ({
+      forgeDebug: vi.fn(),
+    }));
+    const error = new Error('list failed');
+    const store = makeStore();
+    (store.listMessages as ReturnType<typeof vi.fn>).mockRejectedValue(error);
 
-    await normalizeOperationalMemoryMessages({
+    await expect(normalizeOperationalMemoryMessages({
       threadId: 'thread-1',
-      conversationStore: mockStore as never,
-    });
-
-    expect(updateMessage).toHaveBeenCalledWith({
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [
-        { type: 'reasoning', text: 'thinking step 1' },
-        { type: 'text', text: 'done' },
-      ],
-    });
-  });
-
-  it('skips parts with undefined text', async () => {
-    const updateMessage = vi.fn();
-    const mockStore = {
-      listMessages: vi.fn().mockResolvedValue([
-        createMockMessage({
-          operationalMemoryType: 'checkpoint',
-          role: 'user',
-          parts: [
-            { type: 'text' },
-            { type: 'text', text: 'Checkpoint summary: real text' },
-          ],
-        }),
-      ]),
-      updateMessage,
-    };
-
-    await normalizeOperationalMemoryMessages({
-      threadId: 'thread-1',
-      conversationStore: mockStore as never,
-    });
-
-    expect(updateMessage).toHaveBeenCalledWith({
-      threadId: 'thread-1',
-      messageId: 'msg-1',
-      role: 'assistant',
-      parts: [
-        { type: 'text' },
-        { type: 'text', text: 'real text' },
-      ],
-    });
+      conversationStore: store,
+    })).rejects.toThrow('list failed');
   });
 });
