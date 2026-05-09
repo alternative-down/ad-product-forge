@@ -422,7 +422,7 @@ function buildRuntimeSessionSystemPrompt(input: {
 }) {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: '' || '',
+    workingMemory: '' as string,
     agentContext: input.agentContext?.trim() || '',
   };
 

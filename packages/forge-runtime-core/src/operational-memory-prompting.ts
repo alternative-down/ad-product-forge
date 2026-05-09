@@ -195,7 +195,7 @@ function buildObserverTaskPrompt(existingObservations?: string) {
   return prompt;
 }
 
-function buildObserverTaskUserMessage(existingObservations?: string) {
+function _buildObserverTaskUserMessage(existingObservations?: string) {
   return buildObserverTaskPrompt(existingObservations);
 }
 
@@ -299,7 +299,7 @@ function detectDegenerateRepetition(text: string) {
   return text.split('\n').some((line) => line.length > 50_000);
 }
 
-function buildReflectorSystemPrompt() {
+function _buildReflectorSystemPrompt() {
   return [
     'You consolidate batches of observations into a durable reflection.',
     'Preserve concrete facts, decisions, active work, unresolved risks, and anything that would matter later.',
@@ -309,7 +309,7 @@ function buildReflectorSystemPrompt() {
   ].join('\n');
 }
 
-function buildReflectorPrompt(observations: string) {
+function _buildReflectorPrompt(observations: string) {
   return [
     'Consolidate the observations below into a clear, detailed reflection.',
     'Preserve all facts, decisions, and operational details — do not remove content.',
@@ -321,7 +321,7 @@ function buildReflectorPrompt(observations: string) {
   ].join('\n');
 }
 
-function buildReflectorTaskUserMessage() {
+function _buildReflectorTaskUserMessage() {
   return [
     'Consolidate the observations below into a clear, detailed reflection.',
     'Preserve all facts, decisions, and operational details — do not remove content.',
@@ -329,7 +329,7 @@ function buildReflectorTaskUserMessage() {
   ].join('\n');
 }
 
-function parseReflectorOutput(output: string) {
+function _parseReflectorOutput(output: string) {
   const match = output.match(/<observations>([\s\S]*?)<\/observations>/i);
 
   return {

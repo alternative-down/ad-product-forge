@@ -250,7 +250,7 @@ export function createPlanModeActions(input: {
   const enterAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'enterPlanMode',
     description: 'Enter Plan Mode. After this, the agent operates in analysis/planning mode with a reduced tool set (read-only actions only — no write, execute, or mutation tools). Use this to analyze a situation, form an intent, and prepare a plan before taking irreversible actions.',
-    inputSchema: enterPlanModeSchema as any,
+    inputSchema: enterPlanModeSchema as unknown,
     execute: async (parsedInput) => {
       const { intent } = parsedInput as z.infer<typeof enterPlanModeSchema>;
       const stepNumber = input.getCurrentStepNumber();
@@ -266,7 +266,7 @@ export function createPlanModeActions(input: {
   const exitAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'exitPlanMode',
     description: 'Exit Plan Mode and return to normal execution (exit plan mode). Provide the final plan text summarizing what was decided during the planning phase. After this, full tool access is restored.',
-    inputSchema: exitPlanModeSchema as any,
+    inputSchema: exitPlanModeSchema as unknown,
     execute: async (parsedInput) => {
       const { plan } = parsedInput as z.infer<typeof exitPlanModeSchema>;
       const completed = await input.planMode.exitPlanMode(plan);
