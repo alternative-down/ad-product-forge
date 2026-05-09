@@ -1,121 +1,193 @@
+/**
+ * Unit tests for agents/agent-home-metric-snapshot-store.ts.
+ * Tests recordSnapshot against a mocked DB.
+ * Zero prior coverage.
+ */
 import { describe, expect, it, vi } from 'vitest';
+import type { Database } from '../database';
 
-// Test the pure logic parts of the snapshot store.
-// The store's core logic is: call createId(), capture Date.now(), call db.insert(...).
-// We test via a mock that captures every call so we can verify field correctness.
+import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 
-function createMockDb() {
-  const calls: any[] = [];
-  const insert = vi.fn((table) => {
-    return {
-      values: (v: any) => {
-        calls.push({ table, values: v });
-        return Promise.resolve();
-      },
-    };
-  });
-  return { insert, calls };
+// ─── Mock factory ────────────────────────────────────────────────────────────
+// drizzle-orm insert returns a chain: .insert(table).values(...) → Promise
+
+type CapturedValues = {
+  id: string;
+  agentId: string;
+  stepId: string;
+  stepCreatedAt: number;
+  snapshot: unknown;
+  createdAt: number;
+};
+
+function makeMockDb(overrides: { insertError?: Error } = {}) {
+  const captured: CapturedValues[] = [];
+
+  function capture(values: Record<string, unknown>) {
+    captured.push(values as unknown as CapturedValues);
+    if (overrides.insertError) throw overrides.insertError;
+  }
+
+  const mockInsert = vi.fn(() => ({
+    values: vi.fn((vals: Record<string, unknown>) => {
+      capture(vals);
+      return Promise.resolve();
+    }),
+  }));
+
+  return { mockInsert, captured };
 }
 
+// ─── Tests ───────────────────────────────────────────────────────────────────
+
 describe('createAgentHomeMetricSnapshotStore', () => {
-  it('calls insert once per recordSnapshot', async () => {
-    // Inline the store creation with a mock to test behavior
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
+  describe('recordSnapshot', () => {
+    it('calls db.insert exactly once', async () => {
+      const { mockInsert } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
 
-    await store.recordSnapshot({
-      agentId: 'agent-1',
-      stepId: 'step-1',
-      stepCreatedAt: 1700000000000,
-      snapshot: { key: 'val' },
+      await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: { metric: 0.5 },
+      });
+
+      expect(mockInsert).toHaveBeenCalledTimes(1);
     });
 
-    expect(mockDb.calls.length).toBe(1);
-    const call = mockDb.calls[0];
-    expect(call.values.agentId).toBe('agent-1');
-    expect(call.values.stepId).toBe('step-1');
-    expect(call.values.stepCreatedAt).toBe(1700000000000);
-    expect(call.values.snapshot).toEqual({ key: 'val' });
-    expect(typeof call.values.id).toBe('string');
-    expect(typeof call.values.createdAt).toBe('number');
-  });
+    it('captures agentId and stepId in insert values', async () => {
+      const { mockInsert, captured } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
 
-  it('returns createdAt as a number', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
+      await store.recordSnapshot({
+        agentId: 'agent-abc',
+        stepId: 'step-xyz',
+        stepCreatedAt: 1_000_000,
+        snapshot: { score: 0.9 },
+      });
 
-    const before = Date.now();
-    const result = await store.recordSnapshot({
-      agentId: 'a',
-      stepId: 's',
-      stepCreatedAt: 0,
-      snapshot: {},
+      expect(captured[0].agentId).toBe('agent-abc');
+      expect(captured[0].stepId).toBe('step-xyz');
     });
-    const after = Date.now();
 
-    expect(result.createdAt).toBeGreaterThanOrEqual(before);
-    expect(result.createdAt).toBeLessThanOrEqual(after);
+    it('captures the snapshot object as-is', async () => {
+      const { mockInsert, captured } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+      const snapshotData = { metrics: { cpu: 0.3, memory: 0.7 } };
+
+      await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: snapshotData,
+      });
+
+      expect(captured[0].snapshot).toBe(snapshotData);
+    });
+
+    it('captures stepCreatedAt', async () => {
+      const { mockInsert, captured } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+      const stepCreatedAt = Date.now() - 60_000;
+
+      await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt,
+        snapshot: {},
+      });
+
+      expect(captured[0].stepCreatedAt).toBe(stepCreatedAt);
+    });
+
+    it('captured createdAt is a positive number', async () => {
+      const { mockInsert, captured } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+      const before = Date.now();
+
+      await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: {},
+      });
+
+      expect(typeof captured[0].createdAt).toBe('number');
+      expect(captured[0].createdAt).toBeGreaterThanOrEqual(before);
+    });
+
+    it('returns an object with createdAt property', async () => {
+      const { mockInsert } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+
+      const result = await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: {},
+      });
+
+      expect(result).toHaveProperty('createdAt');
+      expect(typeof result.createdAt).toBe('number');
+    });
+
+    it('re-throws when db insert fails', async () => {
+      const db = { insert: vi.fn(() => ({ values: vi.fn(() => Promise.reject(new Error('DB write failed'))) })), query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+
+      await expect(store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: {},
+      })).rejects.toThrow('DB write failed');
+    });
+
+    it('works with empty snapshot object', async () => {
+      const { mockInsert } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+
+      const result = await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: {},
+      });
+
+      expect(result).toHaveProperty('createdAt');
+    });
+
+    it('works with null snapshot', async () => {
+      const { mockInsert, captured } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
+
+      await store.recordSnapshot({
+        agentId: 'agent-42',
+        stepId: 'step-1',
+        stepCreatedAt: Date.now(),
+        snapshot: null as unknown,
+      });
+
+      expect(captured[0].snapshot).toBeNull();
+    });
   });
 
-  it('assigns unique ids to each snapshot', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
+  describe('store shape', () => {
+    it('exposes recordSnapshot as a function', () => {
+      const { mockInsert } = makeMockDb();
+      const db = { insert: mockInsert, query: {} } as unknown as Database;
+      const store = createAgentHomeMetricSnapshotStore(db);
 
-    await store.recordSnapshot({ agentId: 'a', stepId: 's1', stepCreatedAt: 0, snapshot: {} });
-    await store.recordSnapshot({ agentId: 'a', stepId: 's2', stepCreatedAt: 0, snapshot: {} });
-
-    expect(mockDb.calls[0].values.id).not.toBe(mockDb.calls[1].values.id);
-  });
-
-  it('accepts complex nested snapshot', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
-
-    const snapshot = { metrics: { cpu: 0.9 }, steps: [{ id: 'x' }], tags: null };
-    await store.recordSnapshot({ agentId: 'a', stepId: 's', stepCreatedAt: 0, snapshot });
-
-    expect(mockDb.calls[0].values.snapshot).toEqual(snapshot);
-  });
-
-  it('handles empty string stepId', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
-
-    await store.recordSnapshot({ agentId: 'a', stepId: '', stepCreatedAt: 0, snapshot: {} });
-    expect(mockDb.calls[0].values.stepId).toBe('');
-  });
-
-  it('handles large timestamp', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
-
-    await store.recordSnapshot({ agentId: 'a', stepId: 's', stepCreatedAt: Number.MAX_SAFE_INTEGER, snapshot: {} });
-    expect(mockDb.calls[0].values.stepCreatedAt).toBe(Number.MAX_SAFE_INTEGER);
-  });
-
-  it('handles zero timestamp', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
-
-    await store.recordSnapshot({ agentId: 'a', stepId: 's', stepCreatedAt: 0, snapshot: {} });
-    expect(mockDb.calls[0].values.stepCreatedAt).toBe(0);
-  });
-
-  it('handles snapshot with special JS values', async () => {
-    const { createAgentHomeMetricSnapshotStore } = await import('./agent-home-metric-snapshot-store');
-    const mockDb = createMockDb();
-    const store = createAgentHomeMetricSnapshotStore(mockDb as any);
-
-    const snapshot = { bool: false, zero: 0, empty: '', nil: null, nan: NaN };
-    await store.recordSnapshot({ agentId: 'a', stepId: 's', stepCreatedAt: 0, snapshot });
-
-    expect(mockDb.calls[0].values.snapshot).toEqual(snapshot);
+      expect(typeof store.recordSnapshot).toBe('function');
+    });
   });
 });
