@@ -110,6 +110,7 @@ export type RuntimeAgentSession = {
     usage?: RuntimeAgentSessionStepResult['usage'];
   }>;
   hasOwnMemory(): boolean;
+  // eslint-disable-next-line @typescript-eslint/require-await
   getMemory(): Promise<{
     getWorkingMemory(input: {
       threadId: string;
@@ -188,7 +189,7 @@ export async function createRuntimeAgentSession(
 
   return {
     async generate(prompt, options = {}) {
-      return runRuntimeAgentSessionGenerate({
+      return await runRuntimeAgentSessionGenerate({
         runtime,
         session: input,
         prompt,
@@ -198,6 +199,7 @@ export async function createRuntimeAgentSession(
     hasOwnMemory() {
       return true;
     },
+  // eslint-disable-next-line @typescript-eslint/require-await
     async getMemory() {
       return {
         async getWorkingMemory(value) {

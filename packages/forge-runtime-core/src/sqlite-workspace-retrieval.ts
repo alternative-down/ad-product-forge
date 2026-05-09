@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 
@@ -376,6 +377,7 @@ export class SqliteWorkspaceRetrieval {
     }));
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async getStats() {
     const db = this.getDb();
     const countRow = db.prepare(

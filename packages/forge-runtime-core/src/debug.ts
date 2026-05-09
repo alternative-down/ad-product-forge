@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { logger, type LogContext } from './logger.js';
 
 function isForgeDebugEnabled(): boolean {

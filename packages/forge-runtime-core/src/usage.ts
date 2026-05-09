@@ -22,12 +22,14 @@ export type ForgeStepUsageRecord = {
 };
 
 export interface ForgeUsageSink {
+  // eslint-disable-next-line @typescript-eslint/require-await
   recordStepUsage(record: ForgeStepUsageRecord): Promise<void>;
 }
 
 export class InMemoryForgeUsageSink implements ForgeUsageSink {
   private readonly records: ForgeStepUsageRecord[] = [];
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async recordStepUsage(record: ForgeStepUsageRecord): Promise<void> {
     this.records.push(record);
   }

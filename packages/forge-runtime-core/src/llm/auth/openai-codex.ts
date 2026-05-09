@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import os from 'node:os';
 import path from 'node:path';
 import { logger } from "../../logger.js";
@@ -123,5 +124,5 @@ export async function resolveOpenAICodexCredential(options?: {
     return credential;
   }
 
-  return syncOpenAICodexCredential(options);
+  return await syncOpenAICodexCredential(options);
 }

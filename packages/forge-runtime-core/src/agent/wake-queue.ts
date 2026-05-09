@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { logger } from '../logger.js';
 const DEFAULT_WAKE_DEBOUNCE_MS = 3000;
 const DEFAULT_WAKE_MAX_ACCUMULATION_MS = 10000;
@@ -154,6 +155,7 @@ export function createAgentWakeQueue(config: {
       const remainingAccumulationMs = wakeWindow.maxAccumulationMs - accumulatedMs;
       scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
+      // eslint-disable-next-line @typescript-eslint/require-await
     async onRunnerIdle() {
       if (idleEvents.size > 0) {
         for (const event of idleEvents.values()) {
