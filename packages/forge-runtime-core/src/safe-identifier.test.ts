@@ -51,7 +51,7 @@ describe('toForgeSafeIdentifier', () => {
 
   it('handles mixed safe and unsafe characters', () => {
     expect(toForgeSafeIdentifier('hello-world_foo')).toBe('hello_world_foo');
-    expect(toForgeSafeIdentifier('my.agent-v2')).toBe('my_agent_v_');
+    expect(toForgeSafeIdentifier('my.agent-v2')).toBe('my_agent_v2');
     // . -> _, - -> _, v2 stays v2
   });
 });
