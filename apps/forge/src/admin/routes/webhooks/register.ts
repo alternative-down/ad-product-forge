@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createId } from '../../../utils/id';
 import { parseJsonBody, jsonResponse } from '../helpers';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import { z } from 'zod';
 import type { HttpRequest } from '../../http/server';
 import type { createWebhookStore } from '../../../webhooks/store';

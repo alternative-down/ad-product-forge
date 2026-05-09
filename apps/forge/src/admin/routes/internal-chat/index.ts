@@ -19,7 +19,7 @@ import {
   removeInternalChatGroupMemberSchema,
 } from '../schemas';
 import { jsonResponse, parseJsonBody } from '../index';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 
 interface Request {
   query: Map<string, string>;

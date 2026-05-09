@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import { createId } from '../../../utils/id';
 import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema';

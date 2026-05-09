@@ -1,7 +1,7 @@
 /**
  * Schema validation utilities for admin routes
  */
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import type { ZodSchema } from 'zod';
 
 export interface ValidationResult<T> {
