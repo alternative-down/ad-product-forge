@@ -11,9 +11,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  validate:
+  check-filenames:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,23 +29,100 @@ jobs:
       - name: Check Filenames
         run: npm run check-filenames
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
+
       - name: Lint
         run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
 
       - name: Typecheck
         run: npm run typecheck
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
+
       - name: Test
         run: npm run test
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
+
       - name: Build
         run: npm run build -- --force
+
+  fallow:
+    runs-on: ubuntu-latest
+    # Fallow runs after build so health metrics are fresh
+    needs: build
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
 
       - name: Fallow Audit
         run: npx fallow audit --fail-on-regression --tolerance 2% --health-baseline .fallow/baseline-health.json --dead-code-baseline .fallow/baseline-dead-code.json --dupes-baseline .fallow/baseline-dupes.json 2>&1 | tee /tmp/fallow-report.txt; exit 0
 
       - name: Post Fallow Report
-        if: always()
         run: |
           REPORT=$(cat /tmp/fallow-report.txt)
           gh pr comment "${{ github.event.pull_request.number }}" --body "## Fallow Report
