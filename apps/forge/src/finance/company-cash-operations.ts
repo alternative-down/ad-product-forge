@@ -151,24 +151,6 @@ export function createCompanyCashOperations(db: Database) {
     }
   }
 
-  async function getCurrentBalanceUsd() {
-    try {
-      const entries = await db.query.companyCashLedger.findMany({
-        where: eq(companyCashLedger.status, 'posted'),
-      });
-
-      let balance = 0;
-      for (const entry of entries) {
-        if (entry.direction === 'in') balance += entry.amountUsd;
-        else balance -= entry.amountUsd;
-      }
-      return balance;
-    } catch (err) {
-      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'getCurrentBalanceUsd', context: { error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
-  }
-
   return {
     createEntry,
     recordCashIn,
@@ -177,7 +159,5 @@ export function createCompanyCashOperations(db: Database) {
     scheduleCashOut,
     cancelPlannedEntry,
     postPlannedEntry,
-    getEntry,
-    getCurrentBalanceUsd,
-  };
+    getEntry,  };
 }
