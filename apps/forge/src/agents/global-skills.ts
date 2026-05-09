@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { forgeDebug } from '@forge-runtime/core';
