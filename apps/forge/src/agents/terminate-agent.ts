@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 
 
 import type {Database} from '../database/schema';
-import { agents } from '../database/schema';
+import { agents, agentExecutionContracts } from '../database/schema';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import { createAgentContractStore } from './agent-contract-store';
 import type { GitHubAppManager } from '../github/manager';
@@ -88,6 +88,17 @@ export async function terminateInternalAgent(db: Database, input: {
     }
 
     try {
+      await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
+    } catch (contractErr) {
+      forgeDebug({
+        scope: 'terminate-agent',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'contract delete failed during rollback: ' + (contractErr instanceof Error ? contractErr.message : String(contractErr)),
+      });
+    }
+
+    try {
       await db.delete(agents).where(eq(agents.id, input.agentId));
     } catch (deleteErr) {
       forgeDebug({
@@ -113,6 +124,9 @@ export async function terminateInternalAgent(db: Database, input: {
       message: 'internal chat cleanup failed (non-fatal): ' + (err instanceof Error ? err.message : String(err)),
     });
   }
+
+  // Delete execution contracts — cascade handles steps and providers
+  await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
 
   await db.delete(agents).where(eq(agents.id, input.agentId));
   getInternalAgentRegistry().remove(input.agentId);
