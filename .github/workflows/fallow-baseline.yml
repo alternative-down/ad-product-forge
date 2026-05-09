@@ -1,0 +1,104 @@
+name: Fallow Baseline Update
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-baselines:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm install
+
+      - name: Update Health Baseline (if improved)
+        run: |
+          git config user.name "forge-ci" && git config user.email "forge@alternativedown.com"
+
+          npx fallow health --production-dead-code --format json > /tmp/new-health.json 2>/dev/null
+          NEW=$(python3 -c "import json; d=json.load(open('/tmp/new-health.json')); print(len(d.get('findings',[])))")
+
+          if [ -f .fallow/baseline-health.json ]; then
+            OLD=$(python3 -c "import json; d=json.load(open('.fallow/baseline-health.json')); print(len(d.get('findings',[])))")
+          else
+            OLD=999999
+          fi
+
+          echo "health: OLD=$OLD NEW=$NEW"
+          if [ "$NEW" -lt "$OLD" ]; then
+            npx fallow health --production-dead-code --save-baseline .fallow/baseline-health.json > /dev/null 2>&1
+            git add .fallow/baseline-health.json
+            git commit -m "chore(fallow): update health baseline ($OLD→$NEW findings)"
+            git push
+            gh pr comment "${{ github.event.pull_request.number }}" --body "## Fallow: Health baseline updated ✅ (${OLD}→${NEW} findings)"
+          else
+            echo "health: no improvement ($OLD→$NEW), skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Dead Code Baseline (if improved)
+        run: |
+          git config user.name "forge-ci" && git config user.email "forge@alternativedown.com"
+
+          npx fallow dead-code --production --format json > /tmp/new-dc.json 2>/dev/null
+          NEW=$(python3 -c "import json; d=json.load(open('/tmp/new-dc.json')); print(d.get('total_issues',0))")
+
+          if [ -f .fallow/baseline-dead-code.json ]; then
+            OLD=$(python3 -c "import json; d=json.load(open('.fallow/baseline-dead-code.json')); print(d.get('total_issues',0))")
+          else
+            OLD=999999
+          fi
+
+          echo "dead-code: OLD=$OLD NEW=$NEW"
+          if [ "$NEW" -lt "$OLD" ]; then
+            npx fallow dead-code --production --save-baseline .fallow/baseline-dead-code.json > /dev/null 2>&1
+            git add .fallow/baseline-dead-code.json
+            git commit -m "chore(fallow): update dead-code baseline ($OLD→$NEW issues)"
+            git push
+            gh pr comment "${{ github.event.pull_request.number }}" --body "## Fallow: Dead Code baseline updated ✅ (${OLD}→${NEW} issues)"
+          else
+            echo "dead-code: no improvement ($OLD→$NEW), skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Dupes Baseline (if improved)
+        run: |
+          git config user.name "forge-ci" && git config user.email "forge@alternativedown.com"
+
+          npx fallow dupes --production --format json > /tmp/new-dupes.json 2>/dev/null
+          NEW=$(python3 -c "import json; d=json.load(open('/tmp/new-dupes.json')); print(sum(len(g.get('instances',[])) for g in d.get('clone_groups',[])))")
+
+          if [ -f .fallow/baseline-dupes.json ]; then
+            OLD=$(python3 -c "import json; d=json.load(open('.fallow/baseline-dupes.json')); print(sum(len(g.get('instances',[])) for g in d.get('clone_groups',[])))")
+          else
+            OLD=999999
+          fi
+
+          echo "dupes: OLD=$OLD NEW=$NEW"
+          if [ "$NEW" -lt "$OLD" ]; then
+            npx fallow dupes --production --save-baseline .fallow/baseline-dupes.json > /dev/null 2>&1
+            git add .fallow/baseline-dupes.json
+            git commit -m "chore(fallow): update dupes baseline ($OLD→$NEW clone instances)"
+            git push
+            gh pr comment "${{ github.event.pull_request.number }}" --body "## Fallow: Duplicates baseline updated ✅ (${OLD}→${NEW} clone instances)"
+          else
+            echo "dupes: no improvement ($OLD→$NEW), skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
