@@ -89,7 +89,8 @@ export async function createRuntimeAgentSessionRuntime(
     : (input.runtimeActions ?? []);
   let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
   if (input.todoStore) {
-    const todoLib = new LibsqlTodoStore({ client: input.todoStore.client as unknown, tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const todoLib = new LibsqlTodoStore({ client: input.todoStore.client as any, tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime' });
     todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
   }
 

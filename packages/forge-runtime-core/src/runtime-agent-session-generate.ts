@@ -249,7 +249,7 @@ function summarizeGenerateRequest(input: {
     toolCount: input.actions.length,
     toolDescriptionChars: input.actions.reduce((total, action) => total + action.description.length, 0),
     toolSchemaChars: input.actions.reduce(
-      (total, action) => total + JSON.stringify(zodToJsonSchema(action.inputSchema as unknown), null, 2).length,
+      (total, action) => total + JSON.stringify(zodToJsonSchema(action.inputSchema as any), null, 2).length,
       0,
     ),
   };
