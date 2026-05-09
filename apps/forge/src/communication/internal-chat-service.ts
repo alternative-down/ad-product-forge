@@ -138,52 +138,44 @@ export function createInternalChatService(
    * Inline error wrapper — replaces the repetitive try/catch + forgeDebug pattern
    * across all simple delegation methods in this service.
    */
+  // Transparent passthrough — no-op wrapper retained for API compatibility.
+  // The try/catch was removed: underlying functions handle errors and callers
+  // have their own error handling. The generic `[internal-chat-service] async
+  // function failed` message added no value over the real error.
   function wrap<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T {
-    return (async (...args: unknown[]) => {
-      try {
-        return await fn(...args);
-      } catch (err) {
-        forgeDebug({
-          scope: 'internal-chat-service',
-          level: 'error',
-          message: `[internal-chat-service] async function failed`,
-          context: { error: err instanceof Error ? err.message : String(err) },
-        });
-        throw err;
-      }
-    }) as T;
+    return fn as T;
   }
 
 
-  const registerAgentAccount = wrap(accounts.registerAgentAccount.bind(accounts));
-  const registerExternalAccount = wrap(accounts.registerExternalAccount.bind(accounts));
-  const updateExternalAccount = wrap(accounts.updateExternalAccount.bind(accounts));
-  const deleteExternalAccount = wrap(accounts.deleteExternalAccount.bind(accounts));
-  const deleteAgentAccount = wrap(accounts.deleteAgentAccount.bind(accounts));
-  const listAccounts = wrap(accounts.listAccounts.bind(accounts));
-  const getAccountBySlug = wrap(accounts.getAccountBySlug.bind(accounts));
-  const getAccountByAgentId = wrap(accounts.getAccountByAgentId.bind(accounts));
-  const getConversationForAgent = wrap(accounts.getConversationForAgent.bind(accounts));
+  const registerAgentAccount = accounts.registerAgentAccount.bind(accounts);
+  const registerExternalAccount = accounts.registerExternalAccount.bind(accounts);
+  const updateExternalAccount = accounts.updateExternalAccount.bind(accounts);
+  const deleteExternalAccount = accounts.deleteExternalAccount.bind(accounts);
+  const deleteAgentAccount = accounts.deleteAgentAccount.bind(accounts);
+  const listAccounts = accounts.listAccounts.bind(accounts);
+  const getAccountBySlug = accounts.getAccountBySlug.bind(accounts);
+  const getAccountByAgentId = accounts.getAccountByAgentId.bind(accounts);
+  const getConversationForAgent = accounts.getConversationForAgent.bind(accounts);
 
   // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
-  const ensureDirectConversation = wrap(conversations.ensureDirectConversation);
+  const ensureDirectConversation = conversations.ensureDirectConversation;
 
 
   // === Group Management ───────────────────────────────────────────────────
-  const createChatGroup = wrap(groups.createChatGroup);
+  const createChatGroup = groups.createChatGroup;
 
-  const addMemberToGroup = wrap(groups.addMemberToGroup);
+  const addMemberToGroup = groups.addMemberToGroup;
 
-  const removeMemberFromGroup = wrap(groups.removeMemberFromGroup);
+  const removeMemberFromGroup = groups.removeMemberFromGroup;
 
-  const changeChatGroup = wrap(groups.changeChatGroup);
+  const changeChatGroup = groups.changeChatGroup;
 
-  const listChatGroups = wrap(groups.listChatGroups);
+  const listChatGroups = groups.listChatGroups;
 
-  const listGroupMembers = wrap(groups.listGroupMembers);
+  const listGroupMembers = groups.listGroupMembers;
 
-  const listGroupMembersByAccount = wrap(groups.listGroupMembersByAccount);
+  const listGroupMembersByAccount = groups.listGroupMembersByAccount;
 
 
   // === Message Listing ───────────────────────────────────────────────────
@@ -315,18 +307,10 @@ export function createInternalChatService(
 
     return views.filter((view) => view.unreadCount > 0);
   } catch (err) {
-    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'listConversations failed', context: { error: err instanceof Error ? err.message : String(err) } });
     throw err;
   }
   }
 
-  const listing = createInternalChatListing(db, {
-    getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
-  });
   // ── Account-scoped Conversation Listing ───────────────────────────────────
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
@@ -334,7 +318,7 @@ export function createInternalChatService(
   // a resolved accountId directly instead of looking it up from an agentId.
   // Used by admin routes and external integrations that already have the account.
   // NOT a duplicate — this is intentional architectural separation.
-  const listConversationsByAccount = wrap(listing.listConversationsByAccount);
+  const listConversationsByAccount = listing.listConversationsByAccount;
 
   // === Message Retrieval ──────────────────────────────────────────────────
   const getMessages = listing.getMessages
@@ -345,19 +329,19 @@ export function createInternalChatService(
   const getMessagesByAccount = listing.getMessagesByAccount
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
-  const archiveConversationByAccount = wrap(conversations.archiveConversationByAccount);
+  const archiveConversationByAccount = conversations.archiveConversationByAccount;
 
-  const createExternalChatGroup = wrap(groups.createExternalChatGroup);
+  const createExternalChatGroup = groups.createExternalChatGroup;
 
-  const ensureDirectConversationByAccount = wrap(conversations.ensureDirectConversationByAccount);
+  const ensureDirectConversationByAccount = conversations.ensureDirectConversationByAccount;
 
-  const addMemberToGroupByAccount = wrap(groups.addMemberToGroupByAccount);
+  const addMemberToGroupByAccount = groups.addMemberToGroupByAccount;
 
-  const updateMemberRoleByAccount = wrap(groups.updateMemberRoleByAccount);
+  const updateMemberRoleByAccount = groups.updateMemberRoleByAccount;
 
-  const removeMemberFromGroupByAccount = wrap(groups.removeMemberFromGroupByAccount);
+  const removeMemberFromGroupByAccount = groups.removeMemberFromGroupByAccount;
 
-  const updateGroupByAccount = wrap(groups.updateGroupByAccount);
+  const updateGroupByAccount = groups.updateGroupByAccount;
 
 
   // === Unread / Recent ────────────────────────────────────────────────────
@@ -391,6 +375,14 @@ export function createInternalChatService(
 
   const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
   const requireConversationMembership = serviceHelpers.requireConversationMembership;
+
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
+  });
 
   const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
   const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
