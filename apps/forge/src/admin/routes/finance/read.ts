@@ -1,41 +1,40 @@
 /**
- * Finance Admin Routes
- *
- * Refactored from createAdminReadModel (#1555 split).
- * Each route creates only the stores it needs.
+ * Finance Admin Read Routes - Extracted from routes.ts
+ * GET routes for finance overview and contracts
  */
-import { inArray, sql } from 'drizzle-orm';
 
-import type { HttpHandler } from '../../../http/server.js';
-
-import type {Database} from '../../../database/schema';
-import { agentExecutionSteps } from '../../../database/schema';
-import type { MicroErpReadModel } from '../../../micro-erp/read-model';
-import type { CompanyPayables } from '../../../finance/company-payables';
+import { z } from 'zod';
+import { forgeDebug } from '@forge-runtime/core';
+import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
-import { getFinanceOverview } from '../read-model/finance-overview';
-import { getRecurringPayables } from '../read-model/payables-overview';
+
+type CompanyCash = {
+  getOverview: () => Promise<unknown>;
+  listContractSummaries: () => Promise<unknown>;
+}
+
+type FinanceReadInput = {
+  companyCash: CompanyCash;
+}
 
 /**
- * Register GET routes for finance read operations.
- * Finance stores are created here instead of in createAdminReadModel.
+ * Register GET routes for finance read operations
  */
 export function registerFinanceReadRoutes(
   httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) => void },
-  db: Database,
-  finance: MicroErpReadModel,
-  payables: CompanyPayables,
+  input: FinanceReadInput
 ) {
   // GET /admin/finance
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/finance',
     handler: async () => {
-      const [overview, recurringPayablesResult] = await Promise.all([
-        getFinanceOverview(finance),
-        getRecurringPayables(payables),
-      ]);
-      return jsonResponse({ ...overview, recurringPayables: recurringPayablesResult });
+      try {
+        return jsonResponse(await input.companyCash.getOverview());
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -44,43 +43,12 @@ export function registerFinanceReadRoutes(
     method: 'GET',
     path: '/admin/finance/contracts',
     handler: async () => {
-      const contracts = await finance.listActiveInternalAgentContracts();
-      if (!contracts || !Array.isArray(contracts.items)) {
-        return jsonResponse({ items: [], hasMore: false });
+      try {
+        return jsonResponse(await input.companyCash.listContractSummaries());
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      const contractIds = contracts.items.map((c) => c.contractId);
-      if (contractIds.length === 0) {
-        return jsonResponse({ ...contracts, hasMore: false });
-      }
-
-      const spendRows = await db
-        .select({
-          contractId: agentExecutionSteps.contractId,
-          total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
-        })
-        .from(agentExecutionSteps)
-        .where(inArray(agentExecutionSteps.contractId, contractIds))
-        .groupBy(agentExecutionSteps.contractId).all();
-
-      const spentUsdByContractId = new Map<string, number>();
-      for (const row of spendRows) {
-        spentUsdByContractId.set(row.contractId, Number(row.total));
-      }
-
-      return jsonResponse({
-        ...contracts,
-        hasMore: false,
-        items: contracts.items.map((contract) => {
-          const spentUsd = spentUsdByContractId.get(contract.contractId) ?? 0;
-          return {
-            ...contract,
-            spentUsd,
-            spentPercent:
-              contract.weeklyValueUsd > 0 ? (spentUsd / contract.weeklyValueUsd) * 100 : 0,
-          };
-        }),
-      });
     },
   });
 }

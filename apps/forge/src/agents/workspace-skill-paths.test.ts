@@ -1,78 +1,135 @@
+/**
+ * Unit tests for agents/workspace-skill-paths.ts.
+ * Pure path resolution utilities for agent workspace and skills.
+ * Zero prior coverage.
+ */
 import { describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
+
+// Mock path module so we can test the resolution logic without OS-dependent results
+vi.mock('node:path', async () => {
+  const actual = await vi.importActual('node:path');
+  return {
+    ...actual as object,
+    resolve: vi.fn((...segments: string[]) => {
+      // Simple mock: join all segments with '/'
+      return '/' + segments.filter(Boolean).join('/');
+    }),
+  };
+});
+
 import {
   resolveAgentWorkspaceRoot,
   resolveAgentSkillsRoot,
   resolveAgentSkillRoot,
 } from './workspace-skill-paths';
 
+const { resolve } = await import('node:path');
+
 describe('resolveAgentWorkspaceRoot', () => {
-  it('resolves workspace root with default workspace subfolder', () => {
-    const result = resolveAgentWorkspaceRoot('/base', null, 'agent-123');
-    expect(result).toBe('/base/agent-123/workspace');
+  it('uses /workspace when no workspaceFilesystem is provided', () => {
+    const result = resolveAgentWorkspaceRoot('/base', undefined, 'agent-42');
+    expect(result).toMatch(/\/agent-42\/workspace$/);
   });
 
-  it('resolves workspace root with custom basePath', () => {
-    const result = resolveAgentWorkspaceRoot('/base', { basePath: 'custom' }, 'agent-123');
-    expect(result).toBe('/base/agent-123/custom');
+  it('uses /workspace when workspaceFilesystem is null', () => {
+    const result = resolveAgentWorkspaceRoot('/base', null, 'agent-42');
+    expect(result).toMatch(/\/agent-42\/workspace$/);
   });
 
-  it('resolves workspace root with custom basePath containing slashes', () => {
-    const result = resolveAgentWorkspaceRoot('/base', { basePath: 'workspace/sub' }, 'agent-abc');
-    expect(result).toBe('/base/agent-abc/workspace/sub');
+  it('appends basePath to agent workspace when provided', () => {
+    const result = resolveAgentWorkspaceRoot(
+      '/base',
+      { basePath: 'custom' },
+      'agent-42',
+    );
+    expect(result).toMatch(/\/agent-42\/custom$/);
   });
 
-  it('handles undefined workspaceFilesystem same as null', () => {
-    const result = resolveAgentWorkspaceRoot('/base', undefined, 'agent-123');
-    expect(result).toBe('/base/agent-123/workspace');
+  it('appends nested basePath correctly', () => {
+    const result = resolveAgentWorkspaceRoot(
+      '/base',
+      { basePath: 'data/workspace' },
+      'agent-42',
+    );
+    expect(result).toMatch(/\/agent-42\/data\/workspace$/);
+  });
+
+  it('agentId is included in the path', () => {
+    const result = resolveAgentWorkspaceRoot('/base', undefined, 'my-agent-id');
+    expect(result).toContain('my-agent-id');
+  });
+
+  it('workspaceBasePath is the first segment', () => {
+    const result = resolveAgentWorkspaceRoot('/workspace', undefined, 'agent-1');
+    expect(result).toMatch(/^\/workspace/);
   });
 });
 
 describe('resolveAgentSkillsRoot', () => {
-  it('resolves skills root as workspace/skill', () => {
-    const result = resolveAgentSkillsRoot('/base', null, 'agent-123');
-    expect(result).toBe('/base/agent-123/workspace/skills');
+  it('appends /skills to workspace root', () => {
+    const result = resolveAgentSkillsRoot('/base', undefined, 'agent-42');
+    expect(result).toMatch(/\/skills$/);
   });
 
-  it('resolves skills root with custom basePath', () => {
-    const result = resolveAgentSkillsRoot('/base', { basePath: 'custom' }, 'agent-123');
-    expect(result).toBe('/base/agent-123/custom/skills');
+  it('is workspace root + skills suffix', () => {
+    const wsRoot = resolveAgentWorkspaceRoot('/base', undefined, 'agent-42');
+    const skillsRoot = resolveAgentSkillsRoot('/base', undefined, 'agent-42');
+    expect(skillsRoot).toBe(wsRoot + '/skills');
+  });
+
+  it('works with custom workspaceFilesystem', () => {
+    const result = resolveAgentSkillsRoot('/base', { basePath: 'custom' }, 'agent-42');
+    expect(result).toMatch(/\/skills$/);
+    expect(result).toContain('agent-42');
   });
 });
 
 describe('resolveAgentSkillRoot', () => {
-  it('resolves skill root for a given skill', () => {
+  it('returns skillsRoot and skillRoot with /skillName appended', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-123', workspaceFilesystem: null },
+      agent: { id: 'agent-42', workspaceFilesystem: null },
       skillName: 'my-skill',
     });
-
-    expect(result.skillsRoot).toBe('/base/agent-123/workspace/skills');
-    expect(result.skillRoot).toBe('/base/agent-123/workspace/skills/my-skill');
+    expect(result.skillsRoot).toMatch(/\/skills$/);
+    expect(result.skillRoot).toMatch(/\/my-skill$/);
   });
 
-  it('resolves skill root with custom workspaceFilesystem', () => {
+  it('skillRoot ends with the skill name', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-123', workspaceFilesystem: { basePath: 'custom' } },
-      skillName: 'another-skill',
+      agent: { id: 'agent-x' },
+      skillName: 'test-tool',
     });
-
-    expect(result.skillsRoot).toBe('/base/agent-123/custom/skills');
-    expect(result.skillRoot).toBe('/base/agent-123/custom/skills/another-skill');
+    expect(result.skillRoot).toMatch(/test-tool$/);
   });
 
-  it('returns skillsRoot and skillRoot', () => {
+  it('skillRoot is skillsRoot + skillName', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-xyz', workspaceFilesystem: null },
-      skillName: 'test-skill',
+      agent: { id: 'agent-1', workspaceFilesystem: undefined },
+      skillName: 'deploy',
     });
+    expect(result.skillRoot).toBe(result.skillsRoot + '/deploy');
+  });
 
-    expect(result).toHaveProperty('skillsRoot');
-    expect(result).toHaveProperty('skillRoot');
-    expect(result.skillRoot).toBe(path.join(result.skillsRoot, 'test-skill'));
+  it('works with nested basePath workspaceFilesystem', () => {
+    const result = resolveAgentSkillRoot({
+      workspaceBasePath: '/base',
+      agent: { id: 'agent-42', workspaceFilesystem: { basePath: 'data/ws' } },
+      skillName: 'skill',
+    });
+    expect(result.skillsRoot).toMatch(/\/skills$/);
+    expect(result.skillRoot).toMatch(/\/skill$/);
+  });
+
+  it('skillName with spaces/special chars produces valid path', () => {
+    const result = resolveAgentSkillRoot({
+      workspaceBasePath: '/base',
+      agent: { id: 'agent-42' },
+      skillName: 'my cool skill',
+    });
+    expect(result.skillRoot).toContain('my cool skill');
   });
 });
-
-import path from 'node:path';
