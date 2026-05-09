@@ -123,6 +123,15 @@ export function createInternalChatService(
   const getAccountByTargetKey = accounts.getAccountByTargetKey;
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
 
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
+  });
+
+
 
   const conversations = createInternalChatConversations(db);
 
@@ -326,15 +335,15 @@ export function createInternalChatService(
   // a resolved accountId directly instead of looking it up from an agentId.
   // Used by admin routes and external integrations that already have the account.
   // NOT a duplicate — this is intentional architectural separation.
-  const listConversationsByAccount = wrap(listing.listConversationsByAccount.bind(listing));
+  const listConversationsByAccount = wrap(listing.listConversationsByAccount);
 
   // === Message Retrieval ──────────────────────────────────────────────────
-  const getMessages = listing.getMessages.bind(listing);
+  const getMessages = listing.getMessages
 
   // ── Account-scoped Message Retrieval ─────────────────────────────────────
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
-  const getMessagesByAccount = listing.getMessagesByAccount.bind(listing);
+  const getMessagesByAccount = listing.getMessagesByAccount
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
   const archiveConversationByAccount = wrap(conversations.archiveConversationByAccount);
@@ -399,14 +408,6 @@ export function createInternalChatService(
 
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
-
-  const listing = createInternalChatListing(db, {
-    getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
-  });
 
 
   const connection = createInternalChatConnection(db, {
