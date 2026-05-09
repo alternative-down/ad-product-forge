@@ -123,5 +123,5 @@ export async function resolveOpenAICodexCredential(options?: {
     return credential;
   }
 
-  return syncOpenAICodexCredential(options);
+  return await syncOpenAICodexCredential(options);
 }

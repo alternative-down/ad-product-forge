@@ -93,7 +93,7 @@ export class LibsqlTodoStore {
     items: TodoItemInput[],
   ): Promise<TodoItem[]> {
     if (items.length === 0) {
-      return this.getTodos(threadId, resourceId);
+      return await this.getTodos(threadId, resourceId);
     }
 
     await this.ensureSchema();
