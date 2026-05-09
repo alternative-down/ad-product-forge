@@ -1,19 +1,29 @@
 /**
- * Internal Chat Service
+ * Internal Chat Service — Thin Orchestrator
  *
- * A 1300-line factory function organized into five responsibility zones.
- * Each zone handles a distinct concern. The "ByAgent" vs "ByAccount" naming
- * convention reflects an intentional architectural pattern — see below.
+ * Delegates to specialized modules extracted from the original 1300-line
+ * factory function. This file owns the public API surface and wiring.
  *
- * ## Responsibility Zones
+ * ## Extracted Modules
  *
- * | Section | Lines | Purpose |
- * |---------|-------|---------|
- * | Attachments | 54–97 | Store and retrieve message attachments |
- * | Account Management | 98–305 | Register, update, list accounts |
- * | Conversation Setup | 306–388 | Ensure DM conversations exist |
- * | Group Management | 388–575 | Delegate to internal-chat-groups |
- * | Conversations / Messages | 446–1000 | List, read, send messages |
+ * | Module | Purpose |
+ * |--------|---------|
+ * | internal-chat-accounts.ts | Account registration and lookup |
+ * | internal-chat-attachments.ts | Attachment storage and retrieval |
+ * | internal-chat-conversations.ts | Conversation creation and management |
+ * | internal-chat-groups.ts | Group chat management |
+ * | internal-chat-listing.ts | Conversation listing (#1997) |
+ * | internal-chat-messages.ts | Message retrieval and archival (#1997) |
+ * | internal-chat-sending.ts | Message sending |
+ * | internal-chat-reads.ts | Read receipts and unread tracking |
+ * | internal-chat-guards.ts | Membership and authorization guards |
+ * | internal-chat-connection.ts | WebSocket-style real-time delivery |
+ *
+ * ## Remaining Inline Logic
+ *
+ * - listConversations / listConversationsByAccount — delegated to listing module
+ * - getMessages / getMessagesByAccount — delegated to messages module
+ * - All other ByAccount group operations — delegated to groups/conversations
  *
  * ## The ByAgent / ByAccount Pattern
  *
@@ -26,18 +36,7 @@
  *               Used by admin routes, external integrations, or when
  *               the caller already has a concrete account reference.
  *
- * These are NOT duplicates. They represent different trust domains:
- * - ByAgent routes protect against unauthorized agent impersonation
- * - ByAccount routes are used by trusted callers (admins, external integrations)
- *
- * ## Planned Extraction (#1215)
- *
- * This module will be split into:
- *   - internal-chat-attachments.ts  — attachment storage and retrieval
- *   - internal-chat-accounts.ts    — account registration and lookup
- *   - internal-chat-conversations.ts — conversations, groups, messages
- *   - internal-chat-messages.ts     — send/receive message operations
- *   - internal-chat-service.ts      — thin orchestrator, re-exports unified API
+ * These are NOT duplicates. They represent different trust domains.
  *
  * @module
  */
@@ -316,144 +315,12 @@ export function createInternalChatService(
   const listConversationsByAccount = wrap(listing.listConversationsByAccount.bind(listing));
 
   // === Message Retrieval ──────────────────────────────────────────────────
-  async function getMessages(input: {
-    agentId: string;
-    conversationKey: string;
-    limit: number;
-    offset: number;
-    query?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<CommunicationProviderMessage[]> {
-  try {
-    await requireConversationMembership(input.agentId, input.conversationKey);
-    const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
-    const dateTo = parseFilterDate(input.dateTo, 'dateTo');
-    const filters = [
-      eq(internalChatMessages.conversationId, input.conversationKey),
-      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
-      ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
-      ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
-    ];
-
-    const rows = await db
-      .select({
-        messageId: internalChatMessages.id,
-        content: internalChatMessages.content,
-        createdAt: internalChatMessages.createdAt,
-        authorAccountId: internalChatMessages.authorAccountId,
-        authorDisplayName: internalChatAccounts.displayName,
-        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
-      })
-      .from(internalChatMessages)
-      .innerJoin(
-        internalChatMessageReads,
-        and(
-          eq(internalChatMessageReads.messageId, internalChatMessages.id),
-          eq(internalChatMessageReads.agentId, input.agentId),
-        ),
-      )
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
-      )
-      .where(and(...filters))
-      .orderBy(desc(internalChatMessages.createdAt))
-      .offset(input.offset)
-      .limit(input.limit).all();
-
-    const unreadMessageIds = rows.filter((row) => row.unread === 1).map((row) => row.messageId);
-
-    if (unreadMessageIds.length > 0) {
-      await db
-        .update(internalChatMessageReads)
-        .set({ readAt: Date.now() })
-        .where(and(
-          eq(internalChatMessageReads.agentId, input.agentId),
-          inArray(internalChatMessageReads.messageId, unreadMessageIds),
-        ));
-    }
-
-    return Promise.all(
-      rows.reverse().map(async (row) => ({
-        messageId: row.messageId,
-        provider: 'internal-chat',
-        authorId: row.authorAccountId,
-        targetKey: input.conversationKey,
-        content: row.content,
-        attachments: await readMessageAttachments(row.messageId),
-        unread: row.unread === 1,
-        createdAt: new Date(row.createdAt).toISOString(),
-        authorDisplayName: row.authorDisplayName,
-      })),
-    );
-  } catch (err) {
-    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'getMessages failed', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
-  }
+  const getMessages = listing.getMessages.bind(listing);
 
   // ── Account-scoped Message Retrieval ─────────────────────────────────────
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
-  // getMessagesByAccount: same as getMessages above, but uses accountId directly.
-  // Used when the caller already has a concrete account reference.
-  async function getMessagesByAccount(input: {
-    accountId: string;
-    conversationKey: string;
-    limit: number;
-    offset: number;
-    query?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<CommunicationProviderMessage[]> {
-  try {
-    await requireConversationMembershipByAccount(input.accountId, input.conversationKey);
-    const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
-    const dateTo = parseFilterDate(input.dateTo, 'dateTo');
-    const filters = [
-      eq(internalChatMessages.conversationId, input.conversationKey),
-      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
-      ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
-      ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
-    ];
-
-    const rows = await db
-      .select({
-        messageId: internalChatMessages.id,
-        content: internalChatMessages.content,
-        createdAt: internalChatMessages.createdAt,
-        authorAccountId: internalChatMessages.authorAccountId,
-        authorDisplayName: internalChatAccounts.displayName,
-      })
-      .from(internalChatMessages)
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
-      )
-      .where(and(...filters))
-      .orderBy(desc(internalChatMessages.createdAt))
-      .offset(input.offset)
-      .limit(input.limit).all();
-
-    return Promise.all(
-      rows.reverse().map(async (row) => ({
-        messageId: row.messageId,
-        provider: 'internal-chat',
-        authorId: row.authorAccountId,
-        targetKey: input.conversationKey,
-        content: row.content,
-        attachments: await readMessageAttachments(row.messageId),
-        unread: false,
-        createdAt: new Date(row.createdAt).toISOString(),
-        authorDisplayName: row.authorDisplayName,
-      })),
-    );
-  } catch (err) {
-    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'getMessagesByAccount failed', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
-  }
+  const getMessagesByAccount = listing.getMessagesByAccount.bind(listing);
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
   const archiveConversationByAccount = wrap(conversations.archiveConversationByAccount.bind(conversations));
