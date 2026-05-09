@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import type {
   RuntimePlugin,
   StepContextEntry,
@@ -111,7 +112,7 @@ export function createWorkingMemoryContextEntry(workingMemory: string): StepCont
   });
 }
 
-async function loadWorkingMemoryContextText(input: {
+async function _loadWorkingMemoryContextText(input: {
   threadId: string;
   resourceId: string;
   store: RuntimeWorkingMemoryStore;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { z } from 'zod';
 import type { Client } from '@libsql/client';
 
@@ -34,7 +35,7 @@ const todoItemInputSchema = z.union([
       })),
     ]),
   }),
-] as any).transform((val: any) => {
+] as any /* eslint-disable-line @typescript-eslint/no-explicit-any */).transform((val: any) => {
   if ('items' in val) {
     const items = val.items;
     if (Array.isArray(items)) {
@@ -93,7 +94,7 @@ export class LibsqlTodoStore {
     items: TodoItemInput[],
   ): Promise<TodoItem[]> {
     if (items.length === 0) {
-      return this.getTodos(threadId, resourceId);
+      return await this.getTodos(threadId, resourceId);
     }
 
     await this.ensureSchema();

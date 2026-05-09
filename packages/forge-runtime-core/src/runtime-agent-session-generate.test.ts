@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { ModelMessage } from 'ai';
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
@@ -422,7 +422,7 @@ function buildRuntimeSessionSystemPrompt(input: {
 }) {
   const segments = {
     baseSystem: input.baseSystem?.trim() || '',
-    workingMemory: '' || '',
+    workingMemory: '' as string,
     agentContext: input.agentContext?.trim() || '',
   };
 

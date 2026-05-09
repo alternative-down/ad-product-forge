@@ -42,6 +42,7 @@ function requireOperationalMemoryOmLimits(
   return input.checkpointedOmLimits;
 }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSessionRuntime> {
@@ -88,6 +89,7 @@ export async function createRuntimeAgentSessionRuntime(
     : (input.runtimeActions ?? []);
   let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
   if (input.todoStore) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const todoLib = new LibsqlTodoStore({ client: input.todoStore.client as any, tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime' });
     todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
   }

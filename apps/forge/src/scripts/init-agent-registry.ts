@@ -7,7 +7,8 @@ import { eq, and } from 'drizzle-orm';
 
 import * as schema, { type Agent } from '../database/schema';
 
-import {getDatabase, runMigrations} from '../database/schema';
+import { getDatabase } from '../database/client';
+import { runMigrations } from '../database/migrate';
 import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';

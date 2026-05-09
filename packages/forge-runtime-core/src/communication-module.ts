@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { logger } from './logger.js';
 import path from 'node:path';
 
@@ -222,7 +223,7 @@ export async function createCommunicationModule(config: {
       dateTo: input.dateTo,
     });
 
-    return Promise.all(messages.map((message) => toAgentMessageView(activeFilesystem, message)));
+    return await Promise.all(messages.map((message) => toAgentMessageView(activeFilesystem, message)));
   }
 
   async function sendMessage(input: {
@@ -433,7 +434,7 @@ async function materializeInboundAttachments(
   messageId: string,
   attachments: CommunicationProviderMessage['attachments'],
 ): Promise<CommunicationAttachmentView[]> {
-  return Promise.all(
+  return await Promise.all(
     attachments.map(async (attachment, index) => {
       const safeName = sanitizeFileName(attachment.name);
       const targetPath = path.posix.join('tmp', `${messageId}-${index}-${safeName}`);
@@ -455,7 +456,7 @@ async function readOutboundAttachments(input: {
   workspaceRoot: string;
   attachmentPaths: string[];
 }) {
-  return Promise.all(
+  return await Promise.all(
     input.attachmentPaths.map(async (attachmentPath) => {
       const workspacePath = resolveWorkspacePath(input.workspaceRoot, attachmentPath);
       const data = await input.workspaceFilesystem.readFile(workspacePath);

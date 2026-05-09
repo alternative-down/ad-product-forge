@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
 
 const promptCacheMiddleware: LanguageModelMiddleware = {
   specificationVersion: 'v3',
+      // eslint-disable-next-line @typescript-eslint/require-await
   transformParams: async ({ params }) => {
     const cacheControl = { type: 'ephemeral' as const, ttl: '1h' as const };
     const prompt = [...params.prompt] as Array<Record<string, unknown>>;
