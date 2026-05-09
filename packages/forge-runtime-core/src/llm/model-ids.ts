@@ -1,3 +1,4 @@
+/* eslint-disable reexport-check/no-unnecessary-reexports */
 export const OPENAI_CODEX_MODELS = [
   'gpt-5.4',
   'gpt-5.4-nano',
