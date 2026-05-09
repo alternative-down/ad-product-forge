@@ -285,14 +285,20 @@ export function createAgentContractStore(
       };
     }
 
+    const now = time.now();
     try {
-      await companyCashOperations.recordCashIn({
-        type: 'agent-contract-termination-refund',
-        amountUsd: refundableUsd,
-        description: `Contract refund for terminated agent ${agentId}`,
-        referenceType: 'agent-execution-contract',
-        referenceId: activeContract.id,
-        effectiveAt: time.now(),
+      await db.transaction(async (tx) => {
+        await companyCashOperations.recordCashIn(
+          {
+            type: 'agent-contract-termination-refund',
+            amountUsd: refundableUsd,
+            description: `Contract refund for terminated agent ${agentId}`,
+            referenceType: 'agent-execution-contract',
+            referenceId: activeContract.id,
+            effectiveAt: now,
+          },
+          tx,
+        );
       });
     } catch (err) {
       forgeDebug({
@@ -301,7 +307,6 @@ export function createAgentContractStore(
         runtimeId: agentId,
         message: 'refund cash-in failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'agent-contract-store: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
