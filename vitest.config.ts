@@ -16,11 +16,16 @@ export default defineConfig({
     // Keep isolate: true (default) to prevent test state from bleeding
     // between files across different workers.
     isolate: true,
+    // Coverage is disabled by default — run with --coverage flag or CI_VITEST_COVERAGE=1
+    // to collect coverage data. This keeps local test runs fast.
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['apps/forge/src/**/*.ts', 'packages/mastra-engine/src/**/*.ts'],
       exclude: ['**/*.d.ts', '**/*.test.ts'],
+      default: {
+        enabled: false,
+      },
     },
   },
   resolve: {
