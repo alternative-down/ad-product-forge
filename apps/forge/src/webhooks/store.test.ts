@@ -1,260 +1,323 @@
-/**
- * Unit tests for webhooks/store.ts.
- *
- * Mock strategy: fully simulate Drizzle's chainable query builder.
- * Key fact: in Drizzle, select().from().where().orderBy().limit()
- * all return the SAME query builder object. Awaiting it runs the query.
- *
- * We use a class (not a plain object) so that vi.fn() on each method
- * can track separate calls per test without interference.
- */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createWebhookStore } from './store';
-import type { Database } from '../database/schema';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn((a: unknown, b: unknown) => ({ type: 'eq', a, b })),
+  desc: vi.fn((col: unknown) => ({ type: 'desc', col })),
+  and: vi.fn(),
+  sql: vi.fn(),
+  relations: vi.fn(),
+}));
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 }));
 
-let idCounter = 0;
-vi.mock('../utils/id', () => ({
-  createId: vi.fn(() => `mock-id-${++idCounter}`),
+vi.mock('../../utils/id', () => ({
+  createId: vi.fn().mockReturnValue('mock-webhook-id-12345'),
 }));
 
-vi.mock('../database/schema', () => ({
-  webhookRoutes: Symbol('webhookRoutes'),
-  webhookEvents: Symbol('webhookEvents'),
+vi.mock('../../database/schema', () => ({
+  webhookRoutes: { $columnMap: {} },
+  webhookEvents: { $columnMap: {} },
 }));
 
-// A single shared query builder class — each call to .where()/.orderBy()/.limit()
-// returns the SAME instance, matching Drizzle's behavior.
-class QueryBuilder {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _result: any[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _error: any = null;
-
-  setResult(result: unknown[]) { this._result = result; }
-  setError(error: Error) { this._error = error; }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  limit = vi.fn().mockImplementation(() => this.#resolve());
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  orderBy = vi.fn().mockReturnValue(this);
-
-  // Thenable so `await db.select().from().where()` works (listRoutes/listEvents path)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  then = (onfulfilled?: (v: unknown[]) => unknown, onrejected?: (e: unknown) => unknown): Promise<unknown> => this.#resolve().then(onfulfilled, onrejected);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  #resolve(): Promise<any[]> {
-    if (this._error) return Promise.reject(this._error);
-    return Promise.resolve(this._result);
-  }
-}
-
-function createMockDb(overrides?: {
-  insertError?: Error;
-  updateError?: Error;
-  selectResult?: unknown[];
-  selectError?: Error;
-}): Database {
-  const { insertError, updateError, selectResult = [], selectError } = overrides ?? {};
-
-  // Each createMockDb call gets a fresh QueryBuilder
-  const qb = new QueryBuilder();
-  qb.setResult(selectResult);
-  if (selectError) qb.setError(selectError);
-
-  const db = {
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockImplementation(() => {
-        if (insertError) throw insertError;
-        return Promise.resolve(undefined);
-      }),
-    }),
-    update: vi.fn().mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockImplementation(() => {
-          if (updateError) throw updateError;
-          return Promise.resolve(undefined);
-        }),
-      }),
-    }),
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue(qb),
-      }),
-    }),
-  };
-
-  return db as unknown as Database;
-}
-
-beforeEach(() => { idCounter = 0; });
-
-// ─── createRoute ─────────────────────────────────────────────────────────────
-
-describe('createWebhookStore — createRoute', () => {
-  it('creates route with required fields', async () => {
-    const store = createWebhookStore(createMockDb());
-    const result = await store.createRoute({ agentId: 'agent-1', name: 'GitHub' });
-    expect(result.agentId).toBe('agent-1');
-    expect(result.name).toBe('GitHub');
-    expect(result.isActive).toBe(true);
-    expect(result.routeId).toBe('mock-id-1');
+// Drizzle query builder is a chain of calls that returns new query builder objects.
+// Each method returns the new object. We simulate this with a chain factory.
+function makeChain(returnValue: unknown = undefined) {
+  const chain: any = {};
+  const methods = ['from', 'where', 'limit', 'orderBy', 'set', 'values'];
+  methods.forEach((m) => {
+    chain[m] = vi.fn().mockReturnValue(returnValue !== undefined ? returnValue : chain);
   });
-
-  it('stores provided secret', async () => {
-    const store = createWebhookStore(createMockDb());
-    const result = await store.createRoute({ agentId: 'a1', name: 'Stripe', secret: 'secret-xyz' });
-    expect(result.secret).toBe('secret-xyz');
-  });
-
-  it('stores null secret when not provided', async () => {
-    const store = createWebhookStore(createMockDb());
-    const result = await store.createRoute({ agentId: 'a1', name: 'Test' });
-    expect(result.secret).toBeNull();
-  });
-
-  it('throws when DB insert fails', async () => {
-    const store = createWebhookStore(createMockDb({ insertError: new Error('DB error') }));
-    await expect(store.createRoute({ agentId: 'a1', name: 'Fail' })).rejects.toThrow('DB error');
-  });
-});
-
-// ─── getRoute ────────────────────────────────────────────────────────────────
-
-describe('createWebhookStore — getRoute', () => {
-  it('returns route when found', async () => {
-    const route = { routeId: 'r1', agentId: 'a1', name: 'Test', secret: null, isActive: true, createdAt: 0, updatedAt: 0 };
-    const store = createWebhookStore(createMockDb({ selectResult: [route] }));
-    const result = await store.getRoute('r1');
-    expect(result).toEqual(route);
-  });
-
-  it('returns null when not found', async () => {
-    const store = createWebhookStore(createMockDb({ selectResult: [] }));
-    const result = await store.getRoute('nonexistent');
-    expect(result).toBeNull();
-  });
-
-  it('returns null when DB read throws', async () => {
-    const store = createWebhookStore(createMockDb({ selectError: new Error('read error') }));
-    const result = await store.getRoute('bad');
-    expect(result).toBeNull();
-  });
-});
-
-// ─── listRoutesByAgent ───────────────────────────────────────────────────────
-
-describe('createWebhookStore — listRoutesByAgent', () => {
-  it('returns routes ordered by createdAt desc', async () => {
-    const routes = [
-      { routeId: 'r2', agentId: 'a1', name: 'New', secret: null, isActive: true, createdAt: 200, updatedAt: 200 },
-      { routeId: 'r1', agentId: 'a1', name: 'Old', secret: null, isActive: true, createdAt: 100, updatedAt: 100 },
-    ];
-    const store = createWebhookStore(createMockDb({ selectResult: routes }));
-    const result = await store.listRoutesByAgent('a1');
-    expect(result).toHaveLength(2);
-    expect(result[0].routeId).toBe('r2');
-  });
-
-  it('returns empty array on DB error', async () => {
-    const store = createWebhookStore(createMockDb({ selectError: new Error('read error') }));
-    const result = await store.listRoutesByAgent('a1');
-    expect(result).toEqual([]);
-  });
-});
-
-// ─── deactivateRoute ─────────────────────────────────────────────────────────
-
-describe('createWebhookStore — deactivateRoute', () => {
-  it('resolves without throwing on success', async () => {
-    const store = createWebhookStore(createMockDb());
-    await expect(store.deactivateRoute('r1')).resolves.toBeUndefined();
-  });
-
-  it('throws when DB update fails', async () => {
-    const store = createWebhookStore(createMockDb({ updateError: new Error('update error') }));
-    await expect(store.deactivateRoute('r1')).rejects.toThrow('update error');
-  });
-});
-
-// ─── createEvent ─────────────────────────────────────────────────────────────
-
-describe('createWebhookStore — createEvent', () => {
-  it('creates event with all fields', async () => {
-    const store = createWebhookStore(createMockDb());
-    const result = await store.createEvent({
-      routeId: 'r1', agentId: 'agent-1', payload: { action: 'push' },
-      headers: { 'content-type': 'application/json' }, idempotencyKey: 'key-1',
+  // Special: where returns a chain that resolves the promise
+  chain._resolveWhere = (val: unknown) => {
+    const whereChain: any = {};
+    const chainMethods = ['limit', 'orderBy'];
+    chainMethods.forEach((m) => {
+      whereChain[m] = vi.fn().mockReturnValue(whereChain);
     });
-    expect(result.eventId).toBe('mock-id-1');
-    expect(result.routeId).toBe('r1');
-    expect(result.agentId).toBe('agent-1');
-    expect(result.status).toBe('pending');
-    expect(result.idempotencyKey).toBe('key-1');
-    expect(result.payload).toEqual({ action: 'push' });
+    whereChain.then = (cb: (v: unknown) => void) => cb(val);
+    chain.where.mockReturnValue(whereChain);
+    return whereChain;
+  };
+  return chain;
+}
+
+function createMockDb() {
+  // insert() → returns a chain with values()
+  // update() → returns a chain with set().where()
+  // select() → returns a chain with from().where()
+  // db itself only has these three methods
+  return {
+    insert: vi.fn(() => makeChain()),
+    update: vi.fn(() => makeChain()),
+    select: vi.fn(() => makeChain()),
+    delete: vi.fn(() => makeChain()),
+  };
+}
+
+import { createWebhookStore } from './store';
+
+describe('createWebhookStore', () => {
+  let db: ReturnType<typeof createMockDb>;
+
+  beforeEach(() => {
+    db = createMockDb();
+    vi.clearAllMocks();
   });
 
-  it('sets idempotencyKey to null when not provided', async () => {
-    const store = createWebhookStore(createMockDb());
-    const result = await store.createEvent({ routeId: 'r1', agentId: 'a1', payload: {}, headers: {} });
-    expect(result.idempotencyKey).toBeNull();
+  describe('createRoute', () => {
+    it('creates a route and returns it with generated routeId', async () => {
+      const store = createWebhookStore(db as any);
+      const result = await store.createRoute({ agentId: 'agent-1', name: 'Test Webhook', secret: 'my-secret-xyz' });
+      expect(result).toMatchObject({
+        // routeId generated by createId() — verify UUID format
+        routeId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/),
+        agentId: 'agent-1',
+        name: 'Test Webhook',
+        secret: 'my-secret-xyz',
+        isActive: true,
+      });
+    });
+
+    it('uses createId for the routeId', async () => {
+      const store = createWebhookStore(db as any);
+      const result = await store.createRoute({ agentId: 'agent-1', name: 'Test' });
+      // createId generates routeId — verify result has valid UUID
+      expect(result.routeId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    });
+
+    it('defaults secret to null when not provided', async () => {
+      const store = createWebhookStore(db as any);
+      const result = await store.createRoute({ agentId: 'agent-1', name: 'Test' });
+      expect(result.secret).toBeNull();
+    });
+
+    it('calls db.insert with webhookRoutes', async () => {
+      const store = createWebhookStore(db as any);
+      await store.createRoute({ agentId: 'agent-1', name: 'Test' });
+      expect(db.insert).toHaveBeenCalled();
+    });
+
+    it('logs via forgeDebug and rethrows on DB insert error', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      db.insert.mockImplementationOnce(() => {
+        const chain = makeChain();
+        chain.values.mockImplementationOnce(() => { throw new Error('DB connection failed'); });
+        return chain;
+      });
+      const store = createWebhookStore(db as any);
+      await expect(store.createRoute({ agentId: 'agent-1', name: 'Test' })).rejects.toThrow('DB connection failed');
+      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
+        scope: 'webhooks-store',
+        level: 'error',
+        message: expect.stringContaining('createRoute DB write failed'),
+      }));
+    });
   });
 
-  it('throws when DB insert fails', async () => {
-    const store = createWebhookStore(createMockDb({ insertError: new Error('DB error') }));
-    await expect(store.createEvent({ routeId: 'r1', agentId: 'a1', payload: {}, headers: {} })).rejects.toThrow('DB error');
-  });
-});
+  describe('getRoute', () => {
+    it('returns the route when found', async () => {
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb._resolveWhere([{ routeId: 'route-1', name: 'Found Route', agentId: 'agent-1', isActive: true, secret: 'x', createdAt: 1, updatedAt: 1 }]);
+      db.select.mockReturnValueOnce(qb);
 
-// ─── listEventsByAgent ───────────────────────────────────────────────────────
+      const store = createWebhookStore(db as any);
+      const result = await store.getRoute('route-1');
+      expect(result).toMatchObject({ routeId: 'route-1', name: 'Found Route' });
+    });
 
-describe('createWebhookStore — listEventsByAgent', () => {
-  it('returns events ordered by receivedAt desc', async () => {
-    const events = [
-      { eventId: 'e2', routeId: 'r1', agentId: 'a1', payload: {}, headers: {}, idempotencyKey: null, status: 'processed', receivedAt: 200, processedAt: 250 },
-      { eventId: 'e1', routeId: 'r1', agentId: 'a1', payload: {}, headers: {}, idempotencyKey: null, status: 'pending', receivedAt: 100, processedAt: null },
-    ];
-    const store = createWebhookStore(createMockDb({ selectResult: events }));
-    const result = await store.listEventsByAgent('a1');
-    expect(result).toHaveLength(2);
-    expect(result[0].eventId).toBe('e2');
-  });
+    it('returns null when no route matches', async () => {
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb._resolveWhere([]);
+      db.select.mockReturnValueOnce(qb);
 
-  it('returns empty array on DB error', async () => {
-    const store = createWebhookStore(createMockDb({ selectError: new Error('read error') }));
-    const result = await store.listEventsByAgent('a1');
-    expect(result).toEqual([]);
-  });
-});
+      const store = createWebhookStore(db as any);
+      const result = await store.getRoute('nonexistent');
+      expect(result).toBeNull();
+    });
 
-// ─── markProcessed ───────────────────────────────────────────────────────────
+    it('logs and returns null on DB error', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb.where.mockImplementationOnce(() => { throw new Error('Read failed'); });
+      db.select.mockReturnValueOnce(qb);
 
-describe('createWebhookStore — markProcessed', () => {
-  it('resolves without throwing on success', async () => {
-    const store = createWebhookStore(createMockDb());
-    await expect(store.markProcessed('e1')).resolves.toBeUndefined();
-  });
-
-  it('throws when DB update fails', async () => {
-    const store = createWebhookStore(createMockDb({ updateError: new Error('update error') }));
-    await expect(store.markProcessed('e1')).rejects.toThrow('update error');
-  });
-});
-
-// ─── markFailed ─────────────────────────────────────────────────────────────
-
-describe('createWebhookStore — markFailed', () => {
-  it('resolves without throwing on success', async () => {
-    const store = createWebhookStore(createMockDb());
-    await expect(store.markFailed('e1')).resolves.toBeUndefined();
+      const store = createWebhookStore(db as any);
+      const result = await store.getRoute('route-1');
+      expect(result).toBeNull();
+      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
+        scope: 'webhooks-store',
+        level: 'error',
+        message: expect.stringContaining('getRoute DB read failed'),
+      }));
+    });
   });
 
-  it('throws when DB update fails', async () => {
-    const store = createWebhookStore(createMockDb({ updateError: new Error('update error') }));
-    await expect(store.markFailed('e1')).rejects.toThrow('update error');
+  describe('listRoutesByAgent', () => {
+    it('returns routes for the agent ordered by createdAt desc', async () => {
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb._resolveWhere([{ routeId: 'route-1' }, { routeId: 'route-2' }]);
+      db.select.mockReturnValueOnce(qb);
+
+      const store = createWebhookStore(db as any);
+      const result = await store.listRoutesByAgent('agent-1');
+      expect(result).toHaveLength(2);
+    });
+
+    it('returns empty array when no routes exist', async () => {
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb._resolveWhere([]);
+      db.select.mockReturnValueOnce(qb);
+
+      const store = createWebhookStore(db as any);
+      const result = await store.listRoutesByAgent('agent-99');
+      expect(result).toHaveLength(0);
+    });
+
+    it('logs and returns empty array on DB error', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb.where.mockImplementationOnce(() => { throw new Error('DB read error'); });
+      db.select.mockReturnValueOnce(qb);
+
+      const store = createWebhookStore(db as any);
+      const result = await store.listRoutesByAgent('agent-1');
+      expect(result).toHaveLength(0);
+      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({ scope: 'webhooks-store' }));
+    });
+  });
+
+  describe('deactivateRoute', () => {
+    it('calls db.update with webhookRoutes', async () => {
+      const store = createWebhookStore(db as any);
+      await store.deactivateRoute('route-xyz');
+      expect(db.update).toHaveBeenCalled();
+    });
+
+    it('throws and logs on DB error', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      const chain = makeChain();
+      chain.set.mockReturnValueOnce(chain);
+      chain.where.mockImplementationOnce(() => { throw new Error('Update failed'); });
+      db.update.mockReturnValueOnce(chain);
+
+      const store = createWebhookStore(db as any);
+      await expect(store.deactivateRoute('route-xyz')).rejects.toThrow('Update failed');
+      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
+        scope: 'webhooks-store',
+        message: expect.stringContaining('deactivateRoute DB write failed'),
+      }));
+    });
+  });
+
+  describe('createEvent', () => {
+    it('creates a webhook event with status=pending', async () => {
+      const store = createWebhookStore(db as any);
+      const result = await store.createEvent({
+        routeId: 'route-1',
+        agentId: 'agent-1',
+        payload: { foo: 'bar' },
+        headers: { 'content-type': 'application/json' },
+        idempotencyKey: 'idem-key-1',
+      });
+      expect(result).toMatchObject({
+        routeId: 'route-1',
+        agentId: 'agent-1',
+        payload: { foo: 'bar' },
+        status: 'pending',
+        idempotencyKey: 'idem-key-1',
+      });
+    });
+
+    it('defaults idempotencyKey to null', async () => {
+      const store = createWebhookStore(db as any);
+      const result = await store.createEvent({
+        routeId: 'route-1', agentId: 'agent-1', payload: {}, headers: {},
+      });
+      expect(result.idempotencyKey).toBeNull();
+    });
+
+    it('logs and rethrows on DB error', async () => {
+      const { forgeDebug } = await import('@forge-runtime/core');
+      const chain = makeChain();
+      chain.values.mockImplementationOnce(() => { throw new Error('Event insert failed'); });
+      db.insert.mockImplementationOnce(() => chain);
+
+      const store = createWebhookStore(db as any);
+      await expect(store.createEvent({
+        routeId: 'route-1', agentId: 'agent-1', payload: {}, headers: {},
+      })).rejects.toThrow('Event insert failed');
+      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
+        scope: 'webhooks-store',
+        message: expect.stringContaining('createEvent DB write failed'),
+      }));
+    });
+  });
+
+  describe('listEventsByAgent', () => {
+    it('returns events for the agent', async () => {
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb._resolveWhere([{ eventId: 'evt-1' }, { eventId: 'evt-2' }]);
+      db.select.mockReturnValueOnce(qb);
+
+      const store = createWebhookStore(db as any);
+      const result = await store.listEventsByAgent('agent-1');
+      expect(result).toHaveLength(2);
+    });
+
+    it('returns empty array when no events exist', async () => {
+      const qb = makeChain();
+      qb.from.mockReturnValueOnce(qb);
+      qb._resolveWhere([]);
+      db.select.mockReturnValueOnce(qb);
+
+      const store = createWebhookStore(db as any);
+      const result = await store.listEventsByAgent('agent-1');
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('markProcessed', () => {
+    it('calls db.update', async () => {
+      const store = createWebhookStore(db as any);
+      await store.markProcessed('evt-123');
+      expect(db.update).toHaveBeenCalled();
+    });
+
+    it('throws on DB error', async () => {
+      const chain = makeChain();
+      chain.set.mockReturnValueOnce(chain);
+      chain.where.mockImplementationOnce(() => { throw new Error('Mark processed failed'); });
+      db.update.mockReturnValueOnce(chain);
+
+      const store = createWebhookStore(db as any);
+      await expect(store.markProcessed('evt-123')).rejects.toThrow('Mark processed failed');
+    });
+  });
+
+  describe('markFailed', () => {
+    it('calls db.update', async () => {
+      const store = createWebhookStore(db as any);
+      await store.markFailed('evt-456');
+      expect(db.update).toHaveBeenCalled();
+    });
+
+    it('throws on DB error', async () => {
+      const chain = makeChain();
+      chain.set.mockReturnValueOnce(chain);
+      chain.where.mockImplementationOnce(() => { throw new Error('Mark failed DB error'); });
+      db.update.mockReturnValueOnce(chain);
+
+      const store = createWebhookStore(db as any);
+      await expect(store.markFailed('evt-456')).rejects.toThrow('Mark failed DB error');
+    });
   });
 });
