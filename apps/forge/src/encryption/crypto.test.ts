@@ -1,12 +1,12 @@
-import crypto from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
+import crypto from 'node:crypto';
 import { decryptSecret, encryptSecret } from './crypto';
 
 describe('crypto', () => {
   const originalKey = process.env.ENCRYPTION_KEY;
 
   beforeEach(() => {
+    vi.stubGlobal('forgeDebug', vi.fn());
     vi.resetModules();
   });
 
@@ -49,11 +49,11 @@ describe('crypto', () => {
       const { encryptSecret: enc, decryptSecret: dec } = await import('./crypto');
       let encMsg = '';
       let decMsg = '';
-      try { enc('test'); } catch (e: any) { encMsg = e.message; }
+      try { enc('test'); } catch (e: unknown) { encMsg = (e as Error).message; }
       vi.resetModules();
       process.env.ENCRYPTION_KEY = Buffer.from('too-long-key-that-exceeds-32-bytes').toString('base64');
       const { decryptSecret: dec2 } = await import('./crypto');
-      try { dec2('test'); } catch (e: any) { decMsg = e.message; }
+      try { dec2('test'); } catch (e: unknown) { decMsg = (e as Error).message; }
       expect(encMsg).toBe(decMsg);
     });
   });
@@ -67,7 +67,6 @@ describe('crypto', () => {
       const { encryptSecret: fn } = await import('./crypto');
       const result = fn('my secret');
       expect(typeof result).toBe('string');
-      // base64 of at least 16 (IV) + 1 (content) + 16 (tag) = 33+ bytes
       expect(Buffer.from(result, 'base64').length).toBeGreaterThan(32);
     });
 
@@ -117,11 +116,13 @@ describe('crypto', () => {
       expect(() => fn('not-valid-base64!!!')).toThrow();
     });
 
-    it('throws when ciphertext is tampered (auth tag mismatch)', async () => {
+    it('throws on tampered ciphertext (wrong tag)', async () => {
       process.env.ENCRYPTION_KEY = validKey;
       const { encryptSecret: enc, decryptSecret: dec } = await import('./crypto');
-      const tampered = Buffer.from(enc('secret')).toString('base64').replace('A', 'B').replace('a', 'b');
-      expect(() => dec(tampered)).toThrow();
+      const ct = Buffer.from(enc('test'));
+      // Flip last byte to corrupt the auth tag
+      ct[ct.length - 1] ^= 0xff;
+      expect(() => fn(Buffer.from(ct).toString('base64'))).toThrow();
     });
   });
 });

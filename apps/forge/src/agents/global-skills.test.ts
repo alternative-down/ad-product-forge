@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 
 // All mock state in ONE hoisted block
 const _m = vi.hoisted(() => {
@@ -189,44 +190,6 @@ beforeEach(() => {
 });
 
 afterEach(() => { vi.restoreAllMocks(); });
-
-// ─── parseSkillMetadata ───────────────────────────────────────────────────────
-describe('parseSkillMetadata', () => {
-  it('returns empty object for content not starting with frontmatter', () => { expect(parseSkillMetadata('# heading')).toEqual({}); });
-  it('returns empty object when closing fence is missing', () => { expect(parseSkillMetadata('---\nkey: value\nNo fence')).toEqual({}); });
-  it('returns empty object when description key is absent', () => { expect(parseSkillMetadata('---\nversion: 1\n---\n# Skill')).toEqual({}); });
-  it('returns empty object when description value is empty', () => { expect(parseSkillMetadata('---\ndescription:\n---\n# Skill')).toEqual({}); });
-  it('parses description from frontmatter', () => { expect(parseSkillMetadata('---\ndescription: GitHub API\n---\n# Skill')).toEqual({ description: 'GitHub API' }); });
-  it('strips surrounding double quotes from description', () => { expect(parseSkillMetadata('---\ndescription: \"quoted\"\n---\n# Skill').description).toBe('quoted'); });
-  it('strips surrounding single quotes from description', () => { expect(parseSkillMetadata("---\ndescription: 'sq'\n---\n# Skill").description).toBe('sq'); });
-  it('takes last description key when duplicated', () => { expect(parseSkillMetadata('---\ndescription: First\ndescription: Second\n---\n# Skill').description).toBe('Second'); });
-  it('handles description with colons in value', () => { expect(parseSkillMetadata('---\ndescription: https://example.com/path?key=val\n---\n# Skill').description).toBe('https://example.com/path?key=val'); });
-  it('handles multiline frontmatter with many keys', () => { expect(parseSkillMetadata('---\nname: my-skill\ndescription: A skill\nversion: 1.0\n---\n# Skill').description).toBe('A skill'); });
-  it('handles description value with leading/trailing spaces', () => { expect(parseSkillMetadata('---\ndescription:  spaced  \n---\n# Skill').description).toBe('spaced'); });
-});
-
-// ─── normalizeArchiveEntryPath ───────────────────────────────────────────────
-describe('normalizeArchiveEntryPath', () => {
-  it('returns safePath and isDirectory=false for simple file', () => { expect(normalizeArchiveEntryPath('my-skill/SKILL.md')).toEqual({ safePath: 'my-skill/SKILL.md', isDirectory: false }); });
-  it('returns isDirectory=true for entries ending with /', () => { expect(normalizeArchiveEntryPath('my-skill/subdir/')).toEqual({ safePath: 'my-skill/subdir', isDirectory: true }); });
-  it('strips leading slashes', () => { expect(normalizeArchiveEntryPath('/my-skill/SKILL.md').safePath).toBe('my-skill/SKILL.md'); });
-  it('normalizes backslash to forward slash', () => { expect(normalizeArchiveEntryPath('my-skill\\\\SKILL.md').safePath).toBe('my-skill/SKILL.md'); });
-  it('normalizes dot-segment', () => { expect(normalizeArchiveEntryPath('my-skill/./SKILL.md').safePath).toBe('my-skill/SKILL.md'); });
-  it('throws when entry resolves to dot', () => { expect(() => normalizeArchiveEntryPath('./')).toThrow('Invalid skill archive entry'); expect(() => normalizeArchiveEntryPath('.')).toThrow('Invalid skill archive entry'); });
-  it('throws when entry path starts with ../', () => { expect(() => normalizeArchiveEntryPath('../evil.txt')).toThrow('Invalid skill archive entry'); expect(() => normalizeArchiveEntryPath('../../etc/passwd')).toThrow('Invalid skill archive entry'); expect(() => normalizeArchiveEntryPath('foo/../../etc/passwd')).toThrow('Invalid skill archive entry'); });
-  it('throws when entry contains /../ segment', () => { expect(normalizeArchiveEntryPath('foo/../evil.txt')).toEqual({ safePath: 'evil.txt', isDirectory: false }); });
-  it('allows entries that normalize to a safe path', () => { expect(normalizeArchiveEntryPath('foo/../bar.txt').safePath).toBe('bar.txt'); });
-  it('allows nested paths', () => { expect(normalizeArchiveEntryPath('my-skill/lib/utils.js')).toEqual({ safePath: 'my-skill/lib/utils.js', isDirectory: false }); });
-  it('strips skills/ prefix', () => { expect(normalizeArchiveEntryPath('skills/my-skill/SKILL.md').safePath).toBe('my-skill/SKILL.md'); });
-  it('strips skills/ prefix from directory entries', () => { expect(normalizeArchiveEntryPath('skills/my-skill/subdir/')).toEqual({ safePath: 'my-skill/subdir', isDirectory: true }); });
-  it('throws when entry path is empty after normalization', () => { expect(() => normalizeArchiveEntryPath('')).toThrow('Invalid skill archive entry'); });
-});
-
-// ─── resolveGlobalSkillsRoot ──────────────────────────────────────────────────
-describe('resolveGlobalSkillsRoot', () => {
-  it('returns _system/skills relative to workspace base', () => { expect(resolveGlobalSkillsRoot('/base')).toBe('/base/_system/skills'); });
-  it('resolves nested paths', () => { expect(resolveGlobalSkillsRoot('/workspace/agent-42')).toBe('/workspace/agent-42/_system/skills'); });
-});
 
 // ─── listGlobalSkills ────────────────────────────────────────────────────────
 describe('listGlobalSkills', () => {

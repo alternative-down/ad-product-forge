@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 import { createCoolifyManager } from '../manager';
 
 const mockGetProviderConfig = vi.hoisted(() => vi.fn());

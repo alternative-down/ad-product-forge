@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
+vi.stubGlobal('forgeDebug', vi.fn());
 
 // ── vi.hoisted must be at module top level ─────────────────────────────────
 const mockMemoryStore = vi.hoisted(() => ({
@@ -6,6 +7,7 @@ const mockMemoryStore = vi.hoisted(() => ({
   getMessages: vi.fn(),
   insertMessages: vi.fn(),
 }));
+const mockForgeDebug = vi.hoisted(() => vi.fn());
 const mockRuntimeMemory = vi.hoisted(() => ({
   longTermMemoryRecall: null,
   getMessages: vi.fn(),
@@ -13,18 +15,20 @@ const mockRuntimeMemory = vi.hoisted(() => ({
 }));
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-vi.mock('@forge-runtime/core', () => {
+vi.mock('@forge-runtime/core', async () => {
+  const actual = await vi.importActual('@forge-runtime/core') as any;
   const mockSession = vi.fn();
   return {
+    ...actual,
     createRuntimeAgentSession: mockSession,
     createExternalAccountTools: vi.fn().mockReturnValue({}),
     toolsToRuntimeActions: vi.fn().mockReturnValue([]),
     toMastraSafeIdentifier: vi.fn((s: string) => s),
-    forgeDebug: vi.fn(),
+    forgeDebug: mockForgeDebug,
   };
 });
 
-vi.mock('../database', () => ({
+vi.mock('../database/client', () => ({
   getDatabase: vi.fn().mockReturnValue({}),
 }));
 

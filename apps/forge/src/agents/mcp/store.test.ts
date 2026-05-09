@@ -14,7 +14,7 @@ import {
 } from './store';
 
 // ─── module-level mocks ────────────────────────────────────────────────────────
-vi.mock('../../database', () => ({
+vi.mock('../../database/client', () => ({
   getDatabase: vi.fn(),
 }));
 
@@ -22,7 +22,7 @@ vi.mock('nanoid', () => ({
   nanoid: vi.fn(() => 'mock-nanoid-id'),
 }));
 
-import { getDatabase } from '../../database';
+import { getDatabase } from '../../database/client';
 
 // Builds a drizzle-like query chain that works with both "no filter" and
 // ".where()" code paths.

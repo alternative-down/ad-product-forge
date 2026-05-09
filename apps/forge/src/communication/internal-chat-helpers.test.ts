@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+vi.stubGlobal('forgeDebug', vi.fn());
 import {
   buildAgentAccountDescription,
   buildConversationParticipantNames,

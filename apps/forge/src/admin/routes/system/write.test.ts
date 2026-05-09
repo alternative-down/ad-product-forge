@@ -188,6 +188,7 @@ describe('registerSystemWriteRoutes', () => {
   let mockLoader: ReturnType<typeof makeMockLoader>;
 
   beforeEach(() => {
+    vi.stubGlobal('forgeDebug', vi.fn());
     mockServer = makeMockHttpServer();
     mockDb = makeMockDb();
     mockSystemSettings = makeMockSystemSettings();

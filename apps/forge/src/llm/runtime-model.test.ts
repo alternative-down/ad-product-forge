@@ -16,7 +16,8 @@ vi.mock('@forge-runtime/core', () => ({
   createOAuthGateway: mocks.createOAuthGateway,
   OAUTH_GATEWAY_ID: mocks.OAUTH_GATEWAY_ID,
   wrapAnthropicPromptCacheModel: mocks.wrapAnthropicPromptCacheModel,
-  AgentConfig: {} as any // type import,
+  AgentConfig: {} as any, // type import,
+  forgeDebug: vi.fn(),
 }));
 
 vi.mock('@ai-sdk/anthropic', () => ({

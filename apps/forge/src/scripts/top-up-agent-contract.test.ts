@@ -13,7 +13,8 @@ vi.mock('../agents/top-up-agent-contract', () => ({
 }));
 
 // Re-import after mocking
-import '../database/schema';
+vi.mock('../database/client', () => ({ getDatabase: vi.fn() }));
+import '../database/client';
 
 describe('top-up-agent-contract CLI', () => {
   beforeEach(() => {
@@ -22,7 +23,7 @@ describe('top-up-agent-contract CLI', () => {
 
   describe('cliInputSchema', () => {
     it('accepts valid input', async () => {
-      const { getDatabase, runMigrations } = await import('../database/schema');
+      const { getDatabase } = await import('../database/client');
       vi.spyOn(getDatabase() as any, 'query' as any, 'get').mockReturnValue({});
     });
   });
