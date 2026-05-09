@@ -320,6 +320,13 @@ export function createInternalChatService(
   }
   }
 
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
+  });
   // ── Account-scoped Conversation Listing ───────────────────────────────────
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
@@ -384,14 +391,6 @@ export function createInternalChatService(
 
   const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
   const requireConversationMembership = serviceHelpers.requireConversationMembership;
-
-  const listing = createInternalChatListing(db, {
-    getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
-  });
 
   const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
   const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
