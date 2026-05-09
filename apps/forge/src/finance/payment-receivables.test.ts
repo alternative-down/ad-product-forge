@@ -52,11 +52,22 @@ function createMockDb() {
     };
   }
 
+  function transaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T> {
+    // Transaction runs synchronously on the same stores for test purposes
+    return fn({
+      insert,
+      update,
+      select,
+      query: { paymentTransactions: { findFirst } },
+    });
+  }
+
   return {
     insert,
     update,
     select,
     query: { paymentTransactions: { findFirst } },
+    transaction,
     _ledgerStore: ledgerStore,
     _txStore: txStore,
   } as {
@@ -66,6 +77,7 @@ function createMockDb() {
     query: { paymentTransactions: { findFirst: (opts: { where?: unknown }) => Promise<Record<string, unknown> | null> } };
     _ledgerStore: Record<string, unknown>[];
     _txStore: Record<string, unknown>[];
+    transaction: typeof transaction;
   };
 }
 
