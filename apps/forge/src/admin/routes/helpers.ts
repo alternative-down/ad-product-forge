@@ -177,6 +177,7 @@ export async function clearAgentHistory(opts: {
 
   const agentDatabasePath = `${workspaceBasePath}/${agentId}/database.db`;
   const client = createClient({ url: `file:${agentDatabasePath}` });
+    client.execute('PRAGMA foreign_keys = ON');
   const mastraAgentId = toMastraSafeIdentifier(agentId);
   const conversationStore = new LibsqlConversationStore({
     client,

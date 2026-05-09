@@ -270,6 +270,7 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
     const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
+    client.execute('PRAGMA foreign_keys = ON');
     const conversationStore = new LibsqlConversationStore({
       client,
       tablePrefix: threadId,
@@ -342,6 +343,7 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
   const client: ClosableLibsqlClient = createClient({
     url: `file:${agentDatabasePath}`,
   });
+  client.execute('PRAGMA foreign_keys = ON');
   const conversationStore = new LibsqlConversationStore({
     client,
     tablePrefix: mastraAgentId,

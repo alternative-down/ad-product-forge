@@ -528,6 +528,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({ url: `file:${agentDatabasePath}` });
+    client.execute('PRAGMA foreign_keys = ON');
     const conversationStore = new LibsqlConversationStore({ client, tablePrefix: mastraAgentId });
 
     try {
