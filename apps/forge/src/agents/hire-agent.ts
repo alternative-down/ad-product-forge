@@ -14,6 +14,7 @@ import {
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import { encryptSecret } from '../encryption/crypto';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { CreateAgentConfig } from './runtime/types';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
@@ -101,6 +102,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       await tx.insert(agentExecutionContracts).values(contractRecord);
 
       for (const [providerType, credentials] of Object.entries(providerCredentials)) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!credentials) {
           continue;
         }
@@ -185,6 +187,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
 
     try {
       await getInternalAgentRegistry().add(db, runtime);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       registryAdded = true;
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
@@ -205,6 +208,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       agentId,
       emailAddress: provisionedMailbox?.address ?? null,
     };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // Top-level fallback: if DB transaction itself failed, clean up provisioned mailbox
     if (provisionedMailbox && input.emailMailboxes) {

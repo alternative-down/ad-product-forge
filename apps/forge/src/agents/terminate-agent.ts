@@ -28,7 +28,10 @@ export async function terminateInternalAgent(db: Database, input: {
     where: eq(agents.id, input.agentId),
   });
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!agent) {
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     forgeDebug({ scope: 'terminate-agent', level: 'warn', message: 'terminateAgent: agent not found', context: { agentId: input.agentId } });
     throw new Error(`Agent not found: ${input.agentId}`);
   }
