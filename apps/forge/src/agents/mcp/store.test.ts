@@ -274,3 +274,85 @@ describe('deleteAgentMcpConfig', () => {
     expect(db.delete).toHaveBeenCalledOnce();
   });
 });
+// ─── getAgentMcpServers tests ─────────────────────────────────────────────────
+
+describe('getAgentMcpServers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns active MCP server configs for an agent with matching active servers', async () => {
+    const mockRows = [
+      {
+        config: { id: 'cfg-1', agentId: 'agent-1', serverId: 'srv-1', isActive: 1 },
+        server: { id: 'srv-1', name: 'Filesystem', command: 'npx', args: [], isActive: 1 },
+      },
+      {
+        config: { id: 'cfg-2', agentId: 'agent-1', serverId: 'srv-2', isActive: 1 },
+        server: { id: 'srv-2', name: 'Memory', command: 'node', args: [], isActive: 1 },
+      },
+    ];
+
+    const mockDb = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(() =>
+              Object.assign(Promise.resolve(mockRows), {
+                where: vi.fn(),
+              }),
+            ),
+          })),
+        })),
+      })),
+    };
+
+    vi.mocked(getDatabase).mockReturnValue(mockDb as ReturnType<typeof getDatabase>);
+
+    const { getAgentMcpServers } = await import('./store');
+    const result = await getAgentMcpServers('agent-1');
+
+    expect(result).toHaveLength(2);
+    expect(result[0].config.agentId).toBe('agent-1');
+    expect(result[0].server.name).toBe('Filesystem');
+  });
+
+  it('returns empty array when agent has no active MCP configs', async () => {
+    const mockDb = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(() =>
+              Object.assign(Promise.resolve([]), { where: vi.fn() }),
+            ),
+          })),
+        })),
+      })),
+    };
+
+    vi.mocked(getDatabase).mockReturnValue(mockDb as ReturnType<typeof getDatabase>);
+
+    const { getAgentMcpServers } = await import('./store');
+    const result = await getAgentMcpServers('agent-no-configs');
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('throws and logs when database query fails', async () => {
+    const dbError = new Error('SQLITE_CONSTRAINT');
+    const mockDb = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(() => Promise.reject(dbError)),
+          })),
+        })),
+      })),
+    };
+
+    vi.mocked(getDatabase).mockReturnValue(mockDb as ReturnType<typeof getDatabase>);
+
+    const { getAgentMcpServers } = await import('./store');
+    await expect(getAgentMcpServers('agent-1')).rejects.toThrow('SQLITE_CONSTRAINT');
+  });
+});

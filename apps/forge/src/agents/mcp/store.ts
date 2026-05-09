@@ -191,19 +191,29 @@ export async function deleteAgentMcpConfig(id: string): Promise<void> {
 
 export async function getAgentMcpServers(agentId: string): Promise<{ config: AgentMcpConfig; server: McpServerConfig }[]> {
   const db = getDatabase();
-  
-  const results = await db
-    .select({
-      config: agentMcpConfigs,
-      server: mcpServerConfigs,
-    })
-    .from(agentMcpConfigs)
-    .innerJoin(mcpServerConfigs, eq(agentMcpConfigs.serverId, mcpServerConfigs.id))
-    .where(and(
-      eq(agentMcpConfigs.agentId, agentId),
-      eq(agentMcpConfigs.isActive, 1),
-      eq(mcpServerConfigs.isActive, 1)
-    ));
-  
-  return results;
+
+  try {
+    const results = await db
+      .select({
+        config: agentMcpConfigs,
+        server: mcpServerConfigs,
+      })
+      .from(agentMcpConfigs)
+      .innerJoin(mcpServerConfigs, eq(agentMcpConfigs.serverId, mcpServerConfigs.id))
+      .where(and(
+        eq(agentMcpConfigs.agentId, agentId),
+        eq(agentMcpConfigs.isActive, 1),
+        eq(mcpServerConfigs.isActive, 1)
+      ));
+
+    return results;
+  } catch (err) {
+    forgeDebug({
+      scope: 'mcp-store',
+      level: 'error',
+      runtimeId: agentId,
+      message: 'getAgentMcpServers failed: ' + (err instanceof Error ? err.message : String(err)),
+    });
+    throw err;
+  }
 }
