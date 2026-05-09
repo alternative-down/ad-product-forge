@@ -131,7 +131,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         roleDescription: input.roleDescription,
       });
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
       // Compensating transaction: rollback DB records (no external ops succeeded yet)
       await db.transaction(async (tx) => {
         await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
@@ -143,14 +143,14 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
       }
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: error instanceof Error ? error.message : String(error) });
+      throw error;
     }
 
     try {
       await input.schedules.createHeartbeatSchedule(agentId);
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
       // Compensating transaction: undo registerAgentAccount, then rollback DB
       try { await input.internalChat.deleteAgentAccount({ agentId }); } catch (e) {
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
@@ -165,8 +165,8 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
       }
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: error instanceof Error ? error.message : String(error) });
+      throw error;
     }
 
     let runtime;
@@ -181,7 +181,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         internalChat: input.internalChat,
       });
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
       // Compensating transaction: undo heartbeat schedule, undo chat account, rollback DB
       try { await input.schedules.removeAgent(agentId); } catch (e) {
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: removeAgent failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
@@ -199,8 +199,8 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
       }
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: error instanceof Error ? error.message : String(error) });
+      throw error;
     }
 
     try {
@@ -208,7 +208,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       registryAdded = true;
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
       // Compensating transaction: undo heartbeat schedule, undo chat account, rollback DB
       try { await input.schedules.removeAgent(agentId); } catch (e) {
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: removeAgent failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
@@ -226,8 +226,8 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
       }
       }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: error instanceof Error ? error.message : String(error) });
+      throw error;
     }
 
     return {
@@ -242,7 +242,9 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed (top-level)', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
       }
     }
-    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-    throw err;
+    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  } finally {
+    registryAdded = false;
   }
 }
