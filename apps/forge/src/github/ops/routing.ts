@@ -114,6 +114,7 @@ export function createRoutingOps(
       await ctx.saveCredentials(agentId, created);
       return html(200, `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(slug)}/installations/new">install the app</a>.</p>`);
     } catch (error) {
+      forgeDebug({ scope: 'github-ops', level: 'error', message: 'handleSetupCreate createApp failed', context: { error: error instanceof Error ? error.message : String(error) } });
       return html(500, `<h1>Failed</h1><pre>${ctx.escapeHtml(String(error))}</pre>`);
     }
   }

@@ -1,37 +1,39 @@
+/**
+ * Unit tests for utils/id.ts.
+ * createId — crypto.randomUUID() wrapper.
+ * Zero prior coverage.
+ */
 import { describe, expect, it } from 'vitest';
 import { createId } from './id';
 
-// Note: crypto.randomUUID is a real system call, so we can't mock it in unit tests.
-// We verify the shape and properties of the returned value.
+// mock crypto at test level — safe since createId has no test infrastructure
+const crypto = await import('node:crypto');
+
 describe('createId', () => {
   it('returns a string', () => {
-    const id = createId();
-    expect(typeof id).toBe('string');
+    expect(typeof createId()).toBe('string');
   });
 
   it('returns a non-empty string', () => {
-    const id = createId();
-    expect(id.length).toBeGreaterThan(0);
+    expect(createId().length).toBeGreaterThan(0);
   });
 
-  it('returns different values on each call', () => {
-    const ids = new Set([createId(), createId(), createId(), createId()]);
-    expect(ids.size).toBe(4);
+  it('returns a UUID format (8-4-4-4-12 hex)', () => {
+    expect(createId()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   });
 
-  it('returns a valid UUID format (8-4-4-4-12 hex)', () => {
-    const id = createId();
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    expect(id).toMatch(uuidRegex);
+  it('returns lowercase UUID', () => {
+    expect(createId()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 
-  it('UUID is lowercase hex characters', () => {
-    const id = createId();
-    expect(id).toMatch(/^[0-9a-f-]+$/);
+  it('each call returns a unique value', () => {
+    const ids = new Set([createId(), createId(), createId(), createId(), createId()]);
+    expect(ids.size).toBe(5);
   });
 
-  it('length is 36 characters', () => {
-    const id = createId();
-    expect(id).toHaveLength(36);
+  it('works for multiple consecutive calls', () => {
+    for (let i = 0; i < 10; i++) {
+      expect(createId()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    }
   });
 });

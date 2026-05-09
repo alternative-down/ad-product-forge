@@ -7,6 +7,7 @@
  */
 
 import { eq, desc, inArray } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
 import type { HttpHandler } from '../../../http/server';
 
 import type {Database} from '../../../database/schema';
@@ -36,12 +37,17 @@ export function registerAgentBaseRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const agent = await getAgent(agentId);
       if (!agent) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(agent);
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -55,6 +61,7 @@ export function registerAgentStepsRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/steps',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const limit = parseInt(request.query.get('limit') ?? '10', 10);
@@ -66,7 +73,11 @@ export function registerAgentStepsRoutes(
         offset,
       });
       return jsonResponse({ items: rows, hasMore: rows.length === limit });
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/steps", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -80,10 +91,15 @@ export function registerAgentConversationsRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/conversations',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       return jsonResponse(await listAgentRecentConversations(agentId));
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/conversations", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -97,10 +113,15 @@ export function registerAgentMemoryRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/memory',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       return jsonResponse(await getAgentRuntimeMemory(agentId));
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/memory", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -114,6 +135,7 @@ export function registerAgentMetricsRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/metrics',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const limit = parseInt(request.query.get('limit') ?? '10', 10);
@@ -123,7 +145,11 @@ export function registerAgentMetricsRoutes(
         limit,
       });
       return jsonResponse({ items: rows });
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/metrics", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -137,13 +163,18 @@ export function registerAgentContractRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/contracts',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const rows = await db.query.agentExecutionContracts.findMany({
         where: eq(agentExecutionContracts.agentId, agentId),
       });
       return jsonResponse({ items: rows });
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/contracts", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -157,6 +188,7 @@ export function registerAgentMcpRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/mcp-servers',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const agentMcpRows = await db.query.agentMcpConfigs.findMany({
@@ -188,7 +220,11 @@ export function registerAgentMcpRoutes(
           };
         }),
       });
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/mcp-servers", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -202,13 +238,18 @@ export function registerAgentSchedulesRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/schedules',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const rows = await db.query.agentSchedules.findMany({
         where: eq(agentSchedules.agentId, agentId),
       });
       return jsonResponse({ items: rows });
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/schedules", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }
 
@@ -222,6 +263,7 @@ export function registerAgentNotificationsRoutes(
     method: 'GET',
     path: '/admin/agents/:agentId/notifications',
     handler: async (request) => {
+      try {
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const limit = parseInt(request.query.get('limit') ?? '10', 10);
@@ -238,6 +280,10 @@ export function registerAgentNotificationsRoutes(
           read: n.readAt !== null,
         })),
       });
-    },
+      } catch (error) {
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/notifications", context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
+    }
   });
 }

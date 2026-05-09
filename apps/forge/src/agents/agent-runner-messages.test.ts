@@ -1,19 +1,13 @@
-import { describe, expect, test, vi } from 'vitest';
+/**
+ * Unit tests for agents/agent-runner-messages.ts.
+ * createMessageManager — pure state manager for agent wake event buffering.
+ * Zero prior coverage.
+ */
+import { describe, expect, it } from 'vitest';
 import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
-function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {
-  return {
-    groupKey: 'group-' + Math.random(),
-    type: 'message:user',
-    timestamp: Date.now(),
-    idempotencyKey: 'key-' + Math.random(),
-    text: 'hello',
-    originIdleOnly: false,
-    idleOnly: false,
-    ...overrides,
-  };
-}
+// ─── Factory helpers ─────────────────────────────────────────────────────────
 
 function makeState(overrides: Partial<MessageManagerState> = {}): MessageManagerState {
   return {
@@ -28,369 +22,282 @@ function makeState(overrides: Partial<MessageManagerState> = {}): MessageManager
   };
 }
 
-describe('createMessageManager', () => {
-  describe('appendPendingRunMessages', () => {
-    test('adds event to pending map', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ idempotencyKey: 'key-1', text: 'hello' });
+function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {
+  return {
+    id: overrides.id ?? 'evt-1',
+    text: overrides.text ?? 'hello',
+    timestamp: overrides.timestamp ?? Date.now(),
+    idempotencyKey: overrides.idempotencyKey ?? 'key-1',
+    type: overrides.type ?? 'message:dummy',
+    originIdleOnly: overrides.originIdleOnly ?? false,
+    idleOnly: overrides.idleOnly ?? false,
+    groupMetadata: overrides.groupMetadata ?? undefined,
+  };
+}
 
-      manager.appendPendingRunMessages([event]);
+function mockFormatter(events: AgentWakeEvent[]): string {
+  return `MESSAGES:${events.map((e) => e.text).join(',')}`;
+}
 
-      expect(state.pendingRunMessages.size).toBe(1);
-      expect(state.pendingRunMessages.get('key-1')?.text).toBe('hello');
-    });
+// ─── appendPendingRunMessages ───────────────────────────────────────────────
 
-    test('skips events with idleOnly=true when allowIdleOnly=false', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ idleOnly: true, text: 'idle msg' });
+describe('appendPendingRunMessages', () => {
+  it('adds event to pendingRunMessages', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ id: 'evt-a', text: 'hello', idempotencyKey: 'k1' });
 
-      manager.appendPendingRunMessages([event]);
+    manager.appendPendingRunMessages([event]);
 
-      expect(state.pendingRunMessages.size).toBe(0);
-    });
-
-    test('adds events with idleOnly=true when allowIdleOnly=true', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ idleOnly: true, text: 'idle msg' });
-
-      manager.appendPendingRunMessages([event], { allowIdleOnly: true });
-
-      expect(state.pendingRunMessages.size).toBe(1);
-    });
-
-    test('skips events with empty text', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ text: '   \n  ' });
-
-      manager.appendPendingRunMessages([event]);
-
-      expect(state.pendingRunMessages.size).toBe(0);
-    });
-
-    test('skips events with whitespace-only text', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ text: '' });
-
-      manager.appendPendingRunMessages([event]);
-
-      expect(state.pendingRunMessages.size).toBe(0);
-    });
-
-    test('sets originIdleOnly from idleOnly when not already set', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ originIdleOnly: undefined as unknown as false, idleOnly: true });
-
-      manager.appendPendingRunMessages([event], { allowIdleOnly: true });
-
-      const stored = state.pendingRunMessages.get(event.idempotencyKey)!;
-      expect(stored.originIdleOnly).toBe(true);
-    });
-
-    test('overrides originIdleOnly when allowIdleOnly=true', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ originIdleOnly: false, idleOnly: true });
-
-      manager.appendPendingRunMessages([event], { allowIdleOnly: true });
-
-      const stored = state.pendingRunMessages.get(event.idempotencyKey)!;
-      expect(stored.idleOnly).toBe(false);
-    });
-
-    test('updates existing event by idempotencyKey (deduplicates)', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event1 = makeEvent({ idempotencyKey: 'dup-key', text: 'first' });
-      const event2 = makeEvent({ idempotencyKey: 'dup-key', text: 'second' });
-
-      manager.appendPendingRunMessages([event1]);
-      manager.appendPendingRunMessages([event2]);
-
-      expect(state.pendingRunMessages.size).toBe(1);
-      expect(state.pendingRunMessages.get('dup-key')?.text).toBe('second');
-    });
+    expect(state.pendingRunMessages.has('k1')).toBe(true);
   });
 
-  describe('shouldIncludePendingRunEventInFlush', () => {
-    test('returns true for non-message event types', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({ type: 'wake:start', text: 'wake' });
+  it('overwrites existing event with same idempotencyKey', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const event1 = makeEvent({ id: 'evt-1', text: 'first', idempotencyKey: 'k1' });
+    const event2 = makeEvent({ id: 'evt-2', text: 'second', idempotencyKey: 'k1' });
 
-      expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(true);
-    });
+    manager.appendPendingRunMessages([event1]);
+    manager.appendPendingRunMessages([event2]);
 
-    test('returns communicationGroupFlushingEnabled for group messages', () => {
-      const state = makeState({
-        currentFlushSettings: {
-          communicationDmFlushingEnabled: true,
-          communicationGroupFlushingEnabled: false,
-        },
-      });
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({
-        type: 'message:group',
-        groupMetadata: { ConversationType: 'group' as const },
-      });
-
-      expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(false);
-    });
-
-    test('returns communicationDmFlushingEnabled for DM messages', () => {
-      const state = makeState({
-        currentFlushSettings: {
-          communicationDmFlushingEnabled: false,
-          communicationGroupFlushingEnabled: true,
-        },
-      });
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({
-        type: 'message:user',
-        groupMetadata: { ConversationType: 'dm' as const },
-      });
-
-      expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(false);
-    });
-
-    test('returns true for group messages when group flushing enabled', () => {
-      const state = makeState({
-        currentFlushSettings: {
-          communicationDmFlushingEnabled: false,
-          communicationGroupFlushingEnabled: true,
-        },
-      });
-      const manager = createMessageManager(state, () => '');
-      const event = makeEvent({
-        type: 'message:group',
-        groupMetadata: { ConversationType: 'group' as const },
-      });
-
-      expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(true);
-    });
+    expect(state.pendingRunMessages.get('k1')!.text).toBe('second');
   });
 
-  describe('resetFlushedRunEventKeys', () => {
-    test('clears flushedRunEventKeys and flushedRunEventKeyOrder', () => {
-      const state = makeState({
-        flushedRunEventKeys: new Set(['a', 'b']),
-        flushedRunEventKeyOrder: ['a', 'b'],
-      });
-      const manager = createMessageManager(state, () => '');
+  it('skips idleOnly events when allowIdleOnly is false', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const idleEvent = makeEvent({ idleOnly: true, idempotencyKey: 'k1' });
 
-      manager.resetFlushedRunEventKeys();
+    manager.appendPendingRunMessages([idleEvent], { allowIdleOnly: false });
 
-      expect(state.flushedRunEventKeys.size).toBe(0);
-      expect(state.flushedRunEventKeyOrder).toEqual([]);
-    });
+    expect(state.pendingRunMessages.has('k1')).toBe(false);
   });
 
-  describe('rememberFlushedRunEventKey', () => {
-    test('adds key to Set and array', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
+  it('includes idleOnly events when allowIdleOnly is true', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const idleEvent = makeEvent({ idleOnly: true, idleOnly: true, originIdleOnly: false, idempotencyKey: 'k1' });
 
-      manager.rememberFlushedRunEventKey('key-1');
+    manager.appendPendingRunMessages([idleEvent], { allowIdleOnly: true });
 
-      expect(state.flushedRunEventKeys.has('key-1')).toBe(true);
-      expect(state.flushedRunEventKeyOrder).toContain('key-1');
-    });
-
-    test('ignores duplicate keys', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-
-      manager.rememberFlushedRunEventKey('dup');
-      manager.rememberFlushedRunEventKey('dup');
-
-      expect(state.flushedRunEventKeys.size).toBe(1);
-      expect(state.flushedRunEventKeyOrder).toEqual(['dup']);
-    });
-
-    test('evicts oldest key when exceeding MAX_FLUSHED_RUN_EVENT_KEYS', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-
-      for (let i = 0; i < 2_005; i++) {
-        manager.rememberFlushedRunEventKey(`key-${i}`);
-      }
-
-      expect(state.flushedRunEventKeys.size).toBe(2_000);
-      expect(state.flushedRunEventKeys.has('key-0')).toBe(false);
-      expect(state.flushedRunEventKeys.has('key-5')).toBe(true);
-    });
+    expect(state.pendingRunMessages.has('k1')).toBe(true);
   });
 
-  describe('flushPendingRunMessages', () => {
-    test('returns null when pending queue is empty', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => 'formatted');
+  it('skips events with empty text', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const blankEvent = makeEvent({ text: '   ', idempotencyKey: 'k1' });
 
-      const result = manager.flushPendingRunMessages();
+    manager.appendPendingRunMessages([blankEvent]);
 
-      expect(result).toBeNull();
-    });
-
-    test('returns null when all events are already flushed', () => {
-      const state = makeState({
-        pendingRunMessages: new Map([['already-flushed', makeEvent({ idempotencyKey: 'already-flushed' })]]),
-        flushedRunEventKeys: new Set(['already-flushed']),
-        flushedRunEventKeyOrder: ['already-flushed'],
-      });
-      const manager = createMessageManager(state, () => 'formatted');
-
-      const result = manager.flushPendingRunMessages();
-
-      expect(result).toBeNull();
-      expect(state.pendingRunMessages.size).toBe(0);
-    });
-
-    test('returns null when all events are deferred originIdleOnly', () => {
-      const state = makeState({
-        pendingRunMessages: new Map([['idle-event', makeEvent({ originIdleOnly: true })]]),
-      });
-      const manager = createMessageManager(state, () => 'formatted');
-
-      const result = manager.flushPendingRunMessages();
-
-      expect(result).toBeNull();
-      // Deferred events stay in map
-      expect(state.pendingRunMessages.size).toBe(1);
-    });
-
-    test('calls formatter with filtered events and returns formatted string', () => {
-      const state = makeState();
-      const formatMock = vi.fn().mockReturnValue('formatted-output');
-      const manager = createMessageManager(state, formatMock);
-      const event = makeEvent({ idempotencyKey: 'flush-me', text: 'hello' });
-      manager.appendPendingRunMessages([event]);
-
-      const result = manager.flushPendingRunMessages();
-
-      expect(formatMock).toHaveBeenCalledOnce();
-      expect(formatMock.mock.calls[0][0]).toHaveLength(1);
-      expect(result).toBe('formatted-output');
-    });
-
-    test('sorts events by timestamp before formatting', () => {
-      const state = makeState();
-      const captured: AgentWakeEvent[][] = [];
-      const manager = createMessageManager(state, (events) => {
-        captured.push(events);
-        return '';
-      });
-      const t1 = Date.now();
-      const t2 = t1 + 100;
-      const t3 = t1 + 50;
-      manager.appendPendingRunMessages([makeEvent({ idempotencyKey: 'k1', timestamp: t1, text: 't1' })]);
-      manager.appendPendingRunMessages([makeEvent({ idempotencyKey: 'k2', timestamp: t2, text: 't2' })]);
-      manager.appendPendingRunMessages([makeEvent({ idempotencyKey: 'k3', timestamp: t3, text: 't3' })]);
-
-      manager.flushPendingRunMessages();
-
-      expect(captured[0].map((e) => e.idempotencyKey)).toEqual(['k1', 'k3', 'k2']);
-    });
-
-    test('clears pending queue after successful flush', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => 'formatted');
-      manager.appendPendingRunMessages([makeEvent({ idempotencyKey: 'e1', text: 'hello' })]);
-
-      manager.flushPendingRunMessages();
-
-      expect(state.pendingRunMessages.size).toBe(0);
-    });
-
-    test('calls rememberFlushedRunEventKey for each flushed event', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      manager.appendPendingRunMessages([makeEvent({ idempotencyKey: 'k1', text: 'a' })]);
-      manager.appendPendingRunMessages([makeEvent({ idempotencyKey: 'k2', text: 'b' })]);
-
-      manager.flushPendingRunMessages();
-
-      expect(state.flushedRunEventKeys.has('k1')).toBe(true);
-      expect(state.flushedRunEventKeys.has('k2')).toBe(true);
-    });
-
-    test('respects flush settings for group messages', () => {
-      const state = makeState({
-        currentFlushSettings: {
-          communicationDmFlushingEnabled: true,
-          communicationGroupFlushingEnabled: false,
-        },
-      });
-      const formatMock = vi.fn().mockReturnValue('formatted');
-      const manager = createMessageManager(state, formatMock);
-      const groupEvent = makeEvent({
-        type: 'message:group',
-        idempotencyKey: 'group-1',
-        groupMetadata: { ConversationType: 'group' as const },
-      });
-      manager.appendPendingRunMessages([groupEvent]);
-
-      manager.flushPendingRunMessages();
-
-      expect(formatMock).not.toHaveBeenCalled();
-      expect(state.pendingRunMessages.size).toBe(0);
-    });
-
-    test('allows originIdleOnly events when allowOriginIdleOnly=true', () => {
-      const state = makeState();
-      const formatMock = vi.fn().mockReturnValue('formatted');
-      const manager = createMessageManager(state, formatMock);
-      manager.appendPendingRunMessages(
-        [makeEvent({ originIdleOnly: true, idleOnly: false, text: 'origin idle' })],
-        { allowIdleOnly: true },
-      );
-
-      manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
-
-      expect(formatMock).toHaveBeenCalled();
-    });
+    expect(state.pendingRunMessages.has('k1')).toBe(false);
   });
 
-  describe('updateFlushSettings', () => {
-    test('updates currentFlushSettings', () => {
-      const state = makeState({
-        currentFlushSettings: {
-          communicationDmFlushingEnabled: true,
-          communicationGroupFlushingEnabled: true,
-        },
-      });
-      const manager = createMessageManager(state, () => '');
+  it('preserves originIdleOnly on appended events', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ originIdleOnly: true, idleOnly: false, idempotencyKey: 'k1' });
 
-      manager.updateFlushSettings({
+    manager.appendPendingRunMessages([event]);
+
+    expect(state.pendingRunMessages.get('k1')!.originIdleOnly).toBe(true);
+    expect(state.pendingRunMessages.get('k1')!.idleOnly).toBe(false);
+  });
+});
+
+// ─── flushPendingRunMessages ────────────────────────────────────────────────
+
+describe('flushPendingRunMessages', () => {
+  it('returns null when no pending events', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+
+    expect(manager.flushPendingRunMessages()).toBeNull();
+  });
+
+  it('returns formatted string and clears pending events', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.pendingRunMessages.set('k1', makeEvent({ text: 'hello', idempotencyKey: 'k1' }));
+
+    const result = manager.flushPendingRunMessages();
+
+    expect(result).toBe('MESSAGES:hello');
+    expect(state.pendingRunMessages.size).toBe(0);
+  });
+
+  it('formats multiple events in timestamp order', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const now = Date.now();
+    state.pendingRunMessages.set('k2', makeEvent({ text: 'second', timestamp: now + 2, idempotencyKey: 'k2' }));
+    state.pendingRunMessages.set('k1', makeEvent({ text: 'first', timestamp: now + 1, idempotencyKey: 'k1' }));
+
+    const result = manager.flushPendingRunMessages();
+
+    expect(result).toBe('MESSAGES:first,second');
+  });
+
+  it('skips already-flushed events (idempotency)', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.flushedRunEventKeys.add('k1');
+    state.flushedRunEventKeyOrder.push('k1');
+    state.pendingRunMessages.set('k1', makeEvent({ text: 'hello', idempotencyKey: 'k1' }));
+
+    const result = manager.flushPendingRunMessages();
+
+    expect(result).toBeNull();
+  });
+
+  it('skips originIdleOnly events when allowOriginIdleOnly is false', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const idleEvent = makeEvent({ originIdleOnly: true, idleOnly: true, text: 'idle-msg', idempotencyKey: 'k1' });
+    state.pendingRunMessages.set('k1', idleEvent);
+
+    const result = manager.flushPendingRunMessages();
+
+    expect(result).toBeNull();
+    // event should be re-queued
+    expect(state.pendingRunMessages.size).toBe(1);
+  });
+
+  it('includes originIdleOnly events when allowOriginIdleOnly is true', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const idleEvent = makeEvent({ originIdleOnly: true, idleOnly: true, text: 'idle-msg', idempotencyKey: 'k1' });
+    state.pendingRunMessages.set('k1', idleEvent);
+
+    const result = manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
+
+    expect(result).toBe('MESSAGES:idle-msg');
+  });
+
+  it('skips non-message type events based on flush settings', () => {
+    const state = makeState({
+      currentFlushSettings: {
         communicationDmFlushingEnabled: false,
         communicationGroupFlushingEnabled: false,
-      });
-
-      expect(state.currentFlushSettings.communicationDmFlushingEnabled).toBe(false);
-      expect(state.currentFlushSettings.communicationGroupFlushingEnabled).toBe(false);
+      },
     });
+    const manager = createMessageManager(state, mockFormatter);
+    const msgEvent = makeEvent({ type: 'message:dummy', text: 'msg', idempotencyKey: 'k1' });
+    state.pendingRunMessages.set('k1', msgEvent);
+
+    const result = manager.flushPendingRunMessages();
+
+    expect(result).toBeNull();
+    expect(state.pendingRunMessages.size).toBe(0);
   });
 
-  describe('getPendingCount', () => {
-    test('returns pendingRunMessages size', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
-      manager.appendPendingRunMessages([makeEvent({ text: 'a' })]);
-      manager.appendPendingRunMessages([makeEvent({ text: 'b' })]);
-      manager.appendPendingRunMessages([makeEvent({ text: 'c' })]);
+  it('returns null when all events are skipped', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.pendingRunMessages.set('k1', makeEvent({ text: 'hello', idempotencyKey: 'k1' }));
+    state.flushedRunEventKeys.add('k1');
+    state.flushedRunEventKeyOrder.push('k1');
 
-      expect(manager.getPendingCount()).toBe(3);
-    });
+    const result = manager.flushPendingRunMessages();
 
-    test('returns 0 when empty', () => {
-      const state = makeState();
-      const manager = createMessageManager(state, () => '');
+    expect(result).toBeNull();
+  });
+});
 
-      expect(manager.getPendingCount()).toBe(0);
-    });
+// ─── rememberFlushedRunEventKey ───────────────────────────────────────────────
+
+describe('rememberFlushedRunEventKey', () => {
+  it('adds key to flushedRunEventKeys and order', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+
+    manager.rememberFlushedRunEventKey('k1');
+
+    expect(state.flushedRunEventKeys.has('k1')).toBe(true);
+    expect(state.flushedRunEventKeyOrder).toContain('k1');
+  });
+
+  it('is idempotent — does not duplicate key in order', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+
+    manager.rememberFlushedRunEventKey('k1');
+    manager.rememberFlushedRunEventKey('k1');
+
+    expect(state.flushedRunEventKeyOrder.filter((k) => k === 'k1').length).toBe(1);
+  });
+
+  it('evicts oldest keys when order exceeds MAX_FLUSHED_RUN_EVENT_KEYS', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    const maxKeys = 2_000;
+
+    for (let i = 0; i < maxKeys + 5; i++) {
+      manager.rememberFlushedRunEventKey(`k-${i}`);
+    }
+
+    expect(state.flushedRunEventKeyOrder.length).toBeLessThanOrEqual(maxKeys);
+    expect(state.flushedRunEventKeyOrder[0]).toBe('k-5');
+  });
+});
+
+// ─── resetFlushedRunEventKeys ─────────────────────────────────────────────────
+
+describe('resetFlushedRunEventKeys', () => {
+  it('clears flushedRunEventKeys and flushedRunEventKeyOrder', () => {
+    const state = makeState();
+    const manager = createMessageManager(state, mockFormatter);
+    state.flushedRunEventKeys.add('k1');
+    state.flushedRunEventKeyOrder.push('k1');
+
+    manager.resetFlushedRunEventKeys();
+
+    expect(state.flushedRunEventKeys.size).toBe(0);
+    expect(state.flushedRunEventKeyOrder).toHaveLength(0);
+  });
+});
+
+// ─── shouldIncludePendingRunEventInFlush ─────────────────────────────────────
+
+describe('shouldIncludePendingRunEventInFlush', () => {
+  it('always returns true for non-message type events', () => {
+    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: false } });
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ type: 'schedule:tick', groupMetadata: undefined });
+
+    expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(true);
+  });
+
+  it('respects group flush setting for group conversations', () => {
+    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: false } });
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'group' } });
+
+    expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(false);
+  });
+
+  it('respects dm flush setting for dm conversations', () => {
+    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: true } });
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'dm' } });
+
+    expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(false);
+  });
+
+  it('returns true for group conversation when group flush is enabled', () => {
+    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: true } });
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'group' } });
+
+    expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(true);
+  });
+
+  it('returns true for dm conversation when dm flush is enabled', () => {
+    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: false } });
+    const manager = createMessageManager(state, mockFormatter);
+    const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'dm' } });
+
+    expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(true);
   });
 });

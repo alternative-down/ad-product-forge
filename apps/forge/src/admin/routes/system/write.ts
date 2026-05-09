@@ -361,6 +361,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
             }
             results.push({ providerId, synced: true });
           } catch (error) {
+            forgeDebug({ scope: 'admin', level: 'error', message: 'LLM provider sync failed', context: { error: error instanceof Error ? error.message : String(error) } });
             results.push({
               providerId,
               synced: false,

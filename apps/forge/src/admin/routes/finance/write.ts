@@ -3,7 +3,8 @@
  * POST routes for finance operations (investment, payable, ledger, recurring)
  */
 
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
+import { forgeDebug } from '@forge-runtime/core';
 import type { HttpRequest } from '../../../http/server';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
@@ -64,17 +65,24 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/investment/create',
     handler: async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, createInvestmentSchema);
-      const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : Date.now();
+      try {
+        const body = parseJsonBody(request.bodyText, createInvestmentSchema);
+        const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : Date.now();
 
-      await input.companyCash.recordCashIn({
-        type: 'owner-investment',
-        amountUsd: body.amountUsd,
-        description: body.description ?? 'Manual owner investment',
-        effectiveAt,
-      });
+        await input.companyCash.recordCashIn({
+          type: 'owner-investment',
+          amountUsd: body.amountUsd,
+          description: body.description ?? 'Manual owner investment',
+          effectiveAt,
+        });
 
-      return jsonResponse({ success: true });
+        return jsonResponse({ success: true });
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        if (error instanceof Error && error.message.startsWith('Invalid')) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -83,43 +91,49 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/payable/create',
     handler: async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, createPayableSchema);
-      const dueAt = new Date(body.dueAt).getTime();
+      try {
+        const body = parseJsonBody(request.bodyText, createPayableSchema);
+        const dueAt = new Date(body.dueAt).getTime();
 
-      if (!Number.isFinite(dueAt)) {
-        forgeDebug({ scope: 'admin-routes-finance-write', level: 'warn', message: 'createRecurringPayable: invalid dueAt', context: { dueAt: input.dueAt } });
-        throw new Error('Invalid payable dueAt');
-      }
+        if (!Number.isFinite(dueAt)) {
+          throw new Error('Invalid payable dueAt');
+        }
 
-      if (body.kind === 'single') {
-        const result = await input.companyCash.scheduleCashOut({
-          type: 'manual-payable',
+        if (body.kind === 'single') {
+          const result = await input.companyCash.scheduleCashOut({
+            type: 'manual-payable',
+            amountUsd: body.amountUsd,
+            description: body.description ?? body.name,
+            referenceType: 'manual-payable',
+            referenceId: createId(),
+            dueAt,
+          });
+
+          return jsonResponse({
+            kind: body.kind,
+            entryId: result.entryId,
+          }, 201);
+        }
+
+        const result = await input.companyPayables.createRecurringPayable({
+          name: body.name,
+          description: body.description,
           amountUsd: body.amountUsd,
-          description: body.description ?? body.name,
-          referenceType: 'manual-payable',
-          referenceId: createId(),
+          recurrencePeriod: body.recurrencePeriod ?? 'monthly',
           dueAt,
         });
 
         return jsonResponse({
           kind: body.kind,
+          payableId: result.payableId,
           entryId: result.entryId,
         }, 201);
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        if (error instanceof Error && error.message.startsWith('Invalid')) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
-
-      const result = await input.companyPayables.createRecurringPayable({
-        name: body.name,
-        description: body.description,
-        amountUsd: body.amountUsd,
-        recurrencePeriod: body.recurrencePeriod ?? 'monthly',
-        dueAt,
-      });
-
-      return jsonResponse({
-        kind: body.kind,
-        payableId: result.payableId,
-        entryId: result.entryId,
-      }, 201);
     },
   });
 
@@ -128,15 +142,21 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/ledger/post',
     handler: async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-      const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : undefined;
-      const result = await input.companyCash.postPlannedEntry(body.entryId, { effectiveAt });
+      try {
+        const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+        const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : undefined;
+        const result = await input.companyCash.postPlannedEntry(body.entryId, { effectiveAt });
 
-      await input.companyPayables.syncRecurringPayableOccurrence({
-        entryId: body.entryId,
-      });
+        await input.companyPayables.syncRecurringPayableOccurrence({
+          entryId: body.entryId,
+        });
 
-      return jsonResponse(result);
+        return jsonResponse(result);
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -145,14 +165,20 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/ledger/cancel',
     handler: async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-      const result = await input.companyCash.cancelPlannedEntry(body.entryId);
+      try {
+        const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
+        const result = await input.companyCash.cancelPlannedEntry(body.entryId);
 
-      await input.companyPayables.syncRecurringPayableOccurrence({
-        entryId: body.entryId,
-      });
+        await input.companyPayables.syncRecurringPayableOccurrence({
+          entryId: body.entryId,
+        });
 
-      return jsonResponse(result);
+        return jsonResponse(result);
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 
@@ -161,9 +187,15 @@ export function registerFinanceWriteRoutes(
     method: 'POST',
     path: '/admin/finance/recurring-payable/set-active',
     handler: async (request: HttpRequest) => {
-      const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
-      const result = await input.companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
-      return jsonResponse(result);
+      try {
+        const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
+        const result = await input.companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
+        return jsonResponse(result);
+      } catch (error) {
+        if (error instanceof ZodError) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error } });
+        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+      }
     },
   });
 }
