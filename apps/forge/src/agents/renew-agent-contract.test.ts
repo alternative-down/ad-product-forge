@@ -63,7 +63,10 @@ describe('renewAgentContract', () => {
   it('records cash in for refundable amount when fundedAt exists', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
     await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
-    expect(mockRecordCashIn).toHaveBeenCalledWith(expect.objectContaining({ type: 'agent-contract-renewal-refund', referenceType: 'agent-execution-contract' }));
+    expect(mockRecordCashIn).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'agent-contract-renewal-refund', referenceType: 'agent-execution-contract' }),
+      expect.any(Object),
+    );
   });
 
   it('does not record cash in when contract is not funded', async () => {

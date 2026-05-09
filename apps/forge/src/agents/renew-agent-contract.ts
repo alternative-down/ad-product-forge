@@ -1,7 +1,6 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-
 import type {Database} from '../database/schema';
 import { agentExecutionContracts } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
@@ -10,7 +9,6 @@ import { createAgentContractStore } from './agent-contract-store';
 import { currentTimeMs } from '../utils/time';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
-
 
 export async function renewAgentContract(
   db: Database,
@@ -43,6 +41,7 @@ export async function renewAgentContract(
       ? Math.max(activeContract.budgetUsd - spentUsd, 0)
       : 0;
     const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    // Refund is not yet committed — use raw balance without adding it
     const availableBalanceUsd = currentBalanceUsd + refundableUsd;
 
     if (availableBalanceUsd < input.newBudgetUsd) {
@@ -57,20 +56,24 @@ export async function renewAgentContract(
 
     const newContractId = createId();
 
-    // Refund old contract if funded
-    if (refundableUsd > 0) {
-      await companyCashOperations.recordCashIn({
-        type: 'agent-contract-renewal-refund',
-        amountUsd: refundableUsd,
-        description: `Renewal refund for contract ${activeContract.id}`,
-        referenceType: 'agent-execution-contract',
-        referenceId: activeContract.id,
-        effectiveAt: now,
-      });
-    }
-
-    // Close old contract, create new, and fund it atomically
+    // All cash operations (refund old + fund new) and all contract operations
+    // are inside the same transaction. If anything fails, everything rolls back.
     await db.transaction(async (tx) => {
+      // Refund old contract inside tx — cash only actually moves if tx commits
+      if (refundableUsd > 0) {
+        await companyCashOperations.recordCashIn(
+          {
+            type: 'agent-contract-renewal-refund',
+            amountUsd: refundableUsd,
+            description: `Renewal refund for contract ${activeContract.id}`,
+            referenceType: 'agent-execution-contract',
+            referenceId: activeContract.id,
+            effectiveAt: now,
+          },
+          tx,
+        );
+      }
+
       // Close old contract
       await tx
         .update(agentExecutionContracts)
@@ -115,6 +118,7 @@ export async function renewAgentContract(
       newContractId,
       previousBudgetUsd: activeContract.budgetUsd,
       newBudgetUsd: input.newBudgetUsd,
+      refundableUsd,
     } });
 
     return {
