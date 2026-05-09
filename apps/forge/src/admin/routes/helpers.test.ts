@@ -12,6 +12,7 @@ import {
   summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
+  fsPathExists,
 } from './helpers';
 
 vi.mock('@forge-runtime/core', () => ({
@@ -292,5 +293,24 @@ describe('summarizeActiveItems', () => {
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('Object');
     expect(result[0].count).toBe(3);
+  });
+});
+
+// ─── fsPathExists ─────────────────────────────────────────────────────────────
+
+describe('fsPathExists', () => {
+  it('returns true for existing path', async () => {
+    const result = await fsPathExists('/tmp');
+    expect(result).toBe(true);
+  });
+
+  it('returns false for non-existent path', async () => {
+    const result = await fsPathExists('/tmp/this-path-does-not-exist-kaelen-12345');
+    expect(result).toBe(false);
+  });
+
+  it('returns false for path without read permission', async () => {
+    const result = await fsPathExists('/root/secret-file-kaelen-99999');
+    expect(result).toBe(false);
   });
 });
