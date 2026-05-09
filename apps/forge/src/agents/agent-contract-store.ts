@@ -82,13 +82,57 @@ export function createAgentContractStore(
       return fundContractIfNeeded(activeContract);
     }
 
-    const renewedContract = await renewContract(agentId);
+    const latestContract = await getLatestContract(agentId);
 
-    if (!renewedContract) {
+    if (!latestContract || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
       return null;
     }
 
-    return fundContractIfNeeded(renewedContract);
+    const now = time.now();
+    const newContract = {
+      id: createId(),
+      agentId,
+      budgetUsd: latestContract.budgetUsd,
+      autoRenew: latestContract.autoRenew,
+      fundedAt: null,
+      startsAt: latestContract.endsAt,
+      endsAt: latestContract.endsAt + WEEK_MS,
+      createdAt: now,
+    } as const;
+
+    try {
+      const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
+      if (cashBalanceUsd < newContract.budgetUsd) {
+        return null;
+      }
+
+      // Wrap insert + funding in same transaction — if funding fails, contract insert rolls back
+      await db.transaction(async (tx) => {
+        await tx.insert(agentExecutionContracts).values(newContract);
+
+        await companyCashOperations.recordCashOut(
+          {
+            type: 'agent-contract-funding',
+            amountUsd: newContract.budgetUsd,
+            description: `Contract funding for ${agentId}`,
+            referenceType: 'agent-execution-contract',
+            referenceId: newContract.id,
+            effectiveAt: now,
+          },
+          tx,
+        );
+
+        await tx
+          .update(agentExecutionContracts)
+          .set({ fundedAt: now })
+          .where(eq(agentExecutionContracts.id, newContract.id));
+      });
+
+      return newContract;
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'getRunnableContract renewal/funding failed: ' + (err instanceof Error ? err.message : String(err)) });
+      throw err;
+    }
   }
 
   async function getActiveContract(agentId: string) {
