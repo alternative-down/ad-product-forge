@@ -118,6 +118,12 @@ export function createInternalChatService(
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
+  const getRequiredAccount = accounts.getRequiredAccount;
+  const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
+  const getAccountByTargetKey = accounts.getAccountByTargetKey;
+  const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
+
+
   const conversations = createInternalChatConversations(db);
 
   const groups = createInternalChatGroups(db, {
@@ -156,7 +162,6 @@ export function createInternalChatService(
   const listAccounts = wrap(accounts.listAccounts.bind(accounts));
   const getAccountBySlug = wrap(accounts.getAccountBySlug.bind(accounts));
   const getAccountByAgentId = wrap(accounts.getAccountByAgentId.bind(accounts));
-  const getAccountByTargetKey = wrap(accounts.getAccountByTargetKey.bind(accounts));
   const getConversationForAgent = wrap(accounts.getConversationForAgent.bind(accounts));
 
   // ── Conversation Setup ──────────────────────
@@ -357,8 +362,7 @@ export function createInternalChatService(
 
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
 
-  const getRequiredAccount = accounts.getRequiredAccount;
-  const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
+
 
   const guards = createInternalChatGuards(db, {
     getRequiredAgentAccount,
@@ -378,7 +382,6 @@ export function createInternalChatService(
   });
 
   const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
-  const getRequiredAccountBySlug = serviceHelpers.getRequiredAccountBySlug;
   const requireConversationMembership = serviceHelpers.requireConversationMembership;
   const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
   const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
