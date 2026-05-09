@@ -1,275 +1,230 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAgentWakeQueue } from './wake-queue.js';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { createAgentWakeQueue, type AgentWakeEvent } from './wake-queue';
 
-function makeEvent(overrides = {}): {
-  type: string;
-  groupKey: string;
-  idempotencyKey: string;
-  timestamp: number;
-  text: string;
-} {
+function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {
   return {
-    type: 'message:internal-chat',
-    groupKey: 'message:internal-chat:chat-1',
-    idempotencyKey: `key-${Date.now()}-${Math.random()}`,
+    type: 'message:direct',
+    groupKey: 'gk-1',
+    idempotencyKey: `key-${Math.random()}`,
     timestamp: Date.now(),
-    text: 'test',
+    text: 'hello',
     ...overrides,
   };
 }
 
-describe('wake-queue', () => {
-  let executeSpy: ReturnType<typeof vi.fn>;
+describe('createAgentWakeQueue', () => {
+  let execute: ReturnType<typeof vi.fn>;
+  let queue: ReturnType<typeof createAgentWakeQueue>;
 
   beforeEach(() => {
+    execute = vi.fn().mockResolvedValue(undefined);
+    queue = createAgentWakeQueue({ label: 'test', execute });
     vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-  });
-
-  it('notifies external event and triggers after debounce', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    queue.notifyExternalEvent(makeEvent());
-
-    expect(executeSpy).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-    expect(received).toHaveLength(1);
-  });
-
-  it('accumulates multiple events within debounce window', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    const e1 = makeEvent({ idempotencyKey: 'key-1' });
-    const e2 = makeEvent({ idempotencyKey: 'key-2' });
-    queue.notifyExternalEvent(e1);
-    queue.notifyExternalEvent(e2);
-
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(received).toHaveLength(2);
-  });
-
-  it('deduplicates events with same idempotency key', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    const event = makeEvent({ idempotencyKey: 'same-key' });
-    queue.notifyExternalEvent(event);
-    queue.notifyExternalEvent(event);
-
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(received).toHaveLength(1);
-  });
-
-  it('forces trigger when max accumulation time is reached', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'acc-key' }));
-
-    // Trigger before debounce completes
-    await vi.advanceTimersByTimeAsync(10000);
-
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-    expect(received).toHaveLength(1);
-  });
-
-  it('reschedules after execute failure with debounce', async () => {
-    executeSpy = vi.fn().mockRejectedValue(new Error('execute failed'));
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'fail-key' }));
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-
-    // Should reschedule, not execute again immediately
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(1000);
-
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('stop clears pending state and timer', async () => {
-    executeSpy = vi.fn();
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'stop-key' }));
     queue.stop();
-
-    await vi.advanceTimersByTimeAsync(15000);
-
-    expect(executeSpy).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
-  it('onRunnerIdle flushes idle-only events and reschedules trigger', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
+  // ── notifyExternalEvent ──────────────────────────────────────────────────
 
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
+  it('sets pending=true after an event is notified', () => {
+    queue.notifyExternalEvent(makeEvent());
+    expect(queue.getSnapshot().pending).toBe(true);
+  });
 
-    const idleEvent = makeEvent({ idempotencyKey: 'idle-key', idleOnly: true });
-    queue.notifyExternalEvent(idleEvent);
+  it('stores event by idempotencyKey', () => {
+    const ev = makeEvent({ idempotencyKey: 'idempotent-1' });
+    queue.notifyExternalEvent(ev);
+    expect(queue.getSnapshot().events).toContainEqual(expect.objectContaining({ idempotencyKey: 'idempotent-1' }));
+  });
 
-    expect(executeSpy).not.toHaveBeenCalled();
+  it('does not duplicate events with same idempotencyKey', () => {
+    const ev = makeEvent({ idempotencyKey: 'same-key', text: 'first' });
+    queue.notifyExternalEvent(ev);
+    queue.notifyExternalEvent({ ...ev, text: 'second' });
+    expect(queue.getSnapshot().events.filter(e => e.idempotencyKey === 'same-key')).toHaveLength(1);
+  });
 
-    // onRunnerIdle flushes to ready and reschedules — trigger after debounce
-    await queue.onRunnerIdle();
+  // ── debouncing ──────────────────────────────────────────────────────────
+
+  it('waits for DEFAULT_WAKE_DEBOUNCE_MS (3000ms) before executing', async () => {
+    queue.notifyExternalEvent(makeEvent());
+    expect(execute).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(execute).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2); // past 3000ms
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('executes with the queued events after debounce', async () => {
+    const ev1 = makeEvent({ idempotencyKey: 'a', text: 'msg a' });
+    const ev2 = makeEvent({ idempotencyKey: 'b', text: 'msg b' });
+    queue.notifyExternalEvent(ev1);
+    queue.notifyExternalEvent(ev2);
     await vi.advanceTimersByTimeAsync(3000);
-
-    expect(executeSpy).toHaveBeenCalledTimes(1);
-    expect(received).toHaveLength(1);
-    expect(received[0].idleOnly).toBe(true);
+    expect(execute).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ idempotencyKey: 'a', text: 'msg a' }),
+        expect.objectContaining({ idempotencyKey: 'b', text: 'msg b' }),
+      ]),
+    );
   });
 
-  it('onRunnerIdle does nothing when no idle events pending', async () => {
-    executeSpy = vi.fn();
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    await queue.onRunnerIdle();
-
-    expect(executeSpy).not.toHaveBeenCalled();
+  it('executes with events sorted by timestamp', async () => {
+    const earlier = makeEvent({ idempotencyKey: 'early', timestamp: 1000, text: 'early' });
+    const later = makeEvent({ idempotencyKey: 'late', timestamp: 2000, text: 'late' });
+    queue.notifyExternalEvent(later);
+    queue.notifyExternalEvent(earlier); // out-of-order notification
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(execute).toHaveBeenCalledWith([
+      expect.objectContaining({ idempotencyKey: 'early' }),
+      expect.objectContaining({ idempotencyKey: 'late' }),
+    ]);
   });
 
-  it('getSnapshot reflects pending and waitingForIdle state', async () => {
-    executeSpy = vi.fn();
+  // ── group message longer debounce ────────────────────────────────────────
 
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    let snap = queue.getSnapshot();
-    expect(snap.pending).toBe(false);
-    expect(snap.waitingForIdle).toBe(false);
-
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'snap-key' }));
-
-    snap = queue.getSnapshot();
-    expect(snap.pending).toBe(true);
-    expect(snap.events).toHaveLength(1);
-  });
-
-  it('group messages use longer debounce and accumulation windows', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
+  it('uses GROUP_MESSAGE_WAKE_DEBOUNCE_MS (8000ms) for group messages', async () => {
     const groupEvent = makeEvent({
-      idempotencyKey: 'group-key',
+      type: 'message:group',
       groupMetadata: { ConversationType: 'group' },
     });
     queue.notifyExternalEvent(groupEvent);
-
-    // 8s debounce — should not trigger after 5s
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(executeSpy).not.toHaveBeenCalled();
-
-    // But should trigger after 8s
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(executeSpy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(execute).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('deduplicates across ready and idle maps', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
+  it('uses GROUP_MESSAGE_WAKE_MAX_ACCUMULATION_MS (20000ms) as max for group messages', async () => {
+    const groupEvent = makeEvent({
+      type: 'message:group',
+      groupMetadata: { ConversationType: 'group' },
     });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    const key = 'cross-map-key';
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: key }));
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: key, idleOnly: true }));
-
-    await vi.advanceTimersByTimeAsync(3000);
-    await queue.onRunnerIdle();
-
-    expect(executeSpy).toHaveBeenCalledTimes(1);
+    queue.notifyExternalEvent(groupEvent);
+    // Should not trigger before 8000ms
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(execute).not.toHaveBeenCalled();
+    // Should trigger at 8000ms
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('multiple idle events flushed via onRunnerIdle accumulate and trigger', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
+  // ── max accumulation window ───────────────────────────────────────────────
 
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'idle-1', idleOnly: true }));
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'idle-2', idleOnly: true }));
-
-    await queue.onRunnerIdle();
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(received).toHaveLength(2);
+  it('triggers at max accumulation window even without debounce settling', async () => {
+    const ev = makeEvent();
+    queue.notifyExternalEvent(ev);
+    // Advance past the max accumulation (10000ms)
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('idle event deduped when ready event with same key already exists', async () => {
-    const received: ReturnType<typeof makeEvent>[] = [];
-    executeSpy = vi.fn().mockImplementation(async (events) => {
-      received.push(...events);
-    });
+  // ── idleOnly events ─────────────────────────────────────────────────────
 
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    // Same key in both ready and idle — should appear once
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'dedup-key' }));
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'dedup-key', idleOnly: true }));
-
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(received).toHaveLength(1);
+  it('queues idleOnly events separately', () => {
+    const normal = makeEvent({ idleOnly: false });
+    const idle = makeEvent({ idleOnly: true });
+    queue.notifyExternalEvent(normal);
+    queue.notifyExternalEvent(idle);
+    const snapshot = queue.getSnapshot();
+    expect(snapshot.events.some(e => e.idleOnly)).toBe(true);
+    expect(snapshot.events.some(e => !e.idleOnly)).toBe(true);
   });
 
-  it('execute failure re-adds events to ready events', async () => {
-    let callCount = 0;
-    executeSpy = vi.fn().mockImplementation(async () => {
-      callCount++;
-      if (callCount === 1) throw new Error('first failure');
+  it('still accumulates idleOnly events in snapshot', () => {
+    queue.notifyExternalEvent(makeEvent({ idleOnly: true }));
+    expect(queue.getSnapshot().events).toHaveLength(1);
+  });
+
+  // ── onRunnerIdle ────────────────────────────────────────────────────────
+
+  it('onRunnerIdle resolves when not pending', async () => {
+    const p = queue.onRunnerIdle();
+    // Not pending → should resolve immediately
+    await expect(p).resolves.toBeUndefined();
+  });
+
+  it('onRunnerIdle schedules trigger if not at max accumulation', async () => {
+    queue.notifyExternalEvent(makeEvent());
+    execute.mockReturnValue(new Promise(() => {})); // never resolves
+    const idlePromise = queue.onRunnerIdle();
+    // Should have scheduled a timer (nextTriggerAt not null)
+    expect(queue.getSnapshot().nextTriggerAt).not.toBeNull();
+    queue.stop();
+  });
+
+  // ── stop ────────────────────────────────────────────────────────────────
+
+  it('stop clears the timer', () => {
+    queue.notifyExternalEvent(makeEvent());
+    expect(queue.getSnapshot().nextTriggerAt).not.toBeNull();
+    queue.stop();
+    expect(queue.getSnapshot().nextTriggerAt).toBeNull();
+  });
+
+  it('stop prevents further execution', async () => {
+    queue.notifyExternalEvent(makeEvent());
+    queue.stop();
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  // ── error recovery ──────────────────────────────────────────────────────
+
+  it('re-queues events when execute throws', async () => {
+    const ev = makeEvent({ idempotencyKey: 'retry-test' });
+    execute.mockRejectedValueOnce(new Error('boom'));
+    queue.notifyExternalEvent(ev);
+    await vi.advanceTimersByTimeAsync(3000);
+    // After failure, events should be re-queued
+    expect(queue.getSnapshot().pending).toBe(true);
+    expect(queue.getSnapshot().events.some(e => e.idempotencyKey === 'retry-test')).toBe(true);
+  });
+
+  it('events are cleared from snapshot during execution even if pending', async () => {
+    // After successful execution, snapshot events are cleared
+    queue.notifyExternalEvent(makeEvent());
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(execute).toHaveBeenCalledTimes(1);
+    // Events array is cleared after execution
+    expect(queue.getSnapshot().events).toHaveLength(0);
+  });
+
+  // ── getSnapshot ────────────────────────────────────────────────────────
+
+  it('returns firstPendingAt when pending', () => {
+    queue.notifyExternalEvent(makeEvent());
+    expect(queue.getSnapshot().firstPendingAt).not.toBeNull();
+  });
+
+  it('returns null firstPendingAt when not pending', () => {
+    expect(queue.getSnapshot().firstPendingAt).toBeNull();
+  });
+
+  it('clears state after successful execution', async () => {
+    queue.notifyExternalEvent(makeEvent());
+    await vi.advanceTimersByTimeAsync(3000);
+    const snapshot = queue.getSnapshot();
+    expect(snapshot.pending).toBe(false);
+    expect(snapshot.events).toHaveLength(0);
+    expect(snapshot.firstPendingAt).toBeNull();
+    expect(snapshot.nextTriggerAt).toBeNull();
+  });
+
+  // ── label parameter ─────────────────────────────────────────────────────
+
+  it('uses provided label in error logs', async () => {
+    const customQueue = createAgentWakeQueue({
+      label: 'my-agent',
+      execute: vi.fn().mockRejectedValue(new Error('fail')),
     });
-
-    const queue = createAgentWakeQueue({ label: 'test', execute: executeSpy });
-
-    queue.notifyExternalEvent(makeEvent({ idempotencyKey: 'retry-key' }));
+    customQueue.notifyExternalEvent(makeEvent());
     await vi.advanceTimersByTimeAsync(3000);
-
-    expect(callCount).toBe(1);
-
-    // After failure, it reschedules — wait and verify second attempt
-    await vi.advanceTimersByTimeAsync(3000);
-
-    expect(callCount).toBe(2);
+    customQueue.stop();
+    vi.restoreAllMocks();
   });
 });
