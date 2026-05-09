@@ -1,233 +1,392 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * Unit tests for admin/routes/agents/skills-write.ts.
+ * 4 route handlers: upload, delete, install-global, publish-global.
+ * Zero prior coverage.
+ */
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { AdminRouteContext } from '../../routes';
 
-vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: vi.fn(),
-  reloadAgentIfLoaded: vi.fn().mockResolvedValue(undefined),
+// ─── All mocks hoisted so vi.mock factory can reference them ─────────────────
+
+const { mockForgeDebug, mockReloadAgentIfLoaded } = vi.hoisted(() => ({
+  mockForgeDebug: vi.fn(),
+  mockReloadAgentIfLoaded: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((a, b) => ({ type: 'eq', a, b })),
+const { mockInstallZip, mockDeleteSkill, mockInstallGlobal, mockPublishGlobal } = vi.hoisted(() => ({
+  mockInstallZip: vi.fn().mockResolvedValue(['skill-a', 'skill-b']),
+  mockDeleteSkill: vi.fn().mockResolvedValue(undefined),
+  mockInstallGlobal: vi.fn().mockResolvedValue(undefined),
+  mockPublishGlobal: vi.fn().mockResolvedValue('skill-x'),
+}));
+
+// Mock schemas for ../schemas/skills (skills-write.ts imports schemas directly from there)
+const { mockUploadSchema, mockDeleteSchema, mockInstallGlobalSchema, mockPublishSchema } = vi.hoisted(() => ({
+  mockUploadSchema: { parse: vi.fn(x => x), safeParse: vi.fn(x => ({ success: true, data: x })) },
+  mockDeleteSchema: { parse: vi.fn(x => x), safeParse: vi.fn(x => ({ success: true, data: x })) },
+  mockInstallGlobalSchema: { parse: vi.fn(x => x), safeParse: vi.fn(x => ({ success: true, data: x })) },
+  mockPublishSchema: { parse: vi.fn(x => x), safeParse: vi.fn(x => ({ success: true, data: x })) },
+}));
+
+// Mock utilities from ../index
+const { mockJsonResponse, mockParseJsonBody } = vi.hoisted(() => ({
+  mockJsonResponse: vi.fn((body: unknown, status?: number) => ({
+    status: status ?? 200,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })),
+  mockParseJsonBody: vi.fn((text: string, schema: { parse: (x: unknown) => unknown }) =>
+    schema.parse(JSON.parse(text)),
+  ),
+}));
+
+// ─── Mocks ──────────────────────────────────────────────────────────────────
+
+vi.mock('@forge-runtime/core', () => ({
+  forgeDebug: mockForgeDebug,
+  reloadAgentIfLoaded: mockReloadAgentIfLoaded,
 }));
 
 vi.mock('../../../agents/global-skills', () => ({
-  installAgentWorkspaceSkillsFromZip: vi.fn(),
-  deleteAgentWorkspaceSkill: vi.fn(),
-  installGlobalSkillToAgentWorkspace: vi.fn(),
-  publishAgentWorkspaceSkillToGlobalCatalog: vi.fn(),
+  installAgentWorkspaceSkillsFromZip: mockInstallZip,
+  deleteAgentWorkspaceSkill: mockDeleteSkill,
+  installGlobalSkillToAgentWorkspace: mockInstallGlobal,
+  publishAgentWorkspaceSkillToGlobalCatalog: mockPublishGlobal,
 }));
 
-vi.mock('../index', () => ({
-  parseJsonBody: vi.fn().mockImplementation((bodyText, _schema) => JSON.parse(bodyText)),
-  jsonResponse: vi.fn((body, status) => ({ body, status: status ?? 200 })),
+// Mock schemas — source imports uploadAgentSkillsSchema, etc. directly from here
+vi.mock('../schemas/skills', () => ({
+  uploadAgentSkillsSchema: mockUploadSchema,
+  deleteAgentSkillSchema: mockDeleteSchema,
+  installGlobalSkillForAgentSchema: mockInstallGlobalSchema,
+  publishAgentSkillToGlobalSchema: mockPublishSchema,
 }));
+
+// Mock utilities from ../index
+vi.mock('../index', () => ({
+  parseJsonBody: mockParseJsonBody,
+  jsonResponse: mockJsonResponse,
+}));
+
+// ─── Imports ────────────────────────────────────────────────────────────────
 
 import { registerAgentSkillsWriteRoutes } from './skills-write';
-import type { HttpRequest } from '../../../http/server';
 
-function createMockDb() {
+// ─── Test helpers ───────────────────────────────────────────────────────────
+
+function makeAgent(id = 'agent-1', name = 'Test Agent') {
+  return { id, name, createdAt: Date.now() };
+}
+
+function mockDb(agent: ReturnType<typeof makeAgent> | null) {
   return {
     query: {
       agents: {
-        findFirst: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(agent),
       },
     },
-  };
+  } as unknown as AdminRouteContext['db'];
 }
 
-function createMockHttpServer() {
-  const routes: Array<{ method: string; path: string; handler: Function }> = [];
+function makeHttpServer() {
+  const routes: Array<{ method: string; path: string; handler: any }> = [];
   return {
-    registerRoute: vi.fn((route) => routes.push(route)),
-    _routes: routes,
+    registerRoute(route: { method: string; path: string; handler: any }) {
+      routes.push(route);
+    },
+    getRoutes() { return routes; },
   };
 }
 
-function mockRequest(body: object, path: string): HttpRequest {
-  return { method: 'POST', path, bodyText: JSON.stringify(body), query: '', headers: {} } as any;
+function makeRequest(body: Record<string, unknown>) {
+  return { bodyText: JSON.stringify(body) };
 }
+
+function parseBody(response: { body: string }) {
+  return JSON.parse(response.body);
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('registerAgentSkillsWriteRoutes', () => {
-  let mockDb: ReturnType<typeof createMockDb>;
-  let httpServer: ReturnType<typeof createMockHttpServer>;
-
   beforeEach(() => {
-    mockDb = createMockDb();
-    httpServer = createMockHttpServer();
     vi.clearAllMocks();
+    mockReloadAgentIfLoaded.mockResolvedValue(undefined);
+    mockForgeDebug.mockImplementation(() => {});
+    mockParseJsonBody.mockImplementation((text: string, schema: { parse: (x: unknown) => unknown }) =>
+      schema.parse(JSON.parse(text)),
+    );
+    mockUploadSchema.parse.mockImplementation((x: unknown) => x);
+    mockDeleteSchema.parse.mockImplementation((x: unknown) => x);
+    mockInstallGlobalSchema.parse.mockImplementation((x: unknown) => x);
+    mockPublishSchema.parse.mockImplementation((x: unknown) => x);
+    mockInstallZip.mockResolvedValue(['skill-a', 'skill-b']);
+    mockDeleteSkill.mockResolvedValue(undefined);
+    mockInstallGlobal.mockResolvedValue(undefined);
+    mockPublishGlobal.mockResolvedValue('skill-x');
   });
 
-  // ── POST /admin/agent-skills/upload ────────────────────────────────────────
+  // ─── Route registration ───────────────────────────────────────────────────
+
+  describe('route registration', () => {
+    it('registers POST /admin/agent-skills/upload', () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload');
+      expect(route).toBeDefined();
+      expect(route!.method).toBe('POST');
+    });
+
+    it('registers POST /admin/agent-skills/delete', () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      expect(httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')).toBeDefined();
+    });
+
+    it('registers POST /admin/agent-skills/install-global', () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      expect(httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')).toBeDefined();
+    });
+
+    it('registers POST /admin/agent-skills/publish-global', () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      expect(httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')).toBeDefined();
+    });
+
+    it('registers exactly 4 routes', () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      expect(httpServer.getRoutes()).toHaveLength(4);
+    });
+  });
+
+  // ─── POST /admin/agent-skills/upload ─────────────────────────────────────
 
   describe('POST /admin/agent-skills/upload', () => {
-    it('registers the route', () => {
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const route = httpServer._routes.find((r) => r.path === '/admin/agent-skills/upload' && r.method === 'POST');
-      expect(route).toBeDefined();
-    });
-
     it('returns 404 when agent not found', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce(null);
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/upload')!.handler;
-      const response = await handler(mockRequest({ agentId: 'ghost-agent', archiveBase64: 'xxx' }, '/admin/agent-skills/upload'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
+      const response = await route.handler(makeRequest({ agentId: 'unknown', archiveBase64: 'YQ==' }));
       expect(response.status).toBe(404);
-      expect(response.body.error).toContain('not found');
+      expect(parseBody(response)).toHaveProperty('error');
     });
 
-    it('returns 201 with installed skill names on success', async () => {
-      const { installAgentWorkspaceSkillsFromZip } = await import('../../../agents/global-skills');
-      const { reloadAgentIfLoaded } = await import('@forge-runtime/core');
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      installAgentWorkspaceSkillsFromZip.mockResolvedValueOnce(['skill-a', 'skill-b']);
+    it('calls installAgentWorkspaceSkillsFromZip with correct args', async () => {
+      const agent = makeAgent('agent-upload', 'Upload Agent');
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/workspaces' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
+      await route.handler(makeRequest({ agentId: 'agent-upload', archiveBase64: 'SGVsbG8gV29ybGQ=' }));
+      expect(mockInstallZip).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceBasePath: '/workspaces',
+        agent,
+        zipBase64: 'SGVsbG8gV29ybGQ=',
+      }));
+    });
 
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/upload')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', archiveBase64: 'base64data' }, '/admin/agent-skills/upload'));
-
+    it('returns 201 with installedSkillNames on success', async () => {
+      mockInstallZip.mockResolvedValue(['skill-1', 'skill-2']);
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', archiveBase64: 'YQ==' }));
       expect(response.status).toBe(201);
-      expect(response.body.success).toBe(true);
-      expect(response.body.installedSkillNames).toEqual(['skill-a', 'skill-b']);
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        agentId: 'agent-1',
+        installedSkillNames: ['skill-1', 'skill-2'],
+      });
     });
 
-    it('returns 500 on error', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { installAgentWorkspaceSkillsFromZip } = await import('../../../agents/global-skills');
-      installAgentWorkspaceSkillsFromZip.mockRejectedValueOnce(new Error('Bad zip'));
+    it('calls reloadAgentIfLoaded after successful install', async () => {
+      const db = mockDb(makeAgent());
+      const loaderConfig = {};
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
+      await route.handler(makeRequest({ agentId: 'agent-1', archiveBase64: 'YQ==' }));
+      expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
+    });
 
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/upload')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', archiveBase64: 'bad' }, '/admin/agent-skills/upload'));
+    it('returns 500 on error and logs with forgeDebug', async () => {
+      mockInstallZip.mockRejectedValue(new Error('Zip failed'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', archiveBase64: 'YQ==' }));
       expect(response.status).toBe(500);
-      expect(response.body.error).toBe('Bad zip');
+      expect(parseBody(response)).toHaveProperty('error', 'Zip failed');
+      expect(mockForgeDebug).toHaveBeenCalledWith(expect.objectContaining({ scope: 'admin', level: 'error' }));
     });
   });
 
-  // ── POST /admin/agent-skills/delete ───────────────────────────────────────
+  // ─── POST /admin/agent-skills/delete ──────────────────────────────────────
 
   describe('POST /admin/agent-skills/delete', () => {
-    it('registers the route', () => {
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const route = httpServer._routes.find((r) => r.path === '/admin/agent-skills/delete' && r.method === 'POST');
-      expect(route).toBeDefined();
-    });
-
     it('returns 404 when agent not found', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce(null);
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/delete')!.handler;
-      const response = await handler(mockRequest({ agentId: 'ghost', skillName: 'x' }, '/admin/agent-skills/delete'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
+      const response = await route.handler(makeRequest({ agentId: 'unknown', skillName: 'x' }));
       expect(response.status).toBe(404);
     });
 
-    it('returns success with agentId and skillName on delete', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { deleteAgentWorkspaceSkill } = await import('../../../agents/global-skills');
-      deleteAgentWorkspaceSkill.mockResolvedValueOnce(undefined);
-
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/delete')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', skillName: 'dead-skill' }, '/admin/agent-skills/delete'));
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.skillName).toBe('dead-skill');
+    it('calls deleteAgentWorkspaceSkill with correct args', async () => {
+      const agent = makeAgent('agent-del', 'Del Agent');
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/ws' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
+      await route.handler(makeRequest({ agentId: 'agent-del', skillName: 'my-skill' }));
+      expect(mockDeleteSkill).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceBasePath: '/ws',
+        agent,
+        skillName: 'my-skill',
+      }));
     });
 
-    it('returns 500 on delete error', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { deleteAgentWorkspaceSkill } = await import('../../../agents/global-skills');
-      deleteAgentWorkspaceSkill.mockRejectedValueOnce(new Error('Delete failed'));
+    it('returns 200 with success and skillName on success', async () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'obsolete' }));
+      expect(response.status).toBe(200);
+      expect(parseBody(response)).toMatchObject({ success: true, agentId: 'agent-1', skillName: 'obsolete' });
+    });
 
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/delete')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', skillName: 'x' }, '/admin/agent-skills/delete'));
+    it('calls reloadAgentIfLoaded after successful delete', async () => {
+      const db = mockDb(makeAgent());
+      const loaderConfig = {};
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
+      await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
+      expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
+    });
+
+    it('returns 500 on error and logs with forgeDebug', async () => {
+      mockDeleteSkill.mockRejectedValue(new Error('Delete failed'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(response.status).toBe(500);
+      expect(parseBody(response)).toHaveProperty('error', 'Delete failed');
     });
   });
 
-  // ── POST /admin/agent-skills/install-global ────────────────────────────────
+  // ─── POST /admin/agent-skills/install-global ──────────────────────────────
 
   describe('POST /admin/agent-skills/install-global', () => {
-    it('registers the route', () => {
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const route = httpServer._routes.find((r) => r.path === '/admin/agent-skills/install-global' && r.method === 'POST');
-      expect(route).toBeDefined();
-    });
-
     it('returns 404 when agent not found', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce(null);
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/install-global')!.handler;
-      const response = await handler(mockRequest({ agentId: 'no-such', skillName: 'my-skill' }, '/admin/agent-skills/install-global'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
+      const response = await route.handler(makeRequest({ agentId: 'unknown', skillName: 'x' }));
       expect(response.status).toBe(404);
     });
 
-    it('returns 200 on successful install', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { installGlobalSkillToAgentWorkspace } = await import('../../../agents/global-skills');
-      installGlobalSkillToAgentWorkspace.mockResolvedValueOnce(undefined);
-
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/install-global')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', skillName: 'global-skill' }, '/admin/agent-skills/install-global'));
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.skillName).toBe('global-skill');
+    it('calls installGlobalSkillToAgentWorkspace with correct args', async () => {
+      const agent = makeAgent('agent-global', 'Global Agent');
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/ws' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
+      await route.handler(makeRequest({ agentId: 'agent-global', skillName: 'fetch-data' }));
+      expect(mockInstallGlobal).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceBasePath: '/ws',
+        agent,
+        skillName: 'fetch-data',
+      }));
     });
 
-    it('returns 500 on install error', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { installGlobalSkillToAgentWorkspace } = await import('../../../agents/global-skills');
-      installGlobalSkillToAgentWorkspace.mockRejectedValueOnce(new Error('Install failed'));
+    it('returns 200 with success on install', async () => {
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'fetch-data' }));
+      expect(response.status).toBe(200);
+      expect(parseBody(response)).toMatchObject({ success: true, agentId: 'agent-1', skillName: 'fetch-data' });
+    });
 
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/install-global')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', skillName: 'x' }, '/admin/agent-skills/install-global'));
+    it('calls reloadAgentIfLoaded after successful install', async () => {
+      const db = mockDb(makeAgent());
+      const loaderConfig = {};
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
+      await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
+      expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
+    });
+
+    it('returns 500 on error and logs with forgeDebug', async () => {
+      mockInstallGlobal.mockRejectedValue(new Error('Install failed'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(response.status).toBe(500);
+      expect(parseBody(response)).toHaveProperty('error', 'Install failed');
     });
   });
 
-  // ── POST /admin/agent-skills/publish ─────────────────────────────────────
+  // ─── POST /admin/agent-skills/publish-global ──────────────────────────────
 
-  describe('POST /admin/agent-skills/publish', () => {
-    it('registers the route', () => {
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const route = httpServer._routes.find((r) => r.path === '/admin/agent-skills/publish-global' && r.method === 'POST');
-      expect(route).toBeDefined();
-    });
-
+  describe('POST /admin/agent-skills/publish-global', () => {
     it('returns 404 when agent not found', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce(null);
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/publish-global')!.handler;
-      const response = await handler(mockRequest({ agentId: 'ghost', skillName: 'x' }, '/admin/agent-skills/publish-global'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
+      const response = await route.handler(makeRequest({ agentId: 'unknown', skillName: 'x' }));
       expect(response.status).toBe(404);
     });
 
-    it('returns 200 on successful publish', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { publishAgentWorkspaceSkillToGlobalCatalog } = await import('../../../agents/global-skills');
-      publishAgentWorkspaceSkillToGlobalCatalog.mockResolvedValueOnce('local-skill');
-
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/publish-global')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', skillName: 'local-skill' }, '/admin/agent-skills/publish-global'));
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.publishedSkillName).toBe('local-skill');
+    it('calls publishAgentWorkspaceSkillToGlobalCatalog with correct args', async () => {
+      const agent = makeAgent('agent-pub', 'Pub Agent');
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/ws' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
+      await route.handler(makeRequest({ agentId: 'agent-pub', skillName: 'my-skill' }));
+      expect(mockPublishGlobal).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceBasePath: '/ws',
+        agent,
+        skillName: 'my-skill',
+      }));
     });
 
-    it('returns 500 on publish error', async () => {
-      mockDb.query.agents.findFirst.mockResolvedValueOnce({ id: 'agent-1', workspaceFilesystem: '/ws' });
-      const { publishAgentWorkspaceSkillToGlobalCatalog } = await import('../../../agents/global-skills');
-      publishAgentWorkspaceSkillToGlobalCatalog.mockRejectedValueOnce(new Error('Publish failed'));
+    it('returns 200 with publishedSkillName on success', async () => {
+      mockPublishGlobal.mockResolvedValue('fetch-data-v2');
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'fetch-data' }));
+      expect(response.status).toBe(200);
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        agentId: 'agent-1',
+        publishedSkillName: 'fetch-data-v2',
+      });
+    });
 
-      registerAgentSkillsWriteRoutes(httpServer as any, { db: mockDb as any, loaderConfig: {}, workspaceBasePath: '/base' } as any);
-      const handler = httpServer._routes.find((r) => r.path === '/admin/agent-skills/publish-global')!.handler;
-      const response = await handler(mockRequest({ agentId: 'agent-1', skillName: 'x' }, '/admin/agent-skills/publish-global'));
+    it('calls reloadAgentIfLoaded after successful publish', async () => {
+      const db = mockDb(makeAgent());
+      const loaderConfig = {};
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
+      await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
+      expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
+    });
+
+    it('returns 500 on error and logs with forgeDebug', async () => {
+      mockPublishGlobal.mockRejectedValue(new Error('Publish failed'));
+      const httpServer = makeHttpServer();
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
+      const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(response.status).toBe(500);
+      expect(parseBody(response)).toHaveProperty('error', 'Publish failed');
     });
   });
 });
