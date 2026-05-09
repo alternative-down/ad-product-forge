@@ -42,6 +42,7 @@ function requireOperationalMemoryOmLimits(
   return input.checkpointedOmLimits;
 }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSessionRuntime> {

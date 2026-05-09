@@ -83,6 +83,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
       stepNumber: iterationNumber - 1,
     });
 
+  // eslint-disable-next-line @typescript-eslint/require-await
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
@@ -358,6 +359,7 @@ function appendGenerateDiagnostics(error: unknown, diagnostics: {
   return new Error(`${String(error)}\n${diagnosticsText}`);
 }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
   agentContext?: string;

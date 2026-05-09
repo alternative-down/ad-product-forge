@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createClient } from '@libsql/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store';
 
@@ -169,7 +169,7 @@ describe('createUpdateTodosAction', () => {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     await expect(
-      action.execute({ items: { title: 'Test', status: 'invalid' as any } }),
+      action.execute({ items: { title: 'Test', status: 'invalid' as unknown } }),
     ).rejects.toThrow();
   });
 });

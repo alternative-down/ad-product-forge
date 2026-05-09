@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { ModelMessage } from 'ai';
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';

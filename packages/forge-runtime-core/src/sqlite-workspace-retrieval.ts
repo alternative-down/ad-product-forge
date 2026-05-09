@@ -376,6 +376,7 @@ export class SqliteWorkspaceRetrieval {
     }));
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async getStats() {
     const db = this.getDb();
     const countRow = db.prepare(
