@@ -915,124 +915,20 @@ export function createAgentRunner(
                 });
               }
             },
-            onIterationComplete: async (iteration) => {
-              markGenerateProgress(timeout, controller, {
-                stage: 'iteration-complete',
-                detail: {
-                  iteration: iteration.iteration,
-                  finishReason: iteration.finishReason,
-                  textPreview: iteration.text.trim().slice(0, 300),
-                  toolCalls: iteration.toolCalls.map((toolCall) => ({
-                    name: toolCall.name,
-                    args: toolCall.args,
-                  })),
-                  toolResults: iteration.toolResults.map((toolResult) => ({
-                    name: toolResult.name,
-                    error: toolResult.error?.message ?? null,
-                  })),
-                },
-              });
-              lastStepStage = 'processing-runner-control';
-
-              forgeDebug({
-                scope: 'agent-runner',
-                level: 'debug',
-                runtimeId: runtime.id,
-                message: 'iteration toolCalls',
-                context: { toolCallCount: iteration.toolCalls?.length ?? 0 },
-              });
-
-              const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
-              const ignoredTextRequested = controlDirective === 'ignore';
-              const stopRequested = controlDirective === 'stop';
-
-              if (loopDetector.isStuck()) {
-                await withTimeout(
-                  notifications.createNotification({
-                    agentId: runtime.id,
-                    content: [
-                      'Stuck loop detected.',
-                      `Repeated signature count: ${loopDetector.getSignatureCount()}`,
-                      'The agent repeated the same tool/text pattern and was forced to stop.',
-                      '',
-                      'Signature:',
-                      loopSignature,
-                    ].join('\n'),
-                  }),
-                  RUNNER_AWAIT_TIMEOUT_MS,
-                  `Agent notification creation timed out for ${runtime.id}`,
-                );
-                nextStepAt = null;
-                resetLoopDetector();
-                return {
-                  continue: false,
-                };
-              }
-
-              if (iteration.toolCalls.length === 0 && ignoredTextRequested) {
-                suppressNoToolCallReminderForRun = true;
-              }
-
-              if (stopRequested) {
-                nextStepAt = null;
-                resetLoopDetector();
-                return {
-                  continue: false,
-                };
-              }
-
-              const producedVisibleAssistantText = didIterationProduceVisibleAssistantText(iteration);
-              const feedbackMessages: Array<{
-                role: 'assistant' | 'user';
-                content: string;
-              }> = [];
-              const flushedPrompt = flushPendingRunMessages({
-                allowOriginIdleOnly: true,
-              });
-
-              if (flushedPrompt) {
-                feedbackMessages.push({
-                  role: 'user',
-                  content: flushedPrompt,
-                });
-              }
-
-              if (
-                iteration.toolCalls.length === 0 &&
-                producedVisibleAssistantText &&
-                !stopRequested &&
-                !suppressNoToolCallReminderForRun
-              ) {
-                feedbackMessages.push({
-                  role: 'user',
-                  content: RUN_STOP_REMINDER,
-                });
-              }
-
-              const recallStep = buildRecallStepFromIteration(iteration);
-              const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
-                step: recallStep,
-                steps: [recallStep],
-                threadId: currentRuntime.mastraId,
-                resourceId: currentRuntime.mastraId,
-              }) ?? null;
-
-              if (recallFeedback?.trim()) {
-                feedbackMessages.push({
-                  role: 'assistant',
-                  content: recallFeedback.trim(),
-                });
-              }
-
-              if (feedbackMessages.length > 0) {
-                return {
-                  continue: true,
-                  feedbackMessages,
-                };
-              }
-
-              return undefined;
-            },
+            onIterationComplete: async (iteration) => buildIterationFeedback(iteration, {
+              suppressNoToolCallReminderForRun,
+              setSuppressNoToolCallReminder: (val: boolean) => { suppressNoToolCallReminderForRun = val; },
+              nextStepAtRef: { current: nextStepAt },
+              setNextStepAt: (val: number | null) => { nextStepAt = val; },
+              loopDetector,
+              loopSignature,
+              runtime,
+              notifications,
+              currentRuntime,
+              flushPendingRunMessages,
+              markGenerateProgress,
+              controller,
+            }),
           }),
           timeout.promise,
         ]);
@@ -1063,6 +959,127 @@ export function createAgentRunner(
     forgeDebug({ scope: "agent-runner", level: "error", message: "generate timed out after all retry attempts" });
     throw new Error('Agent generate timed out after all retry attempts');
   }
+  /**
+   * Extracts feedback messages and determines whether to continue the agent run
+   * after an iteration completes. Extracted from generateWithTimeoutRetries
+   * to reduce function length and improve readability.
+   */
+  function buildIterationFeedback(
+    iteration: {
+      iteration: { iteration: number; finishReason: string };
+      finishReason: string;
+      text: string;
+      toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
+      toolResults: Array<{ name: string; error?: Error }>;
+    },
+    deps: {
+      suppressNoToolCallReminderForRun: boolean;
+      setSuppressNoToolCallReminder: (val: boolean) => void;
+      nextStepAtRef: { current: number | null };
+      setNextStepAt: (val: number | null) => void;
+      loopDetector: { isStuck: () => boolean; getSignatureCount: () => number };
+      loopSignature: string;
+      runtime: { id: string };
+      notifications: { createNotification: (n: { agentId: string; content: string }) => Promise<unknown> };
+      currentRuntime: {
+        mastraId: string;
+        longTermMemoryRecall?: {
+          recallFromStep: (opts: {
+            step: unknown; steps: unknown[]; threadId: string; resourceId: string;
+          }) => Promise<string | null>;
+        };
+      };
+      flushPendingRunMessages: (opts: { allowOriginIdleOnly: boolean }) => string | null;
+      markGenerateProgress: (
+        timeout: unknown,
+        controller: AbortController,
+        info: { stage: string; detail: Record<string, unknown> },
+      ) => void;
+      controller: AbortController;
+    },
+  ): Promise<{ continue: boolean; feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> } | undefined> {
+    return (async () => {
+      const {
+        suppressNoToolCallReminderForRun,
+        setSuppressNoToolCallReminder,
+        nextStepAtRef,
+        setNextStepAt,
+        loopDetector,
+        loopSignature,
+        runtime,
+        notifications,
+        currentRuntime,
+        flushPendingRunMessages,
+        markGenerateProgress,
+        controller,
+      } = deps;
+
+      const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
+      const ignoredTextRequested = controlDirective === 'ignore';
+      const stopRequested = controlDirective === 'stop';
+
+      if (loopDetector.isStuck()) {
+        await withTimeout(
+          notifications.createNotification({
+            agentId: runtime.id,
+            content: [
+              'Stuck loop detected.',
+              'Repeated signature count: ' + loopDetector.getSignatureCount(),
+              'The agent repeated the same tool/text pattern and was forced to stop.',
+              '',
+              'Signature:',
+              loopSignature,
+            ].join('\n'),
+          }),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          'Agent notification creation timed out for ' + runtime.id,
+        );
+        setNextStepAt(null);
+        return { continue: false, feedbackMessages: [] };
+      }
+
+      if (iteration.toolCalls.length === 0 && ignoredTextRequested) {
+        setSuppressNoToolCallReminder(true);
+      }
+
+      if (stopRequested) {
+        setNextStepAt(null);
+        return { continue: false, feedbackMessages: [] };
+      }
+
+      const producedVisibleAssistantText = didIterationProduceVisibleAssistantText(iteration);
+      const feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> = [];
+      const flushedPrompt = flushPendingRunMessages({ allowOriginIdleOnly: true });
+
+      if (flushedPrompt) {
+        feedbackMessages.push({ role: 'user', content: flushedPrompt });
+      }
+
+      if (iteration.toolCalls.length === 0 && producedVisibleAssistantText && !stopRequested && !suppressNoToolCallReminderForRun) {
+        feedbackMessages.push({ role: 'user', content: RUN_STOP_REMINDER });
+      }
+
+      const recallStep = buildRecallStepFromIteration(iteration);
+      const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
+        step: recallStep,
+        steps: [recallStep],
+        threadId: currentRuntime.mastraId,
+        resourceId: currentRuntime.mastraId,
+      }) ?? null;
+
+      if (recallFeedback?.trim()) {
+        feedbackMessages.push({ role: 'assistant', content: recallFeedback.trim() });
+      }
+
+      if (feedbackMessages.length > 0) {
+        return { continue: true, feedbackMessages };
+      }
+
+      return undefined;
+    })();
+  }
+
+
 
   async function loadAgentContextInstructions() {
     return loadContextInstructions(currentRuntime, db);
