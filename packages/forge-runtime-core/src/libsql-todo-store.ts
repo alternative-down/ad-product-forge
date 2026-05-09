@@ -34,7 +34,7 @@ const todoItemInputSchema = z.union([
       })),
     ]),
   }),
-] as any).transform((val: any) => {
+] as unknown).transform((val: any) => {
   if ('items' in val) {
     const items = val.items;
     if (Array.isArray(items)) {
@@ -202,7 +202,7 @@ export function createUpdateTodosAction(
   return {
     name: 'updateTodos',
     description: 'Create, update, complete, or clear operational todo items. Items without id are created; items with id are updated. Empty array clears all.',
-    inputSchema: todoItemInputSchema as any,
+    inputSchema: todoItemInputSchema as unknown,
     execute: async (rawInput: unknown): Promise<unknown> => {
       const { items } = todoItemInputSchema.parse(rawInput) as { items: TodoItemInput[] };
 

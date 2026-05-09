@@ -19,7 +19,7 @@ const mockStore = {
 
 vi.mock('./store.js', () => ({
   oauthStore: mockStore,
-  OAuthCredential: {} as any,
+  OAuthCredential: {} as unknown,
 }));
 
 // ─── Mock global fetch ─────────────────────────────────────────────────────────
