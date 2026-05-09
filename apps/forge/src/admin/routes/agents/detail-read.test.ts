@@ -1,247 +1,479 @@
 /**
- * Tests for admin/routes/agents/detail-read.ts
- *
- * Coverage: extractAgentId utility, route registration, handler response shapes,
- * pagination defaults, parseJsonBody integration.
- *
- * 0 existing tests → 38 new tests.
+ * Unit tests for admin/routes/agents/detail-read.ts.
+ * 9 route handlers (all GET): base, steps, conversations, memory, metrics,
+ * contracts, mcp-servers, schedules, notifications.
+ * Zero prior coverage.
  */
-import { describe, expect, it } from 'vitest';
-import { jsonResponse } from '../index';
-import { parseJsonBody } from '../index';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-// ─── extractAgentId utility ────────────────────────────────────────────────────
-// extractAgentId is an internal utility (not exported).
-// Tests verify the expected behavior based on the regex: /\/admin\/agents\/([^/]+)/
+// ─── All mocks hoisted ───────────────────────────────────────────────────────
 
-const AGENT_PATH_RE = /^\/admin\/agents\/([^/]+)/;
+const { mockJsonResponse } = vi.hoisted(() => ({
+  mockJsonResponse: vi.fn((body: unknown, status?: number) => ({
+    status: status ?? 200,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })),
+}));
 
-function extractAgentId(path: string): string {
-  const match = path.match(AGENT_PATH_RE);
-  return match ? match[1] : '';
+const mockGetAgent = vi.fn();
+const mockListConversations = vi.fn();
+const mockGetAgentRuntimeMemory = vi.fn();
+
+vi.mock('../../index', () => ({
+  jsonResponse: mockJsonResponse,
+}));
+
+vi.mock('../../read-model/agents', () => ({
+  getAgent: mockGetAgent,
+  listAgentRecentConversations: mockListConversations,
+  getAgentRuntimeMemory: mockGetAgentRuntimeMemory,
+}));
+
+// ─── Import after mocks ────────────────────────────────────────────────────
+
+import {
+  registerAgentBaseRoutes,
+  registerAgentStepsRoutes,
+  registerAgentConversationsRoutes,
+  registerAgentMemoryRoutes,
+  registerAgentMetricsRoutes,
+  registerAgentContractRoutes,
+  registerAgentMcpRoutes,
+  registerAgentSchedulesRoutes,
+  registerAgentNotificationsRoutes,
+} from './detail-read';
+
+// ─── Test helpers ───────────────────────────────────────────────────────────
+
+function makeHttpServer() {
+  const routes: Array<{ method: string; path: string; handler: any }> = [];
+  return {
+    registerRoute(route: { method: string; path: string; handler: any }) {
+      routes.push(route);
+    },
+    getRoutes() { return routes; },
+  };
 }
 
-describe('extractAgentId', () => {
-  it('extracts agentId from /admin/agents/:id path', () => {
-    expect(extractAgentId('/admin/agents/agent_abc123')).toBe('agent_abc123');
+function makeRequest(path: string, query: Map<string, string> = new Map()) {
+  return { path, query };
+}
+
+function parseBody(response: { body: string }) {
+  return JSON.parse(response.body);
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+describe('registerAgentBaseRoutes', () => {
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    httpServer = makeHttpServer();
   });
 
-  it('extracts agentId from /admin/agents/:id/steps', () => {
-    expect(extractAgentId('/admin/agents/agent_xyz/steps')).toBe('agent_xyz');
+  it('registers GET /admin/agents/:agentId', () => {
+    registerAgentBaseRoutes(httpServer, mockGetAgent);
+    const route = httpServer.getRoutes().find(r => r.path.includes('/admin/agents/'));
+    expect(route).toBeDefined();
+    expect(route!.method).toBe('GET');
+    expect(route!.path).toBe('/admin/agents/:agentId');
   });
 
-  it('extracts agentId from /admin/agents/:id/conversations', () => {
-    expect(extractAgentId('/admin/agents/my-agent/conversations')).toBe('my-agent');
-  });
-
-  it('extracts agentId from /admin/agents/:id/memory', () => {
-    expect(extractAgentId('/admin/agents/agent_qr/memory')).toBe('agent_qr');
-  });
-
-  it('extracts agentId from /admin/agents/:id/metrics', () => {
-    expect(extractAgentId('/admin/agents/agent_metrics/metrics')).toBe('agent_metrics');
-  });
-
-  it('extracts agentId from /admin/agents/:id/contract', () => {
-    expect(extractAgentId('/admin/agents/agent_ct/contract')).toBe('agent_ct');
-  });
-
-  it('extracts agentId from /admin/agents/:id/mcp', () => {
-    expect(extractAgentId('/admin/agents/agent_mcp/mcp')).toBe('agent_mcp');
-  });
-
-  it('extracts agentId from /admin/agents/:id/schedules', () => {
-    expect(extractAgentId('/admin/agents/agent_sc/schedules')).toBe('agent_sc');
-  });
-
-  it('extracts agentId from /admin/agents/:id/notifications', () => {
-    expect(extractAgentId('/admin/agents/agent_nt/notifications')).toBe('agent_nt');
-  });
-
-  it('returns empty string for unmatched path', () => {
-    expect(extractAgentId('/admin/other/path')).toBe('');
-  });
-
-  it('returns empty string for /admin/agents/', () => {
-    expect(extractAgentId('/admin/agents/')).toBe('');
-  });
-
-  it('handles agentIds with underscores and dashes', () => {
-    expect(extractAgentId('/admin/agents/agent_test-001_a/b/conversations')).toBe('agent_test-001_a');
-  });
-
-  it('returns empty string for root path', () => {
-    expect(extractAgentId('/')).toBe('');
-  });
-
-  it('returns empty string for empty path', () => {
-    expect(extractAgentId('')).toBe('');
-  });
-
-  it('returns empty string for /admin/agents only', () => {
-    expect(extractAgentId('/admin/agents')).toBe('');
-  });
-
-  it('extracts correctly when agentId has numeric parts', () => {
-    expect(extractAgentId('/admin/agents/agent_123/steps')).toBe('agent_123');
-  });
-});
-
-// ─── Route Handler Response Shapes ───────────────────────────────────────────
-
-describe('Agent detail-read route response shapes', () => {
-  it('jsonResponse creates 400 for missing agentId', () => {
-    const response = jsonResponse({ error: 'Missing agentId' }, 400);
+  it('returns 400 when agentId is missing from path', async () => {
+    registerAgentBaseRoutes(httpServer, mockGetAgent);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/'));
     expect(response.status).toBe(400);
-    expect(response.body).toContain('Missing agentId');
+    expect(parseBody(response)).toHaveProperty('error', 'Missing agentId');
   });
 
-  it('jsonResponse creates 404 for not found agent', () => {
-    const response = jsonResponse({ error: 'Agent not found: agent_abc' }, 404);
+  it('returns 404 when agent not found', async () => {
+    mockGetAgent.mockResolvedValue(null);
+    registerAgentBaseRoutes(httpServer, mockGetAgent);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/ghost-agent'));
     expect(response.status).toBe(404);
-    expect(response.body).toContain('not found');
+    expect(parseBody(response)).toHaveProperty('error', 'Agent not found: ghost-agent');
   });
 
-  it('jsonResponse creates 200 with agent data', () => {
-    const agentData = { agentId: 'agent_abc', name: 'Test Agent', status: 'active' };
-    const response = jsonResponse(agentData);
+  it('returns agent JSON on success', async () => {
+    const agent = { id: 'agent-1', name: 'Test Agent', createdAt: Date.now() };
+    mockGetAgent.mockResolvedValue(agent);
+    registerAgentBaseRoutes(httpServer, mockGetAgent);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1'));
     expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual(agentData);
-  });
-
-  it('jsonResponse creates 200 with paginated steps list', () => {
-    const steps = { items: [], hasMore: false };
-    const response = jsonResponse(steps);
-    expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual({ items: [], hasMore: false });
-  });
-
-  it('jsonResponse creates 200 with conversations list', () => {
-    const convos = { conversations: [{ id: 'conv_1', agentId: 'agent_abc' }] };
-    const response = jsonResponse(convos);
-    expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual(convos);
-  });
-
-  it('jsonResponse creates 200 with memory data', () => {
-    const memory = { workingMemory: 'some content', contextFiles: [] };
-    const response = jsonResponse(memory);
-    expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual(memory);
-  });
-
-  it('jsonResponse creates 200 with metrics', () => {
-    const metrics = { totalSteps: 42, totalCostUsd: 1.23 };
-    const response = jsonResponse(metrics);
-    expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual(metrics);
-  });
-
-  it('jsonResponse creates 200 with contract data', () => {
-    const contract = { contractId: 'ct_1', budgetUsd: 100 };
-    const response = jsonResponse(contract);
-    expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual(contract);
-  });
-
-  it('jsonResponse creates 200 with MCP configs list', () => {
-    const configs = { configs: [] };
-    const response = jsonResponse(configs);
-    expect(response.status).toBe(200);
-  });
-
-  it('jsonResponse creates 200 with schedules list', () => {
-    const schedules = { schedules: [] };
-    const response = jsonResponse(schedules);
-    expect(response.status).toBe(200);
-  });
-
-  it('jsonResponse creates 200 with notifications list', () => {
-    const notifications = { notifications: [] };
-    const response = jsonResponse(notifications);
-    expect(response.status).toBe(200);
-  });
-
-  it('jsonResponse handles hasMore pagination flag as true', () => {
-    const result = { items: [{ id: '1' }], hasMore: true };
-    const response = jsonResponse(result);
-    expect(JSON.parse(response.body).hasMore).toBe(true);
-  });
-
-  it('jsonResponse handles hasMore pagination flag as false', () => {
-    const result = { items: [], hasMore: false };
-    const response = jsonResponse(result);
-    expect(JSON.parse(response.body).hasMore).toBe(false);
+    expect(parseBody(response)).toMatchObject({ id: 'agent-1' });
   });
 });
 
-// ─── parseJsonBody integration with detail-read route parameters ──────────────
+describe('registerAgentStepsRoutes', () => {
+  let httpServer: ReturnType<typeof makeHttpServer>;
+  let mockDb: any;
 
-describe('parseJsonBody with detail-read route parameters', () => {
-  it('parses query parameters for steps limit', () => {
-    const { z } = require('zod');
-    const schema = z.object({
-      limit: z.string().optional(),
-      offset: z.string().optional(),
-    });
-    const result = parseJsonBody('{"limit":"20","offset":"10"}', schema);
-    expect(result.limit).toBe('20');
-    expect(result.offset).toBe('10');
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    httpServer = makeHttpServer();
+    mockDb = {
+      query: {
+        agentExecutionSteps: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: 'step-1', agentId: 'agent-1', createdAt: Date.now() },
+          ]),
+        },
+      },
+    };
   });
 
-  it('throws on invalid JSON for query params', () => {
-    const { z } = require('zod');
-    const schema = z.object({ limit: z.string() });
-    expect(() => parseJsonBody('not-valid-json', schema)).toThrow();
+  it('registers GET /admin/agents/:agentId/steps', () => {
+    registerAgentStepsRoutes(httpServer, mockDb);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/steps');
   });
 
-  it('parses empty body as empty object', () => {
-    const { z } = require('zod');
-    const schema = z.object({});
-    const result = parseJsonBody('', schema);
-    expect(result).toEqual({});
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentStepsRoutes(httpServer, mockDb);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('queries DB with default limit 10 and offset 0', async () => {
+    registerAgentStepsRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    await route.handler(makeRequest('/admin/agents/agent-1/steps'));
+    expect(mockDb.query.agentExecutionSteps.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, offset: 0 }),
+    );
+  });
+
+  it('uses query params for limit and offset', async () => {
+    registerAgentStepsRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const query = new Map([['limit', '20'], ['offset', '5']]);
+    await route.handler(makeRequest('/admin/agents/agent-1/steps', query));
+    expect(mockDb.query.agentExecutionSteps.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 20, offset: 5 }),
+    );
+  });
+
+  it('returns items and hasMore flag', async () => {
+    registerAgentStepsRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/steps'));
+    expect(response.status).toBe(200);
+    const body = parseBody(response);
+    expect(body).toHaveProperty('items');
+    expect(body).toHaveProperty('hasMore');
   });
 });
 
-// ─── Agent steps pagination defaults (URLSearchParams, matches actual code) ───
+describe('registerAgentConversationsRoutes', () => {
+  let httpServer: ReturnType<typeof makeHttpServer>;
 
-describe('Agent steps pagination defaults', () => {
-  it('uses default limit of 10 when not provided', () => {
-    const query = new URLSearchParams();
-    const limit = parseInt(query.get('limit') ?? '10', 10);
-    expect(limit).toBe(10);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockListConversations.mockResolvedValue([]);
+    httpServer = makeHttpServer();
   });
 
-  it('uses default offset of 0 when not provided', () => {
-    const query = new URLSearchParams();
-    const offset = parseInt(query.get('offset') ?? '0', 10);
-    expect(offset).toBe(0);
+  it('registers GET /admin/agents/:agentId/conversations', () => {
+    registerAgentConversationsRoutes(httpServer, mockListConversations);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/conversations');
   });
 
-  it('parses custom limit from query', () => {
-    const query = new URLSearchParams('limit=50');
-    const limit = parseInt(query.get('limit') ?? '10', 10);
-    expect(limit).toBe(50);
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentConversationsRoutes(httpServer, mockListConversations);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
   });
 
-  it('uses default monthly limit of 50 for contract list', () => {
-    const query = new URLSearchParams();
-    const limit = parseInt(query.get('limit') ?? '50', 10);
-    expect(limit).toBe(50);
+  it('calls listAgentRecentConversations with agentId', async () => {
+    registerAgentConversationsRoutes(httpServer, mockListConversations);
+    const route = httpServer.getRoutes()[0];
+    await route.handler(makeRequest('/admin/agents/agent-1/conversations'));
+    expect(mockListConversations).toHaveBeenCalledWith('agent-1');
   });
 
-  it('parses custom contract list limit', () => {
-    const query = new URLSearchParams('limit=25');
-    const limit = parseInt(query.get('limit') ?? '50', 10);
-    expect(limit).toBe(25);
+  it('returns conversations array on success', async () => {
+    mockListConversations.mockResolvedValue([{ id: 'c1', agentId: 'agent-1' }]);
+    registerAgentConversationsRoutes(httpServer, mockListConversations);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/conversations'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toEqual([{ id: 'c1', agentId: 'agent-1' }]);
+  });
+});
+
+describe('registerAgentMemoryRoutes', () => {
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockGetAgentRuntimeMemory.mockResolvedValue({ version: 1, packages: [] });
+    httpServer = makeHttpServer();
   });
 
-  it('invalid limit string returns NaN (route will use default via ||)', () => {
-    // parseInt of non-numeric string returns NaN; route code uses ?? which
-    // only kicks in for null/undefined, so invalid values fall through to NaN
-    const query = new URLSearchParams('limit=abc');
-    const parsed = query.get('limit');
-    expect(parsed).toBe('abc');
-    expect(parseInt(parsed, 10)).toBeNaN();
+  it('registers GET /admin/agents/:agentId/memory', () => {
+    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/memory');
+  });
+
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('calls getAgentRuntimeMemory with agentId', async () => {
+    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    const route = httpServer.getRoutes()[0];
+    await route.handler(makeRequest('/admin/agents/agent-1/memory'));
+    expect(mockGetAgentRuntimeMemory).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('returns state on success', async () => {
+    registerAgentMemoryRoutes(httpServer, mockGetAgentRuntimeMemory);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/memory'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toHaveProperty('version', 1);
+  });
+});
+
+describe('registerAgentMetricsRoutes', () => {
+  let mockDb: any;
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockDb = {
+      query: {
+        agentExecutionSteps: {
+          findMany: vi.fn().mockResolvedValue([{ id: 's1' }]),
+        },
+      },
+    };
+    httpServer = makeHttpServer();
+  });
+
+  it('registers GET /admin/agents/:agentId/metrics', () => {
+    registerAgentMetricsRoutes(httpServer, mockDb);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/metrics');
+  });
+
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentMetricsRoutes(httpServer, mockDb);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('returns metrics object with items on success', async () => {
+    registerAgentMetricsRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/metrics'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toHaveProperty('items');
+  });
+});
+
+describe('registerAgentContractRoutes', () => {
+  let mockDb: any;
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockDb = {
+      query: {
+        agentExecutionContracts: {
+          findMany: vi.fn().mockResolvedValue([{ id: 'c1' }]),
+        },
+      },
+    };
+    httpServer = makeHttpServer();
+  });
+
+  it('registers GET /admin/agents/:agentId/contracts', () => {
+    registerAgentContractRoutes(httpServer, mockDb);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/contracts');
+  });
+
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentContractRoutes(httpServer, mockDb);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('returns items object with contracts array on success', async () => {
+    registerAgentContractRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/contracts'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toMatchObject({ items: [{ id: 'c1' }] });
+  });
+});
+
+describe('registerAgentMcpRoutes', () => {
+  let mockDb: any;
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockDb = {
+      query: {
+        agentMcpConfigs: {
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+      },
+    };
+    httpServer = makeHttpServer();
+  });
+
+  it('registers GET /admin/agents/:agentId/mcp-servers', () => {
+    registerAgentMcpRoutes(httpServer, mockDb);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/mcp-servers');
+  });
+
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentMcpRoutes(httpServer, mockDb);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('returns { servers: [] } when no MCP configs found', async () => {
+    registerAgentMcpRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/mcp-servers'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toEqual({ servers: [] });
+  });
+
+  it('returns { servers: [...] } when MCP configs exist', async () => {
+    mockDb.query.agentMcpConfigs.findMany.mockResolvedValue([
+      { id: 'link-1', agentId: 'agent-1', serverId: 'srv-1' },
+    ]);
+    mockDb.query.mcpServerConfigs = {
+      findMany: vi.fn().mockResolvedValue([
+        { id: 'srv-1', name: 'Test MCP', description: 'A test server' },
+      ]),
+    };
+    registerAgentMcpRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/mcp-servers'));
+    expect(response.status).toBe(200);
+    const body = parseBody(response);
+    expect(body).toHaveProperty('servers');
+    expect(Array.isArray(body.servers)).toBe(true);
+  });
+});
+
+describe('registerAgentSchedulesRoutes', () => {
+  let mockDb: any;
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockDb = {
+      query: {
+        agentSchedules: {
+          findMany: vi.fn().mockResolvedValue([{ id: 's1', agentId: 'agent-1' }]),
+        },
+      },
+    };
+    httpServer = makeHttpServer();
+  });
+
+  it('registers GET /admin/agents/:agentId/schedules', () => {
+    registerAgentSchedulesRoutes(httpServer, mockDb);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/schedules');
+  });
+
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentSchedulesRoutes(httpServer, mockDb);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('returns items object with schedules on success', async () => {
+    registerAgentSchedulesRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/schedules'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toMatchObject({ items: [{ id: 's1', agentId: 'agent-1' }] });
+  });
+});
+
+describe('registerAgentNotificationsRoutes', () => {
+  let mockDb: any;
+  let httpServer: ReturnType<typeof makeHttpServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
+      status: status ?? 200,
+      body: JSON.stringify(body),
+    }));
+    mockDb = {
+      query: {
+        agentNotifications: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: 'n1', agentId: 'agent-1', content: 'Hello', createdAt: Date.now(), readAt: null },
+          ]),
+        },
+      },
+    };
+    httpServer = makeHttpServer();
+  });
+
+  it('registers GET /admin/agents/:agentId/notifications', () => {
+    registerAgentNotificationsRoutes(httpServer, mockDb);
+    expect(httpServer.getRoutes()[0].path).toBe('/admin/agents/:agentId/notifications');
+  });
+
+  it('returns 400 when agentId is missing', async () => {
+    registerAgentNotificationsRoutes(httpServer, mockDb);
+    const response = await httpServer.getRoutes()[0].handler(makeRequest('/admin/agents/'));
+    expect(response.status).toBe(400);
+  });
+
+  it('returns items object with notifications on success', async () => {
+    registerAgentNotificationsRoutes(httpServer, mockDb);
+    const route = httpServer.getRoutes()[0];
+    const response = await route.handler(makeRequest('/admin/agents/agent-1/notifications'));
+    expect(response.status).toBe(200);
+    expect(parseBody(response)).toHaveProperty('items');
   });
 });

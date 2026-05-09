@@ -10,7 +10,7 @@ import { vi, describe, it, expect } from 'vitest';
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 }));
-import { registerAgentReadRoutes } from './index';
+import { registerAgentReadRoutes } from './read';
 import { registerAgentOperationRoutes } from './operations';
 import { registerAgentWriteRoutes } from './write';
 import { registerAgentWriteOpsRoutes } from './write-ops';

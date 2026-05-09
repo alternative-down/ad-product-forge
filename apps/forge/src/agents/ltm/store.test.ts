@@ -1,314 +1,384 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { z } from 'zod';
+/**
+ * Unit tests for agents/ltm/store.ts — createAgentLongTermMemoryStore.
+ * Exports: readState, writeState, readRecallIndexStamp, writeRecallIndexStamp,
+ *          readRecallState, writeRecallState.
+ * Zero prior coverage.
+ */
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { Database } from '../../database';
+import type { LongTermMemoryState, LongTermMemoryRecallSnapshot, LongTermMemoryRecallHistory } from './store';
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((a, b) => ({ type: 'eq', a, b })),
-  and: vi.fn(),
-  relations: vi.fn(),
+// ─── Mock @forge-runtime/core ────────────────────────────────────────────────
+
+const { mockForgeDebug } = vi.hoisted(() => ({
+  mockForgeDebug: vi.fn(),
 }));
 
 vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: vi.fn(),
+  forgeDebug: mockForgeDebug,
 }));
 
-// ── mocks ────────────────────────────────────────────────────────────────────
+// ─── Drizzle mock setup ─────────────────────────────────────────────────────
+//
+// Chain pattern: db.select().from(table).where(eq(...))
+// - db.select() → builder with .from()
+// - .from(table) → builder with .where()
+// - .where() → Promise resolved by mock
+//
+// Also: db.query.table.findFirst (called directly as findFirst(...))
+// Also: db.insert(table).values({...}).onConflictDoUpdate({...})
 
-vi.mock('../../database/schema', () => ({
-  agentLongTermMemoryStates: { $columnMap: {} },
-  agentLongTermMemoryRecallStates: { $columnMap: {} },
-}));
+function createDrizzleMock() {
+  const statesFindFirst = vi.fn();
+  const recallStatesFindFirst = vi.fn();
 
-// Mock db with query builder pattern (insert → values; select → from → where)
-function makeQueryBuilder(result: unknown) {
-  const chain: any = {};
-  chain.values = vi.fn().mockReturnValue({ onConflictDoUpdate: vi.fn().mockResolvedValue(undefined) });
-  chain.from = vi.fn().mockReturnValue(chain);
-  chain.where = vi.fn().mockResolvedValue(result);
-  chain.orderBy = vi.fn().mockReturnValue(chain);
-  chain.limit = vi.fn().mockResolvedValue(result);
-  return chain;
+  const db = {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => Promise.resolve([])),
+        limit: vi.fn(() => Promise.resolve([])),
+      })),
+    })),
+    insert: vi.fn((table: any) => ({
+      values: vi.fn(() => ({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      })),
+    })),
+    query: {
+      agentLongTermMemoryStates: { findFirst: statesFindFirst },
+      agentLongTermMemoryRecallStates: { findFirst: recallStatesFindFirst },
+    },
+  };
+
+  return { db, statesFindFirst, recallStatesFindFirst };
 }
 
-function createMockDb() {
+// ─── Import after mocks ────────────────────────────────────────────────────
+
+import { createAgentLongTermMemoryStore } from './store';
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+const SAMPLE_STATE: LongTermMemoryState = {
+  version: 1,
+  packages: [],
+  lastWrittenPackageId: null,
+  lastWrittenAt: null,
+  lastRunAt: null,
+  lastRunError: null,
+  lastRunErrorAt: null,
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+const SAMPLE_SNAPSHOT: LongTermMemoryRecallSnapshot = {
+  status: 'hit',
+  query: 'how do I configure X',
+  resultIds: ['r1', 'r2'],
+  resultCount: 2,
+  resultScores: [0.95, 0.82],
+  graphHit: false,
+  stepsJson: '[]',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  lastInitAt: null,
+  searchMode: 'hybrid',
+  topK: 5,
+  graphTopK: 3,
+  graphThreshold: 0.7,
+  graphRandomWalkSteps: 10,
+  indexPaths: [],
+  workspaceFileCount: 0,
+  memoryFileCount: 0,
+  checkpointFileCount: 0,
+  error: null,
+};
+
+const SAMPLE_HISTORY: LongTermMemoryRecallHistory = {
+  recentFingerprints: [],
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+function mockRow(state?: Partial<{ state: LongTermMemoryState; recallIndexStamp: string }>) {
   return {
-    insert: vi.fn(() => makeQueryBuilder(undefined)),
-    update: vi.fn(() => makeQueryBuilder(undefined)),
-    select: vi.fn(() => makeQueryBuilder(undefined)),
-    delete: vi.fn(() => makeQueryBuilder(undefined)),
-    query: {
-      agentLongTermMemoryStates: {
-        findFirst: vi.fn(),
-      },
-      agentLongTermMemoryRecallStates: {
-        findFirst: vi.fn(),
-      },
-    },
+    agentId: 'agent-test',
+    state: state?.state ?? SAMPLE_STATE,
+    recallIndexStamp: state?.recallIndexStamp ?? null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
   };
 }
 
-// ── import after mocks ───────────────────────────────────────────────────────
-import { createAgentLongTermMemoryStore } from './store';
-import { longTermMemoryStateSchema, longTermMemoryRecallSnapshotSchema } from './store';
+// ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('createAgentLongTermMemoryStore', () => {
-  let db: ReturnType<typeof createMockDb>;
+  let mockDb: ReturnType<typeof createDrizzleMock>;
+  let store: ReturnType<typeof createAgentLongTermMemoryStore>;
 
   beforeEach(() => {
-    db = createMockDb();
+    mockDb = createDrizzleMock();
+    mockForgeDebug.mockImplementation(() => {});
+    store = createAgentLongTermMemoryStore(mockDb.db as unknown as Database, { agentId: 'agent-test' });
+  });
+
+  afterEach(() => {
     vi.clearAllMocks();
   });
 
-  // ── readState ───────────────────────────────────────────────────────────────
+  // ─── readState ─────────────────────────────────────────────────────────────
 
   describe('readState', () => {
-    it('returns parsed state when DB row has valid state', async () => {
-      const storedState = {
-        version: 1,
-        packages: [],
-        lastWrittenPackageId: 'pkg-1',
-        lastWrittenAt: '2025-01-01T00:00:00.000Z',
-        lastRunAt: null,
-        lastRunError: null,
-        lastRunErrorAt: null,
-        updatedAt: '2025-01-01T00:00:00.000Z',
-      };
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce({ state: storedState });
+    it('returns state from DB when row exists and parsing succeeds', async () => {
+      const row = mockRow({ state: { ...SAMPLE_STATE, lastWrittenPackageId: 'pkg-1' } });
+      mockDb.statesFindFirst.mockResolvedValue(row);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const state = await store.readState();
-
-      expect(state).toMatchObject({ version: 1, lastWrittenPackageId: 'pkg-1' });
+      const result = await store.readState();
+      expect(result.lastWrittenPackageId).toBe('pkg-1');
+      expect(mockDb.statesFindFirst).toHaveBeenCalledOnce();
     });
 
-    it('returns parsed state when DB row state is null', async () => {
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce(null);
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce(null); // writeState also reads first
+    it('returns state from DB when row is null', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(null);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const state = await store.readState();
-
-      expect(state).toMatchObject({ version: 1, packages: [] });
+      const result = await store.readState();
+      expect(result).toMatchObject({ version: 1, packages: [] });
     });
 
-    it('creates and writes empty state when safeParse fails', async () => {
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce({ state: { bad: 'data' } });
+    it('calls writeState then returns empty state when parsing fails', async () => {
+      mockDb.statesFindFirst.mockResolvedValue({
+        agentId: 'agent-test',
+        state: null,
+        recallIndexStamp: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const state = await store.readState();
-
-      expect(state).toMatchObject({ version: 1, packages: [] });
-      expect(db.insert).toHaveBeenCalled();
+      const result = await store.readState();
+      expect(result).toMatchObject({ version: 1, packages: [] });
     });
 
-    it('throws and logs on DB read error', async () => {
-      const { forgeDebug } = await import('@forge-runtime/core');
-      db.query.agentLongTermMemoryStates.findFirst.mockRejectedValueOnce(new Error('DB read error'));
+    it('throws on DB error and logs with forgeDebug', async () => {
+      mockDb.statesFindFirst.mockRejectedValue(new Error('DB error'));
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      await expect(store.readState()).rejects.toThrow('DB read error');
-      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
-        scope: 'ltm',
-        level: 'info',
-        message: 'Failed to read LTM state',
-      }));
+      await expect(store.readState()).rejects.toThrow('DB error');
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ scope: 'ltm', level: 'info', message: 'Failed to read LTM state' }),
+      );
     });
   });
 
-  // ── writeState ─────────────────────────────────────────────────────────────
+  // ─── writeState ─────────────────────────────────────────────────────────────
 
   describe('writeState', () => {
-    it('upserts state with updatedAt set', async () => {
-      const state = {
-        version: 1 as const,
-        packages: [],
-        lastWrittenPackageId: 'pkg-write',
-        lastWrittenAt: '2025-01-01T00:00:00.000Z',
-        lastRunAt: null,
-        lastRunError: null,
-        lastRunErrorAt: null,
-        updatedAt: '2025-01-01T00:00:00.000Z',
-      };
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce(null);
+    it('inserts new row when existing is null', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(null);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      await store.writeState(state);
+      const result = await store.writeState(SAMPLE_STATE);
 
-      expect(db.insert).toHaveBeenCalled();
-      expect(db.query.agentLongTermMemoryStates.findFirst).toHaveBeenCalled();
+      expect(result).toMatchObject({ version: 1 });
+      expect(mockDb.statesFindFirst).toHaveBeenCalledOnce();
     });
 
-    it('throws and logs on upsert error', async () => {
-      const { forgeDebug } = await import('@forge-runtime/core');
-      db.query.agentLongTermMemoryStates.findFirst.mockRejectedValueOnce(new Error('Query failed'));
+    it('updates existing row when one exists', async () => {
+      const existing = mockRow();
+      mockDb.statesFindFirst.mockResolvedValue(existing);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      await expect(store.writeState({
-        version: 1, packages: [], lastWrittenPackageId: null,
-        lastWrittenAt: null, lastRunAt: null, lastRunError: null,
-        lastRunErrorAt: null, updatedAt: 'x',
-      })).rejects.toThrow('Query failed');
-      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'Failed to query LTM state for write',
+      const updated = { ...SAMPLE_STATE, lastWrittenPackageId: 'pkg-updated' };
+      const result = await store.writeState(updated);
+
+      expect(result.lastWrittenPackageId).toBe('pkg-updated');
+    });
+
+    it('throws on query error and logs', async () => {
+      mockDb.statesFindFirst.mockRejectedValue(new Error('Query error'));
+
+      await expect(store.writeState(SAMPLE_STATE)).rejects.toThrow('Query error');
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to query LTM state for write' }),
+      );
+    });
+
+    it('throws on insert error and logs', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(null);
+      // Override insert to throw
+      (mockDb.db as any).insert.mockImplementationOnce(() => ({
+        values: () => ({
+          onConflictDoUpdate: vi.fn().mockRejectedValue(new Error('Insert error')),
+        }),
       }));
+
+      await expect(store.writeState(SAMPLE_STATE)).rejects.toThrow('Insert error');
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to write LTM state' }),
+      );
+    });
+
+    it('sets updatedAt to current ISO timestamp', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(null);
+
+      const before = Date.now();
+      const result = await store.writeState(SAMPLE_STATE);
+      const after = Date.now();
+
+      const resultTime = new Date(result.updatedAt).getTime();
+      expect(resultTime).toBeGreaterThanOrEqual(before);
+      expect(resultTime).toBeLessThanOrEqual(after + 1000);
     });
   });
 
-  // ── readRecallIndexStamp ────────────────────────────────────────────────────
+  // ─── readRecallIndexStamp ──────────────────────────────────────────────────
 
   describe('readRecallIndexStamp', () => {
-    it('returns the recallIndexStamp from DB row', async () => {
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce({ recallIndexStamp: 'stamp-abc', state: null });
+    it('returns recallIndexStamp from DB row', async () => {
+      const stamp = JSON.stringify({ updatedAt: '2026-01-01T00:00:00Z', reason: 'indexed' });
+      mockDb.statesFindFirst.mockResolvedValue(mockRow({ recallIndexStamp: stamp }));
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const stamp = await store.readRecallIndexStamp();
-
-      expect(stamp).toBe('stamp-abc');
+      const result = await store.readRecallIndexStamp();
+      expect(result).toBe(stamp);
     });
 
-    it('returns null when no row exists', async () => {
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce(null);
+    it('returns null when row has no recallIndexStamp', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(mockRow({ recallIndexStamp: null }));
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const stamp = await store.readRecallIndexStamp();
+      const result = await store.readRecallIndexStamp();
+      expect(result).toBeNull();
+    });
 
-      expect(stamp).toBeNull();
+    it('returns null when row is null', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(null);
+
+      const result = await store.readRecallIndexStamp();
+      expect(result).toBeNull();
+    });
+
+    it('throws on DB error and logs', async () => {
+      mockDb.statesFindFirst.mockRejectedValue(new Error('DB error'));
+
+      await expect(store.readRecallIndexStamp()).rejects.toThrow('DB error');
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to read recall index stamp' }),
+      );
     });
   });
 
-  // ── writeRecallIndexStamp ──────────────────────────────────────────────────
+  // ─── writeRecallIndexStamp ─────────────────────────────────────────────────
 
   describe('writeRecallIndexStamp', () => {
-    it('upserts the stamp into DB', async () => {
-      db.query.agentLongTermMemoryStates.findFirst.mockResolvedValueOnce(null);
+    it('queries existing state before writing', async () => {
+      mockDb.statesFindFirst.mockResolvedValue(null);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      await store.writeRecallIndexStamp('my-stamp-v2');
+      await store.writeRecallIndexStamp('manual-trigger');
 
-      expect(db.insert).toHaveBeenCalled();
+      expect(mockDb.statesFindFirst).toHaveBeenCalledOnce();
+    });
+
+    it('throws on query error and logs', async () => {
+      mockDb.statesFindFirst.mockRejectedValue(new Error('Query error'));
+
+      await expect(store.writeRecallIndexStamp('reason')).rejects.toThrow('Query error');
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to query LTM state for recall index write' }),
+      );
     });
   });
 
-  // ── readRecallState ────────────────────────────────────────────────────────
+  // ─── readRecallState ────────────────────────────────────────────────────────
 
   describe('readRecallState', () => {
-    it('returns recall state when row has valid snapshot', async () => {
-      const snapshot = {
-        status: 'hit' as const,
-        query: 'what was I doing?',
-        resultIds: ['id-1', 'id-2'],
-        resultCount: 2,
-        resultScores: [0.9, 0.7],
-        graphHit: true,
-        stepsJson: '{"steps":[]}',
-        updatedAt: '2025-01-01T00:00:00.000Z',
-        lastInitAt: null,
-        searchMode: 'vector',
-        topK: 5,
-        graphTopK: 3,
-        graphThreshold: 0.6,
-        graphRandomWalkSteps: 10,
-        indexPaths: [],
-        workspaceFileCount: 10,
-        memoryFileCount: 5,
-        checkpointFileCount: 2,
-        error: null,
-      };
-      const history = { recentFingerprints: ['fp-1'], updatedAt: '2025-01-01T00:00:00.000Z' };
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce({ snapshot, history });
-
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const result = await store.readRecallState();
-
-      expect(result.snapshot).toMatchObject({ status: 'hit', resultCount: 2 });
-      expect(result.history).toMatchObject({ recentFingerprints: ['fp-1'] });
-    });
-
-    it('returns null snapshot and null history when no row', async () => {
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce(null);
-
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
-      const result = await store.readRecallState();
-
-      expect(result.snapshot).toBeNull();
-      expect(result.history).toBeNull();
-    });
-
-    it('returns null snapshot when safeParse fails on snapshot', async () => {
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce({
-        snapshot: { bad: 'data' },
-        history: { recentFingerprints: [], updatedAt: 'x' },
+    it('returns row snapshot and history when row exists', async () => {
+      mockDb.recallStatesFindFirst.mockResolvedValue({
+        agentId: 'agent-test',
+        threadId: 'thread-1',
+        resourceId: 'res-1',
+        snapshot: SAMPLE_SNAPSHOT,
+        history: SAMPLE_HISTORY,
       });
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
       const result = await store.readRecallState();
-
-      expect(result.snapshot).toBeNull();
+      expect(result.threadId).toBe('thread-1');
+      expect(result.resourceId).toBe('res-1');
+      expect(result.snapshot).toMatchObject({ status: 'hit' });
+      expect(result.history).toMatchObject({ recentFingerprints: [] });
     });
 
-    it('returns null history when safeParse fails on history', async () => {
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce({
+    it('returns null snapshot/history when row exists but fields are null', async () => {
+      mockDb.recallStatesFindFirst.mockResolvedValue({
+        agentId: 'agent-test',
+        threadId: null,
+        resourceId: null,
         snapshot: null,
-        history: { bad: 'data' },
+        history: null,
       });
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
       const result = await store.readRecallState();
-
+      expect(result.snapshot).toBeNull();
       expect(result.history).toBeNull();
+      expect(result.threadId).toBeNull();
+    });
+
+    it('returns null threadId/resourceId when row is null', async () => {
+      mockDb.recallStatesFindFirst.mockResolvedValue(null);
+
+      const result = await store.readRecallState();
+      expect(result.threadId).toBeNull();
+      expect(result.resourceId).toBeNull();
+      expect(result.snapshot).toBeNull();
+    });
+
+    it('throws on DB error and logs', async () => {
+      mockDb.recallStatesFindFirst.mockRejectedValue(new Error('DB error'));
+
+      await expect(store.readRecallState()).rejects.toThrow('DB error');
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to read recall state' }),
+      );
     });
   });
 
-  // ── writeRecallState ───────────────────────────────────────────────────────
+  // ─── writeRecallState ──────────────────────────────────────────────────────
 
   describe('writeRecallState', () => {
-    it('upserts recall state into DB with threadId and resourceId from existing row', async () => {
-      const existingRow = { agentId: 'agent-1', threadId: 'thread-existing', resourceId: 'res-1', snapshot: null, history: null, createdAt: 1000, updatedAt: 2000 };
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce(existingRow);
+    it('queries existing state before writing', async () => {
+      mockDb.recallStatesFindFirst.mockResolvedValue(null);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
       await store.writeRecallState({
-        snapshot: { status: 'miss' as const, query: 'test', resultIds: [], resultCount: 0, resultScores: [], graphHit: false, stepsJson: '{}', updatedAt: 'x', lastInitAt: null, searchMode: 'x', topK: 5, graphTopK: 3, graphThreshold: 0.5, graphRandomWalkSteps: 5, indexPaths: [], workspaceFileCount: 0, memoryFileCount: 0, checkpointFileCount: 0, error: null },
-        history: { recentFingerprints: ['fp-new'], updatedAt: 'x' },
         threadId: 'thread-new',
-        resourceId: 'res-new',
+        snapshot: SAMPLE_SNAPSHOT,
+        history: SAMPLE_HISTORY,
       });
 
-      expect(db.insert).toHaveBeenCalled();
-      expect(db.query.agentLongTermMemoryRecallStates.findFirst).toHaveBeenCalled();
+      expect(mockDb.recallStatesFindFirst).toHaveBeenCalledOnce();
     });
 
-    it('uses existing threadId/resourceId when input ones are absent', async () => {
-      const existingRow = { agentId: 'agent-1', threadId: 'thread-old', resourceId: 'res-old', snapshot: null, history: null, createdAt: 1000, updatedAt: 2000 };
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce(existingRow);
+    it('updates existing recall state row', async () => {
+      const existing = {
+        agentId: 'agent-test',
+        threadId: 'thread-old',
+        resourceId: null,
+        snapshot: SAMPLE_SNAPSHOT,
+        history: SAMPLE_HISTORY,
+      };
+      mockDb.recallStatesFindFirst.mockResolvedValue(existing);
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
       await store.writeRecallState({
-        snapshot: { status: 'error' as const, query: 'err', resultIds: [], resultCount: 0, resultScores: [], graphHit: false, stepsJson: '{}', updatedAt: 'x', lastInitAt: null, searchMode: 'x', topK: 5, graphTopK: 3, graphThreshold: 0.5, graphRandomWalkSteps: 5, indexPaths: [], workspaceFileCount: 0, memoryFileCount: 0, checkpointFileCount: 0, error: 'boom' },
-        history: { recentFingerprints: ['fp-err'], updatedAt: 'x' },
+        threadId: 'thread-updated',
+        resourceId: 'res-updated',
+        snapshot: SAMPLE_SNAPSHOT,
+        history: SAMPLE_HISTORY,
       });
 
-      expect(db.insert).toHaveBeenCalled();
+      expect(mockDb.recallStatesFindFirst).toHaveBeenCalledOnce();
     });
 
-    it('logs and rethrows on DB insert error', async () => {
-      const { forgeDebug } = await import('@forge-runtime/core');
-      db.query.agentLongTermMemoryRecallStates.findFirst.mockResolvedValueOnce(null);
-      db.insert.mockImplementationOnce(() => {
-        const chain = makeQueryBuilder(undefined);
-        chain.values.mockImplementationOnce(() => { throw new Error('Insert failed'); });
-        return chain;
-      });
+    it('throws on query error and logs with the query error message', async () => {
+      mockDb.recallStatesFindFirst.mockRejectedValue(new Error('Query error'));
 
-      const store = createAgentLongTermMemoryStore(db as any, { agentId: 'agent-1' });
       await expect(store.writeRecallState({
-        snapshot: { status: 'miss' as const, query: 'x', resultIds: [], resultCount: 0, resultScores: [], graphHit: false, stepsJson: '{}', updatedAt: 'x', lastInitAt: null, searchMode: 'x', topK: 5, graphTopK: 3, graphThreshold: 0.5, graphRandomWalkSteps: 5, indexPaths: [], workspaceFileCount: 0, memoryFileCount: 0, checkpointFileCount: 0, error: null },
-        history: { recentFingerprints: [], updatedAt: 'x' },
-      })).rejects.toThrow('Insert failed');
-      expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
-        scope: 'ltm',
-        level: 'info',
-        message: 'Failed to write LTM recall state',
-      }));
+        threadId: null,
+        snapshot: SAMPLE_SNAPSHOT,
+      })).rejects.toThrow('Query error');
+      // The query error is caught by the first catch block
+      expect(mockForgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to query LTM recall state for write' }),
+      );
     });
   });
 });

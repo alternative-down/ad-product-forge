@@ -26,6 +26,9 @@ export default defineConfig({
       // Alias @forge-runtime/core to source so vi.mock() can resolve the module
       // without requiring a prior build step (dist/index.js doesn't exist in dev).
       '@forge-runtime/core': path.resolve(__dirname, './packages/forge-runtime-core/src/index.ts'),
+      // Discord.js is not installed in the test environment.
+      // Stub it so modules that import 'discord' (e.g. discord-account.ts) can load in tests.
+      discord: path.resolve(__dirname, './__mocks__/discord.js'),
     },
   },
 });

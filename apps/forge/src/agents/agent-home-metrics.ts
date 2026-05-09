@@ -4,7 +4,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier, forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database';
+import type { Database } from '../database/schema';
 import {
   agents,
   agentExecutionSteps,
