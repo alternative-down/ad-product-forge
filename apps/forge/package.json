@@ -30,7 +30,8 @@
     "nanoid": "^5.1.7",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.5",
-    "octokit": "^5.0.3"
+    "octokit": "^5.0.3",
+    "discord.js": "^14.26.4"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
