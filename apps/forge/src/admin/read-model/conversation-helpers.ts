@@ -183,6 +183,7 @@ async function listThreadMessages(
     const client: ClosableLibsqlClient = createClient({
       url: `file:${agentDatabasePath}`,
     });
+    client.execute('PRAGMA foreign_keys = ON');
     const conversationStore = new LibsqlConversationStore({
       client,
       tablePrefix,

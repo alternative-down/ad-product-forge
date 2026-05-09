@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@libsql/client';
-import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
+import { drizzle, sql, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 import { getAppDatabasePath } from './config';
 
@@ -14,6 +14,10 @@ const databasePath = getAppDatabasePath();
 const url = `file:${databasePath}`;
 const client = createClient({ url });
 const db = drizzle(client, { schema });
+
+// Enable foreign key enforcement at the connection level.
+// Without this, SQLite ignores ON DELETE CASCADE constraints defined in the schema.
+db.run(sql`PRAGMA foreign_keys = ON`);
 
 /**
  * Obtém a instância do database
