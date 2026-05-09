@@ -80,6 +80,7 @@ export async function runNativeToolLoop(input: {
         createAiSdkTool({
           description: tool.description,
           inputSchema: tool.inputSchema as never,
+          // eslint-disable-next-line @typescript-eslint/require-await
           execute: async (toolInput: unknown, options: { toolCallId: string }) =>
             tool.execute(toolInput, {
               runtimeId: input.runtimeId,
