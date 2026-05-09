@@ -30,7 +30,6 @@ export default defineConfig([
       'filename-kebab-case/filename-kebab-case': 'warn',
     },
   },
-  // Route modules can export Route objects alongside components.
   {
     files: ['src/routes/**/*.tsx'],
     rules: {
@@ -42,6 +41,12 @@ export default defineConfig([
     files: ['src/components/ui/**/*.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
+      'no-useless-reexports/no-useless-reexports': 'off',
+    },
+  },
+  {
+    files: ['src/lib/**/*.ts', 'src/lib/**/*.tsx'],
+    rules: {
       'no-useless-reexports/no-useless-reexports': 'off',
     },
   },

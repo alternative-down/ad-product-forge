@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "start": "sh -c 'serve -s dist -l tcp://0.0.0.0:${FORGE_ADMIN_PORT:-3021}'",
-    "lint": "eslint .",
+    "lint": "eslint --config ./eslint.config.js \"src/**/*.ts\"",
     "preview": "vite preview"
   },
   "dependencies": {
