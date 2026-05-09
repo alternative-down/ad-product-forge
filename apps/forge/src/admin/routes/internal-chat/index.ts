@@ -51,7 +51,7 @@ export function registerInternalChatRoutes(
             })),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/accounts', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -74,7 +74,7 @@ export function registerInternalChatRoutes(
           })),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/contacts', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -94,7 +94,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/account/create', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -115,7 +115,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/account/update', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -129,7 +129,7 @@ export function registerInternalChatRoutes(
         const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
         return jsonResponse(await internalChat.deleteExternalAccount(body));
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/account/delete', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -168,7 +168,7 @@ export function registerInternalChatRoutes(
           })),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/conversations', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -211,7 +211,7 @@ export function registerInternalChatRoutes(
           hasMore: items.length === (limit ? parseInt(limit, 10) : 20),
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/messages', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -248,7 +248,7 @@ export function registerInternalChatRoutes(
           body: Buffer.from(attachment.data),
         };
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/message-attachment', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -294,7 +294,7 @@ export function registerInternalChatRoutes(
           conversationKey,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/conversation/create', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -319,7 +319,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/conversation/send', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -339,7 +339,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/conversation/update', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -353,7 +353,7 @@ export function registerInternalChatRoutes(
         const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
         return jsonResponse(await internalChat.archiveConversationByAccount(body));
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/conversation/archive', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -378,7 +378,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/group-members', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -399,7 +399,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/group-member/add', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -420,7 +420,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/group-member/update-role', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -440,7 +440,7 @@ export function registerInternalChatRoutes(
           }),
         );
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/group-member/remove', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
