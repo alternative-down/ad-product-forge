@@ -48,7 +48,7 @@ export function createPaymentReceivablesStore(db: Database) {
     const now = Date.now();
     try {
       const existing = await getProvider(input.provider);
-      if (existing) {
+      if (existing !== null) {
         try {
           await db
             .update(paymentProviders)
@@ -112,7 +112,7 @@ export function createPaymentReceivablesStore(db: Database) {
         )
         .limit(1);
 
-      if (existing[0]) {
+      if (existing[0] != null) {
         try {
           await db
             .update(paymentCustomers)
@@ -171,7 +171,7 @@ export function createPaymentReceivablesStore(db: Database) {
         .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
         .limit(1);
 
-      if (existing[0]) {
+      if (existing[0] != null) {
         try {
           await db
             .update(paymentSubscriptions)
@@ -266,30 +266,30 @@ export function createPaymentReceivablesStore(db: Database) {
         )
         .limit(1);
 
-      if (existing[0]) {
+      if (existing[0] != null) {
+        const tx = existing[0];
         try {
           await db
             .update(paymentTransactions)
             .set({ status: input.status, paidAt: input.paidAt ?? null, updatedAt: now })
-            .where(eq(paymentTransactions.id, existing[0].id));
+            .where(eq(paymentTransactions.id, tx.id));
         } catch (err) {
           forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
           throw err;
         }
 
-        if (input.status === 'completed' && !existing[0].ledgerPosted) {
+        if (input.status === 'completed' && tx.ledgerPosted === false) {
           const id = createId();
           try {
             await db.insert(companyCashLedger).values({
               id,
-              provider: input.provider,
-              providerPaymentId: input.providerPaymentId,
-              entryType: 'revenue',
+              type: 'payment_received',
+              direction: 'in',
               amountUsd: input.amountUsd,
-              description: `Payment received: ${input.providerPaymentId}`,
+              description: `Stripe payment ${input.providerPaymentId}`,
+              status: 'cleared',
               effectiveAt: now,
               createdAt: now,
-              updatedAt: now,
             });
           } catch (err) {
             forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to post revenue to ledger', context: { providerPaymentId: input.providerPaymentId, error: err } });
@@ -300,16 +300,16 @@ export function createPaymentReceivablesStore(db: Database) {
             await db
               .update(paymentTransactions)
               .set({ ledgerEntryId: id, ledgerPosted: true })
-              .where(eq(paymentTransactions.id, existing[0].id));
+              .where(eq(paymentTransactions.id, tx.id));
           } catch (err) {
             forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update transaction with ledger id', context: { providerPaymentId: input.providerPaymentId, error: err } });
             throw err;
           }
 
-          return { id: existing[0].id, isNew: false, ledgerPosted: true };
+          return { id: tx.id, isNew: false, ledgerPosted: true };
         }
 
-        return { id: existing[0].id, isNew: false, ledgerPosted: existing[0].ledgerPosted };
+        return { id: tx.id, isNew: false, ledgerPosted: tx.ledgerPosted };
       }
     } catch (err) {
       forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
@@ -343,14 +343,13 @@ export function createPaymentReceivablesStore(db: Database) {
       try {
         await db.insert(companyCashLedger).values({
           id: ledgerId,
-          provider: input.provider,
-          providerPaymentId: input.providerPaymentId,
-          entryType: 'revenue',
+          type: 'payment_received',
+          direction: 'in',
           amountUsd: input.amountUsd,
-          description: `Payment received: ${input.providerPaymentId}`,
+          description: `Stripe payment ${input.providerPaymentId}`,
+          status: 'cleared',
           effectiveAt: now,
           createdAt: now,
-          updatedAt: now,
         });
       } catch (err) {
         forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to post revenue to ledger', context: { providerPaymentId: input.providerPaymentId, error: err } });
@@ -400,7 +399,7 @@ export function createPaymentReceivablesStore(db: Database) {
 
   async function getTransactionsBySubscription(subscriptionId: string) {
     try {
-      return db
+      return await db
         .select()
         .from(paymentTransactions)
         .where(eq(paymentTransactions.subscriptionId, subscriptionId));
