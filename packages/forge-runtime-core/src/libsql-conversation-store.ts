@@ -103,13 +103,13 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
     });
     const row = result.rows[0];
 
-    if (!row) {
+    if (row == null) {
       return null;
     }
 
     return {
       id: String(row.id),
-      title: row.title ? String(row.title) : undefined,
+      title: row.title != null ? String(row.title) : undefined,
       participantIds: parseJson<string[]>(row.participant_ids_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
       createdAt: String(row.created_at),
@@ -133,7 +133,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
 
     return result.rows.map((row) => ({
       id: String(row.id),
-      title: row.title ? String(row.title) : undefined,
+      title: row.title != null ? String(row.title) : undefined,
       participantIds: parseJson<string[]>(row.participant_ids_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
       createdAt: String(row.created_at),
@@ -280,7 +280,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
     const conditions = ['thread_id = ?'];
     const args: Array<string | number> = [query.threadId];
 
-    if (query.beforeMessageId) {
+    if (query.beforeMessageId != null) {
       conditions.push(
         `(
           created_at < (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
@@ -293,7 +293,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       args.push(query.beforeMessageId, query.beforeMessageId, query.beforeMessageId);
     }
 
-    if (query.afterMessageId) {
+    if (query.afterMessageId != null) {
       conditions.push(
         `(
           created_at > (select created_at from ${escapeIdentifier(this.messageTableName)} where id = ?)
@@ -306,7 +306,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       args.push(query.afterMessageId, query.afterMessageId, query.afterMessageId);
     }
 
-    if (query.limit) {
+    if (query.limit != null) {
       args.push(query.limit);
     }
 
@@ -326,7 +326,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
         from ${escapeIdentifier(this.messageTableName)}
         where ${conditions.join(' and ')}
         order by created_at ${query.order === 'desc' ? 'desc' : 'asc'}, rowid ${query.order === 'desc' ? 'desc' : 'asc'}
-        ${query.limit ? 'limit ?' : ''}
+        ${query.limit != null ? 'limit ?' : ''}
       `,
       args,
     });
@@ -335,12 +335,12 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       id: String(row.id),
       threadId: String(row.thread_id),
       role: row.role as ConversationMessage['role'],
-      authorId: row.author_id ? String(row.author_id) : undefined,
+      authorId: row.author_id != null ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
-      replacedByMessageId: row.replaced_by_message_id ? String(row.replaced_by_message_id) : null,
-      operationalMemoryType: row.om_type
-        ? row.om_type as ConversationMessage['operationalMemoryType']
+      replacedByMessageId: row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType: row.om_type != null
+        ? (row.om_type ?? null) as ConversationMessage['operationalMemoryType']
         : undefined,
       operationalMemoryGeneration:
         typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
@@ -435,12 +435,12 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       id: String(row.id),
       threadId: String(row.thread_id),
       role: row.role as ConversationMessage['role'],
-      authorId: row.author_id ? String(row.author_id) : undefined,
+      authorId: row.author_id != null ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
-      replacedByMessageId: row.replaced_by_message_id ? String(row.replaced_by_message_id) : null,
-      operationalMemoryType: row.om_type
-        ? row.om_type as ConversationMessage['operationalMemoryType']
+      replacedByMessageId: row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType: row.om_type != null
+        ? (row.om_type ?? null) as ConversationMessage['operationalMemoryType']
         : undefined,
       operationalMemoryGeneration:
         typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
@@ -495,7 +495,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
     });
     const row = result.rows[0];
 
-    if (!row) {
+    if (row == null) {
       return null;
     }
 
@@ -539,7 +539,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
     });
     const row = result.rows[0];
 
-    if (!row) {
+    if (row == null) {
       return null;
     }
 

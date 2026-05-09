@@ -43,7 +43,7 @@ export function isWorkspaceEmbedderId(value: string): value is WorkspaceEmbedder
 }
 
 export function resolveWorkspaceEmbedderId(value: string | null | undefined): WorkspaceEmbedderId {
-  return value && isWorkspaceEmbedderId(value) ? value : 'fastembed';
+  return value != null && isWorkspaceEmbedderId(value) ? value : 'fastembed';
 }
 
 export function getWorkspaceEmbedderProvider(
@@ -85,8 +85,8 @@ export async function embedTextWithWorkspaceEmbedder(
   return result.embeddings[0] ?? [];
 }
 
-export async function embedTextWithFastembed(text: string): Promise<number[]> {
-  return embedTextWithWorkspaceEmbedder('fastembed', text);
+export async function embedTextWithFastembed(_text: string): Promise<number[]> {
+return await embedTextWithWorkspaceEmbedder('fastembed', _text);
 }
 
 async function getTransformersPipeline(
@@ -94,12 +94,12 @@ async function getTransformersPipeline(
 ): Promise<FeatureExtractionPipeline> {
   const existingPipeline = transformersPipelineByEmbedder.get(embedderId);
   if (existingPipeline) {
-    return existingPipeline;
+    return await existingPipeline;
   }
 
   const pipelinePromise = createTransformersPipeline(embedderId);
   transformersPipelineByEmbedder.set(embedderId, pipelinePromise);
-  return pipelinePromise;
+  return await pipelinePromise;
 }
 
 async function createFastembedProvider(): Promise<WorkspaceEmbedderProvider> {

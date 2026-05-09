@@ -188,7 +188,7 @@ export async function createRuntimeAgentSession(
 
   return {
     async generate(prompt, options = {}) {
-      return runRuntimeAgentSessionGenerate({
+      return await runRuntimeAgentSessionGenerate({
         runtime,
         session: input,
         prompt,

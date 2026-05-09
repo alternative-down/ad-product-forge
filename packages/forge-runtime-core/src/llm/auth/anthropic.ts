@@ -134,7 +134,7 @@ export async function resolveAnthropicCredential(options?: {
     return credential;
   }
 
-  return syncAnthropicCredential({
+  return await syncAnthropicCredential({
     setupTokenFilePath: options?.setupTokenFilePath,
     authFilePath: options?.authFilePath,
     storePath,
