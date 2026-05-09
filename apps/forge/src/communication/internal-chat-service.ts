@@ -118,6 +118,15 @@ export function createInternalChatService(
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
+  const conversations = createInternalChatConversations(db);
+
+  const groups = createInternalChatGroups(db, {
+    getRequiredAccount,
+    getRequiredAgentAccount,
+    getRequiredAccountBySlug,
+    getAccountByTargetKey,
+  });
+
   /**
    * Inline error wrapper — replaces the repetitive try/catch + forgeDebug pattern
    * across all simple delegation methods in this service.
@@ -152,23 +161,23 @@ export function createInternalChatService(
 
   // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
-  const ensureDirectConversation = wrap(conversations.ensureDirectConversation.bind(conversations));
+  const ensureDirectConversation = wrap(conversations.ensureDirectConversation);
 
 
   // === Group Management ───────────────────────────────────────────────────
-  const createChatGroup = wrap(groups.createChatGroup.bind(groups));
+  const createChatGroup = wrap(groups.createChatGroup);
 
-  const addMemberToGroup = wrap(groups.addMemberToGroup.bind(groups));
+  const addMemberToGroup = wrap(groups.addMemberToGroup);
 
-  const removeMemberFromGroup = wrap(groups.removeMemberFromGroup.bind(groups));
+  const removeMemberFromGroup = wrap(groups.removeMemberFromGroup);
 
-  const changeChatGroup = wrap(groups.changeChatGroup.bind(groups));
+  const changeChatGroup = wrap(groups.changeChatGroup);
 
-  const listChatGroups = wrap(groups.listChatGroups.bind(groups));
+  const listChatGroups = wrap(groups.listChatGroups);
 
-  const listGroupMembers = wrap(groups.listGroupMembers.bind(groups));
+  const listGroupMembers = wrap(groups.listGroupMembers);
 
-  const listGroupMembersByAccount = wrap(groups.listGroupMembersByAccount.bind(groups));
+  const listGroupMembersByAccount = wrap(groups.listGroupMembersByAccount);
 
 
   // === Message Listing ───────────────────────────────────────────────────
@@ -323,19 +332,19 @@ export function createInternalChatService(
   const getMessagesByAccount = listing.getMessagesByAccount.bind(listing);
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
-  const archiveConversationByAccount = wrap(conversations.archiveConversationByAccount.bind(conversations));
+  const archiveConversationByAccount = wrap(conversations.archiveConversationByAccount);
 
-  const createExternalChatGroup = wrap(groups.createExternalChatGroup.bind(groups));
+  const createExternalChatGroup = wrap(groups.createExternalChatGroup);
 
-  const ensureDirectConversationByAccount = wrap(conversations.ensureDirectConversationByAccount.bind(conversations));
+  const ensureDirectConversationByAccount = wrap(conversations.ensureDirectConversationByAccount);
 
-  const addMemberToGroupByAccount = wrap(groups.addMemberToGroupByAccount.bind(groups));
+  const addMemberToGroupByAccount = wrap(groups.addMemberToGroupByAccount);
 
-  const updateMemberRoleByAccount = wrap(groups.updateMemberRoleByAccount.bind(groups));
+  const updateMemberRoleByAccount = wrap(groups.updateMemberRoleByAccount);
 
-  const removeMemberFromGroupByAccount = wrap(groups.removeMemberFromGroupByAccount.bind(groups));
+  const removeMemberFromGroupByAccount = wrap(groups.removeMemberFromGroupByAccount);
 
-  const updateGroupByAccount = wrap(groups.updateGroupByAccount.bind(groups));
+  const updateGroupByAccount = wrap(groups.updateGroupByAccount);
 
 
   // === Unread / Recent ────────────────────────────────────────────────────
@@ -376,16 +385,6 @@ export function createInternalChatService(
   const getRequiredConversationForAccount = serviceHelpers.getRequiredConversationForAccount;
   const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
   const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
-
-
-  const conversations = createInternalChatConversations(db);
-
-  const groups = createInternalChatGroups(db, {
-    getRequiredAccount,
-    getRequiredAgentAccount,
-    getRequiredAccountBySlug,
-    getAccountByTargetKey,
-  });
 
   const accountOps = createInternalChatAccountOps(db, {
     getRequiredAccount,
