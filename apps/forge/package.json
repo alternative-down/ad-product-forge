@@ -7,7 +7,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "build": "npm run -w agent-runtime-core build && npm run -w @forge-runtime/core build && tsup && mkdir -p dist/skills && cp -R src/agents/skills/. dist/skills/",
-    "typecheck": "npm run -w agent-runtime-core build && npm run -w @forge-runtime/core build && tsc --noEmit",
+    "typecheck": "npx tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "test": "vitest run",
     "init-registry": "tsx src/scripts/init-agent-registry.ts",
