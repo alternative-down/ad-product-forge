@@ -6,11 +6,18 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.test.ts'],
+    // Coverage is enabled via --coverage CLI flag (used in CI push/PR runs).
+    // Default test runs are unthrottled for speed.
+    // Coverage is disabled by default — run with --coverage flag or CI_VITEST_COVERAGE=1
+    // to collect coverage data. This keeps local test runs fast.
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['apps/forge/src/**/*.ts', 'packages/mastra-engine/src/**/*.ts'],
       exclude: ['**/*.d.ts', '**/*.test.ts'],
+      default: {
+        enabled: false,
+      },
     },
     // Run test files sequentially (one at a time) to prevent vi.mock() global hoisting
     // from polluting other test files. With parallel execution (default), vitest's
