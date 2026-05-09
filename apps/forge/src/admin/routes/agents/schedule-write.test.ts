@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerAgentSchedulesWriteRoutes } from './schedule-write';
 
-// schedule-write.ts imports { forgeDebug, jsonResponse, parseJsonBody } from '../index'
+// schedule-write.ts imports { forgeDebug } from '../debug' and { jsonResponse, parseJsonBody } from '../index'
 // The real ../index does NOT export forgeDebug (it's only in @forge-runtime/core).
 // This mock makes ../index provide a dummy forgeDebug so the handler's catch block
 // calls don't throw.
