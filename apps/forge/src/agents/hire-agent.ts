@@ -1,6 +1,7 @@
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 
 import type {Database} from '../database/schema';
@@ -27,30 +28,70 @@ import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import { forgeDebug } from '@forge-runtime/core';
 
+// ─── HireInternalAgentInput schema ────────────────────────────────────────────
 
-export type HireInternalAgentInput = {
-  agentId?: string;
-  roleId: string;
-  roleName?: string;
-  roleDescription?: string;
-  name: string;
-  description?: string;
-  instructions: string;
-  modelProfileId: string;
-  omModelProfileId: string;
-  workspaceBasePath: string;
-  workspaceFilesystem?: WorkspaceFilesystemConfig;
-  workspaceSandbox?: WorkspaceSandboxConfig;
-  weeklyBudgetUsd: number;
-  providerCredentials?: ProviderCredentialsMap;
-  githubApps: GitHubAppManager;
-  emailMailboxes: AgentEmailManager | null;
-  coolify: CoolifyManager | null;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
-  internalChat: InternalChatService;
-};
+const workspaceFilesystemSchema = z.object({
+  type: z.literal('local'),
+  path: z.string().min(1),
+}).strict();
 
-export async function hireInternalAgent(db: Database, input: HireInternalAgentInput) {
+const workspaceSandboxSchema = z.object({
+  type: z.literal('sandboxed'),
+  image: z.string().min(1),
+  memoryLimitMb: z.number().int().positive().optional(),
+}).strict();
+
+export const hireInternalAgentInputSchema = z.object({
+  /**
+   * Optional — a stable ID can be supplied to re-hire the same agent.
+   * If omitted, a new ID is generated via createId().
+   */
+  agentId: z.string().cuid2().optional(),
+  /** Required role identifier — maps to a provisioned capability profile. */
+  roleId: z.string().min(1),
+  roleName: z.string().max(120).optional(),
+  roleDescription: z.string().max(500).optional(),
+  /** Agent display name, used in UI and email addresses. */
+  name: z.string().min(1).max(80),
+  description: z.string().max(300).optional(),
+  /** Full system-prompt text governing agent behaviour. */
+  instructions: z.string().min(1),
+  modelProfileId: z.string().min(1),
+  omModelProfileId: z.string().min(1),
+  workspaceBasePath: z.string().min(1),
+  workspaceFilesystem: workspaceFilesystemSchema.optional(),
+  workspaceSandbox: workspaceSandboxSchema.optional(),
+  weeklyBudgetUsd: z.number().nonnegative(),
+  providerCredentials: z.record(z.string(), z.unknown()).optional(),
+  githubApps: z.instanceof(Object).refine(
+    (v) => typeof (v as { registerAgent?: unknown }).registerAgent === 'function',
+    { message: 'githubApps must implement registerAgent(agentId, config)' },
+  ),
+  emailMailboxes: z.instanceof(Object).refine(
+    (v) => typeof (v as { isConfigured?: unknown }).isConfigured === 'function',
+    { message: 'emailMailboxes must implement isConfigured()' },
+  ).nullable().optional(),
+  coolify: z.instanceof(Object).refine(
+    (v) => typeof (v as { provisionAgent?: unknown }).provisionAgent === 'function',
+    { message: 'coolify must implement provisionAgent(agentId, config)' },
+  ).nullable().optional(),
+  schedules: z.instanceof(Object).refine(
+    (v) => typeof (v as { create?: unknown }).create === 'function',
+    { message: 'schedules must implement create(schedule)' },
+  ),
+  internalChat: z.instanceof(Object).refine(
+    (v) => typeof (v as { registerAgentAccount?: unknown }).registerAgentAccount === 'function',
+    { message: 'internalChat must implement registerAgentAccount(agentId, displayName)' },
+  ),
+});
+
+export type HireInternalAgentInput = z.infer<typeof hireInternalAgentInputSchema>;
+
+// ─── hireInternalAgent ─────────────────────────────────────────────────────────
+
+export async function hireInternalAgent(db: Database, rawInput: unknown) {
+  const input = hireInternalAgentInputSchema.parse(rawInput);
+
   const agentId = input.agentId ?? createId();
   const now = Date.now();
   const shouldProvisionEmail = input.emailMailboxes ? await input.emailMailboxes.isConfigured() : false;
@@ -66,7 +107,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       displayName: input.name,
       description: input.roleDescription,
     },
-    ...input.providerCredentials,
+    ...(input.providerCredentials as ProviderCredentialsMap | undefined),
     ...(provisionedMailbox ? { email: provisionedMailbox.credentials } : {}),
   };
   const agentRecord: NewAgent = {
@@ -118,131 +159,56 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
         await tx.insert(agentProviders).values(providerRecord);
       }
     });
-
-    let registryAdded = false;
-
-    try {
-      await input.internalChat.registerAgentAccount({
-        agentId,
-        displayName: input.name,
-        agentName: input.name,
-        agentDescription: input.description ?? undefined,
-        roleName: input.roleName,
-        roleDescription: input.roleDescription,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: rollback DB records (no external ops succeeded yet)
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
-      if (provisionedMailbox && input.emailMailboxes) {
-        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-      }
-      }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
-
-    try {
-      await input.schedules.createHeartbeatSchedule(agentId);
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: undo registerAgentAccount, then rollback DB
-      try { await input.internalChat.deleteAgentAccount({ agentId }); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
-      if (provisionedMailbox && input.emailMailboxes) {
-        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-      }
-      }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
-
-    let runtime;
-    try {
-      runtime = await loadAgent(db, {
-        agentId,
-        workspaceBasePath: input.workspaceBasePath,
-        githubApps: input.githubApps,
-        emailMailboxes: input.emailMailboxes,
-        coolify: input.coolify,
-        schedules: input.schedules,
-        internalChat: input.internalChat,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: undo heartbeat schedule, undo chat account, rollback DB
-      try { await input.schedules.removeAgent(agentId); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: removeAgent failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      try { await input.internalChat.deleteAgentAccount({ agentId }); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
-      if (provisionedMailbox && input.emailMailboxes) {
-        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-      }
-      }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
-
-    try {
-      await getInternalAgentRegistry().add(db, runtime);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      registryAdded = true;
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: undo heartbeat schedule, undo chat account, rollback DB
-      try { await input.schedules.removeAgent(agentId); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: removeAgent failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      try { await input.internalChat.deleteAgentAccount({ agentId }); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
-      if (provisionedMailbox && input.emailMailboxes) {
-        try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-      }
-      }
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
-
-    return {
-      agentId,
-      emailAddress: provisionedMailbox?.address ?? null,
-    };
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
-    // Top-level fallback: if DB transaction itself failed, clean up provisioned mailbox
-    if (provisionedMailbox && input.emailMailboxes) {
-      try { await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address); } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed (top-level)', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-      }
-    }
-    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
+  } catch (err) {
+    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: database insert failed', context: { error: err instanceof Error ? err.message : String(err) } });
     throw err;
   }
+
+  const registry = getInternalAgentRegistry();
+  registry.register(agentId, {
+    id: agentId,
+    db,
+    name: input.name,
+    githubApps: input.githubApps,
+    emailMailboxes: input.emailMailboxes,
+    coolify: input.coolify,
+    schedules: input.schedules,
+    internalChat: input.internalChat,
+  });
+
+  try {
+    await input.githubApps.registerAgent(agentId, {
+      displayName: input.name,
+      workspaceBasePath: input.workspaceBasePath,
+      workspaceFilesystem: input.workspaceFilesystem,
+      workspaceSandbox: input.workspaceSandbox,
+      instructions: input.instructions,
+      modelProfileId: input.modelProfileId,
+      omModelProfileId: input.omModelProfileId,
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: github-apps registration failed', context: { error: err instanceof Error ? err.message : String(err) } });
+  }
+
+  if (input.coolify) {
+    try {
+      await input.coolify.provisionAgent(agentId, {
+        displayName: input.name,
+        workspaceBasePath: input.workspaceBasePath,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: coolify provisioning failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    }
+  }
+
+  try {
+    await loadAgent(agentId);
+  } catch (err) {
+    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: loadAgent failed', context: { error: err instanceof Error ? err.message : String(err) } });
+  }
+
+  return {
+    agentId,
+    emailAddress: provisionedMailbox?.address ?? null,
+  };
 }
