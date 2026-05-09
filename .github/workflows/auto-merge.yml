@@ -36,10 +36,8 @@ print(len(approved), ','.join(sorted(approved)))
           echo "Approved by: $APPROVALS"
           
           if [ "$COUNT" -ge 2 ]; then
-            echo "2+ approvals — attempting auto-merge"
-            gh pr merge "$PR_NUMBER" --merge --auto --delete-branch || \
-            gh pr merge "$PR_NUMBER" --squash --delete-branch || \
-            echo "Auto-merge failed"
+            echo "2+ approvals — enabling auto-merge"
+            gh pr enable-auto-merge "$PR_NUMBER" --squash --delete-branch || echo "Already enabled or failed"
           else
             echo "Need 2 approvals, have $COUNT — skipping"
           fi
