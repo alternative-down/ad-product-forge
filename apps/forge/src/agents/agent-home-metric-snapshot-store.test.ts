@@ -4,7 +4,7 @@
  * Zero prior coverage.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { Database } from '../database';
+import type { Database } from '../database/schema';
 
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 

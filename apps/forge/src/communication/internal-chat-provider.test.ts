@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+vi.stubGlobal('forgeDebug', vi.fn());
 import type { CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
 
 import type { InternalChatService } from './internal-chat-service';

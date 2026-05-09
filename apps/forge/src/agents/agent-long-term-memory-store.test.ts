@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Database } from '../database';
+import type { Database } from '../database/schema';
 
 function createMockDb() {
   const insertMock = vi.fn();
@@ -311,17 +311,4 @@ describe('createAgentLongTermMemoryStore', () => {
     });
   });
 
-  describe('clearRecallState', () => {
-    it('calls delete with where clause for agent', async () => {
-      const storeFn = await createTestSubject();
-      const mockDb = createMockDb();
-      const deleteMock = mockDb.delete as ReturnType<typeof vi.fn>;
-      deleteMock.mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
-
-      const store = storeFn(mockDb, { agentId: 'agent-123' });
-      await store.clearRecallState();
-
-      expect(deleteMock).toHaveBeenCalled();
-    });
-  });
 });

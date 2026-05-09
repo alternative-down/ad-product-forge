@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { registerAgentOperationRoutes } from './operations';
 

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
-import type { Database } from '../database';
+import type { Database } from '../database/schema';
 import { WEEK_MS } from '../shared/constants';
 
 function isSQL(x: unknown): x is { queryChunks: unknown[] } {

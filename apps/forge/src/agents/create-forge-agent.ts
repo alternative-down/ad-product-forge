@@ -127,6 +127,7 @@ export async function createInternalAgentRuntime<
     companyName: config.companyName,
     companyContext: config.companyContext,
   });
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const longTermMemory = options.longTermMemory && options.contractStore
       ? createAgentLongTermMemory({
         agentId: config.id,
@@ -243,5 +244,5 @@ export async function createForgeAgent<
 >(
   config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
 ): Promise<RuntimeAgent> {
-  return createAgent(config, { longTermMemory: false });
+  return await createAgent(config, { longTermMemory: false });
 }
