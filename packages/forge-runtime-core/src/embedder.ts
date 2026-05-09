@@ -1,3 +1,4 @@
+/* eslint-disable reexport-check/no-unnecessary-reexports */
 export {
   embedTextWithFastembed,
   embedTextWithWorkspaceEmbedder,

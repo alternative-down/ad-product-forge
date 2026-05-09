@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, reexport-check/no-unnecessary-reexports */
 import { z } from 'zod';
 import type { Client } from '@libsql/client';
 
@@ -203,7 +203,7 @@ export function createUpdateTodosAction(
   return {
     name: 'updateTodos',
     description: 'Create, update, complete, or clear operational todo items. Items without id are created; items with id are updated. Empty array clears all.',
-    inputSchema: todoItemInputSchema as any,
+    inputSchema: todoItemInputSchema as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
     execute: async (rawInput: unknown): Promise<unknown> => {
       const { items } = todoItemInputSchema.parse(rawInput) as { items: TodoItemInput[] };
 
