@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Database } from '../database';
+import type { Database } from '../database/schema';
 import { systemSettings } from '../database/schema';
 
 const SYSTEM_SETTINGS_ID = 'global';

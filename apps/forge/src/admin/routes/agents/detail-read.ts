@@ -29,7 +29,7 @@ function extractAgentId(path: string): string {
 
 // ─── Agent Base (basic agent data) ─────────────────────────────────────────
 
-function registerAgentBaseRoutes(
+export function registerAgentBaseRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   getAgent: AgentReadModel['getAgent'],
 ) {
@@ -53,7 +53,7 @@ function registerAgentBaseRoutes(
 
 // ─── Agent Execution Steps ───────────────────────────────────────────────────
 
-function registerAgentStepsRoutes(
+export function registerAgentStepsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   db: Database,
 ) {
@@ -83,7 +83,7 @@ function registerAgentStepsRoutes(
 
 // ─── Agent Conversations ─────────────────────────────────────────────────────
 
-function registerAgentConversationsRoutes(
+export function registerAgentConversationsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   listAgentRecentConversations: AgentReadModel['listAgentRecentConversations'],
 ) {
@@ -105,7 +105,7 @@ function registerAgentConversationsRoutes(
 
 // ─── Agent Runtime Memory ───────────────────────────────────────────────────
 
-function registerAgentMemoryRoutes(
+export function registerAgentMemoryRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   getAgentRuntimeMemory: AgentReadModel['getAgentRuntimeMemory'],
 ) {
@@ -127,7 +127,7 @@ function registerAgentMemoryRoutes(
 
 // ─── Agent Metrics ───────────────────────────────────────────────────────────
 
-function registerAgentMetricsRoutes(
+export function registerAgentMetricsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   db: Database,
 ) {
@@ -155,7 +155,7 @@ function registerAgentMetricsRoutes(
 
 // ─── Agent Contracts ───────────────────────────────────────────────────────────
 
-function registerAgentContractRoutes(
+export function registerAgentContractRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   db: Database,
 ) {
@@ -180,7 +180,7 @@ function registerAgentContractRoutes(
 
 // ─── Agent MCP Servers ───────────────────────────────────────────────────────
 
-function registerAgentMcpRoutes(
+export function registerAgentMcpRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   db: Database,
 ) {
@@ -230,7 +230,7 @@ function registerAgentMcpRoutes(
 
 // ─── Agent Schedules ─────────────────────────────────────────────────────────
 
-function registerAgentSchedulesRoutes(
+export function registerAgentSchedulesRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   db: Database,
 ) {
@@ -255,7 +255,7 @@ function registerAgentSchedulesRoutes(
 
 // ─── Agent Notifications ─────────────────────────────────────────────────────
 
-function registerAgentNotificationsRoutes(
+export function registerAgentNotificationsRoutes(
   httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
   db: Database,
 ) {

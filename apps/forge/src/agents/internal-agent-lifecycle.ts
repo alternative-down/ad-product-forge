@@ -1,4 +1,4 @@
-import type { Database } from '../database/index';
+import type { Database } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
 import { buildHiredAgentProfile } from './hiring-profile';

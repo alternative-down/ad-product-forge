@@ -3,7 +3,7 @@
  */
 
 import { eq, and, like, or } from 'drizzle-orm';
-import { getDatabase } from '../../database';
+import { getDatabase } from '../../database/client';
 import { mcpServerConfigs, agentMcpConfigs, type McpServerConfig, type NewMcpServerConfig, type AgentMcpConfig, type NewAgentMcpConfig } from '../../database/schema';
 import { nanoid } from 'nanoid';
 import { forgeDebug } from '@forge-runtime/core';
