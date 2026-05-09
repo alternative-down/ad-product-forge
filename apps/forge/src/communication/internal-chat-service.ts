@@ -123,14 +123,6 @@ export function createInternalChatService(
   const getAccountByTargetKey = accounts.getAccountByTargetKey;
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
 
-  const listing = createInternalChatListing(db, {
-    getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
-  });
-
 
 
   const conversations = createInternalChatConversations(db);
@@ -392,6 +384,15 @@ export function createInternalChatService(
 
   const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
   const requireConversationMembership = serviceHelpers.requireConversationMembership;
+
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
+  });
+
   const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
   const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
   const getRequiredConversationForAccount = serviceHelpers.getRequiredConversationForAccount;
