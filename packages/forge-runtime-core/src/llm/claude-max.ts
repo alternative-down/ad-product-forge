@@ -1,4 +1,4 @@
-import { CLAUDE_MAX_MODELS, type ClaudeMaxModelId } from './model-ids';
+import type { ClaudeMaxModelId } from './model-ids';
 import { OAUTH_GATEWAY_ID } from '../oauth-gateway.js';
 
 export type { ClaudeMaxModelId };
