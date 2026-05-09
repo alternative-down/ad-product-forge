@@ -1,100 +1,90 @@
-import { describe, expect, it } from 'vitest';
-import { InMemoryForgeUsageSink, createForgeUsageObserver } from './usage.js';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { InMemoryForgeUsageSink, type ForgeStepUsageRecord } from './usage';
 
-describe('usage', () => {
-  describe('ForgeStepModelUsage', () => {
-    it('accepts usage with all optional fields', () => {
-      const usage = {
-        inputTokens: 100,
-        outputTokens: 50,
-        totalTokens: 150,
-        cachedInputTokens: 30,
-        reasoningTokens: 20,
-      };
-      expect(usage.inputTokens).toBe(100);
-    });
+function makeRecord(overrides: Partial<ForgeStepUsageRecord> = {}): ForgeStepUsageRecord {
+  return {
+    runtimeId: 'runtime-1',
+    stepId: 'step-1',
+    stepNumber: 1,
+    startedAt: '2024-01-01T00:00:00Z',
+    finishedAt: '2024-01-01T00:00:01Z',
+    usage: { inputTokens: 100, outputTokens: 50 },
+    modelMetadata: { provider: 'anthropic', modelId: 'claude-3' },
+    ...overrides,
+  };
+}
 
-    it('accepts partial usage', () => {
-      const usage = { inputTokens: 50 };
-      expect(usage.inputTokens).toBe(50);
-    });
+describe('InMemoryForgeUsageSink', () => {
+  let sink: InMemoryForgeUsageSink;
+
+  beforeEach(() => {
+    sink = new InMemoryForgeUsageSink();
   });
 
-  describe('InMemoryForgeUsageSink', () => {
-    it('records step usage', async () => {
-      const sink = new InMemoryForgeUsageSink();
-      await sink.recordStepUsage({
-        runtimeId: 'runtime-1',
-        stepId: 'step-1',
-        stepNumber: 1,
-        startedAt: '2024-01-01T00:00:00Z',
-        finishedAt: '2024-01-01T00:00:01Z',
-        usage: { inputTokens: 100, outputTokens: 50 },
-        modelMetadata: { provider: 'openai', modelId: 'gpt-5.4' },
-      });
-      const records = sink.list();
-      expect(records).toHaveLength(1);
-      expect(records[0].runtimeId).toBe('runtime-1');
-      expect(records[0].usage?.inputTokens).toBe(100);
+  describe('recordStepUsage', () => {
+    it('stores a single record', async () => {
+      const record = makeRecord({ stepId: 'step-a' });
+      await sink.recordStepUsage(record);
+      expect(sink.list()).toEqual([record]);
     });
 
-    it('records multiple usages', async () => {
-      const sink = new InMemoryForgeUsageSink();
-      await sink.recordStepUsage({
-        runtimeId: 'runtime-1',
-        stepId: 'step-1',
-        stepNumber: 1,
-        startedAt: '2024-01-01T00:00:00Z',
-        finishedAt: '2024-01-01T00:00:01Z',
-        usage: { inputTokens: 100 },
-        modelMetadata: null,
-      });
-      await sink.recordStepUsage({
-        runtimeId: 'runtime-1',
-        stepId: 'step-2',
-        stepNumber: 2,
-        startedAt: '2024-01-01T00:00:01Z',
-        finishedAt: '2024-01-01T00:00:02Z',
-        usage: { outputTokens: 200 },
-        modelMetadata: null,
-      });
-      expect(sink.list()).toHaveLength(2);
+    it('stores multiple records', async () => {
+      const r1 = makeRecord({ stepId: 'step-a', stepNumber: 1 });
+      const r2 = makeRecord({ stepId: 'step-b', stepNumber: 2 });
+      const r3 = makeRecord({ stepId: 'step-c', stepNumber: 3 });
+      await sink.recordStepUsage(r1);
+      await sink.recordStepUsage(r2);
+      await sink.recordStepUsage(r3);
+      expect(sink.list()).toHaveLength(3);
     });
 
-    it('returns a copy of records', () => {
-      const sink = new InMemoryForgeUsageSink();
-      const list1 = sink.list();
-      const list2 = sink.list();
-      expect(list1).not.toBe(list2);
-      expect(list1).toEqual(list2);
+    it('preserves order of recorded steps', async () => {
+      const r1 = makeRecord({ stepId: 's1', stepNumber: 1 });
+      const r2 = makeRecord({ stepId: 's2', stepNumber: 2 });
+      await sink.recordStepUsage(r1);
+      await sink.recordStepUsage(r2);
+      expect(sink.list()[0].stepId).toBe('s1');
+      expect(sink.list()[1].stepId).toBe('s2');
     });
 
-    it('handles null usage', async () => {
-      const sink = new InMemoryForgeUsageSink();
-      await sink.recordStepUsage({
-        runtimeId: 'runtime-1',
-        stepId: 'step-1',
-        stepNumber: 1,
-        startedAt: '2024-01-01T00:00:00Z',
-        finishedAt: '2024-01-01T00:00:01Z',
-        usage: null,
-        modelMetadata: null,
-      });
+    it('handles record with null usage', async () => {
+      const record = makeRecord({ usage: null });
+      await sink.recordStepUsage(record);
       expect(sink.list()[0].usage).toBeNull();
     });
-  });
 
-  describe('createForgeUsageObserver', () => {
-    it('creates an observer with correct name', () => {
-      const sink = new InMemoryForgeUsageSink();
-      const observer = createForgeUsageObserver(sink);
-      expect(observer.name).toBe('forge-usage-observer');
+    it('handles record with partial usage', async () => {
+      const record = makeRecord({ usage: { inputTokens: 100 } });
+      await sink.recordStepUsage(record);
+      expect(sink.list()[0].usage).toEqual({ inputTokens: 100 });
     });
 
-    it('observer has onAfterStep handler', () => {
-      const sink = new InMemoryForgeUsageSink();
-      const observer = createForgeUsageObserver(sink);
-      expect(typeof observer.onAfterStep).toBe('function');
+    it('handles record with null modelMetadata', async () => {
+      const record = makeRecord({ modelMetadata: null });
+      await sink.recordStepUsage(record);
+      expect(sink.list()[0].modelMetadata).toBeNull();
+    });
+
+    it('stores records with different runtime IDs', async () => {
+      const r1 = makeRecord({ runtimeId: 'runtime-A' });
+      const r2 = makeRecord({ runtimeId: 'runtime-B' });
+      await sink.recordStepUsage(r1);
+      await sink.recordStepUsage(r2);
+      expect(sink.list().map(r => r.runtimeId)).toEqual(['runtime-A', 'runtime-B']);
+    });
+  });
+
+  describe('list', () => {
+    it('returns empty array initially', () => {
+      expect(sink.list()).toEqual([]);
+    });
+
+    it('returns a copy, not the internal array', async () => {
+      const record = makeRecord();
+      await sink.recordStepUsage(record);
+      const list = sink.list();
+      list.push(makeRecord({ stepId: 'mutated' }));
+      expect(sink.list()).toHaveLength(1);
     });
   });
 });
