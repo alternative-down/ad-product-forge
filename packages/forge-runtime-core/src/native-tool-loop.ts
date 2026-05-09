@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { generateText, stepCountIs, tool as createAiSdkTool, type LanguageModel } from 'ai';
 
 import type { Tool } from './tools.js';

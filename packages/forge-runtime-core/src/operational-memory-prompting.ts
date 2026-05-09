@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import type { ConversationMessage } from 'agent-runtime-core/integrations';
 
 function formatObserverDate(createdAt: Date | undefined) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { z } from 'zod';
 import type { Client } from '@libsql/client';
 

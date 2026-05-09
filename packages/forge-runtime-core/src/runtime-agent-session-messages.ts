@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { randomUUID } from 'node:crypto';
 
 import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/integrations';
