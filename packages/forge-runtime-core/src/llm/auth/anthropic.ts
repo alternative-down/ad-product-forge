@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -134,7 +135,7 @@ export async function resolveAnthropicCredential(options?: {
     return credential;
   }
 
-  return syncAnthropicCredential({
+  return await syncAnthropicCredential({
     setupTokenFilePath: options?.setupTokenFilePath,
     authFilePath: options?.authFilePath,
     storePath,

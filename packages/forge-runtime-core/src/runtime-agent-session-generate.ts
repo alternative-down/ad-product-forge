@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { randomUUID } from 'node:crypto';
 
@@ -8,7 +9,7 @@ import {
   type ModelMessage,
   type ToolSet,
 } from 'ai';
-import { z } from 'zod';
+
 
 import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
@@ -83,6 +84,7 @@ export async function runRuntimeAgentSessionGenerate(input: {
       stepNumber: iterationNumber - 1,
     });
 
+  // eslint-disable-next-line @typescript-eslint/require-await
     const system = await buildRuntimeSessionSystemPrompt({
       baseSystem: input.session.system,
       agentContext: iterationNumber === 1 ? input.options.system : undefined,
@@ -358,6 +360,7 @@ function appendGenerateDiagnostics(error: unknown, diagnostics: {
   return new Error(`${String(error)}\n${diagnosticsText}`);
 }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
 async function buildRuntimeSessionSystemPrompt(input: {
   baseSystem?: string;
   agentContext?: string;

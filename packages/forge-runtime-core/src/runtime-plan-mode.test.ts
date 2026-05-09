@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   RuntimePlanMode,
   createPlanModeActions,
-  type PlanEntry,
 } from './runtime-plan-mode';
 
 const tempDirs: string[] = [];
@@ -42,7 +41,7 @@ describe('RuntimePlanMode', () => {
 
     it('persists plan file to memory/plans/', async () => {
       const { planMode, memoryPath } = await makePlanMode();
-      const plan = await planMode.enterPlanMode('Review auth implementation', 5);
+      const _plan = await planMode.enterPlanMode('Review auth implementation', 5);
       const planDir = path.join(memoryPath, 'memory', 'plans');
       const files = await import('node:fs/promises').then(fs => fs.readdir(planDir));
       expect(files).toHaveLength(1);
@@ -143,12 +142,12 @@ describe('RuntimePlanMode', () => {
       const { planMode } = await makePlanMode();
       await planMode.enterPlanMode('Analyze', 1);
       const actions = [
-        { name: 'readFile', description: 'Read a file' } as any,
-        { name: 'writeFile', description: 'Write a file' } as any,
-        { name: 'grep', description: 'Search in files' } as any,
-        { name: 'execute', description: 'Run a command' } as any,
-        { name: 'listDirectory', description: 'List directory contents' } as any,
-        { name: 'deleteFile', description: 'Delete a file' } as any,
+        { name: 'readFile', description: 'Read a file' } as unknown,
+        { name: 'writeFile', description: 'Write a file' } as unknown,
+        { name: 'grep', description: 'Search in files' } as unknown,
+        { name: 'execute', description: 'Run a command' } as unknown,
+        { name: 'listDirectory', description: 'List directory contents' } as unknown,
+        { name: 'deleteFile', description: 'Delete a file' } as unknown,
       ];
       const filtered = planMode.filterReadOnlyActions(actions);
       expect(filtered.map(a => a.name)).toEqual(['readFile', 'grep', 'listDirectory']);
@@ -158,20 +157,20 @@ describe('RuntimePlanMode', () => {
       const { planMode } = await makePlanMode();
       // filterReadOnlyActions always returns read-only subset
       const actions = [
-        { name: 'readFile', description: 'Read a file' } as any,
-        { name: 'writeFile', description: 'Write a file' } as any,
-        { name: 'grep', description: 'Search in files' } as any,
+        { name: 'readFile', description: 'Read a file' } as unknown,
+        { name: 'writeFile', description: 'Write a file' } as unknown,
+        { name: 'grep', description: 'Search in files' } as unknown,
       ];
       const filtered = planMode.filterReadOnlyActions(actions);
-      expect(filtered.map((a: any) => a.name)).toEqual(['readFile', 'grep']);
+      expect(filtered.map((a: unknown) => (a as {name?: string}).name ?? "")).toEqual(['readFile', 'grep']);
     });
 
     it('treats mixed-name actions as non-read-only', async () => {
       const { planMode } = await makePlanMode();
       await planMode.enterPlanMode('Test', 1);
       const actions = [
-        { name: 'readAndWrite', description: 'Read and write' } as any,
-        { name: 'fileWrite', description: 'Write file' } as any,
+        { name: 'readAndWrite', description: 'Read and write' } as unknown,
+        { name: 'fileWrite', description: 'Write file' } as unknown,
       ];
       const filtered = planMode.filterReadOnlyActions(actions);
       expect(filtered).toHaveLength(0);

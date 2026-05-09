@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 

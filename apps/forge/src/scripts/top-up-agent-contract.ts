@@ -4,7 +4,8 @@ import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 
-import {getDatabase, runMigrations} from '../database/schema';
+import { getDatabase } from '../database/client';
+import { runMigrations } from '../database/migrate';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
 
 const cliInputSchema = z.object({

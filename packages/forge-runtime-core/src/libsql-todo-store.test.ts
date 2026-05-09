@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createClient } from '@libsql/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { LibsqlTodoStore, createUpdateTodosAction } from './libsql-todo-store';
 
@@ -125,9 +125,9 @@ describe('createUpdateTodosAction', () => {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     const result = await action.execute({ items: { title: 'New task' } });
-    expect((result as any).todos).toHaveLength(1);
-    expect((result as any).todos[0].title).toBe('New task');
-    expect((result as any).todos[0].status).toBe('pending');
+    expect((result as unknown).todos).toHaveLength(1);
+    expect((result as unknown).todos[0].title).toBe('New task');
+    expect((result as unknown).todos[0].status).toBe('pending');
   });
 
   it('creates multiple todos from array input', async function() {
@@ -136,7 +136,7 @@ describe('createUpdateTodosAction', () => {
     const result = await action.execute({
       items: [{ title: 'T1' }, { title: 'T2', status: 'completed' }],
     });
-    expect((result as any).todos).toHaveLength(2);
+    expect((result as unknown).todos).toHaveLength(2);
   });
 
   it('clears todos with empty array', async function() {
@@ -144,8 +144,8 @@ describe('createUpdateTodosAction', () => {
     await store.upsertTodos('thread-1', 'resource-1', [{ title: 'To clear' }]);
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     const result = await action.execute({ items: [] });
-    expect((result as any).cleared).toBe(true);
-    expect((result as any).todos).toEqual([]);
+    expect((result as unknown).cleared).toBe(true);
+    expect((result as unknown).todos).toEqual([]);
     expect(await store.getTodos('thread-1', 'resource-1')).toEqual([]);
   });
 
@@ -155,8 +155,8 @@ describe('createUpdateTodosAction', () => {
     const id = created[0].id;
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     const result = await action.execute({ items: [{ id, title: 'Updated', status: 'completed' }] });
-    expect((result as any).todos[0].title).toBe('Updated');
-    expect((result as any).todos[0].status).toBe('completed');
+    expect((result as unknown).todos[0].title).toBe('Updated');
+    expect((result as unknown).todos[0].status).toBe('completed');
   });
 
   it('rejects empty title', async function() {
@@ -169,7 +169,7 @@ describe('createUpdateTodosAction', () => {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     await expect(
-      action.execute({ items: { title: 'Test', status: 'invalid' as any } }),
+      action.execute({ items: { title: 'Test', status: 'invalid' as unknown } }),
     ).rejects.toThrow();
   });
 });

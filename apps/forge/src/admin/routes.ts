@@ -140,8 +140,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   const systemRM = createSystemReadModel({ db: input.db });
   const registry = getInternalAgentRegistry();
   const companyCash = createCompanyCashOperations(input.db);
-  const companyPayables = createCompanyPayables(input.db);
-  const finance = createMicroErpReadModel(input.db);
 
   // Agent operations bundle (used by write-ops routes)
   const ops = {
