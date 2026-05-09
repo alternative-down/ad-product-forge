@@ -222,7 +222,7 @@ export function createScheduler(
 
       if (executionState === 'absent') {
         await beginRunFn({
-          reloadRuntime: false,
+          reloadRuntime: true,
           wakeStartedAt: Date.now(),
           markRunning: true,
         });
