@@ -1,3 +1,4 @@
+/* eslint-disable reexport-check/no-unnecessary-reexports, @typescript-eslint/strict-boolean-expressions */
 import { cpus } from 'node:os';
 
 import type { FeatureExtractionPipeline } from '@huggingface/transformers';

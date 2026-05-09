@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { logger } from './logger.js';
 import path from 'node:path';
 

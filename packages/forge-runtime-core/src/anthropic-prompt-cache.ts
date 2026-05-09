@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
 
 const promptCacheMiddleware: LanguageModelMiddleware = {

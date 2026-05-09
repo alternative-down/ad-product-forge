@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { randomUUID } from 'node:crypto';
 

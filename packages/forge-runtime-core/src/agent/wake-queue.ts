@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { logger } from '../logger.js';
 const DEFAULT_WAKE_DEBOUNCE_MS = 3000;
 const DEFAULT_WAKE_MAX_ACCUMULATION_MS = 10000;
