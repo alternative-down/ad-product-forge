@@ -119,191 +119,57 @@ export function createInternalChatService(
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
+  /**
+   * Inline error wrapper — replaces the repetitive try/catch + forgeDebug pattern
+   * across all simple delegation methods in this service.
+   */
+  function wrap<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T {
+    return (async (...args: unknown[]) => {
+      try {
+        return await fn(...args);
+      } catch (err) {
+        forgeDebug({
+          scope: 'internal-chat-service',
+          level: 'error',
+          message: `[internal-chat-service] async function failed`,
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
+        throw err;
+      }
+    }) as T;
+  }
 
-  async function registerAgentAccount(input: Parameters<typeof accounts.registerAgentAccount>[0]) {
-    try {
-    return accounts.registerAgentAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function registerExternalAccount(input: Parameters<typeof accounts.registerExternalAccount>[0]) {
-    try {
-    return accounts.registerExternalAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function updateExternalAccount(input: Parameters<typeof accounts.updateExternalAccount>[0]) {
-    try {
-    return accounts.updateExternalAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function deleteExternalAccount(input: Parameters<typeof accounts.deleteExternalAccount>[0]) {
-    try {
-    return accounts.deleteExternalAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function deleteAgentAccount(input: Parameters<typeof accounts.deleteAgentAccount>[0]) {
-    try {
-    return accounts.deleteAgentAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function listAccounts(input: Parameters<typeof accounts.listAccounts>[0]) {
-    try {
-    return accounts.listAccounts(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function getAccountBySlug(slug: string) {
-    try {
-    return accounts.getAccountBySlug(slug);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function getAccountByAgentId(agentId: string) {
-    try {
-    return accounts.getAccountByAgentId(agentId);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function getAccountByTargetKey(targetKey: string) {
-    try {
-    return accounts.getAccountByTargetKey(targetKey);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
-  async function getConversationForAgent(agentId: string, conversationId: string) {
-    try {
-    return accounts.getConversationForAgent(agentId, conversationId);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+
+  const registerAgentAccount = wrap(accounts.registerAgentAccount.bind(accounts));
+  const registerExternalAccount = wrap(accounts.registerExternalAccount.bind(accounts));
+  const updateExternalAccount = wrap(accounts.updateExternalAccount.bind(accounts));
+  const deleteExternalAccount = wrap(accounts.deleteExternalAccount.bind(accounts));
+  const deleteAgentAccount = wrap(accounts.deleteAgentAccount.bind(accounts));
+  const listAccounts = wrap(accounts.listAccounts.bind(accounts));
+  const getAccountBySlug = wrap(accounts.getAccountBySlug.bind(accounts));
+  const getAccountByAgentId = wrap(accounts.getAccountByAgentId.bind(accounts));
+  const getAccountByTargetKey = wrap(accounts.getAccountByTargetKey.bind(accounts));
+  const getConversationForAgent = wrap(accounts.getConversationForAgent.bind(accounts));
 
   // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
-  async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
-    try {
-    return conversations.ensureDirectConversation(leftAccountId, rightAccountId);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const ensureDirectConversation = wrap(conversations.ensureDirectConversation.bind(conversations));
 
 
   // === Group Management ───────────────────────────────────────────────────
-  async function createChatGroup(input: {
-    agentId: string;
-    conversationKey: string;
-    name: string;
-    creatorName: string;
-  }) {
-    try {
-    return groups.createChatGroup(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const createChatGroup = wrap(groups.createChatGroup.bind(groups));
 
-  async function addMemberToGroup(input: {
-    agentId: string;
-    groupId: string;
-    participantSlug: string;
-    role?: string;
-  }) {
-    try {
-    return groups.addMemberToGroup(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const addMemberToGroup = wrap(groups.addMemberToGroup.bind(groups));
 
-  async function removeMemberFromGroup(input: {
-    agentId: string;
-    groupId: string;
-    participantSlug: string;
-  }) {
-    try {
-    return groups.removeMemberFromGroup(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const removeMemberFromGroup = wrap(groups.removeMemberFromGroup.bind(groups));
 
-  async function changeChatGroup(input: {
-    agentId: string;
-    groupId?: string;
-    name?: string;
-    members?: Array<{
-      participantKey: string;
-      role?: 'admin' | 'normal';
-    }>;
-  }) {
-    try {
-    return groups.changeChatGroup(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const changeChatGroup = wrap(groups.changeChatGroup.bind(groups));
 
-  async function listChatGroups(input: {
-    agentId: string;
-    limit: number;
-  }) {
-    try {
-    return groups.listChatGroups(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const listChatGroups = wrap(groups.listChatGroups.bind(groups));
 
-  async function listGroupMembers(input: { agentId: string; groupId: string }): Promise<InternalChatGroupMember[]> {
-    try {
-    return groups.listGroupMembers(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const listGroupMembers = wrap(groups.listGroupMembers.bind(groups));
 
-  async function listGroupMembersByAccount(input: {
-    accountId: string;
-    groupId: string;
-  }): Promise<InternalChatGroupMember[]> {
-    try {
-    return groups.listGroupMembersByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const listGroupMembersByAccount = wrap(groups.listGroupMembersByAccount.bind(groups));
 
 
   // === Message Listing ───────────────────────────────────────────────────
@@ -447,17 +313,7 @@ export function createInternalChatService(
   // a resolved accountId directly instead of looking it up from an agentId.
   // Used by admin routes and external integrations that already have the account.
   // NOT a duplicate — this is intentional architectural separation.
-  async function listConversationsByAccount(input: {
-    accountId: string;
-    limit: number;
-  }) {
-    try {
-    return listing.listConversationsByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const listConversationsByAccount = wrap(listing.listConversationsByAccount.bind(listing));
 
   // === Message Retrieval ──────────────────────────────────────────────────
   async function getMessages(input: {
@@ -600,117 +456,20 @@ export function createInternalChatService(
   }
 
   // === Account-scoped Group & Conversation Operations ──────────────────────
-  async function archiveConversationByAccount(input: {
-    accountId: string;
-    conversationId: string;
-  }) {
-    try {
-    return conversations.archiveConversationByAccount({
-      accountId: input.accountId,
-      conversationId: input.conversationId,
-      getRequiredConversationForAccount,
-    });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const archiveConversationByAccount = wrap(conversations.archiveConversationByAccount.bind(conversations));
 
-  async function createExternalChatGroup(input: {
-    accountId: string;
-    conversationKey: string;
-    name: string;
-  }) {
-    try {
-    return accountOps.createExternalChatGroup(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const createExternalChatGroup = wrap(groups.createExternalChatGroup.bind(groups));
 
-  async function ensureDirectConversationByAccount(input: {
-    accountId: string;
-    participantAccountId: string;
-  }) {
-    try {
-    return accountOps.ensureDirectConversationByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const ensureDirectConversationByAccount = wrap(conversations.ensureDirectConversationByAccount.bind(conversations));
 
-  async function addMemberToGroupByAccount(input: {
-    accountId: string;
-    groupId: string;
-    participantAccountId: string;
-    role?: string;
-  }) {
-    try {
-    return accountOps.addMemberToGroupByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const addMemberToGroupByAccount = wrap(groups.addMemberToGroupByAccount.bind(groups));
 
-  async function updateMemberRoleByAccount(input: {
-    accountId: string;
-    groupId: string;
-    participantAccountId: string;
-    role: string;
-  }) {
-    try {
-    return accountOps.updateMemberRoleByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const updateMemberRoleByAccount = wrap(groups.updateMemberRoleByAccount.bind(groups));
 
-  async function removeMemberFromGroupByAccount(input: {
-    accountId: string;
-    groupId: string;
-    participantAccountId: string;
-  }) {
-    try {
-    return accountOps.removeMemberFromGroupByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const removeMemberFromGroupByAccount = wrap(groups.removeMemberFromGroupByAccount.bind(groups));
 
-  async function updateGroupByAccount(input: {
-    accountId: string;
-    groupId: string;
-    name?: string;
-    conversationKey?: string;
-  }) {
-    try {
-    return accountOps.updateGroupByAccount(input);
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
+  const updateGroupByAccount = wrap(groups.updateGroupByAccount.bind(groups));
 
-  async function archiveConversationByAccount(input: {
-    accountId: string;
-    conversationId: string;
-  }) {
-    try {
-    return conversations.archiveConversationByAccount({
-      accountId: input.accountId,
-      conversationId: input.conversationId,
-      getRequiredConversationForAccount,
-    });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
-  }
 
   // === Unread / Recent ────────────────────────────────────────────────────
   const getUnreadSummary = reads.getUnreadSummary;
