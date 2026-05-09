@@ -45,7 +45,7 @@ export async function terminateInternalAgent(db: Database, input: {
     });
   }
 
-  // Perform external operations — rollback DB cleanup on any failure
+  // Perform external operations — compensating transaction on any failure
   try {
     await input.schedules.removeAgent(input.agentId);
 
@@ -55,7 +55,7 @@ export async function terminateInternalAgent(db: Database, input: {
 
     await input.githubApps.deleteAgentApp(input.agentId);
 
-    // Clean up internal chat account
+    // Clean up internal chat account — best effort, non-fatal on failure
     try {
       await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
     } catch (chatErr) {
@@ -74,7 +74,8 @@ export async function terminateInternalAgent(db: Database, input: {
       message: 'external cleanup failed during terminate: ' + (err instanceof Error ? err.message : String(err)),
     });
 
-    // Still clean up DB and registry even when external ops fail
+    // Compensating transaction: attempt cleanup of whatever succeeded before the failure.
+    // Best effort — failures are logged but do not re-throw.
     try {
       await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
     } catch (chatErr) {
@@ -101,7 +102,7 @@ export async function terminateInternalAgent(db: Database, input: {
     throw err;
   }
 
-  // External ops succeeded — now delete DB record and workspace
+  // External ops succeeded — now clean up chat account, DB record, and registry
   try {
     await input.internalChat.deleteAgentAccount({ agentId: input.agentId });
   } catch (err) {
