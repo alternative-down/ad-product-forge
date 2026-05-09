@@ -3,7 +3,7 @@
  * OAuth credential sync and resolution for OpenAI Codex CLI.
  * Zero prior coverage.
  */
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { OAuthCredential } from './store.js';
 
 // ─── Shared mock oauthStore ───────────────────────────────────────────────────
@@ -30,7 +30,7 @@ vi.stubGlobal('fetch', mockFetch);
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Build a JWT-like token for testing decodeExpiry. Payload contains { exp } */
-function makeJwt(expUnixSeconds: number): string {
+function _makeJwt(expUnixSeconds: number): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = btoa(JSON.stringify({ exp: expUnixSeconds }));
   return `${header}.${payload}.sig`;
