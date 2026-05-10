@@ -318,8 +318,6 @@ export function createInternalChatService(
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
   const participants = createInternalChatParticipants(db);
 
-  const participants = createInternalChatParticipants(db);
-
   const serviceHelpers = createServiceHelpers({
     db,
     accounts: {
