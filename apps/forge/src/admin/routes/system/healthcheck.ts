@@ -1,5 +1,6 @@
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 import type { AdminReadModel } from '../read-model';
+import { forgeDebug } from '../debug';
 
 interface HealthcheckEntry {
   agentId: string;
@@ -16,24 +17,37 @@ export async function buildSystemHealthcheck(
   agents: HealthcheckEntry[];
   timestamp: number;
 }> {
-  const entries = registry.list();
-  const agents: HealthcheckEntry[] = [];
+  try {
+    const entries = registry.list();
+    const agents: HealthcheckEntry[] = [];
 
-  for (const entry of entries) {
-    const agent = await readModel.getAgent(entry.runtime.id);
-    const runtime = await registry.get(entry.runtime.id);
+    for (const entry of entries) {
+      const agent = await readModel.getAgent(entry.runtime.id);
+      const runtime = await registry.get(entry.runtime.id);
 
-    agents.push({
-      agentId: entry.runtime.id,
-      agentName: runtime?.meta.name ?? entry.runtime.id,
-      status: agent?.status ?? 'unknown',
-      role: agent?.roleId ?? null,
-      lastHeartbeat: agent?.lastHeartbeat ?? null,
+      agents.push({
+        agentId: entry.runtime.id,
+        agentName: runtime?.meta.name ?? entry.runtime.id,
+        status: agent?.status ?? 'unknown',
+        role: agent?.roleId ?? null,
+        lastHeartbeat: agent?.lastHeartbeat ?? null,
+      });
+    }
+
+    return {
+      agents,
+      timestamp: Date.now(),
+    };
+  } catch (err) {
+    forgeDebug({
+      scope: 'system-healthcheck',
+      level: 'error',
+      message: '[system-healthcheck] buildSystemHealthcheck failed',
+      context: {
+        agentCount: registry.list().length,
+        error: err instanceof Error ? err.message : String(err),
+      },
     });
+    throw err;
   }
-
-  return {
-    agents,
-    timestamp: Date.now(),
-  };
 }
