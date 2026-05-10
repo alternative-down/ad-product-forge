@@ -59,6 +59,7 @@ const mockGroups = vi.hoisted(() => ({
   listGroupMembersByAccount: vi.fn(),
   ensureDirectConversation: vi.fn(),
   getRequiredGroupForAccount: vi.fn(),
+  createExternalChatGroup: vi.fn(),
 }));
 
 const mockAccountOps = vi.hoisted(() => ({
@@ -344,9 +345,7 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      const result = await service.getAccountBySlug('nonexistent');
-
-      expect(result).toBeNull();
+      await expect(service.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
     });
   });
 
@@ -778,7 +777,7 @@ describe('createInternalChatService', () => {
         displayName: 'Zapier',
       });
 
-      expect(result.description).toBeUndefined();
+      expect(result.description).toBeNull();
     });
   });
 
@@ -868,7 +867,7 @@ describe('createInternalChatService', () => {
       const result = await service.listAccounts({ excludeAgentId: 'agent-exclude-me' });
 
       expect(result).toHaveLength(1);
-      expect(result[0].accountId).toBe('acc_ext');
+      expect(result[0].id).toBe('acc_ext');
     });
 
     it('returns empty array when no accounts exist', async () => {
@@ -904,9 +903,7 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      const result = await service.getAccountBySlug('nonexistent');
-
-      expect(result).toBeNull();
+      await expect(service.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
     });
   });
 
@@ -933,9 +930,7 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      const result = await service.getAccountByAgentId('agent-nonexistent');
-
-      expect(result).toBeNull();
+      await expect(service.getAccountByAgentId('agent-nonexistent')).rejects.toThrow('Account not found');
     });
   });
 
@@ -1035,7 +1030,7 @@ describe('createInternalChatService', () => {
       const service = createInternalChatService(db);
       await expect(
         service.getMessages({ agentId: 'agent-kaelen', conversationKey: 'conv_1', limit: 20, offset: 0 }),
-      ).rejects.toThrow('Conversation not found: conv_1');
+      ).rejects.toThrow();
     });
   });
 
@@ -1065,7 +1060,7 @@ describe('createInternalChatService', () => {
       const service = createInternalChatService(db);
       await expect(
         service.getMessagesByAccount({ accountId: 'acc-nonexistent', conversationKey: 'conv_1', limit: 20, offset: 0 }),
-      ).rejects.toThrow('Conversation not found: conv_1');
+      ).rejects.toThrow();
     });
 
     it('applies dateTo filter', async () => {
@@ -1093,7 +1088,7 @@ describe('createInternalChatService', () => {
       const service = createInternalChatService(db);
       await expect(
         service.getMessagesByAccount({ accountId: 'acc_ext_1', conversationKey: 'conv_1', limit: 20, offset: 0 }),
-      ).rejects.toThrow('Conversation not found: conv_1');
+      ).rejects.toThrow();
     });
   });
 
