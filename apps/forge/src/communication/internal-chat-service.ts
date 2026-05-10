@@ -311,6 +311,39 @@ export function createInternalChatService(
   }
   }
 
+
+  // ── Moved before listing to break TDZ ────────────────────────────────
+  const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
+  const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
+
+  const serviceHelpers = createServiceHelpers({
+    db,
+    accounts: {
+      getRequiredAccount: accounts.getRequiredAccount,
+      getRequiredAgentAccount: accounts.getRequiredAgentAccount,
+      getAccountBySlug: accounts.getAccountBySlug,
+    },
+    participants,
+  });
+
+  const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
+  const requireConversationMembership = serviceHelpers.requireConversationMembership;
+
+  const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
+  const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
+  const getRequiredConversationForAccount = serviceHelpers.getRequiredConversationForAccount;
+  const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
+  const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
+
+
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
+  });
+
   // ── Account-scoped Conversation Listing ───────────────────────────────────
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
@@ -350,7 +383,6 @@ export function createInternalChatService(
   const listRecentConversations = reads.listRecentConversations;
 
   // === Internal Helpers ────────────────────────────────────────────────────
-  const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
 
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
 
@@ -363,32 +395,7 @@ export function createInternalChatService(
   // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
   const participants = createInternalChatParticipants(db);
 
-  const serviceHelpers = createServiceHelpers({
-    db,
-    accounts: {
-      getRequiredAccount: accounts.getRequiredAccount,
-      getRequiredAgentAccount: accounts.getRequiredAgentAccount,
-      getAccountBySlug: accounts.getAccountBySlug,
-    },
-    participants,
-  });
 
-  const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
-  const requireConversationMembership = serviceHelpers.requireConversationMembership;
-
-  const listing = createInternalChatListing(db, {
-    getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
-  });
-
-  const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
-  const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
-  const getRequiredConversationForAccount = serviceHelpers.getRequiredConversationForAccount;
-  const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
-  const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
 
   const accountOps = createInternalChatAccountOps(db, {
     getRequiredAccount,
