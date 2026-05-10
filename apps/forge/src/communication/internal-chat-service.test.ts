@@ -82,6 +82,25 @@ const mockConversations = vi.hoisted(() => ({
   ensureDirectConversation: vi.fn(),
   archiveConversationByAccount: vi.fn().mockResolvedValue({ conversationId: 'conv_1', archived: true }),
 }));
+const mockReads = vi.hoisted(() => ({
+  getUnreadSummary: vi.fn().mockResolvedValue({ unreadMessageCount: 0, unreadConversationCount: 0 }),
+  listRecentConversations: vi.fn().mockResolvedValue([]),
+  listGroupMembersOrDmPeers: vi.fn().mockResolvedValue([]),
+  listGroupMembersOrDmPeersByAccount: vi.fn().mockResolvedValue([]),
+  init: vi.fn(),
+}));
+vi.mock('./internal-chat-reads', async () => ({
+  createInternalChatReads: () => mockReads,
+}));
+const mockGuards = vi.hoisted(() => ({
+  requireConversationMembership: vi.fn(),
+  requireConversationMembershipByAccount: vi.fn(),
+  getRequiredGroupForAgent: vi.fn().mockResolvedValue({ id: 'grp_1', name: 'Group 1', type: 'group' }),
+  getRequiredGroupForAccount: vi.fn().mockResolvedValue({ id: 'grp_1', name: 'Group 1', type: 'group' }),
+}));
+vi.mock('./internal-chat-guards', async () => ({
+  createInternalChatGuards: () => mockGuards,
+}));
 vi.mock('./internal-chat-groups', async () => ({
   ...(await vi.importActual('./internal-chat-groups')),
   createInternalChatGroups: () => mockGroups,
@@ -1331,7 +1350,7 @@ describe('listGroupMembersByAccount', () => {
 // ─── Untested functions: addMemberToGroupByAccount ─────────────────────────
 describe('addMemberToGroupByAccount', () => {
   it('delegates to groups.addMemberToGroupByAccount', async () => {
-    mockGroups.addMemberToGroupByAccount.mockResolvedValueOnce({ memberId: 'member_new' });
+    mockAccountOps.addMemberToGroupByAccount.mockResolvedValueOnce({ memberId: 'member_new' });
 
     const service = createInternalChatService(db);
     const result = await service.addMemberToGroupByAccount({
@@ -1340,7 +1359,7 @@ describe('addMemberToGroupByAccount', () => {
       participantKey: 'acc_bob',
     });
 
-    expect(mockGroups.addMemberToGroupByAccount).toHaveBeenCalledWith({
+    expect(mockAccountOps.addMemberToGroupByAccount).toHaveBeenCalledWith({
       accountId: 'acc_kaelen',
       conversationKey: 'grp_1',
       participantKey: 'acc_bob',
@@ -1352,7 +1371,7 @@ describe('addMemberToGroupByAccount', () => {
 // ─── Untested functions: updateMemberRoleByAccount ──────────────────────────
 describe('updateMemberRoleByAccount', () => {
   it('delegates to groups.updateMemberRoleByAccount', async () => {
-    mockGroups.updateMemberRoleByAccount.mockResolvedValueOnce({ role: 'admin' });
+    mockAccountOps.updateMemberRoleByAccount.mockResolvedValueOnce({ role: 'admin' });
 
     const service = createInternalChatService(db);
     const result = await service.updateMemberRoleByAccount({
@@ -1362,7 +1381,7 @@ describe('updateMemberRoleByAccount', () => {
       role: 'admin',
     });
 
-    expect(mockGroups.updateMemberRoleByAccount).toHaveBeenCalledWith({
+    expect(mockAccountOps.updateMemberRoleByAccount).toHaveBeenCalledWith({
       accountId: 'acc_kaelen',
       conversationKey: 'grp_1',
       participantKey: 'acc_bob',
@@ -1375,7 +1394,7 @@ describe('updateMemberRoleByAccount', () => {
 // ─── Untested functions: removeMemberFromGroupByAccount ─────────────────────
 describe('removeMemberFromGroupByAccount', () => {
   it('delegates to groups.removeMemberFromGroupByAccount', async () => {
-    mockGroups.removeMemberFromGroupByAccount.mockResolvedValueOnce({ removed: true });
+    mockAccountOps.removeMemberFromGroupByAccount.mockResolvedValueOnce({ removed: true });
 
     const service = createInternalChatService(db);
     const result = await service.removeMemberFromGroupByAccount({
@@ -1384,7 +1403,7 @@ describe('removeMemberFromGroupByAccount', () => {
       participantKey: 'acc_bob',
     });
 
-    expect(mockGroups.removeMemberFromGroupByAccount).toHaveBeenCalledWith({
+    expect(mockAccountOps.removeMemberFromGroupByAccount).toHaveBeenCalledWith({
       accountId: 'acc_kaelen',
       conversationKey: 'grp_1',
       participantKey: 'acc_bob',
@@ -1396,7 +1415,7 @@ describe('removeMemberFromGroupByAccount', () => {
 // ─── Untested functions: updateGroupByAccount ────────────────────────────────
 describe('updateGroupByAccount', () => {
   it('delegates to groups.updateGroupByAccount with accountId + changes', async () => {
-    mockGroups.updateGroupByAccount.mockResolvedValueOnce({ success: true });
+    mockAccountOps.updateGroupByAccount.mockResolvedValueOnce({ success: true });
 
     const service = createInternalChatService(db);
     const result = await service.updateGroupByAccount({
@@ -1405,7 +1424,7 @@ describe('updateGroupByAccount', () => {
       changes: { name: 'Team Channel' },
     });
 
-    expect(mockGroups.updateGroupByAccount).toHaveBeenCalledWith({
+    expect(mockAccountOps.updateGroupByAccount).toHaveBeenCalledWith({
       accountId: 'acc_kaelen',
       conversationKey: 'grp_1',
       changes: { name: 'Team Channel' },
@@ -1445,6 +1464,7 @@ describe('clearHandler', () => {
 
 // ─── Untested functions: createExternalChatGroup ───────────────────────────
 describe('createExternalChatGroup', () => {
+  const db = createMockDb();
   it('delegates to accountOps.createExternalChatGroup', async () => {
     mockAccountOps.createExternalChatGroup.mockResolvedValueOnce({ conversationKey: 'grp_new', name: 'New Group' });
     const service = createInternalChatService(db);
@@ -1464,6 +1484,7 @@ describe('createExternalChatGroup', () => {
 
 // ─── Untested functions: ensureDirectConversationByAccount ─────────────────
 describe('ensureDirectConversationByAccount', () => {
+  const db = createMockDb();
   it('delegates to accountOps.ensureDirectConversationByAccount', async () => {
     mockAccountOps.ensureDirectConversationByAccount.mockResolvedValueOnce({ conversationKey: 'conv_dm' });
     const service = createInternalChatService(db);
@@ -1481,6 +1502,7 @@ describe('ensureDirectConversationByAccount', () => {
 
 // ─── Untested functions: archiveConversationByAccount ─────────────────────
 describe('archiveConversationByAccount', () => {
+  const db = createMockDb();
   it('delegates to conversations.archiveConversationByAccount', async () => {
     mockConversations.archiveConversationByAccount.mockResolvedValueOnce({ conversationId: 'conv_1', archived: true });
     const service = createInternalChatService(db);
@@ -1498,6 +1520,7 @@ describe('archiveConversationByAccount', () => {
 
 // ─── Untested functions: getUnreadSummary ──────────────────────────────────
 describe('getUnreadSummary', () => {
+  const db = createMockDb();
   it('is a function exposed on the service', () => {
     const service = createInternalChatService(db);
     expect(typeof service.getUnreadSummary).toBe('function');
@@ -1506,6 +1529,7 @@ describe('getUnreadSummary', () => {
 
 // ─── Untested functions: listRecentConversations ────────────────────────────
 describe('listRecentConversations', () => {
+  const db = createMockDb();
   it('is a function exposed on the service', () => {
     const service = createInternalChatService(db);
     expect(typeof service.listRecentConversations).toBe('function');
@@ -1514,6 +1538,7 @@ describe('listRecentConversations', () => {
 
 // ─── Untested functions: getMessageAttachmentByAccount ─────────────────────
 describe('getMessageAttachmentByAccount', () => {
+  const db = createMockDb();
   it('delegates to sending.getMessageAttachmentByAccount', async () => {
     mockSending.getMessageAttachmentByAccount.mockResolvedValueOnce({ stream: null, contentType: 'image/png' });
     const service = createInternalChatService(db);
@@ -1533,6 +1558,7 @@ describe('getMessageAttachmentByAccount', () => {
 
 // ─── Untested functions: listConversationsByAccount ────────────────────────
 describe('listConversationsByAccount', () => {
+  const db = createMockDb();
   it('is a function exposed on the service', () => {
     const service = createInternalChatService(db);
     expect(typeof service.listConversationsByAccount).toBe('function');
@@ -1541,6 +1567,7 @@ describe('listConversationsByAccount', () => {
 
 // ─── Untested functions: getMessagesByAccount ────────────────────────────────
 describe('getMessagesByAccount', () => {
+  const db = createMockDb();
   it('is a function exposed on the service', () => {
     const service = createInternalChatService(db);
     expect(typeof service.getMessagesByAccount).toBe('function');
