@@ -60,6 +60,10 @@ const mockGroups = vi.hoisted(() => ({
   ensureDirectConversation: vi.fn(),
   getRequiredGroupForAccount: vi.fn(),
   createExternalChatGroup: vi.fn(),
+  addMemberToGroupByAccount: vi.fn(),
+  updateMemberRoleByAccount: vi.fn(),
+  removeMemberFromGroupByAccount: vi.fn(),
+  updateGroupByAccount: vi.fn(),
 }));
 
 const mockAccountOps = vi.hoisted(() => ({
@@ -196,7 +200,16 @@ function createMockDb() {
       })),
     })),
     transaction: vi.fn((fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
-    delete: vi.fn(() => ({ where: vi.fn(() => Promise.resolve({})) })),
+    delete: vi.fn(() => ({
+      where: vi.fn(() => {
+        const r = { rowCount: 0 };
+        Object.defineProperty(r, 'then', {
+          value: (onFulfilled) => Promise.resolve(r).then(onFulfilled),
+          configurable: true, writable: true,
+        });
+        return r;
+      }),
+    })),
   };
   return db;
 }
@@ -1116,5 +1129,316 @@ describe('createInternalChatService', () => {
 ).rejects.toThrow();
     });
   });
+
+
+// ─── Untested functions: deleteExternalAccount ───────────────────────────────
+describe('deleteExternalAccount', () => {
+  it('deletes the external account and returns deleted: true', async () => {
+    const mockWhere = vi.fn(() => Promise.resolve({ rowCount: 1 }));
+    db.delete.mockReturnValueOnce({ where: mockWhere } as never);
+
+    const service = createInternalChatService(db);
+    const result = await service.deleteExternalAccount({ accountId: 'acc_ext_1' });
+
+    expect(result).toEqual({ deleted: true });
+  });
+
+  it('returns deleted: true even when no rows matched', async () => {
+    const mockWhere = vi.fn(() => Promise.resolve({ rowCount: 0 }));
+    db.delete.mockReturnValueOnce({ where: mockWhere } as never);
+
+    const service = createInternalChatService(db);
+    const result = await service.deleteExternalAccount({ accountId: 'acc_nonexistent' });
+
+    expect(result).toEqual({ deleted: true });
+  });
+});
+
+// ─── Untested functions: deleteAgentAccount ─────────────────────────────────
+describe('deleteAgentAccount', () => {
+  it('deletes the agent account by agentId and returns deleted: true', async () => {
+    const mockWhere = vi.fn(() => Promise.resolve({ rowCount: 1 }));
+    db.delete.mockReturnValueOnce({ where: mockWhere } as never);
+
+    const service = createInternalChatService(db);
+    const result = await service.deleteAgentAccount({ agentId: 'agent-kaelen' });
+
+    expect(result).toEqual({ deleted: true });
+  });
+
+  it('returns deleted: true when no matching agent account exists', async () => {
+    const mockWhere = vi.fn(() => Promise.resolve({ rowCount: 0 }));
+    db.delete.mockReturnValueOnce({ where: mockWhere } as never);
+
+    const service = createInternalChatService(db);
+    const result = await service.deleteAgentAccount({ agentId: 'agent-nonexistent' });
+
+    expect(result).toEqual({ deleted: true });
+  });
+});
+
+// ─── Untested functions: getConversationForAgent ────────────────────────────
+describe('getConversationForAgent', () => {
+  it('returns the conversation when agent is a member', async () => {
+    const mockConv = { id: 'conv_1', type: 'dm' as const, createdAt: MOCK_DATE, updatedAt: MOCK_DATE };
+    db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+    db.query.internalChatConversations.findFirst.mockResolvedValueOnce(mockConv);
+    db.query.internalChatConversationMembers.findFirst.mockResolvedValueOnce({
+      conversationId: 'conv_1', accountId: 'acc_kaelen',
+    });
+
+    const service = createInternalChatService(db);
+    const result = await service.getConversationForAgent('agent-kaelen', 'conv_1');
+
+    expect(result).toEqual(mockConv);
+  });
+
+  it('throws when agent account is not found', async () => {
+    db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
+
+    const service = createInternalChatService(db);
+    await expect(service.getConversationForAgent('agent-unknown', 'conv_1'))
+      .rejects.toThrow('Account not found for agent');
+  });
+
+  it('throws when conversation does not exist', async () => {
+    db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+    db.query.internalChatConversations.findFirst.mockResolvedValueOnce(null);
+
+    const service = createInternalChatService(db);
+    await expect(service.getConversationForAgent('agent-kaelen', 'conv_missing'))
+      .rejects.toThrow('Conversation not found');
+  });
+
+  it('throws when agent is not a member of the conversation', async () => {
+    db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(MOCK_ACCOUNT_A);
+    db.query.internalChatConversations.findFirst.mockResolvedValueOnce({
+      id: 'conv_1', type: 'dm' as const, createdAt: MOCK_DATE, updatedAt: MOCK_DATE,
+    });
+    db.query.internalChatConversationMembers.findFirst.mockResolvedValueOnce(null);
+
+    const service = createInternalChatService(db);
+    await expect(service.getConversationForAgent('agent-kaelen', 'conv_1'))
+      .rejects.toThrow('Agent is not a member of this conversation');
+  });
+});
+
+// ─── Untested functions: addMemberToGroup ───────────────────────────────────
+describe('addMemberToGroup', () => {
+  it('delegates to groups.addMemberToGroup', async () => {
+    mockGroups.addMemberToGroup.mockResolvedValueOnce({ memberId: 'member_1' });
+
+    const service = createInternalChatService(db);
+    const result = await service.addMemberToGroup({ conversationKey: 'grp_1', participantKey: 'acc_bob' });
+
+    expect(mockGroups.addMemberToGroup).toHaveBeenCalledWith({
+      conversationKey: 'grp_1', participantKey: 'acc_bob',
+    });
+    expect(result).toEqual({ memberId: 'member_1' });
+  });
+
+  it('throws when adding a member that already exists', async () => {
+    mockGroups.addMemberToGroup.mockRejectedValueOnce(new Error('addMemberToGroup failed: Member already in group'));
+
+    const service = createInternalChatService(db);
+    await expect(service.addMemberToGroup({ conversationKey: 'grp_1', participantKey: 'acc_bob' }))
+      .rejects.toThrow('addMemberToGroup failed: Member already in group');
+  });
+});
+
+// ─── Untested functions: removeMemberFromGroup ─────────────────────────────
+describe('removeMemberFromGroup', () => {
+  it('delegates to groups.removeMemberFromGroup', async () => {
+    mockGroups.removeMemberFromGroup.mockResolvedValueOnce({ removed: true });
+
+    const service = createInternalChatService(db);
+    const result = await service.removeMemberFromGroup({ conversationKey: 'grp_1', participantKey: 'acc_bob' });
+
+    expect(mockGroups.removeMemberFromGroup).toHaveBeenCalledWith({
+      conversationKey: 'grp_1', participantKey: 'acc_bob',
+    });
+    expect(result).toEqual({ removed: true });
+  });
+
+  it('throws when removing a non-existent member', async () => {
+    mockGroups.removeMemberFromGroup.mockRejectedValueOnce(new Error('removeMemberFromGroup failed: Member not found'));
+
+    const service = createInternalChatService(db);
+    await expect(service.removeMemberFromGroup({ conversationKey: 'grp_1', participantKey: 'acc_bob' }))
+      .rejects.toThrow('removeMemberFromGroup failed: Member not found');
+  });
+});
+
+// ─── Untested functions: changeChatGroup ───────────────────────────────────
+describe('changeChatGroup', () => {
+  it('delegates to groups.changeChatGroup', async () => {
+    mockGroups.changeChatGroup.mockResolvedValueOnce({ success: true });
+
+    const service = createInternalChatService(db);
+    const result = await service.changeChatGroup({
+      conversationKey: 'grp_1',
+      changes: { name: 'New Name' },
+    });
+
+    expect(mockGroups.changeChatGroup).toHaveBeenCalledWith({
+      conversationKey: 'grp_1',
+      changes: { name: 'New Name' },
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it('throws when updating a non-existent group', async () => {
+    mockGroups.changeChatGroup.mockRejectedValueOnce(new Error('changeChatGroup failed: Group not found'));
+
+    const service = createInternalChatService(db);
+    await expect(service.changeChatGroup({ conversationKey: 'grp_unknown', changes: { name: 'X' } }))
+      .rejects.toThrow('changeChatGroup failed: Group not found');
+  });
+});
+
+// ─── Untested functions: listGroupMembers ───────────────────────────────────
+describe('listGroupMembers', () => {
+  it('delegates to groups.listGroupMembers with agentId', async () => {
+    const mockMembers = [
+      { participantId: 'acc_a', participantKey: 'acc_a', participantSlug: 'alice', participantName: 'Alice', role: 'admin' },
+    ];
+    mockGroups.listGroupMembers.mockResolvedValueOnce(mockMembers);
+
+    const service = createInternalChatService(db);
+    const result = await service.listGroupMembers({ conversationKey: 'grp_1', agentId: 'agent-kaelen' });
+
+    expect(mockGroups.listGroupMembers).toHaveBeenCalledWith({ conversationKey: 'grp_1', agentId: 'agent-kaelen' });
+    expect(result).toEqual(mockMembers);
+  });
+});
+
+// ─── Untested functions: listGroupMembersByAccount ───────────────────────────
+describe('listGroupMembersByAccount', () => {
+  it('delegates to groups.listGroupMembersByAccount with accountId', async () => {
+    const mockMembers = [
+      { participantId: 'acc_a', participantKey: 'acc_a', participantSlug: 'alice', participantName: 'Alice', role: 'admin' },
+    ];
+    mockGroups.listGroupMembersByAccount.mockResolvedValueOnce(mockMembers);
+
+    const service = createInternalChatService(db);
+    const result = await service.listGroupMembersByAccount({ conversationKey: 'grp_1', accountId: 'acc_kaelen' });
+
+    expect(mockGroups.listGroupMembersByAccount).toHaveBeenCalledWith({ conversationKey: 'grp_1', accountId: 'acc_kaelen' });
+    expect(result).toEqual(mockMembers);
+  });
+});
+
+// ─── Untested functions: addMemberToGroupByAccount ─────────────────────────
+describe('addMemberToGroupByAccount', () => {
+  it('delegates to groups.addMemberToGroupByAccount', async () => {
+    mockGroups.addMemberToGroupByAccount.mockResolvedValueOnce({ memberId: 'member_new' });
+
+    const service = createInternalChatService(db);
+    const result = await service.addMemberToGroupByAccount({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      participantKey: 'acc_bob',
+    });
+
+    expect(mockGroups.addMemberToGroupByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      participantKey: 'acc_bob',
+    });
+    expect(result).toEqual({ memberId: 'member_new' });
+  });
+});
+
+// ─── Untested functions: updateMemberRoleByAccount ──────────────────────────
+describe('updateMemberRoleByAccount', () => {
+  it('delegates to groups.updateMemberRoleByAccount', async () => {
+    mockGroups.updateMemberRoleByAccount.mockResolvedValueOnce({ role: 'admin' });
+
+    const service = createInternalChatService(db);
+    const result = await service.updateMemberRoleByAccount({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      participantKey: 'acc_bob',
+      role: 'admin',
+    });
+
+    expect(mockGroups.updateMemberRoleByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      participantKey: 'acc_bob',
+      role: 'admin',
+    });
+    expect(result).toEqual({ role: 'admin' });
+  });
+});
+
+// ─── Untested functions: removeMemberFromGroupByAccount ─────────────────────
+describe('removeMemberFromGroupByAccount', () => {
+  it('delegates to groups.removeMemberFromGroupByAccount', async () => {
+    mockGroups.removeMemberFromGroupByAccount.mockResolvedValueOnce({ removed: true });
+
+    const service = createInternalChatService(db);
+    const result = await service.removeMemberFromGroupByAccount({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      participantKey: 'acc_bob',
+    });
+
+    expect(mockGroups.removeMemberFromGroupByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      participantKey: 'acc_bob',
+    });
+    expect(result).toEqual({ removed: true });
+  });
+});
+
+// ─── Untested functions: updateGroupByAccount ────────────────────────────────
+describe('updateGroupByAccount', () => {
+  it('delegates to groups.updateGroupByAccount with accountId + changes', async () => {
+    mockGroups.updateGroupByAccount.mockResolvedValueOnce({ success: true });
+
+    const service = createInternalChatService(db);
+    const result = await service.updateGroupByAccount({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      changes: { name: 'Team Channel' },
+    });
+
+    expect(mockGroups.updateGroupByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      conversationKey: 'grp_1',
+      changes: { name: 'Team Channel' },
+    });
+    expect(result).toEqual({ success: true });
+  });
+});
+
+// ─── Untested functions: onReceiveMessage ───────────────────────────────────
+describe('onReceiveMessage', () => {
+  it('is a function exposed on the service', () => {
+    const service = createInternalChatService(db);
+    expect(typeof service.onReceiveMessage).toBe('function');
+  });
+
+  it('accepts an event without throwing', () => {
+    const service = createInternalChatService(db);
+    expect(() => service.onReceiveMessage({ type: 'message', payload: {} } as never)).not.toThrow();
+  });
+});
+
+// ─── Untested functions: clearHandler ───────────────────────────────────────
+describe('clearHandler', () => {
+  it('is a function exposed on the service', () => {
+    const service = createInternalChatService(db);
+    expect(typeof service.clearHandler).toBe('function');
+  });
+
+  it('clears the connection handler without throwing', () => {
+    const service = createInternalChatService(db);
+    expect(() => service.clearHandler()).not.toThrow();
+  });
+});
+
 
 });
