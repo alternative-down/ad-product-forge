@@ -228,13 +228,7 @@ const registerAgentAccount = admin.registerAgentAccount;
 
   const ensureDirectConversationByAccount = accountOps.ensureDirectConversationByAccount;
 
-  const addMemberToGroupByAccount = groups.addMemberToGroupByAccount;
-
-  const updateMemberRoleByAccount = groups.updateMemberRoleByAccount;
-
-  const removeMemberFromGroupByAccount = groups.removeMemberFromGroupByAccount;
-
-  const updateGroupByAccount = groups.updateGroupByAccount;
+  const { addMemberToGroupByAccount, updateMemberRoleByAccount, removeMemberFromGroupByAccount, updateGroupByAccount } = accountOps;
 
   // === Unread / Recent ────────────────────────────────────────────────────
   const getUnreadSummary = reads.getUnreadSummary;
