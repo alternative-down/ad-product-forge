@@ -75,6 +75,28 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
     : null;
   const limit = config.maxBodyBytes ?? MAX_BODY_BYTES;
   const routes = new Map<RouteKey, HttpHandler>();
+
+  // ── Rate Limit Tracking ──────────────────────────────────────────────────
+  // Sliding window: tracks request timestamps within the current window.
+  const RATE_WINDOW_MS = 60_000; // 1-minute window
+  const RATE_MAX = 120; // requests per window
+  const requestTimestamps: number[] = [];
+
+  function getRateLimitHeaders(): Record<string, string> {
+    const now = Date.now();
+    // Expire timestamps outside the sliding window
+    const cutoff = now - RATE_WINDOW_MS;
+    while (requestTimestamps.length > 0 && requestTimestamps[0] < cutoff) {
+      requestTimestamps.shift();
+    }
+    const remaining = Math.max(0, RATE_MAX - requestTimestamps.length);
+    const resetMs = now + RATE_WINDOW_MS;
+    return {
+      'X-RateLimit-Limit': String(RATE_MAX),
+      'X-RateLimit-Remaining': String(remaining),
+      'X-RateLimit-Reset': String(Math.ceil(resetMs / 1000)),
+    };
+  }
   const server = http.createServer(async (req, res) => {
     if (!req.url || !req.method) {
       const origin = getHeaderValue(req.headers['origin'])
@@ -139,14 +161,19 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
     const bodyResult = await readBodyWithLimit(req, limit);
 
     if (bodyResult.isRejected) {
+      const rateLimitHeaders = getRateLimitHeaders();
       res.writeHead(413, {
         ...corsHeaders,
+        ...rateLimitHeaders,
         'content-type': 'application/json; charset=utf-8',
         'cache-control': 'no-store',
       });
       res.end(JSON.stringify({ error: 'Request body too large' }));
       return;
     }
+
+    // Track request for rate limiting (before handler executes)
+    requestTimestamps.push(Date.now());
 
     try {
       const response = await handler({
@@ -158,15 +185,19 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
         bodyText: bodyResult.buffer.toString('utf8'),
       });
 
+      const rateLimitHeaders = getRateLimitHeaders();
       res.writeHead(response.status, {
         ...corsHeaders,
+        ...rateLimitHeaders,
         ...(response.headers ?? {}),
       });
       res.end(response.body);
     } catch (error) {
       if (error instanceof ZodError) {
+        const rateLimitHeaders = getRateLimitHeaders();
         res.writeHead(400, {
           ...corsHeaders,
+          ...rateLimitHeaders,
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         });
