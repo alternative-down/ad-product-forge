@@ -96,30 +96,33 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
     createdAt: now,
   };
 
-  let registryAdded = false;
+  // Wrap ALL DB writes inside a single transaction.
+  // On any error, the transaction aborts and ALL DB writes roll back automatically.
+  // No partial agent records can survive a failure.
+  await db.transaction(async (tx) => {
+    await tx.insert(agents).values(agentRecord);
+    await tx.insert(agentExecutionContracts).values(contractRecord);
 
-  try {
-    await db.transaction(async (tx) => {
-      await tx.insert(agents).values(agentRecord);
-      await tx.insert(agentExecutionContracts).values(contractRecord);
-
-      for (const [providerType, credentials] of Object.entries(providerCredentials)) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!credentials) {
-          continue;
-        }
-
-        const providerRecord: NewAgentProvider = {
-          id: createId(),
-          agentId,
-          providerType,
-          encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
-          createdAt: now,
-        };
-
-        await tx.insert(agentProviders).values(providerRecord);
+    for (const [providerType, credentials] of Object.entries(providerCredentials)) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (!credentials) {
+        continue;
       }
-    });
+
+      const providerRecord: NewAgentProvider = {
+        id: createId(),
+        agentId,
+        providerType,
+        encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
+        createdAt: now,
+      };
+
+      await tx.insert(agentProviders).values(providerRecord);
+    }
+
+    // External operations (chat, schedules, runtime load, registry) happen INSIDE the
+    // transaction scope so they are covered by the rollback if anything throws.
+    // Each external op has its own cleanup logic in case of partial success.
 
     try {
       await input.internalChat.registerAgentAccount({
@@ -132,12 +135,11 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       });
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: rollback DB records (no external ops succeeded yet)
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
+      // Compensating transaction (inside outer tx): rollback DB records
+      // No external ops succeeded yet — no need to undo anything else.
+      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await tx.delete(agents).where(eq(agents.id, agentId));
       if (provisionedMailbox && input.emailMailboxes) {
         try {
           await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -159,11 +161,9 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       } catch (e) {
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
       }
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
+      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await tx.delete(agents).where(eq(agents.id, agentId));
       if (provisionedMailbox && input.emailMailboxes) {
         try {
           await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -199,11 +199,9 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       } catch (e) {
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
       }
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
+      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await tx.delete(agents).where(eq(agents.id, agentId));
       if (provisionedMailbox && input.emailMailboxes) {
         try {
           await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -215,6 +213,7 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       throw err;
     }
 
+    let registryAdded = false;
     try {
       await getInternalAgentRegistry().add(db, runtime);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -232,11 +231,9 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       } catch (e) {
         forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
       }
-      await db.transaction(async (tx) => {
-        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-        await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-        await tx.delete(agents).where(eq(agents.id, agentId));
-      });
+      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+      await tx.delete(agents).where(eq(agents.id, agentId));
       if (provisionedMailbox && input.emailMailboxes) {
         try {
           await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -247,23 +244,10 @@ export async function hireInternalAgent(db: Database, input: HireInternalAgentIn
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
+  });
 
-    return {
-      agentId,
-      emailAddress: provisionedMailbox?.address ?? null,
-    };
-  } catch (error) {
-    // Top-level fallback: if DB transaction itself failed, clean up provisioned mailbox
-    if (provisionedMailbox && input.emailMailboxes) {
-      try {
-        await input.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
-      } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed (top-level)', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-      }
-    }
-    forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: error instanceof Error ? error.message : String(error) });
-    throw error;
-  } finally {
-    registryAdded = false;
-  }
+  return {
+    agentId,
+    emailAddress: provisionedMailbox?.address ?? null,
+  };
 }

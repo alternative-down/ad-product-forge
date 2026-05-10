@@ -27,13 +27,12 @@ const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(u
 const mockDelete = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
 
 function createMockDb() {
+  const tx = { insert: mockInsert, delete: mockDelete };
   return {
     insert: mockInsert,
     delete: mockDelete,
-    transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
-      // Simulate drizzle transaction by calling the callback with a tx object
-      // that has the same insert/delete methods
-      await fn({ insert: mockInsert, delete: mockDelete });
+    transaction: vi.fn(async (fn: (tx: typeof tx) => Promise<unknown>) => {
+      await fn(tx);
     }),
     query: { agents: { findFirst: vi.fn().mockResolvedValue(null) } },
   };
@@ -118,22 +117,36 @@ describe('hireInternalAgent', () => {
   it('uses provided agentId when given', async () => {
     const db = createMockDb();
     const input = createInput();
-    input.agentId = 'my-custom-id';
+    input.agentId = 'custom-id';
     const result = await hireInternalAgent(db as any, input);
-    expect(result.agentId).toBe('my-custom-id');
+    expect(result.agentId).toBe('custom-id');
   });
 
-  it('rolls back agent deletion on loadAgent failure', async () => {
-    const { loadAgent } = await import('./agent-loader');
-    vi.mocked(loadAgent).mockRejectedValueOnce(new Error('load failed'));
+  // --- Orphan prevention tests (#1857) ---
+
+  it('rolls back DB records when registerAgentAccount fails', async () => {
     const db = createMockDb();
     const input = createInput();
-    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('load failed');
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat registration failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat registration failed');
+    // mockDelete is called as part of the rollback transaction
     expect(mockDelete).toHaveBeenCalled();
   });
 
+  it('rolls back DB records when createHeartbeatSchedule fails', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.schedules = {
+      createHeartbeatSchedule: vi.fn().mockRejectedValue(new Error('schedule failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('schedule failed');
+    expect(mockDelete).toHaveBeenCalled();
+  });
 
-  it('calls deleteAgentAccount on createHeartbeatSchedule failure', async () => {
+  it('calls deleteAgentAccount when createHeartbeatSchedule fails', async () => {
     const db = createMockDb();
     const input = createInput();
     const deleteAgentAccount = vi.fn().mockResolvedValue(undefined);
@@ -148,13 +161,22 @@ describe('hireInternalAgent', () => {
     expect(deleteAgentAccount).toHaveBeenCalledWith({ agentId: 'generated-id' });
   });
 
+  it('rolls back DB records when loadAgent fails', async () => {
+    const { loadAgent } = await import('./agent-loader');
+    vi.mocked(loadAgent).mockRejectedValueOnce(new Error('load failed'));
+    const db = createMockDb();
+    const input = createInput();
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('load failed');
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
   it('provisions mailbox when email is configured', async () => {
     const db = createMockDb();
     const input = createInput();
     input.emailMailboxes = {
       isConfigured: vi.fn().mockResolvedValue(true),
-      provisionMailbox: vi.fn().mockResolvedValue({ address: 'test@test.com', credentials: {} }),
-      deleteMailboxByAddress: vi.fn(),
+      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', token: 't' } }),
+      deleteMailboxByAddress: vi.fn().mockResolvedValue(undefined),
     } as any;
     await hireInternalAgent(db as any, input);
     expect(input.emailMailboxes.provisionMailbox).toHaveBeenCalled();
@@ -165,10 +187,27 @@ describe('hireInternalAgent', () => {
     const input = createInput();
     input.emailMailboxes = {
       isConfigured: vi.fn().mockResolvedValue(true),
-      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', pass: 'p' } }),
-      deleteMailboxByAddress: vi.fn(),
+      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', token: 't' } }),
+      deleteMailboxByAddress: vi.fn().mockResolvedValue(undefined),
     } as any;
     await hireInternalAgent(db as any, input);
-    expect(input.internalChat.registerAgentAccount).toHaveBeenCalled();
+    const emailProviderCall = mockInsert.mock.calls.find(c => c[0] === agentProviders);
+    expect(emailProviderCall).toBeDefined();
+  });
+
+  it('deletes mailbox when registerAgentAccount fails after provisioning', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.emailMailboxes = {
+      isConfigured: vi.fn().mockResolvedValue(true),
+      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', token: 't' } }),
+      deleteMailboxByAddress: vi.fn().mockResolvedValue(undefined),
+    } as any;
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat registration failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat registration failed');
+    expect(input.emailMailboxes.deleteMailboxByAddress).toHaveBeenCalledWith('agent@test.com');
   });
 });
