@@ -8,7 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
-import { parseProviderCredentials, encryptSecret } from '../../communication/provider-loader';
+import { parseProviderCredentials, encryptSecret } from '../../../communication/provider-loader.js';
 import { discordProviderDeleteSignalSchema } from '../schemas/discord.js';
 
 // Schemas co-located with routes (extracted from schemas.ts for locality)
