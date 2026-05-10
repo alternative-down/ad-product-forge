@@ -134,6 +134,9 @@ function makeNoUnnecessaryReexportsRule() {
         ExportNamedDeclaration(node) {
           if (!node.source) return; // local export, ok
           if (hasDisableComment(node)) return;
+          // Type-only re-exports are always allowed — TypeScript best practice,
+          // does not pollute the JavaScript runtime namespace
+          if (node.specifiers && node.specifiers.every(s => s.exportKind === 'type')) return;
           const source = node.source.value || '';
           const count = countExports(node, source);
           if (count === 'all') {
