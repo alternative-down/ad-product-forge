@@ -345,8 +345,6 @@ describe('createInternalChatService', () => {
     });
 
     it('returns null when not found', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
-
       const service = createInternalChatService(db);
       const result = await service.getAccountBySlug('nonexistent');
       expect(result).toBeNull();
@@ -781,7 +779,7 @@ describe('createInternalChatService', () => {
         displayName: 'Zapier',
       });
 
-      expect(result.description ?? undefined).toBeUndefined();
+      expect(result.description).toBeNull();
     });
   });
 
@@ -932,8 +930,6 @@ describe('createInternalChatService', () => {
     });
 
     it('returns null when no account belongs to the agent', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
-
       const service = createInternalChatService(db);
       const result = await service.getAccountByAgentId('agent-nonexistent');
       expect(result).toBeNull();
