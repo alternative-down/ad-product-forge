@@ -268,9 +268,11 @@ export function createAgentContractStore(
     } as const;
 
     try {
-      await db.insert(agentExecutionContracts).values(nextContract);
+      await db.transaction(async (tx) => {
+        await tx.insert(agentExecutionContracts).values(nextContract);
+      });
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'renewContract insert failed: ' + (err instanceof Error ? err.message : String(err)) });
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'renewContract transaction failed: ' + (err instanceof Error ? err.message : String(err)) });
       throw err;
     }
     return nextContract;
