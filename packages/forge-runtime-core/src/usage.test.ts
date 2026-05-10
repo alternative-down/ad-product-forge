@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { InMemoryForgeUsageSink, type ForgeStepUsageRecord } from './usage';
 
 function makeRecord(overrides: Partial<ForgeStepUsageRecord> = {}): ForgeStepUsageRecord {
