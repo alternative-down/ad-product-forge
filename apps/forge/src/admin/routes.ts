@@ -100,6 +100,7 @@ import { createWebhookHandler } from '../webhooks/handler';
 
 import { registerSystemReadRoutes } from './routes/system/read.js';
 import { registerSystemWriteRoutes } from './routes/system/write.js';
+import { registerDashboardRoutes } from './routes/dashboard';
 import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
 
 
@@ -176,48 +177,16 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     path: '/admin/roles',
     handler: async () => jsonResponse(await readModel.listRoles()),
   });
-  // GET /admin/overview — inlined from agentRM.getDashboard
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/overview',
-    handler: async () => {
-      const [balanceResult, recentResult] = await Promise.all([
-        finance.getCompanyCashBalance(),
-        finance.listCompanyCashMovements({ limit: 10 }),
-      ]);
-      const rows = await input.db.query.agents.findMany({
-        columns: { id: true, executionState: true, role: true },
-      });
-      const loadedAgents = registry.size;
-      const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
-      const runningAgents = rows.filter((r) => r.executionState === 'running').length;
-      return jsonResponse({
-        totals: {
-          agents: rows.length,
-          loadedAgents,
-          idleAgents,
-          runningAgents,
-          absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent').length,
-          roles: new Set(rows.map((r) => r.role).filter(Boolean)).size,
-          activeContracts: (await input.db.query.agentExecutionContracts.findMany({
-            where: (fields) => eq(fields.isActive, true),
-            columns: { id: true },
-          })).length,
-        },
-        cash: {
-          balanceUsd: balanceResult.balanceUsd,
-          summary: { income: 0, expenses: 0, net: 0 },
-          recentMovements: recentResult.items,
-        },
-      });
-    },
-  });
 
-  // GET /admin/roles — inlined from systemRM.listRoles
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/roles',
-    handler: async () => jsonResponse(await systemRM.listRoles()),
+  // Dashboard overview and roles (extracted to ./routes/dashboard.ts)
+  // Tech-debt: simple overview/roles are still registered above (#1874 duplicates)
+  registerDashboardRoutes({
+    httpServer: input.httpServer,
+    db: input.db,
+    registry,
+    finance,
+    readModel,
+    systemRM,
   });
 
   // System GET routes (extracted to ./routes/system/read.ts)
