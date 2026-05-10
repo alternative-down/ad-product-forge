@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 jobs:
+  # Conditional: only runs when package.json changed
   lockfile-sync:
     runs-on: ubuntu-latest
-    # Only run when package.json has changed (new/changed/removed dependencies)
     if: contains(github.event.head_commit.diff, 'package.json')
     steps:
       - name: Checkout
@@ -38,9 +38,40 @@ jobs:
             echo "package-lock.json is up to date."
           fi
 
+  # Parallelized jobs — each calls the reusable workflow for shared setup
+  check-filenames:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run check-filenames
+
+  lint:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run lint
+
+  typecheck:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run typecheck
+
+  test:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run test
+
+  build:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run build -- --force
+
+  # All-in-one validation job (fallback / compatibility)
   validate:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
