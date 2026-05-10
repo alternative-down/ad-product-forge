@@ -1,15 +1,15 @@
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler } from '../../../http/server.js';
 import { z } from 'zod';
-import type { Database } from '../../../database/client';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader';
+import type { Database } from '../../../database/client.js';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
 import { forgeDebug } from '@forge-runtime/core';
-import { createId } from '../../../utils/id';
+import { createId } from '../../../utils/id.js';
 import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
-import { reloadAgentIfLoaded } from '../../capabilities/runtime';
+import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
-import { parseProviderCredentials, encryptSecret } from '../provider-credentials';
-import { discordProviderDeleteSignalSchema } from '../schemas';
+import { parseProviderCredentials, encryptSecret } from '../../communication/provider-loader';
+import { discordProviderDeleteSignalSchema } from '../schemas/discord.js';
 
 // Schemas co-located with routes (extracted from schemas.ts for locality)
 const upsertAgentProviderSchema = z.object({
