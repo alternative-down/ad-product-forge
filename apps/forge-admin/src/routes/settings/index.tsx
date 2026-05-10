@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { AdminLoadingState } from '@/components/admin';
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
 import { getSystemLlm, getSystemSettings, updateLlmDefaults, upsertSystemSettings } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 import type { LlmProfile } from '@/lib/admin-api/index';

@@ -3,7 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AdminButton, AdminInput, AdminLoadingState, PageHeader } from '@/components/admin';
+import { AdminButton } from '@/components/admin/./forms/admin-button';
+import { AdminInput } from '@/components/admin/./forms/admin-input';
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/./layout/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { deleteSystemSkill, getSystemSkills, uploadSystemSkills } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
