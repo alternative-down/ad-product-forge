@@ -318,6 +318,8 @@ export function createInternalChatService(
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
   const participants = createInternalChatParticipants(db);
 
+  const participants = createInternalChatParticipants(db);
+
   const serviceHelpers = createServiceHelpers({
     db,
     accounts: {
@@ -399,10 +401,6 @@ export function createInternalChatService(
   const guards = createInternalChatGuards(db, {
     getRequiredAgentAccount,
   });
-
-  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
-
-
 
 
 

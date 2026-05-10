@@ -59,6 +59,9 @@ const mockGroups = vi.hoisted(() => ({
   listGroupMembersByAccount: vi.fn(),
   ensureDirectConversation: vi.fn(),
   getRequiredGroupForAccount: vi.fn(),
+  // Note: createExternalChatGroup comes from accountOps, not groups
+  // But listing tests reference groups.createExternalChatGroup
+  createExternalChatGroup: vi.fn(),
 }));
 
 const mockAccountOps = vi.hoisted(() => ({
@@ -76,6 +79,7 @@ const mockSending = vi.hoisted(() => ({
 const mockConversations = vi.hoisted(() => ({
   ensureDirectConversation: vi.fn(),
   archiveConversationByAccount: vi.fn().mockResolvedValue({ conversationId: 'conv_1', archived: true }),
+  // Note: ensureDirectConversationByAccount comes from accountOps
 }));
 vi.mock('./internal-chat-groups', async () => ({
   ...(await vi.importActual('./internal-chat-groups')),
@@ -344,9 +348,7 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      const result = await service.getAccountBySlug('nonexistent');
-
-      expect(result).toBeNull();
+      await expect(service.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
     });
   });
 
@@ -778,7 +780,7 @@ describe('createInternalChatService', () => {
         displayName: 'Zapier',
       });
 
-      expect(result.description ?? undefined).toBeUndefined();
+      expect(result.description).toBeNull();
     });
   });
 
@@ -904,9 +906,7 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      const result = await service.getAccountBySlug('nonexistent');
-
-      expect(result).toBeNull();
+      await expect(service.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
     });
   });
 
@@ -933,9 +933,7 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      const result = await service.getAccountByAgentId('agent-nonexistent');
-
-      expect(result).toBeNull();
+      await expect(service.getAccountByAgentId('agent-nonexistent')).rejects.toThrow('Account not found');
     });
   });
 
