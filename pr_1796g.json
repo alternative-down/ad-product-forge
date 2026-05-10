@@ -1,6 +1,0 @@
-{
-  "title": "test(1796g): add 9 tests for internal-chat-listing.ts (2 functions, 0 prior coverage)",
-  "body": "## Summary\n\n9 new tests covering `listConversations` and `listConversationsByAccount` in internal-chat-listing.ts. Zero prior coverage.\n\n### Functions covered\n\n| Function | Tests | Key scenarios |\n|---|---|---|\n| listConversationsByAccount | 5 | empty return, verifies external account, calls db.select, enriched shape, name derivation from participant |\n| listConversations | 4 | empty return, resolves agent to account, enriched conversations with messages, method exposure |\n\n### Key mocking insight\n\nThe Drizzle chain requires precise method ordering: `select().from().innerJoin().where().orderBy().limit().all()`. Each method must return an object with the next method in the chain. The second select call (for messages) uses `select().from().innerJoin().innerJoin().where().orderBy().all()` — a double innerJoin without a where between them.\n\nAll 9 tests pass.\nPart of #1796 coverage expansion.",
-  "head": "fix/1796g-internal-chat-listing-tests",
-  "base": "develop"
-}
