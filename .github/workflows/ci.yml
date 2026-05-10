@@ -8,11 +8,12 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  check-filenames:
+  # Conditional: only runs when package.json changed
+  lockfile-sync:
     runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.diff, 'package.json')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -23,13 +24,63 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
+      - name: Install
+        run: npm install
+
+      - name: Detect lockfile changes
+        run: |
+          if git diff --quiet package-lock.json; then
+            echo "ERROR: package-lock.json is out of sync with package.json"
+            echo "Add package-lock.json to your PR diff."
+            echo "Run: npm install && git add package-lock.json"
+            exit 1
+          else
+            echo "package-lock.json is up to date."
+          fi
+
+  # Parallelized jobs — each calls the reusable workflow for shared setup
+  check-filenames:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run check-filenames
+
+  lint:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run lint
+
+  typecheck:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run typecheck
+
+  test:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run test
+
+  build:
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run build -- --force
+
+  # All-in-one validation job (fallback / compatibility)
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
+          node-version: 22
+          cache: npm
 
       - name: Install
         run: npm install
@@ -37,157 +88,20 @@ jobs:
       - name: Check Filenames
         run: npm run check-filenames
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
       - name: Lint
         run: npm run lint
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
 
       - name: Typecheck
         run: npm run typecheck
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
-      - name: Test
-        run: npm run test
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
       - name: Build
         run: npm run build -- --force
 
-  lockfile-sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Check package-lock.json is updated when package.json changes
-        run: |
-          PACKAGE_JSON_CHANGED=$(git diff --name-only origin/${{ github.base_ref || 'develop' }}...HEAD -- '**/package.json' | grep -v node_modules | wc -l)
-          LOCKFILE_CHANGED=$(git diff --name-only origin/${{ github.base_ref || 'develop' }}...HEAD -- '**/package-lock.json' | grep -v node_modules | wc -l)
-
-          if [ "$PACKAGE_JSON_CHANGED" -gt 0 ] && [ "$LOCKFILE_CHANGED" -eq 0 ]; then
-            echo "ERROR: package.json was modified but package-lock.json was not updated."
-            echo "Run 'npm install' and commit the package-lock.json changes."
-            exit 1
-          fi
-          echo "Lockfile check passed."
-
-  fallow:
-    runs-on: ubuntu-latest
-    needs: build
-    if: always()
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install
-        run: npm install
-
       - name: Fallow Audit
-        run: npx fallow audit --fail-on-regression --tolerance 2% --health-baseline .fallow/baseline-health.json --dead-code-baseline .fallow/baseline-dead-code.json --dupes-baseline .fallow/baseline-dupes.json 2>&1 | tee /tmp/fallow-report.txt; exit 0
+        run: npx fallow audit --fail-on-regression --tolerance 2% --health-baseline .fallow/baseline-health.json --dead-code-baseline .fallow/baseline-dead-code.json --dupes-baseline .fallow/baseline-dupes.json
 
-      - name: Post Fallow Report
-        run: |
-          REPORT=$(cat /tmp/fallow-report.txt)
-          gh pr comment "${{ github.event.pull_request.number }}" --body "## Fallow Report
+      - name: Fallow Fix (Dry Run)
+        run: npx fallow fix --dry-run
 
-\`\`\`
-$REPORT
-\`\`\`"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        run: npm run test
