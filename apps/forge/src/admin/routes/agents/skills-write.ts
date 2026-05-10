@@ -5,7 +5,8 @@
 
 import type { HttpHandler } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
-import { forgeDebug, reloadAgentIfLoaded } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
+import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { eq } from 'drizzle-orm';
 import {
   installAgentWorkspaceSkillsFromZip,
@@ -54,7 +55,7 @@ export function registerAgentSkillsWriteRoutes(
           installedSkillNames,
         }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/upload', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -89,7 +90,7 @@ export function registerAgentSkillsWriteRoutes(
           skillName: body.skillName,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/delete', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -124,7 +125,7 @@ export function registerAgentSkillsWriteRoutes(
           skillName: body.skillName,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/install-global', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -159,7 +160,7 @@ export function registerAgentSkillsWriteRoutes(
           publishedSkillName,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/publish-global', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },

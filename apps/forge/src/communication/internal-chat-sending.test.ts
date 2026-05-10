@@ -279,3 +279,126 @@ describe('createChatSending — getMessageAttachmentByAccount', () => {
     expect(result).toEqual({ stream: null, contentType: 'text/plain' });
   });
 });
+// ─── replyToMessageId support ─────────────────────────────────────────────────
+
+function makeMockDbWithReplySupport(overrides: {
+  findManyMembers?: unknown[];
+  findManyError?: Error;
+  parentMessage?: { id: string; conversationId: string } | null;
+  parentMessageError?: Error;
+  updateRowsAffected?: number;
+} = {}) {
+  return {
+    query: {
+      internalChatConversationMembers: {
+        findMany: vi.fn().mockImplementation(async () => {
+          if (overrides.findManyError) throw overrides.findManyError;
+          return overrides.findManyMembers ?? [{ accountId: 'acc-2' }, { accountId: 'acc-3' }];
+        }),
+      },
+      internalChatMessages: {
+        findFirst: vi.fn().mockImplementation(async () => {
+          if (overrides.parentMessageError) throw overrides.parentMessageError;
+          return overrides.parentMessage ?? null;
+        }),
+      },
+    },
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockResolvedValue({}),
+    }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue({ rowsAffected: overrides.updateRowsAffected ?? 1 }),
+      }),
+    }),
+  };
+}
+
+describe('createChatSending — sendMessage with replyToMessageId', () => {
+  it('accepts replyToMessageId and stores it in the database', async () => {
+    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
+    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const serviceHelpers = makeMockServiceHelpers();
+    const connection = makeMockConnection();
+    const reads = makeMockReads();
+    const attachments = makeMockAttachments();
+    const db = makeMockDbWithReplySupport({
+      parentMessage: { id: 'msg-parent', conversationId: 'conv-1' },
+    });
+
+    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const result = await sending.sendMessage({
+      accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply message', attachments: [],
+      replyToMessageId: 'msg-parent',
+    });
+
+    expect(result.success).toBe(true);
+    expect(db.query.internalChatMessages.findFirst).toHaveBeenCalled();
+    // Verify insert was called with replyToMessageId
+    expect(db.insert).toHaveBeenCalled();
+  });
+
+  it('stores null when replyToMessageId is not provided', async () => {
+    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
+    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const serviceHelpers = makeMockServiceHelpers();
+    const connection = makeMockConnection();
+    const reads = makeMockReads();
+    const attachments = makeMockAttachments();
+    const db = makeMockDbWithReplySupport({ parentMessage: { id: 'msg-parent', conversationId: 'conv-1' } });
+
+    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    await sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'plain message', attachments: [] });
+
+    expect(db.query.internalChatMessages.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('throws when replyToMessageId references a non-existent message', async () => {
+    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
+    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const serviceHelpers = makeMockServiceHelpers();
+    const connection = makeMockConnection();
+    const reads = makeMockReads();
+    const attachments = makeMockAttachments();
+    const db = makeMockDbWithReplySupport({ parentMessage: null });
+
+    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    await expect(
+      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply', attachments: [], replyToMessageId: 'msg-nonexistent' }),
+    ).rejects.toThrow('Reply target message not found');
+  });
+
+  it('throws when replyToMessageId belongs to a different conversation', async () => {
+    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
+    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const serviceHelpers = makeMockServiceHelpers();
+    const connection = makeMockConnection();
+    const reads = makeMockReads();
+    const attachments = makeMockAttachments();
+    const db = makeMockDbWithReplySupport({
+      parentMessage: { id: 'msg-parent', conversationId: 'conv-other' },
+    });
+
+    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    await expect(
+      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply', attachments: [], replyToMessageId: 'msg-parent' }),
+    ).rejects.toThrow('Reply target belongs to a different conversation');
+  });
+
+  it('rethrows when parent message lookup fails', async () => {
+    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
+    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const serviceHelpers = makeMockServiceHelpers();
+    const connection = makeMockConnection();
+    const reads = makeMockReads();
+    const attachments = makeMockAttachments();
+    const db = makeMockDbWithReplySupport({
+      parentMessageError: new Error('DB lookup failed'),
+    });
+
+    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    await expect(
+      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply', attachments: [], replyToMessageId: 'msg-parent' }),
+    ).rejects.toThrow('DB lookup failed');
+  });
+});

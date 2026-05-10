@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createId } from '../../../utils/id';
-import { parseJsonBody, jsonResponse } from '../helpers';
-import { forgeDebug } from '@forge-runtime/core';
+import { parseJsonBody, jsonResponse } from '../index';
+import { forgeDebug } from '../debug';
 import { z } from 'zod';
 import type { HttpRequest } from '../../http/server';
 import type { createWebhookStore } from '../../../webhooks/store';
@@ -33,7 +33,7 @@ export function registerWebhookAdminRoutes(
         const route = await store.createRoute({ agentId: body.agentId, name: body.name, secret });
         return jsonResponse({ routeId: route.routeId, secret }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/route/create', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -51,7 +51,7 @@ export function registerWebhookAdminRoutes(
         const routes = await store.listRoutesByAgent(agentId);
         return jsonResponse({ routes: routes.map((r) => ({ routeId: r.routeId, name: r.name, isActive: r.isActive, createdAt: r.createdAt })) });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/routes', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -66,7 +66,7 @@ export function registerWebhookAdminRoutes(
         await store.deactivateRoute(body.routeId);
         return jsonResponse({ success: true });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/route/deactivate', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -84,7 +84,7 @@ export function registerWebhookAdminRoutes(
         const events = await store.listEventsByAgent(agentId);
         return jsonResponse({ events: events.map((e) => ({ eventId: e.eventId, routeId: e.routeId, status: e.status, receivedAt: e.receivedAt })) });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/events', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -99,7 +99,7 @@ export function registerWebhookAdminRoutes(
         await store.markProcessed(body.eventId);
         return jsonResponse({ success: true });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/event/mark-processed', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },

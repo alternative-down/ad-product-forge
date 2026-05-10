@@ -2,7 +2,7 @@
  * internal-chat-sending.ts — Message sending for internal-chat-service.ts
  *
  * Extracted from createInternalChatService as part of #1555 refactoring.
- * Contains sendMessage (110 lines with forgeDebug error handling) and
+ * Contains sendMessage (115 lines with forgeDebug error handling) and
  * getMessageAttachmentByAccount (thin delegate).
  */
 
@@ -79,6 +79,7 @@ export function createChatSending(deps: SendingDeps) {
     targetKey: string;
     content: string;
     attachments: CommunicationFile[];
+    replyToMessageId?: string | null;
   }): Promise<{ success: true; messageId: string; conversationKey: string }> {
     const directAccount = await accounts.getAccountByAgentId(input.targetKey) ?? await accounts.getAccountBySlug(input.targetKey);
     const conversation = directAccount
@@ -90,7 +91,39 @@ export function createChatSending(deps: SendingDeps) {
       throw new Error('Conversation not found: ' + input.targetKey);
     }
 
+    // Guard: reject messages to archived/closed conversations
+    const closedAt = (conversation as { closedAt?: number | null }).closedAt;
+    if (closedAt != null) {
+      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'cannot send to archived conversation', context: { conversationId: conversation.id } });
+      throw new Error('Conversation is archived: ' + input.targetKey);
+    }
+
+    // Guard: validate the server-generated timestamp is not absurdly far in the future (clock skew)
+    const ONE_DAY_MS = 86_400_000;
     const now = Date.now();
+    const maxAcceptable = now + ONE_DAY_MS;
+    if (now > maxAcceptable) {
+      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'invalid timestamp detected' });
+      throw new Error('Invalid timestamp');
+    }
+
+    // Guard: validate replyToMessageId belongs to the same conversation
+    let resolvedReplyTo: string | null = null;
+    if (input.replyToMessageId) {
+      const parentMessage = await db.query.internalChatMessages.findFirst({
+        where: eq(internalChatMessages.id, input.replyToMessageId),
+      });
+      if (!parentMessage) {
+        forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'reply target message not found', context: { replyToMessageId: input.replyToMessageId } });
+        throw new Error('Reply target message not found: ' + input.replyToMessageId);
+      }
+      if (parentMessage.conversationId !== conversation.id) {
+        forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'reply target belongs to different conversation', context: { replyToMessageId: input.replyToMessageId, expectedConversation: conversation.id, actualConversation: parentMessage.conversationId } });
+        throw new Error('Reply target belongs to a different conversation: ' + input.replyToMessageId);
+      }
+      resolvedReplyTo = input.replyToMessageId;
+    }
+
     const messageId = createId();
     let members;
     try {
@@ -108,7 +141,7 @@ export function createChatSending(deps: SendingDeps) {
         conversationId: conversation.id,
         authorAccountId: input.accountId,
         content: input.content,
-        replyToMessageId: null,
+        replyToMessageId: resolvedReplyTo,
         createdAt: now,
       });
     } catch (err) {

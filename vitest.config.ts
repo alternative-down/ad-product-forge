@@ -6,19 +6,27 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.test.ts'],
+    // Limit parallelism so workers stay dedicated to a batch of files,
+    // avoiding vi.mock() pollution that occurs when vitest reshuffles files
+    // across workers mid-run. 4 workers gives ~4× speedup on the test phase
+    // while keeping worker affinity stable.
+    // See: https://github.com/vitest-dev/vitest/issues/3476
+    fileParallelism: true,
+    maxWorkers: 4,
+    // Keep isolate: true (default) to prevent test state from bleeding
+    // between files across different workers.
+    isolate: true,
+    // Coverage is disabled by default — run with --coverage flag or CI_VITEST_COVERAGE=1
+    // to collect coverage data. This keeps local test runs fast.
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['apps/forge/src/**/*.ts', 'packages/mastra-engine/src/**/*.ts'],
       exclude: ['**/*.d.ts', '**/*.test.ts'],
+      default: {
+        enabled: false,
+      },
     },
-    // Run test files sequentially (one at a time) to prevent vi.mock() global hoisting
-    // from polluting other test files. With parallel execution (default), vitest's
-    // worker pool assigns files non-deterministically, causing intermittent failures
-    // in company-cash-ledger.test.ts when agent tests run in the same worker and
-    // call vi.mock('../finance/company-cash-ledger') at module-eval time.
-    // See: https://github.com/vitest-dev/vitest/issues/3476
-    fileParallelism: false,
   },
   resolve: {
     alias: {

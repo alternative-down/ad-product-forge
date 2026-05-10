@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import { createId } from '../../../utils/id';
 import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema';
@@ -518,7 +518,7 @@ export function registerAgentWriteOpsRoutes(
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent/mcp/create', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },

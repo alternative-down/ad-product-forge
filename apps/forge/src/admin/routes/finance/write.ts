@@ -4,7 +4,7 @@
  */
 
 import { z, ZodError } from 'zod';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import type { HttpRequest } from '../../../http/server';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createId } from '../../../utils/id';

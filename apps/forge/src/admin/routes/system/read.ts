@@ -6,7 +6,7 @@
  *
  * Stores are passed directly instead of via a read-model wrapper.
  */
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
@@ -19,7 +19,7 @@ import type { createForgeHttpServer } from '../../../http/server';
 import { buildOauthState } from './oauth-state';
 import { buildSystemHealthcheck } from './healthcheck';
 import { listGlobalSkills } from '../../../agents/global-skills';
-import { jsonResponse } from '../helpers';
+import { jsonResponse } from '../index';
 import type { CapabilityStore } from '../../../capabilities/store';
 import type { SystemIntegrationStore } from '../../../system-integrations/store';
 import type { LlmSettingsStore } from '../../../llm/settings-store';
@@ -57,7 +57,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         const healthcheck = await buildSystemHealthcheck(registry, readModel);
         return jsonResponse(healthcheck);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/healthcheck', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -103,7 +103,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         ]);
         return jsonResponse({ profiles, defaults, prices });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -133,7 +133,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           .sort((a, b) => a.name.localeCompare(b.name));
         return jsonResponse(formatted);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });

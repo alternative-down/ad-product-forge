@@ -279,30 +279,28 @@ export function createPaymentReceivablesStore(db: Database) {
         }
 
         if (input.status === 'completed' && tx.ledgerPosted === false) {
-          const id = createId();
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+          const ledgerEntryId = createId();
           try {
-            await db.insert(companyCashLedger).values({
-              id,
-              type: 'payment_received',
-              direction: 'in',
-              amountUsd: input.amountUsd,
-              description: `Stripe payment ${input.providerPaymentId}`,
-              status: 'cleared',
-              effectiveAt: now,
-              createdAt: now,
+            await db.transaction(async (tx) => {
+              await tx.insert(companyCashLedger).values({
+                id: ledgerEntryId,
+                type: 'payment_received',
+                direction: 'in',
+                amountUsd: input.amountUsd,
+                description: `Stripe payment ${input.providerPaymentId}`,
+                status: 'cleared',
+                effectiveAt: now,
+                createdAt: now,
+              });
+
+              await tx
+                .update(paymentTransactions)
+                .set({ ledgerEntryId, ledgerPosted: true })
+                .where(eq(paymentTransactions.id, tx.id));
             });
           } catch (err) {
-            forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to post revenue to ledger', context: { providerPaymentId: input.providerPaymentId, error: err } });
-            throw err;
-          }
-
-          try {
-            await db
-              .update(paymentTransactions)
-              .set({ ledgerEntryId: id, ledgerPosted: true })
-              .where(eq(paymentTransactions.id, tx.id));
-          } catch (err) {
-            forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update transaction with ledger id', context: { providerPaymentId: input.providerPaymentId, error: err } });
+            forgeDebug({ scope: 'finance', level: 'error', message: 'Failed to post ledger and update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
             throw err;
           }
 
@@ -341,28 +339,25 @@ export function createPaymentReceivablesStore(db: Database) {
     if (input.status === 'completed') {
       const ledgerId = createId();
       try {
-        await db.insert(companyCashLedger).values({
-          id: ledgerId,
-          type: 'payment_received',
-          direction: 'in',
-          amountUsd: input.amountUsd,
-          description: `Stripe payment ${input.providerPaymentId}`,
-          status: 'cleared',
-          effectiveAt: now,
-          createdAt: now,
+        await db.transaction(async (tx) => {
+          await tx.insert(companyCashLedger).values({
+            id: ledgerId,
+            type: 'payment_received',
+            direction: 'in',
+            amountUsd: input.amountUsd,
+            description: `Stripe payment ${input.providerPaymentId}`,
+            status: 'cleared',
+            effectiveAt: now,
+            createdAt: now,
+          });
+
+          await tx
+            .update(paymentTransactions)
+            .set({ ledgerEntryId: ledgerId, ledgerPosted: true })
+            .where(eq(paymentTransactions.id, id));
         });
       } catch (err) {
-        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to post revenue to ledger', context: { providerPaymentId: input.providerPaymentId, error: err } });
-        throw err;
-      }
-
-      try {
-        await db
-          .update(paymentTransactions)
-          .set({ ledgerEntryId: ledgerId, ledgerPosted: true })
-          .where(eq(paymentTransactions.id, id));
-      } catch (err) {
-        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update transaction with ledger id', context: { providerPaymentId: input.providerPaymentId, error: err } });
+        forgeDebug({ scope: 'finance', level: 'error', message: 'Failed to post ledger and update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
         throw err;
       }
     }
