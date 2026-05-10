@@ -12,134 +12,34 @@ permissions:
 
 jobs:
   check-filenames:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
-      - name: Check Filenames
-        run: npm run check-filenames
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run check-filenames
 
   lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
-      - name: Lint
-        run: npm run lint
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run lint
 
   typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
-      - name: Typecheck
-        run: npm run typecheck
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run typecheck
 
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
-      - name: Test
-        run: npm run test
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run test
 
   build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Cache turbo outputs
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install
-        run: npm install
-
-      - name: Build
-        run: npm run build -- --force
+    needs: []
+    uses: ./.github/workflows/_setup-and-run.yml
+    with:
+      cmd: npm run build -- --force
 
   lockfile-sync:
     runs-on: ubuntu-latest
@@ -160,6 +60,7 @@ jobs:
             exit 1
           fi
           echo "Lockfile check passed."
+
 
   fallow:
     runs-on: ubuntu-latest
