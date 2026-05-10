@@ -225,7 +225,6 @@ export function createInternalChatGroups(
         message: `createChatGroup failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { conversationKey: input.conversationKey, agentId: input.agentId },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -270,7 +269,6 @@ export function createInternalChatGroups(
         message: `addMemberToGroup failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -301,7 +299,6 @@ export function createInternalChatGroups(
         message: `removeMemberFromGroup failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -505,7 +502,6 @@ export function createInternalChatGroups(
         message: `changeChatGroup failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { groupId: input.groupId, agentId: input.agentId },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -547,7 +543,6 @@ export function createInternalChatGroups(
         message: `listChatGroups failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId: input.agentId, limit: input.limit },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -587,7 +582,6 @@ export function createInternalChatGroups(
         message: `listGroupMembers failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { groupId: input.groupId, agentId: input.agentId },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -629,7 +623,6 @@ export function createInternalChatGroups(
         message: `listGroupMembersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { groupId: input.groupId, accountId: input.accountId },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }
@@ -663,7 +656,6 @@ export function createInternalChatGroups(
         message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId, conversationId },
       });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'internal-chat-groups: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   } }

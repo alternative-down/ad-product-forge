@@ -50,7 +50,6 @@ export function createChatAttachments(
         message: `storeMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { messageId, attachmentCount: attachments.length },
       });
-      forgeDebug({ scope: 'internal-chat-attachments', level: 'error', message: 'internal-chat-attachments: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -75,7 +74,6 @@ export function createChatAttachments(
         message: `readMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { messageId },
       });
-      forgeDebug({ scope: 'internal-chat-attachments', level: 'error', message: 'internal-chat-attachments: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -84,19 +82,8 @@ export function createChatAttachments(
     messageId: string,
     attachmentName: string,
   ): Promise<CommunicationFile | null> {
-    try {
-      const attachments = await readMessageAttachments(messageId);
-      return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-attachments',
-        level: 'error',
-        message: `readMessageAttachment failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { messageId, attachmentName },
-      });
-      forgeDebug({ scope: 'internal-chat-attachments', level: 'error', message: 'internal-chat-attachments: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
+    const attachments = await readMessageAttachments(messageId);
+    return attachments.find((attachment) => attachment.name === attachmentName) ?? null;
   }
 
   return {
