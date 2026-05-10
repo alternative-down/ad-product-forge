@@ -175,20 +175,25 @@ export async function clearAgentHistory(opts: {
 }): Promise<void> {
   const { db, workspaceBasePath, agentId, includeLongTermMemoryThread } = opts;
 
-  const agentDatabasePath = `${workspaceBasePath}/${agentId}/database.db`;
-  const client = createClient({ url: `file:${agentDatabasePath}` });
+  try {
+    const agentDatabasePath = `${workspaceBasePath}/${agentId}/database.db`;
+    const client = createClient({ url: `file:${agentDatabasePath}` });
     client.execute('PRAGMA foreign_keys = ON');
-  const mastraAgentId = toMastraSafeIdentifier(agentId);
-  const conversationStore = new LibsqlConversationStore({
-    client,
-    tablePrefix: mastraAgentId,
-  });
+    const mastraAgentId = toMastraSafeIdentifier(agentId);
+    const conversationStore = new LibsqlConversationStore({
+      client,
+      tablePrefix: mastraAgentId,
+    });
 
-  await conversationStore.clearThread(mastraAgentId);
+    await conversationStore.clearThread(mastraAgentId);
 
-  if (includeLongTermMemoryThread) {
-    await db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, agentId));
-    await db.delete(agentLongTermMemoryStates).where(eq(agentLongTermMemoryStates.agentId, agentId));
-    await db.delete(agentLongTermMemoryRecallStates).where(eq(agentLongTermMemoryRecallStates.agentId, agentId));
+    if (includeLongTermMemoryThread) {
+      await db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, agentId));
+      await db.delete(agentLongTermMemoryStates).where(eq(agentLongTermMemoryStates.agentId, agentId));
+      await db.delete(agentLongTermMemoryRecallStates).where(eq(agentLongTermMemoryRecallStates.agentId, agentId));
+    }
+  } catch (err) {
+    forgeDebug({ scope: 'helpers', level: 'error', message: '[helpers] clearAgentHistory failed', context: { agentId, includeLongTermMemoryThread, error: err instanceof Error ? err.message : String(err) }});
+    throw err;
   }
 }
