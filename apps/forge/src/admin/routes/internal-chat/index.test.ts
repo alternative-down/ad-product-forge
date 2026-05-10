@@ -226,34 +226,30 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/account/create
   // -------------------------------------------------------------------------
-  // BUG: createExternalInternalChatAccountSchema has provider/targetKey/name fields.
-  // Handler reads body.slug/displayName/description which are stripped by schema → always undefined.
-  test('POST /admin/internal-chat/account/create — schema strips unknown keys; handler reads undefined', async () => {
+  // FIXED: handler reads body.targetKey (→ slug) and body.name (→ displayName)
+  test('POST /admin/internal-chat/account/create — delegates with correct field mapping', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/account/create');
     const body = JSON.stringify({ provider: 'internal-chat', targetKey: 'acc-key', name: 'Test Account' });
-    await route!.handler({ query: new Map(), bodyText: body });
+    const res = await route!.handler({ query: new Map(), bodyText: body });
     expect(mockChat.registerExternalAccount).toHaveBeenCalledWith({
-      slug: undefined,
-      displayName: undefined,
-      description: undefined,
+      slug: 'acc-key',
+      displayName: 'Test Account',
     });
+    expect(res.status).toBe(200);
   });
 
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/account/update
   // -------------------------------------------------------------------------
-  // BUG: updateExternalInternalChatAccountSchema has accountId/name/webhookUrl fields.
-  // Handler reads body.slug/displayName/description (stripped) + body.accountId.
-  // Handler does NOT pass webhookUrl to the service.
-  test('POST /admin/internal-chat/account/update — delegates with stripped fields, no webhookUrl', async () => {
+  // FIXED: handler reads body.name (→ displayName) and body.webhookUrl
+  test('POST /admin/internal-chat/account/update — delegates with correct field mapping including webhookUrl', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/account/update');
-    const body = JSON.stringify({ accountId: 'acc-upd', name: 'Updated' });
+    const body = JSON.stringify({ accountId: 'acc-upd', name: 'Updated', webhookUrl: 'https://example.com/webhook' });
     const res = await route!.handler({ query: new Map(), bodyText: body });
     expect(mockChat.updateExternalAccount).toHaveBeenCalledWith({
       accountId: 'acc-upd',
-      slug: undefined,
-      displayName: undefined,
-      description: undefined,
+      displayName: 'Updated',
+      webhookUrl: 'https://example.com/webhook',
     });
     expect(res.status).toBe(200);
   });
@@ -271,14 +267,13 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/conversation/create
   // -------------------------------------------------------------------------
-  // NOTE: createInternalChatConversationSchema has no 'type' field.
-  // Handler always takes the group branch (dm branch never reached).
-  // ensureDirectConversationByAccount is NOT called on this route.
-  test('POST /admin/internal-chat/conversation/create — always creates group (dm branch unreachable)', async () => {
+  // FIXED: body.type undefined → always group branch (dm branch unreachable).
+  // accountId stripped by schema — read from query param instead.
+  test('POST /admin/internal-chat/conversation/create — always creates group, accountId from query', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/create');
     const body = JSON.stringify({ accountId: 'acc-001', name: 'Team Alpha', memberKeys: ['acc-002', 'acc-003'] });
-    const res = await route!.handler({ query: new Map(), bodyText: body });
-    // createExternalChatGroup is called with the generated conversationKey
+    const res = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: body });
+    // createExternalChatGroup called (dm branch unreachable)
     expect(mockChat.createExternalChatGroup).toHaveBeenCalledTimes(1);
     const call = mockChat.createExternalChatGroup.mock.calls[0][0];
     expect(call.accountId).toBe('acc-001');
@@ -295,60 +290,59 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/conversation/send
   // -------------------------------------------------------------------------
-  // BUG: sendInternalChatConversationMessageSchema has conversationId/content/parentMessageId.
-  // Handler reads body.attachments (not in schema) → undefined → body.attachments.map() throws TypeError.
-  test('POST /admin/internal-chat/conversation/send — schema missing attachments field causes TypeError', async () => {
+  // FIXED: handler uses (body.attachments ?? []) so missing attachments is safe
+  test('POST /admin/internal-chat/conversation/send — delegates correctly without attachments', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/send');
     const body = JSON.stringify({ conversationId: 'conv-001', content: 'Hello!' });
-    await expect(route!.handler({ query: new Map(), bodyText: body }))
-      .rejects.toThrow(TypeError);
+    const res = await route!.handler({ query: new Map(), bodyText: body });
+    expect(mockChat.sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      targetKey: 'conv-001',
+      content: 'Hello!',
+      attachments: [],
+    }));
+    expect(res.status).toBe(200);
   });
 
   // -------------------------------------------------------------------------
   // POST /admin/internal-chat/group-member/add
   // -------------------------------------------------------------------------
-  // BUG: addInternalChatGroupMemberSchema has conversationId/participantKey/role. No accountId.
-  // Handler reads body.accountId (from bodyText) → undefined. Schema strips participantKey → undefined.
-  test('POST /admin/internal-chat/group-member/add — delegates with undefined accountId and participantAccountId', async () => {
+  // FIXED: accountId from query, participantKey → participantAccountId
+  test('POST /admin/internal-chat/group-member/add — delegates with accountId from query and participantKey', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-member/add');
-    const body = JSON.stringify({ accountId: 'acc-001', conversationId: 'conv-001', participantKey: 'acc-002', role: 'admin' });
-    const res = await route!.handler({ query: new Map(), bodyText: body });
+    const body = JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002', role: 'admin' });
+    const res = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: body });
     expect(mockChat.addMemberToGroupByAccount).toHaveBeenCalledWith({
-      accountId: undefined,
+      accountId: 'acc-001',
       groupId: 'conv-001',
-      participantAccountId: undefined,
+      participantAccountId: 'acc-002',
       role: 'admin',
     });
     expect(res.status).toBe(200);
   });
 
-  // -------------------------------------------------------------------------
-  // POST /admin/internal-chat/group-member/update-role
-  // -------------------------------------------------------------------------
-  test('POST /admin/internal-chat/group-member/update-role — delegates with undefined accountId and participantAccountId', async () => {
+  // FIXED: accountId from query, participantKey → participantAccountId
+  test('POST /admin/internal-chat/group-member/update-role — delegates with accountId from query and participantKey', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-member/update-role');
-    const body = JSON.stringify({ accountId: 'acc-001', conversationId: 'conv-001', participantKey: 'acc-002', role: 'normal' });
-    const res = await route!.handler({ query: new Map(), bodyText: body });
+    const body = JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002', role: 'normal' });
+    const res = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: body });
     expect(mockChat.updateMemberRoleByAccount).toHaveBeenCalledWith({
-      accountId: undefined,
+      accountId: 'acc-001',
       groupId: 'conv-001',
-      participantAccountId: undefined,
+      participantAccountId: 'acc-002',
       role: 'normal',
     });
     expect(res.status).toBe(200);
   });
 
-  // -------------------------------------------------------------------------
-  // POST /admin/internal-chat/group-member/remove
-  // -------------------------------------------------------------------------
-  test('POST /admin/internal-chat/group-member/remove — delegates with undefined accountId and participantAccountId', async () => {
+  // FIXED: accountId from query, participantKey → participantAccountId
+  test('POST /admin/internal-chat/group-member/remove — delegates with accountId from query and participantKey', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-member/remove');
-    const body = JSON.stringify({ accountId: 'acc-001', conversationId: 'conv-001', participantKey: 'acc-002' });
-    const res = await route!.handler({ query: new Map(), bodyText: body });
+    const body = JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002' });
+    const res = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: body });
     expect(mockChat.removeMemberFromGroupByAccount).toHaveBeenCalledWith({
-      accountId: undefined,
+      accountId: 'acc-001',
       groupId: 'conv-001',
-      participantAccountId: undefined,
+      participantAccountId: 'acc-002',
     });
     expect(res.status).toBe(200);
   });
