@@ -299,7 +299,7 @@ describe('createScheduler', () => {
       );
       await vi.advanceTimersByTimeAsync(RUNNER_AWAIT_TIMEOUT_MS + 1000);
       expect(beginRunMock).toHaveBeenCalledWith(
-        expect.objectContaining({ reloadRuntime: false, markRunning: true }),
+        expect.objectContaining({ reloadRuntime: true, markRunning: true }),
       );
     });
   });
@@ -401,10 +401,12 @@ describe('createScheduler', () => {
   });
 
   describe('healthcheck', () => {
-    test('startHealthcheck sets a timer', () => {
+    test('startHealthcheck is a no-op when using external timer management', () => {
       const scheduler = createScheduler(makeState(), makeDeps());
       scheduler.startHealthcheck();
-      expect(scheduler.getHealthcheckTimer()).not.toBeNull();
+      // scheduler no longer manages its own interval; external code uses
+      // shouldRunHealthcheckAt() + getHealthcheckIntervalMs() instead
+      expect(scheduler.getHealthcheckTimer()).toBeNull();
     });
 
     test('startHealthcheck is idempotent', () => {
