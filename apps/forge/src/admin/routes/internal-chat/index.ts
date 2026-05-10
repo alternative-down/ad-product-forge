@@ -88,9 +88,8 @@ export function registerInternalChatRoutes(
         const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
         return jsonResponse(
           await internalChat.registerExternalAccount({
-            slug: body.slug,
-            displayName: body.displayName,
-            description: body.description,
+            slug: body.targetKey,
+            displayName: body.name ?? body.targetKey,
           }),
         );
       } catch (error) {
@@ -109,9 +108,8 @@ export function registerInternalChatRoutes(
         return jsonResponse(
           await internalChat.updateExternalAccount({
             accountId: body.accountId,
-            slug: body.slug,
-            displayName: body.displayName,
-            description: body.description,
+            displayName: body.name,
+            webhookUrl: body.webhookUrl,
           }),
         );
       } catch (error) {
@@ -311,7 +309,7 @@ export function registerInternalChatRoutes(
             accountId: body.accountId,
             targetKey: body.conversationId,
             content: body.content,
-            attachments: body.attachments.map((attachment) => ({
+            attachments: (body.attachments ?? []).map((attachment) => ({
               name: attachment.name,
               contentType: attachment.contentType,
               data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),
@@ -333,7 +331,6 @@ export function registerInternalChatRoutes(
         const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
         return jsonResponse(
           await internalChat.updateGroupByAccount({
-            accountId: body.accountId,
             groupId: body.conversationId,
             name: body.name,
           }),
@@ -389,12 +386,16 @@ export function registerInternalChatRoutes(
     path: '/admin/internal-chat/group-member/add',
     handler: async (request: Request) => {
       try {
+        const accountId = request.query.get('accountId');
+        if (!accountId) {
+          return jsonResponse({ error: 'accountId required' }, 400);
+        }
         const body = parseJsonBody(request.bodyText, addInternalChatGroupMemberSchema);
         return jsonResponse(
           await internalChat.addMemberToGroupByAccount({
-            accountId: body.accountId,
+            accountId,
             groupId: body.conversationId,
-            participantAccountId: body.participantAccountId,
+            participantAccountId: body.participantKey,
             role: body.role,
           }),
         );
@@ -410,12 +411,16 @@ export function registerInternalChatRoutes(
     path: '/admin/internal-chat/group-member/update-role',
     handler: async (request: Request) => {
       try {
+        const accountId = request.query.get('accountId');
+        if (!accountId) {
+          return jsonResponse({ error: 'accountId required' }, 400);
+        }
         const body = parseJsonBody(request.bodyText, updateInternalChatGroupMemberRoleSchema);
         return jsonResponse(
           await internalChat.updateMemberRoleByAccount({
-            accountId: body.accountId,
+            accountId,
             groupId: body.conversationId,
-            participantAccountId: body.participantAccountId,
+            participantAccountId: body.participantKey,
             role: body.role,
           }),
         );
@@ -431,12 +436,16 @@ export function registerInternalChatRoutes(
     path: '/admin/internal-chat/group-member/remove',
     handler: async (request: Request) => {
       try {
+        const accountId = request.query.get('accountId');
+        if (!accountId) {
+          return jsonResponse({ error: 'accountId required' }, 400);
+        }
         const body = parseJsonBody(request.bodyText, removeInternalChatGroupMemberSchema);
         return jsonResponse(
           await internalChat.removeMemberFromGroupByAccount({
-            accountId: body.accountId,
+            accountId,
             groupId: body.conversationId,
-            participantAccountId: body.participantAccountId,
+            participantAccountId: body.participantKey,
           }),
         );
       } catch (error) {
