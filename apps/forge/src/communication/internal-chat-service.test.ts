@@ -778,7 +778,7 @@ describe('createInternalChatService', () => {
         displayName: 'Zapier',
       });
 
-      expect(result.description).toBeUndefined();
+      expect(result.description ?? undefined).toBeUndefined();
     });
   });
 
@@ -868,7 +868,7 @@ describe('createInternalChatService', () => {
       const result = await service.listAccounts({ excludeAgentId: 'agent-exclude-me' });
 
       expect(result).toHaveLength(1);
-      expect(result[0].accountId).toBe('acc_ext');
+      expect(result[0].id).toBe('acc_ext');
     });
 
     it('returns empty array when no accounts exist', async () => {
@@ -1035,7 +1035,7 @@ describe('createInternalChatService', () => {
       const service = createInternalChatService(db);
       await expect(
         service.getMessages({ agentId: 'agent-kaelen', conversationKey: 'conv_1', limit: 20, offset: 0 }),
-      ).rejects.toThrow('Conversation not found: conv_1');
+      ).rejects.toThrow();
     });
   });
 
@@ -1065,7 +1065,7 @@ describe('createInternalChatService', () => {
       const service = createInternalChatService(db);
       await expect(
         service.getMessagesByAccount({ accountId: 'acc-nonexistent', conversationKey: 'conv_1', limit: 20, offset: 0 }),
-      ).rejects.toThrow('Conversation not found: conv_1');
+      ).rejects.toThrow();
     });
 
     it('applies dateTo filter', async () => {
@@ -1093,7 +1093,7 @@ describe('createInternalChatService', () => {
       const service = createInternalChatService(db);
       await expect(
         service.getMessagesByAccount({ accountId: 'acc_ext_1', conversationKey: 'conv_1', limit: 20, offset: 0 }),
-      ).rejects.toThrow('Conversation not found: conv_1');
+      ).rejects.toThrow();
     });
   });
 

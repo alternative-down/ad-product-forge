@@ -192,13 +192,22 @@ export function createInternalChatAdmin(db: Database) {
   // ── Account listing ────────────────────────────────────────────────────
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
-    if (input.excludeAgentId) {
-      const rows = await db.query.internalChatAccounts.findMany({
-        where: ne(internalChatAccounts.agentId, input.excludeAgentId),
+    try {
+      if (input.excludeAgentId) {
+        return await db.query.internalChatAccounts.findMany({
+          where: ne(internalChatAccounts.agentId, input.excludeAgentId),
+        });
+      }
+      return await db.query.internalChatAccounts.findMany({});
+    } catch (err) {
+      forgeDebug({
+        scope: 'internal-chat-admin',
+        level: 'error',
+        message: `listAccounts failed: ${err instanceof Error ? err.message : String(err)}`,
+        context: { excludeAgentId: input.excludeAgentId },
       });
-      return rows;
+      throw err;
     }
-    return db.query.internalChatAccounts.findMany({});
   }
 
   // ── Admin read-only views ──────────────────────────────────────────────
@@ -243,20 +252,14 @@ export function createInternalChatAdmin(db: Database) {
     const account = await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.slug, slug),
     });
-    if (!account) {
-      throw new Error("Account not found");
-    }
-    return account;
+    return account ?? null;
   }
 
   async function getAccountByAgentId(agentId: string) {
     const account = await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.agentId, agentId),
     });
-    if (!account) {
-      throw new Error("Account not found for agent");
-    }
-    return account;
+    return account ?? null;
   }
 
   async function getConversationForAgent(agentId: string, conversationId: string) {
