@@ -151,7 +151,7 @@ describe('createAgentWakeQueue', () => {
   it('onRunnerIdle schedules trigger if not at max accumulation', async () => {
     queue.notifyExternalEvent(makeEvent());
     execute.mockReturnValue(new Promise(() => {})); // never resolves
-    const idlePromise = queue.onRunnerIdle();
+    const _idlePromise = queue.onRunnerIdle();
     // Should have scheduled a timer (nextTriggerAt not null)
     expect(queue.getSnapshot().nextTriggerAt).not.toBeNull();
     queue.stop();
