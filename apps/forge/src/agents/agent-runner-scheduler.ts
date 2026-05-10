@@ -46,6 +46,7 @@ export function createScheduler(
   let healthcheckOnRunnerIdle: (() => Promise<void>) | null = null;
   let healthcheckBeginRunFn: ((opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>) | null = null;
   let healthcheckGetPendingCount: (() => number) | null = null;
+  let healthcheckNextAt: number | null = null;
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
   let startingRun = false;
@@ -156,6 +157,16 @@ export function createScheduler(
     }, Math.max(delayMs, 0));
   }
 
+  /**
+   * External scheduling interface.
+   * Sets the next step timestamp; caller is responsible for calling
+   * stepCallback(externalRunEpoch) via setTimeout.
+   */
+  function scheduleAt(timestamp: number) {
+    clearTimer();
+    state.nextStepAt = timestamp;
+  }
+
   // ─── Run epoch management ───────────────────────────────────────────────────
 
   function startNewRunEpoch(): number {
@@ -207,6 +218,7 @@ export function createScheduler(
       healthcheckGetExecutionState = getExecutionState;
       healthcheckBeginRunFn = beginRunFn;
       startHealthcheck();
+      healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
       await refreshRunFlushSettings();
 
       const executionState = await withTimeout(
@@ -344,14 +356,12 @@ export function createScheduler(
 
   // ─── Healthcheck ────────────────────────────────────────────────────────────
 
+  /**
+   * @deprecated Use shouldRunHealthcheckAt() + runHealthcheckExposed() externally.
+   * startHealthcheck is a no-op when using external timer management.
+   */
   function startHealthcheck() {
-    if (healthcheckTimer) {
-      return;
-    }
-
-    healthcheckTimer = setInterval(() => {
-      void runHealthcheck(healthcheckGetExecutionState!, healthcheckOnRunnerIdle!, healthcheckBeginRunFn!, healthcheckGetPendingCount!);
-    }, RUNNER_HEALTHCHECK_INTERVAL_MS);
+    // No-op: external code manages the interval via getHealthcheckIntervalMs()
   }
 
   function clearHealthcheck() {
@@ -363,7 +373,23 @@ export function createScheduler(
     healthcheckTimer = null;
   }
 
-  async function runHealthcheck(
+  /**
+   * External healthcheck interface.
+   * shouldRunHealthcheckAt: returns true if a healthcheck should run now.
+   * runHealthcheckExposed: executes the healthcheck logic (requires callbacks set via start()).
+   * getHealthcheckIntervalMs: returns the interval in ms.
+   * getBackoffMs: returns the current backoff delay in ms.
+   */
+  function shouldRunHealthcheckAt(now: number): boolean {
+    if (!healthcheckNextAt) return false;
+    return now >= healthcheckNextAt;
+  }
+
+  function getHealthcheckIntervalMs(): number {
+    return RUNNER_HEALTHCHECK_INTERVAL_MS;
+  }
+
+  async function runHealthcheckExposed(
     getExecutionState: (runtimeId: string) => Promise<'idle' | 'running' | 'absent'>,
     onRunnerIdle: () => Promise<void>,
     beginRunFn: (opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>,
@@ -384,6 +410,9 @@ export function createScheduler(
         if (!isLocallyIdle()) {
           return;
         }
+
+        // Advance next healthcheck window
+        healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
 
         if (getPendingCount() > 0) {
           await beginRunFn({
@@ -673,7 +702,10 @@ export function createScheduler(
     // Healthcheck
     startHealthcheck,
     clearHealthcheck,
-    runHealthcheck,
+    runHealthcheck: runHealthcheckExposed,
+    shouldRunHealthcheckAt,
+    getHealthcheckIntervalMs,
+    scheduleAt,
     // Step orchestration
     beginRun,
     queueNextStep,
