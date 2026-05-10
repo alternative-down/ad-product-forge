@@ -119,7 +119,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse(result);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: unknown', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/settings/upsert', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
@@ -188,7 +188,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           updatedAt: server?.updatedAt ?? timestamp,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: unknown', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/upsert', context: { error } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },  });
