@@ -401,9 +401,6 @@ export function createInternalChatService(
     getRequiredAgentAccount,
   });
 
-
-
-
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
 
