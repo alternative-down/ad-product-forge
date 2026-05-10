@@ -7,6 +7,7 @@ import {
   syncOpenAICodexCredential,
   syncAnthropicCredential,
 } from '@forge-runtime/core';
+import { forgeDebug } from '../debug';
 import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
 import {
