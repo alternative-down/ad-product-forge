@@ -1,29 +1,19 @@
 /**
- * Internal Chat Service — Thin Orchestrator
+ * Internal Chat Service
  *
- * Delegates to specialized modules extracted from the original 1300-line
- * factory function. This file owns the public API surface and wiring.
+ * A 1300-line factory function organized into five responsibility zones.
+ * Each zone handles a distinct concern. The "ByAgent" vs "ByAccount" naming
+ * convention reflects an intentional architectural pattern — see below.
  *
- * ## Extracted Modules
+ * ## Responsibility Zones
  *
- * | Module | Purpose |
- * |--------|---------|
- * | internal-chat-accounts.ts | Account registration and lookup |
- * | internal-chat-attachments.ts | Attachment storage and retrieval |
- * | internal-chat-conversations.ts | Conversation creation and management |
- * | internal-chat-groups.ts | Group chat management |
- * | internal-chat-listing.ts | Conversation listing (#1997) |
- * | internal-chat-messages.ts | Message retrieval and archival (#1997) |
- * | internal-chat-sending.ts | Message sending |
- * | internal-chat-reads.ts | Read receipts and unread tracking |
- * | internal-chat-guards.ts | Membership and authorization guards |
- * | internal-chat-connection.ts | WebSocket-style real-time delivery |
- *
- * ## Remaining Inline Logic
- *
- * - listConversations / listConversationsByAccount — delegated to listing module
- * - getMessages / getMessagesByAccount — delegated to messages module
- * - All other ByAccount group operations — delegated to groups/conversations
+ * | Section | Lines | Purpose |
+ * |---------|-------|---------|
+ * | Attachments | 54–97 | Store and retrieve message attachments |
+ * | Account Management | 98–305 | Register, update, list accounts |
+ * | Conversation Setup | 306–388 | Ensure DM conversations exist |
+ * | Group Management | 388–575 | Delegate to internal-chat-groups |
+ * | Conversations / Messages | 446–1000 | List, read, send messages |
  *
  * ## The ByAgent / ByAccount Pattern
  *
@@ -36,7 +26,18 @@
  *               Used by admin routes, external integrations, or when
  *               the caller already has a concrete account reference.
  *
- * These are NOT duplicates. They represent different trust domains.
+ * These are NOT duplicates. They represent different trust domains:
+ * - ByAgent routes protect against unauthorized agent impersonation
+ * - ByAccount routes are used by trusted callers (admins, external integrations)
+ *
+ * ## Planned Extraction (#1215)
+ *
+ * This module will be split into:
+ *   - internal-chat-attachments.ts  — attachment storage and retrieval
+ *   - internal-chat-accounts.ts    — account registration and lookup
+ *   - internal-chat-conversations.ts — conversations, groups, messages
+ *   - internal-chat-messages.ts     — send/receive message operations
+ *   - internal-chat-service.ts      — thin orchestrator, re-exports unified API
  *
  * @module
  */
@@ -52,6 +53,7 @@ import type {
   CommunicationProviderMessage,
 } from "@forge-runtime/core";
 import { forgeDebug } from "@forge-runtime/core";
+import { createServiceLogger } from "./internal-chat-service-logger";
 
 
 import type {Database} from "../database/schema";
@@ -101,7 +103,6 @@ import {
   AttachmentNotFoundError,
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
-import { createInternalChatAdmin } from "./internal-chat-admin";
 import { createChatAttachments } from "./internal-chat-attachments";
 import { createInternalChatReads } from "./internal-chat-reads";
 import { createChatSending } from "./internal-chat-sending";
@@ -114,70 +115,196 @@ export function createInternalChatService(
 ) {
   // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
-  const admin = createInternalChatAdmin(db);
   const reads = createInternalChatReads(db);
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
-  const getRequiredAccount = accounts.getRequiredAccount;
-  const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
-  const getAccountByTargetKey = accounts.getAccountByTargetKey;
-  const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
 
-
-
-  const conversations = createInternalChatConversations(db);
-
-  const groups = createInternalChatGroups(db, {
-    getRequiredAccount,
-    getRequiredAgentAccount,
-    getRequiredAccountBySlug,
-    getAccountByTargetKey,
-  });
-
-  /**
-   * Inline error wrapper — replaces the repetitive try/catch + forgeDebug pattern
-   * across all simple delegation methods in this service.
-   */
-  // Transparent passthrough — no-op wrapper retained for API compatibility.
-  // The try/catch was removed: underlying functions handle errors and callers
-  // have their own error handling. The generic `[internal-chat-service] async
-  // function failed` message added no value over the real error.
-  function wrap<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T {
-    return fn as T;
+  async function registerAgentAccount(input: Parameters<typeof accounts.registerAgentAccount>[0]) {
+    try {
+    return accounts.registerAgentAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
   }
-
-
-  const registerAgentAccount = admin.registerAgentAccount;
-  const registerExternalAccount = admin.registerExternalAccount;
-  const updateExternalAccount = admin.updateExternalAccount;
-  const deleteExternalAccount = admin.deleteExternalAccount;
-  const deleteAgentAccount = admin.deleteAgentAccount;
-  const listAccounts = accounts.listAccounts.bind(accounts);
-  const getAccountBySlug = accounts.getAccountBySlug.bind(accounts);
-  const getAccountByAgentId = accounts.getAccountByAgentId.bind(accounts);
-  const getConversationForAgent = accounts.getConversationForAgent.bind(accounts);
+  async function registerExternalAccount(input: Parameters<typeof accounts.registerExternalAccount>[0]) {
+    try {
+    return accounts.registerExternalAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function updateExternalAccount(input: Parameters<typeof accounts.updateExternalAccount>[0]) {
+    try {
+    return accounts.updateExternalAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function deleteExternalAccount(input: Parameters<typeof accounts.deleteExternalAccount>[0]) {
+    try {
+    return accounts.deleteExternalAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function deleteAgentAccount(input: Parameters<typeof accounts.deleteAgentAccount>[0]) {
+    try {
+    return accounts.deleteAgentAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function listAccounts(input: Parameters<typeof accounts.listAccounts>[0]) {
+    try {
+    return accounts.listAccounts(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function getAccountBySlug(slug: string) {
+    try {
+    return accounts.getAccountBySlug(slug);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function getAccountByAgentId(agentId: string) {
+    try {
+    return accounts.getAccountByAgentId(agentId);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function getAccountByTargetKey(targetKey: string) {
+    try {
+    return accounts.getAccountByTargetKey(targetKey);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+  async function getConversationForAgent(agentId: string, conversationId: string) {
+    try {
+    return accounts.getConversationForAgent(agentId, conversationId);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
   // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
-  const ensureDirectConversation = conversations.ensureDirectConversation;
+  async function ensureDirectConversation(leftAccountId: string, rightAccountId: string) {
+    try {
+    return conversations.ensureDirectConversation(leftAccountId, rightAccountId);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
 
   // === Group Management ───────────────────────────────────────────────────
-  const createChatGroup = groups.createChatGroup;
+  async function createChatGroup(input: {
+    agentId: string;
+    conversationKey: string;
+    name: string;
+    creatorName: string;
+  }) {
+    try {
+    return groups.createChatGroup(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
-  const addMemberToGroup = groups.addMemberToGroup;
+  async function addMemberToGroup(input: {
+    agentId: string;
+    groupId: string;
+    participantSlug: string;
+    role?: string;
+  }) {
+    try {
+    return groups.addMemberToGroup(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
-  const removeMemberFromGroup = groups.removeMemberFromGroup;
+  async function removeMemberFromGroup(input: {
+    agentId: string;
+    groupId: string;
+    participantSlug: string;
+  }) {
+    try {
+    return groups.removeMemberFromGroup(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
-  const changeChatGroup = groups.changeChatGroup;
+  async function changeChatGroup(input: {
+    agentId: string;
+    groupId?: string;
+    name?: string;
+    members?: Array<{
+      participantKey: string;
+      role?: 'admin' | 'normal';
+    }>;
+  }) {
+    try {
+    return groups.changeChatGroup(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
-  const listChatGroups = groups.listChatGroups;
+  async function listChatGroups(input: {
+    agentId: string;
+    limit: number;
+  }) {
+    try {
+    return groups.listChatGroups(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
-  const listGroupMembers = groups.listGroupMembers;
+  async function listGroupMembers(input: { agentId: string; groupId: string }): Promise<InternalChatGroupMember[]> {
+    try {
+    return groups.listGroupMembers(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
-  const listGroupMembersByAccount = groups.listGroupMembersByAccount;
+  async function listGroupMembersByAccount(input: {
+    accountId: string;
+    groupId: string;
+  }): Promise<InternalChatGroupMember[]> {
+    try {
+    return groups.listGroupMembersByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
 
 
   // === Message Listing ───────────────────────────────────────────────────
@@ -309,14 +436,321 @@ export function createInternalChatService(
 
     return views.filter((view) => view.unreadCount > 0);
   } catch (err) {
+    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'listConversations failed', context: { error: err instanceof Error ? err.message : String(err) } });
     throw err;
   }
   }
 
+  // ── Account-scoped Conversation Listing ───────────────────────────────────
 
+  // ── ByAccount variant ─────────────────────────────────────────────────────
+  // listConversationsByAccount: same as listConversations above, but accepts
+  // a resolved accountId directly instead of looking it up from an agentId.
+  // Used by admin routes and external integrations that already have the account.
+  // NOT a duplicate — this is intentional architectural separation.
+  async function listConversationsByAccount(input: {
+    accountId: string;
+    limit: number;
+  }) {
+    try {
+    return listing.listConversationsByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  // === Message Retrieval ──────────────────────────────────────────────────
+  async function getMessages(input: {
+    agentId: string;
+    conversationKey: string;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<CommunicationProviderMessage[]> {
+  try {
+    await requireConversationMembership(input.agentId, input.conversationKey);
+    const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
+    const dateTo = parseFilterDate(input.dateTo, 'dateTo');
+    const filters = [
+      eq(internalChatMessages.conversationId, input.conversationKey),
+      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
+      ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
+      ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
+    ];
+
+    const rows = await db
+      .select({
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorAccountId: internalChatMessages.authorAccountId,
+        authorDisplayName: internalChatAccounts.displayName,
+        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
+      })
+      .from(internalChatMessages)
+      .innerJoin(
+        internalChatMessageReads,
+        and(
+          eq(internalChatMessageReads.messageId, internalChatMessages.id),
+          eq(internalChatMessageReads.agentId, input.agentId),
+        ),
+      )
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
+      .where(and(...filters))
+      .orderBy(desc(internalChatMessages.createdAt))
+      .offset(input.offset)
+      .limit(input.limit).all();
+
+    const unreadMessageIds = rows.filter((row) => row.unread === 1).map((row) => row.messageId);
+
+    if (unreadMessageIds.length > 0) {
+      await db
+        .update(internalChatMessageReads)
+        .set({ readAt: Date.now() })
+        .where(and(
+          eq(internalChatMessageReads.agentId, input.agentId),
+          inArray(internalChatMessageReads.messageId, unreadMessageIds),
+        ));
+    }
+
+    return Promise.all(
+      rows.reverse().map(async (row) => ({
+        messageId: row.messageId,
+        provider: 'internal-chat',
+        authorId: row.authorAccountId,
+        targetKey: input.conversationKey,
+        content: row.content,
+        attachments: await readMessageAttachments(row.messageId),
+        unread: row.unread === 1,
+        createdAt: new Date(row.createdAt).toISOString(),
+        authorDisplayName: row.authorDisplayName,
+      })),
+    );
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'getMessages failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
+  }
+
+  // ── Account-scoped Message Retrieval ─────────────────────────────────────
+
+  // ── ByAccount variant ─────────────────────────────────────────────────────
+  // getMessagesByAccount: same as getMessages above, but uses accountId directly.
+  // Used when the caller already has a concrete account reference.
+  async function getMessagesByAccount(input: {
+    accountId: string;
+    conversationKey: string;
+    limit: number;
+    offset: number;
+    query?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<CommunicationProviderMessage[]> {
+  try {
+    await requireConversationMembershipByAccount(input.accountId, input.conversationKey);
+    const dateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
+    const dateTo = parseFilterDate(input.dateTo, 'dateTo');
+    const filters = [
+      eq(internalChatMessages.conversationId, input.conversationKey),
+      ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
+      ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
+      ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
+    ];
+
+    const rows = await db
+      .select({
+        messageId: internalChatMessages.id,
+        content: internalChatMessages.content,
+        createdAt: internalChatMessages.createdAt,
+        authorAccountId: internalChatMessages.authorAccountId,
+        authorDisplayName: internalChatAccounts.displayName,
+      })
+      .from(internalChatMessages)
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
+      .where(and(...filters))
+      .orderBy(desc(internalChatMessages.createdAt))
+      .offset(input.offset)
+      .limit(input.limit).all();
+
+    return Promise.all(
+      rows.reverse().map(async (row) => ({
+        messageId: row.messageId,
+        provider: 'internal-chat',
+        authorId: row.authorAccountId,
+        targetKey: input.conversationKey,
+        content: row.content,
+        attachments: await readMessageAttachments(row.messageId),
+        unread: false,
+        createdAt: new Date(row.createdAt).toISOString(),
+        authorDisplayName: row.authorDisplayName,
+      })),
+    );
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-service', level: 'error', message: 'getMessagesByAccount failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
+  }
+
+  // === Account-scoped Group & Conversation Operations ──────────────────────
+  async function archiveConversationByAccount(input: {
+    accountId: string;
+    conversationId: string;
+  }) {
+    const start = Date.now();
+    const { accountId, conversationId } = input;
+    logger.logGroupOperationStart({ accountId, operation: 'archive', targetId: conversationId });
+    try {
+      const result = await conversations.archiveConversationByAccount({
+        accountId: input.accountId,
+        conversationId: input.conversationId,
+        getRequiredConversationForAccount,
+      });
+      logger.logGroupOperationEnd({ accountId, operation: 'archive', targetId: conversationId, durationMs: Date.now() - start, success: true });
+      return result;
+    } catch (err) {
+      logger.logGroupOperationEnd({ accountId, operation: 'archive', targetId: conversationId, durationMs: Date.now() - start, success: false, error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function createExternalChatGroup(input: {
+    accountId: string;
+    conversationKey: string;
+    name: string;
+  }) {
+    const start = Date.now();
+    const { accountId, conversationKey } = input;
+    logger.logGroupOperationStart({ accountId, operation: 'create_group', targetId: conversationKey });
+    try {
+      const result = await accountOps.createExternalChatGroup(input);
+      logger.logGroupOperationEnd({ accountId, operation: 'create_group', targetId: conversationKey, durationMs: Date.now() - start, success: true });
+      return result;
+    } catch (err) {
+      logger.logGroupOperationEnd({ accountId, operation: 'create_group', targetId: conversationKey, durationMs: Date.now() - start, success: false, error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function ensureDirectConversationByAccount(input: {
+    accountId: string;
+    participantAccountId: string;
+  }) {
+    try {
+    return accountOps.ensureDirectConversationByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function addMemberToGroupByAccount(input: {
+    accountId: string;
+    groupId: string;
+    participantAccountId: string;
+    role?: string;
+  }) {
+    try {
+    return accountOps.addMemberToGroupByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function updateMemberRoleByAccount(input: {
+    accountId: string;
+    groupId: string;
+    participantAccountId: string;
+    role: string;
+  }) {
+    try {
+    return accountOps.updateMemberRoleByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function removeMemberFromGroupByAccount(input: {
+    accountId: string;
+    groupId: string;
+    participantAccountId: string;
+  }) {
+    try {
+    return accountOps.removeMemberFromGroupByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function updateGroupByAccount(input: {
+    accountId: string;
+    groupId: string;
+    name?: string;
+    conversationKey?: string;
+  }) {
+    try {
+    return accountOps.updateGroupByAccount(input);
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  async function archiveConversationByAccount(input: {
+    accountId: string;
+    conversationId: string;
+  }) {
+    const start = Date.now();
+    const { accountId, conversationId } = input;
+    logger.logGroupOperationStart({ accountId, operation: 'archive', targetId: conversationId });
+    try {
+      const result = await conversations.archiveConversationByAccount({
+        accountId: input.accountId,
+        conversationId: input.conversationId,
+        getRequiredConversationForAccount,
+      });
+      logger.logGroupOperationEnd({ accountId, operation: 'archive', targetId: conversationId, durationMs: Date.now() - start, success: true });
+      return result;
+    } catch (err) {
+      logger.logGroupOperationEnd({ accountId, operation: 'archive', targetId: conversationId, durationMs: Date.now() - start, success: false, error: err instanceof Error ? err.message : String(err) });
+      forgeDebug({ scope: 'internal-chat-service', level: 'error', message: `[internal-chat-service] async function failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+  // === Unread / Recent ────────────────────────────────────────────────────
+  const getUnreadSummary = reads.getUnreadSummary;
+
+  const listRecentConversations = reads.listRecentConversations;
+
+  // === Internal Helpers ────────────────────────────────────────────────────
   const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
+
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
+
+  const getRequiredAccount = accounts.getRequiredAccount;
+  const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
+
+  const guards = createInternalChatGuards(db, {
+    getRequiredAgentAccount,
+  });
+
+  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
   const participants = createInternalChatParticipants(db);
+  const logger = createServiceLogger();
 
   const serviceHelpers = createServiceHelpers({
     db,
@@ -329,6 +763,7 @@ export function createInternalChatService(
   });
 
   const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
+  const getRequiredAccountBySlug = serviceHelpers.getRequiredAccountBySlug;
   const requireConversationMembership = serviceHelpers.requireConversationMembership;
   const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
   const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
@@ -336,34 +771,15 @@ export function createInternalChatService(
   const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
   const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
 
-  const listing = createInternalChatListing(db, {
+
+  const conversations = createInternalChatConversations(db);
+
+  const groups = createInternalChatGroups(db, {
+    getRequiredAccount,
     getRequiredAgentAccount,
-    getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
+    getRequiredAccountBySlug,
+    getAccountByTargetKey,
   });
-
-  // ── Account-scoped Conversation Listing ───────────────────────────────────
-
-  // ── ByAccount variant ─────────────────────────────────────────────────────
-  // listConversationsByAccount: same as listConversations above, but accepts
-  // a resolved accountId directly instead of looking it up from an agentId.
-  // Used by admin routes and external integrations that already have the account.
-  // NOT a duplicate — this is intentional architectural separation.
-  const listConversationsByAccount = listing.listConversationsByAccount;
-
-
-  // === Message Retrieval ──────────────────────────────────────────────────
-  const getMessages = listing.getMessages
-
-  // ── Account-scoped Message Retrieval ─────────────────────────────────────
-
-  // ── ByAccount variant ─────────────────────────────────────────────────────
-  const getMessagesByAccount = listing.getMessagesByAccount
-
-  // === Account-scoped Group & Conversation Operations ──────────────────────
-  const archiveConversationByAccount = conversations.archiveConversationByAccount;
 
   const accountOps = createInternalChatAccountOps(db, {
     getRequiredAccount,
@@ -373,42 +789,16 @@ export function createInternalChatService(
     getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
 
-  const createExternalChatGroup = accountOps.createExternalChatGroup;
-
-  const ensureDirectConversationByAccount = accountOps.ensureDirectConversationByAccount;
-
-  const addMemberToGroupByAccount = groups.addMemberToGroupByAccount;
-
-  const updateMemberRoleByAccount = groups.updateMemberRoleByAccount;
-
-  const removeMemberFromGroupByAccount = groups.removeMemberFromGroupByAccount;
-
-  const updateGroupByAccount = groups.updateGroupByAccount;
-
-
-  // === Unread / Recent ────────────────────────────────────────────────────
-  const getUnreadSummary = reads.getUnreadSummary;
-
-  const listRecentConversations = reads.listRecentConversations;
-
-  // === Internal Helpers ────────────────────────────────────────────────────
-
-
-
-
-  const guards = createInternalChatGuards(db, {
-    getRequiredAgentAccount,
-  });
-
-  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
-
-
-
-
-
-
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
+
+  const listing = createInternalChatListing(db, {
+    getRequiredAgentAccount,
+    getRequiredExternalAccount,
+    listGroupMembersOrDmPeers,
+    listGroupMembersOrDmPeersByAccount,
+    readMessageAttachments,
+  });
 
 
   const connection = createInternalChatConnection(db, {
@@ -418,7 +808,7 @@ export function createInternalChatService(
   });
 
   // ── Message Sending (delegated to internal-chat-sending.ts) ─────────────
-  const { sendMessage, getMessageAttachmentByAccount } = createChatSending({
+  const _chatSending = createChatSending({
     db,
     accounts,
     serviceHelpers: {
@@ -436,6 +826,44 @@ export function createInternalChatService(
       readMessageAttachment,
     },
   });
+
+  // ── Wrapped sendMessage with structured logging ──────────────────────────
+  const sendMessage = async function sendMessageLogged(
+    input: Parameters<ReturnType<typeof createChatSending>['sendMessage']>[0],
+  ) {
+    const start = Date.now();
+    const agentId = input?.agentId ?? 'unknown';
+    const accountId = input?.accountId ?? 'unknown';
+    const conversationKey = input?.conversationKey ?? 'unknown';
+    const replyToMessageId = input?.replyToMessageId;
+
+    logger.logSendMessageStart({ agentId, accountId, conversationKey, replyToMessageId });
+    try {
+      const result = await _chatSending.sendMessage(input);
+      logger.logSendMessageEnd({
+        agentId,
+        accountId,
+        conversationKey,
+        messageId: (result as { messageId?: string }).messageId ?? 'unknown',
+        durationMs: Date.now() - start,
+        success: true,
+      });
+      return result;
+    } catch (err) {
+      logger.logSendMessageEnd({
+        agentId,
+        accountId,
+        conversationKey,
+        messageId: replyToMessageId ?? 'unknown',
+        durationMs: Date.now() - start,
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  };
+
+  const getMessageAttachmentByAccount = _chatSending.getMessageAttachmentByAccount;
 
   return {
     registerAgentAccount,
