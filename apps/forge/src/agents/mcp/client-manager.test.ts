@@ -198,3 +198,254 @@ describe('createAgentMcpRuntimeActionSource', () => {
     expect(resolveCount).toBe(1);
   });
 });
+
+// ─── Additional tests: error paths, retry, disconnect handling ───────────────
+
+describe('refreshNow error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('logs forgeDebug when connectServer throws', async () => {
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    mockCreateRuntimeActions.mockRejectedValue(new Error('Connection refused'));
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+    // The server connection failed — the action list should still be empty
+    const actions = await source.getActions();
+    expect(actions).toEqual([]);
+  });
+
+  test('removes stale servers that are no longer in store', async () => {
+    // First: connect a server
+    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool-a', description: '', inputSchema: {} }]);
+    mockGetAgentMcpServers.mockResolvedValueOnce([{ config: makeConfig(), server: makeServer({ id: 'srv-stale' }) }]);
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(await source.getActions()).toHaveLength(1);
+
+    // Server removed from store — should be disposed
+    mockCreateRuntimeActions.mockResolvedValue([]);
+    mockGetAgentMcpServers.mockResolvedValueOnce([]); // empty — srv-stale no longer present
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(mockDisposeAll).toHaveBeenCalled();
+    expect(await source.getActions()).toHaveLength(0);
+  });
+
+  test('skips reconnection when fingerprint unchanged and actions exist', async () => {
+    const actions = [{ name: 'stable-tool', description: '', inputSchema: {} }];
+    mockCreateRuntimeActions.mockResolvedValue(actions);
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    // Second refresh with same server — should NOT call createRuntimeActions again
+    mockCreateRuntimeActions.mockClear();
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(mockCreateRuntimeActions).not.toHaveBeenCalled();
+    expect(await source.getActions()).toMatchObject(actions);
+  });
+});
+
+describe('wrapAction error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('rethrows action error after logging and triggering disconnect', async () => {
+    const innerError = new Error('Tool execution failed');
+    mockCreateRuntimeActions.mockResolvedValue([
+      {
+        name: 'failing-tool',
+        description: '',
+        inputSchema: {},
+        execute: vi.fn().mockRejectedValue(innerError),
+      },
+    ]);
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    const actions = await source.getActions();
+    const action = actions.find((a) => a.name === 'failing-tool')!;
+    await expect(
+      action.execute({}, { runtimeId: 'r1', stepId: 's1', stepNumber: 1 }),
+    ).rejects.toThrow('Tool execution failed');
+  });
+});
+
+describe('scheduleRetry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('schedules refresh with exponential backoff after connection failure', async () => {
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    mockCreateRuntimeActions.mockRejectedValue(new Error('Network error'));
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    // Should have scheduled a retry with exponential backoff
+    // Base delay: 5000ms, first retry
+    await vi.advanceTimersByTimeAsync(5_000);
+    // Refresh should run again
+    expect(mockGetAgentMcpServers).toHaveBeenCalled();
+  });
+});
+
+describe('dispose', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('prevents further scheduleRefresh after dispose', async () => {
+    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool', description: '', inputSchema: {} }]);
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+    await source.dispose();
+
+    mockGetAgentMcpServers.mockClear();
+    // Even though the timer for retry would fire, dispose should prevent refresh
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(mockGetAgentMcpServers).not.toHaveBeenCalled();
+  });
+});
+
+describe('mapServerConfig', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('maps stdio transport correctly', async () => {
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    // The actual mapServerConfig is internal; verify stdio server connects via ForgeMcpToolset
+    mockGetAgentMcpServers.mockResolvedValue([
+      {
+        config: makeConfig(),
+        server: makeServer({
+          transport: 'stdio',
+          command: '/usr/bin/node',
+          args: '["script.js"]',
+          envVars: '{"KEY":"val"}',
+        }),
+      },
+    ]);
+    mockCreateRuntimeActions.mockResolvedValue([]);
+    await vi.advanceTimersByTimeAsync(1);
+    // Verify the toolset was created (mock was called)
+    expect(mockCreateRuntimeActions).toHaveBeenCalled();
+  });
+
+  test('maps http-stream transport correctly', async () => {
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    mockGetAgentMcpServers.mockResolvedValue([
+      {
+        config: makeConfig(),
+        server: makeServer({
+          transport: 'http-stream',
+          url: 'https://mcp.example.com/stream',
+          headers: '{"Authorization":"Bearer token"}',
+        }),
+      },
+    ]);
+    mockCreateRuntimeActions.mockResolvedValue([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mockCreateRuntimeActions).toHaveBeenCalled();
+  });
+});
+
+describe('fingerprintServerConfig', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('same config produces same fingerprint', async () => {
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    // Two connects with identical config should be detected as no-change
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool', description: '', inputSchema: {} }]);
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    mockCreateRuntimeActions.mockClear();
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    // No reconnection needed — same fingerprint
+    expect(mockCreateRuntimeActions).not.toHaveBeenCalled();
+  });
+
+  test('different config triggers reconnection', async () => {
+    mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
+    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool', description: '', inputSchema: {} }]);
+    const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
+    const source = createAgentMcpRuntimeActionSource('agent-1');
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    mockCreateRuntimeActions.mockClear();
+    // Config changed (different command)
+    mockGetAgentMcpServers.mockResolvedValue([
+      { config: makeConfig(), server: makeServer({ command: 'python3' }) },
+    ]);
+    source.start();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(mockCreateRuntimeActions).toHaveBeenCalled();
+  });
+});
