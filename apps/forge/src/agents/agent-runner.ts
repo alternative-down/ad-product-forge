@@ -43,6 +43,18 @@ import {
 import { createLoopDetector } from './agent-runner-loop-detector';
 import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, nextBackoff, resetBackoffState, calculateDelayMs } from './agent-runner-state';
 import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
+import { loadAgentContextInstructions } from './agent-runner-context-loaders';
+import {
+  generateWithTimeoutRetries,
+  buildIterationFeedback,
+  createGenerateTimeoutGuard,
+  touchGenerateTimeout,
+  clearGenerateTimeout,
+  startGenerateAttempt,
+  finishGenerateAttempt,
+  invalidateInFlightGenerate,
+  type GenerateTimeoutHandle,
+} from './agent-runner-generate';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
@@ -558,6 +570,45 @@ export function createAgentRunner(
         contractId,
         contract,
         stepLongTermMemoryRecallSystemText,
+        {
+          db,
+          runtime,
+          currentRuntime,
+          store,
+          usage,
+          notifications,
+          homeMetricSnapshots,
+          messageManager,
+          runLastMessages,
+          flushPendingRunMessages,
+          scheduler,
+          epochState,
+          backoffState,
+          progressState,
+          loopState,
+          loopDetector,
+          currentGenerateAbortController,
+          setCurrentGenerateAbortController: (c) => {
+            currentGenerateAbortController = c;
+          },
+          markGenerateProgress,
+          setBackoffMs: (ms) => {
+            backoffMs = ms;
+          },
+          setInstant: (v) => {
+            instant = v;
+          },
+          setNextStepAt: (v) => {
+            nextStepAt = v;
+          },
+          setLoopSignature: (sig) => {
+            loopState.lastLoopSignature = sig;
+          },
+          loopSignature: loopState.lastLoopSignature ?? '',
+          activeRunId,
+          loadAgentContextInstructions,
+          isStopped: () => stopped,
+        },
       );
 
       if (isStaleRun(runEpoch)) {
