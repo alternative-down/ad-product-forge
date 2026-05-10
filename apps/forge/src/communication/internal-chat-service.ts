@@ -101,6 +101,7 @@ import {
   AttachmentNotFoundError,
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
+import { createInternalChatAdmin } from "./internal-chat-admin";
 import { createChatAttachments } from "./internal-chat-attachments";
 import { createInternalChatReads } from "./internal-chat-reads";
 import { createChatSending } from "./internal-chat-sending";
@@ -113,6 +114,7 @@ export function createInternalChatService(
 ) {
   // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
+  const admin = createInternalChatAdmin(db);
   const reads = createInternalChatReads(db);
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
@@ -147,15 +149,15 @@ export function createInternalChatService(
   }
 
 
-  const registerAgentAccount = accounts.registerAgentAccount.bind(accounts);
-  const registerExternalAccount = accounts.registerExternalAccount.bind(accounts);
-  const updateExternalAccount = accounts.updateExternalAccount.bind(accounts);
-  const deleteExternalAccount = accounts.deleteExternalAccount.bind(accounts);
-  const deleteAgentAccount = accounts.deleteAgentAccount.bind(accounts);
-  const listAccounts = accounts.listAccounts.bind(accounts);
-  const getAccountBySlug = accounts.getAccountBySlug.bind(accounts);
-  const getAccountByAgentId = accounts.getAccountByAgentId.bind(accounts);
-  const getConversationForAgent = accounts.getConversationForAgent.bind(accounts);
+  const registerAgentAccount = admin.registerAgentAccount;
+  const registerExternalAccount = admin.registerExternalAccount;
+  const updateExternalAccount = admin.updateExternalAccount;
+  const deleteExternalAccount = admin.deleteExternalAccount;
+  const deleteAgentAccount = admin.deleteAgentAccount;
+  const listAccounts = admin.listAccounts;
+  const getAccountBySlug = admin.getAccountBySlug;
+  const getAccountByAgentId = admin.getAccountByAgentId;
+  const getConversationForAgent = admin.getConversationForAgent;
 
   // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
