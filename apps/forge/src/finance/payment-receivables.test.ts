@@ -30,24 +30,30 @@ function createMockDb() {
   function update(_table: unknown) {
     let captured: Record<string, unknown> | undefined;
     return {
-      set: (values: Record<string, unknown>) => ({
-        where: (where: unknown) => {
-          const conditions = extractWhere(where);
-          const idx = txStore.findIndex((r) =>
-            Object.entries(conditions).every(([k, v]) => r[k] === v),
-          );
-          if (idx !== -1) Object.assign(txStore[idx], captured);
-          return Promise.resolve({ rowCount: idx === -1 ? 0 : 1 });
-        },
-      }),
+      set: (values: Record<string, unknown>) => {
+        captured = values;
+        return {
+          where: (where: unknown) => {
+            const conditions = extractWhere(where);
+            const idx = txStore.findIndex((r) =>
+              Object.entries(conditions).every(([k, v]) => r[k] === v),
+            );
+            if (idx !== -1) Object.assign(txStore[idx], values);
+            return Promise.resolve({ rowCount: idx === -1 ? 0 : 1 });
+          },
+        };
+      },
     };
   }
 
   function select() {
     return {
-      from: () => ({
-        where: () => ({ limit: () => Promise.resolve(txStore.slice()) }),
-        orderBy: () => ({ limit: () => Promise.resolve(txStore.slice()) }),
+      from: (table: unknown) => ({
+        where: (_condition: unknown) => ({
+          orderBy: (_fn: unknown) => ({ limit: (n: number) => Promise.resolve(txStore.slice()) }),
+          limit: (n: number) => Promise.resolve(txStore.slice()),
+        }),
+        orderBy: (_fn: unknown) => ({ limit: (n: number) => Promise.resolve(txStore.slice()) }),
       }),
     };
   }
