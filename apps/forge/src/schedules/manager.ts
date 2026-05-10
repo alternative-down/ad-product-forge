@@ -394,31 +394,21 @@ export function createAgentScheduleManager(input: {
   }
 
   async function removeAgent(agentId: string) {
-    try {
-      const schedules = await store.listAgentSchedules(agentId);
+    const schedules = await store.listAgentSchedules(agentId);
 
-      for (const scheduleRecord of schedules) {
-        try {
-          cancelScheduledJob(scheduleRecord.scheduleId);
-          await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
-        } catch (err) {
-          forgeDebug({
-            scope: 'schedules',
-            level: 'warn',
-            message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${error instanceof Error ? error.message : String(error)}`,
-            context: { agentId, scheduleId: scheduleRecord.scheduleId },
-          });
-        }
+    for (const scheduleRecord of schedules) {
+      cancelScheduledJob(scheduleRecord.scheduleId);
+      try {
+        await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
+      } catch (err) {
+        forgeDebug({
+          scope: 'schedules',
+          level: 'error',
+          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${err instanceof Error ? err.message : String(err)}`,
+          context: { agentId, scheduleId: scheduleRecord.scheduleId },
+        });
+        throw err;
       }
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'error',
-        message: `removeAgent failed: ${error instanceof Error ? error.message : String(error)}`,
-        context: { agentId },
-      });
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'removeAgent: operation failed', error: error instanceof Error ? error.message : String(error) });
-      throw error;
     }
   }
 
