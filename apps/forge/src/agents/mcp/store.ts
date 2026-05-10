@@ -5,16 +5,16 @@
 import { eq, and, like, or } from 'drizzle-orm';
 import { getDatabase } from '../../database/client';
 import { mcpServerConfigs, agentMcpConfigs, type McpServerConfig, type NewMcpServerConfig, type AgentMcpConfig, type NewAgentMcpConfig } from '../../database/schema';
-import { nanoid } from 'nanoid';
+import { createId } from '../../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
 // MCP Server Config operations
 export async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<McpServerConfig> {
   const db = getDatabase();
-  const now = new Date().toISOString();
+  const now = Date.now();
   
   const newConfig: NewMcpServerConfig = {
-    id: nanoid(),
+    id: createId(),
     ...data,
     createdAt: now,
     updatedAt: now,
@@ -68,7 +68,7 @@ export async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMc
   try {
     await db
       .update(mcpServerConfigs)
-      .set({ ...data, updatedAt: new Date().toISOString() })
+      .set({ ...data, updatedAt: Date.now() })
       .where(eq(mcpServerConfigs.id, id));
   } catch (err) {
     forgeDebug({ scope: 'mcp-store', level: 'error', message: 'updateMcpServerConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });
@@ -111,10 +111,10 @@ export async function searchMcpServerConfigs(query: string): Promise<McpServerCo
 // Agent MCP Config operations
 export async function createAgentMcpConfig(data: Omit<NewAgentMcpConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgentMcpConfig> {
   const db = getDatabase();
-  const now = new Date().toISOString();
+  const now = Date.now();
   
   const newConfig: NewAgentMcpConfig = {
-    id: nanoid(),
+    id: createId(),
     ...data,
     createdAt: now,
     updatedAt: now,
@@ -169,7 +169,7 @@ export async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAge
   try {
     await db
       .update(agentMcpConfigs)
-      .set({ ...data, updatedAt: new Date().toISOString() })
+      .set({ ...data, updatedAt: Date.now() })
       .where(eq(agentMcpConfigs.id, id));
   } catch (err) {
     forgeDebug({ scope: 'mcp-store', level: 'error', message: 'updateAgentMcpConfig failed', context: { id, error: err instanceof Error ? err.message : String(err) } });

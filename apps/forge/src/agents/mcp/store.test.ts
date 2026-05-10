@@ -19,8 +19,8 @@ vi.mock('../../database/client', () => ({
   getDatabase: vi.fn(),
 }));
 
-vi.mock('nanoid', () => ({
-  nanoid: vi.fn(() => 'mock-nanoid-id'),
+vi.mock('../../utils/id', () => ({
+  createId: vi.fn(() => 'mock-nanoid-id'),
 }));
 
 import { getDatabase } from '../../database/client';
