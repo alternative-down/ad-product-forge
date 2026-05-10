@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { getSystemIntegrations, upsertSystemIntegration } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 import type { SystemIntegration } from '@/lib/admin-api/index';
-import { buildCoolifyFormValues, type CoolifyFormValues } from './-coolify-form-state';
+import { buildCoolifyFormValues, type CoolifyFormValues } from './coolify-form-state';
 
 export const Route = createFileRoute('/settings/coolify/')({
   component: SettingsCoolifyRoute,

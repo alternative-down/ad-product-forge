@@ -45,7 +45,11 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/lib/**/*.ts', 'src/lib/**/*.tsx'],
+    files: [
+      'src/lib/**/*.ts',
+      'src/lib/**/*.tsx',
+      'src/components/admin/index.ts',
+    ],
     rules: {
       'no-useless-reexports/no-useless-reexports': 'off',
     },

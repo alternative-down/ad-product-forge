@@ -102,11 +102,3 @@ export function toOperationsDraft(data: SystemSettings): OperationsDraft {
   };
 }
 
-function fromOperationsDraft(draft: OperationsDraft, base: SystemSettings): SystemSettings {
-  return {
-    ...base,
-    stepDelayEnabled: draft.stepDelayEnabled,
-    communicationDmFlushingEnabled: draft.communicationDmFlushingEnabled,
-    communicationGroupFlushingEnabled: draft.communicationGroupFlushingEnabled,
-  };
-}

@@ -1,4 +1,4 @@
-import type { AgentLogRuntimeMemoryData } from './-use-agent-log-data';
+import type { AgentLogRuntimeMemoryData } from './use-agent-log-data';
 
 interface MetricTileProps {
   label: string;

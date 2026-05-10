@@ -1,6 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 
-import type { AgentLogRuntimeMemoryData } from './-use-agent-log-data';
+import type { AgentLogRuntimeMemoryData } from './use-agent-log-data';
 import { AgentLogMetrics } from './-agent-log-metrics';
 
 interface AgentRuntimeMemorySectionProps {
