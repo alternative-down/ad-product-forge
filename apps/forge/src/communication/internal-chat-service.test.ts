@@ -1442,3 +1442,107 @@ describe('clearHandler', () => {
 
 
 });
+
+// ─── Untested functions: createExternalChatGroup ───────────────────────────
+describe('createExternalChatGroup', () => {
+  it('delegates to accountOps.createExternalChatGroup', async () => {
+    mockAccountOps.createExternalChatGroup.mockResolvedValueOnce({ conversationKey: 'grp_new', name: 'New Group' });
+    const service = createInternalChatService(db);
+    const result = await service.createExternalChatGroup({
+      accountId: 'acc_kaelen',
+      name: 'New Group',
+      memberKeys: ['acc_bob'],
+    });
+    expect(mockAccountOps.createExternalChatGroup).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      name: 'New Group',
+      memberKeys: ['acc_bob'],
+    });
+    expect(result).toEqual({ conversationKey: 'grp_new', name: 'New Group' });
+  });
+});
+
+// ─── Untested functions: ensureDirectConversationByAccount ─────────────────
+describe('ensureDirectConversationByAccount', () => {
+  it('delegates to accountOps.ensureDirectConversationByAccount', async () => {
+    mockAccountOps.ensureDirectConversationByAccount.mockResolvedValueOnce({ conversationKey: 'conv_dm' });
+    const service = createInternalChatService(db);
+    const result = await service.ensureDirectConversationByAccount({
+      accountId: 'acc_kaelen',
+      peerKey: 'acc_bob',
+    });
+    expect(mockAccountOps.ensureDirectConversationByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      peerKey: 'acc_bob',
+    });
+    expect(result).toEqual({ conversationKey: 'conv_dm' });
+  });
+});
+
+// ─── Untested functions: archiveConversationByAccount ─────────────────────
+describe('archiveConversationByAccount', () => {
+  it('delegates to conversations.archiveConversationByAccount', async () => {
+    mockConversations.archiveConversationByAccount.mockResolvedValueOnce({ conversationId: 'conv_1', archived: true });
+    const service = createInternalChatService(db);
+    const result = await service.archiveConversationByAccount({
+      accountId: 'acc_kaelen',
+      conversationKey: 'conv_1',
+    });
+    expect(mockConversations.archiveConversationByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      conversationKey: 'conv_1',
+    });
+    expect(result).toEqual({ conversationId: 'conv_1', archived: true });
+  });
+});
+
+// ─── Untested functions: getUnreadSummary ──────────────────────────────────
+describe('getUnreadSummary', () => {
+  it('is a function exposed on the service', () => {
+    const service = createInternalChatService(db);
+    expect(typeof service.getUnreadSummary).toBe('function');
+  });
+});
+
+// ─── Untested functions: listRecentConversations ────────────────────────────
+describe('listRecentConversations', () => {
+  it('is a function exposed on the service', () => {
+    const service = createInternalChatService(db);
+    expect(typeof service.listRecentConversations).toBe('function');
+  });
+});
+
+// ─── Untested functions: getMessageAttachmentByAccount ─────────────────────
+describe('getMessageAttachmentByAccount', () => {
+  it('delegates to sending.getMessageAttachmentByAccount', async () => {
+    mockSending.getMessageAttachmentByAccount.mockResolvedValueOnce({ stream: null, contentType: 'image/png' });
+    const service = createInternalChatService(db);
+    const result = await service.getMessageAttachmentByAccount({
+      accountId: 'acc_kaelen',
+      messageId: 'msg_1',
+      attachmentId: 'att_1',
+    });
+    expect(mockSending.getMessageAttachmentByAccount).toHaveBeenCalledWith({
+      accountId: 'acc_kaelen',
+      messageId: 'msg_1',
+      attachmentId: 'att_1',
+    });
+    expect(result).toEqual({ stream: null, contentType: 'image/png' });
+  });
+});
+
+// ─── Untested functions: listConversationsByAccount ────────────────────────
+describe('listConversationsByAccount', () => {
+  it('is a function exposed on the service', () => {
+    const service = createInternalChatService(db);
+    expect(typeof service.listConversationsByAccount).toBe('function');
+  });
+});
+
+// ─── Untested functions: getMessagesByAccount ────────────────────────────────
+describe('getMessagesByAccount', () => {
+  it('is a function exposed on the service', () => {
+    const service = createInternalChatService(db);
+    expect(typeof service.getMessagesByAccount).toBe('function');
+  });
+});
