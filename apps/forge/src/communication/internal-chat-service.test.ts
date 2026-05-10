@@ -905,7 +905,8 @@ describe('createInternalChatService', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const service = createInternalChatService(db);
-      await expect(service.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
+      const result = await service.getAccountBySlug('nonexistent');
+      expect(result).toBeNull();
     });
   });
 
