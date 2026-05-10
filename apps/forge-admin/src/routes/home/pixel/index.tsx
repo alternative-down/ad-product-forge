@@ -6,7 +6,7 @@ import { RefreshCw } from 'lucide-react';
 import { AdminButton, AdminLoadingState } from '@/components/admin';
 import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 import type { AgentListItem } from '@/lib/admin-api/index/types';
-import { buildSceneAgents } from './agents/-build-scene-agents';
+import { buildSceneAgents } from './agents/build-scene-agents';
 
 export const Route = createFileRoute('/home/pixel/')({
   component: HomePixelRoute,

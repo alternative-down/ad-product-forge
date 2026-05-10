@@ -1,6 +1,6 @@
 import { AdminButton, AdminInput, AdminTextarea } from '@/components/admin';
-import type { SettingsMutation, SettingsQuery } from './settings.types';
-import type { CompanyDraft } from './settings.types';
+import type { SettingsMutation, SettingsQuery } from './settings-types';
+import type { CompanyDraft } from './settings-types';
 
 type CompanySettingsSectionProps = {
   companySettings: CompanyDraft;

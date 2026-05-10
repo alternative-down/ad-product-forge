@@ -3,9 +3,9 @@ import { CircleHelp } from 'lucide-react';
 import { AdminButton, AdminInput } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { SettingsMutation, SettingsQuery } from './settings.types';
-import type { RuntimeDraft } from './settings.types';
-import { fromRuntimeDraft } from './settings.types';
+import type { SettingsMutation, SettingsQuery } from './settings-types';
+import type { RuntimeDraft } from './settings-types';
+import { fromRuntimeDraft } from './settings-types';
 
 type RuntimeSettingFieldProps = {
   label: string;

@@ -5,8 +5,6 @@ import {
   getAgentRuntimeMemory,
   runAgentLongTermMemoryRecallSearch,
 } from '@/lib/admin-api/index';
-import type { AgentLongTermMemoryRecallDebugSearchResult } from '@/lib/admin-api/agent-types';
-
 const PAGE_SIZE = 20;
 const LIVE_REFETCH_INTERVAL_MS = 5_000;
 

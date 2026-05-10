@@ -7,7 +7,6 @@ import type {
   AgentLongTermMemoryRecallDebugSearchResult,
   AgentRecentConversation,
   AgentRuntimeMemorySnapshot,
-  AgentMcpServerInput,
   AgentSchedule,
   AgentThreadMessagesResponse,
   AdjustAgentContractBudgetInput,
@@ -16,10 +15,7 @@ import type {
   HireAgentInput,
   HireAgentResult,
   TopUpAgentContractInput,
-  UpdateAgentMcpServerInput,
-  UpdateScheduleInput,
-  UploadAgentSkillsInput,
-  UpsertAgentProviderInput,
+UpsertAgentProviderInput,
 } from './types';
 
 export function getAgents() {
@@ -222,31 +218,6 @@ export function terminateAgent(agentId: string) {
   });
 }
 
-function createAgentMcpServer(input: AgentMcpServerInput) {
-  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/create', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
-  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/update', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-function deleteAgentMcpServer(input: {
-  agentId: string;
-  configId: string;
-  serverId: string;
-}) {
-  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/delete', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
 export function assignAgentMcpServer(input: {
   agentId: string;
   serverId: string;
@@ -274,13 +245,6 @@ export function detachAgentMcpServer(input: {
   configId: string;
 }) {
   return request<{ success: true; agentId: string; configId: string }>('/admin/agent-mcp/detach', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-function uploadAgentSkills(input: UploadAgentSkillsInput) {
-  return request<{ success: true; agentId: string; installedSkillNames: string[] }>('/admin/agent-skills/upload', {
     method: 'POST',
     body: JSON.stringify(input),
   });

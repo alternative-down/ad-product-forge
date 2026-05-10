@@ -21,7 +21,7 @@ import {
   type RuntimeDraft,
   type SettingsMutation,
   type SettingsQuery,
-} from './settings.types';
+} from './settings-types';
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsGeneralRoute,
