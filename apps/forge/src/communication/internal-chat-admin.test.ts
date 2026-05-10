@@ -144,7 +144,8 @@ describe('createInternalChatAdmin', () => {
       db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
 
       const admin = createInternalChatAdmin(db as any);
-      await expect(admin.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
+      const result = await admin.getAccountBySlug('nonexistent');
+      expect(result).toBeNull();
     });
   });
 
