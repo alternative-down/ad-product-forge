@@ -54,8 +54,6 @@ import { createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
-import { createCompanyPayables } from '../finance/company-payables';
-import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { createLlmModelPriceStore } from '../llm/model-price-store';
 import { topUpActiveAgentContract } from '../agents/top-up-agent-contract';
