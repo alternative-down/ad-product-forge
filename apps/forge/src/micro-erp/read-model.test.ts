@@ -287,16 +287,22 @@ describe('listActiveInternalAgentContracts', () => {
     expect(result.items[0]!.agentName).toBe('Alice');
   });
 
-  test('includes metrics from getActiveContractMetrics', async () => {
+  test('includes budget metrics from getActiveContractMetrics', async () => {
     const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 500 })];
     const steps = [makeStepRow({ contractId: 'c1', costUsd: 50 })];
     const { model } = createMockDb({ contracts, steps });
     const result = await model.listActiveInternalAgentContracts();
+    // getActiveContractMetrics returns: spentUsd, budgetRemainingUsd, budgetUsedPct,
+    // recentSteps (up to 10, ordered by createdAt desc), daysUntilEnd
     expect(result.items[0]!.spentUsd).toBe(50);
-    expect(result.items[0]!.recentStepCount).toBe(1);
+    expect(result.items[0]!.budgetRemainingUsd).toBe(450);
+    expect(result.items[0]!.budgetUsedPct).toBe(10);
+    expect(result.items[0]!.daysUntilEnd).toBeGreaterThan(0);
+    expect(result.items[0]!.recentSteps).toHaveLength(1);
   });
 
-  test('spentPercent = (spentUsd / budgetUsd) * 100', async () => {
+
+  test('budgetUsedPct = (spentUsd / budgetUsd) * 100', async () => {
     const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 200 })];
     const steps = [
       makeStepRow({ contractId: 'c1', costUsd: 50 }),
@@ -305,20 +311,20 @@ describe('listActiveInternalAgentContracts', () => {
     const { model } = createMockDb({ contracts, steps });
     const result = await model.listActiveInternalAgentContracts();
     expect(result.items[0]!.spentUsd).toBe(100);
-    expect(result.items[0]!.spentPercent).toBe(50);
+    expect(result.items[0]!.budgetUsedPct).toBe(50);
   });
 
-  test('daysRemaining is positive for future endAt', async () => {
+  test('daysUntilEnd is positive for future endAt', async () => {
     const now = Date.now();
     const sevenDays = 86_400_000 * 7;
     const contracts = [makeContractRow({ contractId: 'c1', endsAt: now + sevenDays })];
     const { model } = createMockDb({ contracts, steps: [] });
     const result = await model.listActiveInternalAgentContracts();
-    expect(result.items[0]!.daysRemaining).toBeGreaterThanOrEqual(6);
-    expect(result.items[0]!.daysRemaining).toBeLessThanOrEqual(8);
+    expect(result.items[0]!.daysUntilEnd).toBeGreaterThanOrEqual(6);
+    expect(result.items[0]!.daysUntilEnd).toBeLessThanOrEqual(8);
   });
 
-  test('recentStepCount is capped at 10', async () => {
+  test('recentSteps is capped at 10', async () => {
     const now = Date.now();
     const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 500 })];
     const steps = Array.from({ length: 15 }, (_, i) =>
@@ -326,7 +332,7 @@ describe('listActiveInternalAgentContracts', () => {
     );
     const { model } = createMockDb({ contracts, steps });
     const result = await model.listActiveInternalAgentContracts();
-    expect(result.items[0]!.recentStepCount).toBeLessThanOrEqual(10);
+    expect(result.items[0]!.recentSteps).toHaveLength(10);
   });
 });
 
@@ -366,52 +372,38 @@ describe('getActiveInternalAgentContract', () => {
 
 // ─── getActiveContractMetrics — averageStepIntervalLabel ─────────────────────
 
-describe('getActiveContractMetrics — averageStepIntervalLabel', () => {
-  test('is "Sem dados" when no steps', async () => {
+describe('getActiveContractMetrics — budget fields', () => {
+  test('budgetRemainingUsd = budgetUsd - spentUsd (capped at 0)', async () => {
+    const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 1000 })];
+    const steps = [makeStepRow({ contractId: 'c1', costUsd: 300 })];
+    const { model } = createMockDb({ contracts, steps });
+    const result = await model.listActiveInternalAgentContracts();
+    expect(result.items[0]!.budgetRemainingUsd).toBe(700);
+    expect(result.items[0]!.spentUsd).toBe(300);
+  });
+
+  test('budgetRemainingUsd is 0 when overspent', async () => {
+    const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 50 })];
+    const steps = [makeStepRow({ contractId: 'c1', costUsd: 100 })];
+    const { model } = createMockDb({ contracts, steps });
+    const result = await model.listActiveInternalAgentContracts();
+    expect(result.items[0]!.budgetRemainingUsd).toBe(0);
+    expect(result.items[0]!.budgetUsedPct).toBe(200);
+  });
+
+  test('recentSteps contains steps for the contract', async () => {
+    const now = Date.now();
     const contracts = [makeContractRow({ contractId: 'c1' })];
-    const { model } = createMockDb({ contracts, steps: [] });
-    const result = await model.listActiveInternalAgentContracts();
-    expect(result.items[0]!.averageStepIntervalLabel).toBe('Sem dados');
-    expect(result.items[0]!.averageStepIntervalMinutes).toBeNull();
-  });
-
-  test('formats minutes below 60', async () => {
-    const now = Date.now();
-    const contracts = [makeContractRow({ contractId: 'c1', weeklyValueUsd: 500 })];
     const steps = [
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now }),
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now + 30 * 60_000 }),
+      makeStepRow({ id: 's1', contractId: 'c1', costUsd: 1, createdAt: now }),
+      makeStepRow({ id: 's2', contractId: 'c1', costUsd: 1, createdAt: now + 1000 }),
     ];
     const { model } = createMockDb({ contracts, steps });
     const result = await model.listActiveInternalAgentContracts();
-    expect(result.items[0]!.averageStepIntervalMinutes).toBe(30);
-    expect(result.items[0]!.averageStepIntervalLabel).toBe('30 min');
-  });
-
-  test('formats full hours', async () => {
-    const now = Date.now();
-    const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 500 })];
-    const steps = [
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now }),
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now + 7_200_000 }),
-    ];
-    const { model } = createMockDb({ contracts, steps });
-    const result = await model.listActiveInternalAgentContracts();
-    expect(result.items[0]!.averageStepIntervalMinutes).toBe(120);
-    expect(result.items[0]!.averageStepIntervalLabel).toBe('2 h');
-  });
-
-  test('formats hours and minutes', async () => {
-    const now = Date.now();
-    const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 500 })];
-    const steps = [
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now }),
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now + 5_400_000 }),
-    ];
-    const { model } = createMockDb({ contracts, steps });
-    const result = await model.listActiveInternalAgentContracts();
-    expect(result.items[0]!.averageStepIntervalMinutes).toBe(90);
-    expect(result.items[0]!.averageStepIntervalLabel).toBe('1 h 30 min');
+    // recentSteps is an array of step objects, capped at 10
+    expect(result.items[0]!.recentSteps).toHaveLength(2);
+    expect(result.items[0]!.recentSteps.map(s => s.id)).toContain('s1');
+    expect(result.items[0]!.recentSteps.map(s => s.id)).toContain('s2');
   });
 });
 
