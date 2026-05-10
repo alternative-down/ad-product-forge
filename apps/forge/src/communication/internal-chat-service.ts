@@ -126,7 +126,6 @@ export function createInternalChatService(
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
 
 
-
   const conversations = createInternalChatConversations(db);
 
   const groups = createInternalChatGroups(db, {
@@ -136,20 +135,7 @@ export function createInternalChatService(
     getAccountByTargetKey,
   });
 
-  /**
-   * Inline error wrapper — replaces the repetitive try/catch + forgeDebug pattern
-   * across all simple delegation methods in this service.
-   */
-  // Transparent passthrough — no-op wrapper retained for API compatibility.
-  // The try/catch was removed: underlying functions handle errors and callers
-  // have their own error handling. The generic `[internal-chat-service] async
-  // function failed` message added no value over the real error.
-  function wrap<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T {
-    return fn as T;
-  }
-
-
-  const registerAgentAccount = admin.registerAgentAccount;
+const registerAgentAccount = admin.registerAgentAccount;
   const registerExternalAccount = admin.registerExternalAccount;
   const updateExternalAccount = admin.updateExternalAccount;
   const deleteExternalAccount = admin.deleteExternalAccount;
@@ -181,137 +167,6 @@ export function createInternalChatService(
 
 
   // === Message Listing ───────────────────────────────────────────────────
-  async function listConversations(input: {
-    agentId: string;
-    unread?: boolean;
-    limit: number;
-  }): Promise<CommunicationProviderConversation[]> {
-  try {
-    const agentAccount = await getRequiredAgentAccount(input.agentId);
-    const conversationRows = await db
-      .select({
-        id: internalChatConversations.id,
-        name: internalChatConversations.name,
-        type: internalChatConversations.type,
-        updatedAt: internalChatConversations.updatedAt,
-      })
-      .from(internalChatConversations)
-      .innerJoin(
-        internalChatConversationMembers,
-        eq(internalChatConversationMembers.conversationId, internalChatConversations.id),
-      )
-      .where(eq(internalChatConversationMembers.accountId, agentAccount.id))
-      .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit).all();
-
-    const conversationIds = conversationRows.map((row) => row.id);
-
-    if (conversationIds.length === 0) {
-      return [];
-    }
-
-    const messageRows = await db
-      .select({
-        conversationId: internalChatMessages.conversationId,
-        messageId: internalChatMessages.id,
-        content: internalChatMessages.content,
-        createdAt: internalChatMessages.createdAt,
-        authorAccountId: internalChatMessages.authorAccountId,
-        authorDisplayName: internalChatAccounts.displayName,
-        unread: sql<number>`case when ${internalChatMessageReads.readAt} is null then 1 else 0 end`,
-      })
-      .from(internalChatMessages)
-      .innerJoin(
-        internalChatMessageReads,
-        and(
-          eq(internalChatMessageReads.messageId, internalChatMessages.id),
-          eq(internalChatMessageReads.agentId, input.agentId),
-        ),
-      )
-      .innerJoin(
-        internalChatAccounts,
-        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
-      )
-      .where(inArray(internalChatMessages.conversationId, conversationIds))
-      .orderBy(desc(internalChatMessages.createdAt));
-
-    const messageIdsToMarkRead = new Set<string>();
-
-    const messagesByConversationId = new Map<string, CommunicationProviderMessage[]>();
-    const unreadCountByConversationId = new Map<string, number>();
-
-    for (const row of messageRows) {
-      unreadCountByConversationId.set(
-        row.conversationId,
-        (unreadCountByConversationId.get(row.conversationId) ?? 0) + (row.unread ? 1 : 0),
-      );
-
-      const existing = messagesByConversationId.get(row.conversationId) ?? [];
-      const shouldIncludeMessage = input.unread ? row.unread === 1 : true;
-
-      if (shouldIncludeMessage && existing.length < 5) {
-        existing.push({
-          messageId: row.messageId,
-          provider: 'internal-chat',
-          authorId: row.authorAccountId,
-          targetKey: row.conversationId,
-          content: row.content,
-          attachments: await readMessageAttachments(row.messageId),
-          unread: row.unread === 1,
-          createdAt: new Date(row.createdAt).toISOString(),
-          authorDisplayName: row.authorDisplayName,
-        });
-
-        if (row.unread === 1) {
-          messageIdsToMarkRead.add(row.messageId);
-        }
-      }
-
-      messagesByConversationId.set(row.conversationId, existing);
-    }
-
-    if (messageIdsToMarkRead.size > 0) {
-      const now = Date.now();
-
-      await db
-        .update(internalChatMessageReads)
-        .set({ readAt: now })
-        .where(and(
-          eq(internalChatMessageReads.agentId, input.agentId),
-          inArray(internalChatMessageReads.messageId, Array.from(messageIdsToMarkRead)),
-        ));
-    }
-
-    const views = await Promise.all(
-      conversationRows.map(async (conversation) => {
-        const participants = await listGroupMembersOrDmPeers(input.agentId, conversation.id);
-        const conversationName = conversation.name
-          ?? (
-            participants.find((participant) => participant.accountId !== agentAccount.id)?.displayName
-            ?? participants[0]?.displayName
-          );
-
-        return {
-          targetKey: conversation.id,
-          provider: 'internal-chat',
-          latestMessageAt: new Date(conversation.updatedAt).toISOString(),
-          unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
-          name: conversationName,
-          participants: buildConversationParticipantNames(participants),
-          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
-        };
-      }),
-    );
-
-    if (!input.unread) {
-      return views;
-    }
-
-    return views.filter((view) => view.unreadCount > 0);
-  } catch (err) {
-    throw err;
-  }
-  }
 
 
   const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
@@ -344,6 +199,7 @@ export function createInternalChatService(
     listGroupMembersOrDmPeersByAccount,
     readMessageAttachments,
   });
+  const listConversations = listing.listConversations;
 
   // ── Account-scoped Conversation Listing ───────────────────────────────────
 
@@ -393,8 +249,6 @@ export function createInternalChatService(
   const listRecentConversations = reads.listRecentConversations;
 
   // === Internal Helpers ────────────────────────────────────────────────────
-
-
 
 
   const guards = createInternalChatGuards(db, {
