@@ -21,7 +21,7 @@ type InternalAgentEntry = {
  * Exported so callers (admin routes, hire/terminate) can create per-agent managers
  * instead of sharing a single global instance.
  */
-function createPerAgentEmailManager(db: Database): AgentEmailManager {
+export function createPerAgentEmailManager(db: Database): AgentEmailManager {
   const integrations = createSystemIntegrationStore(db);
   return createAgentEmailManager({ db, integrations });
 }

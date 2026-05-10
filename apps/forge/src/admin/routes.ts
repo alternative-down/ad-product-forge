@@ -20,7 +20,7 @@ import {
 import type {Database} from '../database/client'
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { loadAgent } from '../agents/agent-loader';
-import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
+import { getInternalAgentRegistry, createPerAgentEmailManager } from '../agents/internal-agent-registry';
 import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentRoleFromAdmin,
@@ -31,6 +31,7 @@ import {
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createAdminReadModel } from './read-model';
+import { createSystemReadModel } from './read-model/system';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
@@ -77,6 +78,11 @@ import {
 import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
 import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp.js';
 import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
+import { registerAgentBaseRoutes, registerAgentStepsRoutes,
+  registerAgentConversationsRoutes, registerAgentMemoryRoutes,
+  registerAgentMetricsRoutes, registerAgentContractRoutes,
+  registerAgentMcpRoutes, registerAgentSchedulesRoutes,
+  registerAgentNotificationsRoutes } from './routes/agents/detail-read.js';
 import { registerAgentReadRoutes } from './routes/agents/read.js';
 import { registerAgentWriteRoutes } from './routes/agents/write.js';
 import { registerAgentOperationRoutes } from './routes/agents/operations.js';
