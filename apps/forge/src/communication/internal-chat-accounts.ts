@@ -134,7 +134,6 @@ export function createInternalChatAccounts(db: Database) {
         message: `registerExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { slug: input.slug, displayName: input.displayName },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -161,7 +160,6 @@ export function createInternalChatAccounts(db: Database) {
         message: `updateExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId: input.accountId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -176,7 +174,6 @@ export function createInternalChatAccounts(db: Database) {
         message: `deleteExternalAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId: input.accountId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -199,43 +196,20 @@ export function createInternalChatAccounts(db: Database) {
         message: `listAccounts failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { excludeAgentId: input.excludeAgentId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
 
   async function getAccountBySlug(slug: string) {
-    try {
-      return await db.query.internalChatAccounts.findFirst({
-        where: eq(internalChatAccounts.slug, slug),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: `getAccountBySlug failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { slug },
-      });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
+    return await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.slug, slug),
+    });
   }
 
   async function getAccountByAgentId(agentId: string) {
-    try {
-      return await db.query.internalChatAccounts.findFirst({
-        where: eq(internalChatAccounts.agentId, agentId),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-accounts',
-        level: 'error',
-        message: `getAccountByAgentId failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId },
-      });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
+    return await db.query.internalChatAccounts.findFirst({
+      where: eq(internalChatAccounts.agentId, agentId),
+    });
   }
 
   async function getAccountByTargetKey(_targetKey: string) {
@@ -366,7 +340,6 @@ export function createInternalChatAccounts(db: Database) {
         message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { accountId, conversationId },
       });
-      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'internal-chat-accounts: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
