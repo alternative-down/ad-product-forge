@@ -1,6 +1,0 @@
-{
-  "title": "test(1796h): expand internal-chat-access.ts coverage from 7 to 16 tests",
-  "body": "## Summary\n\n9 new tests expanding coverage of internal-chat-access.ts from 7 smoke tests to 16. Part of #1796 coverage expansion.\n\n### Functions covered\n\n| Function | New tests | Key scenarios |\n|---|---|---|\n| getRequiredExternalAccount | 2 | ExternalAccountNotFoundError includes accountId, rethrows on db error |\n| getRequiredAccountBySlug | 4 | returns account by slug, throws InternalChatAccountNotFoundError with slug, rethrows on db error |\n| getMessageAttachmentByAccount | 3 | membership guard throws, MessageNotFoundError includes messageId, AttachmentNotFoundError includes attachmentName |\n\n### Key behavioral insights\n\n- `getRequiredAccountBySlug` is entirely new — never had functional tests before\n- `ExternalAccountNotFoundError(accountId, prefix?)` — second arg is optional prefix, not a message\n- `InternalChatAccountNotFoundError(slug)` — single arg, uses slug in default message\n- `MessageNotFoundError` and `AttachmentNotFoundError` carry the respective identifiers as typed properties\n\nAll 16 tests pass.\nPart of #1796 coverage expansion.",
-  "head": "fix/1796h-internal-chat-access-tests",
-  "base": "develop"
-}

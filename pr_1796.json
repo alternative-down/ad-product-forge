@@ -1,6 +1,0 @@
-{
-  "title": "fix(1796): add try/catch + forgeDebug to labels.ts and pull-requests.ts",
-  "body": "## Summary\n\nWraps all 12 API-facing functions in labels.ts and pull-requests.ts with try/catch + forgeDebug error logging, matching the established pattern in schedules/manager.ts.\n\n### Files changed\n\ngithub/ops/labels.ts — 6 functions wrapped:\n- listLabels, createLabel, updateLabel, deleteLabel, addIssueLabels, removeIssueLabels\n\ngithub/ops/pull-requests.ts — 6 functions wrapped:\n- listPullRequests, createPullRequest, getPullRequest, listPullRequestComments, updatePullRequest, mergePullRequest\n\n### Pattern applied\n\nEach function follows the same pattern:\n} catch (error) {\n  forgeDebug({\n    scope: 'github-ops',\n    level: 'error',\n    message: `{functionName} failed: ${error message}`,\n    context: { agentId, repositoryName, owner, ... },\n  });\n  throw error;\n}\n\n### Bug fix included\n\nremoveIssueLabels had two bugs:\n1. Used response.data.map(...) but DELETE returns empty body — .map() threw\n2. Passed labels: string[] instead of GitHub API's required labels: \"wontfix,bug\" (comma-separated string)\n\n\nBoth fixed. All 88 existing ops tests pass.\nFixes #1796.",
-  "head": "fix/1796-github-ops-errordown",
-  "base": "develop"
-}
