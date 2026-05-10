@@ -171,4 +171,33 @@ describe('hireInternalAgent', () => {
     await hireInternalAgent(db as any, input);
     expect(input.internalChat.registerAgentAccount).toHaveBeenCalled();
   });
+
+  it('rolls back DB records when registerAgentAccount fails', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat registration failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat registration failed');
+    // mockDelete is called as part of the rollback transaction
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
+  it('deletes mailbox when registerAgentAccount fails after provisioning', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.emailMailboxes = {
+      isConfigured: vi.fn().mockResolvedValue(true),
+      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', token: 't' } }),
+      deleteMailboxByAddress: vi.fn().mockResolvedValue(undefined),
+    } as any;
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat registration failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat registration failed');
+    expect(input.emailMailboxes.deleteMailboxByAddress).toHaveBeenCalledWith('agent@test.com');
+  });
+
 });
