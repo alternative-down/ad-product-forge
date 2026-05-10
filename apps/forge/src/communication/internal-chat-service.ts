@@ -53,7 +53,6 @@ import type {
 } from "@forge-runtime/core";
 import { forgeDebug } from "@forge-runtime/core";
 
-
 import type {Database} from "../database/schema";
 import {
   internalChatAccounts,
@@ -125,7 +124,6 @@ export function createInternalChatService(
   const getAccountByTargetKey = accounts.getAccountByTargetKey;
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
 
-
   const conversations = createInternalChatConversations(db);
 
   const groups = createInternalChatGroups(db, {
@@ -149,7 +147,6 @@ const registerAgentAccount = admin.registerAgentAccount;
   // ── Conversation Setup ────────────────────────────────────────────────
   const ensureDirectConversation = conversations.ensureDirectConversation;
 
-
   // === Group Management ───────────────────────────────────────────────────
   const createChatGroup = groups.createChatGroup;
 
@@ -165,9 +162,7 @@ const registerAgentAccount = admin.registerAgentAccount;
 
   const listGroupMembersByAccount = groups.listGroupMembersByAccount;
 
-
   // === Message Listing ───────────────────────────────────────────────────
-
 
   const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
@@ -210,7 +205,6 @@ const registerAgentAccount = admin.registerAgentAccount;
   // NOT a duplicate — this is intentional architectural separation.
   const listConversationsByAccount = listing.listConversationsByAccount;
 
-
   // === Message Retrieval ──────────────────────────────────────────────────
   const getMessages = listing.getMessages
 
@@ -242,7 +236,6 @@ const registerAgentAccount = admin.registerAgentAccount;
 
   const updateGroupByAccount = groups.updateGroupByAccount;
 
-
   // === Unread / Recent ────────────────────────────────────────────────────
   const getUnreadSummary = reads.getUnreadSummary;
 
@@ -250,14 +243,12 @@ const registerAgentAccount = admin.registerAgentAccount;
 
   // === Internal Helpers ────────────────────────────────────────────────────
 
-
   const guards = createInternalChatGuards(db, {
     getRequiredAgentAccount,
   });
 
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
-
 
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
