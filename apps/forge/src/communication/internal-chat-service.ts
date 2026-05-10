@@ -317,6 +317,8 @@ export function createInternalChatService(
   const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
 
+  const participants = createInternalChatParticipants(db);
+
   const serviceHelpers = createServiceHelpers({
     db,
     accounts: {
@@ -364,9 +366,17 @@ export function createInternalChatService(
   // === Account-scoped Group & Conversation Operations ──────────────────────
   const archiveConversationByAccount = conversations.archiveConversationByAccount;
 
-  const createExternalChatGroup = groups.createExternalChatGroup;
+  const accountOps = createInternalChatAccountOps(db, {
+    getRequiredAccount,
+    getRequiredExternalAccount,
+    ensureDirectConversation: groups.ensureDirectConversation,
+    listGroupMembersByAccount: groups.listGroupMembersByAccount,
+    getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
+  });
 
-  const ensureDirectConversationByAccount = conversations.ensureDirectConversationByAccount;
+  const createExternalChatGroup = accountOps.createExternalChatGroup;
+
+  const ensureDirectConversationByAccount = accountOps.ensureDirectConversationByAccount;
 
   const addMemberToGroupByAccount = groups.addMemberToGroupByAccount;
 
@@ -391,19 +401,8 @@ export function createInternalChatService(
     getRequiredAgentAccount,
   });
 
-  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
-  const participants = createInternalChatParticipants(db);
 
 
-
-
-  const accountOps = createInternalChatAccountOps(db, {
-    getRequiredAccount,
-    getRequiredExternalAccount,
-    ensureDirectConversation: groups.ensureDirectConversation,
-    listGroupMembersByAccount: groups.listGroupMembersByAccount,
-    getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
-  });
 
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
