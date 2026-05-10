@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { CircleHelp } from 'lucide-react';
-import { AdminButton, AdminInput } from '@/components/admin';
+import { AdminButton } from '@/components/admin/./forms/admin-button';
+import { AdminInput } from '@/components/admin/./forms/admin-input';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SettingsMutation, SettingsQuery } from './settings.types';

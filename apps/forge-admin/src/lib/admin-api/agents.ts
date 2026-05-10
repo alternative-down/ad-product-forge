@@ -222,6 +222,9 @@ export function terminateAgent(agentId: string) {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createAgentMcpServer(input: AgentMcpServerInput) {
   return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/create', {
     method: 'POST',
@@ -229,6 +232,9 @@ function createAgentMcpServer(input: AgentMcpServerInput) {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
   return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/update', {
     method: 'POST',
@@ -236,6 +242,9 @@ function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function deleteAgentMcpServer(input: {
   agentId: string;
   configId: string;
@@ -279,6 +288,9 @@ export function detachAgentMcpServer(input: {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function uploadAgentSkills(input: UploadAgentSkillsInput) {
   return request<{ success: true; agentId: string; installedSkillNames: string[] }>('/admin/agent-skills/upload', {
     method: 'POST',

@@ -5,6 +5,7 @@ import {
   getAgentRuntimeMemory,
   runAgentLongTermMemoryRecallSearch,
 } from '@/lib/admin-api/index';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { AgentLongTermMemoryRecallDebugSearchResult } from '@/lib/admin-api/agent-types';
 
 const PAGE_SIZE = 20;

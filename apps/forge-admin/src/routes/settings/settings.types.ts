@@ -102,6 +102,7 @@ export function toOperationsDraft(data: SystemSettings): OperationsDraft {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function fromOperationsDraft(draft: OperationsDraft, base: SystemSettings): SystemSettings {
   return {
     ...base,

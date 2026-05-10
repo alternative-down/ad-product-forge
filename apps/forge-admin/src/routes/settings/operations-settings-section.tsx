@@ -1,4 +1,4 @@
-import { AdminButton } from '@/components/admin';
+import { AdminButton } from '@/components/admin/./forms/admin-button';
 import type { SettingsMutation, SettingsQuery } from './settings.types';
 import type { OperationsDraft } from './settings.types';
 

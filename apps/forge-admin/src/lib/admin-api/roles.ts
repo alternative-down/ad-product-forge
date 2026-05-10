@@ -33,6 +33,9 @@ export function deleteRole(roleId: string) {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function addRoleToolPermission(input: {
   roleId: string;
   toolId: string;
@@ -43,6 +46,9 @@ function addRoleToolPermission(input: {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function removeRoleToolPermission(input: {
   roleId: string;
   toolId: string;

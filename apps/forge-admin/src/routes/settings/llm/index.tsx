@@ -2,7 +2,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { AdminLoadingState, PageHeader } from '@/components/admin';
+import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
+import { PageHeader } from '@/components/admin/./layout/page-header';
 import {
   getSystemLlm,
   getSystemOauth,
