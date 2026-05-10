@@ -345,10 +345,9 @@ describe('createInternalChatService', () => {
     });
 
     it('returns null when not found', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
-
       const service = createInternalChatService(db);
-      await expect(service.getAccountBySlug('nonexistent')).rejects.toThrow('Account not found');
+      const result = await service.getAccountBySlug('nonexistent');
+      expect(result).toBeNull();
     });
   });
 
@@ -930,10 +929,9 @@ describe('createInternalChatService', () => {
     });
 
     it('returns null when no account belongs to the agent', async () => {
-      db.query.internalChatAccounts.findFirst.mockResolvedValueOnce(null);
-
       const service = createInternalChatService(db);
-      await expect(service.getAccountByAgentId('agent-nonexistent')).rejects.toThrow('Account not found');
+      const result = await service.getAccountByAgentId('agent-nonexistent');
+      expect(result).toBeNull();
     });
   });
 
