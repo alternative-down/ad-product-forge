@@ -218,6 +218,40 @@ export function terminateAgent(agentId: string) {
   });
 }
 
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function createAgentMcpServer(input: AgentMcpServerInput) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function updateAgentMcpServer(input: UpdateAgentMcpServerInput) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/update', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function deleteAgentMcpServer(input: {
+  agentId: string;
+  configId: string;
+  serverId: string;
+}) {
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/delete', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function assignAgentMcpServer(input: {
   agentId: string;
   serverId: string;
@@ -245,6 +279,16 @@ export function detachAgentMcpServer(input: {
   configId: string;
 }) {
   return request<{ success: true; agentId: string; configId: string }>('/admin/agent-mcp/detach', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// fallow-ignore-next-line unused-export
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function uploadAgentSkills(input: UploadAgentSkillsInput) {
+  return request<{ success: true; agentId: string; installedSkillNames: string[] }>('/admin/agent-skills/upload', {
     method: 'POST',
     body: JSON.stringify(input),
   });
