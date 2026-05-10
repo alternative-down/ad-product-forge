@@ -342,6 +342,22 @@ export function createAgentScheduleStore(db: Database) {
       throw err;
     }
   }
+  async function deleteHeartbeatSchedule(agentId: string) {
+    try {
+      await db
+        .delete(agentSchedules)
+        .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, 'heartbeat')));
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deleteHeartbeatSchedule DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
+      });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
+  }
+
 
   async function setNextTriggerAt(scheduleId: string, nextTriggerAt: number | null) {
     try {
@@ -440,6 +456,7 @@ export function createAgentScheduleStore(db: Database) {
     updateOwnedSchedule,
     deleteAgentSchedule,
     deactivateSchedule,
+    deleteHeartbeatSchedule,
     setNextTriggerAt,
     markTriggered,
   };
