@@ -59,6 +59,7 @@ const mockGroups = vi.hoisted(() => ({
   listGroupMembersByAccount: vi.fn(),
   ensureDirectConversation: vi.fn(),
   getRequiredGroupForAccount: vi.fn(),
+  createExternalChatGroup: vi.fn(),
 }));
 
 const mockAccountOps = vi.hoisted(() => ({
@@ -345,7 +346,6 @@ describe('createInternalChatService', () => {
 
       const service = createInternalChatService(db);
       const result = await service.getAccountBySlug('nonexistent');
-
       expect(result).toBeNull();
     });
   });
@@ -905,7 +905,6 @@ describe('createInternalChatService', () => {
 
       const service = createInternalChatService(db);
       const result = await service.getAccountBySlug('nonexistent');
-
       expect(result).toBeNull();
     });
   });
@@ -934,7 +933,6 @@ describe('createInternalChatService', () => {
 
       const service = createInternalChatService(db);
       const result = await service.getAccountByAgentId('agent-nonexistent');
-
       expect(result).toBeNull();
     });
   });

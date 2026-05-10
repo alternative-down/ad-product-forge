@@ -154,10 +154,10 @@ export function createInternalChatService(
   const updateExternalAccount = admin.updateExternalAccount;
   const deleteExternalAccount = admin.deleteExternalAccount;
   const deleteAgentAccount = admin.deleteAgentAccount;
-  const listAccounts = accounts.listAccounts.bind(accounts);
-  const getAccountBySlug = accounts.getAccountBySlug.bind(accounts);
-  const getAccountByAgentId = accounts.getAccountByAgentId.bind(accounts);
-  const getConversationForAgent = accounts.getConversationForAgent.bind(accounts);
+  const listAccounts = admin.listAccounts;
+  const getAccountBySlug = admin.getAccountBySlug;
+  const getAccountByAgentId = admin.getAccountByAgentId;
+  const getConversationForAgent = admin.getConversationForAgent;
 
   // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
@@ -316,6 +316,7 @@ export function createInternalChatService(
 
   const listGroupMembersOrDmPeers = reads.listGroupMembersOrDmPeers;
   const listGroupMembersOrDmPeersByAccount = reads.listGroupMembersOrDmPeersByAccount;
+
   const participants = createInternalChatParticipants(db);
 
   const serviceHelpers = createServiceHelpers({
@@ -399,13 +400,6 @@ export function createInternalChatService(
   const guards = createInternalChatGuards(db, {
     getRequiredAgentAccount,
   });
-
-  // ── Service Helpers (extracted to internal-chat-service-helpers.ts) ──
-
-
-
-
-
 
   const unread = createInternalChatUnread(db);
   reads.init({ unread, participants, listConversations });
