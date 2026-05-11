@@ -1,10 +1,7 @@
 import { z } from 'zod';
 
-const createInvestmentSchema = z.object({
-  amount: z.number().positive(),
-  description: z.string().min(1),
-});
-
+// createPayableSchema is tested by schemas.test.ts (agent_contract/system_expense variants).
+// Note: finance/write.ts uses a separate local schema (single/recurring variants) instead.
 export const createPayableSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('agent_contract'),
@@ -19,13 +16,3 @@ export const createPayableSchema = z.discriminatedUnion('kind', [
     category: z.string().min(1),
   }),
 ]);
-
-const ledgerEntryActionSchema = z.object({
-  entryId: z.string().min(1),
-  action: z.enum(['approve', 'cancel']),
-});
-
-const recurringPayableStatusSchema = z.object({
-  payableId: z.string().min(1),
-  isActive: z.boolean(),
-});
