@@ -33,12 +33,11 @@ import type { MessageManager } from './agent-runner-messages';
 import type { LoopDetector } from './agent-runner-loop-detector';
 
 import { delay, withTimeout } from '../utils/async';
-import { buildStepSystemPrompt } from './agent-runner-control-directives';
+import { buildStepSystemPrompt, extractRunnerControlDirectiveFromIteration } from './agent-runner-control-directives';
 import {
-  extractRunnerControlDirectiveFromIteration,
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
-} from './agent-runner-helpers';
+} from './agent-runner-iteration-helpers';
 import {
   isStaleRun,
   advanceGenerateToken,
