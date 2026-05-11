@@ -3,6 +3,7 @@ import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
+  internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
@@ -385,6 +386,26 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         .all();
 
       const messageIdsToMarkRead = new Set<string>();
+      const messageIds = messageRows.map((row) => (row as { messageId: string }).messageId);
+
+      // Batch-fetch all attachments in a single query instead of N queries
+      const attachmentsByMessageId = new Map<string, unknown[]>();
+      if (messageIds.length > 0) {
+        const attachmentRows = await db.query.internalChatMessageAttachments.findMany({
+          where: inArray(internalChatMessageAttachments.messageId, messageIds),
+          orderBy: (table, { asc }) => [asc(table.messageId), asc(table.attachmentIndex)],
+        });
+        for (const row of attachmentRows) {
+          const existing = attachmentsByMessageId.get(row.messageId) ?? [];
+          existing.push({
+            name: row.name,
+            data: new Uint8Array(row.data),
+            contentType: row.contentType ?? null,
+            sizeBytes: row.sizeBytes,
+          });
+          attachmentsByMessageId.set(row.messageId, existing);
+        }
+      }
 
       const result = [];
       for (const row of messageRows as Array<{ messageId: string; unread: number; replyToMessageId: string | null }>) {
@@ -394,7 +415,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           authorId: (row as { authorAccountId?: string }).authorAccountId ?? '',
           targetKey: input.conversationKey,
           content: (row as { content?: string }).content ?? '',
-          attachments: await deps.readMessageAttachments(row.messageId),
+          attachments: attachmentsByMessageId.get(row.messageId) ?? [],
           unread: row.unread === 1,
           createdAt: new Date((row as { createdAt?: number }).createdAt ?? 0).toISOString(),
           authorDisplayName: (row as { authorDisplayName?: string }).authorDisplayName ?? '',
@@ -489,6 +510,27 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         .offset(input.offset)
         .all();
 
+      const messageIds = messageRows.map((row) => (row as { messageId: string }).messageId);
+
+      // Batch-fetch all attachments in a single query instead of N queries
+      const attachmentsByMessageId = new Map<string, unknown[]>();
+      if (messageIds.length > 0) {
+        const attachmentRows = await db.query.internalChatMessageAttachments.findMany({
+          where: inArray(internalChatMessageAttachments.messageId, messageIds),
+          orderBy: (table, { asc }) => [asc(table.messageId), asc(table.attachmentIndex)],
+        });
+        for (const row of attachmentRows) {
+          const existing = attachmentsByMessageId.get(row.messageId) ?? [];
+          existing.push({
+            name: row.name,
+            data: new Uint8Array(row.data),
+            contentType: row.contentType ?? null,
+            sizeBytes: row.sizeBytes,
+          });
+          attachmentsByMessageId.set(row.messageId, existing);
+        }
+      }
+
       const result = [];
       for (const row of messageRows as Array<{ messageId: string; replyToMessageId: string | null }>) {
         result.push({
@@ -497,7 +539,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           authorId: (row as { authorAccountId?: string }).authorAccountId ?? '',
           targetKey: input.conversationKey,
           content: (row as { content?: string }).content ?? '',
-          attachments: await deps.readMessageAttachments(row.messageId),
+          attachments: attachmentsByMessageId.get(row.messageId) ?? [],
           unread: false,
           createdAt: new Date((row as { createdAt?: number }).createdAt ?? 0).toISOString(),
           authorDisplayName: (row as { authorDisplayName?: string }).authorDisplayName ?? '',
