@@ -21,6 +21,17 @@ function createMockInternalChat() {
     updateExternalAccount: vi.fn().mockResolvedValue({ accountId: 'acc-upd', slug: 'alice-upd', displayName: 'Alice Updated' }),
     deleteExternalAccount: vi.fn().mockResolvedValue({ success: true }),
     createExternalChatGroup: vi.fn().mockResolvedValue({ conversationId: 'grp-001', conversationKey: 'conv-grp-001' }),
+    createExternalChatGroupWithMembers: vi.fn().mockResolvedValue({
+      groupId: 'conv_1234567890_abc',
+      conversationKey: 'conv_1234567890_abc',
+      name: 'Team Alpha',
+      creatorMember: { participantId: 'acc-001', participantName: 'Account 001', role: 'admin' },
+      members: [
+        { participantId: 'acc-001', role: 'admin' },
+        { participantId: 'acc-002', role: 'normal' },
+        { participantId: 'acc-003', role: 'normal' },
+      ],
+    }),
     listConversationsByAccount: vi.fn().mockResolvedValue([
       {
         targetKey: 'conv-001', provider: 'internal-chat', latestMessageAt: '2024-01-01T10:00:00Z',
@@ -273,15 +284,16 @@ describe('registerInternalChatRoutes', () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/create');
     const body = JSON.stringify({ accountId: 'acc-001', name: 'Team Alpha', memberKeys: ['acc-002', 'acc-003'] });
     const res = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: body });
-    // createExternalChatGroup called (dm branch unreachable)
-    expect(mockChat.createExternalChatGroup).toHaveBeenCalledTimes(1);
-    const call = mockChat.createExternalChatGroup.mock.calls[0][0];
+    // createExternalChatGroupWithMembers called in a single transaction (replaces separate createExternalChatGroup + addMemberToGroupByAccount)
+    expect(mockChat.createExternalChatGroupWithMembers).toHaveBeenCalledTimes(1);
+    const call = mockChat.createExternalChatGroupWithMembers.mock.calls[0][0];
     expect(call.accountId).toBe('acc-001');
     expect(call.name).toBe('Team Alpha');
     expect(call.conversationKey).toMatch(/^conv_[0-9]+_[a-z0-9]+$/);
-    // addMemberToGroupByAccount called twice (once per member)
-    expect(mockChat.addMemberToGroupByAccount).toHaveBeenCalledTimes(2);
-    expect(mockChat.addMemberToGroupByAccount).toHaveBeenCalledWith(expect.objectContaining({ accountId: 'acc-001', role: 'normal' }));
+    expect(call.memberAccountIds).toEqual(['acc-002', 'acc-003']);
+    // Old separate methods NOT called (atomic group creation)
+    expect(mockChat.createExternalChatGroup).not.toHaveBeenCalled();
+    expect(mockChat.addMemberToGroupByAccount).not.toHaveBeenCalled();
     // ensureDirectConversationByAccount is NOT called
     expect(mockChat.ensureDirectConversationByAccount).not.toHaveBeenCalled();
     expect(res.status).toBe(200);

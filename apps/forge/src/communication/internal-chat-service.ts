@@ -225,6 +225,7 @@ const registerAgentAccount = admin.registerAgentAccount;
   });
 
   const createExternalChatGroup = accountOps.createExternalChatGroup;
+  const createExternalChatGroupWithMembers = accountOps.createExternalChatGroupWithMembers;
 
   const ensureDirectConversationByAccount = accountOps.ensureDirectConversationByAccount;
 
@@ -296,6 +297,7 @@ const registerAgentAccount = admin.registerAgentAccount;
     sendMessage,
     getMessageAttachmentByAccount,
     createExternalChatGroup,
+    createExternalChatGroupWithMembers,
     ensureDirectConversationByAccount,
     addMemberToGroupByAccount,
     updateMemberRoleByAccount,

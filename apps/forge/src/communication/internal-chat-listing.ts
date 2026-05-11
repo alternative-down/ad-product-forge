@@ -143,22 +143,47 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           ));
       }
 
-      return Promise.all(
-        conversationRows.map(async (conversation) => {
-          const participants = await deps.listGroupMembersOrDmPeers(input.agentId, conversation.id);
-          const conversationName = conversation.name
-            ?? (participants.find((p) => p.accountId !== agentAccount.id)?.displayName ?? participants[0]?.displayName);
-          return {
-            targetKey: conversation.id,
-            provider: 'internal-chat',
-            latestMessageAt: new Date(conversation.updatedAt).toISOString(),
-            unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
-            name: conversationName ?? '',
-            participants: buildConversationParticipantNames(participants),
-            messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
-          };
-        }),
-      );
+      // Batch-load all members for all conversations (was N+1 per conversation)
+      const memberRows = await db.query.internalChatConversationMembers.findMany({
+        where: inArray(internalChatConversationMembers.conversationId, conversationIds),
+        with: {
+          account: true,
+        },
+      });
+      const membersByConversationId = new Map<string, Array<{
+        accountId: string;
+        displayName: string;
+        role: string;
+        agentId: string | null;
+        slug: string;
+      }>>();
+      for (const row of memberRows) {
+        const entry: { accountId: string; displayName: string; role: string; agentId: string | null; slug: string } = {
+          accountId: row.accountId,
+          displayName: row.displayName,
+          role: row.role,
+          agentId: row.agentId,
+          slug: row.slug,
+        };
+        const existing = membersByConversationId.get(row.conversationId) ?? [];
+        existing.push(entry);
+        membersByConversationId.set(row.conversationId, existing);
+      }
+
+      return conversationRows.map((conversation) => {
+        const participants = membersByConversationId.get(conversation.id) ?? [];
+        const conversationName = conversation.name
+          ?? (participants.find((p) => p.accountId !== agentAccount.id)?.displayName ?? participants[0]?.displayName);
+        return {
+          targetKey: conversation.id,
+          provider: 'internal-chat',
+          latestMessageAt: new Date(conversation.updatedAt).toISOString(),
+          unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
+          name: conversationName ?? '',
+          participants: buildConversationParticipantNames(participants),
+          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
+        };
+      });
     } catch (err) {
       forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] listConversations failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
@@ -237,22 +262,47 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         messagesByConversationId.set(row.conversationId, existing);
       }
 
-      return Promise.all(
-        conversationRows.map(async (conversation) => {
-          const participants = await deps.listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);
-          const conversationName = conversation.name
-            ?? (participants.find((p) => p.accountId !== input.accountId)?.displayName ?? participants[0]?.displayName);
-          return {
-            targetKey: conversation.id,
-            provider: 'internal-chat',
-            latestMessageAt: new Date(conversation.updatedAt).toISOString(),
-            unreadCount: 0,
-            name: conversationName ?? '',
-            participants: buildConversationParticipantNames(participants),
-            messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
-          };
-        }),
-      );
+      // Batch-load all members for all conversations (was N+1 per conversation)
+      const memberRows = await db.query.internalChatConversationMembers.findMany({
+        where: inArray(internalChatConversationMembers.conversationId, conversationIds),
+        with: {
+          account: true,
+        },
+      });
+      const membersByConversationId = new Map<string, Array<{
+        accountId: string;
+        displayName: string;
+        role: string;
+        agentId: string | null;
+        slug: string;
+      }>>();
+      for (const row of memberRows) {
+        const entry: { accountId: string; displayName: string; role: string; agentId: string | null; slug: string } = {
+          accountId: row.accountId,
+          displayName: row.displayName,
+          role: row.role,
+          agentId: row.agentId,
+          slug: row.slug,
+        };
+        const existing = membersByConversationId.get(row.conversationId) ?? [];
+        existing.push(entry);
+        membersByConversationId.set(row.conversationId, existing);
+      }
+
+      return conversationRows.map((conversation) => {
+        const participants = membersByConversationId.get(conversation.id) ?? [];
+        const conversationName = conversation.name
+          ?? (participants.find((p) => p.accountId !== input.accountId)?.displayName ?? participants[0]?.displayName);
+        return {
+          targetKey: conversation.id,
+          provider: 'internal-chat',
+          latestMessageAt: new Date(conversation.updatedAt).toISOString(),
+          unreadCount: 0,
+          name: conversationName ?? '',
+          participants: buildConversationParticipantNames(participants),
+          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
+        };
+      });
     } catch (err) {
       forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] listConversationsByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
