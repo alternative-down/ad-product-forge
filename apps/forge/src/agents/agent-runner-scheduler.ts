@@ -344,7 +344,6 @@ export function createScheduler(
   // ─── Healthcheck ────────────────────────────────────────────────────────────
 
   /**
-   * @deprecated Use shouldRunHealthcheckAt() + runHealthcheckExposed() externally.
    * startHealthcheck is a no-op when using external timer management.
    */
   function startHealthcheck() {
@@ -363,9 +362,7 @@ export function createScheduler(
   /**
    * External healthcheck interface.
    * shouldRunHealthcheckAt: returns true if a healthcheck should run now.
-   * runHealthcheckExposed: executes the healthcheck logic (requires callbacks set via start()).
    * getHealthcheckIntervalMs: returns the interval in ms.
-   * getBackoffMs: returns the current backoff delay in ms.
    */
   function shouldRunHealthcheckAt(now: number): boolean {
     if (!healthcheckNextAt) return false;
@@ -376,65 +373,7 @@ export function createScheduler(
     return RUNNER_HEALTHCHECK_INTERVAL_MS;
   }
 
-  async function runHealthcheckExposed(
-    getExecutionState: (runtimeId: string) => Promise<'idle' | 'running' | 'absent'>,
-    onRunnerIdle: () => Promise<void>,
-    beginRunFn: (opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>,
-    getPendingCount: () => number,
-  ) {
-    if (stopped) {
-      return;
-    }
 
-    try {
-      const executionState = await withTimeout(
-        getExecutionState(deps.runtimeId),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state lookup timed out for ${deps.runtimeId}`,
-      );
-
-      if (executionState === 'idle') {
-        if (!isLocallyIdle()) {
-          return;
-        }
-
-        // Advance next healthcheck window
-        healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
-
-        if (getPendingCount() > 0) {
-          await beginRunFn({
-            reloadRuntime: false,
-            wakeStartedAt: Date.now(),
-            markRunning: true,
-          });
-          return;
-        }
-
-        await onRunnerIdle();
-        return;
-      }
-
-      if (startingRun) {
-        const startingRunAgeMs =
-          startingRunStartedAt === null ? 0 : Date.now() - startingRunStartedAt;
-
-        if (startingRunAgeMs >= STARTING_RUN_TIMEOUT_MS) {
-          startNewRunEpoch();
-          startingRun = false;
-          startingRunStartedAt = null;
-          activeRunId = null;
-        }
-      }
-
-      if (startingRun || executing || timer) {
-        return;
-      }
-
-      await queueNextStep();
-    } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'runHealthcheck failed', context: { runtimeId: deps.runtimeId, error } });
-    }
-  }
 
   // ─── Step orchestration ─────────────────────────────────────────────────────
 
@@ -632,7 +571,6 @@ export function createScheduler(
     // Healthcheck
     startHealthcheck,
     clearHealthcheck,
-    runHealthcheck: runHealthcheckExposed,
     shouldRunHealthcheckAt,
     getHealthcheckIntervalMs,
     scheduleAt,
