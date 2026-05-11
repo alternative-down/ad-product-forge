@@ -30,10 +30,7 @@ async function fundCompanyCash() {
     description: input.description ?? 'Manual company cash funding',
   });
 
-  const balanceUsd = await companyCash.getCurrentBalanceUsd();
-
   forgeDebug({ scope: 'fund-cash', level: 'info', message: 'Added company cash', context: { amountUsd: input.amountUsd } });
-  // Balance logged above via forgeDebug
 }
 
 fundCompanyCash().catch((error) => {
