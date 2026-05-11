@@ -70,7 +70,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       throw new Error('Email provider is disposed');
     }
     if (client) return client;
-    if (connectPromise) return connectPromise;
+    if (connectPromise) return await connectPromise;
 
     connectPromise = (async () => {
       const nextClient = new ImapFlow({

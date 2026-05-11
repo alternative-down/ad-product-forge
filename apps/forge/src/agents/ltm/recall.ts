@@ -627,7 +627,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async readCurrentIndexStamp() {
-    return this.persistenceStore.readRecallIndexStamp();
+    return await this.persistenceStore.readRecallIndexStamp();
   }
 
   private async searchWorkspace(
@@ -831,7 +831,7 @@ export class AgentLongTermMemoryRecall {
     score: number;
     metadata?: Record<string, unknown>;
   }>> {
-    return this.runTrackedRecallOperation<Array<{
+    return await this.runTrackedRecallOperation<Array<{
       id: string;
       text: string;
       score: number;

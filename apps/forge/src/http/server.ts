@@ -127,7 +127,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
     if (url.pathname.startsWith('/admin/')) {
       if (!config.adminApiKey) {
         if (config.allowInsecureLocal) {
-          // eslint-disable-next-line no-console
+           
           console.warn(
             '[forge-http] WARNING: /admin/* served without authentication.'
             + ' Set FORGE_ADMIN_API_KEY to protect admin routes.',

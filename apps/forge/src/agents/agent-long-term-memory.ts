@@ -704,7 +704,7 @@ export function createAgentLongTermMemory(input: {
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
-      return writeCheckpointPackage(payload);
+      return await writeCheckpointPackage(payload);
     },
 
     async onAgentIdle() {

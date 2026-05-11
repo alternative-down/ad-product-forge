@@ -108,5 +108,5 @@ export async function runInternalTermination(db: Database, input: {
   schedules: RunInternalHiringInput['schedules'];
   internalChat: RunInternalHiringInput['internalChat'];
 }) {
-  return terminateInternalAgent(db, input);
+  return await terminateInternalAgent(db, input);
 }
