@@ -350,3 +350,362 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
 
 
 
+
+// =============================================================================
+// Critical path: withTimeout — timeout race and behavior
+// =============================================================================
+
+// =============================================================================
+// Critical path: withTimeout — timeout race behavior via runTrackedRecallOperation
+// =============================================================================
+describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
+  it('resolves when the operation resolves within timeout', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    const result = await (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
+      'test.op',
+      Promise.resolve('fast-result'),
+      5000,
+      'timed out',
+    );
+    expect(result).toBe('fast-result');
+  });
+
+  it('rejects when the operation rejects within timeout', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    await expect(
+      (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
+        'test.op',
+        Promise.reject(new Error('boom')),
+        5000,
+        'timed out',
+      ),
+    ).rejects.toThrow('boom');
+  });
+});
+
+// =============================================================================
+// Critical path: resolveRecallConfig — required settings throw
+// =============================================================================
+describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
+  it('throws when readRuntimeMemorySettings is not provided', async () => {
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+    }) as never;
+
+    await expect(
+      (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig(),
+    ).rejects.toThrow('LTM recall requires runtime memory settings');
+  });
+
+  it('throws when readRuntimeMemorySettings returns null', async () => {
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      readRuntimeMemorySettings: vi.fn().mockResolvedValue(null),
+    }) as never;
+
+    await expect(
+      (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig(),
+    ).rejects.toThrow('LTM recall requires runtime memory settings');
+  });
+
+  it('resolves config when readRuntimeMemorySettings returns valid settings', async () => {
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      readRuntimeMemorySettings: vi.fn().mockResolvedValue({
+        ltmRecallSearchMode: 'hybrid' as const,
+        ltmRecallWorkspaceTopK: 5,
+        ltmRecallGraphTopK: 3,
+        ltmRecallGraphThreshold: 0.5,
+        ltmRecallGraphRandomWalkSteps: 2,
+        ltmRecallGraphIncludeSources: true,
+        ltmRecallScoreThreshold: 0.3,
+        ltmRecallDocumentCount: 10,
+      }),
+    }) as never;
+
+    const config = await (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig();
+    expect(config).toMatchObject({
+      searchMode: 'hybrid',
+      scoreThreshold: 0.3,
+      documentCount: 10,
+      graphRandomWalkSteps: 2,
+      graphIncludeSources: true,
+    });
+  });
+});
+
+// =============================================================================
+// Critical path: searchWorkspace — SQLite no-table graceful degradation
+// =============================================================================
+describe('AgentLongTermMemoryRecall searchWorkspace', () => {
+  it('returns empty results when retrieval throws "no such table"', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+      search: vi.fn().mockRejectedValue(new Error('SQLITE_ERROR: no such table: documents')),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
+      'test query',
+      { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' },
+    );
+    expect(result).toEqual({ formatted: '', results: [] });
+  });
+
+  it('rethrows non-SQLite errors from retrieval.search', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+      search: vi.fn().mockRejectedValue(new Error('disk full')),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    await expect(
+      (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace('test', {
+        topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid',
+      }),
+    ).rejects.toThrow('disk full');
+  });
+
+  it('returns empty results when retrieval returns zero results', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+      search: vi.fn().mockResolvedValue([]),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
+      'test', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' },
+    );
+    expect(result).toEqual({ formatted: '', results: [] });
+  });
+});
+
+// =============================================================================
+// Critical path: searchGraph — error swallowing (returns error object, no throw)
+// =============================================================================
+describe('AgentLongTermMemoryRecall searchGraph', () => {
+  it('returns error object with hit=false when graph search throws', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+      search: vi.fn().mockResolvedValue([]),
+      searchGraph: vi.fn().mockRejectedValue(new Error('graph service unavailable')),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
+      'test query',
+      [],
+      { topK: 3, threshold: 0.5, randomWalkSteps: 2, includeSources: false, contextResults: [] },
+    );
+    expect(result).toMatchObject({
+      hit: false,
+      score: null,
+      context: '',
+      relevantContextRaw: null,
+      sourcesCount: 0,
+      sourcesJson: null,
+      rawJson: null,
+      error: 'graph service unavailable',
+    });
+  });
+
+  it('returns successful result when graph search succeeds', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+      search: vi.fn().mockResolvedValue([]),
+      searchGraph: vi.fn().mockResolvedValue({
+        hit: true,
+        score: 0.87,
+        context: 'Relevant graph context',
+        relevantContextRaw: 'raw context',
+        sourcesCount: 2,
+        sourcesJson: '[{"id":"s1"},{"id":"s2"}]',
+        rawJson: '{"raw":true}',
+      }),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
+      'test query',
+      [],
+      { topK: 3, threshold: 0.5, randomWalkSteps: 2, includeSources: false, contextResults: [] },
+    );
+    expect(result).toMatchObject({
+      hit: true,
+      score: 0.87,
+      context: 'Relevant graph context',
+      sourcesCount: 2,
+      error: null,
+    });
+  });
+});
