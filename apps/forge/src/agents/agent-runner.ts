@@ -18,45 +18,23 @@ import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
 import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
 
 import {
-  AGENT_CONTEXT_WARNING_CHAR_LIMIT,
-  WORKING_MEMORY_WARNING_CHAR_LIMIT,
-  AGENT_CONTEXT_FILE_PATH,
-} from '../utils/constants';
-
-import {
-  delay,
-  withTimeout,
-  buildIterationLoopSignature,
   serializeError,
-  serializeUnknown,
   formatAbsentExecutionError,
-  extractAbsentErrorDetails,
-  buildStepSystemPrompt,
   extractRunnerControlDirective,
-  extractRunnerControlDirectiveFromIteration,
-  buildRecallStepFromIteration,
-  didIterationProduceVisibleAssistantText,
-  collectStepTextParts,
-  hasExactControlDirective,
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
-import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, nextBackoff, resetBackoffState, calculateDelayMs } from './agent-runner-state';
-import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
-import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
+import { isStaleRun, advanceStepEpoch, advanceGenerateToken } from './agent-runner-state';
+import { calculateBudgetDelayMs } from './agent-runner-delay';
+import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
-  createGenerateTimeoutGuard,
-  touchGenerateTimeout,
-  clearGenerateTimeout,
-  startGenerateAttempt,
-  finishGenerateAttempt,
-  type GenerateTimeoutHandle,
 } from './agent-runner-generate';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
+import { executeStep as executeStepImpl } from './agent-runner-execute';
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
