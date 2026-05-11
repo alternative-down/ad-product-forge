@@ -68,7 +68,7 @@ function makeMockDb(): Database {
   } as unknown as Database;
 }
 
-function makeInput(db: Database, opts?: { githubApps?: any; skills?: any }) {
+function makeInput(db: Database, opts?: { githubApps?: unknown; skills?: any }) {
   return {
     db,
     workspaceBasePath: '/tmp/test-workspace',
@@ -118,7 +118,7 @@ describe('registerAgentWriteOpsRoutes', () => {
   describe('POST /admin/agent/reload', () => {
     it('returns success with agentId after loading', async () => {
       const loadAgent = vi.fn().mockResolvedValue({ runner: { forceIdle: vi.fn() } });
-      const registry = new Map<string, any>();
+      const registry = new Map<string, unknown>();
       const mockAdd = vi.fn();
       registry.add = mockAdd;
       const db = makeMockDb();

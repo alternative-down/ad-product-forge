@@ -166,7 +166,7 @@ describe('discord-account — new coverage', () => {
       const inboundHandler = vi.fn();
       (provider as any).onMessage(inboundHandler);
       const mc = getMockClient();
-      const handler = mc.on.mock.calls.find((c: any[]) => c[0] === 'messageCreate')?.[1];
+      const handler = mc.on.mock.calls.find((c: unknown[]) => c[0] === 'messageCreate')?.[1];
       expect(handler).toBeDefined();
       const ownMsg = {
         author: { id: 'bot-id', username: 'test-bot', globalName: 'Test Bot', dmChannel: null },
@@ -187,7 +187,7 @@ describe('discord-account — new coverage', () => {
       const inboundHandler = vi.fn();
       (strictProvider as any).onMessage(inboundHandler);
       const mc = getMockClient();
-      const handler = mc.on.mock.calls.find((c: any[]) => c[0] === 'messageCreate')?.[1];
+      const handler = mc.on.mock.calls.find((c: unknown[]) => c[0] === 'messageCreate')?.[1];
       const msg = {
         author: { id: 'other', username: 'other', globalName: 'Other', dmChannel: null },
         content: 'hello', channelId: 'ch-123',

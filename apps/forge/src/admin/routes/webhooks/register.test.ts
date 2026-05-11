@@ -53,9 +53,9 @@ function createMockStore() {
 
 // --- HTTP server mock ---
 function createMockHttpServer() {
-  const routes: any[] = [];
+  const routes: unknown[] = [];
   return {
-    registerRoute: vi.fn((route: any) => routes.push(route)),
+    registerRoute: vi.fn((route: unknown) => routes.push(route)),
     _routes: routes,
   };
 }
@@ -66,7 +66,7 @@ function parseBody(response: { status: number; body: string }) {
 }
 
 function getHandler(httpServer: ReturnType<typeof createMockHttpServer>, method: string, path: string) {
-  const match = httpServer._routes.find((r: any) => r.method === method && r.path === path);
+  const match = httpServer._routes.find((r: unknown) => r.method === method && r.path === path);
   if (!match) throw new Error(`Route ${method} ${path} not found in mock server`);
   return match.handler;
 }
@@ -97,35 +97,35 @@ describe('registerWebhookAdminRoutes', () => {
   describe('route registration', () => {
     it('registers POST /admin/webhooks/route/create', () => {
       registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: any) => r.path === '/admin/webhooks/route/create');
+      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/route/create');
       expect(route).toBeDefined();
       expect(route.method).toBe('POST');
     });
 
     it('registers GET /admin/webhooks/routes', () => {
       registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: any) => r.path === '/admin/webhooks/routes');
+      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/routes');
       expect(route).toBeDefined();
       expect(route.method).toBe('GET');
     });
 
     it('registers POST /admin/webhooks/route/deactivate', () => {
       registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: any) => r.path === '/admin/webhooks/route/deactivate');
+      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/route/deactivate');
       expect(route).toBeDefined();
       expect(route.method).toBe('POST');
     });
 
     it('registers GET /admin/webhooks/events', () => {
       registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: any) => r.path === '/admin/webhooks/events');
+      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/events');
       expect(route).toBeDefined();
       expect(route.method).toBe('GET');
     });
 
     it('registers POST /admin/webhooks/event/mark-processed', () => {
       registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: any) => r.path === '/admin/webhooks/event/mark-processed');
+      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/event/mark-processed');
       expect(route).toBeDefined();
       expect(route.method).toBe('POST');
     });

@@ -24,14 +24,14 @@ vi.mock('../../database/schema', () => ({
 // Drizzle query builder is a chain of calls that returns new query builder objects.
 // Each method returns the new object. We simulate this with a chain factory.
 function makeChain(returnValue: unknown = undefined) {
-  const chain: any = {};
+  const chain: unknown = {};
   const methods = ['from', 'where', 'limit', 'orderBy', 'set', 'values'];
   methods.forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(returnValue !== undefined ? returnValue : chain);
   });
   // Special: where returns a chain that resolves the promise
   chain._resolveWhere = (val: unknown) => {
-    const whereChain: any = {};
+    const whereChain: unknown = {};
     const chainMethods = ['limit', 'orderBy'];
     chainMethods.forEach((m) => {
       whereChain[m] = vi.fn().mockReturnValue(whereChain);
