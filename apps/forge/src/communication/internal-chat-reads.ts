@@ -6,7 +6,6 @@
  * Uses proper dependency injection — all deps required at construction time.
  */
 
-import type {Database} from '../database/client'
 import { createInternalChatUnread } from './internal-chat-unread';
 import { createInternalChatParticipants } from './internal-chat-participants';
 
@@ -28,7 +27,6 @@ export interface InternalChatReadsStore {
  * No mutable state — deps are immutable after construction.
  */
 export function createInternalChatReads(
-  _db: Database,
   deps: InternalChatReadsDeps,
 ): InternalChatReadsStore {
   async function getUnreadSummary(agentId: string) {
