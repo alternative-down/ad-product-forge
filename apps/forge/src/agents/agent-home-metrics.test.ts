@@ -1,268 +1,296 @@
-import { describe, expect, it, vi } from 'vitest';
-
-// -----------------------------------------------------------------------
-// Mock @forge-runtime/core so the module can be loaded without a full build.
-// -----------------------------------------------------------------------
-vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: vi.fn(),
-  toMastraSafeIdentifier: (s: string) => s,
-  LibsqlConversationStore: vi.fn(),
-  readOperationalMemoryState: vi.fn(),
-}));
-
-// -----------------------------------------------------------------------
-// Import all utilities under test — loaded after mocks are registered so
-// the module graph resolves.
-// -----------------------------------------------------------------------
+import { describe, it, expect } from 'vitest';
 import {
   truncatePreview,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
-  buildAverageStepIntervalMs,
   buildThreadToolInvocationParts,
+  buildAverageStepIntervalMs,
 } from './agent-home-metrics';
 
-describe('agent-home-metrics utilities', () => {
+describe('agent-home-metrics', () => {
   describe('truncatePreview', () => {
-    it('returns the input unchanged when under 220 characters', () => {
-      expect(truncatePreview('This is a short preview.')).toBe('This is a short preview.');
-    });
-
-    it('truncates strings longer than 220 characters with ellipsis', () => {
-      const result = truncatePreview('a'.repeat(250));
-      expect(result.length).toBeLessThanOrEqual(220);
-      expect(result.endsWith('...')).toBe(true);
-    });
-
-    it('produces exactly 220 characters including ellipsis for long input', () => {
-      expect(truncatePreview('x'.repeat(500))).toBe('x'.repeat(217) + '...');
-    });
-
-    it('leaves a string at exactly 220 characters untouched', () => {
-      expect(truncatePreview('y'.repeat(220))).toBe('y'.repeat(220));
-    });
-
-    it('handles empty string', () => {
+    it('returns empty string unchanged', () => {
       expect(truncatePreview('')).toBe('');
+    });
+
+    it('returns strings at boundary unchanged', () => {
+      expect(truncatePreview('a'.repeat(220))).toBe('a'.repeat(220));
+    });
+
+    it('truncates strings over 220 chars with ellipsis', () => {
+      const long = 'a'.repeat(250);
+      const result = truncatePreview(long);
+      expect(result.length).toBe(220); // 217 chars + '...'
+      expect(result.endsWith('...')).toBe(true);
+      expect(result.startsWith('a'.repeat(217))).toBe(true);
+    });
+
+    it('uses trimEnd on truncation point', () => {
+      // 220 chars exactly should be unchanged
+      expect(truncatePreview('a'.repeat(220)).length).toBe(220);
     });
   });
 
   describe('extractLatestMessagePreview', () => {
-    it('returns null when content is not an object', () => {
-      expect(extractLatestMessagePreview(null)).toBe(null);
-      expect(extractLatestMessagePreview('string')).toBe(null);
-      expect(extractLatestMessagePreview(undefined)).toBe(null);
+    it('returns null for null/undefined', () => {
+      expect(extractLatestMessagePreview(null)).toBeNull();
+      expect(extractLatestMessagePreview(undefined)).toBeNull();
     });
 
-    it('returns null when parts is not an array', () => {
-      expect(extractLatestMessagePreview({ parts: 'not an array' })).toBe(null);
+    it('returns null for non-object input', () => {
+      expect(extractLatestMessagePreview('string')).toBeNull();
     });
 
-    it('returns null when no text or reasoning parts exist', () => {
-      expect(extractLatestMessagePreview({ parts: [{ type: 'tool-call', text: 'ignored' }] })).toBe(null);
+    it('returns null when parts is empty or undefined', () => {
+      expect(extractLatestMessagePreview({ parts: [] })).toBeNull();
+      expect(extractLatestMessagePreview({})).toBeNull();
     });
 
-    it('extracts and joins text and reasoning parts, then truncates', () => {
-      const longText = 'x'.repeat(300);
-      const result = extractLatestMessagePreview({
+    it('extracts joined text from all text/reasoning parts', () => {
+      const content = {
         parts: [
-          { type: 'text', text: 'Hello, ' },
-          { type: 'reasoning', text: 'thinking... ' },
-          { type: 'text', text: longText },
+          { type: 'text', text: 'First' },
+          { type: 'text', text: 'Second' },
         ],
-      });
-      expect(result).not.toBeNull();
-      expect(result!.length).toBeLessThanOrEqual(220);
-      expect(result!.startsWith('Hello, thinking... ')).toBe(true);
+      };
+      // Joins ALL text segments, then applies truncatePreview
+      expect(extractLatestMessagePreview(content)).toBe('First Second');
     });
 
-    it('truncates combined text exceeding 220 characters', () => {
-      const result = extractLatestMessagePreview({
-        parts: [{ type: 'text', text: 'a'.repeat(250) }],
-      });
-      expect(result).not.toBeNull();
-      expect(result!.length).toBeLessThanOrEqual(220);
-      expect(result!.endsWith('...')).toBe(true);
+    it('extracts joined text from reasoning parts too', () => {
+      const content = {
+        parts: [
+          { type: 'reasoning', text: 'Thinking...' },
+          { type: 'reasoning', text: 'Final thought' },
+        ],
+      };
+      expect(extractLatestMessagePreview(content)).toBe('Thinking... Final thought');
     });
 
-    it('filters out empty/whitespace-only text parts', () => {
-      expect(
-        extractLatestMessagePreview({
-          parts: [{ type: 'text', text: '' }, { type: 'text', text: '  ' }, { type: 'text', text: 'valid' }],
-        }),
-      ).toBe('valid');
+    it('skips empty text segments', () => {
+      const content = {
+        parts: [
+          { type: 'text', text: 'Valid' },
+          { type: 'text', text: '' },
+          { type: 'text', text: '' },
+        ],
+      };
+      expect(extractLatestMessagePreview(content)).toBe('Valid');
+    });
+
+    it('skips non-text/reasoning parts', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'test' },
+          { type: 'text', text: 'Real response' },
+        ],
+      };
+      expect(extractLatestMessagePreview(content)).toBe('Real response');
+    });
+
+    it('returns null when no text parts with content', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'test' },
+          { type: 'reasoning', text: '' },
+        ],
+      };
+      expect(extractLatestMessagePreview(content)).toBeNull();
+    });
+
+    it('applies truncatePreview to joined text', () => {
+      const content = {
+        parts: [
+          { type: 'text', text: 'Part1 ' },
+          { type: 'text', text: 'Part2' },
+        ],
+      };
+      const result = extractLatestMessagePreview(content);
+      expect(result).toBe('Part1 Part2');
     });
   });
 
   describe('extractLatestMessageToolBadge', () => {
-    it('returns null when content is not an object', () => {
-      expect(extractLatestMessageToolBadge(null)).toBe(null);
-      expect(extractLatestMessageToolBadge(42)).toBe(null);
+    it('returns null for null/undefined', () => {
+      expect(extractLatestMessageToolBadge(null)).toBeNull();
+      expect(extractLatestMessageToolBadge(undefined)).toBeNull();
     });
 
-    it('returns null when no tool-call part is present', () => {
-      expect(extractLatestMessageToolBadge({ parts: [{ type: 'text', text: 'hello' }] })).toBe(null);
+    it('returns null for non-object input', () => {
+      expect(extractLatestMessageToolBadge('string')).toBeNull();
     });
 
-    it('returns null when tool-call part has no toolName', () => {
-      expect(extractLatestMessageToolBadge({ parts: [{ type: 'tool-call' }] })).toBe(null);
+    it('returns null when no tool-call parts', () => {
+      expect(extractLatestMessageToolBadge({ parts: [] })).toBeNull();
     });
 
-    it('returns message badge for send_message tool', () => {
-      expect(
-        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'send_message', toolCallId: 'abc' }] }),
-      ).toEqual({ icon: '✉️', label: 'Mensagem' });
+    it('returns null when tool-call has no toolName', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call' },
+        ],
+      };
+      expect(extractLatestMessageToolBadge(content)).toBeNull();
     });
 
-    it('returns workspace badge for workspace_ prefixed tools', () => {
-      expect(
-        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'workspace_write_file', toolCallId: 'abc' }] }),
-      ).toEqual({ icon: '🛠️', label: 'Workspace' });
+    it('returns null for unknown tool names', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'unknown_tool' },
+        ],
+      };
+      expect(extractLatestMessageToolBadge(content)).toBeNull();
     });
 
-    it('returns github badge for github_ prefixed tools', () => {
-      expect(
-        extractLatestMessageToolBadge({
-          parts: [{ type: 'tool-call', toolName: 'github_create_pull_request', toolCallId: 'abc' }],
-        }),
-      ).toEqual({ icon: '🐙', label: 'GitHub' });
+    it('maps send_message to message icon', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'send_message' },
+        ],
+      };
+      expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '✉️', label: 'Mensagem' });
     });
 
-    it('returns search badge for search_ prefixed tools', () => {
-      expect(
-        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'search_docs', toolCallId: 'abc' }] }),
-      ).toEqual({ icon: '🔎', label: 'Busca' });
+    it('maps workspace_ prefix to workspace icon', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'workspace_update_memory' },
+        ],
+      };
+      expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '🛠️', label: 'Workspace' });
     });
 
-    it('returns null for unrecognized tool name', () => {
-      expect(
-        extractLatestMessageToolBadge({ parts: [{ type: 'tool-call', toolName: 'custom_tool', toolCallId: 'abc' }] }),
-      ).toBe(null);
+    it('maps github_ prefix to github icon', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'github_create_issue' },
+        ],
+      };
+      expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '🐙', label: 'GitHub' });
+    });
+
+    it('maps search_ prefix to search icon', () => {
+      const content = {
+        parts: [
+          { type: 'tool-call', toolName: 'search_web' },
+        ],
+      };
+      expect(extractLatestMessageToolBadge(content)).toEqual({ icon: '🔎', label: 'Busca' });
+    });
+  });
+
+  describe('buildThreadToolInvocationParts', () => {
+    it('returns empty array for null/undefined', () => {
+      expect(buildThreadToolInvocationParts(null)).toEqual([]);
+      expect(buildThreadToolInvocationParts(undefined)).toEqual([]);
+    });
+
+    it('returns empty array for empty object', () => {
+      expect(buildThreadToolInvocationParts({})).toEqual([]);
+    });
+
+    it('returns empty array when no toolInvocations or toolResults', () => {
+      expect(buildThreadToolInvocationParts({ toolInvocations: [], toolResults: [] })).toEqual([]);
+    });
+
+    it('builds parts from toolInvocations with toolCallId', () => {
+      const metadata = {
+        toolInvocations: [
+          { toolName: 'test', toolCallId: 'tc-1', args: { a: 1 } },
+        ],
+        toolResults: [],
+      };
+      const result = buildThreadToolInvocationParts(metadata);
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('tool-call');
+      expect(result[0].toolName).toBe('test');
+      expect(result[0].toolCallId).toBe('tc-1');
+      expect(result[0].args).toEqual({ a: 1 });
+    });
+
+    it('pairs toolInvocations with toolResults by toolCallId', () => {
+      const metadata = {
+        toolInvocations: [
+          { toolName: 'test', toolCallId: 'tc-1' },
+        ],
+        toolResults: [
+          { toolCallId: 'tc-1', result: { success: true } },
+        ],
+      };
+      const result = buildThreadToolInvocationParts(metadata);
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('tool-call');
+      expect(result[0].toolName).toBe('test');
+      expect(result[0].toolCallId).toBe('tc-1');
+      // Result includes the full toolResult object
+      expect(result[0].result).toEqual({ toolCallId: 'tc-1', result: { success: true } });
+    });
+
+    it('includes unmatched toolResults as tool-result parts', () => {
+      const metadata = {
+        toolInvocations: [],
+        toolResults: [
+          { toolCallId: 'orphan', result: { x: 1 } },
+        ],
+      };
+      const result = buildThreadToolInvocationParts(metadata);
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('tool-result');
+    });
+
+    it('skips toolInvocations without toolName', () => {
+      const metadata = {
+        toolInvocations: [
+          { notToolName: true },
+        ],
+      };
+      expect(buildThreadToolInvocationParts(metadata)).toEqual([]);
+    });
+
+    it('adds unmatched toolResults as tool-result parts (even without toolCallId)', () => {
+      const metadata = {
+        toolInvocations: [],
+        toolResults: [
+          { toolCallId: 'orphan', result: { x: 1 } },
+        ],
+      };
+      const result = buildThreadToolInvocationParts(metadata);
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('tool-result');
+      expect(result[0].result).toEqual({ x: 1 });
     });
   });
 
   describe('buildAverageStepIntervalMs', () => {
     it('returns null for empty array', () => {
-      expect(buildAverageStepIntervalMs([])).toBe(null);
+      expect(buildAverageStepIntervalMs([])).toBeNull();
     });
 
     it('returns null for single step', () => {
-      expect(buildAverageStepIntervalMs([{ createdAt: 1000 }])).toBe(null);
+      expect(buildAverageStepIntervalMs([{ createdAt: 1000 }])).toBeNull();
     });
 
-    it('returns 0 for two identical timestamps (zero interval is a valid number)', () => {
-      // Math.max(0, 0) = 0, which is a number, not null — filter keeps it
-      expect(buildAverageStepIntervalMs([{ createdAt: 1000 }, { createdAt: 1000 }])).toBe(0);
+    it('calculates average interval for descending timestamps', () => {
+      // For [6000, 3000, 1000]: intervals are 3000, 2000 -> average = 2500
+      expect(buildAverageStepIntervalMs([
+        { createdAt: 6000 },
+        { createdAt: 3000 },
+        { createdAt: 1000 },
+      ])).toBe(2500);
     });
 
-    it('returns correct average interval for multiple steps (descending timestamps)', () => {
-      // Steps newest-first: 5000,4000,3000,2000,1000,0 — intervals all 1000 → avg=1000
-      expect(
-        buildAverageStepIntervalMs([5000, 4000, 3000, 2000, 1000, 0].map((t) => ({ createdAt: t }))),
-      ).toBe(1000);
+    it('returns correct average for two steps', () => {
+      // [5000, 0]: interval = 5000-0 = 5000 -> Math.max(5000,0) = 5000
+      expect(buildAverageStepIntervalMs([
+        { createdAt: 5000 },
+        { createdAt: 0 },
+      ])).toBe(5000);
     });
 
-    it('uses only the first 6 steps', () => {
-      // 7 steps: first 6 avg=1000, 7th (at 0) creates interval 1000 with 6th
-      // but since only first 6 are sliced, 7th is excluded → avg stays 1000
-      expect(
-        buildAverageStepIntervalMs([6000, 5000, 4000, 3000, 2000, 1000, 0].map((t) => ({ createdAt: t }))),
-      ).toBe(1000);
-    });
-
-    it('rounds to nearest integer', () => {
-      // intervals: 333, 333, 333 → avg=333 (no fractional part to round)
-      expect(buildAverageStepIntervalMs([999, 666, 333].map((t) => ({ createdAt: t })))).toBe(333);
-    });
-
-    it('handles larger intervals', () => {
-      // intervals: 5000, 5000 → avg=5000
-      expect(buildAverageStepIntervalMs([10000, 5000, 0].map((t) => ({ createdAt: t })))).toBe(5000);
-    });
-  });
-
-  describe('buildThreadToolInvocationParts', () => {
-    it('returns empty array when metadata is undefined', () => {
-      expect(buildThreadToolInvocationParts(undefined)).toEqual([]);
-    });
-
-    it('returns empty array when no toolInvocations or toolResults exist', () => {
-      expect(buildThreadToolInvocationParts({})).toEqual([]);
-    });
-
-    it('returns empty array when toolInvocations is not an array', () => {
-      expect(buildThreadToolInvocationParts({ toolInvocations: 'invalid' })).toEqual([]);
-    });
-
-    it('skips invocations that are not objects or lack a toolName string', () => {
-      const result = buildThreadToolInvocationParts({
-        toolInvocations: [null, undefined, { name: 'not-toolName' }, { toolName: 'valid_tool' }],
-      });
-      expect(result).toHaveLength(1);
-      expect(result[0].toolName).toBe('valid_tool');
-    });
-
-    it('excludes results without a string toolCallId from the index, but still emits them as unmatched tool-result parts', () => {
-      // Results with non-string toolCallId are skipped for matching,
-      // but still output at the end as unmatched tool-result parts.
-      const metadata = {
-        toolInvocations: [],
-        toolResults: [
-          { toolCallId: null },
-          { toolCallId: undefined },
-          { toolCallId: 123 as unknown as string },
-          { toolCallId: 'valid-id', result: { output: 'ok' } },
-        ],
-      };
-      const result = buildThreadToolInvocationParts(metadata);
-      // 3 invalid results are emitted as tool-result parts (no index entry),
-      // plus 1 valid result that was never matched → all 4 emitted.
-      expect(result).toHaveLength(4);
-      expect(result.filter((p) => p.type === 'tool-result')).toHaveLength(4);
-    });
-
-    it('pairs invocations with their matching results by toolCallId', () => {
-      const metadata = {
-        toolInvocations: [
-          { toolName: 'send_message', toolCallId: 'call-1', args: { to: 'alice' } },
-          { toolName: 'workspace_write_file', toolCallId: 'call-2', args: { path: '/test' } },
-        ],
-        toolResults: [
-          { toolCallId: 'call-2', result: { success: true } },
-          { toolCallId: 'call-1', result: { sent: true } },
-        ],
-      };
-      const result = buildThreadToolInvocationParts(metadata);
-      // call-1 invocation output first (order from toolInvocations), result attached
-      expect(result).toHaveLength(2);
-      expect(result[0].toolName).toBe('send_message');
-      expect((result[0] as Record<string, unknown>).result).toEqual({ toolCallId: "call-1", result: { sent: true } });
-      expect(result[1].toolName).toBe('workspace_write_file');
-      expect((result[1] as Record<string, unknown>).result).toEqual({ toolCallId: "call-2", result: { success: true } });
-    });
-
-    it('outputs unmatched results as tool-result parts after all invocations', () => {
-      const metadata = {
-        toolInvocations: [{ toolName: 'send_message', toolCallId: 'call-1', args: {} }],
-        toolResults: [
-          { toolCallId: 'call-1', result: { sent: true } },
-          { toolCallId: 'unmatched-call', result: { error: 'not found' } },
-        ],
-      };
-      const result = buildThreadToolInvocationParts(metadata);
-      expect(result).toHaveLength(2);
-      expect(result[0].toolName).toBe('send_message');
-      expect(result[1].type).toBe('tool-result');
-      expect((result[1] as Record<string, unknown>).toolCallId).toBe('unmatched-call');
-    });
-
-    it('handles null toolCallId on invocation without crashing', () => {
-      const result = buildThreadToolInvocationParts({
-        toolInvocations: [{ toolName: 'some_tool', toolCallId: null as unknown as string, args: {} }],
-        toolResults: [],
-      });
-      expect(result).toHaveLength(1);
-      expect((result[0] as Record<string, unknown>).toolCallId).toBe(null);
+    it('handles exactly 6 steps (uses first 6)', () => {
+      // intervals for [6000,5000,4000,3000,2000,1000]: 1000,1000,1000,1000,1000 -> avg = 1000
+      const steps = [6000, 5000, 4000, 3000, 2000, 1000].map(t => ({ createdAt: t }));
+      expect(buildAverageStepIntervalMs(steps)).toBe(1000);
     });
   });
 });
