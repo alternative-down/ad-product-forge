@@ -5,6 +5,7 @@ import { withTimeout } from '../utils/async';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
+import { createFlushManager } from './agent-runner-flush-manager';
 
 export type SchedulerState = {
   nextStepAt: number | null;
@@ -54,17 +55,10 @@ export function createScheduler(
   let executing = false;
   let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
-  let runLastMessages = 20;
-  const DEFAULT_RUN_LAST_MESSAGES = 20;
-  const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
-  const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
-
-  const flushedRunEventKeys = new Set<string>();
-  const flushedRunEventKeyOrder: string[] = [];
-  let currentFlushSettings = {
-    communicationDmFlushingEnabled: true,
-    communicationGroupFlushingEnabled: true,
-  };
+  const flushManager = createFlushManager({
+    runtimeId: deps.runtimeId,
+    getSystemSettings: deps.getSystemSettings,
+  });
 
   // Step callback — set by the runner orchestrator
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
@@ -219,7 +213,7 @@ export function createScheduler(
       healthcheckBeginRunFn = beginRunFn;
       startHealthcheck();
       healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
-      await refreshRunFlushSettings();
+      await flushManager.refreshRunFlushSettings();
 
       const executionState = await withTimeout(
         getExecutionState(deps.runtimeId),
@@ -262,7 +256,7 @@ export function createScheduler(
     executing = false;
     clearTimer();
     clearHealthcheck();
-    resetFlushedRunEventKeys();
+    flushManager.resetFlushedRunEventKeys();
   }
 
   async function forceIdle(
@@ -277,7 +271,7 @@ export function createScheduler(
     startingRunStartedAt = null;
     executing = false;
     clearTimer();
-    resetFlushedRunEventKeys();
+    flushManager.resetFlushedRunEventKeys();
     state.instant = false;
     try {
       await withTimeout(
@@ -479,8 +473,8 @@ export function createScheduler(
       healthcheckOnRunnerIdle = input.onRunnerIdle;
       healthcheckGetPendingCount = input.getPendingCount;
       resetBackoff();
-      resetFlushedRunEventKeys();
-      await refreshRunFlushSettings();
+      flushManager.resetFlushedRunEventKeys();
+      await flushManager.refreshRunFlushSettings();
 
       if (input.reloadRuntime) {
         await input.onReloadRuntime(myRunEpoch);
@@ -553,65 +547,8 @@ export function createScheduler(
     });
   }
 
-  // ─── Flush settings ────────────────────────────────────────────────────────
-
-  async function refreshRunFlushSettings() {
-    try {
-      const settings = await withTimeout(
-        deps.getSystemSettings(),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `System settings lookup timed out for ${deps.runtimeId}`,
-      );
-
-      currentFlushSettings = {
-        communicationDmFlushingEnabled: settings.communicationDmFlushingEnabled,
-        communicationGroupFlushingEnabled: settings.communicationGroupFlushingEnabled,
-      };
-
-      if (settings.memoryLastMessagesFullEnabled) {
-        runLastMessages = FULL_MEMORY_LOAD_LAST_MESSAGES;
-        return;
-      }
-
-      runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
-    } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'refreshRunFlushSettings failed', context: { runtimeId: deps.runtimeId, error } });
-    }
-  }
-
-  function resetFlushedRunEventKeys() {
-    flushedRunEventKeys.clear();
-    flushedRunEventKeyOrder.length = 0;
-  }
-
-  function rememberFlushedRunEventKey(idempotencyKey: string) {
-    if (flushedRunEventKeys.has(idempotencyKey)) {
-      return;
-    }
-
-    flushedRunEventKeys.add(idempotencyKey);
-    flushedRunEventKeyOrder.push(idempotencyKey);
-
-    while (flushedRunEventKeyOrder.length > MAX_FLUSHED_RUN_EVENT_KEYS) {
-      const oldestIdempotencyKey = flushedRunEventKeyOrder.shift();
-      if (!oldestIdempotencyKey) {
-        return;
-      }
-      flushedRunEventKeys.delete(oldestIdempotencyKey);
-    }
-  }
-
-  function isFlushed(key: string): boolean {
-    return flushedRunEventKeys.has(key);
-  }
-
-  function clearFlushHistory() {
-    resetFlushedRunEventKeys();
-  }
-
-  function getFlushSettings() {
-    return { ...currentFlushSettings };
-  }
+  // ─── Flush settings — delegated to flush manager ──────────────────────────
+  // See agent-runner-flush-manager.ts
 
   // ─── State accessors ────────────────────────────────────────────────────────
 
@@ -709,13 +646,13 @@ export function createScheduler(
     // Step orchestration
     beginRun,
     queueNextStep,
-    // Flush settings
-    refreshRunFlushSettings,
-    resetFlushedRunEventKeys,
-    rememberFlushedRunEventKey,
-    isFlushed,
-    clearFlushHistory,
-    getFlushSettings,
+    // Flush settings — delegated to flush manager
+    refreshRunFlushSettings: flushManager.refreshRunFlushSettings.bind(flushManager),
+    resetFlushedRunEventKeys: flushManager.resetFlushedRunEventKeys.bind(flushManager),
+    rememberFlushedRunEventKey: flushManager.rememberFlushedRunEventKey.bind(flushManager),
+    isFlushed: flushManager.isFlushed.bind(flushManager),
+    clearFlushHistory: flushManager.clearFlushHistory.bind(flushManager),
+    getFlushSettings: flushManager.getFlushSettings.bind(flushManager),
     // State accessors
     isLocallyIdle,
     setExecuting,
@@ -724,7 +661,7 @@ export function createScheduler(
     getStartingRunAgeMs,
     getRunId,
     setRunId,
-    getRunLastMessages,
+    getRunLastMessages: flushManager.getRunLastMessages.bind(flushManager),
     getInstant,
     getBackoffMs,
     getNextStepAt,
