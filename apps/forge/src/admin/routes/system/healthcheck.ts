@@ -44,7 +44,7 @@ export async function buildSystemHealthcheck(
       level: 'error',
       message: '[system-healthcheck] buildSystemHealthcheck failed',
       context: {
-        agentCount: registry.list().length,
+        agentCount: entries.length,
         error: err instanceof Error ? err.message : String(err),
       },
     });
