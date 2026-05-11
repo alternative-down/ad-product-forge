@@ -144,3 +144,27 @@ export type SystemMigration = {
   description: string;
   appliedAt: number;
 };
+
+export type UpsertLlmProfileInput = {
+  profileId?: string;
+  name: string;
+  modelKey: string;
+  baseUrl: string;
+  apiKey: string;
+  contractCostMultiplier: number;
+  isEnabled: boolean;
+};
+
+export type UpsertLlmModelPriceInput = {
+  priceId?: string;
+  modelKey: string;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
+};
+
+export type UpdateLlmDefaultsInput = {
+  primaryProfileId: string;
+  omProfileId: string;
+  hiringRhProfileId: string;
+};
