@@ -32,10 +32,7 @@ export interface SystemReadModel {
     defaults: Awaited<ReturnType<ReturnType<typeof createLlmSettingsStore>['getDefaults']>>;
     prices: Awaited<ReturnType<ReturnType<typeof createLlmModelPriceStore>['listPrices']>>;
   }>;
-  // Fragmented LLM routes (#1588)
-  listLlmProfiles: () => Promise<unknown>;
-  getLlmDefaults: () => Promise<unknown>;
-  listLlmPrices: () => Promise<unknown>;
+  // Fragmented LLM routes (#1588) — removed dead wrappers (no routes call these)
   getSystemSettings: () => Promise<ReturnType<ReturnType<typeof createSystemSettingsStore>['getSettings']>>;
   getApplicationMigrations: () => Promise<{
     applied: { id: number; hash: string; createdAt: number }[];
@@ -165,27 +162,12 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
     }
   }
 
-  // ─── Fragmented LLM routes (#1588) ─────────────────────────────────────
-  async function listLlmProfiles() {
-    return await llmSettings.listProfiles();
-  }
-
-  async function getLlmDefaults() {
-    return await llmSettings.getDefaults();
-  }
-
-  async function listLlmPrices() {
-    return await llmModelPrices.listPrices();
-  }
-
+  // ─── Fragmented LLM routes (#1588) — removed dead wrappers (no routes call these)
   return {
     listRoles,
     listSystemIntegrations,
     getSystemLlm,
     getSystemSettings,
     getApplicationMigrations,
-    listLlmProfiles,
-    getLlmDefaults,
-    listLlmPrices,
   };
 }
