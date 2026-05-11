@@ -16,7 +16,6 @@ async function main() {
     agentIds: process.argv.slice(2),
   });
 
-  const agentId = '';
   for (const agentId of input.agentIds) {
     await resetAgentIndexes(input.workspaceBasePath, agentId);
   }
