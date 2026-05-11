@@ -32,19 +32,19 @@ export function createInternalChatReads(
   deps: InternalChatReadsDeps,
 ): InternalChatReadsStore {
   async function getUnreadSummary(agentId: string) {
-    return deps.unread.getUnreadSummary(agentId);
+    return await deps.unread.getUnreadSummary(agentId);
   }
 
   async function listRecentConversations(agentId: string, limit: number) {
-    return deps.listConversations({ agentId, limit });
+    return await deps.listConversations({ agentId, limit });
   }
 
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
-    return deps.participants.listGroupMembersOrDmPeers(agentId, conversationId);
+    return await deps.participants.listGroupMembersOrDmPeers(agentId, conversationId);
   }
 
   async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string) {
-    return deps.participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
+    return await deps.participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
   }
 
   return {

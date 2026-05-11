@@ -127,7 +127,7 @@ export function createDiscordProvider(config: {
   }
 
   async function downloadDiscordAttachments(message: Message): Promise<CommunicationFile[]> {
-    return Promise.all(
+    return await Promise.all(
       Array.from(message.attachments.values()).map(async (attachment) => {
         try {
           const response = await fetch(attachment.url);
@@ -345,7 +345,7 @@ export function createDiscordProvider(config: {
   });
 
   async function getReadyClient() {
-    return ready;
+    return await ready;
   }
 
   async function listCandidateChannels() {
@@ -512,7 +512,7 @@ export function createDiscordProvider(config: {
       input.offset > 0 ? sortedMessages.length - input.offset : undefined,
     );
 
-    return Promise.all(
+    return await Promise.all(
       filteredMessages.map(async (message) => ({
         messageId: message.id,
         provider: 'discord',
@@ -554,7 +554,7 @@ export function createDiscordProvider(config: {
       };
     },
     async listContacts() {
-      return listCandidateUsers();
+      return await listCandidateUsers();
     },
     async listConversations({ limit }) {
       const channels = await listCandidateChannels();
@@ -592,7 +592,7 @@ export function createDiscordProvider(config: {
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
-      return listChannelMessages({
+      return await listChannelMessages({
         channel: channel as DiscordSendableChannel,
         limit,
         offset,
@@ -604,7 +604,7 @@ export function createDiscordProvider(config: {
     async sendMessage(input) {
       const channel = await resolveDiscordTargetChannel(input.targetKey);
 
-      return withTyping(channel, async () => {
+      return await withTyping(channel, async () => {
         const sent = await sendDiscordChunks({
           channel: channel as DiscordSendableChannel,
           content: input.content,

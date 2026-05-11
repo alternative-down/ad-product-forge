@@ -276,7 +276,7 @@ export function createAgentScheduleStore(db: Database) {
     input: UpdateAgentScheduleInput,
   ) {
     const updated = await _applyUpdate(agentId, scheduleId, input);
-    return updated ? getAgentSchedule(agentId, scheduleId) : null;
+    return updated ? await getAgentSchedule(agentId, scheduleId) : null;
   }
 
   async function updateOwnedSchedule(
@@ -285,7 +285,7 @@ export function createAgentScheduleStore(db: Database) {
     input: UpdateAgentScheduleInput,
   ) {
     const updated = await _applyUpdate(agentId, scheduleId, input);
-    return updated ? getOwnedSchedule(agentId, scheduleId) : null;
+    return updated ? await getOwnedSchedule(agentId, scheduleId) : null;
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {

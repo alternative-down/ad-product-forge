@@ -58,7 +58,7 @@ export function createCompanyCashOperations(db: Database) {
     input: CompanyCashEntryInput & { effectiveAt?: number },
     session?: DbSession,
   ) {
-    return createEntry(
+    return await createEntry(
       { ...input, direction: 'in', status: 'posted', dueAt: input.effectiveAt, effectiveAt: input.effectiveAt },
       session,
     );
@@ -68,7 +68,7 @@ export function createCompanyCashOperations(db: Database) {
     input: CompanyCashEntryInput & { effectiveAt?: number },
     session?: DbSession,
   ) {
-    return createEntry(
+    return await createEntry(
       { ...input, direction: 'out', status: 'posted', dueAt: input.effectiveAt, effectiveAt: input.effectiveAt },
       session,
     );
@@ -78,7 +78,7 @@ export function createCompanyCashOperations(db: Database) {
     input: CompanyCashEntryInput & { dueAt: number },
     session?: DbSession,
   ) {
-    return createEntry(
+    return await createEntry(
       { ...input, direction: 'in', status: 'planned', dueAt: input.dueAt },
       session,
     );
@@ -88,7 +88,7 @@ export function createCompanyCashOperations(db: Database) {
     input: CompanyCashEntryInput & { dueAt: number },
     session?: DbSession,
   ) {
-    return createEntry(
+    return await createEntry(
       { ...input, direction: 'out', status: 'planned', dueAt: input.dueAt },
       session,
     );

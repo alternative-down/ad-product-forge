@@ -75,7 +75,7 @@ export async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMc
     throw err;
   }
   
-  return getMcpServerConfig(id);
+  return await getMcpServerConfig(id);
 }
 
 export async function deleteMcpServerConfig(id: string): Promise<void> {
@@ -176,7 +176,7 @@ export async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAge
     throw err;
   }
   
-  return getAgentMcpConfig(id);
+  return await getAgentMcpConfig(id);
 }
 
 export async function deleteAgentMcpConfig(id: string): Promise<void> {
