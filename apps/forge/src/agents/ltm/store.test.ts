@@ -39,7 +39,7 @@ function createDrizzleMock() {
         limit: vi.fn(() => Promise.resolve([])),
       })),
     })),
-    insert: vi.fn((table: any) => ({
+    insert: vi.fn((arg: unknown) => ({
       values: vi.fn(() => ({
         onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
       })),

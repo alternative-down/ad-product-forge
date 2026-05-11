@@ -14,7 +14,7 @@ describe('ltm/helpers', () => {
     });
 
     it('returns fallback string when JSON.stringify throws', () => {
-      const circular: any = { a: 1 };
+      const circular: unknown = { a: 1 };
       circular.self = circular;
       expect(safeSerializeRecallSteps([circular])).toBe('[unserializable steps payload]');
     });
@@ -46,7 +46,7 @@ describe('ltm/helpers', () => {
     });
 
     it('returns fallback string when JSON.stringify throws', () => {
-      const circular: any = { x: 1 };
+      const circular: unknown = { x: 1 };
       circular.self = circular;
       expect(safeSerializeGraphResult(circular)).toBe('[unserializable graph result]');
     });

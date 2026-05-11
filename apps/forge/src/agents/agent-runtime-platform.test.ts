@@ -25,10 +25,10 @@ vi.mock('@forge-runtime/core', () => {
     LibsqlCommunicationContactsStore: vi.fn().mockImplementation(function() { return {}; }),
     LibsqlConversationStore: vi.fn().mockImplementation(function() {
     const threads = new Map();
-    const messages: any[] = [];
+    const messages: unknown[] = [];
     return {
-      upsertThread: vi.fn().mockImplementation(async (t: any) => { threads.set(t.id, t); }),
-      appendMessage: vi.fn().mockImplementation(async (m: any) => { messages.push(m); }),
+      upsertThread: vi.fn().mockImplementation(async (t: unknown) => { threads.set(t.id, t); }),
+      appendMessage: vi.fn().mockImplementation(async (m: unknown) => { messages.push(m); }),
       listMessages: vi.fn().mockImplementation(async ({ threadId }: { threadId: string }) => messages.filter(m => m.threadId === threadId)),
     };
   }),

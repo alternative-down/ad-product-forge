@@ -23,7 +23,7 @@ vi.mock('@forge-runtime/core', () => {
 
   class SqliteWorkspaceRetrieval {
     private _inst: Record<string, any>;
-    constructor(...args: any[]) {
+    constructor(...args: unknown[]) {
       this._inst = __forgeInstance !== null
         ? { ...makeDefaultInstance(), ...__forgeInstance }
         : makeDefaultInstance();
@@ -37,12 +37,12 @@ vi.mock('@forge-runtime/core', () => {
     get queryVector() { return this._inst.queryVector; }
     get dispose() { return this._inst.dispose; }
     _refresh() { return this._inst.refresh(); }
-    _search(...args: any[]) { return this._inst.search(...args); }
-    _searchGraph(...args: any[]) { return this._inst.searchGraph(...args); }
+    _search(...args: unknown[]) { return this._inst.search(...args); }
+    _searchGraph(...args: unknown[]) { return this._inst.searchGraph(...args); }
     _dispose() { return this._inst.dispose(); }
   }
 
-  const FilesystemDocumentSource = vi.fn(function(_opts: any) {
+  const FilesystemDocumentSource = vi.fn(function(arg: unknown) {
     return { loadDocuments: vi.fn(async () => []) };
   });
 

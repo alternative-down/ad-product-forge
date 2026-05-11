@@ -30,7 +30,7 @@ const mockRow = vi.hoisted(() => ({
 }));
 
 // Track insert calls for verification
-const insertCalls: any[] = [];
+const insertCalls: unknown[] = [];
 
 const mockDb = vi.hoisted(() => ({
   query: {
@@ -39,7 +39,7 @@ const mockDb = vi.hoisted(() => ({
     },
   },
   insert: vi.fn().mockImplementation(() => ({
-    values: vi.fn().mockImplementation((vals: any) => {
+    values: vi.fn().mockImplementation((vals: unknown) => {
       insertCalls.push(vals);
       return {
         onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),

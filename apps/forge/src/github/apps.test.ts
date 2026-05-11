@@ -26,7 +26,7 @@ function makeMockCtx(overrides: {
   dbDelete?: ReturnType<typeof vi.fn>;
   nanoid?: ReturnType<typeof vi.fn>;
   saveCredentials?: ReturnType<typeof vi.fn>;
-  opsRouting?: any;
+  opsRouting?: unknown;
   normalizeManifestConfig?: (raw: unknown) => unknown;
 } = {}) {
   const mockGetGlobalConfig = vi.fn().mockResolvedValue(
