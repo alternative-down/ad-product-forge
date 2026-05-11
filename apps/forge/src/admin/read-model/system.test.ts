@@ -1,7 +1,13 @@
 import { describe, expect, test, vi } from 'vitest';
 
+const mockGroupByAll = vi.fn();
 const mockDb = {
   all: vi.fn(),
+  select: vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      groupBy: vi.fn().mockReturnValue({ all: mockGroupByAll }),
+    }),
+  }),
   query: { agents: { findMany: vi.fn() } },
 } as any;
 
@@ -9,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   capabilityStore: {
     listRoles: vi.fn(),
     listGrantedRoleCapabilities: vi.fn(),
+    listGrantedRoleCapabilitiesBatch: vi.fn(),
   },
   integrationStore: {
     listIntegrations: vi.fn(),
@@ -183,6 +190,71 @@ describe('createSystemReadModel', () => {
 
       expect(result.applied).toEqual([]);
       expect(result.entries).toEqual([]);
+    });
+  });
+  describe('listRoles', () => {
+    const mockRoles = [
+      { roleId: 'role-1', name: 'Admin', description: 'Admin role', createdAt: new Date('2024-01-01'), updatedAt: new Date('2024-01-01') },
+      { roleId: 'role-2', name: 'Viewer', description: 'Read-only role', createdAt: new Date('2024-01-02'), updatedAt: new Date('2024-01-02') },
+    ];
+
+    test('returns roles with capabilityIds from batch query', async () => {
+      const mockCapabilitiesMap = new Map([
+        ['role-1', ['cap:read', 'cap:write']],
+        ['role-2', ['cap:read']],
+      ]);
+      mocks.capabilityStore.listGrantedRoleCapabilitiesBatch.mockResolvedValue(mockCapabilitiesMap);
+      mocks.capabilityStore.listRoles.mockResolvedValue(mockRoles);
+      mockDb.all.mockResolvedValue([]);
+      mockGroupByAll.mockResolvedValue([{ roleId: 'role-1', count: 3 }, { roleId: 'role-2', count: 1 }]);
+
+      const store = createSystemReadModel({ db: mockDb });
+      const result = await store.listRoles();
+
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].roleId).toBe('role-1');
+      expect(result.items[0].assignedAgentCount).toBe(3);
+      expect(result.items[0].capabilityIds).toEqual(['cap:read', 'cap:write']);
+      expect(result.items[1].roleId).toBe('role-2');
+      expect(result.items[1].assignedAgentCount).toBe(1);
+      expect(result.items[1].capabilityIds).toEqual(['cap:read']);
+    });
+
+    test('returns empty items when no roles exist', async () => {
+      mocks.capabilityStore.listGrantedRoleCapabilitiesBatch.mockResolvedValue(new Map());
+      mocks.capabilityStore.listRoles.mockResolvedValue([]);
+      mockDb.all.mockResolvedValue([]);
+      mockGroupByAll.mockResolvedValue([]);
+
+      const store = createSystemReadModel({ db: mockDb });
+      const result = await store.listRoles();
+
+      expect(result.items).toEqual([]);
+      expect(result.availableCapabilityIds).toBeDefined();
+    });
+
+    test('uses empty capabilityIds when batch returns no match for a role', async () => {
+      const mockCapabilitiesMap = new Map([
+        ['role-1', ['cap:read']],
+      ]);
+      mocks.capabilityStore.listGrantedRoleCapabilitiesBatch.mockResolvedValue(mockCapabilitiesMap);
+      mocks.capabilityStore.listRoles.mockResolvedValue(mockRoles);
+      mockDb.all.mockResolvedValue([]);
+      mockGroupByAll.mockResolvedValue([]);
+
+      const store = createSystemReadModel({ db: mockDb });
+      const result = await store.listRoles();
+
+      expect(result.items[0].capabilityIds).toEqual(['cap:read']);
+      expect(result.items[1].capabilityIds).toEqual([]);
+    });
+
+    test('logs and re-throws on error', async () => {
+      mocks.capabilityStore.listRoles.mockRejectedValue(new Error('DB error'));
+      mockDb.all.mockResolvedValue([]);
+
+      const store = createSystemReadModel({ db: mockDb });
+      await expect(store.listRoles()).rejects.toThrow('DB error');
     });
   });
 });

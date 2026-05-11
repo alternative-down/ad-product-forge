@@ -1,5 +1,5 @@
 import { createId } from '../utils/id';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 
 import type {Database} from '../database/schema';
@@ -393,6 +393,49 @@ export function createCapabilityStore(db: Database) {
     return [...new Set([...toolIds, ...workflowIds])].sort((left, right) => left.localeCompare(right));
   }
 
+  /**
+   * Batch version of listGrantedRoleCapabilities — fetches capabilities for
+   * multiple roles in a single DB roundtrip (N+1 fix).
+   * Returns a Map from roleId to sorted capabilityIds array.
+   */
+  async function listGrantedRoleCapabilitiesBatch(roleIds: string[]): Promise<Map<string, string[]>> {
+    if (roleIds.length === 0) return new Map();
+
+    const [toolRows, workflowRows] = await Promise.all([
+      db.query.roleToolPermissions.findMany({
+        where: inArray(roleToolPermissions.roleId, roleIds),
+        orderBy: [asc(roleToolPermissions.roleId), asc(roleToolPermissions.toolId)],
+      }),
+      db.query.roleWorkflowPermissions.findMany({
+        where: inArray(roleWorkflowPermissions.roleId, roleIds),
+        orderBy: [asc(roleWorkflowPermissions.roleId), asc(roleWorkflowPermissions.workflowId)],
+      }),
+    ]);
+
+    const result = new Map<string, string[]>();
+    for (const roleId of roleIds) {
+      result.set(roleId, []);
+    }
+
+    for (const row of toolRows) {
+      const existing = result.get(row.roleId) ?? [];
+      existing.push(row.toolId);
+      result.set(row.roleId, existing);
+    }
+    for (const row of workflowRows) {
+      const existing = result.get(row.roleId) ?? [];
+      existing.push(row.workflowId);
+      result.set(row.roleId, existing);
+    }
+
+    // Sort each role's capability list and deduplicate
+    for (const [roleId, ids] of result) {
+      result.set(roleId, [...new Set(ids)].sort((a, b) => a.localeCompare(b)));
+    }
+
+    return result;
+  }
+
   async function listRoleCapabilities(roleId: string) {
     const grantedCapabilityIds = new Set(await listGrantedRoleCapabilities(roleId));
 
@@ -572,6 +615,7 @@ export function createCapabilityStore(db: Database) {
     addRoleWorkflowPermission,
     removeRoleWorkflowPermission,
     listGrantedRoleCapabilities,
+    listGrantedRoleCapabilitiesBatch,
     listRoleCapabilities,
     manageRole,
     manageRoleCapability,
