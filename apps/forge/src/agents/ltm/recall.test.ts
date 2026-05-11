@@ -709,3 +709,293 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
     });
   });
 });
+
+// =============================================================================
+// Additional coverage: formatStructuredValue (internal helper used by formatDocument)
+// =============================================================================
+describe('AgentLongTermMemoryRecall formatStructuredValue', () => {
+  let recall: InstanceType<ReturnType<typeof createAgentLongTermMemoryRecall>> & {
+    formatStructuredValue(value: unknown, indentLevel?: number): string;
+  };
+
+  beforeEach(() => {
+    const instance = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: makeMockPersistenceStore(),
+      model: makeMockModel(),
+    });
+    recall = instance as never;
+  });
+
+  it('returns trimmed string', () => {
+    expect(recall.formatStructuredValue('  hello world  ')).toBe('hello world');
+  });
+
+  it('returns String(number) and String(boolean)', () => {
+    expect(recall.formatStructuredValue(42)).toBe('42');
+    expect(recall.formatStructuredValue(true)).toBe('true');
+  });
+
+  it('returns empty string for null and undefined (falsy non-object)', () => {
+    expect(recall.formatStructuredValue(null)).toBe('');
+    expect(recall.formatStructuredValue(undefined)).toBe('');
+    expect(recall.formatStructuredValue(0)).toBe('0'); // 0 is falsy but number type → String(0)
+    expect(recall.formatStructuredValue(false)).toBe('false');
+  });
+
+  it('returns empty string for empty array', () => {
+    expect(recall.formatStructuredValue([])).toBe('');
+  });
+
+  it('formats non-empty array with bullet points', () => {
+    const result = recall.formatStructuredValue(['alpha', 'beta']);
+    expect(result).toContain('- alpha');
+    expect(result).toContain('- beta');
+  });
+
+  it('returns empty string when all object values are falsy', () => {
+    expect(recall.formatStructuredValue({ a: null, b: undefined })).toBe('');
+  });
+
+  it('formats simple key-value on one line', () => {
+    const result = recall.formatStructuredValue({ name: 'Claude', role: 'assistant' });
+    expect(result).toContain('name: Claude');
+    expect(result).toContain('role: assistant');
+  });
+
+  it('formats nested objects with newline indentation', () => {
+    const result = recall.formatStructuredValue({
+      user: { name: 'Alice', scores: [1, 2, 3] },
+    });
+    expect(result).toContain('user:');
+    expect(result).toContain('  name: Alice');
+    expect(result).toContain('  - 1');
+  });
+
+  it('filters out empty values from arrays', () => {
+    const result = recall.formatStructuredValue(['valid', '', null as unknown as string, 'also valid']);
+    expect(result).toContain('valid');
+    expect(result).not.toContain('null');
+  });
+});
+
+// =============================================================================
+// Additional coverage: readGraphRelevantContext (called by recallFromStep)
+// =============================================================================
+describe('AgentLongTermMemoryRecall readGraphRelevantContext', () => {
+  let recall: InstanceType<ReturnType<typeof createAgentLongTermMemoryRecall>> & {
+    readGraphRelevantContext(result: unknown): string | null;
+  };
+
+  beforeEach(() => {
+    const instance = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: makeMockPersistenceStore(),
+      model: makeMockModel(),
+    });
+    recall = instance as never;
+  });
+
+  it('returns null for null', () => {
+    expect(recall.readGraphRelevantContext(null)).toBeNull();
+  });
+
+  it('returns null for non-object', () => {
+    expect(recall.readGraphRelevantContext('string' as unknown)).toBeNull();
+  });
+
+  it('returns null when relevantContext is missing', () => {
+    expect(recall.readGraphRelevantContext({})).toBeNull();
+    expect(recall.readGraphRelevantContext({ other: 'field' })).toBeNull();
+  });
+
+  it('returns string relevantContext as-is', () => {
+    expect(recall.readGraphRelevantContext({ relevantContext: 'hello context' })).toBe('hello context');
+  });
+
+  it('joins array of strings with double newline', () => {
+    expect(recall.readGraphRelevantContext({ relevantContext: ['line1', 'line2', 'line3'] })).toBe('line1\n\nline2\n\nline3');
+  });
+
+  it('filters out non-string values from array', () => {
+    expect(recall.readGraphRelevantContext({ relevantContext: ['a', null as unknown as string, 'b', undefined as unknown as string, 'c'] })).toBe('a\n\nb\n\nc');
+  });
+});
+
+// =============================================================================
+// Additional coverage: readGraphSources (called by recallFromStep)
+// =============================================================================
+describe('AgentLongTermMemoryRecall readGraphSources', () => {
+  let recall: InstanceType<ReturnType<typeof createAgentLongTermMemoryRecall>> & {
+    readGraphSources(result: unknown): unknown[];
+  };
+
+  beforeEach(() => {
+    const instance = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: makeMockPersistenceStore(),
+      model: makeMockModel(),
+    });
+    recall = instance as never;
+  });
+
+  it('returns empty array for null', () => {
+    expect(recall.readGraphSources(null)).toEqual([]);
+  });
+
+  it('returns empty array for non-object', () => {
+    expect(recall.readGraphSources('string' as unknown)).toEqual([]);
+  });
+
+  it('returns empty array when sources is missing', () => {
+    expect(recall.readGraphSources({})).toEqual([]);
+  });
+
+  it('returns empty array when sources is not an array', () => {
+    expect(recall.readGraphSources({ sources: 'not-an-array' })).toEqual([]);
+    expect(recall.readGraphSources({ sources: { id: '1' } })).toEqual([]);
+  });
+
+  it('returns the array when sources is an array', () => {
+    const sources = [{ id: '1' }, { id: '2' }];
+    expect(recall.readGraphSources({ sources })).toEqual(sources);
+  });
+});
+
+// =============================================================================
+// Additional coverage: readGraphSourceDocument
+// =============================================================================
+describe('AgentLongTermMemoryRecall readGraphSourceDocument', () => {
+  let recall: InstanceType<ReturnType<typeof createAgentLongTermMemoryRecall>> & {
+    readGraphSourceDocument(source: unknown): string;
+  };
+
+  beforeEach(() => {
+    const instance = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: makeMockPersistenceStore(),
+      model: makeMockModel(),
+    });
+    recall = instance as never;
+  });
+
+  it('returns empty string for null', () => {
+    expect(recall.readGraphSourceDocument(null)).toBe('');
+  });
+
+  it('returns empty string for non-object', () => {
+    expect(recall.readGraphSourceDocument('string' as unknown)).toBe('');
+  });
+
+  it('returns empty string when document is missing', () => {
+    expect(recall.readGraphSourceDocument({})).toBe('');
+  });
+
+  it('returns empty string when document is not a string', () => {
+    expect(recall.readGraphSourceDocument({ document: 42 })).toBe('');
+    expect(recall.readGraphSourceDocument({ document: null })).toBe('');
+  });
+
+  it('returns trimmed document string', () => {
+    expect(recall.readGraphSourceDocument({ document: '  some content  ' })).toBe('some content');
+  });
+});
+
+// =============================================================================
+// Additional coverage: runTrackedRecallOperation — lingering state machine
+// =============================================================================
+describe('AgentLongTermMemoryRecall runTrackedRecallOperation lingering state', () => {
+  it('sets lingeringRecallOperationSince when timeout fires and operation not settled', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    vi.useFakeTimers();
+    try {
+      const never = new Promise<string>((resolve) => { /* never resolves */ });
+      const p = (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
+        'slow.op', never, 50, 'timed out',
+      );
+      vi.advanceTimersByTime(50);
+      await expect(p).rejects.toThrow('timed out');
+      expect((recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('increments pendingRecallOperationCount for concurrent operations', async () => {
+    const retrieval = {
+      refresh: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
+    } as unknown as SqliteWorkspaceRetrieval;
+    const persistence = {
+      readRecallThreadState: vi.fn().mockResolvedValue({
+        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+      }),
+      readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
+      persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
+    };
+    const recall = createAgentLongTermMemoryRecall({
+      agentId: 'agent-1',
+      agentWorkspacePath: '/tmp/ws',
+      agentMemoryPath: '/tmp/mem',
+      mastraId: 'mastra-1',
+      conversationStore: makeMockConversationStore(),
+      persistenceStore: persistence,
+      model: makeMockModel(),
+      retrievalWorkspace: retrieval,
+    }) as never;
+
+    // Fire two operations concurrently
+    const [r1, r2] = await Promise.all([
+      (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
+        'op1', Promise.resolve('result1'), 5000, 'timed out',
+      ),
+      (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
+        'op2', Promise.resolve('result2'), 5000, 'timed out',
+      ),
+    ]);
+    expect(r1).toBe('result1');
+    expect(r2).toBe('result2');
+    // Both settled cleanly — pending count back to 0
+    expect((recall as { pendingRecallOperationCount: number }).pendingRecallOperationCount).toBe(0);
+    expect((recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince).toBeNull();
+  });
+});
