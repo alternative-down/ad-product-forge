@@ -104,4 +104,4 @@ jobs:
         run: npx fallow fix --dry-run
 
       - name: Test
-        run: npm run test# Auto-trigger comment
+        run: npm run test
