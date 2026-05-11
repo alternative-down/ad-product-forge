@@ -340,7 +340,6 @@ function didIterationUpdateWorkingMemory(iteration: {
 }
 
 export {
-  withTimeout,
   buildIterationLoopSignature,
   serializeError,
   serializeUnknown,
@@ -355,6 +354,10 @@ export {
   didIterationUpdateWorkingMemory,
   collectStepTextParts,
   hasExactControlDirective,
+  // Internal control-flow helpers — also used in agent-runner.ts
+  isNoActionNeeded,
+  isStopAndIdle,
+  extractControlDirective,
 };
 
 
