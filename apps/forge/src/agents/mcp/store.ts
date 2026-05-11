@@ -211,7 +211,6 @@ export async function getAgentMcpServers(agentId: string): Promise<{ config: Age
     forgeDebug({
       scope: 'mcp-store',
       level: 'error',
-      runtimeId: agentId,
       message: 'getAgentMcpServers failed: ' + (err instanceof Error ? err.message : String(err)),
     });
     throw err;
