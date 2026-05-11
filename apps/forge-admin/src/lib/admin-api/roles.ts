@@ -33,28 +33,6 @@ export function deleteRole(roleId: string) {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function addRoleToolPermission(input: {
-  roleId: string;
-  toolId: string;
-}) {
-  return request<{ success?: boolean }>('/admin/role-tool-permission/add', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function removeRoleToolPermission(input: {
-  roleId: string;
-  toolId: string;
-}) {
-  return request<{ success?: boolean }>('/admin/role-tool-permission/remove', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
 export function addRoleCapability(input: {
   roleId: string;
   capabilityId: string;
