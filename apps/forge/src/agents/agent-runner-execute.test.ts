@@ -1,260 +1,423 @@
 /**
- * Unit tests for executeStep exit paths.
+ * Unit tests for executeStep (agent-runner-execute.ts).
  *
- * Each test declares its own mocks to avoid module-level hoisting issues.
- * The mock helpers (makeDeps) are for building the deps object only.
+ * Tests are grouped by execution phase:
+ *   Phase 0 — early exit guards (stopped / executing / stale)
+ *   Phase 1 — execution state lookup
+ *   Phase 2 — contract loading
+ *   Phase 3 — generation call
+ *   Phase 4 — result interpretation
+ *   Error path — backoff scheduling
+ *
+ * Each test constructs its own mocks inline. No shared vi.mock() at
+ * module level to avoid vitest hoisting issues.
  */
 import { expect, it, vi } from 'vitest';
+import { executeStep } from './agent-runner-execute';
 
-// ── Types (mirrors the deps contract) ─────────────────────────────────────────
+// ─── Mock helpers ────────────────────────────────────────────────────────────────
 
-type ExecuteStepResult = {
-  text: string;
-  steps?: Array<{
-    response?: {
-      uiMessages?: Array<{ parts?: Array<unknown> }>;
-    };
-  }>;
-};
-
-type Deps = {
-  contractId: string;
-  runEpoch: number;
-  stopped: boolean;
-  executing: boolean;
-  isStaleRun: (runEpoch: number) => boolean;
-  transitionToIdle: (runEpoch: number, opts?: object) => Promise<void>;
-  queueNextStep: (runEpoch: number) => Promise<void>;
-  generateWithTimeoutRetries: (prompt: string, runEpoch: number, contractId: string, contract: object, ltmText: string | null, config: object) => Promise<ExecuteStepResult>;
-  schedule: (delayMs: number) => void;
-  messageManager: { getPendingCount: () => number };
-  scheduler: { resetBackoff: () => void };
-  loopState: { reset: () => void };
-  extractRunnerControlDirective: (result: ExecuteStepResult) => string | null;
-  setNextStepAt: (v: number | null) => void;
-  backoffMs: number;
-  nextExponentialBackoffMs: (ms: number) => { current: number; next: number };
-  onRunnerIdle: () => Promise<void>;
-  activeStepEpoch: { current: number };
-  prompt: { current: string };
-};
-
-// ── Test helper: build deps object ─────────────────────────────────────────────
-
-function makeDeps(overrides: Partial<Deps> & { schedule: Deps['schedule']; queueNextStep: Deps['queueNextStep']; transitionToIdle: Deps['transitionToIdle']; generateWithTimeoutRetries: Deps['generateWithTimeoutRetries']; onRunnerIdle: Deps['onRunnerIdle']; setNextStepAt: Deps['setNextStepAt']; loopReset: () => void; schedulerResetBackoff: () => void; extractControlDirective: Deps['extractRunnerControlDirective']; activeStepEpoch: Deps['activeStepEpoch'] }): Deps {
+function mockStore(overrides: Partial<{
+  getExecutionState: ReturnType<typeof vi.fn>;
+  getRunnableContract: ReturnType<typeof vi.fn>;
+  setExecutionState: ReturnType<typeof vi.fn>;
+  setExecutionAbsent: ReturnType<typeof vi.fn>;
+}> = {}) {
   return {
-    contractId: 'c1',
-    runEpoch: 1,
-    stopped: false,
-    executing: false,
-    isStaleRun: () => false,
-    prompt: { current: '' },
-    backoffMs: 60_000,
-    messageManager: { getPendingCount: vi.fn().mockReturnValue(0) },
-    store: null as never,
-    runtime: null as never,
-    currentRuntime: null as never,
-    lastStepStartedAt: { current: null },
-    lastStepStage: { current: null },
-    lastGenerateProgress: { current: null },
-    epochState: null as never,
-    setBackoffMs: vi.fn(),
-    setInstant: vi.fn(),
-    formatAbsentExecutionError: vi.fn(),
-    serializeError: vi.fn(),
-    wakeQueue: null as never,
-    nextExponentialBackoffMs: vi.fn((ms: number) => ({ current: ms, next: ms * 2 })),
-    loopState: { reset: vi.fn() },
+    getExecutionState: vi.fn().mockResolvedValue('idle'),
+    getRunnableContract: vi.fn().mockResolvedValue(null),
+    setExecutionState: vi.fn().mockResolvedValue(undefined),
+    setExecutionAbsent: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
 
-// ── Test helper: executeStepImpl (mirrors agent-runner.ts logic) ───────────────
-
-async function executeStepImpl(deps: Deps): Promise<void> {
-  const { isStaleRun, transitionToIdle, queueNextStep } = deps;
-  const runEpoch = deps.runEpoch;
-  const generateWithTimeoutRetries = deps.generateWithTimeoutRetries;
-  const schedule = deps.schedule;
-  const messageManager = deps.messageManager;
-  const scheduler = deps.scheduler;
-  const loopState = deps.loopState;
-  const extractRunnerControlDirective = deps.extractRunnerControlDirective;
-  const setNextStepAt = deps.setNextStepAt;
-  const backoffMs = deps.backoffMs;
-  const nextExponentialBackoffMs = deps.nextExponentialBackoffMs;
-  const onRunnerIdle = deps.onRunnerIdle;
-  const activeStepEpoch = deps.activeStepEpoch;
-
-  if (deps.stopped || deps.executing || isStaleRun(runEpoch)) {
-    return;
-  }
-
-  let continueRunning = false;
-  let drainWakeQueueAfterStep = false;
-
-  try {
-    const result = await generateWithTimeoutRetries(deps.prompt?.current ?? '', runEpoch, deps.contractId, {} as never, null, {} as never);
-    if (isStaleRun(runEpoch)) { return; }
-
-    const controlDirective = extractRunnerControlDirective(result);
-    const stopRequested = controlDirective === 'stop';
-
-    if (stopRequested && messageManager.getPendingCount() === 0) {
-      setNextStepAt(null);
-      loopState.reset();
-      await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
-      drainWakeQueueAfterStep = true;
-      return;
-    }
-
-    scheduler.resetBackoff();
-    continueRunning = messageManager.getPendingCount() > 0;
-  } catch {
-    if (isStaleRun(runEpoch)) { return; }
-    schedule(nextExponentialBackoffMs(backoffMs).current);
-  } finally {
-    if (activeStepEpoch.current === runEpoch) {
-      activeStepEpoch.current = 0;
-    }
-    if (drainWakeQueueAfterStep && !isStaleRun(runEpoch)) {
-      await onRunnerIdle();
-    }
-    if (continueRunning && !isStaleRun(runEpoch)) {
-      await queueNextStep(runEpoch);
-    }
-  }
+function mockScheduler(overrides: Partial<{
+  resetBackoff: ReturnType<typeof vi.fn>;
+  scheduleNextStep: ReturnType<typeof vi.fn>;
+}> = {}) {
+  return {
+    resetBackoff: vi.fn(),
+    scheduleNextStep: vi.fn(),
+    ...overrides,
+  };
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+function mockMessageManager(pendingCount = 0) {
+  return {
+    getPendingCount: vi.fn().mockReturnValue(pendingCount),
+  };
+}
 
-describe('executeStep exit paths', () => {
-  it('returns immediately when stopped', async () => {
-    // Each test declares its own mocks to avoid module-level hoisting issues
-    const generateWithTimeoutRetries = vi.fn();
-    const transitionToIdle = vi.fn().mockResolvedValue(undefined);
-    const queueNextStep = vi.fn().mockResolvedValue(undefined);
-    const schedule = vi.fn();
-    const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
-    const setNextStepAt = vi.fn();
-    const loopReset = vi.fn();
-    const schedulerResetBackoff = vi.fn();
-    const extractControlDirective = vi.fn().mockReturnValue(null);
-    const activeStepEpoch = { current: 0 };
+function mockEpochState() {
+  return { activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0, activeRunId: null };
+}
 
-    const deps = makeDeps({
-      stopped: true, executing: false, isStaleRun: () => false,
-      generateWithTimeoutRetries, transitionToIdle, queueNextStep,
-      schedule, onRunnerIdle, setNextStepAt, loopReset,
-      schedulerResetBackoff, extractControlDirective, activeStepEpoch,
-    });
+function mockBackoffState() {
+  return { backoffMs: 60_000, instant: false, nextStepAt: null };
+}
 
-    await executeStepImpl(deps);
+function mockProgressState() {
+  return {
+    lastStepStartedAt: null,
+    lastStepStage: null,
+    lastGenerateProgress: null,
+  };
+}
 
-    expect(transitionToIdle).not.toHaveBeenCalled();
-    expect(queueNextStep).not.toHaveBeenCalled();
-    expect(generateWithTimeoutRetries).not.toHaveBeenCalled();
+function mockLoopState() {
+  return { lastLoopSignature: null, repeatedLoopCount: 0 };
+}
+
+function makeDeps(overrides: {
+  stopped?: boolean;
+  executing?: boolean;
+  isStaleRun?: (runEpoch: number) => boolean;
+  runtimeId?: string;
+  contractId?: string;
+  runEpoch?: number;
+  store?: ReturnType<typeof mockStore>;
+  messageManager?: ReturnType<typeof mockMessageManager>;
+  scheduler?: ReturnType<typeof mockScheduler>;
+  transitionToIdle?: ReturnType<typeof vi.fn>;
+  queueNextStep?: ReturnType<typeof vi.fn>;
+  onRunnerIdle?: ReturnType<typeof vi.fn>;
+  generateWithTimeoutRetries?: ReturnType<typeof vi.fn>;
+  markGenerateProgress?: ReturnType<typeof vi.fn>;
+  setLoopSignature?: ReturnType<typeof vi.fn>;
+  loopSignature?: string;
+  loadAgentContextInstructions?: ReturnType<typeof vi.fn>;
+  currentRuntime?: unknown;
+  db?: unknown;
+  pendingLongTermMemoryRecallSystemText?: string | null;
+  flushPendingRunMessages?: ReturnType<typeof vi.fn>;
+  usage?: unknown;
+  notifications?: unknown;
+  homeMetricSnapshots?: unknown;
+  runLastMessages?: number;
+  currentGenerateAbortController?: AbortController | null;
+  setCurrentGenerateAbortController?: ReturnType<typeof vi.fn>;
+  loopDetector?: unknown;
+  forgeDebug?: ReturnType<typeof vi.fn>;
+  mastraId?: string;
+  pricingModelKey?: string;
+  modelProfileId?: string;
+} = {}) {
+  return {
+    contractId: 'contract-1',
+    runEpoch: 1,
+    runtimeId: 'runtime-1',
+    mastraId: 'mastra-1',
+    pricingModelKey: 'flat-rate',
+    modelProfileId: 'profile-1',
+    stopped: false,
+    executing: false,
+    isStaleRun: () => false,
+    epochState: mockEpochState(),
+    backoffState: mockBackoffState(),
+    progressState: mockProgressState(),
+    loopState: mockLoopState(),
+    store: mockStore(),
+    messageManager: mockMessageManager(),
+    scheduler: mockScheduler(),
+    loopDetector: {},
+    onRunnerIdle: vi.fn().mockResolvedValue(undefined),
+    transitionToIdle: vi.fn().mockResolvedValue(undefined),
+    queueNextStep: vi.fn().mockResolvedValue(undefined),
+    generateWithTimeoutRetries: vi.fn().mockResolvedValue({ text: '' }),
+    markGenerateProgress: vi.fn(),
+    setLoopSignature: vi.fn(),
+    loopSignature: '',
+    loadAgentContextInstructions: vi.fn().mockResolvedValue(null),
+    currentRuntime: null as never,
+    db: null as never,
+    pendingLongTermMemoryRecallSystemText: null,
+    flushPendingRunMessages: vi.fn().mockReturnValue(''),
+    usage: null as never,
+    notifications: null as never,
+    homeMetricSnapshots: null as never,
+    runLastMessages: 20,
+    currentGenerateAbortController: null,
+    setCurrentGenerateAbortController: vi.fn(),
+    forgeDebug: vi.fn(),
+    ...overrides,
+  };
+}
+
+// ─── Phase 0 — early exit guards ─────────────────────────────────────────────
+
+it('returns immediately when stopped', async () => {
+  const deps = makeDeps({ stopped: true });
+  await executeStep(deps);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
+
+it('returns immediately when executing', async () => {
+  const deps = makeDeps({ executing: true });
+  await executeStep(deps);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
+
+it('returns immediately when run is stale', async () => {
+  const isStaleRun = vi.fn().mockReturnValue(false);
+  const deps = makeDeps({ isStaleRun });
+  isStaleRun.mockReturnValueOnce(true); // stale on first call (at guard)
+  await executeStep(deps);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
+
+// ─── Phase 1 — execution state lookup ─────────────────────────────────────────
+
+it('returns immediately when execution state is idle', async () => {
+  const store = mockStore({ getExecutionState: vi.fn().mockResolvedValue('idle') });
+  const deps = makeDeps({ store });
+  await executeStep(deps);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
+
+it('sets execution state to running when absent', async () => {
+  const store = mockStore({ getExecutionState: vi.fn().mockResolvedValue('absent') });
+  const deps = makeDeps({ store });
+  await executeStep(deps);
+  expect(store.setExecutionState).toHaveBeenCalledWith('runtime-1', 'running');
+});
+
+it('returns immediately when run becomes stale after execution state check', async () => {
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
   });
+  const isStaleRun = vi.fn().mockReturnValue(false);
+  const deps = makeDeps({ store, isStaleRun });
+  // not stale at guard, not stale at idle check, stale after setExecutionState
+  isStaleRun.mockReturnValueOnce(false);  // guard
+  isStaleRun.mockReturnValueOnce(false);  // idle check
+  isStaleRun.mockReturnValueOnce(true);   // after setExecutionState
+  await executeStep(deps);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
 
-  it('returns immediately when executing', async () => {
-    const generateWithTimeoutRetries = vi.fn();
-    const transitionToIdle = vi.fn().mockResolvedValue(undefined);
-    const queueNextStep = vi.fn().mockResolvedValue(undefined);
-    const schedule = vi.fn();
-    const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
-    const setNextStepAt = vi.fn();
-    const loopReset = vi.fn();
-    const schedulerResetBackoff = vi.fn();
-    const extractControlDirective = vi.fn().mockReturnValue(null);
-    const activeStepEpoch = { current: 0 };
+// ─── Phase 2 — contract loading ───────────────────────────────────────────────
 
-    const deps = makeDeps({
-      stopped: false, executing: true, isStaleRun: () => false,
-      generateWithTimeoutRetries, transitionToIdle, queueNextStep,
-      schedule, onRunnerIdle, setNextStepAt, loopReset,
-      schedulerResetBackoff, extractControlDirective, activeStepEpoch,
-    });
-
-    await executeStepImpl(deps);
-
-    expect(transitionToIdle).not.toHaveBeenCalled();
-    expect(queueNextStep).not.toHaveBeenCalled();
-    expect(generateWithTimeoutRetries).not.toHaveBeenCalled();
+it('returns immediately when contract is null — calls transitionToIdle with deferWakeQueueDrain', async () => {
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(null),
   });
+  const deps = makeDeps({ store });
+  await executeStep(deps);
+  expect(deps.transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
 
-  it('returns immediately when run is stale', async () => {
-    const generateWithTimeoutRetries = vi.fn();
-    const transitionToIdle = vi.fn().mockResolvedValue(undefined);
-    const queueNextStep = vi.fn().mockResolvedValue(undefined);
-    const schedule = vi.fn();
-    const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
-    const setNextStepAt = vi.fn();
-    const loopReset = vi.fn();
-    const schedulerResetBackoff = vi.fn();
-    const extractControlDirective = vi.fn().mockReturnValue(null);
-    const activeStepEpoch = { current: 0 };
-
-    const deps = makeDeps({
-      stopped: false, executing: false, isStaleRun: () => true,
-      generateWithTimeoutRetries, transitionToIdle, queueNextStep,
-      schedule, onRunnerIdle, setNextStepAt, loopReset,
-      schedulerResetBackoff, extractControlDirective, activeStepEpoch,
-    });
-
-    await executeStepImpl(deps);
-
-    expect(generateWithTimeoutRetries).not.toHaveBeenCalled();
-    expect(queueNextStep).not.toHaveBeenCalled();
+it('queues next step when loaded contract id differs from requested contractId', async () => {
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue({ id: 'different-contract', budgetUsd: 10, endsAt: Date.now() + 86_400_000 }),
   });
+  const deps = makeDeps({ store, contractId: 'expected-contract' });
+  await executeStep(deps);
+  expect(deps.queueNextStep).toHaveBeenCalledWith(1);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
 
-  it('schedules backoff on generation error', async () => {
-    const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
-    const transitionToIdle = vi.fn().mockResolvedValue(undefined);
-    const queueNextStep = vi.fn().mockResolvedValue(undefined);
-    const schedule = vi.fn();
-    const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
-    const setNextStepAt = vi.fn();
-    const loopReset = vi.fn();
-    const schedulerResetBackoff = vi.fn();
-    const extractControlDirective = vi.fn().mockReturnValue(null);
-    const activeStepEpoch = { current: 0 };
-
-    const deps = makeDeps({
-      stopped: false, executing: false, isStaleRun: () => false,
-      generateWithTimeoutRetries, transitionToIdle, queueNextStep,
-      schedule, onRunnerIdle, setNextStepAt, loopReset,
-      schedulerResetBackoff, extractControlDirective, activeStepEpoch,
-      backoffMs: 60_000,
-    });
-
-    await executeStepImpl(deps);
-
-    expect(schedule).toHaveBeenCalledWith(60_000);
+it('returns immediately when run becomes stale after loading contract', async () => {
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue({ id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 }),
   });
-
-
-  it('does not queue next step when no pending messages after success', async () => {
-    const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: 'hello' });
-    const transitionToIdle = vi.fn().mockResolvedValue(undefined);
-    const queueNextStep = vi.fn().mockResolvedValue(undefined);
-    const schedule = vi.fn();
-    const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
-    const setNextStepAt = vi.fn();
-    const loopReset = vi.fn();
-    const schedulerResetBackoff = vi.fn();
-    const extractControlDirective = vi.fn().mockReturnValue(null);
-    const activeStepEpoch = { current: 1 };
-
-    const deps = makeDeps({
-      stopped: false, executing: false, isStaleRun: () => false,
-      generateWithTimeoutRetries, transitionToIdle, queueNextStep,
-      schedule, onRunnerIdle, setNextStepAt, loopReset,
-      schedulerResetBackoff, extractControlDirective, activeStepEpoch,
-      messageManager: { getPendingCount: vi.fn().mockReturnValue(0) },
-    });
-
-    await executeStepImpl(deps);
-
-    expect(queueNextStep).not.toHaveBeenCalled();
+  let callCount = 0;
+  const isStaleRun = vi.fn().mockImplementation(() => {
+    callCount++;
+    return callCount === 3; // stale on 3rd call (after contract loaded)
   });
+  const deps = makeDeps({ store, isStaleRun });
+  await executeStep(deps);
+  expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
+});
+
+// ─── Phase 3 — generation ──────────────────────────────────────────────────────
+
+it('calls generateWithTimeoutRetries with correct args when contract matches', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: '' });
+  const deps = makeDeps({ store, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(generateWithTimeoutRetries).toHaveBeenCalledTimes(1);
+  const [, runEpoch, contractId, passedContract] = generateWithTimeoutRetries.mock.calls[0];
+  expect(runEpoch).toBe(1);
+  expect(contractId).toBe('contract-1');
+  expect(passedContract).toBe(contract);
+});
+
+it('returns immediately when run becomes stale after generate call', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const isStaleRun = vi.fn().mockReturnValue(false);
+  const deps = makeDeps({ store, isStaleRun });
+  isStaleRun.mockReturnValueOnce(false);  // guard
+  isStaleRun.mockReturnValueOnce(false);  // idle check
+  isStaleRun.mockReturnValueOnce(false);  // after setExecutionState
+  isStaleRun.mockReturnValueOnce(false);  // after loading contract
+  isStaleRun.mockReturnValueOnce(true);   // after generate call
+  await executeStep(deps);
+  expect(deps.transitionToIdle).not.toHaveBeenCalled();
+  expect(deps.queueNextStep).not.toHaveBeenCalled();
+});
+
+// ─── Phase 4 — result interpretation ──────────────────────────────────────────
+
+it('calls transitionToIdle and drains wake queue when stop requested with no pending messages', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const messageManager = mockMessageManager(0);
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
+    text: 'STOP_AND_IDLE',
+  });
+  const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(deps.transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
+  expect(deps.onRunnerIdle).toHaveBeenCalledTimes(1);
+});
+
+it('resets loop count and clears nextStepAt when stop requested', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const loopState = { lastLoopSignature: 'sig', repeatedLoopCount: 5 };
+  const backoffState = { backoffMs: 60_000, instant: false, nextStepAt: 123 };
+  const messageManager = mockMessageManager(0);
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
+    text: 'STOP_AND_IDLE',
+  });
+  const deps = makeDeps({ store, loopState, backoffState, messageManager, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(loopState.repeatedLoopCount).toBe(0);
+  expect(backoffState.nextStepAt).toBeNull();
+});
+
+it('does not transition to idle when stop requested but pending messages remain', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const messageManager = mockMessageManager(3);
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
+    text: 'STOP_AND_IDLE',
+  });
+  const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(deps.transitionToIdle).not.toHaveBeenCalled();
+  expect(deps.scheduler.resetBackoff).toHaveBeenCalledTimes(1);
+  expect(deps.queueNextStep).toHaveBeenCalledWith(1);
+});
+
+it('resets scheduler backoff on successful non-stop generation', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const scheduler = mockScheduler();
+  const messageManager = mockMessageManager(0);
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: 'hello world' });
+  const deps = makeDeps({ store, scheduler, messageManager, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(scheduler.resetBackoff).toHaveBeenCalledTimes(1);
+});
+
+it('queues next step when pending messages exist after non-stop generation', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const messageManager = mockMessageManager(2);
+  const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: 'response text' });
+  const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(deps.queueNextStep).toHaveBeenCalledWith(1);
+});
+
+// ─── Error path ────────────────────────────────────────────────────────────────
+
+it('does not schedule when run becomes stale during error', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+    setExecutionAbsent: vi.fn().mockResolvedValue(undefined),
+  });
+  const scheduler = mockScheduler();
+  let callCount = 0;
+  // isStaleRun called twice in catch block: first check → stale, skip rest
+  const isStaleRun = vi.fn().mockImplementation(() => {
+    callCount++;
+    return callCount >= 2; // stale on 2nd call (first call in catch block)
+  });
+  const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('generation failed'));
+  const deps = makeDeps({ store, scheduler, isStaleRun, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(scheduler.scheduleNextStep).not.toHaveBeenCalled();
+});
+
+it('schedules exponential backoff on generation error', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const scheduler = mockScheduler();
+  const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('generation failed'));
+  const deps = makeDeps({ store, scheduler, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(scheduler.scheduleNextStep).toHaveBeenCalled();
+  const [delayMs] = scheduler.scheduleNextStep.mock.calls[0];
+  expect(delayMs).toBeGreaterThan(0);
+});
+
+it('calls forgeDebug on error with correct context fields', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+  });
+  const forgeDebug = vi.fn();
+  const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
+  const deps = makeDeps({ store, forgeDebug, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(forgeDebug).toHaveBeenCalledTimes(1);
+  const [call] = forgeDebug.mock.calls[0];
+  expect(call.scope).toBe('agent-runner');
+  expect(call.level).toBe('error');
+  expect(call.runtimeId).toBe('runtime-1');
+  expect(call.context.mastraId).toBe('mastra-1');
+});
+
+it('sets execution absent state on error', async () => {
+  const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
+  const store = mockStore({
+    getExecutionState: vi.fn().mockResolvedValue('running'),
+    getRunnableContract: vi.fn().mockResolvedValue(contract),
+    setExecutionAbsent: vi.fn().mockResolvedValue(undefined),
+  });
+  const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
+  const deps = makeDeps({ store, generateWithTimeoutRetries });
+  await executeStep(deps);
+  expect(store.setExecutionAbsent).toHaveBeenCalledWith(
+    'runtime-1',
+    expect.objectContaining({}),
+  );
 });

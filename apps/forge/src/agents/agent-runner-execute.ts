@@ -29,7 +29,7 @@ import {
   formatAbsentExecutionError,
 } from './agent-runner-helpers';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
-import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-constants';
+const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 
 // ─── State types (same shapes as agent-runner-generate.ts) ────────────────────
 
