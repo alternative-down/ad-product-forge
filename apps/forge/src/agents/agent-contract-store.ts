@@ -236,6 +236,7 @@ export function createAgentContractStore(
         contractCostMultiplier: input.contractCostMultiplier,
         costUsd: input.costUsd,
         createdAt,
+        updatedAt: createdAt,
       });
     } catch (error) {
       forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: input.agentId, message: 'recordAgentStep failed: ' + (error instanceof Error ? error.message : String(error)) });

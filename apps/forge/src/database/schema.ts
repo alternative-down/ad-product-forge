@@ -84,6 +84,7 @@ export const roleToolPermissions = sqliteTable('role_tool_permissions', {
     .references(() => agentRoles.id, { onDelete: 'cascade' }),
   toolId: text('tool_id').notNull(),
   createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   roleToolPermissionsUniqueIdx: uniqueIndex('role_tool_permissions_unique_idx').on(table.roleId, table.toolId),
   roleToolPermissionsRoleIdIdx: index('role_tool_permissions_role_id_idx').on(table.roleId),
@@ -98,6 +99,7 @@ export const roleWorkflowPermissions = sqliteTable('role_workflow_permissions', 
     .references(() => agentRoles.id, { onDelete: 'cascade' }),
   workflowId: text('workflow_id').notNull(),
   createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   roleWorkflowPermissionsUniqueIdx: uniqueIndex('role_workflow_permissions_unique_idx').on(table.roleId, table.workflowId),
   roleWorkflowPermissionsRoleIdIdx: index('role_workflow_permissions_role_id_idx').on(table.roleId),
@@ -188,6 +190,7 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
   contractCostMultiplier: real('contract_cost_multiplier').notNull().default(1),
   costUsd: real('cost_usd').notNull(),
   createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentExecutionStepsAgentIdIdx: index('agent_execution_steps_agent_id_idx').on(table.agentId),
   agentExecutionStepsContractIdIdx: index('agent_execution_steps_contract_id_idx').on(table.contractId),
@@ -290,6 +293,7 @@ export const agentNotifications = sqliteTable('agent_notifications', {
     .references(() => agents.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
   createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
   readAt: integer('read_at'),
 }, (table) => ({
   agentNotificationsAgentIdIdx: index('agent_notifications_agent_id_idx').on(table.agentId),
@@ -778,8 +782,8 @@ export const mcpServerConfigs = sqliteTable(
     headers: text('headers'), // JSON object for HTTP headers
     version: integer('version').notNull().default(1),
     isActive: integer('is_active').notNull().default(1),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   (table) => ({
     nameIdx: index('idx_mcp_server_configs_name').on(table.name),
@@ -804,8 +808,8 @@ export const agentMcpConfigs = sqliteTable(
       .notNull()
       .references(() => mcpServerConfigs.id, { onDelete: 'cascade' }),
     isActive: integer('is_active').notNull().default(1),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   (table) => ({
     agentIdIdx: index('idx_agent_mcp_configs_agent_id').on(table.agentId),
