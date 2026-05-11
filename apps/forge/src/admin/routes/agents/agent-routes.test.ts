@@ -361,7 +361,7 @@ describe('Agent Write Ops Routes', () => {
 
   it('should handle force-idle correctly', () => {
     const forceIdle = vi.fn();
-    let response: any;
+    let response: unknown;
     const httpServer = {
       registerRoute: ({ handler }: { method: string; path: string; handler: Function }) => {
         response = handler({ bodyText: JSON.stringify({ agentId: 'test-agent' }) });

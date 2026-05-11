@@ -164,7 +164,7 @@ const wh = extractWhere(opts?.where);
   return { db, collections };
 }
 
-let createAgentContractStore: (db: any) => ReturnType<typeof import('./agent-contract-store').createAgentContractStore>;
+let createAgentContractStore: (db: unknown) => ReturnType<typeof import('./agent-contract-store').createAgentContractStore>;
 let collections: MockCollections;
 
 beforeEach(async () => {
