@@ -114,10 +114,12 @@ export function createInternalChatService(
   // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
   const admin = createInternalChatAdmin(db);
+
+  // Deferred: reads needs listConversations from listing module (created later).
+  // Only listGroupMembersOrDmPeersByAccount is used before actualReads exists,
+  // so we only stub that one method here.
   const reads = createInternalChatReads(db, {
-    unread: { getUnreadSummary: async () => { throw new Error("reads not yet initialized"); } },
-    participants: { listGroupMembersOrDmPeers: async () => { throw new Error("reads not yet initialized"); }, listGroupMembersOrDmPeersByAccount: async () => { throw new Error("reads not yet initialized"); } },
-    listConversations: async () => { throw new Error("reads not yet initialized"); },
+    participants: { listGroupMembersOrDmPeersByAccount: async () => { throw new Error("reads not yet initialized"); } },
   });
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
@@ -147,7 +149,6 @@ const registerAgentAccount = admin.registerAgentAccount;
   const getAccountByAgentId = admin.getAccountByAgentId;
   const getConversationForAgent = admin.getConversationForAgent;
 
-  // ── Conversation Setup ──────────────────────
   // ── Conversation Setup ────────────────────────────────────────────────
   const ensureDirectConversation = conversations.ensureDirectConversation;
 
@@ -239,19 +240,13 @@ const registerAgentAccount = admin.registerAgentAccount;
 
   // ── DI: Initialize reads with actual deps ───────────────────────────────
   const unread = createInternalChatUnread(db);
-  // Replace reads with proper deps (now that unread, participants, listConversations exist)
-  // Note: reads object was created earlier with placeholder deps. We recreate it.
   const actualReads = createInternalChatReads(db, {
     unread,
     participants,
     listConversations,
   });
-  // Update delegates to use actual reads
   const getUnreadSummary = actualReads.getUnreadSummary;
   const listRecentConversations = actualReads.listRecentConversations;
-  const listGroupMembersOrDmPeers_ = actualReads.listGroupMembersOrDmPeers;
-  const listGroupMembersOrDmPeersByAccount_ = actualReads.listGroupMembersOrDmPeersByAccount;
-
   // === Internal Helpers ────────────────────────────────────────────────────
 
   const guards = createInternalChatGuards(db, {
