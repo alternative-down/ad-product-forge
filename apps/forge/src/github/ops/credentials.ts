@@ -50,7 +50,7 @@ export function createCredentialsOps(ctx: OpsContext) {
   }
 
   async function saveCredentials(agentId: string, credentials: GitHubAppCredentials) {
-    return ctx.saveCredentials(agentId, credentials);
+    return await ctx.saveCredentials(agentId, credentials);
   }
 
   function parseCredentials(encryptedCredentials: string) {
@@ -65,15 +65,15 @@ export function createCredentialsOps(ctx: OpsContext) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
-    return ctx.createInstallationOctokit(credentials.installationId);
+    return await ctx.createInstallationOctokit(credentials.installationId);
   }
 
   async function createInstallationOctokit(installationId: number) {
-    return ctx.createInstallationOctokit(installationId);
+    return await ctx.createInstallationOctokit(installationId);
   }
 
   async function getInstallationToken(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
-    return ctx.getInstallationToken(credentials);
+    return await ctx.getInstallationToken(credentials);
   }
 
   return {

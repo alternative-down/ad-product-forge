@@ -107,7 +107,7 @@ export function createAgentRunner(
     setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
   let timer: NodeJS.Timeout | null = null;
-  let healthcheckTimer: NodeJS.Timeout | null = null;
+  const healthcheckTimer: NodeJS.Timeout | null = null;
   let stopped = false;
   let instant = false;
   let startingRun = false;
@@ -927,7 +927,7 @@ export function createAgentRunner(
                 });
               }
             },
-            onIterationComplete: async (iteration) => buildIterationFeedback(iteration, {
+            onIterationComplete: async (iteration) => await buildIterationFeedback(iteration, {
               suppressNoToolCallReminderForRun,
               setSuppressNoToolCallReminder: (val: boolean) => { suppressNoToolCallReminderForRun = val; },
               nextStepAtRef: { current: nextStepAt },

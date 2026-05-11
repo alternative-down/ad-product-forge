@@ -228,7 +228,7 @@ export function createGitHubAppManager(config: {
       return null;
     }
 
-    return createAgentApp({
+    return await createAgentApp({
       agentId,
       agentName: agent.name,
     });
@@ -318,7 +318,7 @@ export function createGitHubAppManager(config: {
 
 // === Repo Ops ===
   async function listRepositories(agentId: string) {
-    return opsRepos.listRepositories(agentId);
+    return await opsRepos.listRepositories(agentId);
   }
 
   async function createRepository(agentId: string, input: {
@@ -328,7 +328,7 @@ export function createGitHubAppManager(config: {
     autoInit?: boolean;
     defaultBranch?: string;
   }) {
-    return opsRepos.createRepository(agentId, input);
+    return await opsRepos.createRepository(agentId, input);
   }
 
   async function updateRepository(agentId: string, input: {
@@ -339,21 +339,21 @@ export function createGitHubAppManager(config: {
     private?: boolean;
     defaultBranch?: string;
   }) {
-    return opsRepos.updateRepository(agentId, input);
+    return await opsRepos.updateRepository(agentId, input);
   }
 
   async function deleteRepository(agentId: string, input: {
     owner?: string;
     repositoryName: string;
   }) {
-    return opsRepos.deleteRepository(agentId, input);
+    return await opsRepos.deleteRepository(agentId, input);
   }
 
   async function getRepository(agentId: string, input: {
     owner?: string;
     repositoryName: string;
   }) {
-    return opsRepos.getRepository(agentId, input);
+    return await opsRepos.getRepository(agentId, input);
   }
 
   async function listPullRequests(agentId: string, input: {
@@ -361,7 +361,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     state?: 'open' | 'closed' | 'all';
   }) {
-    return opsPullRequests.listPullRequests(agentId, input);
+    return await opsPullRequests.listPullRequests(agentId, input);
   }
 
   async function createPullRequest(agentId: string, input: {
@@ -372,7 +372,7 @@ export function createGitHubAppManager(config: {
     base: string;
     body?: string;
   }) {
-    return opsPullRequests.createPullRequest(agentId, input);
+    return await opsPullRequests.createPullRequest(agentId, input);
   }
 
   async function getPullRequest(agentId: string, input: {
@@ -380,7 +380,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     pullRequestNumber: number;
   }) {
-    return opsPullRequests.getPullRequest(agentId, input);
+    return await opsPullRequests.getPullRequest(agentId, input);
   }
 
   async function listPullRequestComments(agentId: string, input: {
@@ -390,7 +390,7 @@ export function createGitHubAppManager(config: {
     direction?: 'asc' | 'desc';
     limit?: number;
   }) {
-    return opsPullRequests.listPullRequestComments(agentId, input);
+    return await opsPullRequests.listPullRequestComments(agentId, input);
   }
 
   async function updatePullRequest(agentId: string, input: {
@@ -402,7 +402,7 @@ export function createGitHubAppManager(config: {
     base?: string;
     state?: 'open' | 'closed';
   }) {
-    return opsPullRequests.updatePullRequest(agentId, input);
+    return await opsPullRequests.updatePullRequest(agentId, input);
   }
 
   async function mergePullRequest(agentId: string, input: {
@@ -413,7 +413,7 @@ export function createGitHubAppManager(config: {
     commitTitle?: string;
     commitMessage?: string;
   }) {
-    return opsPullRequests.mergePullRequest(agentId, input);
+    return await opsPullRequests.mergePullRequest(agentId, input);
   }
 
   async function listIssues(agentId: string, input: {
@@ -427,7 +427,7 @@ export function createGitHubAppManager(config: {
     direction?: 'asc' | 'desc';
     limit?: number;
   }) {
-    return opsIssues.listIssues(agentId, input);
+    return await opsIssues.listIssues(agentId, input);
   }
 
   async function getIssue(agentId: string, input: {
@@ -435,7 +435,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return opsIssues.getIssue(agentId, input);
+    return await opsIssues.getIssue(agentId, input);
   }
 
   async function createIssue(agentId: string, input: {
@@ -447,7 +447,7 @@ export function createGitHubAppManager(config: {
     assignees?: string[];
     milestone?: number;
   }) {
-    return opsIssues.createIssue(agentId, input);
+    return await opsIssues.createIssue(agentId, input);
   }
 
   async function updateIssue(agentId: string, input: {
@@ -461,7 +461,7 @@ export function createGitHubAppManager(config: {
     assignees?: string[];
     milestone?: number | null;
   }) {
-    return opsIssues.updateIssue(agentId, input);
+    return await opsIssues.updateIssue(agentId, input);
   }
 
   async function closeIssue(agentId: string, input: {
@@ -469,7 +469,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return opsIssues.closeIssue(agentId, input);
+    return await opsIssues.closeIssue(agentId, input);
   }
 
   async function reopenIssue(agentId: string, input: {
@@ -477,7 +477,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return opsIssues.reopenIssue(agentId, input);
+    return await opsIssues.reopenIssue(agentId, input);
   }
 
   async function listIssueComments(agentId: string, input: {
@@ -486,7 +486,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     limit?: number;
   }) {
-    return opsIssues.listIssueComments(agentId, input);
+    return await opsIssues.listIssueComments(agentId, input);
   }
 
   async function getIssueComment(agentId: string, input: {
@@ -494,7 +494,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     commentId: number;
   }) {
-    return opsIssues.getIssueComment(agentId, input);
+    return await opsIssues.getIssueComment(agentId, input);
   }
 
   async function createIssueComment(agentId: string, input: {
@@ -503,7 +503,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     body: string;
   }) {
-    return opsIssues.createIssueComment(agentId, input);
+    return await opsIssues.createIssueComment(agentId, input);
   }
 
   async function updateIssueComment(agentId: string, input: {
@@ -512,7 +512,7 @@ export function createGitHubAppManager(config: {
     commentId: number;
     body: string;
   }) {
-    return opsIssues.updateIssueComment(agentId, input);
+    return await opsIssues.updateIssueComment(agentId, input);
   }
 
   async function deleteIssueComment(agentId: string, input: {
@@ -520,7 +520,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     commentId: number;
   }) {
-    return opsIssues.deleteIssueComment(agentId, input);
+    return await opsIssues.deleteIssueComment(agentId, input);
   }
 
   async function listLabels(agentId: string, input: {
@@ -528,7 +528,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     limit?: number;
   }) {
-    return opsLabels.listLabels(agentId, input);
+    return await opsLabels.listLabels(agentId, input);
   }
 
   async function createLabel(agentId: string, input: {
@@ -538,7 +538,7 @@ export function createGitHubAppManager(config: {
     color: string;
     description?: string;
   }) {
-    return opsLabels.createLabel(agentId, input);
+    return await opsLabels.createLabel(agentId, input);
   }
 
   async function updateLabel(agentId: string, input: {
@@ -549,7 +549,7 @@ export function createGitHubAppManager(config: {
     color?: string;
     description?: string;
   }) {
-    return opsLabels.updateLabel(agentId, input);
+    return await opsLabels.updateLabel(agentId, input);
   }
 
   async function deleteLabel(agentId: string, input: {
@@ -557,7 +557,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     labelName: string;
   }) {
-    return opsLabels.deleteLabel(agentId, input);
+    return await opsLabels.deleteLabel(agentId, input);
   }
 
   async function addIssueLabels(agentId: string, input: {
@@ -566,7 +566,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     labels: string[];
   }) {
-    return opsLabels.addIssueLabels(agentId, input);
+    return await opsLabels.addIssueLabels(agentId, input);
   }
 
   async function removeIssueLabels(agentId: string, input: {
@@ -575,7 +575,7 @@ export function createGitHubAppManager(config: {
     issueNumber: number;
     labels: string[];
   }) {
-    return opsLabels.removeIssueLabels(agentId, input);
+    return await opsLabels.removeIssueLabels(agentId, input);
   }
 
   async function listMilestones(agentId: string, input: {
@@ -584,7 +584,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed' | 'all';
     limit?: number;
   }) {
-    return opsMilestones.listMilestones(agentId, input);
+    return await opsMilestones.listMilestones(agentId, input);
   }
 
   async function createMilestone(agentId: string, input: {
@@ -595,7 +595,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed';
     dueOn?: string;
   }) {
-    return opsMilestones.createMilestone(agentId, input);
+    return await opsMilestones.createMilestone(agentId, input);
   }
 
   async function updateMilestone(agentId: string, input: {
@@ -607,7 +607,7 @@ export function createGitHubAppManager(config: {
     state?: 'open' | 'closed';
     dueOn?: string | null;
   }) {
-    return opsMilestones.updateMilestone(agentId, input);
+    return await opsMilestones.updateMilestone(agentId, input);
   }
 
   async function deleteMilestone(agentId: string, input: {
@@ -615,7 +615,7 @@ export function createGitHubAppManager(config: {
     repositoryName: string;
     milestoneNumber: number;
   }) {
-    return opsMilestones.deleteMilestone(agentId, input);
+    return await opsMilestones.deleteMilestone(agentId, input);
   }
 
   return {
@@ -727,7 +727,7 @@ export function createGitHubAppManager(config: {
 
   async function getInstallationOctokit(agentId: string) {
     const credentials = await getActiveCredentials(agentId);
-    return createInstallationOctokit(credentials);
+    return await createInstallationOctokit(credentials);
   }
 
   async function getInstallationToken(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
@@ -756,6 +756,6 @@ export function createGitHubAppManager(config: {
 
   async function createInstallationOctokit(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
     const app = createGitHubApp(credentials);
-    return app.getInstallationOctokit(credentials.installationId);
+    return await app.getInstallationOctokit(credentials.installationId);
   }
 }
