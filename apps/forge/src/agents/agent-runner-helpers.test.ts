@@ -1,26 +1,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { withTimeout } from '../utils/async';
 import {
-  buildIterationLoopSignature,
-  didIterationUpdateWorkingMemory,
+  isNoActionNeeded,
+  isStopAndIdle,
+  extractControlDirective,
+} from './agent-runner-helpers';
+import {
   serializeError,
   serializeUnknown,
   formatAbsentExecutionError,
   extractAbsentErrorDetails,
   formatAbsentErrorDetailValue,
+} from './agent-runner-error-formatting';
+import {
   buildStepSystemPrompt,
+  hasExactControlDirective,
   extractRunnerControlDirective,
-  extractRunnerControlDirectiveFromIteration,
+} from './agent-runner-control-directives';
+import {
+  buildIterationLoopSignature,
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
-  collectStepTextParts,
-  hasExactControlDirective,
-} from './agent-runner-helpers';
+  didIterationUpdateWorkingMemory,
+} from './agent-runner-iteration-helpers';
 import {
-  isNoActionNeeded,
-  isStopAndIdle,
-  extractControlDirective,
-} from './agent-runner-helpers';
+  collectStepTextParts,
+} from './agent-runner-control-directives';
+import {
+  extractRunnerControlDirectiveFromIteration,
+} from './agent-runner-control-directives';
 
 describe('agent-runner-helpers', () => {
   // ── withTimeout ────────────────────────────────────────────────────────────
