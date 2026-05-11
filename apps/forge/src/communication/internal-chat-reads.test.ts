@@ -1,185 +1,160 @@
 /**
  * Unit tests for communication/internal-chat-reads.ts.
- * createInternalChatReads — lazy-init pattern with placeholder delegation.
- * Zero prior coverage.
+ * createInternalChatReads — DI pattern (deps required at construction).
+ * Refactored from lazy-init pattern per issue #2208.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { createInternalChatReads } from './internal-chat-reads';
-import type { InternalChatReadsStore } from './internal-chat-reads';
 
-// Mock DB (unused but required by signature)
 const mockDb = {} as Parameters<typeof createInternalChatReads>[0];
 
 describe('createInternalChatReads', () => {
-  describe('before init() is called', () => {
-    it('returns an object with all 5 methods', () => {
-      const reads = createInternalChatReads(mockDb);
-      expect(typeof reads.getUnreadSummary).toBe('function');
-      expect(typeof reads.listRecentConversations).toBe('function');
-      expect(typeof reads.listGroupMembersOrDmPeers).toBe('function');
-      expect(typeof reads.listGroupMembersOrDmPeersByAccount).toBe('function');
-      expect(typeof reads.init).toBe('function');
-    });
-
-    it('getUnreadSummary throws when called before init (unreadStore undefined)', async () => {
-      const reads = createInternalChatReads(mockDb);
-      await expect(reads.getUnreadSummary('agent-1')).rejects.toThrow();
-    });
-
-    it('listRecentConversations throws when called before init (listConversationsFn undefined)', async () => {
-      const reads = createInternalChatReads(mockDb);
-      await expect(reads.listRecentConversations('agent-1', 20)).rejects.toThrow();
-    });
-
-    it('listGroupMembersOrDmPeers throws when called before init (participantsStore undefined)', async () => {
-      const reads = createInternalChatReads(mockDb);
-      await expect(reads.listGroupMembersOrDmPeers('agent-1', 'conv-1')).rejects.toThrow();
-    });
-
-    it('listGroupMembersOrDmPeersByAccount throws when called before init', async () => {
-      const reads = createInternalChatReads(mockDb);
-      await expect(reads.listGroupMembersOrDmPeersByAccount('acct-1', 'conv-1')).rejects.toThrow();
-    });
-
-    it('init() can be called multiple times (last wins)', () => {
-      const reads = createInternalChatReads(mockDb);
-      const mockUnread1 = { getUnreadSummary: vi.fn<() => Promise<unknown>>().mockResolvedValue('first') };
-      const mockUnread2 = { getUnreadSummary: vi.fn<() => Promise<unknown>>().mockResolvedValue('second') };
-      reads.init({
-        unread: mockUnread1 as Parameters<typeof reads.init>[0]['unread'],
-        participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
-        listConversations: vi.fn(),
-      });
-      reads.init({
-        unread: mockUnread2 as Parameters<typeof reads.init>[0]['unread'],
-        participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
-        listConversations: vi.fn(),
-      });
-      expect(reads.getUnreadSummary('agent-1')).resolves.toBe('second');
-    });
+  it('returns an object with 4 methods (no init() in DI pattern)', () => {
+    const mockDeps = {
+      unread: { getUnreadSummary: vi.fn() },
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: vi.fn(),
+    };
+    const reads = createInternalChatReads(mockDb, mockDeps);
+    expect(typeof reads.getUnreadSummary).toBe('function');
+    expect(typeof reads.listRecentConversations).toBe('function');
+    expect(typeof reads.listGroupMembersOrDmPeers).toBe('function');
+    expect(typeof reads.listGroupMembersOrDmPeersByAccount).toBe('function');
+    // No init() method in DI pattern — deps are immutable
+    expect(typeof (reads as any).init).toBe('undefined');
   });
 
-  describe('after init() with mock deps', () => {
-    it('getUnreadSummary delegates to unreadStore.getUnreadSummary', async () => {
-      const mockUnread = {
-        getUnreadSummary: vi.fn<() => Promise<{ count: number }>>().mockResolvedValue({ count: 5 }),
-      };
-      const reads = createInternalChatReads(mockDb);
-      reads.init({
-        unread: mockUnread as Parameters<typeof reads.init>[0]['unread'],
-        participants: {
-          listGroupMembersOrDmPeers: vi.fn(),
-          listGroupMembersOrDmPeersByAccount: vi.fn(),
-        },
-        listConversations: vi.fn(),
-      });
-
-      const result = await reads.getUnreadSummary('agent-abc');
-      expect(result).toEqual({ count: 5 });
-      expect(mockUnread.getUnreadSummary).toHaveBeenCalledWith('agent-abc');
+  it('getUnreadSummary delegates to deps.unread.getUnreadSummary', async () => {
+    const mockUnread = {
+      getUnreadSummary: vi.fn<() => Promise<{ count: number }>>().mockResolvedValue({ count: 5 }),
+    };
+    const reads = createInternalChatReads(mockDb, {
+      unread: mockUnread,
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: vi.fn(),
     });
 
-    it('getUnreadSummary passes through thrown errors from unreadStore', async () => {
-      const mockError = new Error('unread store failed');
-      const mockUnread = {
-        getUnreadSummary: vi.fn<() => Promise<unknown>>().mockRejectedValue(mockError),
-      };
-      const reads = createInternalChatReads(mockDb);
-      reads.init({
-        unread: mockUnread as Parameters<typeof reads.init>[0]['unread'],
-        participants: {
-          listGroupMembersOrDmPeers: vi.fn(),
-          listGroupMembersOrDmPeersByAccount: vi.fn(),
-        },
-        listConversations: vi.fn(),
-      });
+    const result = await reads.getUnreadSummary('agent-abc');
+    expect(result).toEqual({ count: 5 });
+    expect(mockUnread.getUnreadSummary).toHaveBeenCalledWith('agent-abc');
+  });
 
-      await expect(reads.getUnreadSummary('agent-1')).rejects.toThrow('unread store failed');
+  it('getUnreadSummary passes through thrown errors from unread dep', async () => {
+    const mockError = new Error('unread store failed');
+    const mockUnread = {
+      getUnreadSummary: vi.fn<() => Promise<unknown>>().mockRejectedValue(mockError),
+    };
+    const reads = createInternalChatReads(mockDb, {
+      unread: mockUnread,
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: vi.fn(),
     });
 
-    it('listRecentConversations delegates to listConversationsFn', async () => {
-      const mockConvs = [
-        { id: 'conv-1', name: 'General' },
-        { id: 'conv-2', name: 'Random' },
-      ];
-      const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockConvs);
-      const reads = createInternalChatReads(mockDb);
-      reads.init({
-        unread: { getUnreadSummary: vi.fn() },
-        participants: {
-          listGroupMembersOrDmPeers: vi.fn(),
-          listGroupMembersOrDmPeersByAccount: vi.fn(),
-        },
-        listConversations: mockListConversations as Parameters<typeof reads.init>[0]['listConversations'],
-      });
+    await expect(reads.getUnreadSummary('agent-1')).rejects.toThrow('unread store failed');
+  });
 
-      const result = await reads.listRecentConversations('agent-xyz', 10);
-      expect(result).toEqual(mockConvs);
-      expect(mockListConversations).toHaveBeenCalledWith({ agentId: 'agent-xyz', limit: 10 });
+  it('getUnreadSummary passes through thrown errors with correct agentId', async () => {
+    const mockError = new Error('access denied');
+    const mockUnread = {
+      getUnreadSummary: vi.fn<() => Promise<unknown>>().mockRejectedValue(mockError),
+    };
+    const reads = createInternalChatReads(mockDb, {
+      unread: mockUnread,
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: vi.fn(),
     });
 
-    it('listRecentConversations passes unread: false to listConversationsFn', async () => {
-      const receivedInput = vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]);
-      const reads = createInternalChatReads(mockDb);
-      reads.init({
-        unread: { getUnreadSummary: vi.fn() },
-        participants: {
-          listGroupMembersOrDmPeers: vi.fn(),
-          listGroupMembersOrDmPeersByAccount: vi.fn(),
-        },
-        listConversations: receivedInput as Parameters<typeof reads.init>[0]['listConversations'],
-      });
+    await expect(reads.getUnreadSummary('agent-specific-id')).rejects.toThrow('access denied');
+  });
 
-      await reads.listRecentConversations('agent-1', 5);
-      expect(receivedInput).toHaveBeenCalledWith({ agentId: 'agent-1', limit: 5 });
+  it('listRecentConversations delegates to deps.listConversations with correct args', async () => {
+    const mockConvs = [{ id: 'conv-1', name: 'General' }, { id: 'conv-2', name: 'Random' }];
+    const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockConvs);
+    const reads = createInternalChatReads(mockDb, {
+      unread: { getUnreadSummary: vi.fn() },
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: mockListConversations,
     });
 
-    it('listGroupMembersOrDmPeers delegates to participantsStore', async () => {
-      const mockMembers = [
-        { accountId: 'acct-1', displayName: 'Alice' },
-        { accountId: 'acct-2', displayName: 'Bob' },
-      ];
-      const mockParticipants = {
-        listGroupMembersOrDmPeers: vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockMembers),
-        listGroupMembersOrDmPeersByAccount: vi.fn(),
-      };
-      const reads = createInternalChatReads(mockDb);
-      reads.init({
-        unread: { getUnreadSummary: vi.fn() },
-        participants: mockParticipants as Parameters<typeof reads.init>[0]['participants'],
-        listConversations: vi.fn(),
-      });
+    const result = await reads.listRecentConversations('agent-xyz', 10);
+    expect(result).toEqual(mockConvs);
+    expect(mockListConversations).toHaveBeenCalledWith({ agentId: 'agent-xyz', limit: 10 });
+  });
 
-      const result = await reads.listGroupMembersOrDmPeers('agent-1', 'conv-99');
-      expect(result).toEqual(mockMembers);
-      expect(mockParticipants.listGroupMembersOrDmPeers).toHaveBeenCalledWith('agent-1', 'conv-99');
+  it('listRecentConversations delegates with limit=0', async () => {
+    const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]);
+    const reads = createInternalChatReads(mockDb, {
+      unread: { getUnreadSummary: vi.fn() },
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: mockListConversations,
     });
 
-    it('listGroupMembersOrDmPeersByAccount delegates to participantsStore', async () => {
-      const mockMembers = [{ accountId: 'acct-3', displayName: 'Charlie' }];
-      const mockParticipants = {
-        listGroupMembersOrDmPeers: vi.fn(),
-        listGroupMembersOrDmPeersByAccount: vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockMembers),
-      };
-      const reads = createInternalChatReads(mockDb);
-      reads.init({
-        unread: { getUnreadSummary: vi.fn() },
-        participants: mockParticipants as Parameters<typeof reads.init>[0]['participants'],
-        listConversations: vi.fn(),
-      });
+    await reads.listRecentConversations('agent-a', 0);
+    expect(mockListConversations).toHaveBeenCalledWith({ agentId: 'agent-a', limit: 0 });
+  });
 
-      const result = await reads.listGroupMembersOrDmPeersByAccount('acct-5', 'conv-10');
-      expect(result).toEqual(mockMembers);
-      expect(mockParticipants.listGroupMembersOrDmPeersByAccount).toHaveBeenCalledWith('acct-5', 'conv-10');
+  it('listGroupMembersOrDmPeers delegates to deps.participants.listGroupMembersOrDmPeers', async () => {
+    const mockPeers = [{ id: 'user-1' }, { id: 'user-2' }];
+    const mockParticipants = {
+      listGroupMembersOrDmPeers: vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockPeers),
+      listGroupMembersOrDmPeersByAccount: vi.fn(),
+    };
+    const reads = createInternalChatReads(mockDb, {
+      unread: { getUnreadSummary: vi.fn() },
+      participants: mockParticipants,
+      listConversations: vi.fn(),
     });
 
-    it('satisfies InternalChatReadsStore type', () => {
-      const reads: InternalChatReadsStore = createInternalChatReads(mockDb);
-      expect(typeof reads.init).toBe('function');
-      expect(typeof reads.getUnreadSummary).toBe('function');
-      expect(typeof reads.listRecentConversations).toBe('function');
-      expect(typeof reads.listGroupMembersOrDmPeers).toBe('function');
-      expect(typeof reads.listGroupMembersOrDmPeersByAccount).toBe('function');
+    const result = await reads.listGroupMembersOrDmPeers('agent-1', 'conv-123');
+    expect(result).toEqual(mockPeers);
+    expect(mockParticipants.listGroupMembersOrDmPeers).toHaveBeenCalledWith('agent-1', 'conv-123');
+  });
+
+  it('listGroupMembersOrDmPeersByAccount delegates to deps.participants.listGroupMembersOrDmPeersByAccount', async () => {
+    const mockPeers = [{ id: 'user-3' }];
+    const mockParticipants = {
+      listGroupMembersOrDmPeers: vi.fn(),
+      listGroupMembersOrDmPeersByAccount: vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockPeers),
+    };
+    const reads = createInternalChatReads(mockDb, {
+      unread: { getUnreadSummary: vi.fn() },
+      participants: mockParticipants,
+      listConversations: vi.fn(),
     });
+
+    const result = await reads.listGroupMembersOrDmPeersByAccount('acct-456', 'conv-789');
+    expect(result).toEqual(mockPeers);
+    expect(mockParticipants.listGroupMembersOrDmPeersByAccount).toHaveBeenCalledWith('acct-456', 'conv-789');
+  });
+
+  it('deps cannot be called before construction — no runtime crash possible', async () => {
+    // In DI pattern, deps are required at construction. There is no init() to skip.
+    // So calling any method always has deps available — no "undefined" crash possible.
+    const mockUnread = {
+      getUnreadSummary: vi.fn<() => Promise<{ count: number }>>().mockResolvedValue({ count: 0 }),
+    };
+    const reads = createInternalChatReads(mockDb, {
+      unread: mockUnread,
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: vi.fn(),
+    });
+
+    // No error — deps are always present
+    const result = await reads.getUnreadSummary('agent-1');
+    expect(result).toEqual({ count: 0 });
+  });
+
+  it('listConversations dep receives only agentId and limit (not unread param)', async () => {
+    const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]);
+    const reads = createInternalChatReads(mockDb, {
+      unread: { getUnreadSummary: vi.fn() },
+      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      listConversations: mockListConversations,
+    });
+
+    await reads.listRecentConversations('agent-test', 50);
+    const call = mockListConversations.mock.calls[0][0];
+    expect(Object.keys(call)).not.toContain('unread');
+    expect(call).toEqual({ agentId: 'agent-test', limit: 50 });
   });
 });
