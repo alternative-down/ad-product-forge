@@ -102,7 +102,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   }
 
   async function listSystemIntegrations() {
-    return integrations.listIntegrations();
+    return await integrations.listIntegrations();
   }
 
   async function getSystemLlm() {
@@ -121,7 +121,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   }
 
   async function getSystemSettings() {
-    return systemSettings.getSettings();
+    return await systemSettings.getSettings();
   }
 
   async function getApplicationMigrations() {
@@ -171,15 +171,15 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
 
   // ─── Fragmented LLM routes (#1588) ─────────────────────────────────────
   async function listLlmProfiles() {
-    return llmSettings.listProfiles();
+    return await llmSettings.listProfiles();
   }
 
   async function getLlmDefaults() {
-    return llmSettings.getDefaults();
+    return await llmSettings.getDefaults();
   }
 
   async function listLlmPrices() {
-    return llmModelPrices.listPrices();
+    return await llmModelPrices.listPrices();
   }
 
   return {

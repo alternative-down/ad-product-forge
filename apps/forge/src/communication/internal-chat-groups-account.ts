@@ -36,7 +36,7 @@ export function createInternalChatGroupsAccount(_db: Database, deps: InternalCha
     participantAccountId: string;
     role?: string;
   }) {
-    return deps.addMemberToGroupByAccount(input);
+    return await deps.addMemberToGroupByAccount(input);
   }
 
   async function updateMemberRoleByAccount(input: {
@@ -45,7 +45,7 @@ export function createInternalChatGroupsAccount(_db: Database, deps: InternalCha
     participantAccountId: string;
     role: string;
   }) {
-    return deps.updateMemberRoleByAccount(input);
+    return await deps.updateMemberRoleByAccount(input);
   }
 
   async function removeMemberFromGroupByAccount(input: {
@@ -53,7 +53,7 @@ export function createInternalChatGroupsAccount(_db: Database, deps: InternalCha
     groupId: string;
     participantAccountId: string;
   }) {
-    return deps.removeMemberFromGroupByAccount(input);
+    return await deps.removeMemberFromGroupByAccount(input);
   }
 
   async function updateGroupByAccount(input: {
@@ -62,7 +62,7 @@ export function createInternalChatGroupsAccount(_db: Database, deps: InternalCha
     name?: string;
     conversationKey?: string;
   }) {
-    return deps.updateGroupByAccount(input);
+    return await deps.updateGroupByAccount(input);
   }
 
   return {

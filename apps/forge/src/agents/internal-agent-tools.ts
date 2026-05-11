@@ -46,7 +46,7 @@ export function createInternalAgentTools(config: {
       inputSchema: hireInternalAgentInputSchema,
       outputSchema: hireInternalAgentOutputSchema,
       execute: async (input) => {
-        return runInternalHiring(config.db, {
+        return await runInternalHiring(config.db, {
           ...input,
           workspaceBasePath: config.workspaceBasePath,
           githubApps: config.githubApps,
@@ -63,7 +63,7 @@ export function createInternalAgentTools(config: {
       inputSchema: terminateInternalAgentInputSchema,
       outputSchema: terminateInternalAgentOutputSchema,
       execute: async (input) => {
-        return runInternalTermination(config.db, {
+        return await runInternalTermination(config.db, {
           ...input,
           workspaceBasePath: config.workspaceBasePath,
           githubApps: config.githubApps,

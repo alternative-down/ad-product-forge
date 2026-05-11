@@ -71,7 +71,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     }
 
     if (this.refreshPromise) {
-      return this.refreshPromise;
+      return await this.refreshPromise;
     }
 
     this.refreshPromise = this.refreshNow()
@@ -79,7 +79,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         this.refreshPromise = null;
       });
 
-    return this.refreshPromise;
+    return await this.refreshPromise;
   }
 
   private async refreshNow() {

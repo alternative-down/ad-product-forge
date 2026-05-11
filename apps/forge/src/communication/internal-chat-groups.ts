@@ -99,7 +99,7 @@ export function createInternalChatGroups(
     conversationId: string,
   ) {
     const account = await deps.getRequiredAgentAccount(agentId);
-    return getRequiredConversationForAccount(account.id, conversationId);
+    return await getRequiredConversationForAccount(account.id, conversationId);
   }
 
   async function getRequiredConversationForAccount(
@@ -150,7 +150,7 @@ export function createInternalChatGroups(
     conversationId: string,
   ) {
     const account = await deps.getRequiredAgentAccount(agentId);
-    return requireConversationMembershipByAccount(account.id, conversationId);
+    return await requireConversationMembershipByAccount(account.id, conversationId);
   }
 
   async function requireConversationMembershipByAccount(

@@ -96,7 +96,7 @@ function createMockDb(initial: NotificationRow[] = []) {
         agentNotifications: {
           findMany: vi.fn(async (opts?: { where?: unknown; orderBy?: unknown; limit?: number }) => {
             const wh = extractWhere(opts?.where);
-            let rows = [...notifications.values()].filter((n) => {
+            const rows = [...notifications.values()].filter((n) => {
               if (wh.agentId && n.agentId !== wh.agentId) return false;
               if (wh.readAt !== undefined && n.readAt !== wh.readAt) return false;
               return true;

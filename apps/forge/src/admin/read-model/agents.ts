@@ -484,7 +484,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   async function listAgentRecentConversations(agentId: string) {
     const rows = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!rows) return [];
-    return listRecentConversations(agentId, 10);
+    return await listRecentConversations(agentId, 10);
   }
 
   async function listAgentExecutionSteps(input: { agentId: string; limit: number; offset: number }) {
@@ -501,7 +501,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function listAgentThreadMessages(params: { agentId: string; page: number; perPage: number }) {
-    return listThreadMessages(workspaceBasePath, params.agentId, {
+    return await listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
     });
@@ -512,7 +512,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     page: number;
     perPage: number;
   }) {
-    return listThreadMessages(workspaceBasePath, params.agentId, {
+    return await listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
       threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),

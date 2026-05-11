@@ -127,7 +127,7 @@ function createInternalAgentRegistry() {
           publicBaseUrl: loaderConfig!.publicBaseUrl,
           integrations: loaderConfig!.integrations,
         });
-        return loadAgent(db, {
+        return await loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
           coolify: reloadCoolify,
