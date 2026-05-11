@@ -47,7 +47,7 @@ const updateAgentMcpServerSchema = z.object({
   headersText: z.string().optional(),
   isActive: z.boolean().optional(),
 });
-const deleteAgentMcpServerSchema = z.object({ serverId: z.string().min(1) });
+const deleteAgentMcpServerSchema = z.object({ agentId: z.string().min(1), serverId: z.string().min(1) });
 const assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
