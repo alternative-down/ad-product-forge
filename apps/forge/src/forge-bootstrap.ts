@@ -18,7 +18,6 @@ import { createAgentContractStore } from './agents/agent-contract-store';
 import { prepareAgentEmbeddersForStartup } from './agents/agent-embedder-maintenance';
 
 const envSchema = z.object({
-  FORGE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
   FORGE_DATA_PATH: z.string().default('./data'),
   WORKSPACE_BASE_PATH: z.string().default('./workspaces'),
   FORGE_HTTP_PORT: z.coerce.number().int().positive().default(3011),
@@ -75,7 +74,7 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
   return rawValue;
 }
 
-/** Normalise value — trim empty strings to undefined *//**
+/** Normalise value — trim empty strings to undefined */
  * Bootstrap Forge: validate env, load DB, create all managers and services.
  * Returns the fully wired application context ready for routes registration.
  */
@@ -150,14 +149,9 @@ export async function createForgeBootstrap() {
 
   const readModel = createAdminReadModel({
     db,
-    registry,
-    integrations,
-    internalChat,
-    agentContracts,
-    schedules,
-    coolifyManager,
-    minimaxManager,
+    workspaceBasePath: env.WORKSPACE_BASE_PATH,
     githubApps,
+    internalChat,
   });
 
   registerAdminRoutes({
