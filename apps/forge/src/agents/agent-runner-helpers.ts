@@ -3,11 +3,6 @@ const STOP_AND_IDLE_PREFIX = 'STOP_AND_IDLE';
 
 import { withTimeout } from '../utils/async';
 
-function delay(delayMs: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, delayMs);
-  });
-}
 
 
 
@@ -345,7 +340,6 @@ function didIterationUpdateWorkingMemory(iteration: {
 }
 
 export {
-  delay,
   withTimeout,
   buildIterationLoopSignature,
   serializeError,

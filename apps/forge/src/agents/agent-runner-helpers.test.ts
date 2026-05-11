@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { withTimeout } from '../utils/async';
 import {
-  delay,
-  withTimeout,
   buildIterationLoopSignature,
   didIterationUpdateWorkingMemory,
   serializeError,
@@ -19,20 +18,6 @@ import {
 } from './agent-runner-helpers';
 
 describe('agent-runner-helpers', () => {
-  // ── delay ──────────────────────────────────────────────────────────────────
-  describe('delay', () => {
-    it('returns a Promise', () => {
-      const result = delay(10);
-      expect(result).toBeInstanceOf(Promise);
-    });
-
-    it('resolves after the given delay', async () => {
-      const p = delay(10);
-      expect(p).toBeInstanceOf(Promise);
-      await expect(p).resolves.toBeUndefined();
-    });
-  });
-
   // ── withTimeout ────────────────────────────────────────────────────────────
   describe('withTimeout', () => {
     beforeEach(() => { vi.useFakeTimers(); });
