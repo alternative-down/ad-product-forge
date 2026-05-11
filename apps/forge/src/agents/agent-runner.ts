@@ -24,12 +24,13 @@ import {
 } from '../utils/constants';
 
 import {
-  delay,
-  buildIterationLoopSignature,
   serializeError,
-  serializeUnknown,
   formatAbsentExecutionError,
   extractAbsentErrorDetails,
+} from './agent-runner-error-formatting';
+import {
+  delay,
+  buildIterationLoopSignature,
   buildStepSystemPrompt,
   extractRunnerControlDirective,
   extractRunnerControlDirectiveFromIteration,
