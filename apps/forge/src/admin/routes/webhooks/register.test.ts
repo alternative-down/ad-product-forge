@@ -5,9 +5,9 @@ vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 }));
 
-// Mock ../helpers — register.ts imports parseJsonBody, jsonResponse from '../helpers'
+// Mock ../helpers — register.ts imports parseJsonBody, jsonResponse, forgeDebug from '../helpers'
+// forgeDebug re-exports from @forge-runtime/core, so we let the core mock track calls
 vi.mock('../helpers', () => ({
-  forgeDebug: vi.fn(),
   parseJsonBody: vi.fn((bodyText: string, _schema?: unknown) => {
     if (!bodyText || bodyText.trim() === '{}' || bodyText.trim() === '') return {};
     try { return JSON.parse(bodyText); } catch { return {}; }
@@ -285,4 +285,62 @@ describe('registerWebhookAdminRoutes', () => {
       expect(store.markProcessed).toHaveBeenCalledWith('evt-123');
     });
   });
+  describe('error handling', () => {
+    it('returns 500 when createRoute throws', async () => {
+      store.createRoute.mockRejectedValueOnce(new Error('DB constraint violation'));
+      registerWebhookAdminRoutes(httpServer, store);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create');
+      const response = await handler(makeRequest({ agentId: 'agent-42', name: 'Test' }));
+      expect(response.status).toBe(500);
+      expect(parseBody(response).error).toBe('DB constraint violation');
+    });
+
+    it('forgeDebug is called on createRoute failure', async () => {
+      const { forgeDebug } = await vi.importMock('@forge-runtime/core');
+      store.createRoute.mockRejectedValueOnce(new Error('boom'));
+      registerWebhookAdminRoutes(httpServer, store);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create');
+      await handler(makeRequest({ agentId: 'agent-42', name: 'Test' }));
+      expect(forgeDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ scope: 'admin', level: 'error' }),
+      );
+    });
+
+    it('returns 500 when listRoutesByAgent throws', async () => {
+      store.listRoutesByAgent.mockRejectedValueOnce(new Error('DB error'));
+      registerWebhookAdminRoutes(httpServer, store);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes');
+      const req = { bodyText: '', path: '/admin/webhooks/routes', query: new URLSearchParams([['agentId', 'agent-42']]), method: 'GET', headers: {} };
+      const response = await handler(req);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when deactivateRoute throws', async () => {
+      store.deactivateRoute.mockRejectedValueOnce(new Error('DB write error'));
+      registerWebhookAdminRoutes(httpServer, store);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate');
+      const response = await handler(makeRequest({ routeId: 'route-xyz' }));
+      expect(response.status).toBe(500);
+      expect(parseBody(response).error).toBe('DB write error');
+    });
+
+    it('returns 500 when listEventsByAgent throws', async () => {
+      store.listEventsByAgent.mockRejectedValueOnce(new Error('DB error'));
+      registerWebhookAdminRoutes(httpServer, store);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events');
+      const req = { bodyText: '', path: '/admin/webhooks/events', query: new URLSearchParams([['agentId', 'agent-42']]), method: 'GET', headers: {} };
+      const response = await handler(req);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when markProcessed throws', async () => {
+      store.markProcessed.mockRejectedValueOnce(new Error('DB error'));
+      registerWebhookAdminRoutes(httpServer, store);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed');
+      const response = await handler(makeRequest({ eventId: 'evt-123' }));
+      expect(response.status).toBe(500);
+      expect(parseBody(response).error).toBe('DB error');
+    });
+  });
+
 });
