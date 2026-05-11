@@ -215,7 +215,6 @@ function startGenerateAttempt(
   controller: AbortController,
 ): number {
   advanceGenerateToken(deps.epochState);
-  deps.epochState.activeGenerateToken;
   deps.setCurrentGenerateAbortController(controller);
   return deps.epochState.activeGenerateToken;
 }
@@ -442,9 +441,6 @@ export async function generateWithTimeoutRetries(
         runtimeId: deps.runtime.id,
         message: `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
       });
-
-      const progressTimeout = timeout;
-      const progressController = controller;
 
       const result = await Promise.race([
         deps.currentRuntime.generate(
