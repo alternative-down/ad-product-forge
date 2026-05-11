@@ -83,7 +83,7 @@ async function executeHireAgentTool(input: {
 }) {
   const { tool, toolInput, db, capabilities } = input;
   // execute is typed; call with the right input shape
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const result = await (tool.execute as (arg: unknown) => Promise<unknown>)(toolInput);
   return result;
 }
