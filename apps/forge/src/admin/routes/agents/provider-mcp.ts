@@ -170,7 +170,6 @@ export function registerAgentProviderMcpRoutes({
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
-        const timestamp = new Date().toISOString();
         const serverId = createId();
         const configId = createId();
 
@@ -186,8 +185,8 @@ export function registerAgentProviderMcpRoutes({
           headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
           version: 1,
           isActive: body.isActive ? 1 : 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await db.insert(agentMcpConfigs).values({
@@ -195,8 +194,8 @@ export function registerAgentProviderMcpRoutes({
           agentId: body.agentId,
           serverId,
           isActive: body.isActive ? 1 : 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await reloadAgentMcp(db, loaderConfig, body.agentId);
@@ -215,8 +214,6 @@ export function registerAgentProviderMcpRoutes({
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
-        const timestamp = new Date().toISOString();
-
         await db
           .update(mcpServerConfigs)
           .set({
@@ -229,7 +226,7 @@ export function registerAgentProviderMcpRoutes({
             url: body.transport === 'http_streamable' ? body.url : null,
             headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
             isActive: body.isActive ? 1 : 0,
-            updatedAt: timestamp,
+            updatedAt: Date.now(),
           })
           .where(eq(mcpServerConfigs.id, body.serverId));
 
@@ -237,7 +234,7 @@ export function registerAgentProviderMcpRoutes({
           .update(agentMcpConfigs)
           .set({
             isActive: body.isActive ? 1 : 0,
-            updatedAt: timestamp,
+            updatedAt: Date.now(),
           })
           .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
 
@@ -301,7 +298,7 @@ export function registerAgentProviderMcpRoutes({
             .update(agentMcpConfigs)
             .set({
               isActive: body.isActive ? 1 : 0,
-              updatedAt: new Date().toISOString(),
+              updatedAt: Date.now(),
             })
             .where(eq(agentMcpConfigs.id, existing.id));
 
@@ -315,7 +312,6 @@ export function registerAgentProviderMcpRoutes({
           });
         }
 
-        const timestamp = new Date().toISOString();
         const configId = createId();
 
         await db.insert(agentMcpConfigs).values({
@@ -323,8 +319,8 @@ export function registerAgentProviderMcpRoutes({
           agentId: body.agentId,
           serverId: body.serverId,
           isActive: body.isActive ? 1 : 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await reloadAgentMcp(db, loaderConfig, body.agentId);
@@ -348,7 +344,7 @@ export function registerAgentProviderMcpRoutes({
           .update(agentMcpConfigs)
           .set({
             isActive: body.isActive ? 1 : 0,
-            updatedAt: new Date().toISOString(),
+            updatedAt: Date.now(),
           })
           .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)));
 
