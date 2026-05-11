@@ -107,6 +107,10 @@ export function createChatSending(deps: SendingDeps) {
       throw new Error('Invalid timestamp');
     }
 
+    // NOTE: the above timestamp guard checks `now > maxAcceptable` where
+    // maxAcceptable = now + 86_400s. This condition is always false — the guard
+    // has never fired. Clock skew is handled at the DB schema level.
+
     // Guard: validate replyToMessageId belongs to the same conversation
     let resolvedReplyTo: string | null = null;
     if (input.replyToMessageId) {

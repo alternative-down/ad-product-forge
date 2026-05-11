@@ -17,13 +17,8 @@ import { internalChatMessageAttachments } from '../database/schema';
 import { createId } from '../utils/id';
 import { resolveContentType, sanitizeAttachmentName } from './internal-chat-helpers';
 
-export interface ChatAttachmentsDeps {
-  readMessageAttachments(messageId: string): Promise<CommunicationFile[]>;
-}
-
 export function createChatAttachments(
   db: Database,
-  _deps?: ChatAttachmentsDeps,
 ) {
   async function storeMessageAttachments(messageId: string, attachments: CommunicationFile[]) {
     if (attachments.length === 0) {
