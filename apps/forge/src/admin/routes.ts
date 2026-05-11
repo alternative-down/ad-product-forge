@@ -172,19 +172,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
   registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
 
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/overview',
-    handler: async () => jsonResponse(await readModel.getDashboard()),
-  });
-  input.httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/roles',
-    handler: async () => jsonResponse(await readModel.listRoles()),
-  });
-
-  // Dashboard overview and roles (extracted to ./routes/dashboard.ts)
-  // Tech-debt: simple overview/roles are still registered above (#1874 duplicates)
   registerDashboardRoutes({
     httpServer: input.httpServer,
     db: input.db,
