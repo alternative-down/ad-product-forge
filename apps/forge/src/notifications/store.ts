@@ -11,13 +11,14 @@ export function createAgentNotificationStore(db: Database) {
     agentId: string;
     content: string;
     createdAt?: number;
-  }): Promise<{ id: string; agentId: string; content: string; createdAt: number; readAt: null } | null> {
+  }): Promise<{ id: string; agentId: string; content: string; createdAt: number; updatedAt: number; readAt: null } | null> {
     const now = input.createdAt ?? Date.now();
     const notification = {
       id: createId(),
       agentId: input.agentId,
       content: input.content,
       createdAt: now,
+      updatedAt: now,
       readAt: null,
     };
 
@@ -67,7 +68,7 @@ export function createAgentNotificationStore(db: Database) {
       try {
         await db
           .update(agentNotifications)
-          .set({ readAt: Date.now() })
+          .set({ readAt: Date.now(), updatedAt: Date.now() })
           .where(and(eq(agentNotifications.agentId, input.agentId), inArray(agentNotifications.id, unreadNotificationIds)));
       } catch (err) {
         forgeDebug({

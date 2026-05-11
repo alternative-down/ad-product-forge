@@ -283,6 +283,7 @@ export function createCapabilityStore(db: Database) {
           roleId: input.roleId,
           toolId: input.toolId,
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         })
         .onConflictDoNothing();
     } catch (err) {
@@ -346,6 +347,7 @@ export function createCapabilityStore(db: Database) {
           roleId: input.roleId,
           workflowId: input.workflowId,
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         })
         .onConflictDoNothing();
     } catch (err) {
