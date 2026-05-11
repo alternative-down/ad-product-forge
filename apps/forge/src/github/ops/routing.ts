@@ -45,19 +45,19 @@ export function createRoutingOps(
     const cleanups = [
       ctx.config.httpServer.registerRoute({
         method: 'GET', path: ctx.getRegisterPath(agentId),
-        handler: async () => handleRegisterPage(agentId),
+        handler: async () => await handleRegisterPage(agentId),
       }),
       ctx.config.httpServer.registerRoute({
         method: 'GET', path: ctx.getManifestCallbackPath(agentId),
-        handler: async (request) => handleManifestCallback(agentId, request.query.get('code'), request.query.get('state')),
+        handler: async (request) => await handleManifestCallback(agentId, request.query.get('code'), request.query.get('state')),
       }),
       ctx.config.httpServer.registerRoute({
         method: 'GET', path: ctx.getSetupPath(agentId),
-        handler: async (request) => handleSetupCallback(agentId, request.query.get('installation_id')),
+        handler: async (request) => await handleSetupCallback(agentId, request.query.get('installation_id')),
       }),
       ctx.config.httpServer.registerRoute({
         method: 'POST', path: ctx.getWebhookPath(agentId),
-        handler: async (request) => handleWebhook(agentId, request.headers, request.bodyText),
+        handler: async (request) => await handleWebhook(agentId, request.headers, request.bodyText),
       }),
     ];
     ctx.routeCleanups.set(agentId, cleanups);
