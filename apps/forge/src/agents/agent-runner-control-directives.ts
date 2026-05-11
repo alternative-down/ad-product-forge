@@ -117,4 +117,25 @@ export function buildStepSystemPrompt(input: {
 
 // ─── Constants (re-exported for consumers) ───────────────────────────────────
 
+
+// Returns the control directive ('stop' | 'ignore' | null) from an LLM iteration.
+// Uses hasExactControlDirective (defined in this module) to scan the trimmed text.
+function extractRunnerControlDirectiveFromIteration(iteration: {
+  text: string;
+}): 'stop' | 'ignore' | null {
+  const text = iteration.text.trim();
+
+  if (hasExactControlDirective(text, STOP_AND_IDLE_PREFIX)) {
+    return 'stop' as const;
+  }
+
+  if (hasExactControlDirective(text, NO_ACTION_NEEDED_PREFIX)) {
+    return 'ignore' as const;
+  }
+
+  return null;
+}
+
+export { extractRunnerControlDirectiveFromIteration };
+
 export { NO_ACTION_NEEDED_PREFIX, STOP_AND_IDLE_PREFIX };
