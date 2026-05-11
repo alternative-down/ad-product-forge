@@ -25,9 +25,11 @@
 import { withTimeout } from '../utils/async';
 import {
   extractRunnerControlDirective,
+} from './agent-runner-helpers';
+import {
   serializeError,
   formatAbsentExecutionError,
-} from './agent-runner-helpers';
+} from './agent-runner-error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 
