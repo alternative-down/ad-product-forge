@@ -16,6 +16,11 @@ import {
   collectStepTextParts,
   hasExactControlDirective,
 } from './agent-runner-helpers';
+import {
+  isNoActionNeeded,
+  isStopAndIdle,
+  extractControlDirective,
+} from './agent-runner-helpers';
 
 describe('agent-runner-helpers', () => {
   // ── withTimeout ────────────────────────────────────────────────────────────
@@ -532,5 +537,119 @@ describe('agent-runner-helpers', () => {
     });
   });
 
+  describe('isNoActionNeeded', () => {
+    it('returns true for text starting with NO_ACTION_NEEDED', () => {
+      const result = isNoActionNeeded('NO_ACTION_NEEDED');
+      expect(result).toBe(true);
+    });
+
+    it('returns true for text with leading whitespace before NO_ACTION_NEEDED', () => {
+      const result = isNoActionNeeded('  NO_ACTION_NEEDED');
+      expect(result).toBe(true);
+    });
+
+    it('returns true for text with tabs before NO_ACTION_NEEDED', () => {
+      const result = isNoActionNeeded('		NO_ACTION_NEEDED');
+      expect(result).toBe(true);
+    });
+
+    it('returns false for text not starting with NO_ACTION_NEEDED', () => {
+      expect(isNoActionNeeded('Some other text')).toBe(false);
+      expect(isNoActionNeeded('')).toBe(false);
+      expect(isNoActionNeeded('stop_and_idle')).toBe(false);
+    });
+
+    it('returns true for text that starts with NO_ACTION_NEEDED (including extensions)', () => {
+      expect(isNoActionNeeded('NO_ACTION_NEEDED')).toBe(true);
+      expect(isNoActionNeeded('NO_ACTION_NEEDED some trailing text')).toBe(true);
+    });
+
+    it('is case-sensitive', () => {
+      expect(isNoActionNeeded('no_action_needed')).toBe(false);
+      expect(isNoActionNeeded('No_Action_Needed')).toBe(false);
+      expect(isNoActionNeeded('no action needed')).toBe(false);
+    });
+  });
+
+  describe('isStopAndIdle', () => {
+    it('returns true for text starting with STOP_AND_IDLE', () => {
+      const result = isStopAndIdle('STOP_AND_IDLE');
+      expect(result).toBe(true);
+    });
+
+    it('returns true for text with leading whitespace before STOP_AND_IDLE', () => {
+      const result = isStopAndIdle('  STOP_AND_IDLE');
+      expect(result).toBe(true);
+    });
+
+    it('returns true for text with tabs before STOP_AND_IDLE', () => {
+      const result = isStopAndIdle('		STOP_AND_IDLE');
+      expect(result).toBe(true);
+    });
+
+    it('returns false for text not starting with STOP_AND_IDLE', () => {
+      expect(isStopAndIdle('Some other text')).toBe(false);
+      expect(isStopAndIdle('')).toBe(false);
+      expect(isStopAndIdle('no_action_needed')).toBe(false);
+    });
+
+    it('returns true for text that starts with STOP_AND_IDLE (including extensions)', () => {
+      expect(isStopAndIdle('STOP_AND_IDLE')).toBe(true);
+      expect(isStopAndIdle('STOP_AND_IDLE some trailing text')).toBe(true);
+    });
+
+    it('is case-sensitive', () => {
+      expect(isStopAndIdle('stop_and_idle')).toBe(false);
+      expect(isStopAndIdle('Stop_And_Idle')).toBe(false);
+      expect(isStopAndIdle('stop and idle')).toBe(false);
+    });
+  });
+
+  describe('extractControlDirective', () => {
+    it('returns stop for text starting with STOP_AND_IDLE', () => {
+      expect(extractControlDirective('STOP_AND_IDLE')).toBe('stop');
+    });
+
+    it('returns stop for text with leading whitespace before STOP_AND_IDLE', () => {
+      expect(extractControlDirective('  STOP_AND_IDLE')).toBe('stop');
+      expect(extractControlDirective('	STOP_AND_IDLE')).toBe('stop');
+    });
+
+    it('returns stop with trailing content after STOP_AND_IDLE', () => {
+      expect(extractControlDirective('STOP_AND_IDLE some extra text')).toBe('stop');
+    });
+
+    it('returns no-action-needed for text starting with NO_ACTION_NEEDED', () => {
+      expect(extractControlDirective('NO_ACTION_NEEDED')).toBe('no-action-needed');
+    });
+
+    it('returns no-action-needed for text with leading whitespace', () => {
+      expect(extractControlDirective('  NO_ACTION_NEEDED')).toBe('no-action-needed');
+      expect(extractControlDirective('	NO_ACTION_NEEDED')).toBe('no-action-needed');
+    });
+
+    it('returns no-action-needed with trailing content', () => {
+      expect(extractControlDirective('NO_ACTION_NEEDED rest of text')).toBe('no-action-needed');
+    });
+
+    it('returns null for plain text without control markers', () => {
+      expect(extractControlDirective('Hello world')).toBe(null);
+      expect(extractControlDirective('')).toBe(null);
+      expect(extractControlDirective('stop_and_idle')).toBe(null);
+      expect(extractControlDirective('no_action_needed')).toBe(null);
+    });
+
+    it('is case-sensitive', () => {
+      expect(extractControlDirective('stop_and_idle')).toBe(null);
+      expect(extractControlDirective('no_action_needed')).toBe(null);
+      expect(extractControlDirective('Stop_And_Idle')).toBe(null);
+      expect(extractControlDirective('No_Action_Needed')).toBe(null);
+    });
+
+    it('prefers stop over no-action-needed when both could match', () => {
+      // STOP_AND_IDLE comes first in the logic
+      expect(extractControlDirective('STOP_AND_IDLE')).toBe('stop');
+    });
+  });
 
 });
