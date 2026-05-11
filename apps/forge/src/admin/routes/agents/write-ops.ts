@@ -372,7 +372,6 @@ export function registerAgentWriteOpsRoutes(
       try {
         const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
         const db = input.db;
-        const timestamp = new Date().toISOString();
         const serverId = createId();
         const configId = createId();
 
@@ -388,8 +387,9 @@ export function registerAgentWriteOpsRoutes(
           headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
           version: 1,
           isActive: body.isActive ? 1 : 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
+          version: 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await db.insert(agentMcpConfigs).values({
@@ -397,8 +397,8 @@ export function registerAgentWriteOpsRoutes(
           agentId: body.agentId,
           serverId,
           isActive: body.isActive ? 1 : 0,
-          createdAt: timestamp,
-          updatedAt: timestamp,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await reloadAgentMcp(db, input.loaderConfig, body.agentId);
