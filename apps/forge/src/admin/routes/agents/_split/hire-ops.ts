@@ -5,7 +5,7 @@
  */
 
 import { parseJsonBody, jsonResponse } from '../../index';
-import { agents } from '../../../../src/database/schema';
+import { agents } from '../../../database/schema';
 import { eq } from 'drizzle-orm';
 import {
   hireAgentSchema,

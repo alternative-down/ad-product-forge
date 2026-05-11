@@ -6,10 +6,10 @@
 
 import { z } from 'zod';
 import { parseJsonBody, jsonResponse } from '../../index';
-import { agents } from '../../../../src/database/schema';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
+import { agents } from '../../../database/schema';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import { eq } from 'drizzle-orm';
-import { createId } from '../../../../src/utils/id';
+import { createId } from '../../../utils/id';
 import { normalizeJsonText, normalizeOptionalText } from '../../helpers';
 import { reloadAgentMcp } from '../../../routes/mcp-helpers';
 import { createCapabilityStore } from '../../../capabilities/store';
