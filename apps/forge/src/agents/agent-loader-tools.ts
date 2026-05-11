@@ -30,7 +30,7 @@ export async function loadAgentToolset(input: {
     : {};
   const scheduleTools = createAgentScheduleTools(
     input.agentId,
-    input.loaderConfig.schedules,
+    input.loaderConfig.schedules ?? null,
     input.allowedToolIds,
   );
   const capabilityTools = createCapabilityTools(

@@ -103,7 +103,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         emailMailboxes: config.emailMailboxes,
         coolify: config.coolify,
         minimax: config.minimax,
-        schedules: config.schedules,
+        schedules: config.schedules ?? null,
         internalChat: config.internalChat,
         agentId: agentConfig.id,
       });

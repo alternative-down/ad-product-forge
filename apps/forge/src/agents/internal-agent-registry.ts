@@ -8,6 +8,7 @@ import { loadAgents, loadAgent } from './agent-loader';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import { createAgentEmailManager, type AgentEmailManager } from '../email/migadu-manager';
 import { createCoolifyManager, type CoolifyManager } from '../coolify/manager';
+import { createAgentScheduleManager } from '../schedules/manager';
 import { createGitHubAppManager } from '../github/manager';
 
 type InternalAgentEntry = {
@@ -52,8 +53,29 @@ export function createPerAgentGitHubManager(config: {
 
 
 
+
+/**
+ * Creates a per-agent AgentScheduleManager instance.
+ * Each agent gets its own scheduler with callbacks pointing to that agent's runner.
+ */
+export function createPerAgentScheduleManager(config: {
+  db: Database;
+  agentId: string;
+  notifyAgent: Parameters<typeof createAgentScheduleManager>[0]['notifyAgent'];
+  getAgentExecutionState?: Parameters<typeof createAgentScheduleManager>[0]['getAgentExecutionState'];
+  getAgentPendingSummary?: Parameters<typeof createAgentScheduleManager>[0]['getAgentPendingSummary'];
+}) {
+  return createAgentScheduleManager({
+    db: config.db,
+    notifyAgent: config.notifyAgent,
+    getAgentExecutionState: config.getAgentExecutionState,
+    getAgentPendingSummary: config.getAgentPendingSummary,
+  });
+}
+
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
+  const agentSchedulers = new Map<string, ReturnType<typeof createAgentScheduleManager>>();
   let loaderConfig: (Omit<AgentLoaderConfig, "emailMailboxes" | "coolify" | "githubApps"> & {
     httpServer: Parameters<typeof createGitHubAppManager>[0]["httpServer"];
     publicBaseUrl: string;
@@ -70,18 +92,19 @@ function createInternalAgentRegistry() {
     const cleanConfig = {
       workspaceBasePath: config.workspaceBasePath,
       minimax: config.minimax,
-      schedules: config.schedules,
       internalChat: config.internalChat,
-      // intentionally omitted: emailMailboxes, coolify, githubApps
+      // schedules are created per-agent in add() below
+      // intentionally omitted: emailMailboxes, coolify, githubApps, schedules
     };
     const runtimes = await loadAgents(db, cleanConfig);
 
     for (const runtime of runtimes.values()) {
-      await add(db, runtime, config);
+      await add(db, runtime, config, null);
       existingAgentIds.delete(runtime.id);
     }
 
     for (const agentId of existingAgentIds) {
+      agentSchedulers.delete(agentId);
       remove(agentId);
     }
 

@@ -13,7 +13,17 @@ export interface AgentLoaderConfig {
   emailMailboxes: AgentEmailManager | null;
   coolify: CoolifyManager | null;
   minimax?: MiniMaxManager;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
+  /**
+   * Global scheduler for admin routes only.
+   * Per-agent schedulers are created inside internal-agent-registry.
+   * Set to null if not needed (e.g., during agent load).
+   */
+  /**
+   * Scheduler for admin operations. Per-agent schedulers are created
+   * inside internal-agent-registry via createPerAgentScheduleManager().
+   * May be null during agent loading (cleanConfig path).
+   */
+  schedules: ReturnType<typeof createAgentScheduleManager> | null;
   internalChat: InternalChatService;
 }
 

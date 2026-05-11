@@ -120,7 +120,33 @@ export async function createForgeBootstrap() {
   const minimaxManager = createMiniMaxManager({ integrations });
   const githubApps = createGitHubAppManager({ integrations });
 
-  const schedules = createAgentScheduleManager({ db, registry });
+  // Scheduler for admin operations (route handlers, tool delegation).
+  // Per-agent schedulers are created inside internal-agent-registry via
+  // createPerAgentScheduleManager() — one per agent with callbacks to that
+  // agent's runner. The global scheduler is NOT passed to the registry.
+  const schedules = createAgentScheduleManager({
+    db,
+    getAgentExecutionState: (agentId) => {
+      const entry = registry.get(agentId);
+      if (!entry) return Promise.resolve('absent');
+      // runner has no public execution state query, default to 'idle' when runner exists
+      return Promise.resolve('idle');
+    },
+    notifyAgent: ({ agentId, scheduleId, scheduleKind, scheduleName, content: msg, timestamp, idleOnly }) => {
+      const entry = registry.get(agentId);
+      if (entry) {
+        entry.runner.notifyExternalEvent({
+          type: 'schedule:trigger',
+          scheduleId,
+          scheduleKind,
+          scheduleName,
+          content: msg,
+          timestamp,
+          idleOnly,
+        });
+      }
+    },
+  });
 
   const readModel = createAdminReadModel({
     db,

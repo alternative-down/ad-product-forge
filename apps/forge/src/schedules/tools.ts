@@ -191,9 +191,12 @@ function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value:
 
 export function createAgentScheduleTools(
   agentId: string,
-  schedules: ReturnType<typeof createAgentScheduleManager>,
+  schedules: ReturnType<typeof createAgentScheduleManager> | null,
   allowedToolIds?: Set<string> | null,
 ) {
+  if (!schedules) {
+    return {};
+  }
   const tools: Record<string, unknown> = {};
 
   tools.list_self_crons = createTool({
