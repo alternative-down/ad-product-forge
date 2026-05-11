@@ -278,13 +278,6 @@ export function detachAgentMcpServer(input: {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function uploadAgentSkills(input: UploadAgentSkillsInput) {
-  return request<{ success: true; agentId: string; installedSkillNames: string[] }>('/admin/agent-skills/upload', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
 
 export function deleteAgentSkill(input: DeleteAgentSkillInput) {
   return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/delete', {
