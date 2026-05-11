@@ -33,8 +33,8 @@ import type { MessageManager } from './agent-runner-messages';
 import type { LoopDetector } from './agent-runner-loop-detector';
 
 import { delay, withTimeout } from '../utils/async';
+import { buildStepSystemPrompt } from './agent-runner-control-directives';
 import {
-  buildStepSystemPrompt,
   extractRunnerControlDirectiveFromIteration,
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
