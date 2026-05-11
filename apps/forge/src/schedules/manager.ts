@@ -58,7 +58,12 @@ export function createAgentScheduleManager(input: {
   type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
   async function getOwnedSchedule(agentId: string, scheduleId: string) {
-    return store.getOwnedSchedule(agentId, scheduleId);
+    try {
+      return store.getOwnedSchedule(agentId, scheduleId);
+    } catch (error) {
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'getOwnedSchedule failed', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) }});
+      throw error;
+    }
   }
 
   async function loadAll() {
@@ -148,18 +153,28 @@ export function createAgentScheduleManager(input: {
   }
 
   async function listSchedules(agentId: string) {
-    const schedules = await store.listAgentSchedules(agentId);
-    return schedules.map(toToolOutput);
+    try {
+      const schedules = await store.listAgentSchedules(agentId);
+      return schedules.map(toToolOutput);
+    } catch (error) {
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listSchedules failed', context: { error: error instanceof Error ? error.message : String(error) }});
+      throw error;
+    }
   }
 
   async function listTasks(creatorAgentId: string, targetAgentId?: string) {
-    const schedules = await store.listCreatedAgentSchedules(creatorAgentId, targetAgentId);
-    return schedules.map((schedule) => ({
-      ...toToolOutput(schedule),
-      createdBy: creatorAgentId,
-      targetAgentId: schedule.agentId,
-      taskId: schedule.scheduleId,
-    }));
+    try {
+      const schedules = await store.listCreatedAgentSchedules(creatorAgentId, targetAgentId);
+      return schedules.map((schedule) => ({
+        ...toToolOutput(schedule),
+        createdBy: creatorAgentId,
+        targetAgentId: schedule.agentId,
+        taskId: schedule.scheduleId,
+      }));
+    } catch (error) {
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listTasks failed', context: { error: error instanceof Error ? error.message : String(error) }});
+      throw error;
+    }
   }
 
   async function updateSchedule(agentId: string, scheduleId: string, rawInput: z.input<typeof updateScheduleSchema>) {
@@ -352,17 +367,22 @@ export function createAgentScheduleManager(input: {
     scheduleId: string,
     rawInput: z.input<typeof updateScheduleSchema>,
   ) {
-    const schedule = await store.getScheduleById(scheduleId);
+    try {
+      const schedule = await store.getScheduleById(scheduleId);
 
-    if (!schedule) {
-      throw new Error(`Schedule not found: ${scheduleId}`);
+      if (!schedule) {
+        throw new Error(`Schedule not found: ${scheduleId}`);
+      }
+
+      // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
+      requireScheduleEditor(schedule, editorAgentId);
+
+      // Delegate to updateSchedule with the target agent's ID
+      return updateSchedule(schedule.agentId, scheduleId, rawInput);
+    } catch (error) {
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'editCron failed', context: { error: error instanceof Error ? error.message : String(error) }});
+      throw error;
     }
-
-    // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
-    requireScheduleEditor(schedule, editorAgentId);
-
-    // Delegate to updateSchedule with the target agent's ID
-    return updateSchedule(schedule.agentId, scheduleId, rawInput);
   }
 
   // Cross-agent: Delete schedule (only creator can delete)
