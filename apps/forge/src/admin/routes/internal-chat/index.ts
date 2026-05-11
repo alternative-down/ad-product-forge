@@ -272,24 +272,16 @@ export function registerInternalChatRoutes(
         }
 
         const conversationKey = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        await internalChat.createExternalChatGroup({
+        const result = await internalChat.createExternalChatGroupWithMembers({
           accountId: body.accountId,
           conversationKey,
           name: body.name?.trim() || 'Novo grupo',
+          memberAccountIds: body.memberKeys as string[],
         });
 
-        for (const participantAccountId of body.memberKeys) {
-          await internalChat.addMemberToGroupByAccount({
-            accountId: body.accountId,
-            groupId: conversationKey,
-            participantAccountId,
-            role: 'normal',
-          });
-        }
-
         return jsonResponse({
-          conversationId: conversationKey,
-          conversationKey,
+          conversationId: result.groupId,
+          conversationKey: result.conversationKey,
         });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/conversation/create', context: { error } });

@@ -106,6 +106,101 @@ export function createInternalChatAccountOps(
     }
   }
 
+  /**
+   * Creates a group and adds members in a single DB transaction.
+   * This prevents partial failure if a member insert fails after the group is created.
+   *
+   * Returns the created group with all members, or rolls back everything on failure.
+   */
+  async function createExternalChatGroupWithMembers(input: {
+    accountId: string;
+    conversationKey: string;
+    name: string;
+    memberAccountIds: string[];
+  }) {
+    try {
+      // Check if group already exists (outside transaction — not worth locking early)
+      const existing = await db.query.internalChatConversations.findFirst({
+        where: eq(internalChatConversations.id, input.conversationKey),
+      });
+
+      if (existing) {
+        throw new ChatGroupAlreadyExistsError(input.conversationKey);
+      }
+
+      // Resolve account IDs once before transaction
+      const creatorAccount = await deps.getRequiredExternalAccount(input.accountId);
+      const memberAccounts = await Promise.all(
+        input.memberAccountIds.map((id) => deps.getRequiredAccount(id)),
+      );
+
+      const now = Date.now();
+
+      const groupMembers = await db.transaction(async (tx) => {
+        // Insert group
+        await tx.insert(internalChatConversations).values({
+          id: input.conversationKey,
+          type: 'group',
+          name: input.name,
+          createdByAccountId: creatorAccount.id,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        // Insert creator as admin
+        await tx.insert(internalChatConversationMembers).values({
+          conversationId: input.conversationKey,
+          accountId: creatorAccount.id,
+          role: 'admin',
+          createdAt: now,
+        });
+
+        // Filter out accounts already in the group (idempotent)
+        const creatorId = creatorAccount.id;
+        const membersToAdd = memberAccounts
+          .map((a) => a.id)
+          .filter((id) => id !== creatorId);
+
+        if (membersToAdd.length > 0) {
+          await tx.insert(internalChatConversationMembers).values(
+            membersToAdd.map((accountId) => ({
+              conversationId: input.conversationKey,
+              accountId,
+              role: 'normal',
+              createdAt: now,
+            })),
+          );
+        }
+
+        // Read back all members
+        const members = await tx.query.internalChatConversationMembers.findMany({
+          where: eq(internalChatConversationMembers.conversationId, input.conversationKey),
+        });
+
+        return members;
+      });
+
+      return {
+        groupId: input.conversationKey,
+        name: input.name,
+        provider: 'internal-chat',
+        conversationKey: input.conversationKey,
+        creatorMember: {
+          participantId: creatorAccount.id,
+          participantName: creatorAccount.displayName,
+          role: 'admin',
+        },
+        members: groupMembers.map((m) => ({
+          participantId: m.accountId,
+          role: m.role,
+        })),
+        createdAt: new Date(now).toISOString(),
+      };
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] createExternalChatGroupWithMembers failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
   async function ensureDirectConversationByAccount(input: {
     accountId: string;
     participantAccountId: string;
@@ -224,6 +319,7 @@ export function createInternalChatAccountOps(
 
   return {
     createExternalChatGroup,
+    createExternalChatGroupWithMembers,
     ensureDirectConversationByAccount,
     addMemberToGroupByAccount,
     updateMemberRoleByAccount,
