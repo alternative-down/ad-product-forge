@@ -58,20 +58,22 @@ export type SettingsQuery = {
 /* ── Helpers ──────────────────────────────────────────────────── */
 
 export function toRuntimeDraft(data: SystemSettings): RuntimeDraft {
+  // Guard numeric fields against null/undefined so they produce '0' rather than 'undefined'
+  const str = (value: unknown) => (value == null ? '0' : String(value));
   return {
     memoryLastMessagesFullEnabled: data.memoryLastMessagesFullEnabled,
-    memoryLastMessagesCount: String(data.memoryLastMessagesCount),
+    memoryLastMessagesCount: str(data.memoryLastMessagesCount),
     tokenCountFilterEnabled: data.tokenCountFilterEnabled,
-    tokenCountFilterLimit: String(data.tokenCountFilterLimit),
+    tokenCountFilterLimit: str(data.tokenCountFilterLimit),
     checkpointedOmEnabled: data.checkpointedOmEnabled,
-    checkpointedOmTotalContextTokens: String(data.checkpointedOmTotalContextTokens),
-    checkpointedOmRecentRawTokens: String(data.checkpointedOmRecentRawTokens),
-    checkpointedOmRawObservationBatchTokens: String(data.checkpointedOmRawObservationBatchTokens),
-    checkpointedOmObservationReflectionBatchTokens: String(data.checkpointedOmObservationReflectionBatchTokens),
-    checkpointedOmObservationSupportTokens: String(data.checkpointedOmObservationSupportTokens),
-    checkpointedOmReflectionSupportTokens: String(data.checkpointedOmReflectionSupportTokens),
-    ltmRecallScoreThreshold: String(data.ltmRecallScoreThreshold),
-    ltmRecallDocumentCount: String(data.ltmRecallDocumentCount),
+    checkpointedOmTotalContextTokens: str(data.checkpointedOmTotalContextTokens),
+    checkpointedOmRecentRawTokens: str(data.checkpointedOmRecentRawTokens),
+    checkpointedOmRawObservationBatchTokens: str(data.checkpointedOmRawObservationBatchTokens),
+    checkpointedOmObservationReflectionBatchTokens: str(data.checkpointedOmObservationReflectionBatchTokens),
+    checkpointedOmObservationSupportTokens: str(data.checkpointedOmObservationSupportTokens),
+    checkpointedOmReflectionSupportTokens: str(data.checkpointedOmReflectionSupportTokens),
+    ltmRecallScoreThreshold: str(data.ltmRecallScoreThreshold),
+    ltmRecallDocumentCount: str(data.ltmRecallDocumentCount),
   };
 }
 
