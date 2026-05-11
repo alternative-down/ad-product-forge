@@ -97,9 +97,14 @@ export function createInternalChatConversations(db: Database) {
       throw err;
     }
 
-    return (await (db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    }) as Promise<InternalChatConversation>));
+    return {
+      id: conversationId,
+      type: 'dm',
+      name: null,
+      createdByAccountId: leftAccountId,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
   async function archiveConversationByAccount(input: {
