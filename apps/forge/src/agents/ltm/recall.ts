@@ -200,21 +200,25 @@ export class AgentLongTermMemoryRecall {
     this.conversationStore = input.conversationStore;
     this.recentRawTokens = input.recentRawTokens ?? 0;
     this.persistenceStore = input.persistenceStore;
-    this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
-      databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
-      source: new FilesystemDocumentSource({
-        roots: [
-          input.agentMemoryPath,
-        ],
-        includeExtensions: ['.txt', '.md'],
-      }),
-      embedder: {
-        embed: async ({ texts }: { texts: string[] }) => ({
-          vectors: await Promise.all(texts.map((text: string) =>
-            embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text))),
+    if (input.retrievalWorkspace) {
+      this.retrievalWorkspace = input.retrievalWorkspace;
+    } else {
+      this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
+        databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
+        source: new FilesystemDocumentSource({
+          roots: [
+            input.agentMemoryPath,
+          ],
+          includeExtensions: ['.txt', '.md'],
         }),
-      },
-    });
+        embedder: {
+          embed: async ({ texts }: { texts: string[] }) => ({
+            vectors: await Promise.all(texts.map((text: string) =>
+              embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text))),
+          }),
+        },
+      });
+    }
   }
 
   async recallFromStep(input: {
