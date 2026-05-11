@@ -25,7 +25,7 @@
 import { withTimeout } from '../utils/async';
 import {
   extractRunnerControlDirective,
-} from './agent-runner-helpers';
+} from './agent-runner-control-directives';
 import {
   serializeError,
   formatAbsentExecutionError,
