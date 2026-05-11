@@ -23,7 +23,6 @@ import {
   AGENT_CONTEXT_FILE_PATH,
 } from '../utils/constants';
 
-
 import {
   delay,
   withTimeout,
@@ -46,13 +45,11 @@ import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agen
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
-  buildIterationFeedback,
   createGenerateTimeoutGuard,
   touchGenerateTimeout,
   clearGenerateTimeout,
   startGenerateAttempt,
   finishGenerateAttempt,
-  invalidateInFlightGenerate,
   type GenerateTimeoutHandle,
 } from './agent-runner-generate';
 
@@ -793,311 +790,15 @@ export function createAgentRunner(
     notifyExternalEvent,
   };
 
-  async function generateWithTimeoutRetries(
-    promptText: string,
-    runEpoch: number,
-    contractId: string,
-    contract: {
-      id: string;
-      budgetUsd: number;
-      endsAt: number;
-    },
-    longTermMemoryRecallSystemText: string | null,
-  ) {
-    const effectivePromptText = [
-      longTermMemoryRecallSystemText?.trim()
-        ? {
-            role: 'assistant' as const,
-            content: longTermMemoryRecallSystemText.trim(),
-          }
-        : null,
-      promptText.trim()
-        ? {
-            role: 'user' as const,
-            content: promptText.trim(),
-          }
-        : null,
-    ].filter((value): value is {
-      role: 'assistant' | 'user';
-      content: string;
-    } => Boolean(value));
-    const runDelayMs = await planCurrentRunDelayMs(contract);
-    let suppressNoToolCallReminderForRun = false;
-
-    for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
-      const controller = new AbortController();
-      const generateToken = startGenerateAttempt(controller);
-      const timeout = createGenerateTimeoutGuard(controller);
-      markGenerateProgress(timeout, controller, {
-        stage: 'generate-started',
-        detail: {
-          attempt,
-          runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
-          maxSteps: GENERATE_MAX_STEPS_PER_RUN,
-        },
-      });
-
-      try {
-        forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'preparing runtime context before generate' });
-        const agentContextInstructions = await loadAgentContextInstructions();
-        const systemPrompt = buildStepSystemPrompt({
-          agentContextInstructions,
-        });
-        forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'runtime context ready before generate' });
-        forgeDebug({ scope: 'agent-runner', level: 'info', runtimeId: runtime.id, message: `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})` });
-        const result = await Promise.race([
-          currentRuntime.agent.generate(effectivePromptText, {
-            runId: activeRunId ?? `${runtime.id}:${runEpoch}`,
-            maxSteps: GENERATE_MAX_STEPS_PER_RUN,
-            savePerStep: true,
-            abortSignal: controller.signal,
-            ...(systemPrompt ? { system: systemPrompt } : {}),
-            memory: {
-              thread: currentRuntime.mastraId,
-              resource: currentRuntime.mastraId,
-              options: {
-                lastMessages: runLastMessages,
-              },
-            },
-            providerOptions: {
-              anthropic: {
-                thinking: { type: 'enabled', budgetTokens: 2000 },
-              },
-            },
-            prepareStep: async ({ stepNumber }) => {
-              markGenerateProgress(timeout, controller, {
-                stage: 'prepare-step',
-                detail: {
-                  stepNumber,
-                },
-              });
-
-              if (stepNumber === 0 || runDelayMs <= 0) {
-                return;
-              }
-
-              await delay(runDelayMs);
-            },
-            onStepFinish: async (stepResult) => {
-              markGenerateProgress(timeout, controller, {
-                stage: 'step-finish',
-                detail: {
-                  usage: stepResult.usage ?? null,
-                },
-              });
-              lastStepStage = 'recording-agent-usage';
-              const { inputTokens, cachedInputTokens, outputTokens } =
-                usage.getUsageFromResult(stepResult);
-
-              const recordedStep = await withTimeout(
-                usage.recordAgentStep(contractId, inputTokens, cachedInputTokens, outputTokens),
-                RUNNER_AWAIT_TIMEOUT_MS,
-                `Agent usage recording timed out for ${runtime.id}`,
-              );
-
-              if (options.workspaceBasePath && recordedStep) {
-                await withTimeout(
-                  (async () => {
-                    const snapshot = await readAgentHomeMetricSnapshot({
-                      db,
-                      workspaceBasePath: options.workspaceBasePath as string,
-                      agentId: currentRuntime.id,
-                      runtime: currentRuntime,
-                      runnerSnapshot: getSnapshot(),
-                    });
-
-                    if (!snapshot) {
-                      return;
-                    }
-
-                    await homeMetricSnapshots.recordSnapshot({
-                      agentId: currentRuntime.id,
-                      stepId: recordedStep.stepId,
-                      stepCreatedAt: recordedStep.createdAt,
-                      snapshot: {
-                        ...snapshot,
-                        omTrace: stepResult.omTrace ?? [],
-                      },
-                    });
-                  })(),
-                  RUNNER_AWAIT_TIMEOUT_MS,
-                  `Agent home metric snapshot timed out for ${runtime.id}`,
-                ).catch((error) => {
-                  forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'Failed to persist home metric snapshot', context: { error } });
-                });
-              }
-            },
-            onIterationComplete: async (iteration) => await buildIterationFeedback(iteration, {
-              suppressNoToolCallReminderForRun,
-              setSuppressNoToolCallReminder: (val: boolean) => { suppressNoToolCallReminderForRun = val; },
-              nextStepAtRef: { current: nextStepAt },
-              setNextStepAt: (val: number | null) => { nextStepAt = val; },
-              loopDetector,
-              loopSignature,
-              runtime,
-              notifications,
-              currentRuntime,
-              flushPendingRunMessages,
-              markGenerateProgress,
-              controller,
-            }),
-          }),
-          timeout.promise,
-        ]);
-        forgeDebug({ scope: 'agent-runner', level: 'info', runtimeId: runtime.id, message: `generate completed (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})` });
-        return result;
-      } catch (error) {
-        const timedOut = controller.signal.aborted;
-
-        if (!timedOut || attempt === GENERATE_TIMEOUT_MAX_ATTEMPTS) {
-          forgeDebug({ scope: 'agent-runner', level: 'error', message: 'agent-runner: operation failed', error: err instanceof Error ? err.message : String(err) });
-          throw error;
-        }
-
-        const backoffMs = GENERATE_TIMEOUT_BACKOFF_MS * attempt;
-        forgeDebug({
-          scope: 'agent-runner',
-          level: 'warn',
-          runtimeId: runtime.id,
-          message: `generate timed out on attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS}; retrying in ${backoffMs}ms`,
-        });
-        await delay(backoffMs);
-      } finally {
-        clearGenerateTimeout(timeout);
-        finishGenerateAttempt(generateToken, controller);
-      }
-    }
-
-    forgeDebug({ scope: "agent-runner", level: "error", message: "generate timed out after all retry attempts" });
-    throw new Error('Agent generate timed out after all retry attempts');
-  }
   /**
    * Extracts feedback messages and determines whether to continue the agent run
    * after an iteration completes. Extracted from generateWithTimeoutRetries
    * to reduce function length and improve readability.
    */
-  function buildIterationFeedback(
-    iteration: {
-      iteration: { iteration: number; finishReason: string };
-      finishReason: string;
-      text: string;
-      toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
-      toolResults: Array<{ name: string; error?: Error }>;
-    },
-    deps: {
-      suppressNoToolCallReminderForRun: boolean;
-      setSuppressNoToolCallReminder: (val: boolean) => void;
-      nextStepAtRef: { current: number | null };
-      setNextStepAt: (val: number | null) => void;
-      loopDetector: { isStuck: () => boolean; getSignatureCount: () => number };
-      loopSignature: string;
-      runtime: { id: string };
-      notifications: { createNotification: (n: { agentId: string; content: string }) => Promise<unknown> };
-      currentRuntime: {
-        mastraId: string;
-        longTermMemoryRecall?: {
-          recallFromStep: (opts: {
-            step: unknown; steps: unknown[]; threadId: string; resourceId: string;
-          }) => Promise<string | null>;
-        };
-      };
-      flushPendingRunMessages: (opts: { allowOriginIdleOnly: boolean }) => string | null;
-      markGenerateProgress: (
-        timeout: unknown,
-        controller: AbortController,
-        info: { stage: string; detail: Record<string, unknown> },
-      ) => void;
-      controller: AbortController;
-    },
-  ): Promise<{ continue: boolean; feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> } | undefined> {
-    return (async () => {
-      const {
-        suppressNoToolCallReminderForRun,
-        setSuppressNoToolCallReminder,
-        nextStepAtRef,
-        setNextStepAt,
-        loopDetector,
-        loopSignature,
-        runtime,
-        notifications,
-        currentRuntime,
-        flushPendingRunMessages,
-        markGenerateProgress,
-        controller,
-      } = deps;
 
-      const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
-      const ignoredTextRequested = controlDirective === 'ignore';
-      const stopRequested = controlDirective === 'stop';
-
-      if (loopDetector.isStuck()) {
-        await withTimeout(
-          notifications.createNotification({
-            agentId: runtime.id,
-            content: [
-              'Stuck loop detected.',
-              'Repeated signature count: ' + loopDetector.getSignatureCount(),
-              'The agent repeated the same tool/text pattern and was forced to stop.',
-              '',
-              'Signature:',
-              loopSignature,
-            ].join('\n'),
-          }),
-          RUNNER_AWAIT_TIMEOUT_MS,
-          'Agent notification creation timed out for ' + runtime.id,
-        );
-        setNextStepAt(null);
-        return { continue: false, feedbackMessages: [] };
-      }
-
-      if (iteration.toolCalls.length === 0 && ignoredTextRequested) {
-        setSuppressNoToolCallReminder(true);
-      }
-
-      if (stopRequested) {
-        setNextStepAt(null);
-        return { continue: false, feedbackMessages: [] };
-      }
-
-      const producedVisibleAssistantText = didIterationProduceVisibleAssistantText(iteration);
-      const feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> = [];
-      const flushedPrompt = flushPendingRunMessages({ allowOriginIdleOnly: true });
-
-      if (flushedPrompt) {
-        feedbackMessages.push({ role: 'user', content: flushedPrompt });
-      }
-
-      if (iteration.toolCalls.length === 0 && producedVisibleAssistantText && !stopRequested && !suppressNoToolCallReminderForRun) {
-        feedbackMessages.push({ role: 'user', content: RUN_STOP_REMINDER });
-      }
-
-      const recallStep = buildRecallStepFromIteration(iteration);
-      const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
-        step: recallStep,
-        steps: [recallStep],
-        threadId: currentRuntime.mastraId,
-        resourceId: currentRuntime.mastraId,
-      }) ?? null;
-
-      if (recallFeedback?.trim()) {
-        feedbackMessages.push({ role: 'assistant', content: recallFeedback.trim() });
-      }
-
-      if (feedbackMessages.length > 0) {
-        return { continue: true, feedbackMessages };
-      }
-
-      return undefined;
-    })();
-  }
-
-
-
-  async function loadAgentContextInstructions() {
+  async function loadAgentContextInstructions(currentRuntime: InternalAgentRuntime, db: Database) {
     return loadContextInstructions(currentRuntime, db);
   }
-
-
 
   function notifyExternalEvent(event: AgentWakeEvent) {
     if (stopped) {
@@ -1115,7 +816,9 @@ export function createAgentRunner(
     activeRunEpoch += 1;
     activeStepEpoch = 0;
     // Keep scheduler's state in sync for snapshot consistency
-    invalidateInFlightGenerate();
+    advanceGenerateToken(epochState);
+    currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
+    currentGenerateAbortController = null;
     // Also update scheduler state
     scheduler.startNewRunEpoch();
     return activeRunEpoch;
@@ -1140,7 +843,9 @@ export function createAgentRunner(
     }
 
     clearTimer();
-    invalidateInFlightGenerate();
+    advanceGenerateToken(epochState);
+    currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
+    currentGenerateAbortController = null;
     scheduler.setInstant(false);
     resetLoopDetector();
     await withTimeout(
@@ -1165,130 +870,6 @@ export function createAgentRunner(
     await wakeQueue.onRunnerIdle();
   }
 
-  function invalidateInFlightGenerate() {
-    activeGenerateToken += 1;
-    currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
-    currentGenerateAbortController = null;
-  }
-
-  function startGenerateAttempt(controller: AbortController) {
-    advanceGenerateToken(epochState);
-    activeGenerateToken = epochState.activeGenerateToken;
-    currentGenerateAbortController = controller;
-    return activeGenerateToken;
-  }
-
-  function finishGenerateAttempt(generateToken: number, controller: AbortController) {
-    controller.abort();
-
-    if (activeGenerateToken !== generateToken) {
-      return;
-    }
-
-    currentGenerateAbortController = null;
-  }
-
-  async function planCurrentRunDelayMs(contract: {
-    id: string;
-    budgetUsd: number;
-    endsAt: number;
-  }) {
-    scheduler.resetBackoff();
-    const settings = await withTimeout(
-      systemSettings.getSettings(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `System settings lookup timed out for ${runtime.id}`,
-    );
-
-    if (scheduler.getState().instant || !settings.stepDelayEnabled) {
-      return 0;
-    }
-
-    const spentUsd = await withTimeout(
-      store.getContractSpend(contract.id),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent contract spend lookup timed out for ${runtime.id}`,
-    );
-    const remainingBudgetUsd = contract.budgetUsd - spentUsd;
-    const estimatedStepUsd = await withTimeout(
-      usage.estimateStepCostUsd(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent step cost estimate timed out for ${runtime.id}`,
-    );
-
-    return calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
-  }
-
-  function createGenerateTimeoutGuard(_controller: AbortController) {
-    let timeoutId: NodeJS.Timeout | null = null;
-    let rejectTimeout: ((error: Error) => void) | null = null;
-    const promise = new Promise<never>((_, reject) => {
-      rejectTimeout = reject;
-    });
-
-    return {
-      promise,
-      get timeoutId() {
-        return timeoutId;
-      },
-      set timeoutId(value: NodeJS.Timeout | null) {
-        timeoutId = value;
-      },
-      rejectTimeout,
-    };
-  }
-
-  function touchGenerateTimeout(
-    timeout: {
-      timeoutId: NodeJS.Timeout | null;
-      rejectTimeout: ((error: Error) => void) | null;
-    },
-    controller: AbortController,
-  ) {
-    if (timeout.timeoutId) {
-      clearTimeout(timeout.timeoutId);
-    }
-
-    timeout.timeoutId = setTimeout(() => {
-      const timeoutError = new Error(
-        `Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms without iteration progress`,
-      );
-      (timeoutError as Error & { context?: Record<string, unknown> }).context = {
-        lastStepStage,
-        lastGenerateProgress,
-      };
-      controller.abort(timeoutError);
-      timeout.rejectTimeout?.(timeoutError);
-    }, GENERATE_TIMEOUT_MS);
-  }
-
-  function markGenerateProgress(
-    timeout: {
-      timeoutId: NodeJS.Timeout | null;
-      rejectTimeout: ((error: Error) => void) | null;
-    },
-    controller: AbortController,
-    progress: {
-      stage: string;
-      detail?: Record<string, unknown>;
-    },
-  ) {
-    lastGenerateProgress = {
-      stage: progress.stage,
-      at: Date.now(),
-      detail: progress.detail ?? null,
-    };
-    touchGenerateTimeout(timeout, controller);
-  }
-
-  function clearGenerateTimeout(timeout: { timeoutId: NodeJS.Timeout | null }) {
-    if (!timeout.timeoutId) {
-      return;
-    }
-
-    clearTimeout(timeout.timeoutId);
-    timeout.timeoutId = null;
-  }
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;
