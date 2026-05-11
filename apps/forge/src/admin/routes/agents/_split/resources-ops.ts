@@ -6,8 +6,7 @@
 
 import { z } from 'zod';
 import { parseJsonBody, jsonResponse } from '../../index';
-import { agents } from '../../../database/schema';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
+import { agents, mcpServerConfigs, agentMcpConfigs } from '../../index';
 import { eq } from 'drizzle-orm';
 import { createId } from '../../../utils/id';
 import { normalizeJsonText, normalizeOptionalText } from '../../helpers';
