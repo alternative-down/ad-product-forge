@@ -29,3 +29,12 @@ export async function withTimeout<T>(
     if (timer) clearTimeout(timer);
   }
 }
+
+/**
+ * Sleep for a given number of milliseconds.
+ */
+export function delay(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
