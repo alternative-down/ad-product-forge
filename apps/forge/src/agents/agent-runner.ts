@@ -41,6 +41,7 @@ import {
 } from './agent-runner-helpers';
 import { createLoopDetector } from './agent-runner-loop-detector';
 import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, nextBackoff, resetBackoffState, calculateDelayMs } from './agent-runner-state';
+import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
@@ -126,7 +127,7 @@ export function createAgentRunner(
   const loopDetector = createLoopDetector(loopState);
   let activeRunEpoch = 0;
   let activeStepEpoch = 0;
-  let activeGenerateToken = 0;
+  const activeGenerateToken = 0;
   let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
@@ -451,7 +452,7 @@ export function createAgentRunner(
     } catch (error) {
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error } });
       scheduler.setInstant(false);
-      schedule(scheduler.nextBackoff());
+      schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
     }
   }
 
@@ -620,7 +621,7 @@ export function createAgentRunner(
       ).catch((stateError) => {
         forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to set absent state', context: { stateError } });
       });
-      schedule(nextBackoff());
+      schedule(nextExponentialBackoffMs(backoffMs).current);
     } finally {
       lastStepStartedAt = null;
       lastStepStage = null;
@@ -730,34 +731,11 @@ export function createAgentRunner(
       delayMs: scheduler.getState().instant
         || !settings.stepDelayEnabled
         ? 0
-        : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
+        : calculateBudgetDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
     };
   }
 
-  function calculateDelayMs(
-    endsAt: number,
-    remainingBudgetUsd: number,
-    estimatedStepUsd: number | null,
-  ) {
-    if (estimatedStepUsd === null || estimatedStepUsd <= 0) {
-      return 0;
-    }
 
-    const remainingTimeMs = endsAt - Date.now();
-    const stepsPossible = remainingBudgetUsd / estimatedStepUsd;
-
-    if (remainingTimeMs <= 0 || stepsPossible <= 0) {
-      return 0;
-    }
-
-    return remainingTimeMs / stepsPossible;
-  }
-
-  function nextBackoff() {
-    const delayMs = backoffMs;
-    backoffMs = Math.min(backoffMs * 2, TEN_MINUTES_MS);
-    return delayMs;
-  }
 
   function getSnapshot() {
     const s = scheduler.getState();
