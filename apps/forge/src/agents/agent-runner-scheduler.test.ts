@@ -97,9 +97,9 @@ describe('timer management', () => {
     expect(scheduler.getNextStepAt()).toBe(ts);
   });
 
-  it('getTimer returns null initially', () => {
+  it('isTimerActive returns false initially', () => {
     const { scheduler } = setupScheduler();
-    expect(scheduler.getTimer()).toBeNull();
+    expect(scheduler.isTimerActive()).toBe(false);
   });
 
   it('getHealthcheckTimer returns null initially', () => {
