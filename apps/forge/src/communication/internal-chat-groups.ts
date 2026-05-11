@@ -177,7 +177,7 @@ export function createInternalChatGroups(
   // -----------------------------------------------------------------------
 
   async function createChatGroup(input: CreateChatGroupInput) {
-    { try {
+    try {
     const existing = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, input.conversationKey),
     });
@@ -227,10 +227,10 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function addMemberToGroup(input: AddMemberToGroupInput) {
-    { try {
+    try {
     const group = await getRequiredGroupForAgent(input.agentId, input.groupId);
     const participant = await deps.getRequiredAccountBySlug(input.participantSlug);
     const now = Date.now();
@@ -271,10 +271,10 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function removeMemberFromGroup(input: RemoveMemberFromGroupInput) {
-    { try {
+    try {
     await getRequiredGroupForAgent(input.agentId, input.groupId);
     const participant = await deps.getRequiredAccountBySlug(input.participantSlug);
 
@@ -301,10 +301,10 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function changeChatGroup(input: ChangeChatGroupInput) {
-    { try {
+    try {
     const actorAccount = await deps.getRequiredAgentAccount(input.agentId);
     const now = Date.now();
     const groupId = input.groupId ?? `grp_${createId()}`;
@@ -504,10 +504,10 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function listChatGroups(input: ListChatGroupsInput) {
-    { try {
+    try {
     const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
 
     const rows = await db
@@ -545,10 +545,10 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function listGroupMembers(input: ListGroupMembersInput) {
-    { try {
+    try {
     await getRequiredGroupForAgent(input.agentId, input.groupId);
 
     const rows = await db
@@ -584,12 +584,12 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function listGroupMembersByAccount(
     input: ListGroupMembersByAccountInput,
   ): Promise<InternalChatGroupMember[]> {
-    { try {
+    try {
     await getRequiredGroupForAccount(input.accountId, input.groupId);
 
     const rows = await db
@@ -625,13 +625,13 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   async function listGroupMembersOrDmPeersByAccount(
     accountId: string,
     conversationId: string,
   ): Promise<InternalChatGroupParticipant[]> {
-    { try {
+    try {
     const rows = await db
       .select({
         accountId: internalChatConversationMembers.accountId,
@@ -658,7 +658,7 @@ export function createInternalChatGroups(
       });
       throw err;
     }
-  } }
+  }
 
   return {
     createChatGroup,
