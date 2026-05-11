@@ -7,6 +7,7 @@ import { createId } from '../../../utils/id';
 import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
+import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
 import { parseProviderCredentials } from '../../../communication/provider-loader';
 import { encryptSecret } from '../../../encryption/crypto';
@@ -46,7 +47,7 @@ const updateAgentMcpServerSchema = z.object({
   headersText: z.string().optional(),
   isActive: z.boolean().optional(),
 });
-const deleteMcpServerSchema = z.object({ serverId: z.string().min(1) });
+const deleteAgentMcpServerSchema = z.object({ serverId: z.string().min(1) });
 const assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
