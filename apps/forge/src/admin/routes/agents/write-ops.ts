@@ -28,6 +28,7 @@ import {
   updateAgentGitHubManifestConfigSchema,
   updateAgentConfigSchema,
 } from '../schemas/agents';
+import { registerLifecycleOps } from './_split/lifecycle-ops';
 
 
 import type {Database} from '../../../../src/database/schema';
@@ -194,80 +195,8 @@ export function registerAgentWriteOpsRoutes(
 ) {
   const capabilities = createCapabilityStore(input.db);
   const resolvePermissionId = (name: string) => name;
-  // POST /admin/agent/reload
-  // FIX #1046: Use registry.add() to properly create the runner and update the real registry.
-  // Previously this wrote to a snapshot Map, not the real registry.
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/reload',
-    handler: async (request) => {
-      try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-        const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
-        await registry.add(input.db, runtime);
-        return jsonResponse({ success: true, agentId });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/reload route handler failed', context: { path: '/admin/agent/reload', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/force-idle
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/force-idle',
-    handler: async (request) => {
-      try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-        const entry = registry.get(agentId);
-        if (entry) {
-          await entry.runner.forceIdle();
-        }
-        return jsonResponse({ success: true, agentId });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/force-idle route handler failed', context: { path: '/admin/agent/force-idle', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/rewakeup
-  // FIX #1046: Load agent and add to the real registry via registry.add().
-  // Previously this wrote to a snapshot Map and had a redundant double-loadAgent call.
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/rewakeup',
-    handler: async (request) => {
-      try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-        let entry = registry.get(agentId);
-  
-        if (entry) {
-          await entry.runner.forceIdle();
-        } else {
-          const runtime = await ops.loadAgent(input.db, { ...(input.loaderConfig), agentId });
-          await registry.add(input.db, runtime);
-          entry = registry.get(agentId);
-        }
-  
-        entry!.runner.notifyExternalEvent({
-          type: 'admin-rewakeup',
-          groupKey: `admin-rewakeup:${agentId}`,
-          groupMetadata: { source: 'admin' },
-          idempotencyKey: `admin-rewakeup:${agentId}:${Date.now()}`,
-          text: 'Admin requested a forced rewakeup. Rebuild context and continue work from the current state.',
-          timestamp: Date.now(),
-        });
-  
-        return jsonResponse({ success: true, agentId });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/rewakeup route handler failed', context: { path: '/admin/agent/rewakeup', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
+  // Lifecycle ops — extracted to _split/lifecycle-ops.ts
+  registerLifecycleOps(httpServer, input, ops);
   // POST /admin/agent/contract/top-up
   httpServer.registerRoute({
     method: 'POST',
