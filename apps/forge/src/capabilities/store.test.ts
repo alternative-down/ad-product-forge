@@ -62,16 +62,16 @@ function createMockDb() {
     return fn;
   };
   const makeDeleteChain = () => {
-    const whereChain = { where: vi.fn<any>().mockResolvedValue(undefined) };
-    const fn = vi.fn<any>().mockImplementation((_table: any) => whereChain);
+    const whereChain = { where: vi.fn().mockResolvedValue(undefined) };
+    const fn = vi.fn().mockImplementation((_table: any) => whereChain);
     fn.mockImplementation((_table: any) => whereChain);
     return fn as any;
   };
   const makeUpdateChain = () => {
-    const whereChain = { returning: vi.fn<any>().mockResolvedValue(undefined) };
-    const setChain = { where: vi.fn<any>().mockImplementation(() => whereChain) };
-    const chain = { set: vi.fn<any>().mockImplementation(() => setChain) };
-    const fn = vi.fn<any>().mockImplementation((_table: any) => chain);
+    const whereChain = { returning: vi.fn().mockResolvedValue(undefined) };
+    const setChain = { where: vi.fn().mockImplementation(() => whereChain) };
+    const chain = { set: vi.fn().mockImplementation(() => setChain) };
+    const fn = vi.fn().mockImplementation((_table: any) => chain);
     fn.mockImplementation((_table: any) => chain);
     return fn as any;
   };
