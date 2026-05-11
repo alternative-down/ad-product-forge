@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createBrowserTools } from './tools';
 
 describe('BrowserTools', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let mockService: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let tools: any;
 
   beforeEach(() => {

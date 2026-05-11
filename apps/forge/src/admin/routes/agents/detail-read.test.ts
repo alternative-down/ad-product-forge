@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Unit tests for admin/routes/agents/detail-read.ts.
  * 9 route handlers (all GET): base, steps, conversations, memory, metrics,
