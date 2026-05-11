@@ -113,7 +113,9 @@ describe('runMigrations', () => {
 
     try {
       await runMigrations(mockDb);
-    } catch {}
+    } catch {
+      // no-op: testing error path, suppress empty catch warning
+    }
 
     const messages = debugCalls.map((c) => c.message);
     expect(messages).not.toContain('Migrations completed successfully');

@@ -357,8 +357,7 @@ describe('getLastAssistantText', () => {
   it('skips null messages when finding last assistant', () => {
     const messages = [
       { role: 'user', content: 'hello' },
-      // eslint-disable-next-line no-null/no-null
-      null,
+            null,
       { role: 'assistant', content: 'found' },
     ] as unknown as NativeToolLoopMessage[];
     expect(getLastAssistantText(messages)).toBe('found');
