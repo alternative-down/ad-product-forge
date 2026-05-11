@@ -203,7 +203,7 @@ function makeModelPrice(overrides: Partial<ModelPriceRow> = {}) {
 describe('agent-contract-store', () => {
   describe('getExecutionState', () => {
     test('returns idle when agent not found', async () => {
-      const { db } = createMockDb(collections);
+      const { db, collections: c2 } = createMockDb(collections);
       const store = createAgentContractStore(db);
       expect(await store.getExecutionState('nonexistent')).toBe('idle');
     });
@@ -386,4 +386,116 @@ describe('agent-contract-store', () => {
       expect(result!.refundedUsd).toBe(0);
     });
   });
-});
+
+  describe('getRunnableContract', () => {
+    test('returns null when no contracts at all', async () => {
+      makeAgent({ id: 'a-no-contracts' });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.getRunnableContract('a-no-contracts')).toBeNull();
+    });
+    test('returns funded active contract when one exists', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-runnable' });
+      makeContract({ id: 'c-runnable', agentId: 'a-runnable', fundedAt: now, startsAt: now - 100, endsAt: now + 1_000_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      const result = await store.getRunnableContract('a-runnable');
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('c-runnable');
+    });
+    test('returns null when active contract is unfunded (insufficient cash)', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-unfunded' });
+      makeContract({ id: 'c-unfunded', agentId: 'a-unfunded', fundedAt: null, startsAt: now - 100, endsAt: now + 1_000_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      const result = await store.getRunnableContract('a-unfunded');
+      expect(result).toBeNull();
+    });
+    test('returns null when latest contract autoRenew is false', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-no-renew' });
+      makeContract({ id: 'c-no-renew', agentId: 'a-no-renew', autoRenew: 0, startsAt: now - 200_000, endsAt: now - 100_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.getRunnableContract('a-no-renew')).toBeNull();
+    });
+    test('returns null when latest contract not yet ended', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-not-ended' });
+      makeContract({ id: 'c-not-ended', agentId: 'a-not-ended', startsAt: now - 100, endsAt: now + 1_000_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.getRunnableContract('a-not-ended')).toBeNull();
+    });
+  });
+
+  describe('renewContract', () => {
+    test('returns null when no contracts exist', async () => {
+      makeAgent({ id: 'a-none' });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.renewContract('a-none')).toBeNull();
+    });
+    test('returns null when latest contract autoRenew is false', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-no-renew' });
+      makeContract({ id: 'c-no-renew', agentId: 'a-no-renew', autoRenew: 0, endsAt: now - 1000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.renewContract('a-no-renew')).toBeNull();
+    });
+    test('returns null when latest contract endsAt is in the future', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-future' });
+      makeContract({ id: 'c-future', agentId: 'a-future', autoRenew: 1, endsAt: now + 1_000_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.renewContract('a-future')).toBeNull();
+    });
+    test('creates new contract extending previous contract by one week', async () => {
+      const now = Date.now();
+      const previousEnd = now - 1000;
+      makeAgent({ id: 'a-renew' });
+      makeContract({ id: 'c-previous', agentId: 'a-renew', autoRenew: 1, budgetUsd: 5, endsAt: previousEnd });
+      const { db, collections: c2 } = createMockDb(collections);
+      const origInsert = db.insert;
+      db.insert = vi.fn((table) => ({
+        values: vi.fn(async (vals) => {
+          const v = vals as Record<string, unknown>;
+          c2.contracts.set(v.id as string, v as never);
+        }),
+      })) as unknown as typeof db.insert;
+      db.transaction = vi.fn(async (fn) => {
+        await fn({
+          insert: db.insert,
+          update: db.update,
+          select: db.select,
+        });
+      });
+      const store = createAgentContractStore(db);
+      const result = await store.renewContract('a-renew');
+      expect(result).not.toBeNull();
+      expect(result!.agentId).toBe('a-renew');
+      expect(result!.startsAt).toBe(previousEnd);
+      expect(result!.endsAt).toBe(previousEnd + WEEK_MS);
+      expect(result!.budgetUsd).toBe(5);
+      expect(result!.autoRenew).toBe(1);
+    });
+  });
+
+  describe('fundContractIfNeeded', () => {
+    test('returns contract unchanged when already funded', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-funded' });
+      const contract = makeContract({ id: 'c-funded', agentId: 'a-funded', fundedAt: now, budgetUsd: 10 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      const result = await store.fundContractIfNeeded(contract);
+      expect(result).not.toBeNull();
+      expect(result!.fundedAt).toBe(now);
+    });
+  });
+
+  });
