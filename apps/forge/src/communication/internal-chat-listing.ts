@@ -117,16 +117,16 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         const shouldInclude = input.unread ? row.unread === 1 : true;
         if (shouldInclude && existing.length < 5) {
           existing.push({
-            messageId: (row as { messageId: string }).messageId,
+            messageId: row.messageId,
             provider: 'internal-chat',
-            authorId: (row as { authorAccountId?: string }).authorAccountId ?? '',
+            authorId: row.authorAccountId,
             targetKey: row.conversationId,
-            content: (row as { content?: string }).content ?? '',
+            content: row.content ?? '',
             attachments: [],
             unread: row.unread === 1,
-            createdAt: new Date((row as { createdAt?: number }).createdAt ?? 0).toISOString(),
-            authorDisplayName: (row as { authorDisplayName?: string }).authorDisplayName ?? '',
-            replyToMessageId: (row as { replyToMessageId?: string | null }).replyToMessageId ?? null,
+            createdAt: new Date(row.createdAt ?? 0).toISOString(),
+            authorDisplayName: row.authorDisplayName ?? '',
+            replyToMessageId: row.replyToMessageId ?? null,
           });
           if (row.unread === 1) messageIdsToMarkRead.add(row.messageId);
         }
@@ -248,16 +248,16 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         const existing = messagesByConversationId.get(row.conversationId) ?? [];
         if (existing.length < 5) {
           existing.push({
-            messageId: (row as { messageId: string }).messageId,
+            messageId: row.messageId,
             provider: 'internal-chat',
-            authorId: (row as { authorAccountId?: string }).authorAccountId ?? '',
+            authorId: row.authorAccountId,
             targetKey: row.conversationId,
-            content: (row as { content?: string }).content ?? '',
+            content: row.content ?? '',
             attachments: [],
             unread: false,
-            createdAt: new Date((row as { createdAt?: number }).createdAt ?? 0).toISOString(),
-            authorDisplayName: (row as { authorDisplayName?: string }).authorDisplayName ?? '',
-            replyToMessageId: (row as { replyToMessageId?: string | null }).replyToMessageId ?? null,
+            createdAt: new Date(row.createdAt ?? 0).toISOString(),
+            authorDisplayName: row.authorDisplayName ?? '',
+            replyToMessageId: row.replyToMessageId ?? null,
           });
         }
         messagesByConversationId.set(row.conversationId, existing);
@@ -386,7 +386,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         .all();
 
       const messageIdsToMarkRead = new Set<string>();
-      const messageIds = messageRows.map((row) => (row as { messageId: string }).messageId);
+      const messageIds = messageRows.map((row) => row.messageId);
 
       // Batch-fetch all attachments in a single query instead of N queries
       const attachmentsByMessageId = new Map<string, unknown[]>();
@@ -412,14 +412,14 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         const message: Record<string, unknown> = {
           messageId: row.messageId,
           provider: 'internal-chat',
-          authorId: (row as { authorAccountId?: string }).authorAccountId ?? '',
+          authorId: row.authorAccountId,
           targetKey: input.conversationKey,
-          content: (row as { content?: string }).content ?? '',
+          content: row.content ?? '',
           attachments: attachmentsByMessageId.get(row.messageId) ?? [],
           unread: row.unread === 1,
-          createdAt: new Date((row as { createdAt?: number }).createdAt ?? 0).toISOString(),
-          authorDisplayName: (row as { authorDisplayName?: string }).authorDisplayName ?? '',
-          replyToMessageId: (row as { replyToMessageId?: string | null }).replyToMessageId ?? null,
+          createdAt: new Date(row.createdAt ?? 0).toISOString(),
+          authorDisplayName: row.authorDisplayName ?? '',
+          replyToMessageId: row.replyToMessageId ?? null,
         };
         result.push(message);
         if (row.unread === 1) messageIdsToMarkRead.add(row.messageId);
@@ -510,7 +510,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         .offset(input.offset)
         .all();
 
-      const messageIds = messageRows.map((row) => (row as { messageId: string }).messageId);
+      const messageIds = messageRows.map((row) => row.messageId);
 
       // Batch-fetch all attachments in a single query instead of N queries
       const attachmentsByMessageId = new Map<string, unknown[]>();
@@ -534,16 +534,16 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       const result = [];
       for (const row of messageRows as Array<{ messageId: string; replyToMessageId: string | null }>) {
         result.push({
-          messageId: (row as { messageId: string }).messageId,
+          messageId: row.messageId,
           provider: 'internal-chat',
-          authorId: (row as { authorAccountId?: string }).authorAccountId ?? '',
+          authorId: row.authorAccountId,
           targetKey: input.conversationKey,
-          content: (row as { content?: string }).content ?? '',
+          content: row.content ?? '',
           attachments: attachmentsByMessageId.get(row.messageId) ?? [],
           unread: false,
-          createdAt: new Date((row as { createdAt?: number }).createdAt ?? 0).toISOString(),
-          authorDisplayName: (row as { authorDisplayName?: string }).authorDisplayName ?? '',
-          replyToMessageId: (row as { replyToMessageId?: string | null }).replyToMessageId ?? null,
+          createdAt: new Date(row.createdAt ?? 0).toISOString(),
+          authorDisplayName: row.authorDisplayName ?? '',
+          replyToMessageId: row.replyToMessageId ?? null,
         });
       }
 
