@@ -10,7 +10,6 @@
     "apps/forge/src/finance/payment-providers/stripe.ts",
     "apps/forge/src/finance/payment-receivables.ts",
     "apps/forge/src/finance/payment-schema.ts",
-    "apps/forge/src/ticketing/service.ts",
     "packages/forge-runtime-core/src/operational-memory-om-rendering.ts"
   ],
   "unused_exports": [
