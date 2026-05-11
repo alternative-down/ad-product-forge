@@ -72,6 +72,9 @@ function makeMockDb(convRows: unknown[] = [], messageRows: unknown[] = [], readR
       internalChatMessageReads: {
         findMany: vi.fn().mockResolvedValue(readRows),
       },
+      internalChatMessageAttachments: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
     },
   };
 }
@@ -109,6 +112,7 @@ function makeGetMessagesEnv(extra?: Partial<ConversationListingDeps>) {
   const db = makeMockDb([{ id: 'conv-1', name: 'Team', type: 'group', updatedAt: MOCK_NOW, createdAt: MOCK_NOW }]);
   db.query.internalChatAccounts.findFirst.mockResolvedValue(MOCK_ACCOUNT);
   db.query.internalChatConversationMembers.findFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1' });
+  db.query.internalChatMessageAttachments.findMany.mockResolvedValue([]);
   return { db, listing: createInternalChatListing(db as never, deps) };
 }
 
@@ -119,6 +123,7 @@ function makeGetByAccountEnv(extra?: Partial<ConversationListingDeps>) {
   const deps = makeMockDeps({ getRequiredExternalAccount: vi.fn().mockResolvedValue(MOCK_EXT_ACCOUNT), ...extra });
   const db = makeMockDb([{ id: 'conv-1', name: 'DM', type: 'direct', updatedAt: MOCK_NOW, createdAt: MOCK_NOW }]);
   db.query.internalChatConversationMembers.findFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1' });
+  db.query.internalChatMessageAttachments.findMany.mockResolvedValue([]);
   return { db, listing: createInternalChatListing(db as never, deps) };
 }
 
