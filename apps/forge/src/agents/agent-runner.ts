@@ -43,7 +43,6 @@ import { withTimeout } from '../utils/async';
 import { createLoopDetector } from './agent-runner-loop-detector';
 import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, nextBackoff, resetBackoffState, calculateDelayMs } from './agent-runner-state';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
-import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
