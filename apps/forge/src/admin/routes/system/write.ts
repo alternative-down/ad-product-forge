@@ -131,7 +131,6 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, upsertSystemMcpServerSchema);
-        const timestamp = new Date().toISOString();
         const serverId = body.serverId ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
         const values = {
@@ -146,7 +145,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
             ? normalizeJsonText(body.headersText, 'headersText', 'object')
             : null,
           isActive: body.isActive ? 1 : 0,
-          updatedAt: timestamp,
+          updatedAt: Date.now(),
         };
 
         if (body.serverId) {
@@ -156,7 +155,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
             id: serverId,
             ...values,
             version: 1,
-            createdAt: timestamp,
+            createdAt: Date.now(),
           });
         }
 
@@ -184,8 +183,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           url: server?.url ?? '',
           headersText: server?.headers ?? '',
           isActive: (server?.isActive ?? (body.isActive ? 1 : 0)) === 1,
-          createdAt: server?.createdAt ?? timestamp,
-          updatedAt: server?.updatedAt ?? timestamp,
+          createdAt: server?.createdAt ?? Date.now(),
+          updatedAt: server?.updatedAt ?? Date.now(),
         });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/upsert', context: { error } });
