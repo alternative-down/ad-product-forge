@@ -70,18 +70,14 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
           .from(agents)
           .groupBy(agents.roleId).all(),
       ]);
-      const capabilityPermissions = await Promise.all(
-        roles.map(async (role) => ({
-          roleId: role.roleId,
-          capabilityIds: await capabilities.listGrantedRoleCapabilities(role.roleId),
-        })),
-      );
       const assignedAgentCountByRoleId = new Map(
         agentCounts
           .filter((row) => row.roleId)
           .map((row) => [row.roleId as string, row.count]),
       );
-      const capabilityMap = new Map(capabilityPermissions.map((row) => [row.roleId, row.capabilityIds]));
+      const capabilityMap = await capabilities.listGrantedRoleCapabilitiesBatch(
+        roles.map((role) => role.roleId),
+      );
 
       return {
         availableCapabilityIds: forgeCapabilityIds,
