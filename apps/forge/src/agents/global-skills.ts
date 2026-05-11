@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { forgeDebug } from '@forge-runtime/core';
+import { ensureDirectory, ensureParentDirectories, normalizeArchiveEntryPath } from './workspace-skill-helpers';
 
 import type { Agent } from '../database/schema';
 export {
@@ -33,56 +34,6 @@ type GlobalSkillSummary = {
 
 function resolveGlobalSkillsRoot(workspaceBasePath: string) {
   return path.resolve(workspaceBasePath, '_system', 'skills');
-}
-
-function normalizeArchiveEntryPath(entryPath: string) {
-  const normalizedPath = entryPath.replace(/\\/g, '/').replace(/^\/+/, '');
-  const isDirectory = normalizedPath.endsWith('/');
-  const withoutSkillsPrefix = normalizedPath.startsWith('skills/')
-    ? normalizedPath.slice('skills/'.length)
-    : normalizedPath;
-  const safePath = path.posix.normalize(isDirectory ? withoutSkillsPrefix.slice(0, -1) : withoutSkillsPrefix);
-
-  if (!safePath || safePath === '.' || safePath.startsWith('../') || safePath.includes('/../')) {
-    forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: invalid archive entry', context: { entryPath } });
-    throw new Error(`Invalid skill archive entry: ${entryPath}`);
-  }
-
-  return {
-    safePath,
-    isDirectory,
-  };
-}
-
-async function ensureDirectory(targetPath: string) {
-  try {
-    const stat = await fs.stat(targetPath);
-
-    if (stat.isDirectory()) {
-      return;
-    }
-
-    await fs.rm(targetPath, { force: true });
-  } catch (error) {
-    forgeDebug({ scope: 'global-skills', level: 'error', message: '[global-skills] ensureSkillDirectory cleared path', context: { error: error instanceof Error ? error.message : String(error) }});
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      forgeDebug({ scope: 'agents', level: 'error', message: 'Global skill operation failed', context: { error } });
-      throw error;
-    }
-  }
-
-  await fs.mkdir(targetPath, { recursive: true });
-}
-
-async function ensureParentDirectories(targetPath: string, rootPath: string) {
-  const relativePath = path.relative(rootPath, targetPath);
-  const segments = relativePath.split(path.sep).slice(0, -1);
-  let currentPath = rootPath;
-
-  for (const segment of segments) {
-    currentPath = path.resolve(currentPath, segment);
-    await ensureDirectory(currentPath);
-  }
 }
 
 async function listCustomGlobalSkills(workspaceBasePath: string): Promise<GlobalSkillSummary[]> {
