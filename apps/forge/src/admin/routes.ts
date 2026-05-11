@@ -73,20 +73,20 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas.js';
-import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp.js';
-import { registerInternalChatRoutes } from './routes/internal-chat/index.js';
+import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas';
+import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
+import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import { registerAgentBaseRoutes, registerAgentStepsRoutes,
   registerAgentConversationsRoutes, registerAgentMemoryRoutes,
   registerAgentMetricsRoutes, registerAgentContractRoutes,
   registerAgentMcpRoutes, registerAgentSchedulesRoutes,
-  registerAgentNotificationsRoutes } from './routes/agents/detail-read.js';
-import { registerAgentReadRoutes } from './routes/agents/read.js';
-import { registerAgentWriteRoutes } from './routes/agents/write.js';
-import { registerAgentOperationRoutes } from './routes/agents/operations.js';
-import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops.js';
-import { registerAgentSkillsWriteRoutes } from './routes/agents/skills-write.js';
-import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-write.js';
+  registerAgentNotificationsRoutes } from './routes/agents/detail-read';
+import { registerAgentReadRoutes } from './routes/agents/read';
+import { registerAgentWriteRoutes } from './routes/agents/write';
+import { registerAgentOperationRoutes } from './routes/agents/operations';
+import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops';
+import { registerAgentSkillsWriteRoutes } from './routes/agents/skills-write';
+import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-write';
 import {
   normalizeOptionalText,
   normalizeJsonText,
@@ -95,18 +95,18 @@ import {
   summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
-} from './routes/helpers.js';
+} from './routes/helpers';
 
-import { registerFinanceReadRoutes } from './routes/finance/read.js';
-import { registerFinanceWriteRoutes } from './routes/finance/write.js';
+import { registerFinanceReadRoutes } from './routes/finance/read';
+import { registerFinanceWriteRoutes } from './routes/finance/write';
 import { registerWebhookAdminRoutes } from './routes/webhooks/register';
 import { createWebhookStore } from '../webhooks/store';
 import { createWebhookHandler } from '../webhooks/handler';
 
-import { registerSystemReadRoutes } from './routes/system/read.js';
-import { registerSystemWriteRoutes } from './routes/system/write.js';
+import { registerSystemReadRoutes } from './routes/system/read';
+import { registerSystemWriteRoutes } from './routes/system/write';
 import { registerDashboardRoutes } from './routes/dashboard';
-import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers.js';
+import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
 
 
 export interface AdminRouteContext {
