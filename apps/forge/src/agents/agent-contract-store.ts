@@ -79,7 +79,7 @@ export function createAgentContractStore(
     const activeContract = await getActiveContract(agentId);
 
     if (activeContract) {
-      return fundContractIfNeeded(activeContract);
+      return await fundContractIfNeeded(activeContract);
     }
 
     const latestContract = await getLatestContract(agentId);

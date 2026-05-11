@@ -49,14 +49,14 @@ export function createInternalChatProvider(input: {
       }));
     },
     async listConversations({ limit, unread }) {
-      return input.internalChat.listConversations({
+      return await input.internalChat.listConversations({
         agentId: input.agentId,
         limit,
         unread,
       });
     },
     async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
-      return input.internalChat.getMessages({
+      return await input.internalChat.getMessages({
         agentId: input.agentId,
         conversationKey: targetKey,
         limit,

@@ -80,7 +80,7 @@ export async function installAgentWorkspaceSkillsFromZip(input: {
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>;
   zipBase64: string;
 }) {
-  return installAgentWorkspaceSkillsArchive(input);
+  return await installAgentWorkspaceSkillsArchive(input);
 }
 
 export async function deleteAgentWorkspaceSkill(input: {

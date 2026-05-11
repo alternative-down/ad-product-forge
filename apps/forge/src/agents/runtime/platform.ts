@@ -135,15 +135,15 @@ export async function createAgentRuntimePlatform(input: {
   });
   const workspaceFilesystem: RuntimeWorkspace['filesystem'] = {
     async exists(targetPath: string) {
-      return workspaceFs.exists(normalizeWorkspaceFilesystemPath(targetPath));
+      return await workspaceFs.exists(normalizeWorkspaceFilesystemPath(targetPath));
     },
     async readFile(targetPath: string) {
-      return workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
+      return await workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
     },
   };
   const communicationWorkspaceFilesystem: CommunicationWorkspaceFilesystem = {
     async readFile(targetPath: string) {
-      return workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
+      return await workspaceFs.readFile(normalizeWorkspaceFilesystemPath(targetPath));
     },
     async writeFile(targetPath: string, data: Uint8Array | Buffer | string) {
       await workspaceFs.writeFile(normalizeWorkspaceFilesystemPath(targetPath), data);

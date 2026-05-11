@@ -17,7 +17,7 @@ export async function main() {
   forgeDebug({ scope: 'forge', level: 'info', message: `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}` });
   forgeDebug({ scope: 'forge', level: 'info', message: `Admin API key: ${bootstrap.adminApiKey ? 'configured' : 'NOT configured'}` });
   if (bootstrap.allowInsecureLocal) {
-    // eslint-disable-next-line no-console
+     
     console.warn(
       '[forge-main] WARNING: Admin routes served WITHOUT authentication.'
       + ' Set FORGE_ADMIN_API_KEY for production deployments.',
@@ -35,10 +35,10 @@ export async function main() {
 }
 
 main().catch((error) => {
-  // eslint-disable-next-line no-console
+   
   console.error('[forge-main] Fatal error during startup:', error instanceof Error ? error.message : String(error));
   if (error instanceof Error && error.stack) {
-    // eslint-disable-next-line no-console
+     
     console.error(error.stack);
   }
   process.exit(1);

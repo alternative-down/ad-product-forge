@@ -225,7 +225,7 @@ export function createChatSending(deps: SendingDeps) {
     messageId: string;
     attachmentName: string;
   }) {
-    return attachments.readMessageAttachment(input.messageId, input.attachmentName);
+    return await attachments.readMessageAttachment(input.messageId, input.attachmentName);
   }
 
   return { sendMessage, getMessageAttachmentByAccount };
