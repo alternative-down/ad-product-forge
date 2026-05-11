@@ -29,6 +29,7 @@ import {
   updateAgentConfigSchema,
 } from '../schemas/agents';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
+import { registerContractOps } from './_split/contract-ops';
 
 
 import type {Database} from '../../../../src/database/schema';
@@ -197,51 +198,8 @@ export function registerAgentWriteOpsRoutes(
   const resolvePermissionId = (name: string) => name;
   // Lifecycle ops — extracted to _split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
-  // POST /admin/agent/contract/top-up
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/contract/top-up',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
-        return jsonResponse(await ops.topUpActiveAgentContract(input.db, body));
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/contract/top-up route handler failed', context: { path: '/admin/agent/contract/top-up', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/contract/adjust-budget
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/contract/adjust-budget',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
-        return jsonResponse(await ops.adjustAgentContractBudget(input.db, body));
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/contract/adjust-budget route handler failed', context: { path: '/admin/agent/contract/adjust-budget', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/contract/renew
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/contract/renew',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
-        return jsonResponse(await ops.renewAgentContract(input.db, body));
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/contract/renew route handler failed', context: { path: '/admin/agent/contract/renew', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
+  // Contract ops — extracted to _split/contract-ops.ts
+  registerContractOps({ httpServer, db: input.db, ops });
   // POST /admin/agent/hire
   httpServer.registerRoute({
     method: 'POST',
