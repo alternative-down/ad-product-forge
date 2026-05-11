@@ -114,7 +114,11 @@ export function createInternalChatService(
   // ── Account Management (delegated to internal-chat-accounts.ts) ─────────
   const accounts = createInternalChatAccounts(db);
   const admin = createInternalChatAdmin(db);
-  const reads = createInternalChatReads(db);
+  const reads = createInternalChatReads(db, {
+    unread: { getUnreadSummary: async () => { throw new Error("reads not yet initialized"); } },
+    participants: { listGroupMembersOrDmPeers: async () => { throw new Error("reads not yet initialized"); }, listGroupMembersOrDmPeersByAccount: async () => { throw new Error("reads not yet initialized"); } },
+    listConversations: async () => { throw new Error("reads not yet initialized"); },
+  });
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────
   const attachments = createChatAttachments(db);
@@ -231,9 +235,21 @@ const registerAgentAccount = admin.registerAgentAccount;
   const { addMemberToGroupByAccount, updateMemberRoleByAccount, removeMemberFromGroupByAccount, updateGroupByAccount } = accountOps;
 
   // === Unread / Recent ────────────────────────────────────────────────────
-  const getUnreadSummary = reads.getUnreadSummary;
 
-  const listRecentConversations = reads.listRecentConversations;
+  // ── DI: Initialize reads with actual deps ───────────────────────────────
+  const unread = createInternalChatUnread(db);
+  // Replace reads with proper deps (now that unread, participants, listConversations exist)
+  // Note: reads object was created earlier with placeholder deps. We recreate it.
+  const actualReads = createInternalChatReads(db, {
+    unread,
+    participants,
+    listConversations,
+  });
+  // Update delegates to use actual reads
+  const getUnreadSummary = actualReads.getUnreadSummary;
+  const listRecentConversations = actualReads.listRecentConversations;
+  const listGroupMembersOrDmPeers_ = actualReads.listGroupMembersOrDmPeers;
+  const listGroupMembersOrDmPeersByAccount_ = actualReads.listGroupMembersOrDmPeersByAccount;
 
   // === Internal Helpers ────────────────────────────────────────────────────
 
@@ -241,8 +257,7 @@ const registerAgentAccount = admin.registerAgentAccount;
     getRequiredAgentAccount,
   });
 
-  const unread = createInternalChatUnread(db);
-  reads.init({ unread, participants, listConversations });
+  // reads.init() removed — deps now passed at construction
 
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
