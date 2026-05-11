@@ -17,7 +17,7 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
 
   async function requireConversationMembership(agentId: string, conversationId: string) {
     const account = await deps.getRequiredAgentAccount(agentId);
-    return requireConversationMembershipByAccount(account.id, conversationId);
+    return await requireConversationMembershipByAccount(account.id, conversationId);
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
@@ -36,7 +36,7 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
 
   async function getRequiredConversationForAgent(agentId: string, conversationId: string) {
     const account = await deps.getRequiredAgentAccount(agentId);
-    return getRequiredConversationForAccount(account.id, conversationId);
+    return await getRequiredConversationForAccount(account.id, conversationId);
   }
 
   async function getRequiredConversationForAccount(accountId: string, conversationId: string) {

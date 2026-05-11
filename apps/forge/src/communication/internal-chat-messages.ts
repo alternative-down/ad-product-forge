@@ -112,7 +112,7 @@ export function createInternalChatMessages(
         ));
     }
 
-    return Promise.all(
+    return await Promise.all(
       rows.reverse().map(async (row) => ({
         messageId: row.messageId,
         provider: 'internal-chat',
@@ -167,7 +167,7 @@ export function createInternalChatMessages(
       .offset(input.offset)
       .limit(input.limit).all();
 
-    return Promise.all(
+    return await Promise.all(
       rows.reverse().map(async (row) => ({
         messageId: row.messageId,
         provider: 'internal-chat',

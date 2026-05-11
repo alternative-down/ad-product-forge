@@ -417,7 +417,7 @@ export function createCapabilityStore(db: Database) {
         throw new Error('Role name is required.');
       }
 
-      return createRole({
+      return await createRole({
         name: input.name.trim(),
         description: input.description?.trim() || undefined,
       });
@@ -431,7 +431,7 @@ export function createCapabilityStore(db: Database) {
       throw new Error('roleId is required.');
       }
 
-      return deleteRole(input.roleId);
+      return await deleteRole(input.roleId);
     }
 
     if (!input.roleId) {
@@ -446,7 +446,7 @@ export function createCapabilityStore(db: Database) {
       throw new Error('At least one field besides roleId must be provided.');
     }
 
-    return updateRole({
+    return await updateRole({
       roleId: input.roleId,
       name: input.name?.trim(),
       description: input.description === undefined ? undefined : (input.description?.trim() || null),
@@ -461,12 +461,12 @@ export function createCapabilityStore(db: Database) {
     const isWorkflow = input.capabilityId.startsWith('wf-');
     if (input.action === 'add') {
       return isWorkflow
-        ? addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
-        : addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
+        ? await addRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
+        : await addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
     } else {
       return isWorkflow
-        ? removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
-        : removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
+        ? await removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
+        : await removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
     }
   }
 

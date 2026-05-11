@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Unit tests for admin/routes/agents/skills-write.ts.
  * 4 route handlers: upload, delete, install-global, publish-global.

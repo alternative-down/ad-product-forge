@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
+ 
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import {
   createMcpServerConfig,

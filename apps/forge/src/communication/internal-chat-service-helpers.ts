@@ -63,11 +63,11 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   const { db, accounts, participants } = deps;
 
   async function getRequiredAccount(accountId: string): Promise<HelperAccount> {
-    return accounts.getRequiredAccount(accountId);
+    return await accounts.getRequiredAccount(accountId);
   }
 
   async function getRequiredAgentAccount(agentId: string): Promise<HelperAccount> {
-    return accounts.getRequiredAgentAccount(agentId);
+    return await accounts.getRequiredAgentAccount(agentId);
   }
 
   async function getRequiredExternalAccount(accountId: string): Promise<HelperAccount> {
@@ -100,7 +100,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
 
   async function requireConversationMembership(agentId: string, conversationId: string): Promise<void> {
     const account = await getRequiredAgentAccount(agentId);
-    return requireConversationMembershipByAccount(account.id, conversationId);
+    return await requireConversationMembershipByAccount(account.id, conversationId);
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string): Promise<void> {
@@ -126,7 +126,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
     conversationId: string,
   ): Promise<{ id: string; type: string; name: string | null }> {
     const account = await getRequiredAgentAccount(agentId);
-    return getRequiredConversationForAccount(account.id, conversationId);
+    return await getRequiredConversationForAccount(account.id, conversationId);
   }
 
   async function getRequiredConversationForAccount(
@@ -172,11 +172,11 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   }
 
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string): Promise<HelperParticipant[]> {
-    return participants.listGroupMembersOrDmPeers(agentId, conversationId);
+    return await participants.listGroupMembersOrDmPeers(agentId, conversationId);
   }
 
   async function listGroupMembersOrDmPeersByAccount(accountId: string, conversationId: string): Promise<HelperParticipant[]> {
-    return participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
+    return await participants.listGroupMembersOrDmPeersByAccount(accountId, conversationId);
   }
 
   return {

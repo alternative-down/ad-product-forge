@@ -279,7 +279,7 @@ export function createPaymentReceivablesStore(db: Database) {
         }
 
         if (input.status === 'completed' && tx.ledgerPosted === false) {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+           
           const ledgerEntryId = createId();
           try {
             await db.transaction(async (tx) => {

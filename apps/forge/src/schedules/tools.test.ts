@@ -85,7 +85,7 @@ function normalizeOptionalText(value?: string) {
 
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
   const cronId = value.scheduleId ?? value.taskId;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { scheduleId: _s, taskId: _t, ...rest } = value;
   return { ...rest, cronId };
 }

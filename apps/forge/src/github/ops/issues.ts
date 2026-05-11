@@ -196,7 +196,7 @@ export function createIssuesOps(ctx: OpsContext) {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return updateIssue(agentId, { ...input, state: 'closed' });
+    return await updateIssue(agentId, { ...input, state: 'closed' });
   }
 
   async function reopenIssue(agentId: string, input: {
@@ -204,7 +204,7 @@ export function createIssuesOps(ctx: OpsContext) {
     repositoryName: string;
     issueNumber: number;
   }) {
-    return updateIssue(agentId, { ...input, state: 'open' });
+    return await updateIssue(agentId, { ...input, state: 'open' });
   }
 
   async function listIssueComments(agentId: string, input: {
