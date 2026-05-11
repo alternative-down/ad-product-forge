@@ -41,7 +41,11 @@ function makeMockDb(convRows: unknown[] = [], messageRows: unknown[] = [], readR
     where: vi.fn().mockReturnValue(convWhere),
     limit: vi.fn().mockReturnValue(convLimit),
   };
-  const convFrom = { from: vi.fn().mockReturnValue({ innerJoin: vi.fn().mockReturnValue(convInnerJoin) }) };
+  const convAllForExtra = vi.fn().mockResolvedValue([]);
+  const convFrom = {
+    from: vi.fn().mockReturnValue({ innerJoin: vi.fn().mockReturnValue(convInnerJoin) }),
+    where: vi.fn().mockReturnValue({ all: convAllForExtra }),
+  };
 
   // Message query chain: select().from().innerJoin().innerJoin().where().orderBy().all()
   const msgOrderBy = { all: msgAll };
@@ -64,7 +68,7 @@ function makeMockDb(convRows: unknown[] = [], messageRows: unknown[] = [], readR
     select,
     query: {
       internalChatAccounts: { findFirst: vi.fn() },
-      internalChatConversationMembers: { findFirst: vi.fn() },
+      internalChatConversationMembers: { findFirst: vi.fn(), findMany: vi.fn() },
       internalChatMessageReads: {
         findMany: vi.fn().mockResolvedValue(readRows),
       },
@@ -157,13 +161,13 @@ describe('createInternalChatListing -- listConversationsByAccount', () => {
     const messageRows = [
       { conversationId: 'conv-1', id: 'msg-1', content: 'Hello', createdAt: 999, authorAccountId: 'acct-1', authorDisplayName: 'Alice' },
     ];
+    const memberRows = [
+      { conversationId: 'conv-1', accountId: 'acct-1', role: 'admin', displayName: 'Alice', agentId: null, slug: 'alice' },
+      { conversationId: 'conv-1', accountId: 'acct-2', role: 'normal', displayName: 'Bob', agentId: null, slug: 'bob' },
+    ];
     const db = makeMockDb(convRows, messageRows);
-    const deps = makeMockDeps({
-      listGroupMembersOrDmPeersByAccount: vi.fn().mockResolvedValue([
-        { accountId: 'acct-1', displayName: 'Alice', role: 'admin', agentId: null, slug: 'alice' },
-        { accountId: 'acct-2', displayName: 'Bob', role: 'normal', agentId: null, slug: 'bob' },
-      ]),
-    });
+    db.query.internalChatConversationMembers.findMany = vi.fn().mockResolvedValue(memberRows);
+    const deps = makeMockDeps({});
     const listing = createInternalChatListing(db as never, deps);
 
     const result = await listing.listConversationsByAccount({ accountId: 'acct-1', limit: 20 });
@@ -181,13 +185,13 @@ describe('createInternalChatListing -- listConversationsByAccount', () => {
     const convRows = [
       { id: 'conv-1', name: null, type: 'dm' as const, updatedAt: 1000 },
     ];
+    const memberRows = [
+      { conversationId: 'conv-1', accountId: 'acct-1', role: 'admin', displayName: 'Alice', agentId: null, slug: 'alice' },
+      { conversationId: 'conv-1', accountId: 'acct-2', role: 'normal', displayName: 'Bob', agentId: null, slug: 'bob' },
+    ];
     const db = makeMockDb(convRows, []);
-    const deps = makeMockDeps({
-      listGroupMembersOrDmPeersByAccount: vi.fn().mockResolvedValue([
-        { accountId: 'acct-1', displayName: 'Alice', role: 'admin', agentId: null, slug: 'alice' },
-        { accountId: 'acct-2', displayName: 'Bob', role: 'normal', agentId: null, slug: 'bob' },
-      ]),
-    });
+    db.query.internalChatConversationMembers.findMany = vi.fn().mockResolvedValue(memberRows);
+    const deps = makeMockDeps({});
     const listing = createInternalChatListing(db as never, deps);
 
     const result = await listing.listConversationsByAccount({ accountId: 'acct-1', limit: 20 });
@@ -226,12 +230,12 @@ describe('createInternalChatListing -- listConversations', () => {
     const messageRows = [
       { conversationId: 'conv-1', id: 'msg-1', content: 'Hello', createdAt: 999, authorAccountId: 'acct-2', authorDisplayName: 'Bob' },
     ];
+    const memberRows = [
+      { conversationId: 'conv-1', accountId: 'acct-1', role: 'admin', displayName: 'Alice', agentId: null, slug: 'alice' },
+    ];
     const db = makeMockDb(convRows, messageRows);
-    const deps = makeMockDeps({
-      listGroupMembersOrDmPeers: vi.fn().mockResolvedValue([
-        { accountId: 'acct-1', displayName: 'Alice', role: 'admin', agentId: null, slug: 'alice' },
-      ]),
-    });
+    db.query.internalChatConversationMembers.findMany = vi.fn().mockResolvedValue(memberRows);
+    const deps = makeMockDeps({});
     const listing = createInternalChatListing(db as never, deps);
 
     const result = await listing.listConversations({ agentId: 'agent-1', limit: 20 });
