@@ -12,6 +12,7 @@ const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
+import { createTimerManager } from './agent-runner-timer-manager';
 
 export type SchedulerState = {
   nextStepAt: number | null;
@@ -54,7 +55,7 @@ export function createScheduler(
   let healthcheckBeginRunFn: ((opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>) | null = null;
   let healthcheckGetPendingCount: (() => number) | null = null;
   let healthcheckNextAt: number | null = null;
-  let timer: NodeJS.Timeout | null = null;
+  // timer managed by timerManager
   let stopped = false;
   let startingRun = false;
   let startingRunStartedAt: number | null = null;
@@ -65,24 +66,21 @@ export function createScheduler(
     runtimeId: deps.runtimeId,
     getSystemSettings: deps.getSystemSettings,
   });
+  const timerManager = createTimerManager(state);
 
   // Step callback — set by the runner orchestrator
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
 
   function clearTimer() {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    state.nextStepAt = null;
+    timerManager.clearTimer();
   }
 
   function setNextStepAt(timestamp: number) {
-    state.nextStepAt = timestamp;
+    timerManager.setNextStepAt(timestamp);
   }
 
   function isTimerActive(): boolean {
-    return timer !== null || state.nextStepAt !== null;
+    return timerManager.isTimerActive();
   }
 
   function nextBackoff(): number {
@@ -135,13 +133,8 @@ export function createScheduler(
   }
 
   function scheduleNextStep(delayMs: number, stepFn?: () => void) {
-    clearTimer();
-    state.nextStepAt = Date.now() + delayMs;
-    timer = setTimeout(() => {
-      timer = null;
-      state.nextStepAt = null;
-      if (stepFn) { stepFn(); }
-    }, Math.max(delayMs, 0));
+    timerManager.scheduleNextStep(delayMs);
+    if (stepFn) { timerManager.setStepFn(stepFn); }
   }
 
   /**
@@ -150,8 +143,7 @@ export function createScheduler(
    * stepCallback(externalRunEpoch) via setTimeout.
    */
   function scheduleAt(timestamp: number) {
-    clearTimer();
-    state.nextStepAt = timestamp;
+    timerManager.scheduleAt(timestamp);
   }
 
   // ─── Run epoch management ───────────────────────────────────────────────────
@@ -445,7 +437,7 @@ export function createScheduler(
   }
 
   async function queueNextStep() {
-    if (stopped || executing || timer || isStaleRun(state.activeRunEpoch)) {
+    if (stopped || executing || timerManager.isTimerActive() || isStaleRun(state.activeRunEpoch)) {
       return;
     }
 
@@ -485,7 +477,7 @@ export function createScheduler(
   // ─── State accessors ────────────────────────────────────────────────────────
 
   function isLocallyIdle(): boolean {
-    return !startingRun && !executing && !timer;
+    return !startingRun && !executing && !timerManager.isTimerActive();
   }
 
   function setExecuting(value: boolean) {
@@ -541,9 +533,7 @@ export function createScheduler(
     return healthcheckTimer;
   }
 
-  function getTimer(): NodeJS.Timeout | null {
-    return timer;
-  }
+
 
   return {
     // Timer / scheduling
@@ -602,7 +592,6 @@ export function createScheduler(
     setStepCallback,
     getAbortController,
     getHealthcheckTimer,
-    getTimer,
     getState: () => ({ ...state }),
     isStopped: () => stopped,
   };
