@@ -213,6 +213,8 @@ export function createInternalChatAccounts(db: Database) {
   }
 
   async function getAccountByTargetKey(_targetKey: string) {
+    // FIXME: always returns null; replace with real lookup by targetKey
+    // once internal-chat targetKey system is fully implemented.
     return null;
   }
 
