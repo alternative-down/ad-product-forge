@@ -7,6 +7,7 @@ const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
+import { createRunLifecycle } from './agent-runner-run-lifecycle';
 
 export type SchedulerState = {
   nextStepAt: number | null;
@@ -55,12 +56,13 @@ export function createScheduler(
   let startingRunStartedAt: number | null = null;
   let executing = false;
   let activeRunId: string | null = null;
-  let currentGenerateAbortController: AbortController | null = null;
+  // currentGenerateAbortController managed by runLifecycle
   const flushManager = createFlushManager({
     runtimeId: deps.runtimeId,
     getSystemSettings: deps.getSystemSettings,
   });
   const timerManager = createTimerManager(state);
+  const runLifecycle = createRunLifecycle(state, { get stopped() { return stopped; } });
 
   // Step callback — set by the runner orchestrator
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
@@ -156,38 +158,27 @@ export function createScheduler(
   // ─── Run epoch management ───────────────────────────────────────────────────
 
   function startNewRunEpoch(): number {
-    state.activeRunEpoch += 1;
-    state.activeStepEpoch = 0;
-    invalidateInFlightGenerate();
-    return state.activeRunEpoch;
+    return runLifecycle.startNewRunEpoch();
   }
 
   function isStaleRun(runEpoch: number): boolean {
-    return stopped || runEpoch !== state.activeRunEpoch;
+    return runLifecycle.isStaleRun(runEpoch);
   }
 
   function invalidateInFlightGenerate() {
-    state.activeGenerateToken += 1;
-    currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
-    currentGenerateAbortController = null;
+    runLifecycle.invalidateInFlightGenerate();
   }
 
   function startGenerateAttempt(controller: AbortController): number {
-    state.activeGenerateToken += 1;
-    currentGenerateAbortController = controller;
-    return state.activeGenerateToken;
+    return runLifecycle.startGenerateAttempt(controller);
   }
 
   function finishGenerateAttempt(generateToken: number, controller: AbortController) {
-    controller.abort();
-    if (state.activeGenerateToken !== generateToken) {
-      return;
-    }
-    currentGenerateAbortController = null;
+    runLifecycle.finishGenerateAttempt(generateToken, controller);
   }
 
   function getGenerateToken(): number {
-    return state.activeGenerateToken;
+    return runLifecycle.getGenerateToken();
   }
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
@@ -533,7 +524,7 @@ export function createScheduler(
   }
 
   function getAbortController(): AbortController | null {
-    return currentGenerateAbortController;
+    return runLifecycle.getAbortController();
   }
 
   function getHealthcheckTimer(): NodeJS.Timeout | null {
