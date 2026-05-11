@@ -86,7 +86,7 @@ vi.mock('../../admin/routes/index', () => ({
     headers: { 'content-type': 'application/json; charset=utf-8' },
     body: JSON.stringify(body),
   }),
-  parseJsonBody: (bodyText: string, schema: any) => {
+  parseJsonBody: (bodyText: string, schema: unknown) => {
     const data = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
     try {
       return schema.parse(data);

@@ -22,7 +22,7 @@ vi.mock('@forge-runtime/core', () => {
   }
   class SqliteWorkspaceRetrieval {
     private _inst: Record<string, any>;
-    constructor(..._args: any[]) {
+    constructor(..._args: unknown[]) {
       this._inst = __forgeInstance !== null
         ? { ...makeDefaultInstance(), ...__forgeInstance }
         : makeDefaultInstance();
@@ -37,7 +37,7 @@ vi.mock('@forge-runtime/core', () => {
   }
   return {
     SqliteWorkspaceRetrieval,
-    FilesystemDocumentSource: vi.fn(function(_opts: any) {
+    FilesystemDocumentSource: vi.fn(function(arg: unknown) {
       return { loadDocuments: vi.fn(async () => []) };
     }),
     forgeDebug: vi.fn(),
