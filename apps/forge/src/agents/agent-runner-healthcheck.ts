@@ -83,19 +83,9 @@ export async function runHealthcheck(deps: HealthcheckDeps): Promise<void> {
     return;
   }
 
-  // Non-idle — check if a start timed out
-  // The healthcheck loop uses its own tracking, synced back via callbacks
-  // onStartingRunTimeout is called when the loop detects a stuck start
-  const startingRunAgeMs = 0; // caller tracks via syncStarterState
-
-  // Check if we're in a "stuck starting" state
-  // If the caller reports startingRun=true and it's been too long, call the timeout handler
-  // But we don't track time ourselves — we trust the caller's syncStarterState
-
-  // For active execution, if not starting, not executing, and no timer, trigger next step
-  // The actual starting/executing/timer checks are done by the caller (agent-runner.ts)
-  // and synced via syncStarterState/syncExecuting/syncTimer
-  // Here we just try to queue if nothing is blocking
+  // Non-idle — for active execution, trigger next step.
+  // The caller (agent-runner.ts) handles starting/executing/timer state
+  // via syncStarterState/syncExecuting/syncTimer; we just queue if not blocked.
   try {
     await queueNextStep();
   } catch (error) {
