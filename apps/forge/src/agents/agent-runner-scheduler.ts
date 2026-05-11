@@ -9,20 +9,14 @@ import {
   calculateDelayMs as calcDelayMs,
 } from './agent-runner-scheduler-backoff';
 import {
-  startNewRunEpoch as epochStartNewRunEpoch,
-  isStaleRun as epochIsStaleRun,
   advanceStepEpoch as epochAdvanceStepEpoch,
-  getGenerateToken as epochGetGenerateToken,
-  startGenerateAttempt as epochStartGenerateAttempt,
-  finishGenerateAttempt as epochFinishGenerateAttempt,
-  invalidateInFlightGenerate as epochInvalidateInFlightGenerate,
-  getAbortController as epochGetAbortController,
 } from './agent-runner-scheduler-epoch';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
+import { createRunLifecycle } from './agent-runner-run-lifecycle';
 
 export type SchedulerState = {
   nextStepAt: number | null;
@@ -58,12 +52,6 @@ export function createScheduler(
   state: SchedulerState,
   deps: SchedulerDependencies,
 ) {
-  // genCtrl: AbortController state for epoch functions — kept separate from
-  // SchedulerState so epoch helpers don't need to know about abort controllers
-  const genCtrl = {
-    currentAbortController: null as AbortController | null,
-  };
-
   let healthcheckTimer: NodeJS.Timeout | null = null;
   // Healthcheck callbacks — set when the runner starts and when beginRun is configured
   let healthcheckGetExecutionState: ((runtimeId: string) => Promise<'idle' | 'running' | 'absent'>) | null = null;
@@ -82,6 +70,7 @@ export function createScheduler(
     getSystemSettings: deps.getSystemSettings,
   });
   const timerManager = createTimerManager(state);
+  const runLifecycle = createRunLifecycle(state, { get stopped() { return stopped; } });
 
   // Step callback — set by the runner orchestrator
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
@@ -164,27 +153,27 @@ export function createScheduler(
   // ─── Run epoch management ───────────────────────────────────────────────────
 
   function startNewRunEpoch(): number {
-    return epochStartNewRunEpoch(state);
+    return runLifecycle.startNewRunEpoch();
   }
 
   function isStaleRun(runEpoch: number): boolean {
-    return epochIsStaleRun(state, stopped, runEpoch);
+    return runLifecycle.isStaleRun(runEpoch);
   }
 
   function invalidateInFlightGenerate() {
-    epochInvalidateInFlightGenerate(state, genCtrl);
+    runLifecycle.invalidateInFlightGenerate();
   }
 
   function startGenerateAttempt(controller: AbortController): number {
-    return epochStartGenerateAttempt(state, genCtrl, controller);
+    return runLifecycle.startGenerateAttempt(controller);
   }
 
   function finishGenerateAttempt(generateToken: number, controller: AbortController) {
-    epochFinishGenerateAttempt(state, genCtrl, generateToken, controller);
+    runLifecycle.finishGenerateAttempt(generateToken, controller);
   }
 
   function getGenerateToken(): number {
-    return epochGetGenerateToken(state);
+    return runLifecycle.getGenerateToken();
   }
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
@@ -530,7 +519,7 @@ export function createScheduler(
   }
 
   function getAbortController(): AbortController | null {
-    return epochGetAbortController(genCtrl);
+    return runLifecycle.getAbortController();
   }
 
   function getHealthcheckTimer(): NodeJS.Timeout | null {
