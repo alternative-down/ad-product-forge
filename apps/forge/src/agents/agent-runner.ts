@@ -45,6 +45,7 @@ import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, ne
 import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
+import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
@@ -317,70 +318,30 @@ export function createAgentRunner(
   }
 
   async function runHealthcheck() {
-    if (stopped) {
-      return;
-    }
-
-    try {
-      const executionState = await withTimeout(
-        store.getExecutionState(runtime.id),
-        RUNNER_AWAIT_TIMEOUT_MS,
-        `Agent execution state lookup timed out for ${runtime.id}`,
-      );
-
-      if (executionState === 'idle') {
-        if (!isLocallyIdle()) {
-          return;
-        }
-
-        if (messageManager.getPendingCount() > 0) {
-
-          await beginRun({
-
-            reloadRuntime: false,
-
-            wakeStartedAt: Date.now(),
-
-            markRunning: true,
-
-          });
-          return;
-        }
-
-        const wakeSnapshot = wakeQueue.getSnapshot();
-        if (wakeSnapshot.pending || wakeSnapshot.waitingForIdle) {
-          await wakeQueue.onRunnerIdle();
-        }
-
-        return;
-      }
-
-      if (startingRun) {
-        const startingRunAgeMs =
-          startingRunStartedAt === null ? 0 : Date.now() - startingRunStartedAt;
-
-        if (startingRunAgeMs >= STARTING_RUN_TIMEOUT_MS) {
-          forgeDebug({
-            scope: 'agent-runner',
-            level: 'warn',
-            runtimeId: runtime.id,
-            message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state`,
-          });
-          startNewRunEpoch();
-          startingRun = false;
-          startingRunStartedAt = null;
-          activeRunId = null;
-        }
-      }
-
-      if (startingRun || executing || timer) {
-        return;
-      }
-
-      await queueNextStep();
-    } catch (error) {
-      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error } });
-    }
+    if (stopped) return;
+    await healthcheckRunHealthcheck({
+      runtimeId: runtime.id,
+      getExecutionState: (id) =>
+        withTimeout(store.getExecutionState(id), RUNNER_AWAIT_TIMEOUT_MS, `Agent execution state lookup timed out for ${id}`),
+      isLocallyIdle,
+      getPendingCount: () => messageManager.getPendingCount(),
+      getWakeSnapshot: () => wakeQueue.getSnapshot(),
+      onRunnerIdle: () => wakeQueue.onRunnerIdle(),
+      beginRun: (opts) => beginRun(opts),
+      queueNextStep,
+      onStartingRunTimeout: () => {
+        forgeDebug({ scope: 'agent-runner', level: 'warn', runtimeId: runtime.id, message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state` });
+        startNewRunEpoch();
+        startingRun = false;
+        startingRunStartedAt = null;
+        activeRunId = null;
+      },
+      syncStarterState: (running, startedAt) => { startingRun = running; startingRunStartedAt = startedAt; },
+      syncExecuting: (val) => { executing = val; },
+      syncTimer: (val) => { timer = val; },
+      isStaleRun,
+      notifyError: (error) => forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error } }),
+    });
   }
 
   async function beginRun(input: {
