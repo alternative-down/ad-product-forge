@@ -1,16 +1,16 @@
-import type { HttpHandler } from '../../../http/server.js';
+import type { HttpHandler } from '../../../http/server';
 import { z } from 'zod';
-import type { Database } from '../../../database/client.js';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader.js';
+import type { Database } from '../../../database/client';
+import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { forgeDebug } from '@forge-runtime/core';
-import { createId } from '../../../utils/id.js';
+import { createId } from '../../../utils/id';
 import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
-import { parseProviderCredentials } from '../../../communication/provider-loader.js';
-import { encryptSecret } from '../../../encryption/crypto.js';
-import { discordProviderDeleteSignalSchema } from '../schemas/discord.js';
+import { parseProviderCredentials } from '../../../communication/provider-loader';
+import { encryptSecret } from '../../../encryption/crypto';
+import { discordProviderDeleteSignalSchema } from '../schemas/discord';
 
 // Schemas co-located with routes (extracted from schemas.ts for locality)
 const upsertAgentProviderSchema = z.object({
