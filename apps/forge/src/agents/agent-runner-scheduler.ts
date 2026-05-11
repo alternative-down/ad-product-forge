@@ -2,6 +2,12 @@ import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-consta
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { withTimeout } from '../utils/async';
+import {
+  nextBackoff as backoffNextBackoff,
+  resetBackoff as backoffResetBackoff,
+  setInstant as backoffSetInstant,
+  calculateDelayMs as calcDelayMs,
+} from './agent-runner-scheduler-backoff';
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
@@ -86,17 +92,15 @@ export function createScheduler(
   }
 
   function nextBackoff(): number {
-    const delayMs = state.backoffMs;
-    state.backoffMs = Math.min(state.backoffMs * 2, TEN_MINUTES_MS);
-    return delayMs;
+    return backoffNextBackoff(state);
   }
 
   function resetBackoff() {
-    state.backoffMs = ONE_MINUTE_MS;
+    backoffResetBackoff(state);
   }
 
   function setInstant(value: boolean) {
-    state.instant = value;
+    backoffSetInstant(state, value);
   }
 
   function calculateDelayMs(
@@ -104,18 +108,7 @@ export function createScheduler(
     remainingBudgetUsd: number,
     estimatedStepUsd: number | null,
   ): number {
-    if (estimatedStepUsd === null || estimatedStepUsd <= 0) {
-      return 0;
-    }
-
-    const remainingTimeMs = endsAt - Date.now();
-    const stepsPossible = remainingBudgetUsd / estimatedStepUsd;
-
-    if (remainingTimeMs <= 0 || stepsPossible <= 0) {
-      return 0;
-    }
-
-    return remainingTimeMs / stepsPossible;
+    return calcDelayMs(endsAt, remainingBudgetUsd, estimatedStepUsd);
   }
 
   async function planNextStepDelay(): Promise<number> {
