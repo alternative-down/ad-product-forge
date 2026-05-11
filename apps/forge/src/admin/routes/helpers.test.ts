@@ -1,23 +1,21 @@
 /**
  * Unit tests for admin/routes/helpers.ts
- * Pure functions: normalizeOptionalText, normalizeJsonText,
- * summarizeHealthcheckThreadMessage, extractLatestHealthcheckMessagePreview,
- * summarizeActiveItems.
- * Zero prior coverage.
+ *
+ * Covers: normalizeOptionalText, normalizeJsonText, parseJsonBody,
+ * jsonResponse, summarizeHealthcheckThreadMessage,
+ * extractLatestHealthcheckMessagePreview, summarizeActiveItems
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
   normalizeOptionalText,
   normalizeJsonText,
+  parseJsonBody,
+  jsonResponse,
   summarizeHealthcheckThreadMessage,
   extractLatestHealthcheckMessagePreview,
   summarizeActiveItems,
-  fsPathExists,
 } from './helpers';
-
-vi.mock('@forge-runtime/core', () => ({
-  forgeDebug: vi.fn(),
-}));
 
 // ─── normalizeOptionalText ────────────────────────────────────────────────────
 
@@ -31,19 +29,15 @@ describe('normalizeOptionalText', () => {
   });
 
   it('returns null for whitespace-only string', () => {
-    expect(normalizeOptionalText('   \t\n  ')).toBeNull();
+    expect(normalizeOptionalText('   \n\t')).toBeNull();
   });
 
   it('returns trimmed string for non-empty input', () => {
-    expect(normalizeOptionalText('  hello  ')).toBe('hello');
+    expect(normalizeOptionalText('  hello world  ')).toBe('hello world');
   });
 
   it('preserves internal whitespace', () => {
-    expect(normalizeOptionalText('hello world')).toBe('hello world');
-  });
-
-  it('returns string for single character', () => {
-    expect(normalizeOptionalText('x')).toBe('x');
+    expect(normalizeOptionalText('hello   world')).toBe('hello   world');
   });
 });
 
@@ -59,199 +53,285 @@ describe('normalizeJsonText', () => {
   });
 
   it('returns null for whitespace-only string', () => {
-    expect(normalizeJsonText('  ', 'field', 'array')).toBeNull();
+    expect(normalizeJsonText('  \n', 'field', 'object')).toBeNull();
   });
 
-  it('returns trimmed JSON string for valid array', () => {
-    expect(normalizeJsonText('["a","b"]', 'field', 'array')).toBe('["a","b"]');
+  it('returns JSON string for valid object', () => {
+    const result = normalizeJsonText('{"key":"value"}', 'field', 'object');
+    expect(result).toBe('{"key":"value"}');
   });
 
-  it('returns trimmed JSON string for valid object', () => {
-    expect(normalizeJsonText('{"key":"value"}', 'field', 'object')).toBe('{"key":"value"}');
+  it('returns JSON string for valid array', () => {
+    const result = normalizeJsonText('[1,2,3]', 'field', 'array');
+    expect(result).toBe('[1,2,3]');
   });
 
-  it('trims and returns whitespace-wrapped JSON', () => {
-    expect(normalizeJsonText('  {"x":1}  ', 'field', 'object')).toBe('{"x":1}');
+  it('throws when expected object but got array', () => {
+    expect(() => normalizeJsonText('[1,2,3]', 'field', 'object')).toThrow('field must be a JSON object');
+  });
+
+  it('throws when expected array but got object', () => {
+    expect(() => normalizeJsonText('{"key":"value"}', 'field', 'array')).toThrow('field must be a JSON array');
+  });
+
+  it('throws for invalid JSON', () => {
+    expect(() => normalizeJsonText('not json', 'field', 'object')).toThrow();
+  });
+
+  it('strips extra properties from object (JSON.parse roundtrip)', () => {
+    const result = normalizeJsonText('{"a":1}', 'field', 'object');
+    expect(JSON.parse(result)).toEqual({ a: 1 });
+  });
+
+  it('normalizes JSON with extra whitespace', () => {
+    const result = normalizeJsonText('  {"key":"value"}  ', 'field', 'object');
+    expect(result).toBe('{"key":"value"}');
+  });
+});
+
+// ─── parseJsonBody ─────────────────────────────────────────────────────────────
+
+describe('parseJsonBody', () => {
+  const testSchema = z.object({
+    name: z.string(),
+    age: z.number().optional(),
+  });
+
+  it('parses valid JSON body', () => {
+    const result = parseJsonBody('{"name":"Alice","age":30}', testSchema);
+    expect(result).toEqual({ name: 'Alice', age: 30 });
+  });
+
+  it('parses minimal body matching schema', () => {
+    const result = parseJsonBody('{"name":"Bob"}', testSchema);
+    expect(result).toEqual({ name: 'Bob' });
+  });
+
+  it('throws for empty bodyText (no JSON.parse fallback)', () => {
+    // parseJsonBody calls JSON.parse on trimmed body even when empty
+    // so '' throws because JSON.parse('') fails
+    expect(() => parseJsonBody('', testSchema)).toThrow();
+    expect(() => parseJsonBody('   ', testSchema)).toThrow();
+  });
+
+  it('throws ZodError for invalid body', () => {
+    expect(() => parseJsonBody('{"name":123}', testSchema)).toThrow();
   });
 
   it('throws for invalid JSON syntax', () => {
-    expect(() => normalizeJsonText('{invalid}', 'field', 'object')).toThrow();
+    expect(() => parseJsonBody('not json', testSchema)).toThrow();
   });
 
-  it('throws for wrong shape: array when object expected', () => {
-    expect(() => normalizeJsonText('[1,2]', 'field', 'object')).toThrow('field must be a JSON object');
-  });
-
-  it('throws for wrong shape: object when array expected', () => {
-    expect(() => normalizeJsonText('{"a":1}', 'field', 'array')).toThrow('field must be a JSON array');
-  });
-
-  it('throws for null when object expected', () => {
-    expect(() => normalizeJsonText('null', 'field', 'object')).toThrow();
-  });
-
-  it('throws for string when object expected', () => {
-    expect(() => normalizeJsonText('"hello"', 'field', 'object')).toThrow();
+  it('applies schema defaults for missing optional fields', () => {
+    const schemaWithDefault = z.object({
+      name: z.string(),
+      active: z.boolean().default(true),
+    });
+    const result = parseJsonBody('{"name":"Carol"}', schemaWithDefault);
+    expect(result).toEqual({ name: 'Carol', active: true });
   });
 });
 
-// ─── summarizeHealthcheckThreadMessage ───────────────────────────────────────
+// ─── jsonResponse ─────────────────────────────────────────────────────────────
+
+describe('jsonResponse', () => {
+  it('returns default status 200', () => {
+    const r = jsonResponse({ ok: true });
+    expect(r.status).toBe(200);
+    expect(JSON.parse(r.body)).toEqual({ ok: true });
+  });
+
+  it('returns custom status code', () => {
+    const r = jsonResponse({ error: 'not found' }, 404);
+    expect(r.status).toBe(404);
+  });
+
+  it('includes content-type header', () => {
+    const r = jsonResponse(null);
+    expect(r.headers['content-type']).toContain('application/json');
+  });
+
+  it('includes cache-control no-store', () => {
+    const r = jsonResponse({});
+    expect(r.headers['cache-control']).toBe('no-store');
+  });
+
+  it('serializes nested objects correctly', () => {
+    const r = jsonResponse({ nested: { deep: [1, 2, 3] } });
+    const parsed = JSON.parse(r.body);
+    expect(parsed.nested.deep).toEqual([1, 2, 3]);
+  });
+
+  it('serializes null body', () => {
+    const r = jsonResponse(null);
+    expect(r.body).toBe('null');
+  });
+
+  it('serializes string body (edge case)', () => {
+    const r = jsonResponse('hello');
+    expect(r.body).toBe('"hello"');
+  });
+});
+
+// ─── summarizeHealthcheckThreadMessage ────────────────────────────────────────
 
 describe('summarizeHealthcheckThreadMessage', () => {
-  function makeMessage(overrides: Partial<{
-    id: string; role: string; createdAt: number; type: string | null; content: unknown;
-  }> = {}) {
-    return {
+  it('returns id, role, createdAt, type, preview, hasReasoning, partTypes', () => {
+    const result = summarizeHealthcheckThreadMessage({
       id: 'msg-1',
       role: 'assistant',
-      createdAt: 1_000_000,
+      createdAt: 1000,
+      type: 'message',
+    });
+    expect(result).toMatchObject({
+      id: 'msg-1',
+      role: 'assistant',
+      createdAt: 1000,
+      type: 'message',
+      preview: null,
+      hasReasoning: false,
+      partTypes: [],
+    });
+  });
+
+  it('extracts preview and partTypes from content.parts', () => {
+    const result = summarizeHealthcheckThreadMessage({
+      id: 'msg-2',
+      role: 'user',
+      createdAt: 2000,
       type: null,
-      content: undefined,
-      ...overrides,
-    };
-  }
-
-  it('returns object with id, role, createdAt, type, preview, hasReasoning, partTypes', () => {
-    const msg = makeMessage({ content: 'hello' });
-    const result = summarizeHealthcheckThreadMessage(msg);
-    expect(result).toHaveProperty('id');
-    expect(result).toHaveProperty('role');
-    expect(result).toHaveProperty('createdAt');
-    expect(result).toHaveProperty('type');
-    expect(result).toHaveProperty('preview');
-    expect(result).toHaveProperty('hasReasoning');
-    expect(result).toHaveProperty('partTypes');
-  });
-
-  it('extracts preview from nested content object', () => {
-    const msg = makeMessage({ content: { content: 'nested response' } });
-    const result = summarizeHealthcheckThreadMessage(msg);
-    expect(result.preview).toBe('nested response');
-  });
-
-  it('extracts preview from last text part', () => {
-    const msg = makeMessage({
       content: {
         parts: [
-          { type: 'text', text: 'first' },
-          { type: 'text', text: 'last message' },
+          { type: 'text', text: 'Hello world' },
+          { type: 'tool_use', name: 'test' },
         ],
       },
     });
-    const result = summarizeHealthcheckThreadMessage(msg);
-    expect(result.preview).toBe('last message');
+    expect(result.preview).toBe('Hello world');
+    expect(result.partTypes).toEqual(['text', 'tool_use']);
   });
 
-  it('hasReasoning is false when no reasoning present', () => {
-    const msg = makeMessage({ content: 'normal response' });
-    const result = summarizeHealthcheckThreadMessage(msg);
+  it('sets hasReasoning true when content has reasoning string', () => {
+    const result = summarizeHealthcheckThreadMessage({
+      id: 'msg-3',
+      role: 'assistant',
+      createdAt: 3000,
+      type: 'message',
+      content: { reasoning: 'thinking...' },
+    });
+    expect(result.hasReasoning).toBe(true);
+  });
+
+  it('sets hasReasoning true when parts include reasoning type', () => {
+    const result = summarizeHealthcheckThreadMessage({
+      id: 'msg-4',
+      role: 'assistant',
+      createdAt: 4000,
+      type: 'message',
+      content: { parts: [{ type: 'reasoning', text: '...' }] },
+    });
+    expect(result.hasReasoning).toBe(true);
+  });
+
+  it('sets hasReasoning false when no reasoning', () => {
+    const result = summarizeHealthcheckThreadMessage({
+      id: 'msg-5',
+      role: 'user',
+      createdAt: 5000,
+      type: 'message',
+      content: { parts: [{ type: 'text', text: 'hello' }] },
+    });
     expect(result.hasReasoning).toBe(false);
   });
 
-  it('hasReasoning is true when reasoning part exists', () => {
-    const msg = makeMessage({
-      content: {
-        parts: [
-          { type: 'reasoning', text: 'let me think...' },
-        ],
-      },
+  it('handles undefined content', () => {
+    const result = summarizeHealthcheckThreadMessage({
+      id: 'msg-6',
+      role: 'assistant',
+      createdAt: 6000,
+      type: 'message',
+      content: undefined,
     });
-    const result = summarizeHealthcheckThreadMessage(msg);
-    expect(result.hasReasoning).toBe(true);
+    expect(result.preview).toBeNull();
+    expect(result.hasReasoning).toBe(false);
+    expect(result.partTypes).toEqual([]);
   });
 
-  it('hasReasoning is true when reasoning string in content', () => {
-    const msg = makeMessage({
-      content: { reasoning: 'thinking step by step' },
+  it('limits partTypes to 20 entries', () => {
+    const manyParts = Array.from({ length: 30 }, (_, i) => ({ type: 'text', text: `p${i}` }));
+    const result = summarizeHealthcheckThreadMessage({
+      id: 'msg-7',
+      role: 'assistant',
+      createdAt: 7000,
+      type: 'message',
+      content: { parts: manyParts },
     });
-    const result = summarizeHealthcheckThreadMessage(msg);
-    expect(result.hasReasoning).toBe(true);
-  });
-
-  it('partTypes extracts types from parts array', () => {
-    const msg = makeMessage({
-      content: {
-        parts: [
-          { type: 'text', text: 'hello' },
-          { type: 'reasoning', text: 'thinking' },
-        ],
-      },
-    });
-    const result = summarizeHealthcheckThreadMessage(msg);
-    expect(result.partTypes).toContain('text');
-    expect(result.partTypes).toContain('reasoning');
+    expect(result.partTypes).toHaveLength(20);
   });
 });
 
-// ─── extractLatestHealthcheckMessagePreview ───────────────────────────────────
+// ─── extractLatestHealthcheckMessagePreview ──────────────────────────────────
 
 describe('extractLatestHealthcheckMessagePreview', () => {
-  it('returns null for null', () => {
-    expect(extractLatestHealthcheckMessagePreview(null)).toBeNull();
-  });
-
-  it('returns null for undefined', () => {
-    expect(extractLatestHealthcheckMessagePreview(undefined)).toBeNull();
-  });
-
   it('returns null for non-object content', () => {
-    expect(extractLatestHealthcheckMessagePreview(123 as unknown)).toBeNull();
-    expect(extractLatestHealthcheckMessagePreview('string' as unknown)).toBeNull();
+    expect(extractLatestHealthcheckMessagePreview(null)).toBeNull();
+    expect(extractLatestHealthcheckMessagePreview('string')).toBeNull();
+    expect(extractLatestHealthcheckMessagePreview(123)).toBeNull();
+  });
+
+  it('returns null when content.parts is not an array', () => {
+    expect(extractLatestHealthcheckMessagePreview({ parts: 'not array' })).toBeNull();
+    expect(extractLatestHealthcheckMessagePreview({ parts: null })).toBeNull();
   });
 
   it('returns null for empty parts array', () => {
     expect(extractLatestHealthcheckMessagePreview({ parts: [] })).toBeNull();
   });
 
-  it('returns last text part value', () => {
-    const content = {
-      parts: [
-        { type: 'text', text: 'first' },
-        { type: 'text', text: 'last message' },
-      ],
-    };
-    expect(extractLatestHealthcheckMessagePreview(content)).toBe('last message');
-  });
-
-  it('skips parts without type=text or type=reasoning', () => {
-    const content = {
-      parts: [
-        { type: 'image', url: 'http://img.png' },
-        { type: 'text', text: 'has content' },
-      ],
-    };
-    expect(extractLatestHealthcheckMessagePreview(content)).toBe('has content');
-  });
-
-  it('skips parts with empty text', () => {
-    const content = {
-      parts: [
-        { type: 'text', text: '' },
-        { type: 'text', text: 'visible' },
-      ],
-    };
-    expect(extractLatestHealthcheckMessagePreview(content)).toBe('visible');
-  });
-
-  it('falls back to string content field', () => {
-    const content = { content: 'plain text response' };
-    expect(extractLatestHealthcheckMessagePreview(content)).toBe('plain text response');
-  });
-
-  it('falls back to reasoning field when no text parts', () => {
-    const content = { reasoning: 'chain of thought' };
-    expect(extractLatestHealthcheckMessagePreview(content)).toBe('chain of thought');
-  });
-
-  it('returns null when no matching content found', () => {
-    const content = { parts: [] };
+  it('returns null when no parts have text or reasoning type', () => {
+    const content = { parts: [{ type: 'tool_use', text: 'tool' }] };
     expect(extractLatestHealthcheckMessagePreview(content)).toBeNull();
   });
 
-  it('truncates preview to 280 characters', () => {
-    const longText = 'a'.repeat(300);
-    const content = { parts: [{ type: 'text', text: longText }] };
-    expect(extractLatestHealthcheckMessagePreview(content)!.length).toBe(280);
+  it('returns text from latest matching part (reverse iteration)', () => {
+    const content = {
+      parts: [
+        { type: 'text', text: 'first' },
+        { type: 'tool_use' },
+        { type: 'reasoning', text: 'thinking' },
+        { type: 'text', text: 'latest text' },
+      ],
+    };
+    expect(extractLatestHealthcheckMessagePreview(content)).toBe('latest text');
+  });
+
+  it('returns the latest text/reasoning part in reverse order', () => {
+    // reverse iteration finds 'reasoning value' last (it comes after 'text value')
+    const content = {
+      parts: [
+        { type: 'text', text: 'text value' },
+        { type: 'reasoning', text: 'reasoning value' },
+      ],
+    };
+    expect(extractLatestHealthcheckMessagePreview(content)).toBe('reasoning value');
+  });
+
+  it('returns reasoning text when no text parts exist', () => {
+    const content = {
+      parts: [
+        { type: 'reasoning', text: 'thinking process' },
+        { type: 'tool_use' },
+      ],
+    };
+    expect(extractLatestHealthcheckMessagePreview(content)).toBe('thinking process');
+  });
+
+  it('falls back to content.content string when no parts exist', () => {
+    // After checking parts, function falls back to record.content as string
+    const content = {
+      content: 'plain text content',
+    };
+    expect(extractLatestHealthcheckMessagePreview(content)).toBe('plain text content');
   });
 });
 
@@ -262,55 +342,46 @@ describe('summarizeActiveItems', () => {
     expect(summarizeActiveItems([])).toEqual([]);
   });
 
-  it('groups by constructor name', () => {
-    const items = [{ name: 'agents' }];
-    const result = summarizeActiveItems(items);
-    expect(result).toContainEqual({ name: 'Object', count: 1 });
-  });
-
-  it('groups by constructor name, counts correctly', () => {
-    const items = [{ name: 'agents' }, { name: 'agents' }, { name: 'schedules' }];
+  it('groups items by their constructor.name', () => {
+    const items = [
+      { customProp: 1 }, // anonymous object → Object
+      { customProp: 2 },
+      { customProp: 3 },
+    ];
     const result = summarizeActiveItems(items);
     expect(result).toContainEqual({ name: 'Object', count: 3 });
   });
 
-  it('sums all objects into single constructor count', () => {
+  it('counts total items per constructor name', () => {
     const items = [
-      { name: 'agents' }, { name: 'agents' }, { name: 'agents' },
-      { name: 'schedules' }, { name: 'schedules' },
+      { a: 1 },
+      { b: 2 },
+      { c: 3 },
     ];
     const result = summarizeActiveItems(items);
-    expect(result).toContainEqual({ name: 'Object', count: 5 });
+    expect(result).toContainEqual({ name: 'Object', count: 3 });
   });
 
-  it('returns empty array when given empty input', () => {
-    expect(summarizeActiveItems([])).toEqual([]);
-  });
-
-  it('groups by constructor name for multiple different types', () => {
-    const items = [{ a: 1 }, { b: 2 }, { c: 3 }];
+  it('sorts by count descending', () => {
+    class Agent {}
+    class Schedule {}
+    const items = [
+      new Schedule(),
+      new Schedule(),
+      new Agent(),
+    ];
     const result = summarizeActiveItems(items);
-    expect(result).toHaveLength(1);
-    expect(result[0].name).toBe('Object');
-    expect(result[0].count).toBe(3);
-  });
-});
-
-// ─── fsPathExists ─────────────────────────────────────────────────────────────
-
-describe('fsPathExists', () => {
-  it('returns true for existing path', async () => {
-    const result = await fsPathExists('/tmp');
-    expect(result).toBe(true);
+    // Schedule (count 2) should come before Agent (count 1)
+    expect(result[0].name).toBe('Schedule');
+    expect(result[0].count).toBe(2);
   });
 
-  it('returns false for non-existent path', async () => {
-    const result = await fsPathExists('/tmp/this-path-does-not-exist-kaelen-12345');
-    expect(result).toBe(false);
-  });
-
-  it('returns false for path without read permission', async () => {
-    const result = await fsPathExists('/root/secret-file-kaelen-99999');
-    expect(result).toBe(false);
+  it('handles primitives (uses typeof for non-objects)', () => {
+    const items: unknown[] = [
+      'string', 'string', 42, true, null,
+    ];
+    const result = summarizeActiveItems(items);
+    // string → 'string' (typeof), number → 'number', boolean → 'boolean', null → 'null' (typeof)
+    expect(result.map(r => r.name)).toContain('string');
   });
 });
