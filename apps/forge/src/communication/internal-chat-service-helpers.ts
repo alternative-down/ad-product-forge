@@ -79,7 +79,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
       }
       return account;
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] getRequiredExternalAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'getRequiredExternalAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -93,7 +93,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
       }
       return account;
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] getRequiredAccountBySlug failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'getRequiredAccountBySlug failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -116,7 +116,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
         throw new ConversationNotFoundError(conversationId);
       }
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] requireConversationMembershipByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'requireConversationMembershipByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -144,7 +144,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
       }
       return conversation;
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat-helpers', level: 'error', message: '[internal-chat-helpers] getRequiredConversationForAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'getRequiredConversationForAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
