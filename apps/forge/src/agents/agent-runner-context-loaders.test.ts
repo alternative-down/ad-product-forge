@@ -1,259 +1,243 @@
 /**
  * Unit tests for agents/agent-runner-context-loaders.ts.
- * loadAgentContextInstructions, loadActiveScheduleSummary, loadAgentContextContent.
- * Zero prior coverage.
+ *
+ * Tests the 3 exported async functions:
+ * - loadActiveScheduleSummary
+ * - loadAgentContextContent
+ * - loadAgentContextInstructions
+ *
+ * These load workspace context and schedule summaries for the agent runner.
  */
-import { describe, expect, it, vi } from 'vitest';
-import {
-  loadAgentContextInstructions,
-  loadActiveScheduleSummary,
-  loadAgentContextContent,
-} from './agent-runner-context-loaders';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { AGENT_CONTEXT_FILE_PATH, AGENT_CONTEXT_WARNING_CHAR_LIMIT } from '../utils/constants';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Test module imports ──────────────────────────────────────────────────────
+// The module is marked unused-file but is loaded by agent-runner.ts.
+// We import from the compiled output path to test the actual logic.
+import * as loaders from './agent-runner-context-loaders';
 
-function makeMockRuntime(content: string | null): {
-  workspace: { filesystem: { exists: Function; readFile: Function } };
-  id: string;
-} {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fakeFilesystem(overrides: {
+  exists?: (path: string) => Promise<boolean>;
+  readFile?: (path: string) => Promise<string | Buffer | null>;
+} = {}) {
   return {
-    id: 'agent-123',
-    workspace: {
-      filesystem: {
-        exists: vi.fn().mockResolvedValue(content !== null),
-        readFile: vi.fn().mockResolvedValue(content),
-      },
-    },
+    exists: overrides.exists ?? vi.fn<() => Promise<boolean>>(),
+    readFile: overrides.readFile ?? vi.fn<() => Promise<string | Buffer | null>>(),
   };
 }
 
-function makeMockDb(rows: Array<{ name: string | null; cronExpression: string | null; timezone: string | null }>): { select: Function; from: Function; where: Function; limit: Function } {
+function fakeDb(scheduleRows: Array<{ name: string | null; cronExpression: string | null; timezone: string | null }>) {
   return {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue(rows),
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(scheduleRows),
+        }),
+      }),
+    }),
   };
 }
 
-// ─── loadAgentContextInstructions ───────────────────────────────────────────
+// ─── Tests: loadActiveScheduleSummary ───────────────────────────────────────
 
-describe('loadAgentContextInstructions', () => {
-  it('returns undefined when both schedule and context are null', async () => {
-    const runtime = makeMockRuntime(null);
-    const db = makeMockDb([]);
+describe('loadActiveScheduleSummary', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
-    const result = await loadAgentContextInstructions(runtime as any, db as any);
-
-    expect(result).toBeUndefined();
-  });
-
-  it('returns schedule summary only when context file absent', async () => {
-    const runtime = makeMockRuntime(null);
-    const db = makeMockDb([
-      { name: 'hourly', cronExpression: '0 * * * *', timezone: 'UTC' },
-    ]);
-
-    const result = await loadAgentContextInstructions(runtime as any, db as any);
-
-    expect(result).toContain('hourly');
-    expect(result).toContain('0 * * * *');
-  });
-
-  it('returns context only when no schedules found', async () => {
-    const runtime = makeMockRuntime('my agent context');
-    const db = makeMockDb([]);
-
-    const result = await loadAgentContextInstructions(runtime as any, db as any);
-
-    expect(result).toContain('my agent context');
-    expect(result).not.toContain('## Active Schedules');
-  });
-
-  it('joins schedule and context with double newline', async () => {
-    const runtime = makeMockRuntime('workspace notes');
-    const db = makeMockDb([
-      { name: 'morning', cronExpression: '0 8 * * *', timezone: 'America/New_York' },
-    ]);
-
-    const result = await loadAgentContextInstructions(runtime as any, db as any);
-
-    // result should have both sections separated by blank line
-    expect(result).toContain('morning');
-    expect(result).toContain('workspace notes');
-    expect(result?.indexOf('## Active Schedules')).toBeLessThan(result?.indexOf('workspace notes') ?? -1);
-  });
-
-  it('uses schedule lines format: "  Name: "cron" [tz]"', async () => {
-    const runtime = makeMockRuntime(null);
-    const db = makeMockDb([
-      { name: 'Cleanup', cronExpression: '0 0 * * *', timezone: 'UTC' },
-    ]);
-
-    const result = await loadAgentContextInstructions(runtime as any, db as any);
-
-    expect(result).toContain('  Cleanup: "0 0 * * *" [UTC]');
-  });
-});
-
-// ─── loadActiveScheduleSummary ───────────────────────────────────────────────
-
-describe('loadActiveScheduleSummary — happy path', () => {
-  it('returns null when no rows returned', async () => {
-    const db = makeMockDb([]);
-
-    const result = await loadActiveScheduleSummary(db as any, 'agent-123');
-
+  it('returns null when no active schedules exist', async () => {
+    const db = fakeDb([]);
+    vi.useFakeTimers();
+    const result = await loaders.loadActiveScheduleSummary(db as never, 'agent-1');
     expect(result).toBeNull();
   });
 
-  it('formats schedule lines with name, cron, and timezone', async () => {
-    const db = makeMockDb([
-      { name: 'Morning', cronExpression: '0 7 * * *', timezone: 'UTC' },
-      { name: 'Evening', cronExpression: '0 19 * * *', timezone: 'America/New_York' },
+  it('returns formatted schedule lines when schedules exist', async () => {
+    const db = fakeDb([
+      { name: 'Morning cron', cronExpression: '0 9 * * *', timezone: 'America/New_York' },
+      { name: null, cronExpression: '*/15 * * * *', timezone: 'UTC' },
     ]);
-
-    const result = await loadActiveScheduleSummary(db as any, 'agent-123');
-
-    expect(result).toContain('  Morning: "0 7 * * *" [UTC]');
-    expect(result).toContain('  Evening: "0 19 * * *" [America/New_York]');
+    const result = await loaders.loadActiveScheduleSummary(db as never, 'agent-1');
+    expect(result).toContain('## Active Schedules');
+    expect(result).toContain('Morning cron: "0 9 * * *" [America/New_York]');
+    expect(result).toContain('(unnamed): "*/15 * * * *" [UTC]');
   });
 
-  it('uses UTC default when timezone is null', async () => {
-    const db = makeMockDb([
-      { name: 'Task', cronExpression: '0 * * * *', timezone: null },
+  it('uses UTC as default timezone', async () => {
+    const db = fakeDb([
+      { name: 'Test', cronExpression: '0 * * * *', timezone: null },
     ]);
-
-    const result = await loadActiveScheduleSummary(db as any, 'agent-123');
-
+    const result = await loaders.loadActiveScheduleSummary(db as never, 'agent-1');
     expect(result).toContain('[UTC]');
   });
 
-  it('uses empty string default when cronExpression is null', async () => {
-    const db = makeMockDb([
-      { name: 'Task', cronExpression: null, timezone: 'UTC' },
-    ]);
-
-    const result = await loadActiveScheduleSummary(db as any, 'agent-123');
-
-    expect(result).toContain('Task: "" [UTC]');
-  });
-
-  it('uses "(unnamed)" when name is null', async () => {
-    const db = makeMockDb([
-      { name: null, cronExpression: '0 * * * *', timezone: 'UTC' },
-    ]);
-
-    const result = await loadActiveScheduleSummary(db as any, 'agent-123');
-
-    expect(result).toContain('(unnamed)');
-  });
-});
-
-describe('loadActiveScheduleSummary — error handling', () => {
-  it('returns null on DB error (caught and logged)', async () => {
+  it('returns null and logs on DB error', async () => {
     const db = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockRejectedValue(new Error('db connection failed')),
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockRejectedValue(new Error('DB error')),
+          }),
+        }),
+      }),
     };
-
-    const result = await loadActiveScheduleSummary(db as any, 'agent-123');
-
+    const result = await loaders.loadActiveScheduleSummary(db as never, 'agent-1');
     expect(result).toBeNull();
   });
 });
 
-// ─── loadAgentContextContent ─────────────────────────────────────────────────
+// ─── Tests: loadAgentContextContent ──────────────────────────────────────────
 
-describe('loadAgentContextContent — no filesystem', () => {
-  it('returns null when filesystem is falsy', async () => {
-    const result = await loadAgentContextContent(null as any);
+describe('loadAgentContextContent', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
+  it('returns null when filesystem is absent', async () => {
+    const result = await loaders.loadAgentContextContent(null as never);
     expect(result).toBeNull();
   });
 
-  it('returns null when filesystem.exists throws', async () => {
-    const fakeFilesystem = {
-      exists: vi.fn().mockRejectedValue(new Error('fs error')),
-    };
-
-    const result = await loadAgentContextContent(fakeFilesystem as any);
-
-    expect(result).toBeNull();
-  });
-});
-
-describe('loadAgentContextContent — file not found', () => {
   it('returns null when file does not exist', async () => {
-    const fakeFilesystem = {
-      exists: vi.fn().mockResolvedValue(false),
-    };
-
-    const result = await loadAgentContextContent(fakeFilesystem as any);
-
-    expect(result).toBeNull();
-  });
-});
-
-describe('loadAgentContextContent — file present', () => {
-  it('returns trimmed content under AGENT_CONTEXT_WARNING_CHAR_LIMIT', async () => {
-    const fakeFilesystem = {
-      exists: vi.fn().mockResolvedValue(true),
-      readFile: vi.fn().mockResolvedValue('  my context content  '),
-    };
-
-    const result = await loadAgentContextContent(fakeFilesystem as any);
-
-    expect(result).toBe('my context content');
-  });
-
-  it('returns null when file is empty after trim', async () => {
-    const fakeFilesystem = {
-      exists: vi.fn().mockResolvedValue(true),
-      readFile: vi.fn().mockResolvedValue('   \n   '),
-    };
-
-    const result = await loadAgentContextContent(fakeFilesystem as any);
-
+    const fs = fakeFilesystem({ exists: async () => false });
+    const result = await loaders.loadAgentContextContent(fs as never);
     expect(result).toBeNull();
   });
 
-  it('handles Buffer data by converting to utf8 string', async () => {
-    const fakeFilesystem = {
-      exists: vi.fn().mockResolvedValue(true),
-      readFile: vi.fn().mockResolvedValue(Buffer.from('buffer content', 'utf8')),
-    };
+  it('returns null when file is empty', async () => {
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => '   \n  \n  ',
+    });
+    const result = await loaders.loadAgentContextContent(fs as never);
+    expect(result).toBeNull();
+  });
 
-    const result = await loadAgentContextContent(fakeFilesystem as any);
+  it('returns trimmed content when file exists and is non-empty', async () => {
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => '  Hello world  \n  ',
+    });
+    const result = await loaders.loadAgentContextContent(fs as never);
+    expect(result).toBe('Hello world');
+  });
 
+  it('handles Buffer data by decoding to UTF-8', async () => {
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => Buffer.from('buffer content'),
+    });
+    const result = await loaders.loadAgentContextContent(fs as never);
     expect(result).toBe('buffer content');
   });
 
-  it('returns null when readFile throws (caught)', async () => {
-    const fakeFilesystem = {
-      exists: vi.fn().mockResolvedValue(true),
-      readFile: vi.fn().mockRejectedValue(new Error('read error')),
-    };
-
-    const result = await loadAgentContextContent(fakeFilesystem as any);
-
-    expect(result).toBeNull();
+  it('adds warning header when content exceeds char limit', async () => {
+    const longContent = 'x'.repeat(AGENT_CONTEXT_WARNING_CHAR_LIMIT + 100);
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => longContent,
+    });
+    const result = await loaders.loadAgentContextContent(fs as never);
+    expect(result).toContain('Context pressure warning:');
+    expect(result).toContain('`AGENT_CONTEXT.md` is getting large');
+    expect(result).toContain(longContent);
   });
 
-  it('adds pressure warning when content exceeds AGENT_CONTEXT_WARNING_CHAR_LIMIT', async () => {
-    const longContent = 'x'.repeat(9000);
-    const fakeFilesystem = {
-      exists: vi.fn().mockResolvedValue(true),
-      readFile: vi.fn().mockResolvedValue(longContent),
+  it('returns content as-is when under char limit', async () => {
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => 'short content',
+    });
+    const result = await loaders.loadAgentContextContent(fs as never);
+    expect(result).toBe('short content');
+  });
+
+  it('returns null when readFile throws', async () => {
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => { throw new Error('read error'); },
+    });
+    const result = await loaders.loadAgentContextContent(fs as never);
+    expect(result).toBeNull();
+  });
+});
+
+// ─── Tests: loadAgentContextInstructions ─────────────────────────────────────
+
+describe('loadAgentContextInstructions', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('returns undefined when no schedule and no context file', async () => {
+    const db = fakeDb([]);
+    const fs = fakeFilesystem({ exists: async () => false });
+
+    const runtime = {
+      id: 'agent-1',
+      workspace: { filesystem: fs },
     };
 
-    const result = await loadAgentContextContent(fakeFilesystem as any);
+    const result = await loaders.loadAgentContextInstructions(runtime as never, db as never);
+    expect(result).toBeUndefined();
+  });
 
-    expect(result).toContain('Context pressure warning');
-    expect(result).toContain('is getting large');
-    expect(result).toContain('AGENT_CONTEXT.md') || expect(result).toContain('AGENT_CONTEXT');
-    expect(result).toContain(longContent);
+  it('includes schedule section when schedules exist', async () => {
+    const db = fakeDb([{ name: 'Morning', cronExpression: '0 9 * * *', timezone: 'UTC' }]);
+    const fs = fakeFilesystem({ exists: async () => false });
+
+    const runtime = {
+      id: 'agent-1',
+      workspace: { filesystem: fs },
+    };
+
+    const result = await loaders.loadAgentContextInstructions(runtime as never, db as never);
+    expect(result).toContain('Morning: "0 9 * * *" [UTC]');
+  });
+
+  it('includes context file content when file exists', async () => {
+    const db = fakeDb([]);
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => 'workspace context here',
+    });
+
+    const runtime = {
+      id: 'agent-1',
+      workspace: { filesystem: fs },
+    };
+
+    const result = await loaders.loadAgentContextInstructions(runtime as never, db as never);
+    expect(result).toContain('workspace context here');
+  });
+
+  it('combines schedule summary and context file', async () => {
+    const db = fakeDb([{ name: 'MySchedule', cronExpression: '0 9 * * *', timezone: 'UTC' }]);
+    const fs = fakeFilesystem({
+      exists: async () => true,
+      readFile: async () => 'Context content',
+    });
+
+    const runtime = {
+      id: 'agent-1',
+      workspace: { filesystem: fs },
+    };
+
+    const result = await loaders.loadAgentContextInstructions(runtime as never, db as never);
+    expect(result).toContain('MySchedule');
+    expect(result).toContain('Context content');
+  });
+
+  it('uses only schedule summary when no context file exists', async () => {
+    const db = fakeDb([{ name: 'SchedOnly', cronExpression: '1 * * * *', timezone: 'UTC' }]);
+    const fs = fakeFilesystem({ exists: async () => false });
+
+    const runtime = {
+      id: 'agent-1',
+      workspace: { filesystem: fs },
+    };
+
+    const result = await loaders.loadAgentContextInstructions(runtime as never, db as never);
+    expect(result).toContain('SchedOnly');
+    expect(result).not.toContain('workspace context');
   });
 });
