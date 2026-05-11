@@ -10,9 +10,6 @@ import { jsonResponse } from './helpers';
 /**
  * Dashboard analytics and overview routes.
  * Extracted from routes.ts #1874 — GET /admin/overview (analytics) and GET /admin/roles
- *
- * Tech-debt: routes.ts also has simple versions of these routes registered before these.
- * Both versions execute. Remove duplicates in next pass.
  */
 export function registerDashboardRoutes({
   httpServer,
