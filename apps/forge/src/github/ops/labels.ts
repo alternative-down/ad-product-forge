@@ -25,14 +25,14 @@ export function createLabelsOps(ctx: OpsContext) {
         color: label.color,
         default: label.default,
       }));
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `listLabels failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `listLabels failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -60,14 +60,14 @@ export function createLabelsOps(ctx: OpsContext) {
         color: response.data.color,
         default: response.data.default,
       };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `createLabel failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `createLabel failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -97,14 +97,14 @@ export function createLabelsOps(ctx: OpsContext) {
         color: response.data.color,
         default: response.data.default,
       };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `updateLabel failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `updateLabel failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -123,14 +123,14 @@ export function createLabelsOps(ctx: OpsContext) {
         name: input.labelName,
       });
       return { success: true };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `deleteLabel failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `deleteLabel failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -156,14 +156,14 @@ export function createLabelsOps(ctx: OpsContext) {
         color: label.color,
         default: label.default,
       }));
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `addIssueLabels failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `addIssueLabels failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
       });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -184,14 +184,14 @@ export function createLabelsOps(ctx: OpsContext) {
         labels: input.labels.join(','),
       });
       return { success: true };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `removeIssueLabels failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `removeIssueLabels failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
       });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
