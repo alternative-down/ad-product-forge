@@ -91,7 +91,7 @@ describe('planNextAttempt', () => {
     const store = mockStore({
       getRunnableContract: vi.fn().mockResolvedValue(null),
     });
-    const deps = makeDeps({ store });
+    const deps = makeDeps({ store }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({ execute: 'idle' });
   });
@@ -105,7 +105,7 @@ describe('planNextAttempt', () => {
     const usage = mockUsage({
       estimateStepCostUsd: vi.fn().mockResolvedValue(2.0), // cost = 2 > remaining = 1
     });
-    const deps = makeDeps({ store, usage });
+    const deps = makeDeps({ store, usage }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({ execute: 'idle' });
   });
@@ -119,7 +119,7 @@ describe('planNextAttempt', () => {
     const usage = mockUsage({
       estimateStepCostUsd: vi.fn().mockResolvedValue(1.0), // cost = 1 > remaining = 0
     });
-    const deps = makeDeps({ store, usage });
+    const deps = makeDeps({ store, usage }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({ execute: 'idle' });
   });
@@ -129,7 +129,7 @@ describe('planNextAttempt', () => {
       getRunnableContract: vi.fn().mockResolvedValue(null),
     });
     const scheduler = mockScheduler();
-    const deps = makeDeps({ store, scheduler });
+    const deps = makeDeps({ store, scheduler }) as any;
     await planNextAttempt(deps);
     expect(scheduler.resetBackoff).not.toHaveBeenCalled();
   });
@@ -144,7 +144,7 @@ describe('planNextAttempt', () => {
       estimateStepCostUsd: vi.fn().mockResolvedValue(2.0),
     });
     const scheduler = mockScheduler();
-    const deps = makeDeps({ store, usage, scheduler });
+    const deps = makeDeps({ store, usage, scheduler }) as any;
     await planNextAttempt(deps);
     expect(scheduler.resetBackoff).not.toHaveBeenCalled();
   });
@@ -158,7 +158,7 @@ describe('planNextAttempt', () => {
     const scheduler = mockScheduler({
       getState: vi.fn().mockReturnValue({ instant: true }),
     });
-    const deps = makeDeps({ store, scheduler });
+    const deps = makeDeps({ store, scheduler }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,
@@ -176,7 +176,7 @@ describe('planNextAttempt', () => {
     const systemSettings = mockSystemSettings({
       getSettings: vi.fn().mockResolvedValue({ stepDelayEnabled: false }),
     });
-    const deps = makeDeps({ store, systemSettings });
+    const deps = makeDeps({ store, systemSettings }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,
@@ -199,7 +199,7 @@ describe('planNextAttempt', () => {
     });
     const scheduler = mockScheduler();
     const calculateBudgetDelayMs = vi.fn().mockReturnValue(30_000);
-    const deps = makeDeps({ store, usage, systemSettings, scheduler, calculateBudgetDelayMs });
+    const deps = makeDeps({ store, usage, systemSettings, scheduler, calculateBudgetDelayMs }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,
@@ -215,7 +215,7 @@ describe('planNextAttempt', () => {
       getContractSpend: vi.fn().mockResolvedValue(0),
     });
     const scheduler = mockScheduler();
-    const deps = makeDeps({ store, scheduler });
+    const deps = makeDeps({ store, scheduler }) as any;
     await planNextAttempt(deps);
     expect(scheduler.resetBackoff).toHaveBeenCalledTimes(1);
   });
@@ -229,7 +229,7 @@ describe('planNextAttempt', () => {
     const scheduler = mockScheduler({
       getState: vi.fn().mockReturnValue({ instant: true }),
     });
-    const deps = makeDeps({ store, scheduler });
+    const deps = makeDeps({ store, scheduler }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,
@@ -251,8 +251,8 @@ describe('planNextAttempt', () => {
       getSettings: vi.fn().mockResolvedValue({ stepDelayEnabled: true }),
     });
     const scheduler = mockScheduler();
-    const deps = makeDeps({ store, usage, systemSettings, scheduler });
-    const result = await planNextAttempt(deps);
+    const deps = makeDeps({ store, usage, systemSettings, scheduler }) as any;
+    const result = await planNextAttempt(deps) as any;
     // Default calculateBudgetDelayMs computes a positive value
     expect(result.execute).toBe(true);
     expect(typeof result.delayMs).toBe('number');
@@ -271,7 +271,7 @@ describe('planNextAttempt', () => {
     const scheduler = mockScheduler({
       getState: vi.fn().mockReturnValue({ instant: true }),
     });
-    const deps = makeDeps({ store, usage, scheduler });
+    const deps = makeDeps({ store, usage, scheduler }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,
@@ -289,7 +289,7 @@ describe('planNextAttempt', () => {
     const scheduler = mockScheduler({
       getState: vi.fn().mockReturnValue({ instant: true }),
     });
-    const deps = makeDeps({ store, scheduler });
+    const deps = makeDeps({ store, scheduler }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,

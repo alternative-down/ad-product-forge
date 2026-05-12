@@ -203,7 +203,7 @@ describe('emailProviderCredentialsSchema', () => {
 
 describe('isConfigured', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
-  beforeEach(() => { mockFetch = vi.fn(); global.fetch = mockFetch; });
+  beforeEach(() => { mockFetch = vi.fn(); (global.fetch as any) = mockFetch; });
 
   it('returns true when migadu config is present', async () => {
     const manager = createAgentEmailManager({
@@ -223,7 +223,7 @@ describe('isConfigured', () => {
 
 describe('provisionMailbox', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
-  beforeEach(() => { mockFetch = vi.fn(); global.fetch = mockFetch; });
+  beforeEach(() => { mockFetch = vi.fn(); (global.fetch as any) = mockFetch; });
 
   it('creates mailbox when none exists', async () => {
     mockFetch.mockImplementation(async (input: unknown) => {
@@ -236,15 +236,15 @@ describe('provisionMailbox', () => {
       }
       throw new Error('Unexpected fetch: ' + url);
     });
-    global.fetch = mockFetch;
+    (global.fetch as any) = mockFetch;
     const manager = createAgentEmailManager({
       db: { query: { agentProviders: { findFirst: vi.fn().mockResolvedValue(null) } } } as any,
       integrations: { getMigaduConfig: vi.fn().mockResolvedValue({ apiUser: 'admin@migadu.com', apiKey: 'key' }) } as any,
     });
     const result = await manager.provisionMailbox({ agentId: 'test-agent', agentName: 'Test Agent' });
     expect(result.address).toBe('test-agent@migadu.com');
-    expect(result.credentials.imap.host).toBe('imap.migadu.com');
-    expect(result.credentials.imap.port).toBe(993);
+    expect(result.credentials!.imap.host).toBe('imap.migadu.com');
+    expect(result.credentials!.imap.port).toBe(993);
   });
   it('updates mailbox when already exists', async () => {
     mockFetch.mockImplementation(async (input: unknown) => {
@@ -254,7 +254,7 @@ describe('provisionMailbox', () => {
       }
       throw new Error('Unexpected fetch: ' + url);
     });
-    global.fetch = mockFetch;
+    (global.fetch as any) = mockFetch;
     const manager = createAgentEmailManager({
       db: { query: { agentProviders: { findFirst: vi.fn().mockResolvedValue(null) } } } as any,
       integrations: { getMigaduConfig: vi.fn().mockResolvedValue({ apiUser: 'admin@migadu.com', apiKey: 'key' }) } as any,
@@ -274,20 +274,20 @@ describe('provisionMailbox', () => {
       }
       throw new Error('Unexpected: ' + url);
     });
-    global.fetch = mockFetch;
+    (global.fetch as any) = mockFetch;
     const manager = createAgentEmailManager({
       db,
       integrations: { getMigaduConfig: vi.fn().mockResolvedValue({ apiUser: 'admin@migadu.com', apiKey: 'key' }) } as any,
     });
     const result = await manager.provisionMailbox({ agentId: 'store-test', agentName: 'Store Test' });
-    expect(result.credentials.smtp.host).toBe('smtp.migadu.com');
-    expect(result.credentials.smtp.secure).toBe(true);
+    expect(result.credentials!.smtp.host).toBe('smtp.migadu.com');
+    expect(result.credentials!.smtp.secure).toBe(true);
   });
 });
 
 describe('deleteAgentMailbox', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
-  beforeEach(() => { mockFetch = vi.fn(); global.fetch = mockFetch; });
+  beforeEach(() => { mockFetch = vi.fn(); (global.fetch as any) = mockFetch; });
 
   it('does nothing when no credentials stored', async () => {
     const db = { query: { agentProviders: { findFirst: vi.fn().mockResolvedValue(null) } } } as any;
@@ -302,11 +302,11 @@ describe('deleteAgentMailbox', () => {
 
 describe('deleteMailboxByAddress', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
-  beforeEach(() => { mockFetch = vi.fn(); global.fetch = mockFetch; });
+  beforeEach(() => { mockFetch = vi.fn(); (global.fetch as any) = mockFetch; });
 
   it('deletes mailbox successfully', async () => {
     mockFetch.mockResolvedValueOnce(mockResponse({}, 200));
-    global.fetch = mockFetch;
+    (global.fetch as any) = mockFetch;
     const manager = createAgentEmailManager({
       db: {} as any,
       integrations: { getMigaduConfig: vi.fn().mockResolvedValue({ apiUser: 'admin@migadu.com', apiKey: 'key' }) } as any,
@@ -319,7 +319,7 @@ describe('deleteMailboxByAddress', () => {
   });
   it('succeeds when mailbox already gone (404)', async () => {
     mockFetch.mockResolvedValueOnce(mockResponse('not found', 404));
-    global.fetch = mockFetch;
+    (global.fetch as any) = mockFetch;
     const manager = createAgentEmailManager({
       db: {} as any,
       integrations: { getMigaduConfig: vi.fn().mockResolvedValue({ apiUser: 'admin@migadu.com', apiKey: 'key' }) } as any,
@@ -328,7 +328,7 @@ describe('deleteMailboxByAddress', () => {
   });
   it('throws on unexpected error', async () => {
     mockFetch.mockResolvedValueOnce(mockResponse('server error', 500));
-    global.fetch = mockFetch;
+    (global.fetch as any) = mockFetch;
     const manager = createAgentEmailManager({
       db: {} as any,
       integrations: { getMigaduConfig: vi.fn().mockResolvedValue({ apiUser: 'admin@migadu.com', apiKey: 'key' }) } as any,

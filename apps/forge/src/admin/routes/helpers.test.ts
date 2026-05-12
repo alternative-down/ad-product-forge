@@ -80,7 +80,7 @@ describe('normalizeJsonText', () => {
 
   it('strips extra properties from object (JSON.parse roundtrip)', () => {
     const result = normalizeJsonText('{"a":1}', 'field', 'object');
-    expect(JSON.parse(result)).toEqual({ a: 1 });
+    expect(JSON.parse(result!)).toEqual({ a: 1 });
   });
 
   it('normalizes JSON with extra whitespace', () => {

@@ -83,7 +83,7 @@ const MOCK_AGENT_ID = 'agent-123';
 const MOCK_AGENT_NAME = 'Test Agent';
 const MOCK_ALLOWED_TOOL_IDS = new Set<string>();
 
-function makeConfig(overrides: Partial<AgentLoaderConfig> = {}): AgentLoaderConfig {
+function makeConfig(overrides: any = {}): any {
   return {
     githubApps: [],
     coolify: undefined,
@@ -175,7 +175,7 @@ describe('loadAgentToolset', () => {
 
   it('passes agentId, agentName, internalChat config, and allowedToolIds to createInternalChatTools', async () => {
     mockCreateInternalChatTools.mockClear();
-    const config = makeConfig({ internalChat: { maxParticipants: 99 } });
+    const config: any = makeConfig({ internalChat: { maxParticipants: 99 } });
     await loadAgentToolset({
       db: MOCK_DB,
       loaderConfig: config,
@@ -194,7 +194,7 @@ describe('loadAgentToolset', () => {
 
   it('passes agentId, githubApps, and allowedToolIds to createGitHubTools', async () => {
     mockCreateGitHubTools.mockClear();
-    const config = makeConfig({ githubApps: [{ appId: 1, privateKey: 'pk', webhookSecret: 'ws' }] });
+    const config: any = makeConfig({ githubApps: [{ appId: 1, privateKey: 'pk', webhookSecret: 'ws' }] });
     await loadAgentToolset({
       db: MOCK_DB,
       loaderConfig: config,

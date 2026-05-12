@@ -131,7 +131,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
   describe('route registration', () => {
     it('registers POST /admin/agent-skills/upload', () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
@@ -139,25 +139,25 @@ describe('registerAgentSkillsWriteRoutes', () => {
 
     it('registers POST /admin/agent-skills/delete', () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       expect(httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')).toBeDefined();
     });
 
     it('registers POST /admin/agent-skills/install-global', () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       expect(httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')).toBeDefined();
     });
 
     it('registers POST /admin/agent-skills/publish-global', () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       expect(httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')).toBeDefined();
     });
 
     it('registers exactly 4 routes', () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       expect(httpServer.getRoutes()).toHaveLength(4);
     });
   });
@@ -167,7 +167,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
   describe('POST /admin/agent-skills/upload', () => {
     it('returns 404 when agent not found', async () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
       const response = await route.handler(makeRequest({ agentId: 'unknown', archiveBase64: 'YQ==' }));
       expect(response.status).toBe(404);
@@ -177,7 +177,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('calls installAgentWorkspaceSkillsFromZip with correct args', async () => {
       const agent = makeAgent('agent-upload', 'Upload Agent');
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/workspaces' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/workspaces' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
       await route.handler(makeRequest({ agentId: 'agent-upload', archiveBase64: 'SGVsbG8gV29ybGQ=' }));
       expect(mockInstallZip).toHaveBeenCalledWith(expect.objectContaining({
@@ -190,7 +190,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('returns 201 with installedSkillNames on success', async () => {
       mockInstallZip.mockResolvedValue(['skill-1', 'skill-2']);
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', archiveBase64: 'YQ==' }));
       expect(response.status).toBe(201);
@@ -205,7 +205,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
       const db = mockDb(makeAgent());
       const loaderConfig = {};
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
       await route.handler(makeRequest({ agentId: 'agent-1', archiveBase64: 'YQ==' }));
       expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
@@ -214,7 +214,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('returns 500 on error and logs with forgeDebug', async () => {
       mockInstallZip.mockRejectedValue(new Error('Zip failed'));
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/upload')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', archiveBase64: 'YQ==' }));
       expect(response.status).toBe(500);
@@ -228,7 +228,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
   describe('POST /admin/agent-skills/delete', () => {
     it('returns 404 when agent not found', async () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
       const response = await route.handler(makeRequest({ agentId: 'unknown', skillName: 'x' }));
       expect(response.status).toBe(404);
@@ -237,7 +237,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('calls deleteAgentWorkspaceSkill with correct args', async () => {
       const agent = makeAgent('agent-del', 'Del Agent');
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/ws' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/ws' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
       await route.handler(makeRequest({ agentId: 'agent-del', skillName: 'my-skill' }));
       expect(mockDeleteSkill).toHaveBeenCalledWith(expect.objectContaining({
@@ -249,7 +249,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
 
     it('returns 200 with success and skillName on success', async () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'obsolete' }));
       expect(response.status).toBe(200);
@@ -260,7 +260,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
       const db = mockDb(makeAgent());
       const loaderConfig = {};
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
       await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
@@ -269,7 +269,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('returns 500 on error and logs with forgeDebug', async () => {
       mockDeleteSkill.mockRejectedValue(new Error('Delete failed'));
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/delete')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(response.status).toBe(500);
@@ -282,7 +282,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
   describe('POST /admin/agent-skills/install-global', () => {
     it('returns 404 when agent not found', async () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
       const response = await route.handler(makeRequest({ agentId: 'unknown', skillName: 'x' }));
       expect(response.status).toBe(404);
@@ -291,7 +291,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('calls installGlobalSkillToAgentWorkspace with correct args', async () => {
       const agent = makeAgent('agent-global', 'Global Agent');
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/ws' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/ws' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
       await route.handler(makeRequest({ agentId: 'agent-global', skillName: 'fetch-data' }));
       expect(mockInstallGlobal).toHaveBeenCalledWith(expect.objectContaining({
@@ -303,7 +303,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
 
     it('returns 200 with success on install', async () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'fetch-data' }));
       expect(response.status).toBe(200);
@@ -314,7 +314,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
       const db = mockDb(makeAgent());
       const loaderConfig = {};
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
       await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
@@ -323,7 +323,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('returns 500 on error and logs with forgeDebug', async () => {
       mockInstallGlobal.mockRejectedValue(new Error('Install failed'));
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/install-global')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(response.status).toBe(500);
@@ -336,7 +336,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
   describe('POST /admin/agent-skills/publish-global', () => {
     it('returns 404 when agent not found', async () => {
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(null), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
       const response = await route.handler(makeRequest({ agentId: 'unknown', skillName: 'x' }));
       expect(response.status).toBe(404);
@@ -345,7 +345,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('calls publishAgentWorkspaceSkillToGlobalCatalog with correct args', async () => {
       const agent = makeAgent('agent-pub', 'Pub Agent');
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: {}, workspaceBasePath: '/ws' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(agent), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/ws' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
       await route.handler(makeRequest({ agentId: 'agent-pub', skillName: 'my-skill' }));
       expect(mockPublishGlobal).toHaveBeenCalledWith(expect.objectContaining({
@@ -358,7 +358,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('returns 200 with publishedSkillName on success', async () => {
       mockPublishGlobal.mockResolvedValue('fetch-data-v2');
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'fetch-data' }));
       expect(response.status).toBe(200);
@@ -373,7 +373,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
       const db = mockDb(makeAgent());
       const loaderConfig = {};
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db, loaderConfig, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
       await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(mockReloadAgentIfLoaded).toHaveBeenCalledWith(db, loaderConfig, 'agent-1');
@@ -382,7 +382,7 @@ describe('registerAgentSkillsWriteRoutes', () => {
     it('returns 500 on error and logs with forgeDebug', async () => {
       mockPublishGlobal.mockRejectedValue(new Error('Publish failed'));
       const httpServer = makeHttpServer();
-      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: {}, workspaceBasePath: '/tmp' });
+      registerAgentSkillsWriteRoutes(httpServer, { db: mockDb(makeAgent()), loaderConfig: { githubApps: {} as unknown, emailMailboxes: {} as unknown, coolify: {} as unknown } as unknown, workspaceBasePath: '/tmp' } as any);
       const route = httpServer.getRoutes().find(r => r.path === '/admin/agent-skills/publish-global')!;
       const response = await route.handler(makeRequest({ agentId: 'agent-1', skillName: 'x' }));
       expect(response.status).toBe(500);

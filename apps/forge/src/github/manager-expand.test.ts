@@ -8,7 +8,7 @@ const { mockRequest, mockDecryptSecret, mockEncryptSecret, mockCreateAppAuth, mo
   mockGetGitHubConfig: vi.fn(),
 }));
 
-vi.mock('octokit', () => { const req = mockRequest; return { App: vi.fn().mockImplementation(function() { this.octokit = { request: req }; this.getInstallationOctokit = async () => ({ request: req }); }), Octokit: vi.fn().mockImplementation((opts) => ({ request: mockRequest, auth: opts?.auth })) }; });
+vi.mock('octokit', () => { const req = mockRequest; const AppMock = function(this: { octokit: unknown; getInstallationOctokit: () => Promise<unknown>; }) { this.octokit = { request: req }; this.getInstallationOctokit = async () => ({ request: req }); }; return { App: vi.fn(AppMock), Octokit: vi.fn().mockImplementation((opts) => ({ request: mockRequest, auth: opts?.auth })) }; });
 vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 vi.mock('../notifications/store', () => ({ createAgentNotificationStore: vi.fn(() => ({ createNotification: vi.fn() })) }));
@@ -21,21 +21,21 @@ const MANIFEST = { permissions: { administration: true, contents: true, issues: 
 const activeJson = JSON.stringify({ status: 'active', appId: 1, privateKey: 'pk', webhookSecret: 'wh', appSlug: 'app', appName: 'App', manifestConfig: MANIFEST, installationId: 99, createdAt: 1 });
 const pendingJson = JSON.stringify({ status: 'pending', state: 'st', appName: 'App', manifestConfig: MANIFEST, createdAt: 1 });
 
-function buildConfig(org, dbFirst) {
+function buildConfig(org: { organization: string } | null, dbFirst: { id: string; agentId: string; providerType: string; encryptedCredentials: string } | null) {
   return {
     db: {
       query: {
         agentProviders: { findFirst: vi.fn().mockResolvedValue(dbFirst), findMany: vi.fn().mockResolvedValue([]) },
-        agents: { findFirst: vi.fn() },
+        agents: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
       },
-      insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue({}) })),
-      update: vi.fn(() => ({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }) })),
+      insert: vi.fn(() => ({ values: vi.fn(), returning: vi.fn().mockResolvedValue({}) })),
+      update: vi.fn(() => ({ set: vi.fn(), where: vi.fn().mockResolvedValue({}) })),
     },
-    httpServer: { registerRoute: vi.fn(), route: vi.fn() },
+    httpServer: { registerRoute: vi.fn(), start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined), get port() { return 3000; } },
     publicBaseUrl: 'https://forge.example.com',
     integrations: { getGitHubConfig: mockGetGitHubConfig.mockResolvedValue(org) },
     agents: { get: vi.fn().mockResolvedValue({ request: mockRequest }), set: vi.fn(), has: vi.fn(), delete: vi.fn() },
-  };
+  } as unknown as Parameters<typeof createGitHubAppManager>[0];
 }
 
 const df = (active = true) => ({ id: 'p1', agentId: 'a1', providerType: 'github-app', encryptedCredentials: active ? activeJson : pendingJson });
@@ -72,7 +72,7 @@ describe('createGitHubAppManager', () => {
             mockDecryptSecret.mockReturnValue(pendingJson);await expect(createGitHubAppManager(buildConfig({ organization: 'o' }, df(false))).getGitCredentials({ agentId: 'a1' })).rejects.toThrow('not active');
         });
         it('throws when not configured', async () => {
-            mockGetGitHubConfig.mockResolvedValue(null);await expect(createGitHubAppManager(buildConfig(null)).getGitCredentials({ agentId: 'a1' })).rejects.toThrow('not configured');
+            mockGetGitHubConfig.mockResolvedValue(null);await expect(createGitHubAppManager(buildConfig(null, null)).getGitCredentials({ agentId: 'a1' })).rejects.toThrow('not configured');
         });
     });
     describe('listRepositories', () => {
@@ -207,7 +207,7 @@ describe('createGitHubAppManager', () => {
     });
     describe('createLabel', () => {
         it('creates label and returns it', async () => {
-            mockRequest.mockResolvedValue({ data: { id: 10, name: 'enhancement', color: '00ff00', description: 'New feature' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).createLabel('a1', { repositoryName: 'repo', name: 'enhancement', color: '00ff00', description: 'New feature' });expect(r.name).toBe('enhancement');
+            mockRequest.mockResolvedValue({ data: { id: 10, name: 'enhancement', color: '00ff00', description: 'New feature' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).createLabel('a1', { repositoryName: 'repo', labelName: 'enhancement', color: '00ff00', description: 'New feature' });expect(r.name).toBe('enhancement');
         });
     });
     describe('updateLabel', () => {
