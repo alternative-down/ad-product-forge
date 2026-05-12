@@ -77,7 +77,7 @@ function resetAllMocks() {
   if (mockStore) {
     mockStore.getExecutionState.mockReset().mockResolvedValue('idle');
     mockStore.setExecutionState.mockReset().mockResolvedValue(undefined);
-    mockStore.setExecutionAbsent.mockReset().mockResolvedValue(undefined);
+    mockStore.setExecutionState.mockReset().mockResolvedValue(undefined);
     mockStore.getRunnableContract.mockReset().mockResolvedValue(null);
     mockStore.getRunLastMessages.mockReset().mockResolvedValue([]);
     mockStore.getContractSpend.mockReset().mockResolvedValue(0);
@@ -104,7 +104,6 @@ vi.mock('./agent-contract-store', () => ({
     mockStore = {
       getExecutionState: vi.fn().mockResolvedValue('idle'),
       setExecutionState: vi.fn().mockResolvedValue(undefined),
-      setExecutionAbsent: vi.fn().mockResolvedValue(undefined),
       getRunnableContract: vi.fn().mockResolvedValue(null),
       getRunLastMessages: vi.fn().mockResolvedValue([]),
       getContractSpend: vi.fn().mockResolvedValue(0),
@@ -261,7 +260,7 @@ function makeDb() {
     agentHomeMetricSnapshots: { findFirst: vi.fn(), findMany: vi.fn() },
     agentRoles: { findFirst: vi.fn() },
     agents: { findFirst: vi.fn(), findMany: vi.fn() },
-  } as unknown as import('../../db/types').Database;
+  } as unknown as any;
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -320,7 +319,7 @@ describe('createAgentRunner', () => {
     it('execute with idle-check event does not throw', async () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       const runner = createAgentRunner(makeDb(), makeRuntime());
-      const event = { id: 'evt-idle-check', type: 'idle-check' as const };
+      const event = { id: 'evt-idle-check', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any;
       await expect(runner.execute([event])).resolves.toBeUndefined();
     });
 
@@ -466,7 +465,7 @@ describe('createAgentRunner', () => {
       mockStore.getExecutionState.mockResolvedValue('idle');
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
-      await runner.execute([{ id: 'hc', type: 'idle-check' as const }]);
+      await runner.execute([{ id: 'hc', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
       expect(mockStore.getExecutionState).toHaveBeenCalledWith('test-agent-1');
     });
   });
@@ -508,7 +507,7 @@ describe('createAgentRunner', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
       // planNextAttempt fires regardless; no throw is the expected behavior
-      await runner.execute([{ id: 'evt-running', type: 'idle-check' as const }]);
+      await runner.execute([{ id: 'evt-running', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
       expect(true).toBe(true);
     });
 
@@ -519,7 +518,7 @@ describe('createAgentRunner', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
       // Should not throw when absent state with no contract
-      await runner.execute([{ id: 'evt-absent', type: 'idle-check' as const }]);
+      await runner.execute([{ id: 'evt-absent', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
       expect(true).toBe(true);
     });
   });
@@ -533,7 +532,7 @@ describe('runHealthcheck', () => {
       // runHealthcheck is called internally; we verify no throw by calling it directly
       // Note: runHealthcheck is not in the public API, so test via idle-check path
       mockStore.getExecutionState.mockResolvedValue('idle');
-      await runner.execute([{ id: 'hc-stopped', type: 'idle-check' as const }]);
+      await runner.execute([{ id: 'hc-stopped', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
       expect(true).toBe(true);
     });
 
@@ -544,7 +543,7 @@ describe('runHealthcheck', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
       // With running state, planNextAttempt returns {execute: 'idle'} since no contract
-      await runner.execute([{ id: 'evt-running', type: 'idle-check' as const }]);
+      await runner.execute([{ id: 'evt-running', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
       // No throw confirms the path completes
       expect(true).toBe(true);
     });
@@ -763,7 +762,7 @@ describe('runHealthcheck', () => {
       mockStore.getRunnableContract.mockResolvedValue(null);
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
-      await runner.execute([{ id: 'ic-no-contract', type: 'idle-check' as const }]);
+      await runner.execute([{ id: 'ic-no-contract', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
       expect(true).toBe(true);
     });
   });

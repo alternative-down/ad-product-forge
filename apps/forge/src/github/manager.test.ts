@@ -44,17 +44,17 @@ function createMockDb(overrides?: {
     },
   };
 
-  db.insert = vi.fn(() => ({
+  (db as unknown as Record<string, unknown>).insert = vi.fn(() => ({
     values: vi.fn().mockResolvedValue({ rowid: 1 }),
   }));
 
-  db.update = vi.fn(() => ({
+  (db as unknown as Record<string, unknown>).update = vi.fn(() => ({
     set: vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue({}),
     }),
   }));
 
-  return db as unknown as ReturnType<typeof createGitHubAppManager> extends { db: infer D } ? D : never;
+  return db as unknown as any;
 }
 
 function createMockIntegrations(getGitHubConfigMock: unknown) {
@@ -117,13 +117,13 @@ describe('createGitHubAppManager', () => {
   describe('isConfigured', () => {
     it('returns true when GitHub integration is configured', async () => {
       const config = createConfig({ organization: 'my-org' });
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(manager.isConfigured()).resolves.toBe(true);
     });
 
     it('returns false when GitHub integration is not configured', async () => {
       const config = createConfig(null);
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(manager.isConfigured()).resolves.toBe(false);
     });
   });
@@ -155,7 +155,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       const result = await manager.getAgentProvisioning('agent-1');
 
       expect(result).toMatchObject({
@@ -172,7 +172,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       const result = await manager.getAgentProvisioning('agent-new');
 
       expect(result).toMatchObject({ agentId: 'agent-new', status: 'pending' });
@@ -184,7 +184,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig(null);
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(manager.getAgentProvisioning('agent-unknown')).resolves.toBeNull();
     });
   });
@@ -195,7 +195,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       const result = await manager.createAgentApp({ agentId: 'agent-fresh', agentName: 'Fresh Agent' });
 
       expect(result).toMatchObject({ agentId: 'agent-fresh', status: 'pending' });
@@ -224,7 +224,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(
         manager.createAgentApp({ agentId: 'agent-existing', agentName: 'Existing Agent' }),
       ).rejects.toThrow('GitHub App already exists for agent agent-existing');
@@ -266,7 +266,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await manager.loadAllAgents();
 
       expect(config.db.query.agentProviders.findMany).toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await manager.loadAllAgents();
 
       expect(config.db.query.agentProviders.findMany).toHaveBeenCalled();
@@ -323,7 +323,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(
         manager.getGitCredentials({ agentId: 'agent-inactive', repositoryName: 'my/repo' }),
       ).rejects.toThrow('GitHub App not active for agent agent-inactive');
@@ -334,7 +334,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig(null);
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(
         manager.getGitCredentials({ agentId: 'agent-1', repositoryName: 'my/repo' }),
       ).rejects.toThrow('GitHub integration is not configured');
@@ -347,7 +347,7 @@ describe('createGitHubAppManager', () => {
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
 
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(
         manager.updateAgentManifestConfig({
           agentId: 'agent-no-creds',

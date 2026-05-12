@@ -65,8 +65,8 @@ function createMockDb(overrides?: {
       },
     },
   };
-  db.insert = vi.fn(() => ({ values: vi.fn().mockResolvedValue({ rowid: 1 }) }));
-  db.update = vi.fn(() => ({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }) }));
+  (db as unknown as Record<string, unknown>).insert = vi.fn(() => ({ values: vi.fn().mockResolvedValue({ rowid: 1 }) }));
+  (db as unknown as Record<string, unknown>).update = vi.fn(() => ({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }) }));
   return db as unknown as ReturnType<typeof createGitHubAppManager> extends { db: infer D } ? D : never;
 }
 
@@ -145,7 +145,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       const newManifest = { ...DEFAULT_MANIFEST_CONFIG, description: 'Updated' };
       const result = await manager.updateAgentManifestConfig({ agentId: 'agent-1', manifestConfig: newManifest });
       expect(result).toMatchObject({ agentId: 'agent-1', status: 'active' });
@@ -156,7 +156,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: null });
       const config = createConfig({ organization: 'my-org', appHomeUrl: 'https://example.com' });
       config.db = db;
-      const manager = createGitHubAppManager(config);
+      const manager = createGitHubAppManager(config as any);
       await expect(
         manager.updateAgentManifestConfig({ agentId: 'unknown', manifestConfig: DEFAULT_MANIFEST_CONFIG }),
       ).rejects.toThrow('GitHub App does not exist for agent unknown');
@@ -177,7 +177,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).getRepository('agent-1', { repositoryName: 'my-repo' });
+      const result = await createGitHubAppManager(config as any).getRepository('agent-1', { repositoryName: 'my-repo' });
       expect(result).toMatchObject({ id: 999, name: 'my-repo', fullName: 'my-org/my-repo', private: true, defaultBranch: 'main' });
     });
 
@@ -187,7 +187,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'default-org' });
       config.db = db;
-      await createGitHubAppManager(config).getRepository('agent-1', { owner: 'custom-org', repositoryName: 'my-repo' });
+      await createGitHubAppManager(config as any).getRepository('agent-1', { owner: 'custom-org', repositoryName: 'my-repo' });
       expect(mockOctokit.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}', { owner: 'custom-org', repo: 'my-repo' });
     });
 
@@ -198,7 +198,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
       await expect(
-        createGitHubAppManager(config).getRepository('agent-1', { repositoryName: 'missing' }),
+        createGitHubAppManager(config as any).getRepository('agent-1', { repositoryName: 'missing' }),
       ).rejects.toThrow('Not Found');
     });
   });
@@ -211,10 +211,10 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       });
       mockAppInstance.getInstallationOctokit.mockResolvedValue(mockOctokit);
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
-      db.insert = vi.fn(() => ({ values: vi.fn().mockResolvedValue({ rowid: 1 }) }));
+      (db as unknown as Record<string, unknown>).insert = vi.fn(() => ({ values: vi.fn().mockResolvedValue({ rowid: 1 }) }));
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).createRepository('agent-1', { name: 'new-repo', description: 'A new repo', private: true });
+      const result = await createGitHubAppManager(config as any).createRepository('agent-1', { name: 'new-repo', description: 'A new repo', private: true });
       expect(mockOctokit.request).toHaveBeenCalledWith('POST /orgs/{org}/repos', { org: 'my-org', name: 'new-repo', description: 'A new repo', private: true, auto_init: false });
       expect(result.id).toBe(789);
     });
@@ -227,7 +227,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      await createGitHubAppManager(config).updateRepository('agent-1', { repositoryName: 'repo', description: 'New desc', defaultBranch: 'develop' });
+      await createGitHubAppManager(config as any).updateRepository('agent-1', { repositoryName: 'repo', description: 'New desc', defaultBranch: 'develop' });
       expect(mockOctokit.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}', { owner: 'my-org', repo: 'repo', description: 'New desc', default_branch: 'develop' });
     });
   });
@@ -239,7 +239,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      await createGitHubAppManager(config).deleteRepository('agent-1', { repositoryName: 'old-repo' });
+      await createGitHubAppManager(config as any).deleteRepository('agent-1', { repositoryName: 'old-repo' });
       expect(mockOctokit.request).toHaveBeenCalledWith('DELETE /repos/{owner}/{repo}', { owner: 'my-org', repo: 'old-repo' });
     });
   });
@@ -256,7 +256,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).listPullRequests('agent-1', { repositoryName: 'repo' });
+      const result = await createGitHubAppManager(config as any).listPullRequests('agent-1', { repositoryName: 'repo' });
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ number: 1, state: 'open', title: 'PR One', base: 'main' });
       expect(result[1]).toMatchObject({ number: 2, state: 'closed', title: 'PR Two', base: 'develop' });
@@ -268,7 +268,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      await createGitHubAppManager(config).listPullRequests('agent-1', { repositoryName: 'repo', state: 'closed' });
+      await createGitHubAppManager(config as any).listPullRequests('agent-1', { repositoryName: 'repo', state: 'closed' });
       expect(mockOctokit.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}/pulls', { owner: 'my-org', repo: 'repo', state: 'closed', per_page: 100 });
     });
   });
@@ -284,7 +284,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).getPullRequest('agent-1', { repositoryName: 'repo', pullRequestNumber: 5 });
+      const result = await createGitHubAppManager(config as any).getPullRequest('agent-1', { repositoryName: 'repo', pullRequestNumber: 5 });
       expect(result).toMatchObject({ number: 5, title: 'PR #5', state: 'open', body: 'PR body' });
     });
   });
@@ -296,7 +296,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).mergePullRequest('agent-1', { repositoryName: 'repo', pullRequestNumber: 3, mergeMethod: 'squash' });
+      const result = await createGitHubAppManager(config as any).mergePullRequest('agent-1', { repositoryName: 'repo', pullRequestNumber: 3, mergeMethod: 'squash' });
       expect(result).toMatchObject({ merged: true });
       expect(mockOctokit.request).toHaveBeenCalledWith('PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', { owner: 'my-org', repo: 'repo', pull_number: 3, merge_method: 'squash' });
     });
@@ -314,7 +314,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).listIssues('agent-1', { repositoryName: 'repo' });
+      const result = await createGitHubAppManager(config as any).listIssues('agent-1', { repositoryName: 'repo' });
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ number: 10, title: 'Bug report', state: 'open' });
       expect(result[1]).toMatchObject({ number: 11, title: 'Feature request', state: 'closed', assignees: ['dev'] });
@@ -332,7 +332,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).getIssue('agent-1', { repositoryName: 'repo', issueNumber: 7 });
+      const result = await createGitHubAppManager(config as any).getIssue('agent-1', { repositoryName: 'repo', issueNumber: 7 });
       expect(result).toMatchObject({
         number: 7, title: 'Issue #7', state: 'open', body: 'Issue body',
         labels: ['enhancement', 'priority'], assignees: ['engineer'], comments: 3,
@@ -350,7 +350,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      const result = await createGitHubAppManager(config).createIssue('agent-1', { repositoryName: 'repo', title: 'New issue', body: 'Issue description', labels: ['bug'] });
+      const result = await createGitHubAppManager(config as any).createIssue('agent-1', { repositoryName: 'repo', title: 'New issue', body: 'Issue description', labels: ['bug'] });
       expect(result.number).toBe(20);
     });
   });
@@ -362,7 +362,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      await createGitHubAppManager(config).updateIssue('agent-1', { repositoryName: 'repo', issueNumber: 15, title: 'Updated title', body: 'Updated body' });
+      await createGitHubAppManager(config as any).updateIssue('agent-1', { repositoryName: 'repo', issueNumber: 15, title: 'Updated title', body: 'Updated body' });
       expect(mockOctokit.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/issues/{issue_number}', { owner: 'my-org', repo: 'repo', issue_number: 15, title: 'Updated title', body: 'Updated body' });
     });
   });
@@ -374,7 +374,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      await createGitHubAppManager(config).closeIssue('agent-1', { repositoryName: 'repo', issueNumber: 8 });
+      await createGitHubAppManager(config as any).closeIssue('agent-1', { repositoryName: 'repo', issueNumber: 8 });
       expect(mockOctokit.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/issues/{issue_number}', { owner: 'my-org', repo: 'repo', issue_number: 8, state: 'closed' });
     });
   });
@@ -386,7 +386,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const db = createMockDb({ agentProvidersFindFirst: mockActiveAgent() });
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
-      await createGitHubAppManager(config).reopenIssue('agent-1', { repositoryName: 'repo', issueNumber: 9 });
+      await createGitHubAppManager(config as any).reopenIssue('agent-1', { repositoryName: 'repo', issueNumber: 9 });
       expect(mockOctokit.request).toHaveBeenCalledWith('PATCH /repos/{owner}/{repo}/issues/{issue_number}', { owner: 'my-org', repo: 'repo', issue_number: 9, state: 'open' });
     });
   });
@@ -402,14 +402,14 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const config = createConfig({ organization: 'my-org' });
       config.db = db;
       // Should not throw — non-active credentials are skipped silently
-      await expect(createGitHubAppManager(config).loadAllAgents()).resolves.toBeUndefined();
+      await expect(createGitHubAppManager(config as any).loadAllAgents()).resolves.toBeUndefined();
     });
 
     it('resolves when GitHub integration is not configured (no providers)', async () => {
       const db = createMockDb();
       const config = createConfig(null);
       config.db = db;
-      await expect(createGitHubAppManager(config).loadAllAgents()).resolves.toBeUndefined();
+      await expect(createGitHubAppManager(config as any).loadAllAgents()).resolves.toBeUndefined();
     });
   });
 });
