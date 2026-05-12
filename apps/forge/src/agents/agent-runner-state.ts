@@ -20,7 +20,7 @@ function createRunEpochState(): RunEpochState {
 }
 
 /** Advances the run epoch, resetting step and generate counters. */
-function advanceRunEpoch(state: RunEpochState): number {
+export function advanceRunEpoch(state: RunEpochState): number {
   state.activeRunEpoch += 1;
   state.activeStepEpoch = 0;
   state.activeGenerateToken = 0;
@@ -29,7 +29,7 @@ function advanceRunEpoch(state: RunEpochState): number {
 }
 
 /** Returns true if the given runEpoch is older than the current active run. */
-function isStaleRun(state: RunEpochState, runEpoch: number): boolean {
+export function isStaleRun(state: RunEpochState, runEpoch: number): boolean {
   return runEpoch !== state.activeRunEpoch;
 }
 
@@ -65,13 +65,13 @@ function createBackoffState(): BackoffState {
 }
 
 /** Doubles backoff, capped at 5 minutes. */
-function nextBackoff(state: BackoffState): number {
+export function nextBackoff(state: BackoffState): number {
   state.backoffMs = Math.min(state.backoffMs * 2, 300_000);
   return state.backoffMs;
 }
 
 /** Resets backoff to default. */
-function resetBackoff(state: BackoffState): void {
+export function resetBackoff(state: BackoffState): void {
   state.backoffMs = 60_000;
   state.instant = false;
 }
@@ -80,7 +80,7 @@ function resetBackoff(state: BackoffState): void {
  * Calculates the delay in ms before the next step.
  * Returns 0 if no delay is needed.
  */
-function calculateDelayMs(
+export function calculateDelayMs(
   state: BackoffState,
   options: {
     hasPendingMessages: boolean;

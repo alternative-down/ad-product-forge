@@ -17,7 +17,7 @@
  * - Constants: GENERATE_TIMEOUT_MS, GENERATE_TIMEOUT_MAX_ATTEMPTS, GENERATE_TIMEOUT_BACKOFF_MS,
  *              GENERATE_MAX_STEPS_PER_RUN, RUNNER_AWAIT_TIMEOUT_MS, RUN_STOP_REMINDER
  * - Helpers: buildStepSystemPrompt, extractRunnerControlDirectiveFromIteration, etc.
- * - State helpers: isStaleRun, advanceGenerateToken, nextBackoff, resetBackoffState, calculateDelayMs
+ * - State helpers: isStaleRun, advanceGenerateToken, nextBackoff, resetBackoff, calculateDelayMs
  */
 
 import type { Database } from '../database/schema';
@@ -42,7 +42,7 @@ import {
   isStaleRun,
   advanceGenerateToken,
   nextBackoff,
-  resetBackoffState,
+  resetBackoff,
   calculateDelayMs,
 } from './agent-runner-state';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
@@ -60,7 +60,7 @@ const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
+export const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 
 // ─── Dependencies interface ─────────────────────────────────────────────────────
 
@@ -577,7 +577,7 @@ export async function generateWithTimeoutRetries(
       // Back off on retryable error
       deps.setBackoffMs(GENERATE_TIMEOUT_BACKOFF_MS);
       await delay(GENERATE_TIMEOUT_BACKOFF_MS);
-      resetBackoffState(deps.backoffState);
+      resetBackoff(deps.backoffState);
       invalidateInFlightGenerate(deps);
     }
   }
