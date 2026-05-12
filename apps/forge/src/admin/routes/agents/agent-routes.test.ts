@@ -194,7 +194,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
     registerAgentWriteRoutes(httpServer as any, {} as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes.find((r) => r.path === '/admin/agent/clear-history' && r.method === 'POST')).toBeDefined();
   });
@@ -207,7 +207,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
     registerAgentWriteRoutes(httpServer as any, {} as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes.find((r) => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST')).toBeDefined();
   });
@@ -220,7 +220,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
     registerAgentWriteRoutes(httpServer as any, {} as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes).toHaveLength(2);
   });
@@ -263,10 +263,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/reload' && r.method === 'POST')).toBeDefined();
   });
 
@@ -277,10 +277,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/force-idle' && r.method === 'POST')).toBeDefined();
   });
 
@@ -291,10 +291,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/rewakeup' && r.method === 'POST')).toBeDefined();
   });
 
@@ -305,10 +305,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/contract/top-up' && r.method === 'POST')).toBeDefined();
     expect(routes.find((r) => r.path === '/admin/agent/contract/adjust-budget' && r.method === 'POST')).toBeDefined();
     expect(routes.find((r) => r.path === '/admin/agent/contract/renew' && r.method === 'POST')).toBeDefined();
@@ -321,10 +321,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/hire' && r.method === 'POST')).toBeDefined();
     expect(routes.find((r) => r.path === '/admin/agent/terminate' && r.method === 'POST')).toBeDefined();
     expect(routes.find((r) => r.path === '/admin/agent/change-role' && r.method === 'POST')).toBeDefined();
@@ -337,10 +337,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/github-manifest-config/update' && r.method === 'POST')).toBeDefined();
     expect(routes.find((r) => r.path === '/admin/agent/update-config' && r.method === 'POST')).toBeDefined();
   });
@@ -352,10 +352,10 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       createOps(),
-    );
+    ) as any;
     expect(routes).toHaveLength(29);
   });
 
@@ -373,8 +373,8 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      registry,
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      registry as any,
       createOps(),
     );
     expect(forceIdle).toHaveBeenCalled();
@@ -394,8 +394,8 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      registry,
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      registry as any,
       createOps(),
     );
     expect(capturedHandler).toBeTruthy();
@@ -428,8 +428,8 @@ describe('Agent Write Ops Routes', () => {
     const ops = { ...createOps(), loadAgent: mockLoadAgent };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      fakeRegistry,
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      fakeRegistry as any,
       ops,
     );
     expect(capturedHandler).toBeTruthy();
@@ -448,8 +448,8 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} },
-      new Map(),
+      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      new Map() as any,
       { ...createOps(), topUpActiveAgentContract: mockTopUp },
     );
     expect(capturedHandler).toBeTruthy();
