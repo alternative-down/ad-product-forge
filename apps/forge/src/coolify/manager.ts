@@ -2,6 +2,8 @@
  * Coolify API client — manages applications, GitHub apps, deployments, and envs.
  */
 
+import { forgeDebug } from '@forge-runtime/core';
+
 import { z } from 'zod';
 
 import { removeUndefined, safeJsonParse, buildRequestError } from './helpers';

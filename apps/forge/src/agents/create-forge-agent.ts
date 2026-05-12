@@ -1,4 +1,5 @@
 import {
+  forgeDebug,
   type CommunicationModule,
   type RuntimePlanMode,
   createRuntimeAgentSession,

@@ -2,6 +2,8 @@
  * Schedule operation helpers for manager.ts
  * Extracted to reduce duplication in createAgentScheduleManager
  */
+import { forgeDebug } from '@forge-runtime/core';
+
 import type { AgentScheduleStore } from './store';
 import { z } from 'zod';
 

@@ -3,6 +3,8 @@
  * closeIssue, reopenIssue, listIssueComments, getIssueComment,
  * createIssueComment, updateIssueComment, deleteIssueComment
  */
+import { forgeDebug } from '@forge-runtime/core';
+
 import type { OpsContext } from './context';
 
 const SCOPE = 'github-ops-issues';
