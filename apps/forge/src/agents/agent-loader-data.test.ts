@@ -81,19 +81,19 @@ describe('loadAgentRuntimeData', () => {
   it('throws when agent not found in registry', async () => {
     mocks.findFirstMock.mockResolvedValue(null);
 
-    await expect(loadAgentRuntimeData(createMockDb() as any, createMockConfig()))
+    await expect(loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any))
       .rejects.toThrow('Agent not found in registry: agent-123');
   });
 
   it('throws when agent is missing roleId', async () => {
     mocks.findFirstMock.mockResolvedValue({ id: 'agent-123', roleId: null });
 
-    await expect(loadAgentRuntimeData(createMockDb() as any, createMockConfig()))
+    await expect(loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any))
       .rejects.toThrow('Agent is missing roleId: agent-123');
   });
 
   it('returns runtime data with all required fields', async () => {
-    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig());
+    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any);
 
     expect(result).toHaveProperty('agent');
     expect(result).toHaveProperty('role');
@@ -116,7 +116,7 @@ describe('loadAgentRuntimeData', () => {
     ]);
     mocks.decryptSecretMock.mockReturnValue('{"token":"abc123"}');
 
-    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig());
+    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any);
 
     expect(result.providerCredentials).toHaveProperty('discord');
     expect(mocks.decryptSecretMock).toHaveBeenCalledWith('encrypted-discord-data');
@@ -127,7 +127,7 @@ describe('loadAgentRuntimeData', () => {
       { providerType: 'slack', encryptedCredentials: 'bad' },
     ]);
 
-    await loadAgentRuntimeData(createMockDb() as any, createMockConfig());
+    await loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any);
 
     expect(mocks.decryptSecretMock).not.toHaveBeenCalled();
   });
@@ -141,7 +141,7 @@ describe('loadAgentRuntimeData', () => {
     });
 
     await expect(
-      loadAgentRuntimeData(createMockDb() as any, createMockConfig()),
+      loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any),
     ).rejects.toThrow('decrypt failed');
   });
 
@@ -152,14 +152,14 @@ describe('loadAgentRuntimeData', () => {
     mocks.decryptSecretMock.mockReturnValue('not-valid-json');
 
     await expect(
-      loadAgentRuntimeData(createMockDb() as any, createMockConfig()),
+      loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any),
     ).rejects.toThrow();
   });
 
   it('calls loadCommunicationProviders with correct args', async () => {
     const config = createMockConfig();
 
-    await loadAgentRuntimeData(createMockDb() as any, config);
+    await loadAgentRuntimeData(createMockDb() as any, config as any);
 
     expect(mocks.loadCommunicationProvidersMock).toHaveBeenCalledWith(
       {},
@@ -168,7 +168,7 @@ describe('loadAgentRuntimeData', () => {
   });
 
   it('resolves both primary and om runtime models', async () => {
-    await loadAgentRuntimeData(createMockDb() as any, createMockConfig());
+    await loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any);
 
     expect(mocks.resolveProfileRuntimeModelMock).toHaveBeenCalledTimes(2);
   });
@@ -176,7 +176,7 @@ describe('loadAgentRuntimeData', () => {
   it('returns empty providerCredentials when no providers configured', async () => {
     mocks.findManyMock.mockResolvedValue([]);
 
-    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig());
+    const result = await loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any);
 
     expect(result.providerCredentials).toEqual({});
   });
