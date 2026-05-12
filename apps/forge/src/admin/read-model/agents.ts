@@ -26,10 +26,10 @@ import {
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 
-import type {Database} from '../../database/schema';
+import type {Database} from '../../database/index';
 import { createSystemSettingsStore } from '../../system-settings/store';
 import { createMicroErpReadModel } from '../../micro-erp/read-model';
-import type { AgentLongTermMemoryRecallDebugSearchInput } from '../agents/ltm/recall';
+import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 import { forgeDebug } from '@forge-runtime/core';
 import {
@@ -50,6 +50,53 @@ const RECENT_NOTIFICATION_LIMIT = 10;
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
 };
+
+
+export interface AgentListItem {
+  agentId: string;
+  name: string;
+  description: string | null;
+  role: string | null;
+  executionState: string;
+  lastExecutionError: string | null;
+  lastExecutionErrorAt: number | null;
+  roleName: string | null;
+  modelProfile: string | null;
+  omModelProfile: string | null;
+  loaded: boolean;
+  runner: unknown | null;
+  providerTypes: unknown[];
+  overview: {
+    lastStepAt: number | null;
+    lastStepContextTokens: number | null;
+    lastStepPreview: string | null;
+    lastToolBadge: string | null;
+    lastStepTokens: number | null;
+    lastStepCostUsd: number | null;
+    averageStepIntervalMs: number | null;
+    unreadNotificationCount: number;
+    om: {
+      generationCount: number;
+      checkpointGeneration: number;
+      recentRawTokenCount: number;
+      recentRawTokenLimit: number;
+      overflowTokenCount: number;
+      overflowTokenLimit: number;
+      observationTokenCount: number;
+      reflectionTriggerTokenLimit: number;
+      reflectionTokenCount: number;
+      reflectionTokenLimit: number;
+      checkpointTokenCount: number;
+    } | null;
+    ltm: {
+      running: boolean;
+      queued: boolean;
+      packageCount: number;
+    };
+  };
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface AgentReadModel {
   getDashboard: () => Promise<{
@@ -118,16 +165,16 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function getTotals() {
-    const rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, role: true } });
-    const loadedAgents = registry.size;
+    const rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, roleId: true } });
+    const loadedAgents = registry.list().length;
     const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
     const runningAgents = rows.filter((r) => r.executionState === 'running').length;
     const absentAgents = rows.filter((r) => !r.executionState || r.executionState === 'absent').length;
     const activeContracts = await db.query.agentExecutionContracts.findMany({
-      where: eq(agentExecutionContracts.isActive, true),
+      where: eq(agentExecutionContracts.isActive, 1),
       columns: { id: true },
     });
-    const roles = new Set(rows.map((r) => r.role).filter(Boolean)).size;
+    const roles = new Set(rows.map((r) => r.roleId).filter(Boolean)).size;
     return {
       agents: rows.length,
       loadedAgents,
@@ -151,7 +198,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     };
   }
 
-  async function listAgents(): Promise<import('./index').AgentListItem[]> {
+  async function listAgents(): Promise<AgentListItem[]> {
     const [agentRows, unreadNotificationRows, allRoles, allProfiles] = await Promise.all([
       db.query.agents.findMany({ orderBy: (fields, { asc }) => [asc(fields.name)] }),
       db
@@ -267,8 +314,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       return {
         agentId: agent.id,
         name: agent.name ?? '',
-        description: agent.description ?? undefined,
-        role: agent.role ?? null,
+        description: agent.description ?? null,
+        role: agent.roleId ?? null,
         executionState,
         lastExecutionError: agent.lastExecutionError ?? null,
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
@@ -305,14 +352,14 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
               }
             : null,
           ltm: {
-            running: executionState === 'idle' ? (loadedAgent?.runtime?.longTermMemory?.readSnapshot()?.running ?? false) : false,
-            queued: executionState === 'idle' ? (loadedAgent?.runtime?.longTermMemory?.readSnapshot()?.queued ?? false) : false,
+            running: executionState === 'idle' ? (false) : false,
+            queued: executionState === 'idle' ? (false) : false,
             packageCount: longTermMemoryState?.packages.length ?? 0,
           },
         },
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
-      };
+      } as AgentListItem;
     });
   }
 
@@ -365,10 +412,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
     const heartbeat = agentScheduleRows.find((s) => s.kind === 'heartbeat');
 
-    const githubProvisioning = loadedAgent?.runtime?.github ? {
-      installed: true,
-      repositories: [],
-    } : null;
+    const githubProvisioning = null;
 
     const recentSteps_ = recentSteps.map((step) => {
       const { id, ...rest } = step;
@@ -421,7 +465,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     return {
       agentId: agent.id,
       name: agent.name ?? '',
-      description: agent.description ?? undefined,
+      description: agent.description ?? null,
       instructions: agent.instructions ?? '',
       executionState: agent.executionState ?? 'absent',
       lastExecutionError: agent.lastExecutionError ?? null,
