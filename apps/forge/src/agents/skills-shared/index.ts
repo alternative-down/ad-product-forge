@@ -3,7 +3,7 @@
  * workspace-skills.ts. Extracted to reduce duplication (108-line clone group).
  */
 
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { forgeDebug } from '@forge-runtime/core';
 
