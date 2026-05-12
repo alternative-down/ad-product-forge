@@ -74,7 +74,8 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
   return rawValue;
 }
 
-/** Normalise value — trim empty strings to undefined */
+/**
+ * Normalise value — trim empty strings to undefined.
  * Returns the fully wired application context ready for routes registration.
  */
 export async function createForgeBootstrap() {
