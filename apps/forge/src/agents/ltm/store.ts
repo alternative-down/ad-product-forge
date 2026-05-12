@@ -63,7 +63,7 @@ export type LongTermMemoryRecallSnapshot = z.infer<typeof longTermMemoryRecallSn
 export type LongTermMemoryRecallHistory = z.infer<typeof longTermMemoryRecallHistorySchema>;
 
 function createEmptyLongTermMemoryState(): LongTermMemoryState {
-  const now = new Date().toISOString();
+  const now = Date.now();
 
   return {
     version: 1,
@@ -103,7 +103,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
   async function writeState(state: LongTermMemoryState) {
     const nextState = {
       ...state,
-      updatedAt: new Date().toISOString(),
+      updatedAt: Date.now(),
     } satisfies LongTermMemoryState;
     const now = Date.now();
     let existing: typeof agentLongTermMemoryStates.$inferSelect | null = null;
@@ -182,7 +182,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           agentId: input.agentId,
           state,
           recallIndexStamp: JSON.stringify({
-            updatedAt: new Date().toISOString(),
+            updatedAt: now,
             reason,
           }),
           createdAt: existing?.createdAt ?? now,
@@ -192,7 +192,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           target: agentLongTermMemoryStates.agentId,
           set: {
             recallIndexStamp: JSON.stringify({
-              updatedAt: new Date().toISOString(),
+              updatedAt: now,
               reason,
             }),
             updatedAt: now,

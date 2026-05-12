@@ -264,7 +264,7 @@ export class AgentLongTermMemoryRecall {
           status: 'miss',
         }), {
           recentFingerprints: recallThreadState.recentFingerprints,
-          updatedAt: new Date().toISOString(),
+          updatedAt: Date.now(),
         });
         return null;
       }
@@ -1108,7 +1108,7 @@ export class AgentLongTermMemoryRecall {
 
     return {
       recentFingerprints: deduped.slice(0, Math.max(input.windowSize, 1)),
-      updatedAt: new Date().toISOString(),
+      updatedAt: Date.now(),
     } satisfies LongTermMemoryRecallHistory;
   }
 
