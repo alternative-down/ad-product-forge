@@ -115,7 +115,7 @@ export function createLlmSettingsStore(db: Database) {
     const parsed = llmProfileSchema.parse(input);
     const now = Date.now();
     const profileId = input.profileId ?? createId();
-    let existing: typeof llmProfiles.$inferSelect | null = null;
+    let existing: LlmProfile | null = null;
     try {
       existing = input.profileId
         ? await db.query.llmProfiles.findFirst({
@@ -218,7 +218,7 @@ export function createLlmSettingsStore(db: Database) {
     }
 
     const now = Date.now();
-    let existing: typeof systemLlmDefaults.$inferSelect | null = null;
+    let existing: SystemLlmDefaults | null = null;
     try {
       existing = await getDefaultsRow();
     } catch (err) {
