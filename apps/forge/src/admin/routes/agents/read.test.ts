@@ -54,13 +54,13 @@ describe('registerAgentReadRoutes', () => {
   }
 
   it('registers exactly 9 GET routes', () => {
-    registerAgentReadRoutes(httpServer, mockReadModel);
+    registerAgentReadRoutes(httpServer as any, mockReadModel);
     const getRoutes = httpServer.routes.filter((r) => r.method === 'GET');
     expect(getRoutes).toHaveLength(9);
   });
 
   it('registers all expected paths', () => {
-    registerAgentReadRoutes(httpServer, mockReadModel);
+    registerAgentReadRoutes(httpServer as any, mockReadModel);
     const paths = httpServer.routes.map((r) => r.path);
     expect(paths).toContain('/admin/agents');
     expect(paths).toContain('/admin/agent');
@@ -76,7 +76,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agents
   describe('GET /admin/agents', () => {
     it('returns listAgents result', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agents')!;
       const res = await route.handler(createMockRequest());
       expect(mockReadModel.listAgents).toHaveBeenCalledTimes(1);
@@ -87,7 +87,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent
   describe('GET /admin/agent', () => {
     it('delegates to getAgent with query agentId', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent')!;
       await route.handler(createMockRequest(new Map([['agentId', 'ag_002']])));
       expect(mockReadModel.getAgent).toHaveBeenCalledWith('ag_002');
@@ -95,14 +95,14 @@ describe('registerAgentReadRoutes', () => {
 
     it('returns 404 when agent not found', async () => {
       mockReadModel.getAgent.mockResolvedValue(null);
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_unknown']])));
       expect(res).toEqual({ status: 404, body: JSON.stringify({ error: 'Agent not found: ag_unknown' }), headers: expect.objectContaining({ 'content-type': expect.any(String) }) });
     });
 
     it('throws ZodError when agentId missing', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent')!;
       await expect(route.handler(createMockRequest(new Map([['agentId', null]])))).rejects.toBeInstanceOf(ZodError);
     });
@@ -111,7 +111,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/recent-conversations
   describe('GET /admin/agent/recent-conversations', () => {
     it('returns conversations from readModel', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/recent-conversations')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_003']])));
       expect(mockReadModel.listAgentRecentConversations).toHaveBeenCalledWith('ag_003');
@@ -120,7 +120,7 @@ describe('registerAgentReadRoutes', () => {
 
     it('returns 404 when agent not found', async () => {
       mockReadModel.listAgentRecentConversations.mockResolvedValue(null);
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/recent-conversations')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_404']])));
       expect(res).toEqual({ status: 404, body: JSON.stringify({ error: 'Agent not found: ag_404' }), headers: expect.objectContaining({ 'content-type': expect.any(String) }) });
@@ -130,7 +130,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/execution-steps
   describe('GET /admin/agent/execution-steps', () => {
     it('passes agentId, limit, offset to readModel', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/execution-steps')!;
       await route.handler(createMockRequest(new Map([
         ['agentId', 'ag_004'],
@@ -145,7 +145,7 @@ describe('registerAgentReadRoutes', () => {
     });
 
     it('uses schema defaults when limit/offset not provided', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/execution-steps')!;
       await route.handler(createMockRequest(new Map([['agentId', 'ag_005']])));
       // agentExecutionStepsQuerySchema applies defaults: limit=20, offset=0
@@ -160,7 +160,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/thread-messages
   describe('GET /admin/agent/thread-messages', () => {
     it('passes agentId, page, perPage to readModel', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/thread-messages')!;
       await route.handler(createMockRequest(new Map([
         ['agentId', 'ag_006'],
@@ -178,7 +178,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/ltm-thread-messages
   describe('GET /admin/agent/ltm-thread-messages', () => {
     it('passes to listAgentLongTermMemoryThreadMessages', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/ltm-thread-messages')!;
       await route.handler(createMockRequest(new Map([
         ['agentId', 'ag_007'],
@@ -196,7 +196,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/runtime-memory
   describe('GET /admin/agent/runtime-memory', () => {
     it('returns runtime memory snapshot', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/runtime-memory')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_008']])));
       expect(mockReadModel.getAgentRuntimeMemory).toHaveBeenCalledWith('ag_008');
@@ -205,7 +205,7 @@ describe('registerAgentReadRoutes', () => {
 
     it('returns 404 when snapshot not found', async () => {
       mockReadModel.getAgentRuntimeMemory.mockResolvedValue(null);
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/runtime-memory')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_009']])));
       expect(res).toEqual({ status: 404, body: JSON.stringify({ error: 'Agent not found: ag_009' }), headers: expect.objectContaining({ 'content-type': expect.any(String) }) });
@@ -215,7 +215,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/om-debug-export
   describe('GET /admin/agent/om-debug-export', () => {
     it('returns om debug export', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/om-debug-export')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_010']])));
       expect(mockReadModel.getAgentOmDebugExport).toHaveBeenCalledWith('ag_010');
@@ -224,7 +224,7 @@ describe('registerAgentReadRoutes', () => {
 
     it('returns 404 when not found', async () => {
       mockReadModel.getAgentOmDebugExport.mockResolvedValue(null);
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/om-debug-export')!;
       const res = await route.handler(createMockRequest(new Map([['agentId', 'ag_011']])));
       expect(res).toEqual({ status: 404, body: JSON.stringify({ error: 'Agent not found: ag_011' }), headers: expect.objectContaining({ 'content-type': expect.any(String) }) });
@@ -234,7 +234,7 @@ describe('registerAgentReadRoutes', () => {
   // GET /admin/agent/conversation-messages
   describe('GET /admin/agent/conversation-messages', () => {
     it('passes all query params to readModel', async () => {
-      registerAgentReadRoutes(httpServer, mockReadModel);
+      registerAgentReadRoutes(httpServer as any, mockReadModel);
       const route = httpServer.routes.find((r) => r.path === '/admin/agent/conversation-messages')!;
       await route.handler(createMockRequest(new Map([
         ['agentId', 'ag_012'],
