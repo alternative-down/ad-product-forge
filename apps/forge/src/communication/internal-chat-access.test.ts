@@ -26,7 +26,7 @@ describe('createInternalChatAccess', () => {
         readMessageAttachment: vi.fn().mockResolvedValue('attachment-data'),
       };
 
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps);
+      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
       const result = await getMessageAttachmentByAccount({
         accountId: 'acc_1',
         conversationId: 'conv_1',
@@ -47,7 +47,7 @@ describe('createInternalChatAccess', () => {
         readMessageAttachment: vi.fn(),
       };
 
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps);
+      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
 
       await expect(
         getMessageAttachmentByAccount({
@@ -68,7 +68,7 @@ describe('createInternalChatAccess', () => {
         readMessageAttachment: vi.fn().mockResolvedValue(null),
       };
 
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps);
+      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
 
       await expect(
         getMessageAttachmentByAccount({
@@ -96,7 +96,7 @@ describe('createInternalChatAccess', () => {
         }),
       };
       const db = makeDb();
-      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps);
+      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps as any);
 
       const result = await getRequiredExternalAccount('acc_1');
       expect(result.id).toBe('acc_1');
@@ -112,7 +112,7 @@ describe('createInternalChatAccess', () => {
         }),
       };
       const db = makeDb();
-      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps);
+      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps as any);
 
       await expect(getRequiredExternalAccount('acc_1')).rejects.toThrow(ExternalAccountNotFoundError);
     });
@@ -133,7 +133,7 @@ describe('createInternalChatAccess', () => {
         }),
       };
       const db = makeDb();
-      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps);
+      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
       const result = await getRequiredAccountBySlug('carol');
       expect(result.slug).toBe('carol');
@@ -144,7 +144,7 @@ describe('createInternalChatAccess', () => {
         getAccountBySlug: vi.fn().mockResolvedValue(null),
       };
       const db = makeDb();
-      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps);
+      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
       await expect(getRequiredAccountBySlug('unknown-slug')).rejects.toThrow(InternalChatAccountNotFoundError);
     });
@@ -164,7 +164,7 @@ describe('createInternalChatAccess', () => {
         }),
       };
       const db = makeDb();
-      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps);
+      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps as any);
 
       try {
         await getRequiredExternalAccount('acct-bot');
@@ -179,7 +179,7 @@ describe('createInternalChatAccess', () => {
         getRequiredAccount: vi.fn().mockRejectedValue(new Error('db account not found')),
       };
       const db = makeDb();
-      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps);
+      const { getRequiredExternalAccount } = createInternalChatAccess(db, deps as any);
 
       await expect(getRequiredExternalAccount('acct-1')).rejects.toThrow('db account not found');
     });
@@ -198,7 +198,7 @@ describe('createInternalChatAccess', () => {
         }),
       };
       const db = makeDb();
-      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps);
+      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
       const result = await getRequiredAccountBySlug('alice');
       expect(result.slug).toBe('alice');
@@ -209,7 +209,7 @@ describe('createInternalChatAccess', () => {
         getAccountBySlug: vi.fn().mockResolvedValue(null),
       };
       const db = makeDb();
-      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps);
+      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
       await expect(getRequiredAccountBySlug('nobody')).rejects.toThrow(InternalChatAccountNotFoundError);
     });
@@ -219,7 +219,7 @@ describe('createInternalChatAccess', () => {
         getAccountBySlug: vi.fn().mockResolvedValue(null),
       };
       const db = makeDb();
-      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps);
+      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
       try {
         await getRequiredAccountBySlug('missing-slug');
@@ -234,7 +234,7 @@ describe('createInternalChatAccess', () => {
         getAccountBySlug: vi.fn().mockRejectedValue(new Error('db lookup failed')),
       };
       const db = makeDb();
-      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps);
+      const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
       await expect(getRequiredAccountBySlug('alice')).rejects.toThrow('db lookup failed');
     });
@@ -252,7 +252,7 @@ describe('createInternalChatAccess', () => {
       };
       const db = makeDb();
       db.query.internalChatMessages.findFirst.mockResolvedValueOnce({ id: 'msg-1' });
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps);
+      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
 
       await expect(
         getMessageAttachmentByAccount({
@@ -276,7 +276,7 @@ describe('createInternalChatAccess', () => {
       };
       const db = makeDb();
       db.query.internalChatMessages.findFirst.mockResolvedValueOnce(null);
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps);
+      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
 
       try {
         await getMessageAttachmentByAccount({
@@ -298,7 +298,7 @@ describe('createInternalChatAccess', () => {
       };
       const db = makeDb();
       db.query.internalChatMessages.findFirst.mockResolvedValueOnce({ id: 'msg-1' });
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps);
+      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
 
       try {
         await getMessageAttachmentByAccount({

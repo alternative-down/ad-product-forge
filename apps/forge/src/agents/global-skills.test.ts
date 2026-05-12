@@ -18,12 +18,12 @@ const _m = vi.hoisted(() => {
   const fileStore   = new Map<string, string | Uint8Array>();
   const dirStore    = new Map<string, string[]>();
   const resolveResults: string[] = [];
-  const resolveAgentSkillRoot   = vi.fn<[{ workspaceBasePath: string; agent: { id: string }; skillName: string }], { skillsRoot: string; skillRoot: string }>();
-  const resolveAgentSkillsRoot  = vi.fn<[string, unknown, string], string>();
-  const resolveBundledSkillRoot = vi.fn<(name: string) => Promise<string>>(
+  const resolveAgentSkillRoot   = vi.fn();
+  const resolveAgentSkillsRoot  = vi.fn();
+  const resolveBundledSkillRoot = vi.fn(
     (name: string) => Promise.resolve(`/base/_bundled/${name}`)
   );
-  const copyDirectoryContents    = vi.fn<(src: string, dst: string) => Promise<void>>();
+  const copyDirectoryContents    = vi.fn();
 
   return {
     mkdirFn, rmFn, copyFileFn, writeFileFn, readFileFn, readdirFn, accessFn, statFn, unzipSync,
@@ -54,7 +54,7 @@ vi.mock('node:path', async () => {
 
 vi.mock('node:fs/promises', async () => {
   const RealFs = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
-  const impl: typeof import('node:fs/promises') = {
+  const impl = {
     mkdir: mkdirFn as typeof RealFs.mkdir,
     rm:    rmFn   as typeof RealFs.rm,
     copyFile:  copyFileFn  as typeof RealFs.copyFile,
@@ -63,7 +63,7 @@ vi.mock('node:fs/promises', async () => {
     readdir:   readdirFn   as typeof RealFs.readdir,
     access:    accessFn    as typeof RealFs.access,
     stat:      statFn      as typeof RealFs.stat,
-  };
+  } as any;
   return { default: impl, ...impl };
 });
 
@@ -105,14 +105,14 @@ vi.mock('./workspace-skill-paths', async () => {
 });
 
 // ── SUT: import real module, mock nothing inside it ───────────────────────────
-const gs = await vi.importActual<typeof import('./global-skills')>('./global-skills');
+const gs = await vi.importActual('./global-skills') as any;
 // Export BUNDLED_SKILL_DIRECTORY_NAMES so seedBundledSkills() iterates correctly
-gs.BUNDLED_SKILL_DIRECTORY_NAMES = (await vi.importActual('./bundled-workspace-skills')).BUNDLED_SKILL_DIRECTORY_NAMES;
+(gs as any).BUNDLED_SKILL_DIRECTORY_NAMES = (await vi.importActual('./bundled-workspace-skills') as any).BUNDLED_SKILL_DIRECTORY_NAMES;
 
 // Extract helpers and integration functions for direct testing
 const { parseSkillMetadata, normalizeArchiveEntryPath, resolveGlobalSkillsRoot,
        listGlobalSkills, installGlobalSkillsFromZip, deleteGlobalSkill,
-       installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } = gs;
+       installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } = gs as any;
 
 // ── Seed helpers ──────────────────────────────────────────────────────────────
 const BUNDLED_SKILLS = ['github-api', 'coolify-api', 'skills-creator'];
@@ -244,7 +244,7 @@ describe('listGlobalSkills', () => {
   // Sorted: coolify-api < github-api < skills-creator.
   it('returns bundled skills sorted by skillName', async () => {
     seedBundledSkill('github-api'); seedBundledSkill('coolify-api'); seedBundledSkill('skills-creator');
-    const names = (await listGlobalSkills('/base')).map(s => s.skillName);
+    const names = (await listGlobalSkills('/base')).map((s: { skillName: string }) => s.skillName);
     expect(names).toEqual(['coolify-api', 'github-api', 'skills-creator']);
   });
   it('returns custom skills from _system/skills', async () => {
@@ -260,7 +260,7 @@ describe('listGlobalSkills', () => {
     seedBundledSkill('github-api'); seedBundledSkill('coolify-api'); seedBundledSkill('skills-creator');
     seedCustomSkill('github-api', '---\ndescription: Custom\n---\n');
     seedDir('/base/_system/skills', ['github-api']);
-    const skill = (await listGlobalSkills('/base')).find(s => s.skillName === 'github-api');
+    const skill = (await listGlobalSkills('/base')).find((s: { skillName: string }) => s.skillName === 'github-api');
     // Source Map: bundled inserted first, custom inserted second (overwrites). Custom wins.
     expect(skill?.source).toBe('custom');
     expect(skill?.editable).toBe(true);  // custom → editable: true
@@ -269,7 +269,7 @@ describe('listGlobalSkills', () => {
     seedBundledSkill('github-api'); seedBundledSkill('coolify-api'); seedBundledSkill('skills-creator');
     seedCustomSkill('my-tool', '---\ndescription: Custom\n---\n');
     seedDir('/base/_system/skills', ['my-tool']);
-    const names = (await listGlobalSkills('/base')).map(s => s.skillName);
+    const names = (await listGlobalSkills('/base')).map((s: { skillName: string }) => s.skillName);
     expect(names).toEqual(['coolify-api', 'github-api', 'my-tool', 'skills-creator']);
   });
   it('returns fileCount from countSkillFiles', async () => {
@@ -277,7 +277,7 @@ describe('listGlobalSkills', () => {
     seedDir('/base/_bundled/github-api', ['SKILL.md', 'README.md']);
     fileStore.set('/base/_bundled/github-api/README.md', '# Readme');
     const result = await listGlobalSkills('/base');
-    const githubApi = result.find(s => s.skillName === 'github-api');
+    const githubApi = result.find((s: { skillName: string; fileCount?: number }) => s.skillName === 'github-api');
     expect(githubApi?.fileCount).toBe(2);
   });
 });

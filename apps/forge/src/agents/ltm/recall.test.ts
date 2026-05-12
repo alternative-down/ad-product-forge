@@ -21,7 +21,7 @@ function makeMockConversationStore() {
   return {
     addMessage: vi.fn().mockResolvedValue(undefined),
     listMessages: vi.fn().mockResolvedValue({ messages: [], hasMore: false }),
-  } as unknown as ConversationStore;
+  } as any;
 }
 
 function makeMockPersistenceStore() {
@@ -32,14 +32,14 @@ function makeMockPersistenceStore() {
       rawWindowMessageCount: 0,
     }),
     persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-  };
+  } as any;
 }
 
 function makeMockModel() {
   return {
     embed: vi.fn().mockResolvedValue({ embedding: new Array(128).fill(0.1), dimension: 128 }),
     generate: vi.fn().mockResolvedValue({ text: 'generated recall context' }),
-  };
+  } as any;
 }
 
 // =============================================================================
@@ -70,7 +70,7 @@ describe('createAgentLongTermMemoryRecall', () => {
 // =============================================================================
 
 describe('buildRecallQueryFromStep', () => {
-  let recall: InstanceType<ReturnType<typeof createAgentLongTermMemoryRecall>> & {
+  let recall: any & {
     buildRecallQueryFromStep(step: unknown): string;
   };
 
@@ -84,7 +84,7 @@ describe('buildRecallQueryFromStep', () => {
       persistenceStore: makeMockPersistenceStore(),
       model: makeMockModel(),
     });
-    recall = instance as never;
+    recall = instance as any;
   });
 
   it('returns empty string for null', () => {
@@ -172,7 +172,7 @@ describe('buildRecallQueryFromStep', () => {
 // =============================================================================
 
 describe('shouldSkipRecallInjection', () => {
-  let recall: InstanceType<ReturnType<typeof createAgentLongTermMemoryRecall>> & {
+  let recall: any & {
     shouldSkipRecallInjection(input: {
       graph: { hit: boolean; sourcesCount: number };
       results: Array<{ id: string }>;
@@ -190,7 +190,7 @@ describe('shouldSkipRecallInjection', () => {
       persistenceStore: makeMockPersistenceStore(),
       model: makeMockModel(),
     });
-    recall = instance as never;
+    recall = instance as any;
   });
 
   it('returns false when rawWindowMessageCount is 0', () => {
@@ -265,7 +265,7 @@ describe('AgentLongTermMemoryRecall initialize', () => {
       readRecallState: vi.fn().mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -274,8 +274,7 @@ describe('AgentLongTermMemoryRecall initialize', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
     (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
     await recall.initialize();
     expect(retrieval.refresh).not.toHaveBeenCalled();
@@ -296,7 +295,7 @@ describe('AgentLongTermMemoryRecall refreshIndex', () => {
       readRecallState: vi.fn().mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('stamp-1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -305,8 +304,7 @@ describe('AgentLongTermMemoryRecall refreshIndex', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
     (recall as { lastIndexedStamp: string }).lastIndexedStamp = 'stamp-1';
@@ -328,7 +326,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
       model: makeMockModel(),
-    }) as never;
+    }) as any;
     expect((recall as { pendingRecallOperationCount: number }).pendingRecallOperationCount).toBe(0);
   });
 
@@ -341,7 +339,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
       model: makeMockModel(),
-    }) as never;
+    }) as any;
     expect((recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince).toBeNull();
   });
 });
@@ -371,7 +369,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -380,8 +378,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     const result = await (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
       'test.op',
@@ -404,7 +401,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -413,8 +410,7 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     await expect(
       (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
@@ -437,7 +433,7 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
         recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
       }),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -446,7 +442,7 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-    }) as never;
+    }) as any;
 
     await expect(
       (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig(),
@@ -459,7 +455,7 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
         recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
       }),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -469,7 +465,7 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
       persistenceStore: persistence,
       model: makeMockModel(),
       readRuntimeMemorySettings: vi.fn().mockResolvedValue(null),
-    }) as never;
+    }) as any;
 
     await expect(
       (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig(),
@@ -482,7 +478,7 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
         recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
       }),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -501,7 +497,7 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
         ltmRecallScoreThreshold: 0.3,
         ltmRecallDocumentCount: 10,
       }),
-    }) as never;
+    }) as any;
 
     const config = await (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig();
     expect(config).toMatchObject({
@@ -531,7 +527,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -540,8 +536,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
       'test query',
@@ -563,7 +558,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -572,8 +567,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     await expect(
       (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace('test', {
@@ -595,7 +589,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -604,8 +598,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
       'test', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' },
@@ -632,7 +625,7 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -641,8 +634,7 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
       'test query',
@@ -683,7 +675,7 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
-    };
+    } as any;
     const recall = createAgentLongTermMemoryRecall({
       agentId: 'agent-1',
       agentWorkspacePath: '/tmp/ws',
@@ -692,8 +684,7 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
       model: makeMockModel(),
-      retrievalWorkspace: retrieval,
-    }) as never;
+    }) as any;
 
     const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
       'test query',
