@@ -44,18 +44,22 @@ vi.mock('../../../utils/id', () => ({
 function createMockStore() {
   return {
     createRoute: vi.fn(),
+    getRoute: vi.fn(),
     listRoutesByAgent: vi.fn(),
     deactivateRoute: vi.fn(),
     listEventsByAgent: vi.fn(),
     markProcessed: vi.fn(),
+    markFailed: vi.fn(),
   };
 }
 
 // --- HTTP server mock ---
+type MockRoute = { method: string; path: string; handler: unknown };
+
 function createMockHttpServer() {
-  const routes: unknown[] = [];
+  const routes: MockRoute[] = [];
   return {
-    registerRoute: vi.fn((route: unknown) => routes.push(route)),
+    registerRoute: vi.fn((route: MockRoute) => routes.push(route)),
     _routes: routes,
   };
 }
@@ -66,7 +70,7 @@ function parseBody(response: { status: number; body: string }) {
 }
 
 function getHandler(httpServer: ReturnType<typeof createMockHttpServer>, method: string, path: string) {
-  const match = httpServer._routes.find((r: unknown) => r.method === method && r.path === path);
+  const match = httpServer._routes.find((r) => r.method === method && r.path === path);
   if (!match) throw new Error(`Route ${method} ${path} not found in mock server`);
   return match.handler;
 }
@@ -96,45 +100,45 @@ describe('registerWebhookAdminRoutes', () => {
 
   describe('route registration', () => {
     it('registers POST /admin/webhooks/route/create', () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/route/create');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/route/create');
       expect(route).toBeDefined();
-      expect(route.method).toBe('POST');
+      expect((route as { method: string }).method).toBe('POST');
     });
 
     it('registers GET /admin/webhooks/routes', () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/routes');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/routes');
       expect(route).toBeDefined();
-      expect(route.method).toBe('GET');
+      expect((route as { method: string }).method).toBe('GET');
     });
 
     it('registers POST /admin/webhooks/route/deactivate', () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/route/deactivate');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/route/deactivate');
       expect(route).toBeDefined();
-      expect(route.method).toBe('POST');
+      expect((route as { method: string }).method).toBe('POST');
     });
 
     it('registers GET /admin/webhooks/events', () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/events');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/events');
       expect(route).toBeDefined();
-      expect(route.method).toBe('GET');
+      expect((route as { method: string }).method).toBe('GET');
     });
 
     it('registers POST /admin/webhooks/event/mark-processed', () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const route = httpServer._routes.find((r: unknown) => r.path === '/admin/webhooks/event/mark-processed');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const route = httpServer._routes.find((r) => r.path === '/admin/webhooks/event/mark-processed');
       expect(route).toBeDefined();
-      expect(route.method).toBe('POST');
+      expect((route as { method: string }).method).toBe('POST');
     });
   });
 
   describe('POST /admin/webhooks/route/create', () => {
     it('creates a webhook route and returns 201 with routeId and secret', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       store.createRoute.mockResolvedValueOnce({
         routeId: 'route-abc',
@@ -145,7 +149,7 @@ describe('registerWebhookAdminRoutes', () => {
         createdAt: Date.now(),
       });
 
-      const response = await handler(makeRequest({ agentId: 'agent-1', name: 'My Webhook' }));
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ agentId: 'agent-1', name: 'My Webhook' }));
 
       expect(response.status).toBe(201);
       const body = parseBody(response);
@@ -159,8 +163,8 @@ describe('registerWebhookAdminRoutes', () => {
     });
 
     it('passes createId() output into createHash to generate the secret', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       store.createRoute.mockImplementation(async (input: { agentId: string; name: string; secret: string }) => ({
         routeId: 'route-1',
@@ -171,7 +175,7 @@ describe('registerWebhookAdminRoutes', () => {
         createdAt: Date.now(),
       }));
 
-      const response = await handler(makeRequest({ agentId: 'agent-1', name: 'Test' }));
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ agentId: 'agent-1', name: 'Test' }));
       const body = parseBody(response);
 
       // Secret is the first 32 chars of the hex digest of 32 bytes of 0x61
@@ -184,8 +188,8 @@ describe('registerWebhookAdminRoutes', () => {
 
   describe('GET /admin/webhooks/routes', () => {
     it('returns 400 when agentId is missing', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       const req = { bodyText: '', path: '/admin/webhooks/routes', query: new URLSearchParams(), method: 'GET', headers: {} };
       const response = await handler(req);
@@ -195,8 +199,8 @@ describe('registerWebhookAdminRoutes', () => {
     });
 
     it('returns routes for a given agentId', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       store.listRoutesByAgent.mockResolvedValueOnce([
         { routeId: 'route-1', name: 'Webhook One', isActive: true, createdAt: 1000 },
@@ -221,12 +225,12 @@ describe('registerWebhookAdminRoutes', () => {
 
   describe('POST /admin/webhooks/route/deactivate', () => {
     it('deactivates a route and returns success', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       store.deactivateRoute.mockResolvedValueOnce(undefined);
 
-      const response = await handler(makeRequest({ routeId: 'route-xyz' }));
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ routeId: 'route-xyz' }));
 
       expect(response.status).toBe(200);
       expect(parseBody(response).success).toBe(true);
@@ -236,8 +240,8 @@ describe('registerWebhookAdminRoutes', () => {
 
   describe('GET /admin/webhooks/events', () => {
     it('returns 400 when agentId is missing', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       const req = { bodyText: '', path: '/admin/webhooks/events', query: new URLSearchParams(), method: 'GET', headers: {} };
       const response = await handler(req);
@@ -247,8 +251,8 @@ describe('registerWebhookAdminRoutes', () => {
     });
 
     it('returns events for a given agentId', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       store.listEventsByAgent.mockResolvedValueOnce([
         { eventId: 'evt-1', routeId: 'route-1', status: 'pending', receivedAt: 3000 },
@@ -273,12 +277,12 @@ describe('registerWebhookAdminRoutes', () => {
 
   describe('POST /admin/webhooks/event/mark-processed', () => {
     it('marks an event as processed and returns success', async () => {
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed') as (req: unknown) => Promise<{ status: number; body: string }>;
 
       store.markProcessed.mockResolvedValueOnce(undefined);
 
-      const response = await handler(makeRequest({ eventId: 'evt-123' }));
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ eventId: 'evt-123' }));
 
       expect(response.status).toBe(200);
       expect(parseBody(response).success).toBe(true);
@@ -288,9 +292,9 @@ describe('registerWebhookAdminRoutes', () => {
   describe('error handling', () => {
     it('returns 500 when createRoute throws', async () => {
       store.createRoute.mockRejectedValueOnce(new Error('DB constraint violation'));
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create');
-      const response = await handler(makeRequest({ agentId: 'agent-42', name: 'Test' }));
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (req: unknown) => Promise<{ status: number; body: string }>;
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ agentId: 'agent-42', name: 'Test' }));
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB constraint violation');
     });
@@ -298,8 +302,8 @@ describe('registerWebhookAdminRoutes', () => {
     it('forgeDebug is called on createRoute failure', async () => {
       const { forgeDebug } = await vi.importMock('@forge-runtime/core');
       store.createRoute.mockRejectedValueOnce(new Error('boom'));
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/create') as (req: unknown) => Promise<{ status: number; body: string }>;
       await handler(makeRequest({ agentId: 'agent-42', name: 'Test' }));
       expect(forgeDebug).toHaveBeenCalledWith(
         expect.objectContaining({ scope: 'admin', level: 'error' }),
@@ -308,8 +312,8 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('returns 500 when listRoutesByAgent throws', async () => {
       store.listRoutesByAgent.mockRejectedValueOnce(new Error('DB error'));
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/routes') as (req: unknown) => Promise<{ status: number; body: string }>;
       const req = { bodyText: '', path: '/admin/webhooks/routes', query: new URLSearchParams([['agentId', 'agent-42']]), method: 'GET', headers: {} };
       const response = await handler(req);
       expect(response.status).toBe(500);
@@ -317,17 +321,17 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('returns 500 when deactivateRoute throws', async () => {
       store.deactivateRoute.mockRejectedValueOnce(new Error('DB write error'));
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate');
-      const response = await handler(makeRequest({ routeId: 'route-xyz' }));
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/route/deactivate') as (req: unknown) => Promise<{ status: number; body: string }>;
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ routeId: 'route-xyz' }));
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB write error');
     });
 
     it('returns 500 when listEventsByAgent throws', async () => {
       store.listEventsByAgent.mockRejectedValueOnce(new Error('DB error'));
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events');
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'GET', '/admin/webhooks/events') as (req: unknown) => Promise<{ status: number; body: string }>;
       const req = { bodyText: '', path: '/admin/webhooks/events', query: new URLSearchParams([['agentId', 'agent-42']]), method: 'GET', headers: {} };
       const response = await handler(req);
       expect(response.status).toBe(500);
@@ -335,9 +339,9 @@ describe('registerWebhookAdminRoutes', () => {
 
     it('returns 500 when markProcessed throws', async () => {
       store.markProcessed.mockRejectedValueOnce(new Error('DB error'));
-      registerWebhookAdminRoutes(httpServer, store);
-      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed');
-      const response = await handler(makeRequest({ eventId: 'evt-123' }));
+      registerWebhookAdminRoutes(httpServer, store as unknown as Parameters<typeof registerWebhookAdminRoutes>[1]);
+      const handler = getHandler(httpServer, 'POST', '/admin/webhooks/event/mark-processed') as (req: unknown) => Promise<{ status: number; body: string }>;
+      const response = await (handler as (req: unknown) => Promise<{ status: number; body: string }>)(makeRequest({ eventId: 'evt-123' }));
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB error');
     });

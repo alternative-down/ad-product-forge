@@ -12,7 +12,7 @@ vi.mock('@forge-runtime/core', () => ({
 import { toolsToRuntimeActions } from '@forge-runtime/core';
 
 import { createInternalAgentTools } from './internal-agent-tools';
-import type { Database } from '../database/schema';
+import type { Database } from '../database/client';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';

@@ -309,8 +309,8 @@ describe('agent-runner-helpers', () => {
     it('truncates strings over 200 chars', () => {
       const long = 'a'.repeat(300);
       const result = formatAbsentErrorDetailValue(long);
-      expect(result.length).toBe(203); // 200 + '...'
-      expect(result.endsWith('...')).toBe(true);
+      expect(result!.length).toBe(203); // 200 + '...'
+      expect(result!.endsWith('...')).toBe(true);
     });
   });
 

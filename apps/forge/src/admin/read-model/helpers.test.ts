@@ -478,8 +478,8 @@ describe('mergeToolLogMessages', () => {
   });
 
   test('passes through messages without inputPartIndex', () => {
-    const messages = [{ role: 'user' as const, content: 'hello', parts: [] }];
-    expect(mergeToolLogMessages(messages)).toEqual(messages);
+    const messages = [{ role: 'user' as const, content: 'hello', parts: [] }] as unknown as { id: string; role: string; threadId: string; createdAt: string; parts: unknown[]; metadata?: unknown }[];
+    expect(mergeToolLogMessages(messages as Parameters<typeof mergeToolLogMessages>[0])).toEqual(messages);
   });
 
   test('does not merge when inputPartIndex differs', () => {
@@ -492,8 +492,8 @@ describe('mergeToolLogMessages', () => {
         role: 'assistant' as const,
         parts: [{ type: 'tool-call' as const, toolCall: { toolCallId: '2', toolName: 'b', input: { inputPartIndex: 1 } } }],
       },
-    ];
-    const result = mergeToolLogMessages(messages);
+    ] as unknown as { id: string; role: string; threadId: string; createdAt: string; parts: unknown[]; metadata?: unknown }[];
+    const result = mergeToolLogMessages(messages as Parameters<typeof mergeToolLogMessages>[0]);
     expect(result).toHaveLength(2);
   });
 });
@@ -588,6 +588,6 @@ describe('isTextPart', () => {
   });
 
   test('returns false for part with null text', () => {
-    expect(isTextPart({ type: 'text', text: null })).toBe(false);
+    expect(isTextPart({ type: 'text', text: undefined })).toBe(false);
   });
 });
