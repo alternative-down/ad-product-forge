@@ -14,7 +14,7 @@ export function toUint8Array(value: ArrayBuffer | Uint8Array | string): Uint8Arr
 export function toCommunicationAttachments(
   email: Email,
   providerMessageId: string,
-): type CommunicationFile[] {
+): CommunicationFile[] {
   return (email.attachments ?? []).map((attachment, index) => {
     const data = toUint8Array(attachment.content);
     return {
@@ -59,7 +59,7 @@ export function pruneRecentOutboundMessages(
     Array<{
       messageId: string;
       content: string;
-      attachments: type CommunicationFile[];
+      attachments: CommunicationFile[];
       createdAt: string;
       unread: boolean;
       authorId: string;
