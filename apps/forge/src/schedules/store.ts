@@ -220,7 +220,7 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ): Promise<boolean> {
-    let existing: typeof agentSchedules.$inferSelect | null | undefined;
+    let existing: AgentSchedule | null | undefined;
     try {
       existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
@@ -289,7 +289,7 @@ export function createAgentScheduleStore(db: Database) {
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
-    let existing: typeof agentSchedules.$inferSelect | null | undefined;
+    let existing: AgentSchedule | null | undefined;
     try {
       existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
@@ -400,7 +400,7 @@ export function createAgentScheduleStore(db: Database) {
   type StoredSchedule = Awaited<ReturnType<typeof listActiveSchedules>>[number];
 
   // --- helpers ---
-  function toScheduleRecord(row: typeof agentSchedules.$inferSelect): StoredSchedule {
+  function toScheduleRecord(row: AgentSchedule): StoredSchedule {
     return {
       scheduleId: row.id,
       agentId: row.agentId,
@@ -423,7 +423,7 @@ export function createAgentScheduleStore(db: Database) {
     };
   }
 
-  function toScheduleSummary(row: typeof agentSchedules.$inferSelect) {
+  function toScheduleSummary(row: AgentSchedule) {
     return {
       scheduleId: row.id,
       agentId: row.agentId,

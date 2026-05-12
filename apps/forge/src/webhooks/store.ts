@@ -5,8 +5,8 @@ import type {Database} from '../database/schema';
 import { webhookRoutes, webhookEvents } from '../database/schema';
 import { createId } from '../utils/id';
 
-export type WebhookRoute = typeof webhookRoutes.$inferSelect;
-export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type WebhookRoute = WebhookRoute;
+export type WebhookEvent = WebhookEvent;
 
 export function createWebhookStore(db: Database) {
   async function createRoute(input: {
