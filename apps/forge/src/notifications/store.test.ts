@@ -146,11 +146,11 @@ describe('createAgentNotificationStore', () => {
         content: 'Hello world',
       });
 
-      expect(result.agentId).toBe('agent_1');
-      expect(result.content).toBe('Hello world');
-      expect(result.id).toBeDefined();
-      expect(result.createdAt).toBeDefined();
-      expect(result.readAt).toBeNull();
+      expect((result as any).agentId).toBe('agent_1');
+      expect((result as any).content).toBe('Hello world');
+      expect((result as any).id).toBeDefined();
+      expect((result as any).createdAt).toBeDefined();
+      expect((result as any).readAt).toBeNull();
     });
 
     test('uses provided createdAt when given', async () => {
@@ -161,7 +161,7 @@ describe('createAgentNotificationStore', () => {
         createdAt: ts,
       });
 
-      expect(result.createdAt).toBe(ts);
+      expect((result as any).createdAt).toBe(ts);
     });
 
     test('makes notification available via findMany', async () => {
@@ -187,7 +187,7 @@ describe('createAgentNotificationStore', () => {
       const result = await store.listNotifications({ agentId: 'agent_1', limit: 10 });
 
       expect(result).toHaveLength(3);
-      expect(result.map((n) => n.content)).toEqual(['Third', 'Second', 'First']);
+      expect(result.map((n: any) => n.content)).toEqual(['Third', 'Second', 'First']);
     });
 
     test('respects limit', async () => {
