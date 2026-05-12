@@ -56,7 +56,7 @@ describe('RuntimeActionRegistry', () => {
       });
 
       expect(result.name).toBe('greet');
-      expect(result.output.greeting).toBe('Hello, Alice');
+      expect((result.output as { greeting: string }).greeting).toBe('Hello, Alice');
     });
 
     it('throws when executing unknown action', async () => {
@@ -97,7 +97,7 @@ describe('RuntimeActionRegistry', () => {
         inputSchema: z.object({}),
         parseInput: (input: Record<string, unknown>) => ({
           parsed: String(input['raw']),
-        }),
+        }) as Record<string, unknown>,
         execute: async (input) => input,
       });
 
