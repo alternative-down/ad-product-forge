@@ -160,7 +160,7 @@ describe('createAppProvisioningOps', () => {
         'agent-new',
         expect.objectContaining({ status: 'pending' }),
       );
-      expect(ctx.opsRouting.registerAgentRoutes).toHaveBeenCalledWith('agent-new');
+      expect((ctx as any).opsRouting.registerAgentRoutes).toHaveBeenCalledWith('agent-new');
     });
 
     it('builds provisioning with pending credentials', async () => {
@@ -169,11 +169,11 @@ describe('createAppProvisioningOps', () => {
 
       const result = await ops.createAgentApp({ agentId: 'agent-test', agentName: 'Test' });
 
-      expect(ctx.opsRouting.buildProvisioning).toHaveBeenCalledWith(
+      expect((ctx as any).opsRouting.buildProvisioning).toHaveBeenCalledWith(
         'agent-test',
         expect.objectContaining({ status: 'pending' }),
       );
-      expect(result.provisioning).toBe(true);
+      expect((result as any).provisioning).toBe(true);
     });
 
     it('logs error on failure', async () => {
@@ -207,7 +207,7 @@ describe('createAppProvisioningOps', () => {
 
       const result = await ops.getAgentProvisioning('agent-1');
 
-      expect(ctx.opsRouting.buildProvisioning).toHaveBeenCalledWith('agent-1', creds);
+      expect((ctx as any).opsRouting.buildProvisioning).toHaveBeenCalledWith('agent-1', creds);
       expect(result).toEqual(expect.objectContaining({ provisioning: true }));
     });
 
@@ -220,7 +220,7 @@ describe('createAppProvisioningOps', () => {
 
       const result = await ops.getAgentProvisioning('agent-unconfigured');
 
-      expect(ctx.opsRouting.buildProvisioning).toHaveBeenCalledWith(
+      expect((ctx as any).opsRouting.buildProvisioning).toHaveBeenCalledWith(
         'agent-unconfigured',
         expect.objectContaining({ status: 'pending' }),
       );
@@ -235,7 +235,7 @@ describe('createAppProvisioningOps', () => {
 
       await expect(ops.updateAgentManifestConfig({
         agentId: 'agent-1',
-        manifestConfig: { permissions: [] },
+        manifestConfig: { permissions: [] } as any,
       })).rejects.toThrow('no GitHub credentials to update');
 
       expect(mockForgeDebug).toHaveBeenCalled();
@@ -246,13 +246,13 @@ describe('createAppProvisioningOps', () => {
     });
 
     it('saves updated credentials when existing found', async () => {
-      const existing = { status: 'active' as const, appId: 1, installationId: 1, state: 'old', appName: 'Old', manifestConfig: { permissions: [] }, createdAt: Date.now() };
+      const existing = { status: 'active' as const, appId: 1, installationId: 1, state: 'old', appName: 'Old', manifestConfig: { permissions: [] } as any, createdAt: Date.now() };
       const { ctx, mockSaveCredentials } = makeMockCtx({ credentialsValue: existing });
       const ops = createAppProvisioningOps(ctx as any);
 
       await ops.updateAgentManifestConfig({
         agentId: 'agent-1',
-        manifestConfig: { permissions: ['repo'] },
+        manifestConfig: { permissions: ['repo'] } as any,
       });
 
       expect(mockSaveCredentials).toHaveBeenCalledWith('agent-1', expect.objectContaining({ status: 'active' }));
@@ -265,7 +265,7 @@ describe('createAppProvisioningOps', () => {
 
       await expect(ops.updateAgentManifestConfig({
         agentId: 'agent-1',
-        manifestConfig: {},
+        manifestConfig: {} as any,
       })).rejects.toThrow('Config error');
       expect(mockForgeDebug).toHaveBeenCalledWith(
         expect.objectContaining({ level: 'error', message: expect.stringContaining('updateAgentManifestConfig failed') }),
