@@ -2,7 +2,7 @@
  * email-account helpers — extracted from createEmailProvider for testability.
  * These are pure/pure-ish functions that don't close over provider state.
  */
-import type { CommunicationFile } from '@forge-runtime/core';
+import { forgeDebug, type CommunicationFile } from '@forge-runtime/core';
 import type { Email } from 'postal-mime';
 
 export function toUint8Array(value: ArrayBuffer | Uint8Array | string): Uint8Array {
