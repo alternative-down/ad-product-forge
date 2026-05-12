@@ -75,7 +75,7 @@ describe('registerFinanceWriteRoutes', () => {
   it('registers all 5 routes', () => {
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     expect(mockServer.registerRoute).toHaveBeenCalledTimes(5);
@@ -85,7 +85,7 @@ describe('registerFinanceWriteRoutes', () => {
   it('registers investment/create route as POST', () => {
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     const route = mockServer.routes.find(r => r.path === '/admin/finance/investment/create');
@@ -96,7 +96,7 @@ describe('registerFinanceWriteRoutes', () => {
   it('registers payable/create route as POST', () => {
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     const route = mockServer.routes.find(r => r.path === '/admin/finance/payable/create');
@@ -107,7 +107,7 @@ describe('registerFinanceWriteRoutes', () => {
   it('registers ledger/post route as POST', () => {
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     const route = mockServer.routes.find(r => r.path === '/admin/finance/ledger/post');
@@ -118,7 +118,7 @@ describe('registerFinanceWriteRoutes', () => {
   it('registers ledger/cancel route as POST', () => {
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     const route = mockServer.routes.find(r => r.path === '/admin/finance/ledger/cancel');
@@ -129,7 +129,7 @@ describe('registerFinanceWriteRoutes', () => {
   it('registers recurring-payable/set-active route as POST', () => {
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     const route = mockServer.routes.find(r => r.path === '/admin/finance/recurring-payable/set-active');
@@ -152,7 +152,7 @@ describe('POST /admin/finance/investment/create — handler', () => {
 
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     handler = mockServer.routes.find(r => r.path === '/admin/finance/investment/create')!.handler as typeof handler;
@@ -187,7 +187,7 @@ describe('POST /admin/finance/investment/create — handler', () => {
         effectiveAt: expect.any(Number),
       }),
     );
-    const call = mockCompanyCash.recordCashIn.mock.calls[0][0];
+    const call = (mockCompanyCash.recordCashIn.mock.calls as any)[0][0];
     expect(call.effectiveAt).toBeGreaterThan(0);
   });
 
@@ -214,7 +214,7 @@ describe('POST /admin/finance/payable/create — handler', () => {
 
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     handler = mockServer.routes.find(r => r.path === '/admin/finance/payable/create')!.handler as typeof handler;
@@ -338,7 +338,7 @@ describe('POST /admin/finance/ledger/post — handler', () => {
 
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     handler = mockServer.routes.find(r => r.path === '/admin/finance/ledger/post')!.handler as typeof handler;
@@ -385,7 +385,7 @@ describe('POST /admin/finance/ledger/cancel — handler', () => {
 
     registerFinanceWriteRoutes(mockServer, {
       companyCash: mockCompanyCash,
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     handler = mockServer.routes.find(r => r.path === '/admin/finance/ledger/cancel')!.handler as typeof handler;
@@ -418,7 +418,7 @@ describe('POST /admin/finance/recurring-payable/set-active — handler', () => {
 
     registerFinanceWriteRoutes(mockServer, {
       companyCash: makeMockCompanyCash(),
-      companyPayables: mockCompanyPayables,
+      companyPayables: mockCompanyPayables as any,
     });
 
     handler = mockServer.routes.find(r => r.path === '/admin/finance/recurring-payable/set-active')!.handler as typeof handler;
