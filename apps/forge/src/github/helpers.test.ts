@@ -66,7 +66,7 @@ describe('normalizeGitHubAppCredentials', () => {
       webhookSecret: 'webhook',
       manifestConfig: { permissions: { issues: true }, events: { push: false } },
     };
-    const result = normalizeGitHubAppCredentials(raw);
+    const result = normalizeGitHubAppCredentials(raw as any);
     expect(result.manifestConfig.permissions.issues).toBe(true);
     expect(result.manifestConfig.permissions.contents).toBe(
       DEFAULT_GITHUB_APP_MANIFEST_CONFIG.permissions.contents,
@@ -124,7 +124,7 @@ describe('buildManifestPermissions', () => {
 
   it('maps false permissions to read', () => {
     const perms = buildManifestPermissions({
-      permissions: { administration: false, contents: false, issues: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
+      permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
       events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
     });
     expect(perms.administration).toBe('read');
@@ -134,7 +134,7 @@ describe('buildManifestPermissions', () => {
 
   it('maps true permissions to write', () => {
     const perms = buildManifestPermissions({
-      permissions: { administration: true, contents: true, issues: true, organization_projects: true, pull_requests: true, repository_projects: true, workflows: true },
+      permissions: { administration: true, contents: true, issues: true, metadata: true, organization_projects: true, pull_requests: true, repository_projects: true, workflows: true },
       events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
     });
     expect(perms.administration).toBe('write');
@@ -147,7 +147,7 @@ describe('buildManifestPermissions', () => {
 describe('buildManifestEvents', () => {
   it('returns only enabled events', () => {
     const events = buildManifestEvents({
-      permissions: { administration: false, contents: false, issues: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
+      permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
       events: {
         push: true,
         pull_request: true,
@@ -167,7 +167,7 @@ describe('buildManifestEvents', () => {
 
   it('returns empty array when all events are false', () => {
     const events = buildManifestEvents({
-      permissions: { administration: false, contents: false, issues: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
+      permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
       events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
     });
     expect(events).toEqual([]);
@@ -176,7 +176,7 @@ describe('buildManifestEvents', () => {
 
 // --- isGitHubSelfEvent ---
 describe('isGitHubSelfEvent', () => {
-  const activeCredentials = {
+  const activeCredentials: any = {
     status: 'active' as const,
     appId: 1,
     appSlug: 'my-agent-app',
