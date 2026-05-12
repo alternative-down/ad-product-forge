@@ -231,258 +231,258 @@ describe('database schema', () => {
 
   describe('types are exported and instantiable', () => {
     it('Agent type', () => {
-      const a: Agent = { id: 'a1', roleId: 'r1', name: 'Test', kind: 'fullstack', status: 'active', createdAt: 0, updatedAt: 0 };
+      const a: Agent = { id: 'a1', name: 'Test', description: null, roleId: 'r1', modelProfileId: 'mp1', omModelProfileId: 'mp1', instructions: '', executionState: 'idle', lastExecutionError: null, lastExecutionErrorAt: null, workspaceAutoSync: 1, workspaceBm25: 1, workspaceEmbedder: 'default', workspaceFilesystem: null, workspaceSkills: null, workspaceSandbox: null, createdAt: 0, updatedAt: 0 };
       expect(a.name).toBe('Test');
     });
 
     it('NewAgent type', () => {
-      const a: NewAgent = { roleId: 'r1', name: 'New', kind: 'fullstack', status: 'active' };
-      expect(a.kind).toBe('fullstack');
+      const a: NewAgent = { id: 'a1', name: 'New', description: null, roleId: 'r1', modelProfileId: 'mp1', omModelProfileId: 'mp1', instructions: '', executionState: 'idle', workspaceAutoSync: 1, workspaceBm25: 1, workspaceEmbedder: 'default', workspaceFilesystem: null, workspaceSkills: null, workspaceSandbox: null, lastExecutionError: null, lastExecutionErrorAt: null, createdAt: 0, updatedAt: 0 };
+      expect(a.name).toBe('New');
     });
 
     it('AgentRole type', () => {
-      const r: AgentRole = { id: 'r1', name: 'Developer', description: 'A dev role', kind: 'fullstack', createdAt: 0, updatedAt: 0 };
-      expect(r.kind).toBe('fullstack');
+      const r: AgentRole = { id: 'r1', name: 'Developer', description: 'A dev role', createdAt: 0, updatedAt: 0 };
+      expect(r.name).toBe('Developer');
     });
 
     it('NewAgentRole type', () => {
-      const r: NewAgentRole = { name: 'Dev', description: 'desc', kind: 'fullstack' };
+      const r: NewAgentRole = { id: 'r1', name: 'Dev', description: 'desc', createdAt: 0, updatedAt: 0 };
       expect(r.name).toBe('Dev');
     });
 
     it('RoleToolPermission type', () => {
-      const p: RoleToolPermission = { id: 'p1', roleId: 'r1', tool: 'code_edit', createdAt: 0, updatedAt: 0 };
-      expect(p.tool).toBe('code_edit');
+      const p: RoleToolPermission = { roleId: 'r1', toolId: 'code_edit', createdAt: 0, updatedAt: 0 };
+      expect(p.toolId).toBe('code_edit');
     });
 
     it('NewRoleToolPermission type', () => {
-      const p: NewRoleToolPermission = { roleId: 'r1', tool: 'read' };
-      expect(p.tool).toBe('read');
+      const p: NewRoleToolPermission = { roleId: 'r1', toolId: 'read', createdAt: 0, updatedAt: 0 };
+      expect(p.toolId).toBe('read');
     });
 
     it('RoleWorkflowPermission type', () => {
-      const p: RoleWorkflowPermission = { id: 'wp1', roleId: 'r1', workflow: 'deploy', createdAt: 0, updatedAt: 0 };
-      expect(p.workflow).toBe('deploy');
+      const p: RoleWorkflowPermission = { roleId: 'r1', workflowId: 'deploy', createdAt: 0, updatedAt: 0 };
+      expect(p.workflowId).toBe('deploy');
     });
 
     it('NewRoleWorkflowPermission type', () => {
-      const p: NewRoleWorkflowPermission = { roleId: 'r1', workflow: 'test' };
-      expect(p.workflow).toBe('test');
+      const p: NewRoleWorkflowPermission = { roleId: 'r1', workflowId: 'test', createdAt: 0, updatedAt: 0 };
+      expect(p.workflowId).toBe('test');
     });
 
     it('SystemSettings type', () => {
-      const s: SystemSettings = { id: 's1', key: 'mode', value: 'prod', createdAt: 0, updatedAt: 0 };
-      expect(s.key).toBe('mode');
+      const s: SystemSettings = { id: 's1', companyName: 'Acme', companyContext: 'context', stepDelayEnabled: 1, communicationDmFlushingEnabled: 1, communicationGroupFlushingEnabled: 1, memoryLastMessagesFullEnabled: 0, memoryLastMessagesCount: 0, tokenCountFilterEnabled: 0, tokenCountFilterLimit: 0, checkpointedOmEnabled: 0, checkpointedOmTotalContextTokens: 0, checkpointedOmRecentRawTokens: 0, checkpointedOmRawObservationBatchTokens: 0, checkpointedOmObservationReflectionBatchTokens: 0, checkpointedOmObservationSupportTokens: 0, checkpointedOmReflectionSupportTokens: 0, omObservationMessageTokens: 0, omObservationBufferTokens: 0, omObservationBufferActivation: 0, omObservationPreviousObserverTokens: 0, omReflectionObservationTokens: 0, omReflectionBufferActivation: 0, ltmRecallSearchMode: 'vector', ltmRecallWorkspaceTopK: 0, ltmRecallGraphTopK: 0, ltmRecallGraphThreshold: 0, ltmRecallGraphRandomWalkSteps: 0, ltmRecallGraphIncludeSources: 0, ltmRecallScoreThreshold: 0, ltmRecallDocumentCount: 0, updatedAt: 0 };
+      expect(s.companyName).toBe('Acme');
     });
 
     it('NewSystemSettings type', () => {
-      const s: NewSystemSettings = { key: 'env', value: 'prod' };
-      expect(s.value).toBe('prod');
+      const s: NewSystemSettings = { id: 's1', companyName: 'Acme', companyContext: 'context', stepDelayEnabled: 1, communicationDmFlushingEnabled: 1, communicationGroupFlushingEnabled: 1, memoryLastMessagesFullEnabled: 0, memoryLastMessagesCount: 0, tokenCountFilterEnabled: 0, tokenCountFilterLimit: 0, checkpointedOmEnabled: 0, checkpointedOmTotalContextTokens: 0, checkpointedOmRecentRawTokens: 0, checkpointedOmRawObservationBatchTokens: 0, checkpointedOmObservationReflectionBatchTokens: 0, checkpointedOmObservationSupportTokens: 0, checkpointedOmReflectionSupportTokens: 0, omObservationMessageTokens: 0, omObservationBufferTokens: 0, omObservationBufferActivation: 0, omObservationPreviousObserverTokens: 0, omReflectionObservationTokens: 0, omReflectionBufferActivation: 0, ltmRecallSearchMode: 'vector', ltmRecallWorkspaceTopK: 0, ltmRecallGraphTopK: 0, ltmRecallGraphThreshold: 0, ltmRecallGraphRandomWalkSteps: 0, ltmRecallGraphIncludeSources: 0, ltmRecallScoreThreshold: 0, ltmRecallDocumentCount: 0, updatedAt: 0 };
+      expect(s.companyContext).toBe('context');
     });
 
     it('AgentExecutionContract type', () => {
-      const c: AgentExecutionContract = { id: 'c1', agentId: 'a1', title: 'Task', status: 'active', createdAt: 0, updatedAt: 0 };
-      expect(c.title).toBe('Task');
+      const c: AgentExecutionContract = { id: 'c1', agentId: 'a1', isActive: 1, budgetUsd: 100, autoRenew: 1, fundedAt: null, startsAt: 0, endsAt: 100, createdAt: 0 };
+      expect(c.budgetUsd).toBe(100);
     });
 
     it('NewAgentExecutionContract type', () => {
-      const c: NewAgentExecutionContract = { agentId: 'a1', title: 'New', status: 'active' };
+      const c: NewAgentExecutionContract = { id: 'c1', agentId: 'a1', isActive: 1, budgetUsd: 100, autoRenew: 1, fundedAt: null, startsAt: 0, endsAt: 100, createdAt: 0 };
       expect(c.agentId).toBe('a1');
     });
 
     it('AgentExecutionStep type', () => {
-      const s: AgentExecutionStep = { id: 'es1', contractId: 'c1', stepIndex: 1, outcome: 'success', createdAt: 0, updatedAt: 0 };
-      expect(s.stepIndex).toBe(1);
+      const s: AgentExecutionStep = { id: 'es1', contractId: 'c1', agentId: 'a1', llmProfileId: 'mp1', modelKey: 'gpt-4', kind: 'generate', inputTokens: 100, cachedInputTokens: 0, outputTokens: 50, inputPerMillionUsd: 1, inputCachePerMillionUsd: 0, outputPerMillionUsd: 3, contractCostMultiplier: 1, costUsd: 0.0025, createdAt: 0, updatedAt: 0 };
+      expect(s.modelKey).toBe('gpt-4');
     });
 
     it('NewAgentExecutionStep type', () => {
-      const s: NewAgentExecutionStep = { contractId: 'c1', stepIndex: 0, outcome: 'pending' };
-      expect(s.outcome).toBe('pending');
+      const s: NewAgentExecutionStep = { id: 'es1', contractId: 'c1', agentId: 'a1', llmProfileId: 'mp1', modelKey: 'gpt-4', kind: 'generate', inputTokens: 100, cachedInputTokens: 0, outputTokens: 50, inputPerMillionUsd: 1, inputCachePerMillionUsd: 0, outputPerMillionUsd: 3, contractCostMultiplier: 1, costUsd: 0.0025, createdAt: 0, updatedAt: 0 };
+      expect(s.costUsd).toBe(0.0025);
     });
 
     it('AgentHomeMetricSnapshot type', () => {
-      const m: AgentHomeMetricSnapshot = { id: 'm1', agentId: 'a1', metric: 'tasks_done', value: 10, period: 'daily', recordedAt: 0, createdAt: 0 };
-      expect(m.metric).toBe('tasks_done');
+      const m: AgentHomeMetricSnapshot = { id: 'm1', agentId: 'a1', stepId: 'es1', stepCreatedAt: 0, snapshot: '{"value":10}', createdAt: 0 };
+      expect(m.snapshot).toBeDefined();
     });
 
     it('NewAgentHomeMetricSnapshot type', () => {
-      const m: NewAgentHomeMetricSnapshot = { agentId: 'a1', metric: 'speed', value: 5, period: 'hourly' };
-      expect(m.value).toBe(5);
+      const m: NewAgentHomeMetricSnapshot = { id: 'm1', agentId: 'a1', stepId: 'es1', stepCreatedAt: 0, snapshot: '{"value":5}', createdAt: 0 };
+      expect(m.snapshot).toBeDefined();
     });
 
     it('AgentCheckpointedOmState type', () => {
-      const s: AgentCheckpointedOmState = { id: 'cs1', agentId: 'a1', checkpointKey: 'cp1', stateJson: '{}', createdAt: 0, updatedAt: 0 };
-      expect(s.checkpointKey).toBe('cp1');
+      const s: AgentCheckpointedOmState = { agentId: 'a1', threadId: 't1', resourceId: 'r1', state: '{}', createdAt: 0, updatedAt: 0 };
+      expect(s.state).toBe('{}');
     });
 
     it('NewAgentCheckpointedOmState type', () => {
-      const s: NewAgentCheckpointedOmState = { agentId: 'a1', checkpointKey: 'cp', stateJson: '{}' };
-      expect(s.agentId).toBe('a1');
+      const s: NewAgentCheckpointedOmState = { agentId: 'a1', threadId: 't1', resourceId: 'r1', state: '{}', createdAt: 0, updatedAt: 0 };
+      expect(s.state).toBe('{}');
     });
 
     it('AgentLongTermMemoryState type', () => {
-      const s: AgentLongTermMemoryState = { id: 'lm1', agentId: 'a1', content: 'Important', createdAt: 0, updatedAt: 0 };
-      expect(s.content).toBe('Important');
+      const s: AgentLongTermMemoryState = { agentId: 'a1', state: '{"content":"Important"}', recallIndexStamp: null, createdAt: 0, updatedAt: 0 };
+      expect(s.state).toBeDefined();
     });
 
     it('NewAgentLongTermMemoryState type', () => {
-      const s: NewAgentLongTermMemoryState = { agentId: 'a1', content: 'Data' };
-      expect(s.content).toBe('Data');
+      const s: NewAgentLongTermMemoryState = { agentId: 'a1', state: '{"content":"Data"}', recallIndexStamp: null, createdAt: 0, updatedAt: 0 };
+      expect(s.state).toBeDefined();
     });
 
     it('AgentLongTermMemoryRecallState type', () => {
-      const s: AgentLongTermMemoryRecallState = { id: 'lr1', agentId: 'a1', memoryId: 'lm1', relevance: 0.9, createdAt: 0, updatedAt: 0 };
-      expect(s.relevance).toBe(0.9);
+      const s: AgentLongTermMemoryRecallState = { agentId: 'a1', snapshot: '{"content":"Data"}', threadId: 't1', resourceId: 'r1', history: null, createdAt: 0, updatedAt: 0 };
+      expect(s.snapshot).toBeDefined();
     });
 
     it('NewAgentLongTermMemoryRecallState type', () => {
-      const s: NewAgentLongTermMemoryRecallState = { agentId: 'a1', memoryId: 'lm1', relevance: 0.5 };
-      expect(s.memoryId).toBe('lm1');
+      const s: NewAgentLongTermMemoryRecallState = { agentId: 'a1', snapshot: '{"content":"Data"}', threadId: 't1', resourceId: 'r1', history: null, createdAt: 0, updatedAt: 0 };
+      expect(s.snapshot).toBeDefined();
     });
 
     it('AgentNotification type', () => {
-      const n: AgentNotification = { id: 'n1', agentId: 'a1', message: 'Alert', kind: 'info', createdAt: 0, updatedAt: 0 };
-      expect(n.kind).toBe('info');
+      const n: AgentNotification = { id: 'n1', agentId: 'a1', content: 'Alert', readAt: null, createdAt: 0, updatedAt: 0 };
+      expect(n.content).toBe('Alert');
     });
 
     it('NewAgentNotification type', () => {
-      const n: NewAgentNotification = { agentId: 'a1', message: 'Hi', kind: 'info' };
-      expect(n.message).toBe('Hi');
+      const n: NewAgentNotification = { id: 'n1', agentId: 'a1', content: 'Alert', readAt: null, createdAt: 0, updatedAt: 0 };
+      expect(n.content).toBe('Alert');
     });
 
     it('AgentSchedule type', () => {
-      const s: AgentSchedule = { id: 'sch1', agentId: 'a1', cronExpression: '0 9 * * *', isActive: true, createdAt: 0, updatedAt: 0 };
+      const s: AgentSchedule = { id: 'sch1', agentId: 'a1', name: 'Schedule', description: null, creatorId: null, isActive: 1, kind: 'cron', scheduleType: 'cron', timezone: 'UTC', cronExpression: '0 9 * * *', nextTriggerAt: null, content: '', scheduledDate: null, wakeWhenRunning: 0, lastTriggeredAt: null, createdAt: 0, updatedAt: 0 };
       expect(s.cronExpression).toBe('0 9 * * *');
     });
 
     it('NewAgentSchedule type', () => {
-      const s: NewAgentSchedule = { agentId: 'a1', cronExpression: '0 8 * * *', isActive: true };
-      expect(s.isActive).toBe(true);
+      const s: NewAgentSchedule = { id: 'sch1', agentId: 'a1', name: 'Schedule', description: null, creatorId: null, isActive: 1, kind: 'cron', scheduleType: 'cron', timezone: 'UTC', cronExpression: '0 8 * * *', nextTriggerAt: null, content: '', scheduledDate: null, wakeWhenRunning: 0, lastTriggeredAt: null, createdAt: 0, updatedAt: 0 };
+      expect(s.cronExpression).toBe('0 8 * * *');
     });
 
     it('LlmProfile type', () => {
-      const p: LlmProfile = { id: 'lp1', name: 'GPT-4', modelName: 'gpt-4', provider: 'openai', createdAt: 0, updatedAt: 0 };
-      expect(p.provider).toBe('openai');
+      const p: LlmProfile = { id: 'lp1', name: 'GPT-4', modelKey: 'gpt-4', baseUrl: null, encryptedApiKey: 'key', contractCostMultiplier: 1, isEnabled: 1, createdAt: 0, updatedAt: 0 };
+      expect(p.modelKey).toBe('gpt-4');
     });
 
     it('NewLlmProfile type', () => {
-      const p: NewLlmProfile = { name: 'Claude', modelName: 'claude-3', provider: 'anthropic' };
-      expect(p.modelName).toBe('claude-3');
+      const p: NewLlmProfile = { id: 'lp1', name: 'Claude', modelKey: 'claude-3', baseUrl: null, encryptedApiKey: 'key', contractCostMultiplier: 1, isEnabled: 1, createdAt: 0, updatedAt: 0 };
+      expect(p.modelKey).toBe('claude-3');
     });
 
     it('SystemLlmDefaults type', () => {
-      const d: SystemLlmDefaults = { id: 'd1', profileId: 'lp1', createdAt: 0, updatedAt: 0 };
-      expect(d.profileId).toBe('lp1');
+      const d: SystemLlmDefaults = { id: 'd1', primaryProfileId: 'lp1', omProfileId: 'lp2', hiringRhProfileId: 'lp3', createdAt: 0, updatedAt: 0 };
+      expect(d.primaryProfileId).toBe('lp1');
     });
 
     it('NewSystemLlmDefaults type', () => {
-      const d: NewSystemLlmDefaults = { profileId: 'lp2' };
-      expect(d.profileId).toBe('lp2');
+      const d: NewSystemLlmDefaults = { id: 'd1', primaryProfileId: 'lp1', omProfileId: 'lp2', hiringRhProfileId: 'lp3', createdAt: 0, updatedAt: 0 };
+      expect(d.omProfileId).toBe('lp2');
     });
 
     it('AgentProvider type', () => {
-      const p: AgentProvider = { id: 'ap1', name: 'Forge', description: 'Test', createdAt: 0, updatedAt: 0 };
-      expect(p.name).toBe('Forge');
+      const p: AgentProvider = { id: 'ap1', agentId: 'a1', providerType: 'anthropic', encryptedCredentials: 'key', createdAt: 0 };
+      expect(p.providerType).toBe('anthropic');
     });
 
     it('NewAgentProvider type', () => {
-      const p: NewAgentProvider = { name: 'New', description: 'Provider' };
-      expect(p.name).toBe('New');
+      const p: NewAgentProvider = { id: 'ap1', agentId: 'a1', providerType: 'openai', encryptedCredentials: 'key', createdAt: 0 };
+      expect(p.providerType).toBe('openai');
     });
 
     it('SystemIntegration type', () => {
-      const i: SystemIntegration = { id: 'si1', kind: 'migadu', config: {}, createdAt: 0, updatedAt: 0 };
-      expect(i.kind).toBe('migadu');
+      const i: SystemIntegration = { providerType: 'migadu', encryptedConfig: '{}', isEnabled: 1, createdAt: 0, updatedAt: 0 };
+      expect(i.providerType).toBe('migadu');
     });
 
     it('NewSystemIntegration type', () => {
-      const i: NewSystemIntegration = { kind: 'coolify', config: {} };
-      expect(i.kind).toBe('coolify');
+      const i: NewSystemIntegration = { providerType: 'coolify', encryptedConfig: '{}', createdAt: 0, updatedAt: 0 };
+      expect(i.providerType).toBe('coolify');
     });
 
     it('InternalChatAccount type', () => {
-      const a: InternalChatAccount = { id: 'ca1', targetKey: 'key1', provider: 'slack', displayName: 'Test', createdAt: 0, updatedAt: 0 };
-      expect(a.provider).toBe('slack');
+      const a: InternalChatAccount = { id: 'ca1', slug: 'key1', displayName: 'Test', description: null, agentId: null, createdAt: 0, updatedAt: 0 };
+      expect(a.displayName).toBe('Test');
     });
 
     it('NewInternalChatAccount type', () => {
-      const a: NewInternalChatAccount = { targetKey: 'key2', provider: 'discord', displayName: 'Bot' };
-      expect(a.provider).toBe('discord');
+      const a: NewInternalChatAccount = { id: 'ca1', slug: 'key2', displayName: 'Bot', description: null, agentId: null, createdAt: 0, updatedAt: 0 };
+      expect(a.displayName).toBe('Bot');
     });
 
     it('InternalChatConversation type', () => {
-      const c: InternalChatConversation = { id: 'cv1', provider: 'slack', targetKey: 'ch1', name: 'general', isGroup: false, createdAt: 0, updatedAt: 0 };
-      expect(c.name).toBe('general');
+      const c: InternalChatConversation = { id: 'cv1', type: 'dm', name: null, createdByAccountId: 'ca1', createdAt: 0, updatedAt: 0 };
+      expect(c.type).toBe('dm');
     });
 
     it('NewInternalChatConversation type', () => {
-      const c: NewInternalChatConversation = { provider: 'discord', targetKey: 'ch2', name: 'random', isGroup: true };
-      expect(c.isGroup).toBe(true);
+      const c: NewInternalChatConversation = { id: 'cv1', type: 'group', name: 'random', createdByAccountId: 'ca1', createdAt: 0, updatedAt: 0 };
+      expect(c.name).toBe('random');
     });
 
     it('InternalChatConversationMember type', () => {
-      const m: InternalChatConversationMember = { id: 'cm1', conversationId: 'cv1', accountId: 'ca1', role: 'member', createdAt: 0, updatedAt: 0 };
+      const m: InternalChatConversationMember = { accountId: 'ca1', conversationId: 'cv1', role: 'member', createdAt: 0 };
       expect(m.role).toBe('member');
     });
 
     it('NewInternalChatConversationMember type', () => {
-      const m: NewInternalChatConversationMember = { conversationId: 'cv1', accountId: 'ca1', role: 'admin' };
+      const m: NewInternalChatConversationMember = { accountId: 'ca1', conversationId: 'cv1', role: 'admin', createdAt: 0 };
       expect(m.role).toBe('admin');
     });
 
     it('InternalChatMessage type', () => {
-      const m: InternalChatMessage = { id: 'msg1', conversationId: 'cv1', senderId: 'ca1', content: 'Hello', contentText: 'Hello', createdAt: 0, updatedAt: 0 };
+      const m: InternalChatMessage = { id: 'msg1', conversationId: 'cv1', authorAccountId: 'ca1', content: 'Hello', replyToMessageId: null, createdAt: 0 };
       expect(m.content).toBe('Hello');
     });
 
     it('NewInternalChatMessage type', () => {
-      const m: NewInternalChatMessage = { conversationId: 'cv1', senderId: 'ca1', content: 'Hi', contentText: 'Hi' };
-      expect(m.contentText).toBe('Hi');
+      const m: NewInternalChatMessage = { id: 'msg1', conversationId: 'cv1', authorAccountId: 'ca1', content: 'Hi', replyToMessageId: null, createdAt: 0 };
+      expect(m.content).toBe('Hi');
     });
 
     it('InternalChatMessageRead type', () => {
-      const r: InternalChatMessageRead = { id: 'mr1', messageId: 'msg1', accountId: 'ca1', readAt: 0, createdAt: 0, updatedAt: 0 };
-      expect(r.messageId).toBe('msg1');
+      const r: InternalChatMessageRead = { agentId: 'a1', messageId: 'msg1', readAt: 0 };
+      expect(r.readAt).toBe(0);
     });
 
     it('NewInternalChatMessageRead type', () => {
-      const r: NewInternalChatMessageRead = { messageId: 'msg2', accountId: 'ca1', readAt: 0 };
-      expect(r.messageId).toBe('msg2');
+      const r: NewInternalChatMessageRead = { agentId: 'a1', messageId: 'msg1', readAt: 0 };
+      expect(r.readAt).toBe(0);
     });
 
     it('InternalChatMessageAttachment type', () => {
-      const a: InternalChatMessageAttachment = { id: 'ma1', messageId: 'msg1', fileName: 'doc.pdf', mimeType: 'application/pdf', fileSizeBytes: 1024, storagePath: '/files/doc.pdf', createdAt: 0, updatedAt: 0 };
-      expect(a.fileName).toBe('doc.pdf');
+      const a: InternalChatMessageAttachment = { id: 'ma1', messageId: 'msg1', name: 'doc.pdf', data: Buffer.from('data'), sizeBytes: 1024, contentType: 'application/pdf', attachmentIndex: 0, createdAt: 0 };
+      expect(a.name).toBe('doc.pdf');
     });
 
     it('LlmModelPrice type', () => {
-      const p: LlmModelPrice = { id: 'mp1', profileId: 'lp1', pricePer1kInputTokens: 0.01, pricePer1kOutputTokens: 0.03, createdAt: 0, updatedAt: 0 };
-      expect(p.pricePer1kInputTokens).toBe(0.01);
+      const p: LlmModelPrice = { modelKey: 'gpt-4', inputPerMillionUsd: 1, inputCachePerMillionUsd: 0, outputPerMillionUsd: 3, createdAt: 0, updatedAt: 0 };
+      expect(p.inputPerMillionUsd).toBe(1);
     });
 
     it('NewLlmModelPrice type', () => {
-      const p: NewLlmModelPrice = { profileId: 'lp1', pricePer1kInputTokens: 0.02, pricePer1kOutputTokens: 0.06 };
-      expect(p.pricePer1kOutputTokens).toBe(0.06);
+      const p: NewLlmModelPrice = { modelKey: 'gpt-4', inputPerMillionUsd: 2, inputCachePerMillionUsd: 0, outputPerMillionUsd: 6, createdAt: 0, updatedAt: 0 };
+      expect(p.outputPerMillionUsd).toBe(6);
     });
 
     it('CompanyCashLedgerEntry type', () => {
-      const e: CompanyCashLedgerEntry = { id: 'le1', kind: 'debit', amountUsd: 100, description: 'Test', createdAt: 0, updatedAt: 0 };
-      expect(e.kind).toBe('debit');
+      const e: CompanyCashLedgerEntry = { id: 'le1', type: 'debit', amountUsd: 100, description: 'Test', status: 'completed', direction: 'outbound', referenceType: null, referenceId: null, dueAt: null, effectiveAt: null, createdAt: 0 };
+      expect(e.amountUsd).toBe(100);
     });
 
     it('NewCompanyCashLedgerEntry type', () => {
-      const e: NewCompanyCashLedgerEntry = { kind: 'credit', amountUsd: 50, description: 'Income' };
+      const e: NewCompanyCashLedgerEntry = { id: 'le1', type: 'credit', amountUsd: 50, description: 'Income', status: 'pending', direction: 'inbound', createdAt: 0 };
       expect(e.amountUsd).toBe(50);
     });
 
     it('CompanyRecurringPayable type', () => {
-      const p: CompanyRecurringPayable = { id: 'rp1', name: 'Sub', amountUsd: 50, kind: 'recurring', recurrencePeriod: 'monthly', nextDueAt: 0, isActive: true, createdAt: 0, updatedAt: 0 };
-      expect(p.kind).toBe('recurring');
+      const p: CompanyRecurringPayable = { id: 'rp1', name: 'Sub', amountUsd: 50, recurrencePeriod: 'monthly', nextDueAt: 0, isActive: 1, description: null, createdAt: 0, updatedAt: 0 };
+      expect(p.amountUsd).toBe(50);
     });
 
     it('NewCompanyRecurringPayable type', () => {
-      const p: NewCompanyRecurringPayable = { name: 'Sub', amountUsd: 50, kind: 'recurring', recurrencePeriod: 'monthly', nextDueAt: 0, isActive: true };
-      expect(p.kind).toBe('recurring');
+      const p: NewCompanyRecurringPayable = { id: 'rp1', name: 'Sub', amountUsd: 50, recurrencePeriod: 'monthly', nextDueAt: 0, isActive: 1, description: null, createdAt: 0, updatedAt: 0 };
+      expect(p.amountUsd).toBe(50);
     });
   });
 });
