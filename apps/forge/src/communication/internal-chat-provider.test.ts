@@ -37,7 +37,7 @@ describe('createInternalChatProvider', () => {
       const cb = vi.fn();
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      provider.onMessage(cb);
+      provider.onMessage!(cb);
 
       expect(svc.onReceiveMessage).toHaveBeenCalledWith('agent-1', cb);
     });
@@ -47,8 +47,8 @@ describe('createInternalChatProvider', () => {
       const cb = vi.fn();
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      provider.onMessage(cb);
-      provider.dispose();
+      provider.onMessage!(cb);
+      provider.dispose!();
 
       expect(svc.clearHandler).toHaveBeenCalledWith('agent-1', cb);
     });
@@ -60,8 +60,8 @@ describe('createInternalChatProvider', () => {
       const cb = vi.fn();
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      provider.onMessage(cb);
-      provider.dispose();
+      provider.onMessage!(cb);
+      provider.dispose!();
 
       expect(svc.clearHandler).toHaveBeenCalledWith('agent-1', cb);
     });
@@ -70,7 +70,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService();
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      provider.dispose();
+      provider.dispose!();
 
       expect(svc.clearHandler).toHaveBeenCalledWith('agent-1', undefined);
     });
@@ -81,7 +81,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getAccountByAgentId: vi.fn().mockResolvedValue(null) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.getSelfContact();
+      const result = await provider.getSelfContact!();
 
       expect(result).toBeNull();
     });
@@ -99,7 +99,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getAccountByAgentId: vi.fn().mockResolvedValue(account) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.getSelfContact();
+      const result = await provider.getSelfContact!();
 
       expect(result).toEqual({
         targetKey: 'agent-1',
@@ -123,7 +123,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getAccountByAgentId: vi.fn().mockResolvedValue(account) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.getSelfContact();
+      const result = await provider.getSelfContact!();
 
       expect(result?.targetKey).toBe('system-account');
     });
@@ -140,7 +140,7 @@ describe('createInternalChatProvider', () => {
       });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      await provider.listContacts();
+      await provider.listContacts!();
 
       expect(svc.listAccounts).toHaveBeenCalledWith({ excludeAgentId: 'agent-1' });
     });
@@ -152,7 +152,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ listAccounts: vi.fn().mockResolvedValue(accounts) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.listContacts();
+      const result = await provider.listContacts!();
 
       expect(result).toEqual([{
         targetKey: 'agent-2',
@@ -167,7 +167,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ listAccounts: vi.fn().mockResolvedValue([]) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.listContacts();
+      const result = await provider.listContacts!();
 
       expect(result).toEqual([]);
     });
@@ -181,7 +181,7 @@ describe('createInternalChatProvider', () => {
       });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      await provider.listConversations({ limit: 20, unread: true });
+      await provider.listConversations!({ limit: 20, unread: true });
 
       expect(svc.listConversations).toHaveBeenCalledWith({
         agentId: 'agent-1',
@@ -195,7 +195,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ listConversations: vi.fn().mockResolvedValue(conversations) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.listConversations({});
+      const result = await provider.listConversations!({ limit: 10, unread: false });
 
       expect(result).toBe(conversations);
     });
@@ -207,7 +207,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getMessages: vi.fn().mockResolvedValue(messages) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      await provider.getMessages({ targetKey: 'conv-1', limit: 10, offset: 5, query: 'hello', dateFrom: 1000, dateTo: 2000 });
+      await provider.getMessages!({ targetKey: 'conv-1', limit: 10, offset: 5, query: 'hello', dateFrom: '1000', dateTo: '2000' });
 
       expect(svc.getMessages).toHaveBeenCalledWith({
         agentId: 'agent-1',
@@ -215,8 +215,8 @@ describe('createInternalChatProvider', () => {
         limit: 10,
         offset: 5,
         query: 'hello',
-        dateFrom: 1000,
-        dateTo: 2000,
+        dateFrom: '1000',
+        dateTo: '2000',
       });
     });
 
@@ -225,7 +225,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getMessages: vi.fn().mockResolvedValue(messages) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.getMessages({ targetKey: 'conv-1' });
+      const result = await provider.getMessages!({ targetKey: 'conv-1', limit: 20, offset: 0 });
 
       expect(result).toBe(messages);
     });
@@ -236,7 +236,7 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getAccountByAgentId: vi.fn().mockResolvedValue(null) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      await expect(provider.sendMessage({ targetKey: 'conv-1', content: 'hello' }))
+      await expect(provider.sendMessage!({ targetKey: 'conv-1', content: 'hello', attachments: [] }))
         .rejects.toThrow('Internal chat account not found for agent: agent-1');
     });
 
@@ -273,7 +273,7 @@ describe('createInternalChatProvider', () => {
       });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.sendMessage({ targetKey: 'any', content: 'hi' });
+      const result = await provider.sendMessage!({ targetKey: 'any', content: 'hi', attachments: [] });
 
       expect(result.targetKey).toBe('different-conv');
       expect(result.messageId).toBe('msg-x');
