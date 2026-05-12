@@ -20,7 +20,7 @@ vi.mock('./internal-agent-registry', () => ({
 vi.mock('node:fs/promises', () => ({ rm: mockRm }));
 
 import { terminateInternalAgent } from './terminate-agent';
-import { agents } from '../database/schema';
+import { agents } from '../database/client';
 import type { AgentEmailManager, CoolifyManager } from '../index';
 
 function createMockDb(agent?: Record<string, unknown> | null) {
