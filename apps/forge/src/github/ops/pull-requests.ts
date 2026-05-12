@@ -28,14 +28,14 @@ export function createPullRequestsOps(ctx: OpsContext) {
         head: pr.head.ref,
         base: pr.base.ref,
       }));
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `listPullRequests failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `listPullRequests failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
-      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -67,14 +67,14 @@ export function createPullRequestsOps(ctx: OpsContext) {
         head: response.data.head.ref,
         base: response.data.base.ref,
       };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `createPullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `createPullRequest failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
-      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -105,14 +105,14 @@ export function createPullRequestsOps(ctx: OpsContext) {
         createdAt: response.data.created_at,
         updatedAt: response.data.updated_at,
       };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `getPullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `getPullRequest failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
-      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -141,14 +141,14 @@ export function createPullRequestsOps(ctx: OpsContext) {
         createdAt: comment.created_at,
         updatedAt: comment.updated_at,
       }));
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `listPullRequestComments failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `listPullRequestComments failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
-      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -187,14 +187,14 @@ export function createPullRequestsOps(ctx: OpsContext) {
         createdAt: response.data.created_at,
         updatedAt: response.data.updated_at,
       };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `updatePullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `updatePullRequest failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
-      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
@@ -223,14 +223,14 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: response.data.message,
         sha: response.data.sha,
       };
-    } catch (error) {
+    } catch (err) {
       forgeDebug({
         scope: 'github-ops',
         level: 'error',
-        message: `mergePullRequest failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `mergePullRequest failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
-      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw error;
     }
   }
