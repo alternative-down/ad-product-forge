@@ -1,4 +1,4 @@
-import type { CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
+import { forgeDebug, type CommunicationInboundMessage, type CommunicationProvider } from '@forge-runtime/core';
 
 import type { InternalChatService } from './internal-chat-service';
 

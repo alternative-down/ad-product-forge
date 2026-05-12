@@ -2,6 +2,8 @@
  * Routing Ops — buildProvisioning, registerAgentRoutes,
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
+import { forgeDebug } from '@forge-runtime/core';
+
 import type { Octokit } from 'octokit';
 import { App } from 'octokit';
 import type { OpsContext } from './context';

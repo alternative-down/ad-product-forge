@@ -1,3 +1,5 @@
+import { forgeDebug } from '@forge-runtime/core';
+
 import crypto from 'node:crypto';
 
 /**
