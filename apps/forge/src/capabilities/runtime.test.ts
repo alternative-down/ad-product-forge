@@ -5,7 +5,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 
 // Track runner instances keyed by runtime id
-const mockRunnerInstances = new Map<string, ReturnType<typeof vi.fn>>();
+const mockRunnerInstances = new Map<string, any>();
 
 vi.mock('../agents/agent-runner', () => ({
   createAgentRunner: vi.fn((_db, runtime) => {
@@ -16,7 +16,7 @@ vi.mock('../agents/agent-runner', () => ({
       forceIdle: vi.fn(),
       getSnapshot: vi.fn().mockReturnValue({ wake: { events: [] }, pendingRunEvents: [] }),
     };
-    mockRunnerInstances.set(runtime.id, runner);
+    mockRunnerInstances.set(runtime.id, runner as any as any);
     return runner;
   }),
 }));
@@ -88,7 +88,7 @@ function makeConfig() {
     githubApps: {} as import('../github/manager').GitHubAppManager,
     emailMailboxes: null,
     coolify: null,
-    schedules: {} as ReturnType<import('../schedules/manager').createAgentScheduleManager>,
+    schedules: {} as any,
     internalChat: makeMinimalInternalChat(),
   };
 }
@@ -162,7 +162,7 @@ describe('capabilities/runtime', () => {
     it('loads and re-adds the agent when it is in the registry', async () => {
       registryState.set('ag_001', { id: 'ag_001', runner: vi.fn() });
       const { loadAgent } = await import('../agents/agent-loader');
-      loadAgent.mockResolvedValue({ id: 'ag_001', name: 'Test', dispose: vi.fn() } as never);
+      (loadAgent as any).mockResolvedValue({ id: 'ag_001', name: 'Test', dispose: vi.fn() } as never);
 
       const db = makeDb();
       const config = makeConfig();
@@ -186,12 +186,12 @@ describe('capabilities/runtime', () => {
       registryState.set('ag_002', { id: 'ag_002', runner: vi.fn() });
 
       const { loadAgent } = await import('../agents/agent-loader');
-      loadAgent.mockResolvedValue({ id: '', name: 'Test', dispose: vi.fn() } as never);
+      (loadAgent as any).mockResolvedValue({ id: '', name: 'Test', dispose: vi.fn() } as never);
 
       await reloadAgentsForRole(db, makeConfig(), 'role_dev');
 
       expect(db.query.agents.findMany).toHaveBeenCalled();
-      const findManyCall = vi.mocked(db.query.agents.findMany).mock.calls[0][0];
+      const findManyCall = vi.mocked(db.query.agents.findMany).mock.calls[0]![0] as any;
       expect(findManyCall.columns).toEqual({ id: true });
       expect(loadAgent).toHaveBeenCalledTimes(2);
     });
@@ -274,14 +274,14 @@ describe('capabilities/runtime', () => {
         .mockResolvedValueOnce(role);
 
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
-      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(null) };
+      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(null) };
 
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
-      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() };
+      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
       registryState.set('ag_target', { id: 'ag_target', runner: mockRunner });
-      loadAgent.mockResolvedValue(undefined);
+      (loadAgent as any).mockResolvedValue(undefined);
 
       const result = await changeAgentRole({
         db,
@@ -322,9 +322,9 @@ describe('capabilities/runtime', () => {
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
-      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() };
+      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
       registryState.set('ag_self', { id: 'ag_self', runner: mockRunner });
-      loadAgent.mockResolvedValue(undefined);
+      (loadAgent as any).mockResolvedValue(undefined);
 
       await changeAgentRole({
         db,
@@ -390,9 +390,9 @@ describe('capabilities/runtime', () => {
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
-      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() };
+      const mockRunner = { notifyExternalEvent: vi.fn(), run: vi.fn() } as any;
       registryState.set('ag_target', { id: 'ag_target', runner: mockRunner });
-      loadAgent.mockResolvedValue(undefined);
+      (loadAgent as any).mockResolvedValue(undefined);
 
       const result = await changeAgentRoleFromAdmin({
         db,
@@ -436,7 +436,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
       const db = makeDb();
-      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
 
       const { decryptSecret, encryptSecret } = await import('../encryption/crypto');
@@ -463,7 +463,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
       const db = makeDb();
-      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
 
       const { encryptSecret } = await import('../encryption/crypto');
@@ -482,7 +482,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', 'encrypted');
 
       const db = makeDb();
-      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
 
       const { decryptSecret } = await import('../encryption/crypto');
       vi.mocked(decryptSecret).mockImplementationOnce(() => {
@@ -503,7 +503,7 @@ describe('capabilities/runtime', () => {
       const provider = makeProvider('prov_001', 'ag_001', storedCredentials);
 
       const db = makeDb();
-      db.query.agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
+      (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(provider) };
 
       const updateChain = {
         set: vi.fn().mockReturnThis(),

@@ -20,7 +20,7 @@ function makeDefaultState(): SchedulerState {
 function depsWith(getRunnableContract: () => Promise<{ id: string; budgetUsd: number; endsAt: number } | null>): SchedulerDependencies {
   return {
     runtimeId: 'agent-1',
-    getSystemSettings: async () => ({ stepDelayEnabled: true, memoryLastMessagesFullEnabled: false }),
+    getSystemSettings: async () => ({ stepDelayEnabled: true, memoryLastMessagesFullEnabled: false, memoryLastMessagesCount: 10, communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: true }),
     getRunnableContract,
     getContractSpend: async () => 0,
     estimateStepCostUsd: async () => 0.01,
@@ -73,7 +73,7 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
     scheduler.stop();
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(onAgentRunning).not.toHaveBeenCalled();
     expect(setExecutionState).not.toHaveBeenCalled();
   });
@@ -81,8 +81,8 @@ describe('beginRun', () => {
   it('returns early when already starting a run', async () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
-    const p = scheduler.beginRun(0, makeInput());
-    await scheduler.beginRun(0, makeInput());
+    const p = scheduler.beginRun(0, makeInput() as any);
+    await scheduler.beginRun(0, makeInput() as any);
     await p;
     expect(onAgentRunning).toHaveBeenCalledTimes(1);
   });
@@ -91,7 +91,7 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
     expect(scheduler.isStartingRun()).toBe(false);
-    const p = scheduler.beginRun(0, makeInput());
+    const p = scheduler.beginRun(0, makeInput() as any);
     expect(scheduler.isStartingRun()).toBe(true);
     await p;
     expect(scheduler.isStartingRun()).toBe(false);
@@ -100,14 +100,14 @@ describe('beginRun', () => {
   it('clears startingRunStartedAt after beginRun completes', async () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(scheduler.getStartingRunAgeMs()).toBe(0);
   });
 
   it('calls onReloadRuntime when reloadRuntime is true', async () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
-    const input = makeInput();
+    const input = makeInput() as any;
     input.reloadRuntime = true;
     await scheduler.beginRun(0, input);
     expect(onReloadRuntime).toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     state.activeRunEpoch = 5;
     const scheduler = createScheduler(state, depsWith(async () => null));
-    const input = makeInput();
+    const input = makeInput() as any;
     input.reloadRuntime = true;
     await scheduler.beginRun(5, input);
     expect(onReloadRuntime).toHaveBeenCalledWith(6);
@@ -127,7 +127,7 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     expect(state.instant).toBe(false);
     const scheduler = createScheduler(state, depsWith(async () => null));
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(state.instant).toBe(true);
   });
 
@@ -135,14 +135,14 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     state.backoffMs = ONE_MINUTE_MS * 8;
     const scheduler = createScheduler(state, depsWith(async () => null));
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(scheduler.getBackoffMs()).toBe(ONE_MINUTE_MS);
   });
 
   it('calls setExecutionState(running) when markRunning is true', async () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
-    const input = makeInput();
+    const input = makeInput() as any;
     input.markRunning = true;
     await scheduler.beginRun(0, input);
     expect(setExecutionState).toHaveBeenCalledWith('agent-1', 'running');
@@ -151,7 +151,7 @@ describe('beginRun', () => {
   it('does NOT call setExecutionState when markRunning is false', async () => {
     const state = makeDefaultState();
     const scheduler = createScheduler(state, depsWith(async () => null));
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(setExecutionState).not.toHaveBeenCalled();
   });
 
@@ -167,7 +167,7 @@ describe('beginRun', () => {
     input.reloadRuntime = true;
     input.onReloadRuntime = reloadSpy;
     input.onAgentRunning = runningSpy;
-    await scheduler.beginRun(0, input);
+    await scheduler.beginRun(0, input as any);
     expect(order).toEqual(['reloadRuntime', 'onAgentRunning']);
   });
 
@@ -175,7 +175,7 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     state.activeRunEpoch = 0;
     const scheduler = createScheduler(state, depsWith(async () => null));
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(state.activeRunEpoch).toBe(1);
   });
 
@@ -183,7 +183,7 @@ describe('beginRun', () => {
     const state = makeDefaultState();
     state.activeStepEpoch = 99;
     const scheduler = createScheduler(state, depsWith(async () => null));
-    await scheduler.beginRun(0, makeInput());
+    await scheduler.beginRun(0, makeInput() as any);
     expect(state.activeStepEpoch).toBe(0);
   });
 
@@ -193,7 +193,7 @@ describe('beginRun', () => {
       async () => { throw new Error('contract error'); },
       { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
     ));
-    await expect(scheduler.beginRun(0, makeInput())).resolves.toBeUndefined();
+    await expect(scheduler.beginRun(0, makeInput() as any)).resolves.toBeUndefined();
   });
 });
 

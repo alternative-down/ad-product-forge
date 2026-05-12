@@ -69,7 +69,7 @@ describe('normalizeGitHubAppCredentials', () => {
         events: { push: true, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
       },
     };
-    const result = normalizeGitHubAppCredentials(credentials as Parameters<typeof normalizeGitHubAppCredentials>[0]);
+    const result = normalizeGitHubAppCredentials(credentials as unknown as Parameters<typeof normalizeGitHubAppCredentials>[0]);
     expect(result.manifestConfig.permissions.administration).toBe(true);
     expect(result.manifestConfig.permissions.issues).toBe(false);
   });
@@ -79,7 +79,7 @@ describe('normalizeGitHubAppCredentials', () => {
       appId: '123',
       privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
     };
-    const result = normalizeGitHubAppCredentials(credentials as Parameters<typeof normalizeGitHubAppCredentials>[0]);
+    const result = normalizeGitHubAppCredentials(credentials as unknown as Parameters<typeof normalizeGitHubAppCredentials>[0]);
     expect(result.manifestConfig.permissions.administration).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe('normalizeGitHubAppCredentials', () => {
       privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
       manifestConfig: 'not valid',
     };
-    const result = normalizeGitHubAppCredentials(credentials as Parameters<typeof normalizeGitHubAppCredentials>[0]);
+    const result = normalizeGitHubAppCredentials(credentials as unknown as Parameters<typeof normalizeGitHubAppCredentials>[0]);
     expect(result.manifestConfig.permissions.administration).toBe(true);
   });
 });

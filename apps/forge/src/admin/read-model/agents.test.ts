@@ -70,20 +70,56 @@ import { createAgentReadModel } from './agents';
 // Factory helpers
 // ---------------------------------------------------------------------
 function makeMockDb(overrides = {}) {
-  return createMockDb(overrides) as ReturnType<typeof createAgentReadModel> extends Promise<infer R> ? never : Parameters<typeof createAgentReadModel>[0]['db'];
+  return createMockDb(overrides) as unknown;
 }
 
 function makeMockFinance() {
   return {
     getCompanyCashBalance: vi.fn().mockResolvedValue({ balanceUsd: 1234.56 }),
-    listCompanyCashMovements: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+    listCompanyCashMovements: vi.fn().mockResolvedValue({ items: [], total: 0, summary: null, hasMore: false }),
+    getCompanyCashSummary: vi.fn().mockResolvedValue({ balanceUsd: 1234.56, pendingPaymentsUsd: 0, pendingReceivablesUsd: 0 }),
+    listActiveInternalAgentContracts: vi.fn().mockResolvedValue([]),
+    getActiveInternalAgentContract: vi.fn().mockResolvedValue(null),
+    getActiveContractMetrics: vi.fn().mockResolvedValue({ runningAgents: 0, totalBudgetUsd: 0, usedBudgetUsd: 0 }),
   };
 }
 
 function makeMockInternalChat() {
   return {
+    registerAgentAccount: vi.fn().mockResolvedValue({ id: 'a1', agentId: 'a1', displayName: 'Test Agent', providerType: 'internal-chat', createdAt: Date.now() }),
+    registerExternalAccount: vi.fn().mockResolvedValue({ id: 'e1', displayName: 'Ext', providerType: 'email', createdAt: Date.now() }),
+    updateExternalAccount: vi.fn().mockResolvedValue({ id: 'e1' }),
+    deleteExternalAccount: vi.fn().mockResolvedValue(undefined),
+    deleteAgentAccount: vi.fn().mockResolvedValue(undefined),
+    onReceiveMessage: vi.fn(),
+    clearHandler: vi.fn(),
     listAccounts: vi.fn().mockResolvedValue([]),
-    getMessages: vi.fn().mockResolvedValue([]),
+    getAccountBySlug: vi.fn().mockResolvedValue(null),
+    getAccountByAgentId: vi.fn().mockResolvedValue(null),
+    getConversationForAgent: vi.fn().mockResolvedValue(null),
+    createChatGroup: vi.fn().mockResolvedValue({ id: 'g1', createdAt: Date.now() }),
+    addMemberToGroup: vi.fn().mockResolvedValue(undefined),
+    removeMemberFromGroup: vi.fn().mockResolvedValue(undefined),
+    changeChatGroup: vi.fn().mockResolvedValue({ id: 'g1' }),
+    listChatGroups: vi.fn().mockResolvedValue([]),
+    listGroupMembers: vi.fn().mockResolvedValue([]),
+    listGroupMembersByAccount: vi.fn().mockResolvedValue([]),
+    listConversations: vi.fn().mockResolvedValue([]),
+    listConversationsByAccount: vi.fn().mockResolvedValue([]),
+    getMessages: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+    getMessagesByAccount: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+    sendMessage: vi.fn().mockResolvedValue({ id: 'm1', createdAt: Date.now() }),
+    getMessageAttachmentByAccount: vi.fn().mockResolvedValue(null),
+    createExternalChatGroup: vi.fn().mockResolvedValue({ id: 'g1', createdAt: Date.now() }),
+    createExternalChatGroupWithMembers: vi.fn().mockResolvedValue({ id: 'g1', createdAt: Date.now() }),
+    ensureDirectConversationByAccount: vi.fn().mockResolvedValue({ id: 'c1', createdAt: Date.now() }),
+    addMemberToGroupByAccount: vi.fn().mockResolvedValue(undefined),
+    updateMemberRoleByAccount: vi.fn().mockResolvedValue(undefined),
+    removeMemberFromGroupByAccount: vi.fn().mockResolvedValue(undefined),
+    updateGroupByAccount: vi.fn().mockResolvedValue({ id: 'g1' }),
+    archiveConversationByAccount: vi.fn().mockResolvedValue(undefined),
+    getUnreadSummary: vi.fn().mockResolvedValue({ total: 0, byAccount: {} }),
+    listRecentConversations: vi.fn().mockResolvedValue([]),
   };
 }
 
@@ -95,12 +131,18 @@ function makeMockSystemSettings() {
       checkpointedOmObservationReflectionBatchTokens: 5000,
       checkpointedOmTotalContextTokens: 200000,
     }),
+    upsertSettings: vi.fn().mockResolvedValue({
+      checkpointedOmRecentRawTokens: 10000,
+      checkpointedOmRawObservationBatchTokens: 5000,
+      checkpointedOmObservationReflectionBatchTokens: 5000,
+      checkpointedOmTotalContextTokens: 200000,
+    }),
   };
 }
 
 function makeReadModel(deps = {}) {
   return createAgentReadModel({
-    db: makeMockDb(),
+    db: makeMockDb() as unknown as Parameters<typeof createAgentReadModel>[0]['db'],
     finance: makeMockFinance(),
     internalChat: makeMockInternalChat(),
     workspaceBasePath: '/workspaces/forge',
@@ -167,7 +209,7 @@ describe('createAgentReadModel', () => {
         workspaceFilesystem: null,
       };
       const roleRow = { id: 'role-1', name: 'Developer', description: null, capabilities: null, createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' };
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findMany.mockResolvedValue([agentRow]);
       db.query.agentRoles.findMany.mockResolvedValue([roleRow]);
       db.query.llmProfiles.findMany.mockResolvedValue([]);
@@ -189,7 +231,7 @@ describe('createAgentReadModel', () => {
         updatedAt: '2024-01-01T00:00:00.000Z',
         workspaceFilesystem: null,
       };
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findMany.mockResolvedValue([agentRow]);
       db.query.agentRoles.findMany.mockResolvedValue([]);
       db.query.llmProfiles.findMany.mockResolvedValue([]);
@@ -202,7 +244,7 @@ describe('createAgentReadModel', () => {
 
   describe('getAgent', () => {
     it('returns null when agent not found', async () => {
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(null);
       const model = makeReadModel({ db });
       const result = await model.getAgent('nonexistent');
@@ -232,7 +274,7 @@ describe('createAgentReadModel', () => {
         createdAt: '2024-01-02T00:00:00.000Z',
         updatedAt: '2024-01-02T00:00:00.000Z',
       };
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       db.query.agentExecutionSteps.findMany.mockResolvedValue([stepRow]);
       db.query.agentRoles.findMany.mockResolvedValue([]);
@@ -259,7 +301,7 @@ describe('createAgentReadModel', () => {
         updatedAt: '2024-01-03T12:00:00.000Z',
         workspaceFilesystem: null,
       };
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       db.query.agentRoles.findMany.mockResolvedValue([]);
       db.query.llmProfiles.findMany.mockResolvedValue([]);
@@ -276,7 +318,7 @@ describe('createAgentReadModel', () => {
 
   describe('listAgentRecentConversations', () => {
     it('returns empty when agent not found', async () => {
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(null);
       const model = makeReadModel({ db });
       const result = await model.listAgentRecentConversations('ghost-agent');
@@ -285,7 +327,7 @@ describe('createAgentReadModel', () => {
 
     it('returns conversations from conversation helper', async () => {
       const agentRow = { id: 'agent-1', name: 'A', role: null, executionState: 'absent' as const, lastExecutionError: null, lastExecutionErrorAt: null, createdAt: '', updatedAt: '', workspaceFilesystem: null };
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       mockListRecentConversations.mockResolvedValue([{ id: 'conv-1' }]);
       const model = makeReadModel({ db });
@@ -300,7 +342,7 @@ describe('createAgentReadModel', () => {
         { id: 's2', agentId: 'a1', kind: 'step', status: 'ok' as const, input: null, output: null, error: null, createdAt: '2024-01-02', updatedAt: '2024-01-02' },
         { id: 's1', agentId: 'a1', kind: 'step', status: 'ok' as const, input: null, output: null, error: null, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
       ];
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agentExecutionSteps.findMany.mockResolvedValue(stepRows);
       const model = makeReadModel({ db });
       const result = await model.listAgentExecutionSteps({ agentId: 'a1', limit: 20, offset: 0 });
@@ -308,7 +350,7 @@ describe('createAgentReadModel', () => {
     });
 
     it('respects limit and offset', async () => {
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agentExecutionSteps.findMany.mockResolvedValue([]);
       const model = makeReadModel({ db });
       await model.listAgentExecutionSteps({ agentId: 'a1', limit: 5, offset: 10 });
@@ -343,17 +385,17 @@ describe('createAgentReadModel', () => {
       const snapshotRows = [
         { id: 'snap-1', agentId: 'a1', stepId: 'step-1', stepCreatedAt: '2024-01-01', createdAt: '2024-01-01', snapshot: { foo: 'bar' } },
       ];
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agentHomeMetricSnapshots.findMany.mockResolvedValue(snapshotRows);
       const model = makeReadModel({ db });
-      const result = await model.listRecentAgentHomeMetricSnapshots({ agentId: 'a1', limit: 10 });
+      const result = (await model.listRecentAgentHomeMetricSnapshots({ agentId: 'a1', limit: 10 })) as Array<{ id: string; snapshot: unknown }>;
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('snap-1');
       expect(result[0].snapshot).toEqual({ foo: 'bar' });
     });
 
     it('returns empty when no snapshots exist', async () => {
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agentHomeMetricSnapshots.findMany.mockResolvedValue([]);
       const model = makeReadModel({ db });
       const result = await model.listRecentAgentHomeMetricSnapshots({ agentId: 'a1', limit: 5 });
@@ -413,7 +455,7 @@ describe('createAgentReadModel', () => {
           updatedAt: '2024-01-01T00:00:00.000Z',
         },
       ];
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       db.query.agentRoles.findMany.mockResolvedValue([]);
       db.query.llmProfiles.findMany.mockResolvedValue([]);
@@ -434,7 +476,7 @@ describe('createAgentReadModel', () => {
 
   describe('getAgentOmDebugExport', () => {
     it('returns null when agent not found', async () => {
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(null);
       const model = makeReadModel({ db });
       const result = await model.getAgentOmDebugExport('ghost');
@@ -448,7 +490,7 @@ describe('createAgentReadModel', () => {
       (LibsqlConversationStore as any).mockImplementation(function() { return { read: vi.fn().mockResolvedValue({ workingMemory: null }) }; });
 
       const agentRow = { id: 'agent-1', name: 'A', role: null, executionState: 'absent' as const, lastExecutionError: null, lastExecutionErrorAt: null, createdAt: '', updatedAt: '', workspaceFilesystem: null };
-      const db = makeMockDb();
+      const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       db.query.agentRoles.findMany.mockResolvedValue([]);
       db.query.llmProfiles.findMany.mockResolvedValue([]);
@@ -478,7 +520,7 @@ describe('createAgentReadModel', () => {
       });
       mockReadLongTermMemoryRecallSnapshot.mockResolvedValue(null);
       const model = makeReadModel({ db });
-      const result = await model.getAgentOmDebugExport('agent-1');
+      const result = await model.getAgentOmDebugExport('agent-1') as { agent: unknown } | null;
       expect(result).not.toBeNull();
       expect(result!.agent).toBeDefined();
     });
@@ -499,7 +541,7 @@ describe('createAgentReadModel', () => {
         targetKey: 'conv-key',
         limit: 50,
         offset: 0,
-      });
+      }) as { items: Array<{ authorAgentId: string }>; hasMore: boolean };
       expect(result.items[0].authorAgentId).toBe('agent-1');
     });
 
@@ -512,7 +554,7 @@ describe('createAgentReadModel', () => {
         targetKey: 'key',
         limit: 10,
         offset: 0,
-      });
+      }) as { items: unknown[]; hasMore: boolean };
       expect(result.items).toEqual([]);
       expect(result.hasMore).toBe(false);
     });

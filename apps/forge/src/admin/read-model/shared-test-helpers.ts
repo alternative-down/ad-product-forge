@@ -49,7 +49,22 @@ export function createMockDb(overrides = {}) {
     }),
     ...overrides,
   };
-  return db as ReturnType<typeof vi.fn>;
+  const MockDb = {
+  query: {
+    agents: ReturnType<typeof vi.fn>,
+    agentNotifications: ReturnType<typeof vi.fn>,
+    agentExecutionContracts: ReturnType<typeof vi.fn>,
+    agentRoles: ReturnType<typeof vi.fn>,
+    llmProfiles: ReturnType<typeof vi.fn>,
+    agentExecutionSteps: ReturnType<typeof vi.fn>,
+    agentMcpConfigs: ReturnType<typeof vi.fn>,
+    agentSchedules: ReturnType<typeof vi.fn>,
+    mcpServerConfigs: ReturnType<typeof vi.fn>,
+    agentHomeMetricSnapshots: ReturnType<typeof vi.fn>,
+  },
+  select: ReturnType<typeof vi.fn>,
+};
+return db as typeof db & Record<string, unknown>;
 }
 
 /**
