@@ -14,7 +14,11 @@
 import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
-import type { CheckpointedOmState, WorkspaceEmbedderId } from '@forge-runtime/core';
+import type { WorkspaceEmbedderId } from '@forge-runtime/core';
+import { InferModel } from 'drizzle-orm';
+
+// CheckpointedOmState removed from @forge-runtime/core - defined inline for schema compatibility
+interface CheckpointedOmState { threadId: string; checkpoint: unknown; timestamp: number; }
 
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
@@ -54,16 +58,16 @@ export const agents = sqliteTable('agents', {
   // Workspace configuration
   workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1), // boolean as 0/1
   workspaceBm25: integer('workspace_bm25').notNull().default(1), // boolean as 0/1
-  workspaceEmbedder: text('workspace_embedder').$type<WorkspaceEmbedderId>().notNull().default('transformers-multilingual-e5-small-cpu'),
-  workspaceFilesystem: text('workspace_filesystem', { mode: 'json' }).$type<WorkspaceFilesystemConfig>(),
-  workspaceSandbox: text('workspace_sandbox', { mode: 'json' }).$type<WorkspaceSandboxConfig>(),
-  workspaceSkills: text('workspace_skills', { mode: 'json' }).$type<WorkspaceSkillsConfig>(),
+  workspaceEmbedder: text('workspace_embedder').notNull().default('transformers-multilingual-e5-small-cpu'),
+  workspaceFilesystem: text('workspace_filesystem'),
+  workspaceSandbox: text('workspace_sandbox'),
+  workspaceSkills: text('workspace_skills'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type Agent = typeof agents.$inferSelect;
-export type NewAgent = typeof agents.$inferInsert;
+export type Agent = InferModel<typeof agents>;
+export type NewAgent = InferModel<typeof agents, 'insert'>;
 
 export const agentRoles = sqliteTable('agent_roles', {
   id: text('id').primaryKey(),
@@ -75,8 +79,8 @@ export const agentRoles = sqliteTable('agent_roles', {
   agentRolesNameIdx: uniqueIndex('agent_roles_name_idx').on(table.name),
 }));
 
-export type AgentRole = typeof agentRoles.$inferSelect;
-export type NewAgentRole = typeof agentRoles.$inferInsert;
+export type AgentRole = InferModel<typeof agentRoles>;
+export type NewAgentRole = InferModel<typeof agentRoles, 'insert'>;
 
 export const roleToolPermissions = sqliteTable('role_tool_permissions', {
   roleId: text('role_id')
@@ -90,8 +94,8 @@ export const roleToolPermissions = sqliteTable('role_tool_permissions', {
   roleToolPermissionsRoleIdIdx: index('role_tool_permissions_role_id_idx').on(table.roleId),
 }));
 
-export type RoleToolPermission = typeof roleToolPermissions.$inferSelect;
-export type NewRoleToolPermission = typeof roleToolPermissions.$inferInsert;
+export type RoleToolPermission = InferModel<typeof roleToolPermissions>;
+export type NewRoleToolPermission = InferModel<typeof roleToolPermissions, 'insert'>;
 
 export const roleWorkflowPermissions = sqliteTable('role_workflow_permissions', {
   roleId: text('role_id')
@@ -105,8 +109,8 @@ export const roleWorkflowPermissions = sqliteTable('role_workflow_permissions', 
   roleWorkflowPermissionsRoleIdIdx: index('role_workflow_permissions_role_id_idx').on(table.roleId),
 }));
 
-export type RoleWorkflowPermission = typeof roleWorkflowPermissions.$inferSelect;
-export type NewRoleWorkflowPermission = typeof roleWorkflowPermissions.$inferInsert;
+export type RoleWorkflowPermission = InferModel<typeof roleWorkflowPermissions>;
+export type NewRoleWorkflowPermission = InferModel<typeof roleWorkflowPermissions, 'insert'>;
 
 export const systemSettings = sqliteTable('system_settings', {
   id: text('id').primaryKey(),
@@ -143,8 +147,8 @@ export const systemSettings = sqliteTable('system_settings', {
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type SystemSettings = typeof systemSettings.$inferSelect;
-export type NewSystemSettings = typeof systemSettings.$inferInsert;
+export type SystemSettings = InferModel<typeof systemSettings>;
+export type NewSystemSettings = InferModel<typeof systemSettings, 'insert'>;
 
 
 export const systemSettingsRelations = relations(systemSettings, () => ({}));
@@ -165,8 +169,8 @@ export const agentExecutionContracts = sqliteTable('agent_execution_contracts', 
   agentContractsEndsAtIdx: index('agent_execution_contracts_ends_at_idx').on(table.endsAt),
 }));
 
-export type AgentExecutionContract = typeof agentExecutionContracts.$inferSelect;
-export type NewAgentExecutionContract = typeof agentExecutionContracts.$inferInsert;
+export type AgentExecutionContract = InferModel<typeof agentExecutionContracts>;
+export type NewAgentExecutionContract = InferModel<typeof agentExecutionContracts, 'insert'>;
 
 export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
   id: text('id').primaryKey(),
@@ -198,8 +202,8 @@ export const agentExecutionSteps = sqliteTable('agent_execution_steps', {
   agentExecutionStepsCreatedAtIdx: index('agent_execution_steps_created_at_idx').on(table.createdAt),
 }));
 
-export type AgentExecutionStep = typeof agentExecutionSteps.$inferSelect;
-export type NewAgentExecutionStep = typeof agentExecutionSteps.$inferInsert;
+export type AgentExecutionStep = InferModel<typeof agentExecutionSteps>;
+export type NewAgentExecutionStep = InferModel<typeof agentExecutionSteps, 'insert'>;
 
 export const agentHomeMetricSnapshots = sqliteTable('agent_home_metric_snapshots', {
   id: text('id').primaryKey(),
@@ -210,7 +214,7 @@ export const agentHomeMetricSnapshots = sqliteTable('agent_home_metric_snapshots
     .notNull()
     .references(() => agentExecutionSteps.id, { onDelete: 'cascade' }),
   stepCreatedAt: integer('step_created_at').notNull(),
-  snapshot: text('snapshot', { mode: 'json' }).$type<unknown>().notNull(),
+  snapshot: text('snapshot').notNull(),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   agentHomeMetricSnapshotsAgentIdIdx: index('agent_home_metric_snapshots_agent_id_idx').on(table.agentId),
@@ -218,8 +222,8 @@ export const agentHomeMetricSnapshots = sqliteTable('agent_home_metric_snapshots
   agentHomeMetricSnapshotsStepIdIdx: uniqueIndex('agent_home_metric_snapshots_step_id_idx').on(table.stepId),
 }));
 
-export type AgentHomeMetricSnapshot = typeof agentHomeMetricSnapshots.$inferSelect;
-export type NewAgentHomeMetricSnapshot = typeof agentHomeMetricSnapshots.$inferInsert;
+export type AgentHomeMetricSnapshot = InferModel<typeof agentHomeMetricSnapshots>;
+export type NewAgentHomeMetricSnapshot = InferModel<typeof agentHomeMetricSnapshots, 'insert'>;
 
 export const agentCheckpointedOmStates = sqliteTable('agent_checkpointed_om_states', {
   agentId: text('agent_id')
@@ -227,15 +231,15 @@ export const agentCheckpointedOmStates = sqliteTable('agent_checkpointed_om_stat
     .references(() => agents.id, { onDelete: 'cascade' }),
   threadId: text('thread_id').notNull(),
   resourceId: text('resource_id').notNull(),
-  state: text('state', { mode: 'json' }).$type<CheckpointedOmState>().notNull(),
+  state: text('state').notNull(),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentCheckpointedOmStatesThreadIdIdx: uniqueIndex('agent_checkpointed_om_states_thread_id_idx').on(table.threadId),
 }));
 
-export type AgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferSelect;
-export type NewAgentCheckpointedOmState = typeof agentCheckpointedOmStates.$inferInsert;
+export type AgentCheckpointedOmState = InferModel<typeof agentCheckpointedOmStates>;
+export type NewAgentCheckpointedOmState = InferModel<typeof agentCheckpointedOmStates, 'insert'>;
 
 
 export const agentCheckpointedOmStatesRelations = relations(agentCheckpointedOmStates, ({ one }) => ({
@@ -248,14 +252,14 @@ export const agentLongTermMemoryStates = sqliteTable('agent_long_term_memory_sta
   agentId: text('agent_id')
     .primaryKey()
     .references(() => agents.id, { onDelete: 'cascade' }),
-  state: text('state', { mode: 'json' }).$type<unknown>().notNull(),
+  state: text('state').notNull(),
   recallIndexStamp: text('recall_index_stamp'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type AgentLongTermMemoryState = typeof agentLongTermMemoryStates.$inferSelect;
-export type NewAgentLongTermMemoryState = typeof agentLongTermMemoryStates.$inferInsert;
+export type AgentLongTermMemoryState = InferModel<typeof agentLongTermMemoryStates>;
+export type NewAgentLongTermMemoryState = InferModel<typeof agentLongTermMemoryStates, 'insert'>;
 
 
 export const agentLongTermMemoryStatesRelations = relations(agentLongTermMemoryStates, ({ one }) => ({
@@ -270,14 +274,14 @@ export const agentLongTermMemoryRecallStates = sqliteTable('agent_long_term_memo
     .references(() => agents.id, { onDelete: 'cascade' }),
   threadId: text('thread_id'),
   resourceId: text('resource_id'),
-  snapshot: text('snapshot', { mode: 'json' }).$type<unknown>(),
-  history: text('history', { mode: 'json' }).$type<unknown>(),
+  snapshot: text('snapshot'),
+  history: text('history'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type AgentLongTermMemoryRecallState = typeof agentLongTermMemoryRecallStates.$inferSelect;
-export type NewAgentLongTermMemoryRecallState = typeof agentLongTermMemoryRecallStates.$inferInsert;
+export type AgentLongTermMemoryRecallState = InferModel<typeof agentLongTermMemoryRecallStates>;
+export type NewAgentLongTermMemoryRecallState = InferModel<typeof agentLongTermMemoryRecallStates, 'insert'>;
 
 
 export const agentLongTermMemoryRecallStatesRelations = relations(agentLongTermMemoryRecallStates, ({ one }) => ({
@@ -301,8 +305,8 @@ export const agentNotifications = sqliteTable('agent_notifications', {
   agentNotificationsReadAtIdx: index('agent_notifications_read_at_idx').on(table.readAt),
 }));
 
-export type AgentNotification = typeof agentNotifications.$inferSelect;
-export type NewAgentNotification = typeof agentNotifications.$inferInsert;
+export type AgentNotification = InferModel<typeof agentNotifications>;
+export type NewAgentNotification = InferModel<typeof agentNotifications, 'insert'>;
 
 export const agentSchedules = sqliteTable('agent_schedules', {
   id: text('id').primaryKey(),
@@ -333,8 +337,8 @@ export const agentSchedules = sqliteTable('agent_schedules', {
   agentSchedulesCreatorIdIdx: index('idx_schedules_creator_id').on(table.creatorId),
 }));
 
-export type AgentSchedule = typeof agentSchedules.$inferSelect;
-export type NewAgentSchedule = typeof agentSchedules.$inferInsert;
+export type AgentSchedule = InferModel<typeof agentSchedules>;
+export type NewAgentSchedule = InferModel<typeof agentSchedules, 'insert'>;
 
 export const internalChatAccounts = sqliteTable('forge_internal_chat_accounts', {
   id: text('id').primaryKey(),
@@ -350,8 +354,8 @@ export const internalChatAccounts = sqliteTable('forge_internal_chat_accounts', 
   internalChatAccountsAgentIdIdx: uniqueIndex('forge_internal_chat_accounts_agent_id_idx').on(table.agentId),
 }));
 
-export type InternalChatAccount = typeof internalChatAccounts.$inferSelect;
-export type NewInternalChatAccount = typeof internalChatAccounts.$inferInsert;
+export type InternalChatAccount = InferModel<typeof internalChatAccounts>;
+export type NewInternalChatAccount = InferModel<typeof internalChatAccounts, 'insert'>;
 
 export const internalChatConversations = sqliteTable('forge_internal_chat_conversations', {
   id: text('id').primaryKey(),
@@ -366,8 +370,8 @@ export const internalChatConversations = sqliteTable('forge_internal_chat_conver
   internalChatConversationsUpdatedAtIdx: index('forge_internal_chat_conversations_updated_at_idx').on(table.updatedAt),
 }));
 
-export type InternalChatConversation = typeof internalChatConversations.$inferSelect;
-export type NewInternalChatConversation = typeof internalChatConversations.$inferInsert;
+export type InternalChatConversation = InferModel<typeof internalChatConversations>;
+export type NewInternalChatConversation = InferModel<typeof internalChatConversations, 'insert'>;
 
 export const internalChatConversationMembers = sqliteTable('forge_internal_chat_conversation_members', {
   conversationId: text('conversation_id')
@@ -383,8 +387,8 @@ export const internalChatConversationMembers = sqliteTable('forge_internal_chat_
   internalChatConversationMembersAccountIdx: index('forge_internal_chat_conversation_members_account_idx').on(table.accountId),
 }));
 
-export type InternalChatConversationMember = typeof internalChatConversationMembers.$inferSelect;
-export type NewInternalChatConversationMember = typeof internalChatConversationMembers.$inferInsert;
+export type InternalChatConversationMember = InferModel<typeof internalChatConversationMembers>;
+export type NewInternalChatConversationMember = InferModel<typeof internalChatConversationMembers, 'insert'>;
 
 export const internalChatMessages = sqliteTable('forge_internal_chat_messages', {
   id: text('id').primaryKey(),
@@ -402,8 +406,8 @@ export const internalChatMessages = sqliteTable('forge_internal_chat_messages', 
   internalChatMessagesCreatedAtIdx: index('forge_internal_chat_messages_created_at_idx').on(table.createdAt),
 }));
 
-export type InternalChatMessage = typeof internalChatMessages.$inferSelect;
-export type NewInternalChatMessage = typeof internalChatMessages.$inferInsert;
+export type InternalChatMessage = InferModel<typeof internalChatMessages>;
+export type NewInternalChatMessage = InferModel<typeof internalChatMessages, 'insert'>;
 
 export const internalChatMessageReads = sqliteTable('forge_internal_chat_message_reads', {
   messageId: text('message_id')
@@ -419,8 +423,8 @@ export const internalChatMessageReads = sqliteTable('forge_internal_chat_message
   internalChatMessageReadsReadAtIdx: index('forge_internal_chat_message_reads_read_at_idx').on(table.readAt),
 }));
 
-export type InternalChatMessageRead = typeof internalChatMessageReads.$inferSelect;
-export type NewInternalChatMessageRead = typeof internalChatMessageReads.$inferInsert;
+export type InternalChatMessageRead = InferModel<typeof internalChatMessageReads>;
+export type NewInternalChatMessageRead = InferModel<typeof internalChatMessageReads, 'insert'>;
 
 export const internalChatMessageAttachments = sqliteTable('forge_internal_chat_message_attachments', {
   id: text('id').primaryKey(),
@@ -438,8 +442,8 @@ export const internalChatMessageAttachments = sqliteTable('forge_internal_chat_m
   internalChatMessageAttachmentsUniqueIdx: uniqueIndex('forge_internal_chat_message_attachments_unique_idx').on(table.messageId, table.attachmentIndex),
 }));
 
-export type InternalChatMessageAttachment = typeof internalChatMessageAttachments.$inferSelect;
-export type NewInternalChatMessageAttachment = typeof internalChatMessageAttachments.$inferInsert;
+export type InternalChatMessageAttachment = InferModel<typeof internalChatMessageAttachments>;
+export type NewInternalChatMessageAttachment = InferModel<typeof internalChatMessageAttachments, 'insert'>;
 
 export const llmModelPrices = sqliteTable('llm_model_prices', {
   modelKey: text('model_key').primaryKey(),
@@ -450,8 +454,8 @@ export const llmModelPrices = sqliteTable('llm_model_prices', {
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type LlmModelPrice = typeof llmModelPrices.$inferSelect;
-export type NewLlmModelPrice = typeof llmModelPrices.$inferInsert;
+export type LlmModelPrice = InferModel<typeof llmModelPrices>;
+export type NewLlmModelPrice = InferModel<typeof llmModelPrices, 'insert'>;
 
 
 export const llmModelPricesRelations = relations(llmModelPrices, () => ({}));
@@ -472,7 +476,7 @@ export const companyCashLedger = sqliteTable('company_cash_ledger', {
   companyCashLedgerEffectiveAtIdx: index('company_cash_ledger_effective_at_idx').on(table.effectiveAt),
 }));
 
-export type CompanyCashLedgerEntry = typeof companyCashLedger.$inferSelect;
+export type CompanyCashLedgerEntry = InferModel<typeof companyCashLedger>;
 
 export const companyRecurringPayables = sqliteTable('company_recurring_payables', {
   id: text('id').primaryKey(),
@@ -489,8 +493,8 @@ export const companyRecurringPayables = sqliteTable('company_recurring_payables'
   companyRecurringPayablesNextDueAtIdx: index('company_recurring_payables_next_due_at_idx').on(table.nextDueAt),
 }));
 
-export type CompanyRecurringPayable = typeof companyRecurringPayables.$inferSelect;
-export type NewCompanyRecurringPayable = typeof companyRecurringPayables.$inferInsert;
+export type CompanyRecurringPayable = InferModel<typeof companyRecurringPayables>;
+export type NewCompanyRecurringPayable = InferModel<typeof companyRecurringPayables, 'insert'>;
 
 
 export const companyRecurringPayablesRelations = relations(companyRecurringPayables, () => ({}));
@@ -528,18 +532,18 @@ export type SystemIntegrationConfigMap = {
 };
 
 export const systemIntegrations = sqliteTable('system_integrations', {
-  providerType: text('provider_type').primaryKey().$type<keyof SystemIntegrationConfigMap>(),
+  providerType: text('provider_type').primaryKey(),
   encryptedConfig: text('encrypted_config').notNull(),
   isEnabled: integer('is_enabled').notNull().default(1),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type SystemIntegration = typeof systemIntegrations.$inferSelect;
-export type NewSystemIntegration = typeof systemIntegrations.$inferInsert;
+export type SystemIntegration = InferModel<typeof systemIntegrations>;
+export type NewSystemIntegration = InferModel<typeof systemIntegrations, 'insert'>;
 
 export const systemIntegrationsRelations = relations(systemIntegrations, () => ({}));
-export type NewCompanyCashLedgerEntry = typeof companyCashLedger.$inferInsert;
+export type NewCompanyCashLedgerEntry = InferModel<typeof companyCashLedger, 'insert'>;
 
 
 export const companyCashLedgerRelations = relations(companyCashLedger, () => ({}));
@@ -559,8 +563,8 @@ export const llmProfiles = sqliteTable('llm_profiles', {
   llmProfilesIsEnabledIdx: index('llm_profiles_is_enabled_idx').on(table.isEnabled),
 }));
 
-export type LlmProfile = typeof llmProfiles.$inferSelect;
-export type NewLlmProfile = typeof llmProfiles.$inferInsert;
+export type LlmProfile = InferModel<typeof llmProfiles>;
+export type NewLlmProfile = InferModel<typeof llmProfiles, 'insert'>;
 
 export const systemLlmDefaults = sqliteTable('system_llm_defaults', {
   id: text('id').primaryKey(),
@@ -571,8 +575,8 @@ export const systemLlmDefaults = sqliteTable('system_llm_defaults', {
   updatedAt: integer('updated_at').notNull(),
 });
 
-export type SystemLlmDefaults = typeof systemLlmDefaults.$inferSelect;
-export type NewSystemLlmDefaults = typeof systemLlmDefaults.$inferInsert;
+export type SystemLlmDefaults = InferModel<typeof systemLlmDefaults>;
+export type NewSystemLlmDefaults = InferModel<typeof systemLlmDefaults, 'insert'>;
 
 
 export const systemLlmDefaultsRelations = relations(systemLlmDefaults, () => ({}));
@@ -592,8 +596,8 @@ export const agentProviders = sqliteTable('agent_providers', {
   agentProviderUnique: uniqueIndex('agent_provider_unique').on(table.agentId, table.providerType),
 }));
 
-export type AgentProvider = typeof agentProviders.$inferSelect;
-export type NewAgentProvider = typeof agentProviders.$inferInsert;
+export type AgentProvider = InferModel<typeof agentProviders>;
+export type NewAgentProvider = InferModel<typeof agentProviders, 'insert'>;
 
 /**
  * Relações
@@ -791,8 +795,8 @@ export const mcpServerConfigs = sqliteTable(
   }),
 );
 
-export type McpServerConfig = typeof mcpServerConfigs.$inferSelect;
-export type NewMcpServerConfig = typeof mcpServerConfigs.$inferInsert;
+export type McpServerConfig = InferModel<typeof mcpServerConfigs>;
+export type NewMcpServerConfig = InferModel<typeof mcpServerConfigs, 'insert'>;
 
 /**
  * Agent MCP Configs - Association table linking agents to MCP servers
@@ -819,8 +823,8 @@ export const agentMcpConfigs = sqliteTable(
   }),
 );
 
-export type AgentMcpConfig = typeof agentMcpConfigs.$inferSelect;
-export type NewAgentMcpConfig = typeof agentMcpConfigs.$inferInsert;
+export type AgentMcpConfig = InferModel<typeof agentMcpConfigs>;
+export type NewAgentMcpConfig = InferModel<typeof agentMcpConfigs, 'insert'>;
 
 // Relations
 export const mcpServerConfigsRelations = relations(mcpServerConfigs, ({ many }) => ({
@@ -843,7 +847,7 @@ export const webhookRoutes = sqliteTable('webhook_routes', {
   agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   secret: text('secret'), // HMAC signing secret, nullable
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  isActive: integer('is_active').notNull().default(1), // boolean as 0/1
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
@@ -860,8 +864,8 @@ export const webhookEvents = sqliteTable('webhook_events', {
   eventId: text('event_id').primaryKey(),
   routeId: text('route_id').notNull().references(() => webhookRoutes.routeId, { onDelete: 'cascade' }),
   agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
-  payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
-  headers: text('headers', { mode: 'json' }).$type<Record<string, string>>().notNull(),
+  payload: text('payload').notNull(),
+  headers: text('headers').notNull(),
   idempotencyKey: text('idempotency_key'),
   status: text('status').notNull().default('pending'), // 'pending' | 'processed' | 'failed'
   receivedAt: integer('received_at').notNull(),
@@ -874,7 +878,7 @@ export const knowledgeDocuments = sqliteTable('knowledge_documents', {
   content: text('content').notNull(),
   ownerAgentId: text('owner_agent_id').references(() => agents.id, { onDelete: 'set null' }),
   source: text('source'), // e.g. "PRD-19", "meeting-notes", "engineering-decision"
-  tags: text('tags', { mode: 'json' }).$type<string[]>(), // JSON array
+  tags: text('tags'), // JSON array
   version: integer('version').notNull().default(1),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
@@ -917,8 +921,8 @@ export const tickets = sqliteTable('forge_tickets', {
   ticketsExternalIdIdx: uniqueIndex('forge_tickets_external_id_idx').on(table.externalId),
 }));
 
-export type Ticket = typeof tickets.$inferSelect;
-export type NewTicket = typeof tickets.$inferInsert;
+export type Ticket = InferModel<typeof tickets>;
+export type NewTicket = InferModel<typeof tickets, 'insert'>;
 
 export const ticketMessages = sqliteTable('forge_ticket_messages', {
   id: text('id').primaryKey(),
@@ -934,8 +938,8 @@ export const ticketMessages = sqliteTable('forge_ticket_messages', {
   ticketMessagesCreatedAtIdx: index('forge_ticket_messages_created_at_idx').on(table.createdAt),
 }));
 
-export type TicketMessage = typeof ticketMessages.$inferSelect;
-export type NewTicketMessage = typeof ticketMessages.$inferInsert;
+export type TicketMessage = InferModel<typeof ticketMessages>;
+export type NewTicketMessage = InferModel<typeof ticketMessages, 'insert'>;
 
 // ── Ticketing Relations ────────────────────────────────────────────────────────
 

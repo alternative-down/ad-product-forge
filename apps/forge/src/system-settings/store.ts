@@ -59,7 +59,7 @@ function resolveRecallSearchMode(value: string | null | undefined): typeof DEFAU
  * every field. Boolean columns (stored as 0/1 integers) are normalised to
  * booleans.
  */
-function mapRow(row: typeof systemSettings.$inferSelect | null): SystemSettingsValue {
+function mapRow(row: SystemSettings | null): SystemSettingsValue {
   if (row === null) {
     return { ...DEFAULTS, updatedAt: null };
   }

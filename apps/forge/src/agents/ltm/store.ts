@@ -106,7 +106,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
       updatedAt: Date.now(),
     } satisfies LongTermMemoryState;
     const now = Date.now();
-    let existing: typeof agentLongTermMemoryStates.$inferSelect | null = null;
+    let existing: AgentLongTermMemoryState | null = null;
 
     try {
       existing = await db.query.agentLongTermMemoryStates.findFirst({
@@ -160,7 +160,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
 
   async function writeRecallIndexStamp(reason: string) {
     const now = Date.now();
-    let existing: typeof agentLongTermMemoryStates.$inferSelect | null = null;
+    let existing: AgentLongTermMemoryState | null = null;
     let state: LongTermMemoryState;
 
     try {
@@ -231,7 +231,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
     history?: LongTermMemoryRecallHistory;
   }) {
     const now = Date.now();
-    let existing: typeof agentLongTermMemoryRecallStates.$inferSelect | null = null;
+    let existing: AgentLongTermMemoryRecallState | null = null;
 
     try {
       existing = await db.query.agentLongTermMemoryRecallStates.findFirst({
