@@ -134,12 +134,12 @@ export function LtmRecallSnapshotRenderer({ result }: LtmRecallSnapshotRendererP
         <div className="text-sm text-muted-foreground">Nenhum resultado vector.</div>
       )}
 
-      {result.graphSources.length > 0 ? (
+      {(function(){try{return JSON.parse(result.graphSourcesJson ?? '[]').length>0}catch{return false}})() ? (
         <div className="space-y-3">
           <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Graph sources
           </div>
-          {result.graphSources.map((source, i) => (
+          {JSON.parse(result.graphSourcesJson ?? '[]').map((source, i) => (
             <div
               key={i}
               className="rounded-2xl border border-border/80 bg-background/70 p-4 text-xs text-foreground"
