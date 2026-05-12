@@ -148,13 +148,13 @@ function makeDeps(overrides: {
 
 it('returns immediately when stopped', async () => {
   const deps = makeDeps({ stopped: true });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
 
 it('returns immediately when executing', async () => {
   const deps = makeDeps({ executing: true });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
 
@@ -162,7 +162,7 @@ it('returns immediately when run is stale', async () => {
   const isStaleRun = vi.fn().mockReturnValue(false);
   const deps = makeDeps({ isStaleRun });
   isStaleRun.mockReturnValueOnce(true); // stale on first call (at guard)
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
 
@@ -171,14 +171,14 @@ it('returns immediately when run is stale', async () => {
 it('returns immediately when execution state is idle', async () => {
   const store = mockStore({ getExecutionState: vi.fn().mockResolvedValue('idle') });
   const deps = makeDeps({ store });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
 
 it('sets execution state to running when absent', async () => {
   const store = mockStore({ getExecutionState: vi.fn().mockResolvedValue('absent') });
   const deps = makeDeps({ store });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(store.setExecutionState).toHaveBeenCalledWith('runtime-1', 'running');
 });
 
@@ -192,7 +192,7 @@ it('returns immediately when run becomes stale after execution state check', asy
   isStaleRun.mockReturnValueOnce(false);  // guard
   isStaleRun.mockReturnValueOnce(false);  // idle check
   isStaleRun.mockReturnValueOnce(true);   // after setExecutionState
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
 
@@ -204,7 +204,7 @@ it('returns immediately when contract is null — calls transitionToIdle with de
     getRunnableContract: vi.fn().mockResolvedValue(null),
   });
   const deps = makeDeps({ store });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
@@ -215,7 +215,7 @@ it('queues next step when loaded contract id differs from requested contractId',
     getRunnableContract: vi.fn().mockResolvedValue({ id: 'different-contract', budgetUsd: 10, endsAt: Date.now() + 86_400_000 }),
   });
   const deps = makeDeps({ store, contractId: 'expected-contract' });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.queueNextStep).toHaveBeenCalledWith(1);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
@@ -231,7 +231,7 @@ it('returns immediately when run becomes stale after loading contract', async ()
     return callCount === 3; // stale on 3rd call (after contract loaded)
   });
   const deps = makeDeps({ store, isStaleRun });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });
 
@@ -245,7 +245,7 @@ it('calls generateWithTimeoutRetries with correct args when contract matches', a
   });
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: '' });
   const deps = makeDeps({ store, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(generateWithTimeoutRetries).toHaveBeenCalledTimes(1);
   const [, runEpoch, contractId, passedContract] = generateWithTimeoutRetries.mock.calls[0];
   expect(runEpoch).toBe(1);
@@ -266,7 +266,7 @@ it('returns immediately when run becomes stale after generate call', async () =>
   isStaleRun.mockReturnValueOnce(false);  // after setExecutionState
   isStaleRun.mockReturnValueOnce(false);  // after loading contract
   isStaleRun.mockReturnValueOnce(true);   // after generate call
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.transitionToIdle).not.toHaveBeenCalled();
   expect(deps.queueNextStep).not.toHaveBeenCalled();
 });
@@ -284,7 +284,7 @@ it('calls transitionToIdle and drains wake queue when stop requested with no pen
     text: 'STOP_AND_IDLE',
   });
   const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
   expect(deps.onRunnerIdle).toHaveBeenCalledTimes(1);
 });
@@ -301,8 +301,8 @@ it('resets loop count and clears nextStepAt when stop requested', async () => {
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
     text: 'STOP_AND_IDLE',
   });
-  const deps = makeDeps({ store, loopState, backoffState, messageManager, generateWithTimeoutRetries });
-  await executeStep(deps);
+  const deps = makeDeps({ store, loopState, backoffState, messageManager, generateWithTimeoutRetries } as Parameters<typeof makeDeps>[0]);
+  await executeStep(deps as any);
   expect(loopState.repeatedLoopCount).toBe(0);
   expect(backoffState.nextStepAt).toBeNull();
 });
@@ -318,7 +318,7 @@ it('does not transition to idle when stop requested but pending messages remain'
     text: 'STOP_AND_IDLE',
   });
   const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.transitionToIdle).not.toHaveBeenCalled();
   expect(deps.scheduler.resetBackoff).toHaveBeenCalledTimes(1);
   expect(deps.queueNextStep).toHaveBeenCalledWith(1);
@@ -334,7 +334,7 @@ it('resets scheduler backoff on successful non-stop generation', async () => {
   const messageManager = mockMessageManager(0);
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: 'hello world' });
   const deps = makeDeps({ store, scheduler, messageManager, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(scheduler.resetBackoff).toHaveBeenCalledTimes(1);
 });
 
@@ -347,7 +347,7 @@ it('queues next step when pending messages exist after non-stop generation', asy
   const messageManager = mockMessageManager(2);
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({ text: 'response text' });
   const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(deps.queueNextStep).toHaveBeenCalledWith(1);
 });
 
@@ -369,7 +369,7 @@ it('does not schedule when run becomes stale during error', async () => {
   });
   const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('generation failed'));
   const deps = makeDeps({ store, scheduler, isStaleRun, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(scheduler.scheduleNextStep).not.toHaveBeenCalled();
 });
 
@@ -382,7 +382,7 @@ it('schedules exponential backoff on generation error', async () => {
   const scheduler = mockScheduler();
   const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('generation failed'));
   const deps = makeDeps({ store, scheduler, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(scheduler.scheduleNextStep).toHaveBeenCalled();
   const [delayMs] = scheduler.scheduleNextStep.mock.calls[0];
   expect(delayMs).toBeGreaterThan(0);
@@ -397,7 +397,7 @@ it('calls forgeDebug on error with correct context fields', async () => {
   const forgeDebug = vi.fn();
   const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
   const deps = makeDeps({ store, forgeDebug, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(forgeDebug).toHaveBeenCalledTimes(1);
   const [call] = forgeDebug.mock.calls[0];
   expect(call.scope).toBe('agent-runner');
@@ -415,7 +415,7 @@ it('sets execution absent state on error', async () => {
   });
   const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
   const deps = makeDeps({ store, generateWithTimeoutRetries });
-  await executeStep(deps);
+  await executeStep(deps as any);
   expect(store.setExecutionAbsent).toHaveBeenCalledWith(
     'runtime-1',
     expect.objectContaining({}),
