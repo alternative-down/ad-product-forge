@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { eq, and } from 'drizzle-orm';
 
-import * as schema, { type Agent } from '../database/schema';
+import * as schema from '../database/schema';
 
 import { getDatabase } from '../database/client';
 import { runMigrations } from '../database/migrate';
