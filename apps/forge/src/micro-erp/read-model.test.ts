@@ -106,9 +106,9 @@ function createMockDb(opts: {
   const balanceChain     = makeSelectChain([{ total: balanceUsd }]);
   const contractsChain    = makeSelectChain([...contracts]);
     // Recursively extract all non-operator string values from a Drizzle expression.
-  function extractVals(expr) {
-    const vals = [];
-    function go(o) {
+  function extractVals(expr: any) {
+    const vals: any[] = [];
+    function go(o: any) {
       if (typeof o === 'string') { vals.push(o); return; }
       if (Array.isArray(o)) { o.forEach(go); return; }
       if (o && typeof o === 'object') {
@@ -207,15 +207,15 @@ describe('listCompanyCashMovements', () => {
     const { model } = createMockDb({ cashRows: [], balanceUsd: 0 });
     const result = await model.listCompanyCashMovements();
     expect(result.summary).toBeDefined();
-    expect(typeof result.summary.balanceUsd).toBe('number');
-    expect(typeof result.summary.netUsd).toBe('number');
+    expect(typeof (result.summary as any).balanceUsd).toBe('number');
+    expect(typeof (result.summary as any).netUsd).toBe('number');
   });
 
   test('uses findMany for rows', async () => {
     const rows = [makeCashRow({ id: 'e1' })];
     const { model, db } = createMockDb({ cashRows: rows });
     await model.listCompanyCashMovements();
-    expect(db.query.companyCashLedger.findMany).toHaveBeenCalled();
+    expect((db.query as any).companyCashLedger.findMany).toHaveBeenCalled();
   });
 
   test('filters by direction when provided', async () => {
@@ -402,8 +402,8 @@ describe('getActiveContractMetrics — budget fields', () => {
     const result = await model.listActiveInternalAgentContracts();
     // recentSteps is an array of step objects, capped at 10
     expect(result.items[0]!.recentSteps).toHaveLength(2);
-    expect(result.items[0]!.recentSteps.map(s => s.id)).toContain('s1');
-    expect(result.items[0]!.recentSteps.map(s => s.id)).toContain('s2');
+    expect(result.items[0]!.recentSteps.map((s: any) => s.id)).toContain('s1');
+    expect(result.items[0]!.recentSteps.map((s: any) => s.id)).toContain('s2');
   });
 });
 
