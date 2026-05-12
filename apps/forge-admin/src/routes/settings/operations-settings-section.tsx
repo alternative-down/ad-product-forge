@@ -1,9 +1,6 @@
 import { AdminButton } from '@/components/admin';
 import type { SettingsMutation, SettingsQuery } from './settings-types';
 import type { OperationsDraft } from './settings-types';
-import { AdminButton } from '@/components/admin/./forms/admin-button';
-import type { SettingsMutation, SettingsQuery } from './settings.types';
-import type { OperationsDraft } from './settings.types';
 
 type OperationSwitchFieldProps = {
   label: string;
