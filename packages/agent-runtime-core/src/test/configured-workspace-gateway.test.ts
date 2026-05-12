@@ -17,6 +17,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { ConfiguredWorkspaceGateway } from '../integrations/gateways/configured-workspace-gateway.js';
+import type { WorkspaceGateway } from '../integrations/gateways/workspace.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -26,9 +27,9 @@ import { ConfiguredWorkspaceGateway } from '../integrations/gateways/configured-
 function makeSpyBaseGateway() {
   return {
     execute: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0, timedOut: false }),
-    startBackground: vi.fn(),
-    getProcessOutput: vi.fn(),
-    killProcess: vi.fn(),
+    startBackground: vi.fn().mockResolvedValue({ pid: 'test-pid' }),
+    getProcessOutput: vi.fn().mockResolvedValue({ pid: 'test-pid', running: false, exitCode: 0, stdout: '', stderr: '' }),
+    killProcess: vi.fn().mockResolvedValue(null),
   };
 }
 
@@ -64,7 +65,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, cwd: agentA });
 
-      await gateway.execute({ command: ['ls'] });
+      await gateway.execute({ command: 'ls' });
 
       expect(base.execute).toHaveBeenCalledWith(
         expect.objectContaining({ cwd: agentA }),
@@ -76,7 +77,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, cwd: agentA });
 
-      await gateway.execute({ command: ['ls'], cwd: subDir });
+      await gateway.execute({ command: 'ls', cwd: subDir });
 
       expect(base.execute).toHaveBeenCalledWith(
         expect.objectContaining({ cwd: subDir }),
@@ -87,7 +88,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base });
 
-      await gateway.execute({ command: ['ls'] });
+      await gateway.execute({ command: 'ls' });
 
       const call = base.execute.mock.calls[0][0] as { cwd?: string };
       expect(call.cwd).toBeUndefined();
@@ -100,7 +101,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, workspaceRoot: agentA });
 
-      await gateway.execute({ command: ['echo', '$HOME'] });
+      await gateway.execute({ command: 'echo $HOME' });
 
       expect(base.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -117,7 +118,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, workspaceRoot: agentA });
 
-      await gateway.execute({ command: ['env'], env: { HOME: '/custom/path', OTHER_VAR: 'preserved' } });
+      await gateway.execute({ command: 'env', env: { HOME: '/custom/path', OTHER_VAR: 'preserved' } });
 
       const call = base.execute.mock.calls[0][0] as { env: Record<string, string> };
       // Workspace HOME is enforced for isolation — request HOME cannot override it
@@ -137,7 +138,7 @@ describe('ConfiguredWorkspaceGateway', () => {
         workspaceRoot: agentA,
       });
 
-      await gateway.execute({ command: ['env'] });
+      await gateway.execute({ command: 'env' });
 
       expect(base.execute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -157,7 +158,7 @@ describe('ConfiguredWorkspaceGateway', () => {
         env: { MY_VAR: 'hello' },
       });
 
-      await gateway.execute({ command: ['env'] });
+      await gateway.execute({ command: 'env' });
 
       const callEnv = base.execute.mock.calls[0][0].env as Record<string, string>;
       expect(callEnv.HOME).toBeUndefined();
@@ -170,7 +171,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, timeoutMs: 5000 });
 
-      await gateway.execute({ command: ['sleep', '10'] });
+      await gateway.execute({ command: 'sleep 10' });
 
       expect(base.execute).toHaveBeenCalledWith(
         expect.objectContaining({ timeoutMs: 5000 }),
@@ -181,7 +182,7 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, timeoutMs: 5000 });
 
-      await gateway.execute({ command: ['sleep', '10'], timeoutMs: 1000 });
+      await gateway.execute({ command: 'sleep 10', timeoutMs: 1000 });
 
       expect(base.execute).toHaveBeenCalledWith(
         expect.objectContaining({ timeoutMs: 1000 }),
@@ -212,8 +213,8 @@ describe('ConfiguredWorkspaceGateway — agent workspace isolation', () => {
       workspaceRoot: agentB,
     });
 
-    await gatewayA.execute({ command: ['ls', '.'] });
-    await gatewayB.execute({ command: ['ls', '.'] });
+    await gatewayA.execute({ command: 'ls .' });
+    await gatewayB.execute({ command: 'ls .' });
 
     // Each gateway scoped its own cwd
     expect(baseAgentA.execute).toHaveBeenCalledWith(
@@ -250,8 +251,8 @@ describe('ConfiguredWorkspaceGateway — agent workspace isolation', () => {
       workspaceRoot: agentB,
     });
 
-    await gatewayA.execute({ command: ['env'] });
-    await gatewayB.execute({ command: ['env'] });
+    await gatewayA.execute({ command: 'env' });
+    await gatewayB.execute({ command: 'env' });
 
     const envA = baseA.execute.mock.calls[0][0].env as Record<string, string>;
     const envB = baseB.execute.mock.calls[0][0].env as Record<string, string>;
@@ -413,7 +414,7 @@ describe('ConfiguredWorkspaceGateway — background process isolation', () => {
     const base_ = makeSpyBaseGateway();
     const gateway = new ConfiguredWorkspaceGateway({ base: base_, cwd: agentA });
 
-    await gateway.startBackground({ command: ['node', 'server.js'] });
+    await gateway.startBackground({ command: 'node server.js' });
 
     expect(base_.startBackground).toHaveBeenCalledWith(
       expect.objectContaining({ cwd: agentA }),
@@ -427,7 +428,7 @@ describe('ConfiguredWorkspaceGateway — background process isolation', () => {
     const base_ = makeSpyBaseGateway();
     const gateway = new ConfiguredWorkspaceGateway({ base: base_, workspaceRoot: agentB });
 
-    await gateway.startBackground({ command: ['node', 'server.js'] });
+    await gateway.startBackground({ command: 'node server.js' });
 
     expect(base_.startBackground).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -442,10 +443,10 @@ describe('ConfiguredWorkspaceGateway — background process isolation', () => {
     const base_ = makeSpyBaseGateway();
     const gateway = new ConfiguredWorkspaceGateway({ base: base_ });
 
-    await gateway.getProcessOutput({ processId: 'pid-123', stream: 'stdout' });
+    await gateway.getProcessOutput({ pid: 'pid-123' });
     await gateway.killProcess('pid-123');
 
-    expect(base_.getProcessOutput).toHaveBeenCalledWith({ processId: 'pid-123', stream: 'stdout' });
+    expect(base_.getProcessOutput).toHaveBeenCalledWith({ pid: 'pid-123' });
     expect(base_.killProcess).toHaveBeenCalledWith('pid-123');
   });
 });
@@ -458,7 +459,7 @@ describe('ConfiguredWorkspaceGateway — workspace root property isolation', () 
   it('workspaceRoot is exposed as a read property for external inspection', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
     const spy = vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0, timedOut: false });
-    const gateway = new ConfiguredWorkspaceGateway({ base: spy, workspaceRoot: agentA });
+    const gateway = new ConfiguredWorkspaceGateway({ base: spy as unknown as WorkspaceGateway, workspaceRoot: agentA });
 
     // workspaceRoot is exposed on the gateway instance for inspection by callers
     expect(gateway.workspaceRoot).toBe(agentA);
@@ -474,8 +475,8 @@ describe('ConfiguredWorkspaceGateway — workspace root property isolation', () 
     const gateway1 = new ConfiguredWorkspaceGateway({ base: base_, workspaceRoot: agentA });
     const gateway2 = new ConfiguredWorkspaceGateway({ base: base_, workspaceRoot: agentB });
 
-    await gateway1.execute({ command: ['env'] });
-    await gateway2.execute({ command: ['env'] });
+    await gateway1.execute({ command: 'env' });
+    await gateway2.execute({ command: 'env' });
 
     const env1 = base_.execute.mock.calls[0][0].env as Record<string, string>;
     const env2 = base_.execute.mock.calls[1][0].env as Record<string, string>;
