@@ -457,23 +457,18 @@ describe('extractLatestMessageToolBadge', () => {
 });
 
 describe('decryptProviderConfig', () => {
-  // decryptProviderConfig returns the decrypted string on parse failure (not null)
-  test('returns null for null input', () => {
-    expect(decryptProviderConfig(null as unknown as string)).toBeNull();
-  });
-
-  test('returns null for undefined input', () => {
-    expect(decryptProviderConfig(undefined as unknown as string)).toBeUndefined();
-  });
-
   test('decrypts and parses valid credentials JSON', () => {
     const result = decryptProviderConfig('{"apiKey":"secret","endpoint":"url"}');
     expect(result).toEqual({ apiKey: 'secret', endpoint: 'url' });
   });
 
-  test('returns decrypted string for invalid JSON', () => {
-    // On JSON parse failure the function returns the decrypted (plain) string
-    expect(decryptProviderConfig('not-json')).toBe('not-json');
+  test('throws on invalid JSON instead of returning plaintext', () => {
+    // On JSON parse failure the function throws — credentials must not leak as plaintext
+    expect(() => decryptProviderConfig('not-json')).toThrow();
+  });
+
+  test('throws on malformed credentials JSON', () => {
+    expect(() => decryptProviderConfig('{broken')).toThrow();
   });
 });
 
