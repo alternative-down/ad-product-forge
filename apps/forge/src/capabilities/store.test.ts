@@ -45,8 +45,8 @@ function createMockRole(overrides = {}) {
 }
 function createMockDb() {
   const makeInsertChain = () => {
-    const chain = {};
-    const fn = vi.fn().mockImplementation((_table) => {
+    const chain: Record<string, unknown> = {};
+    const fn: any = vi.fn().mockImplementation((_table) => {
       chain.values = vi.fn().mockImplementation((_vals) => {
         chain.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
         return chain;
@@ -59,11 +59,11 @@ function createMockDb() {
       return chain;
     });
     fn.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
-    return fn;
+    return fn as any;
   };
   const makeDeleteChain = () => {
-    const whereChain = { where: vi.fn().mockResolvedValue(undefined) };
-    const fn = vi.fn().mockImplementation((_table: any) => whereChain);
+    const whereChain: Record<string, unknown> = { where: vi.fn().mockResolvedValue(undefined) };
+    const fn: any = vi.fn().mockImplementation((_table: any) => whereChain);
     fn.mockImplementation((_table: any) => whereChain);
     return fn as any;
   };
@@ -71,7 +71,7 @@ function createMockDb() {
     const whereChain = { returning: vi.fn().mockResolvedValue(undefined) };
     const setChain = { where: vi.fn().mockImplementation(() => whereChain) };
     const chain = { set: vi.fn().mockImplementation(() => setChain) };
-    const fn = vi.fn().mockImplementation((_table: any) => chain);
+    const fn: any = vi.fn().mockImplementation((_table: any) => chain);
     fn.mockImplementation((_table: any) => chain);
     return fn as any;
   };
@@ -484,7 +484,7 @@ describe('capabilities/store', () => {
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
-      const result = await store.manageRole({ action: 'create', name: '  Trimmed Name  ', description: '  Desc  ' });
+      const result = await store.manageRole({ action: 'create', name: '  Trimmed Name  ', description: '  Desc  ' }) as { name: string; description: string | null; roleId: string };
       expect(result.name).toBe('Trimmed Name');
       expect(result.description).toBe('Desc');
     });
@@ -505,7 +505,7 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findFirst.mockResolvedValue(createMockRole({ name: 'Old' }));
       const store = createCapabilityStore(db);
-      const result = await store.manageRole({ action: 'update', roleId: 'role-test', name: '  New Name  ', description: '  New Desc  ' });
+      const result = await store.manageRole({ action: 'update', roleId: 'role-test', name: '  New Name  ', description: '  New Desc  ' }) as { name?: string; description?: string | null; roleId: string };
       expect(result.name).toBe('New Name');
       expect(result.description).toBe('New Desc');
     });
@@ -513,7 +513,7 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findFirst.mockResolvedValue(createMockRole({ name: 'Old' }));
       const store = createCapabilityStore(db);
-      const result = await store.manageRole({ action: 'update', roleId: 'role-test', name: 'New', description: '   ' });
+      const result = await store.manageRole({ action: 'update', roleId: 'role-test', name: 'New', description: '   ' }) as { name?: string; description?: string | null; roleId: string };
       expect(result.description).toBeUndefined();
     });
     it('delete: throws when roleId is missing', async () => {
