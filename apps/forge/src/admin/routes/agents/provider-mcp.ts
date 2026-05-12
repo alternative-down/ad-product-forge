@@ -80,7 +80,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-provider/upsert',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
         if (body.providerType === 'discord') {
@@ -141,7 +141,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-provider/delete',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
 
@@ -167,7 +167,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/create',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
         const serverId = createId();
@@ -211,7 +211,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/update',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
         await db
@@ -251,7 +251,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/delete',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
 
@@ -283,7 +283,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/assign',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
         const existing = await db.query.agentMcpConfigs.findFirst({
@@ -336,7 +336,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/set-active',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
 
@@ -366,7 +366,7 @@ export function registerAgentProviderMcpRoutes({
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent-mcp/detach',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
         const config = await db.query.agentMcpConfigs.findFirst({

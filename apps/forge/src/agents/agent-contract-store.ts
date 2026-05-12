@@ -107,7 +107,7 @@ export function createAgentContractStore(
       }
 
       // Wrap insert + funding in same transaction — if funding fails, contract insert rolls back
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("drizzle-orm").sql.SQL) => {
         await tx.insert(agentExecutionContracts).values(newContract);
 
         await companyCashOperations.recordCashOut(
@@ -269,7 +269,7 @@ export function createAgentContractStore(
     } as const;
 
     try {
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("drizzle-orm").sql.SQL) => {
         await tx.insert(agentExecutionContracts).values(nextContract);
       });
     } catch (err) {
@@ -290,7 +290,7 @@ export function createAgentContractStore(
         return null;
       }
       const now = time.now();
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("drizzle-orm").sql.SQL) => {
         await companyCashOperations.recordCashOut(
           {
             type: 'agent-contract-funding',
@@ -334,7 +334,7 @@ export function createAgentContractStore(
 
     const now = time.now();
     try {
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("drizzle-orm").sql.SQL) => {
         await companyCashOperations.recordCashIn(
           {
             type: 'agent-contract-termination-refund',
