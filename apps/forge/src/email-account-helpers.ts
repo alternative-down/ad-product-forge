@@ -2,7 +2,7 @@
  * email-account helpers — extracted from createEmailProvider for testability.
  * These are pure/pure-ish functions that don't close over provider state.
  */
-import type { CommunicationFile } from '@forge-runtime/core';
+import { forgeDebug, type CommunicationFile } from '@forge-runtime/core';
 import type { Email } from 'postal-mime';
 
 export function toUint8Array(value: ArrayBuffer | Uint8Array | string): Uint8Array {
@@ -14,7 +14,7 @@ export function toUint8Array(value: ArrayBuffer | Uint8Array | string): Uint8Arr
 export function toCommunicationAttachments(
   email: Email,
   providerMessageId: string,
-): CommunicationFile[] {
+): type CommunicationFile[] {
   return (email.attachments ?? []).map((attachment, index) => {
     const data = toUint8Array(attachment.content);
     return {
@@ -59,7 +59,7 @@ export function pruneRecentOutboundMessages(
     Array<{
       messageId: string;
       content: string;
-      attachments: CommunicationFile[];
+      attachments: type CommunicationFile[];
       createdAt: string;
       unread: boolean;
       authorId: string;

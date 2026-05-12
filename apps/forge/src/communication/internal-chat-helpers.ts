@@ -1,3 +1,5 @@
+import { forgeDebug } from '@forge-runtime/core';
+
 import { customAlphabet } from 'nanoid';
 import path from 'node:path';
 
