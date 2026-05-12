@@ -403,7 +403,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       const steps = await db.query.agentExecutionSteps.findMany({
         where: and(
           eq(agentExecutionSteps.agentId, agentId),
-          gte(agentExecutionSteps.createdAt, currentPeriodStart.toISOString()),
+          gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
         ),
         columns: { costUsd: true },
       });
