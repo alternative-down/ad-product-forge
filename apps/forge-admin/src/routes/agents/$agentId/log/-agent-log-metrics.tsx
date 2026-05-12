@@ -48,7 +48,7 @@ function formatDateTime(value: number) {
 
 interface AgentLogMetricsProps {
   metrics: NonNullable<AgentLogRuntimeMemoryData['metrics']>;
-  generationCount: number | null;
+
   updatedAt: number | null;
   lastObservedAt: number | null;
   checkpointMessageId: string | null;
@@ -58,7 +58,6 @@ interface AgentLogMetricsProps {
 
 export function AgentLogMetrics({
   metrics,
-  generationCount,
   updatedAt,
   lastObservedAt,
   checkpointMessageId,
