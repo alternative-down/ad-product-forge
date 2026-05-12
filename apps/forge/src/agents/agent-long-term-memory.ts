@@ -601,7 +601,7 @@ export function createAgentLongTermMemory(input: {
         } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
-          forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'agent-long-term-memory: operation failed', error: err instanceof Error ? err.message : String(err) });
+          forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'agent-long-term-memory: operation failed', error: error instanceof Error ? error.message : String(error) });
           throw error;
         }
 
