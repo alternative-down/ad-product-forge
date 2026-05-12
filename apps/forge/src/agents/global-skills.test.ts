@@ -43,14 +43,13 @@ const {
 // ── External dep mocks (order matters: must precede SUT import) ────────────────
 vi.mock('node:path', async () => {
   const RealPath = await vi.importActual<typeof import('node:path')>('node:path');
-  return { default: {
-    ...RealPath,
-    resolve: vi.fn((...args: string[]) => {
-      const r = RealPath.resolve(...args);
-      resolveResults.push(r);
-      return r;
-    }),
-  } };
+  const mockResolve = vi.fn((...args: string[]) => {
+    const r = RealPath.resolve(...args);
+    resolveResults.push(r);
+    return r;
+  });
+  // For import * as path, need both default and named exports
+  return { default: { ...RealPath, resolve: mockResolve }, resolve: mockResolve };
 });
 
 vi.mock('node:fs/promises', async () => {
@@ -65,7 +64,25 @@ vi.mock('node:fs/promises', async () => {
     access:    accessFn    as typeof RealFs.access,
     stat:      statFn      as typeof RealFs.stat,
   };
-  return { default: impl };
+  return { default: impl, ...impl };
+});
+
+// Mock node:fs (sync) — skills-shared/index.ts imports the sync version
+// and uses fs.readdir with withFileTypes:true in countSkillFiles
+// Mock node:fs (sync) — skills-shared/index.ts uses 'import * as fs from node:fs'
+// and calls fs.readdir (async, not readdirSync) with withFileTypes:true
+const mockReaddir = async (p: string, opts?: { withFileTypes?: boolean }) => {
+  const entries = dirStore.get(String(p).replace(/\/$/, ''));
+  if (entries === undefined) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+  return entries.map(name => {
+    const fullPath = p.endsWith('/') ? p + name : p + '/' + name;
+    const isDir = dirStore.has(fullPath) || name.endsWith('/');
+    return { name, isDirectory: () => isDir, isFile: () => !isDir, isBlockDevice: () => false, isCharacterDevice: () => false, isFIFO: () => false, isSocket: () => false, isSymbolicLink: () => false };
+  });
+};
+vi.mock('node:fs', () => {
+  const fsMock = { readdir: mockReaddir, readdirSync: mockReaddir };
+  return { __esModule: true, default: fsMock, ...fsMock };
 });
 
 vi.mock('fflate', async () => ({ unzipSync }));
@@ -162,8 +179,13 @@ beforeEach(() => {
     return entries.map(name => {
       const fullPath = p.endsWith('/') ? p + name : p + '/' + name;
       const isDir = dirStore.has(fullPath) || name.endsWith('/');
-      return { name, isDirectory: () => isDir, isFile: () => !isDir };
-    }) as unknown as import('node:fs').Dirent[];
+      // Return a proper Dirent-like object with name and isDirectory/isFile methods.
+      // When Node's fs.readdir is called with withFileTypes:true it calls
+      // readdir(fd, 'buffer', stats, entries, buffer) which expects Dirent.name to be
+      // set on the buffer entries.
+      const entry: import('node:fs').Dirent = { name, isDirectory: () => isDir, isFile: () => !isDir, isBlockDevice: () => false, isCharacterDevice: () => false, isFIFO: () => false, isSocket: () => false, isSymbolicLink: () => false } as unknown as import('node:fs').Dirent;
+      return entry;
+    });
   });
   readFileFn.mockImplementation(async (p: string) => {
     const key = String(p).replace(/\/$/, '');
