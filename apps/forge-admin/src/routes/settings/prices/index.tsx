@@ -92,6 +92,7 @@ function SettingsPricesRoute() {
                     size="icon"
                     onClick={() => {
                       setPriceForm({
+                        priceId: price.priceId,
                         modelKey: price.modelKey,
                         inputPerMillionUsd: price.inputPerMillionUsd,
                         inputCachePerMillionUsd: price.inputCachePerMillionUsd,

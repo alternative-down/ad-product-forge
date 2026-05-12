@@ -104,9 +104,7 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
       return;
     }
 
-    await this.keywordIndex.index([
-      ...await this.store.list(),
-    ]);
+    await this.keywordIndex.index(documents);
     await this.vectorIndex.index(await this.embedDocuments(documents));
   }
 
