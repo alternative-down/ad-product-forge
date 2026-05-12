@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Shared mock refs ──────────────────────────────────────────────────────────
 
 type MockScheduler = {
+  startNewRunEpoch: ReturnType<typeof vi.fn>;
+  getState: ReturnType<typeof vi.fn>;
   startHealthcheck: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   clearHealthcheck: ReturnType<typeof vi.fn>;
@@ -28,6 +30,7 @@ type MockMessageManager = {
 };
 
 type MockStore = {
+  getRunLastMessages: ReturnType<typeof vi.fn>;
   getExecutionState: ReturnType<typeof vi.fn>;
   setExecutionState: ReturnType<typeof vi.fn>;
   getRunnableContract: ReturnType<typeof vi.fn>;
