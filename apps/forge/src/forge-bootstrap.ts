@@ -75,7 +75,6 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
 }
 
 /** Normalise value — trim empty strings to undefined */
- * Bootstrap Forge: validate env, load DB, create all managers and services.
  * Returns the fully wired application context ready for routes registration.
  */
 export async function createForgeBootstrap() {
