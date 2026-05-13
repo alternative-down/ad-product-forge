@@ -66,7 +66,6 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'createSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     return record;
