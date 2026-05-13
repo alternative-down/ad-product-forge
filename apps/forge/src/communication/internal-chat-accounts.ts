@@ -53,19 +53,30 @@ export function createInternalChatAccounts(db: Database) {
       roleName: input.roleName,
       roleDescription: input.roleDescription,
     });
-    const existing = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, input.agentId),
-    });
+    let existing;
+    try {
+      existing = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, input.agentId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'registerAgentAccount: findFirst failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (existing) {
-      await db
-        .update(internalChatAccounts)
-        .set({
-          displayName: input.displayName,
-          description,
-          updatedAt: now,
-        })
-        .where(eq(internalChatAccounts.agentId, input.agentId));
+      try {
+        await db
+          .update(internalChatAccounts)
+          .set({
+            displayName: input.displayName,
+            description,
+            updatedAt: now,
+          })
+          .where(eq(internalChatAccounts.agentId, input.agentId));
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'registerAgentAccount: update failed', context: { accountId: existing.id, error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
 
       return {
         accountId: existing.id,
@@ -79,23 +90,34 @@ export function createInternalChatAccounts(db: Database) {
     const slug = createInternalChatSlug(input.displayName);
     const accountId = `acct_${createId()}`;
 
-    await db.insert(internalChatAccounts).values({
-      id: accountId,
-      agentId: input.agentId,
-      slug,
-      displayName: input.displayName,
-      description,
-      createdAt: now,
-      updatedAt: now,
-    });
+    try {
+      await db.insert(internalChatAccounts).values({
+        id: accountId,
+        agentId: input.agentId,
+        slug,
+        displayName: input.displayName,
+        description,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'registerAgentAccount: insert failed', context: { accountId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     // Create DM conversations with all existing agent accounts
-    const existingAgentAccounts = await db.query.internalChatAccounts.findMany({
-      where: and(
-        isNotNull(internalChatAccounts.agentId),
-        ne(internalChatAccounts.agentId, input.agentId),
-      ),
-    });
+    let existingAgentAccounts;
+    try {
+      existingAgentAccounts = await db.query.internalChatAccounts.findMany({
+        where: and(
+          isNotNull(internalChatAccounts.agentId),
+          ne(internalChatAccounts.agentId, input.agentId),
+        ),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'registerAgentAccount: list existing accounts failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     for (const existing of existingAgentAccounts) {
       await ensureDirectConversation(accountId, existing.id);
@@ -201,15 +223,25 @@ export function createInternalChatAccounts(db: Database) {
   }
 
   async function getAccountBySlug(slug: string) {
-    return await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.slug, slug),
-    });
+    try {
+      return await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.slug, slug),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getAccountBySlug failed', context: { slug, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function getAccountByAgentId(agentId: string) {
-    return await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, agentId),
-    });
+    try {
+      return await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, agentId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getAccountByAgentId failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function getAccountByTargetKey(targetKey: string) {
@@ -225,9 +257,15 @@ export function createInternalChatAccounts(db: Database) {
   }
 
   async function getRequiredAccount(accountId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.id, accountId),
-    });
+    let account;
+    try {
+      account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.id, accountId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getRequiredAccount DB read failed', context: { accountId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     if (!account) {
       forgeDebug({ scope: 'internal-chat-accounts', level: 'warn', message: 'deleteInternalChatAccount: not found', context: { accountId } });
       throw new InternalChatAccountNotFoundError(accountId);
@@ -239,18 +277,30 @@ export function createInternalChatAccounts(db: Database) {
     if (accountIds.length === 0) {
       return new Map();
     }
-    const accounts = await db.query.internalChatAccounts.findMany({
-      where: accountIds.length === 1
-        ? eq(internalChatAccounts.id, accountIds[0])
-        : inArray(internalChatAccounts.id, accountIds),
-    });
+    let accounts;
+    try {
+      accounts = await db.query.internalChatAccounts.findMany({
+        where: accountIds.length === 1
+          ? eq(internalChatAccounts.id, accountIds[0])
+          : inArray(internalChatAccounts.id, accountIds),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getAccountsById failed', context: { count: accountIds.length, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return new Map(accounts.map((a) => [a.id, a]));
   }
 
   async function getRequiredAgentAccount(agentId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, agentId),
-    });
+    let account;
+    try {
+      account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, agentId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getRequiredAgentAccount DB read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     if (!account) {
       forgeDebug({ scope: 'internal-chat-accounts', level: 'warn', message: 'getAgentInternalChatAccount: not found', context: { agentId } });
       throw new InternalChatAccountNotFoundError(agentId, `Internal chat account not found for agent: ${agentId}`);
@@ -259,9 +309,15 @@ export function createInternalChatAccounts(db: Database) {
   }
 
   async function getRequiredAccountBySlug(slug: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.slug, slug),
-    });
+    let account;
+    try {
+      account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.slug, slug),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getRequiredAccountBySlug DB read failed', context: { slug, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     if (!account) {
       throw new InternalChatAccountNotFoundError(slug);
     }
@@ -269,9 +325,15 @@ export function createInternalChatAccounts(db: Database) {
   }
 
   async function getConversationForAgent(agentId: string, conversationId: string) {
-    const account = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, agentId),
-    });
+    let account;
+    try {
+      account = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, agentId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: 'getConversationForAgent DB read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     if (!account) {
       throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
     }

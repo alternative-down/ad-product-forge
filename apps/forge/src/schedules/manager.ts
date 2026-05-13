@@ -108,26 +108,19 @@ export function createAgentScheduleManager(input: {
       content: '',
       wakeWhenRunning: false,
     });
-    const heartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
-
-    if (!heartbeat) {
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createHeartbeatSchedule failed to load heartbeat', context: { agentId, recordId: record.id } });
-      throw new Error(`Failed to load heartbeat schedule: ${record.id}`);
-    }
-
     try {
-      await registerSchedule(heartbeat);
+      await registerSchedule(record);
     } catch (error) {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
         message: 'createHeartbeatSchedule: registerSchedule failed',
-        context: { agentId, scheduleId: heartbeat.scheduleId, error: error instanceof Error ? error.message : String(error) },
+        context: { agentId, scheduleId: record.scheduleId, error: error instanceof Error ? error.message : String(error) },
       });
       throw error;
     }
     return {
-      scheduleId: heartbeat.scheduleId,
+      scheduleId: record.scheduleId,
     };
   }
 
