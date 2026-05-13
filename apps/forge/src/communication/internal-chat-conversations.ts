@@ -19,6 +19,20 @@ import {
 } from '../database/schema';
 import type { InternalChatConversation } from './internal-chat-helpers';
 
+
+const logInternalChatConvError = (
+  context: string,
+  error: unknown,
+  extra: Record<string, unknown> = {},
+) => {
+  forgeDebug({
+    scope: 'internal-chat',
+    level: 'error',
+    message: `${context} failed: ${error instanceof Error ? error.message : String(error)}`,
+    context: extra,
+  });
+};
+
 export function createInternalChatConversations(db: Database) {
   async function ensureDirectConversation(
     leftAccountId: string,
@@ -51,7 +65,7 @@ export function createInternalChatConversations(db: Database) {
           ),
         });
       } catch (error) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'ensureDirectConversation findFirst failed', context: { error: error instanceof Error ? error.message : String(error) } });
+        logInternalChatConvError('ensureDirectConversation findFirst', error);
         throw error;
       }
 
@@ -73,7 +87,7 @@ export function createInternalChatConversations(db: Database) {
         updatedAt: now,
       });
     } catch (error) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'ensureDirectConversation insert conversation failed', context: { conversationId, error: error instanceof Error ? error.message : String(error) } });
+      logInternalChatConvError('ensureDirectConversation insert conversation', error, { conversationId });
       throw error;
     }
 
@@ -93,7 +107,7 @@ export function createInternalChatConversations(db: Database) {
         },
       ]);
     } catch (error) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'ensureDirectConversation insert members failed', context: { conversationId, error: error instanceof Error ? error.message : String(error) } });
+      logInternalChatConvError('ensureDirectConversation insert members', error, { conversationId });
       throw error;
     }
 
@@ -128,7 +142,7 @@ export function createInternalChatConversations(db: Database) {
         limit: 1,
       });
     } catch (error) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation findMany failed', context: { conversationId: input.conversationId, error: error instanceof Error ? error.message : String(error) } });
+      logInternalChatConvError('archiveConversation findMany', error, { conversationId: input.conversationId });
       throw error;
     }
 
@@ -138,7 +152,7 @@ export function createInternalChatConversations(db: Database) {
           .delete(internalChatConversations)
           .where(eq(internalChatConversations.id, input.conversationId));
       } catch (error) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation delete failed', context: { conversationId: input.conversationId, error: error instanceof Error ? error.message : String(error) } });
+        logInternalChatConvError('archiveConversation delete', error, { conversationId: input.conversationId });
         throw error;
       }
     }
