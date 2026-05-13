@@ -220,7 +220,7 @@ describe('runInternalTermination', () => {
       emailMailboxes: null,
       coolify: null,
       schedules: createMockSchedules() as any,
-    });
+    } as any);
 
     expect(mockTerminateInternalAgent).toHaveBeenCalledWith(mockDb, expect.objectContaining({
       agentId: 'agent-1',

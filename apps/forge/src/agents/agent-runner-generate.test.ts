@@ -35,8 +35,7 @@ function makeIteration(overrides: {
     text: overrides.text ?? 'Hello world',
     toolCalls: overrides.toolCalls ?? [],
     toolResults: overrides.toolResults ?? [],
-    messages: [], // satisfies didIterationProduceVisibleAssistantText(iteration)
-  };
+  } as any;
 }
 
 function makeMinimalDeps(overrides: Partial<Parameters<typeof buildIterationFeedback>[1]> = {}) {

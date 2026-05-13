@@ -7,7 +7,7 @@ afterEach(() => { vi.useRealTimers(); });
 describe('agent-runner-flush-manager', () => {
   const RUNTIME_ID = 'test-runtime';
 
-  function makeDeps(overrides: Partial<Parameters<typeof createFlushManager>[0]['deps']> = {}) {
+  function makeDeps(overrides: Partial<Parameters<typeof createFlushManager>[0]> = {}) {
     const getSystemSettings = vi.fn().mockResolvedValue({
       stepDelayEnabled: false,
       memoryLastMessagesFullEnabled: false,

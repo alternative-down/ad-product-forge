@@ -105,7 +105,7 @@ function getLastAssistantText(messages: NativeToolLoopMessage[]): string {
 // buildStepDiagnostics
 // -----------------------------------------------------------------------
 
-function buildStepDiagnostics(messages: NativeToolLoopMessage[]): NativeToolLoopMessage[] {
+function buildStepDiagnostics(messages: NativeToolLoopMessage[]): any {
   return messages.map((message) => {
     if (!message) return { role: 'unknown' };
     const content = message.content;
