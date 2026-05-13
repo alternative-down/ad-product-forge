@@ -79,6 +79,7 @@ function makeMockDb(rows: unknown[] = []) {
     select: vi.fn().mockReturnValue(L4),
     query: {
       internalChatConversationMembers: { findFirst: membershipFindFirst },
+      internalChatMessageAttachments: { findMany: vi.fn().mockResolvedValue([]) },
     },
     update: vi.fn().mockReturnValue({ where: vi.fn() }),
   };
