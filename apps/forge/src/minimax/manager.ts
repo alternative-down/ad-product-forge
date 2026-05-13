@@ -61,7 +61,7 @@ export class MiniMaxClient {
             try {
               return JSON.parse(rawBody) as MiniMaxJsonResponse;
             } catch (error) {
-              forgeDebug({ scope: 'minimax/manager', level: 'warn', message: 'Failed to parse MiniMax response', context: { error: error instanceof Error ? error.message : String(error) } });
+              forgeDebug({ scope: 'minimax', level: 'warn', message: 'Failed to parse MiniMax response', context: { error: error instanceof Error ? error.message : String(error) } });
               return null;
             }
           })()
@@ -406,7 +406,7 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
   const key = apiKey || process.env.MINIMAX_API_KEY;
 
   if (!key) {
-    forgeDebug({ scope: 'minimax-manager', level: 'error', message: 'createMinimaxManager: MINIMAX_API_KEY not set' });
+    forgeDebug({ scope: 'minimax', level: 'error', message: 'createMinimaxManager: MINIMAX_API_KEY not set' });
     throw new Error('MINIMAX_API_KEY environment variable is not set');
   }
 
@@ -420,7 +420,7 @@ export function createMiniMaxManager(config: {
     const cfg = await config.integrations.getMinimaxConfig();
 
     if (!cfg) {
-      forgeDebug({ scope: 'minimax/manager', level: 'warn', message: 'getClient MiniMax integration not configured' });
+      forgeDebug({ scope: 'minimax', level: 'warn', message: 'getClient MiniMax integration not configured' });
       throw new Error('MiniMax integration is not configured');
     }
 

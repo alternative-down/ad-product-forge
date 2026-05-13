@@ -124,7 +124,7 @@ async function writeBufferToWorkspace(
   const filesystem = workspace?.filesystem;
 
   if (!filesystem) {
-    forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+    forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
     throw new Error('MiniMax tools require a workspace filesystem');
   }
 
@@ -152,7 +152,7 @@ async function readWorkspaceImageAsDataUrl(
   const filesystem = workspace?.filesystem;
 
   if (!filesystem) {
-    forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+    forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
     throw new Error('MiniMax tools require a workspace filesystem');
   }
 
@@ -161,7 +161,7 @@ async function readWorkspaceImageAsDataUrl(
   const mimeType = resolveImageContentType(filePath);
 
   if (!mimeType || !mimeType.startsWith('image/')) {
-    forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+    forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
     throw new Error(`Reference image must be an image file: ${filePath}`);
   }
 
@@ -182,7 +182,7 @@ async function waitForVideoFile(
     const status = await minimax.queryVideoGeneration(taskId);
 
     if (!status.success) {
-      forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+      forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
       throw new Error(status.error?.message || 'Failed to query MiniMax video generation status');
     }
 
@@ -193,14 +193,14 @@ async function waitForVideoFile(
     }
 
     if (videoStatus === 'failed') {
-      forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+      forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
       throw new Error(status.data?.failureReason || 'MiniMax video generation failed');
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 
-  forgeDebug({ scope: 'minimax-tools', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+  forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
   throw new Error('MiniMax video generation did not finish within the expected time window');
 }
 
