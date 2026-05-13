@@ -23,13 +23,7 @@ export async function renewAgentContract(
   const now = currentTimeMs();
 
   try {
-    const activeContract = await db.query.agentExecutionContracts.findFirst({
-      where: and(
-        eq(agentExecutionContracts.agentId, input.agentId),
-        lte(agentExecutionContracts.startsAt, now),
-        gte(agentExecutionContracts.endsAt, now),
-      ),
-    });
+    const activeContract = await contractStore.getActiveContract(input.agentId);
 
     if (!activeContract) {
       forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'no-active-contract', context: { agentId: input.agentId } });
