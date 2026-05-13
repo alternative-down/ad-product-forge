@@ -99,9 +99,6 @@ export function createGitHubAppManager(config: {
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
-  // opsRouting proxy: declared before opsCtx to avoid TDZ; populated after instantiation
-  const opsRouting: ReturnType<typeof createRoutingOps> = {} as never;
-
   // ── Build shared ops context ───────────────────────────────────────────────
   const opsCtx: OpsContext = {
     config,
@@ -144,21 +141,17 @@ export function createGitHubAppManager(config: {
     summarizeGitHubEvent,
     normalizeGitHubAppCredentials: (r) => normalizeGitHubAppCredentials(r as Parameters<typeof normalizeGitHubAppCredentials>[0]) as never,
     normalizeManifestConfig: (r) => normalizeManifestConfig(r as Parameters<typeof normalizeManifestConfig>[0]) as never,
-    opsRouting,
   };
 
-  // ── Instantiate ops modules ─────────────────────────────────────────────
+  // ── Instantiate ops modules (opsRouting not in opsCtx to avoid circular reference) ─
+  const opsRouting = createRoutingOps(opsCtx);
   const opsCredentials = createCredentialsOps(opsCtx);
   const opsRepos = createReposOps(opsCtx);
   const opsPullRequests = createPullRequestsOps(opsCtx);
   const opsIssues = createIssuesOps(opsCtx);
   const opsLabels = createLabelsOps(opsCtx);
   const opsMilestones = createMilestonesOps(opsCtx);
-  const _routingOps = createRoutingOps(opsCtx);
   const opsApps = createAppProvisioningOps(opsCtx);
-
-  // Populate opsRouting proxy after all modules are initialized (avoids TDZ)
-  Object.assign(opsRouting, _routingOps);
 
   // ── App Lifecycle ────────────────────────────────────────────────────────
   async function getGlobalConfig() {
