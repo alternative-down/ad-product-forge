@@ -9,10 +9,8 @@ import {
 import type { Database } from '../database/client';
 import {
   type ConversationListingDeps,
-  type ConversationListItem,
   type MessageListItem,
   type MessageRowFull,
-  type ConversationParticipant,
 } from './internal-chat-listing-types';
 import { buildConversationParticipantNames } from './internal-chat-helpers';
 import { forgeDebug } from '@forge-runtime/core';
@@ -86,7 +84,7 @@ export function createConversationListing(db: Database, deps: ConversationListin
           (unreadCountByConversationId.get(row.conversationId) ?? 0) + (row.unread === 1 ? 1 : 0),
         );
         const existing = messagesByConversationId.get(row.conversationId) ?? [];
-        const shouldInclude = input.unread ? row.unread === 1 : true;
+        const shouldInclude = (input.unread ?? false) ? row.unread === 1 : true;
         if (shouldInclude && existing.length < 5) {
           existing.push({
             messageId: row.messageId,
