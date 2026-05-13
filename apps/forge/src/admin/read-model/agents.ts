@@ -52,6 +52,7 @@ type ClosableLibsqlClient = ReturnType<typeof createClient> & {
 };
 
 import { createAgentListReadModel } from './agents-list';
+import { createAgentConversationsReadModel } from './agents-conversations';
 import type { AgentListItem, AgentReadModel } from './agents-types';
 
 
@@ -115,6 +116,12 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   // listAgents and getAgent delegated to agents-list submodule
+  const conversationsRM = createAgentConversationsReadModel({
+    db,
+    workspaceBasePath,
+    internalChat,
+  });
+
   const agentListRM = createAgentListReadModel({
     db,
     registry,
@@ -123,12 +130,13 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   });
   const listAgents = agentListRM.listAgents;
   const getAgent = agentListRM.getAgent;
+  const {
+    listAgentRecentConversations,
+    listAgentConversationMessages,
+    listAgentThreadMessages,
+    listAgentLongTermMemoryThreadMessages,
+  } = conversationsRM;
 
-  async function listAgentRecentConversations(agentId: string) {
-    const rows = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (!rows) return [];
-    return await listRecentConversations(agentId, 10);
-  }
 
   async function listAgentExecutionSteps(input: { agentId: string; limit: number; offset: number }) {
     const rows = await db.query.agentExecutionSteps.findMany({
@@ -143,25 +151,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     });
   }
 
-  async function listAgentThreadMessages(params: { agentId: string; page: number; perPage: number }) {
-    return await listThreadMessages(workspaceBasePath, params.agentId, {
-      page: params.page,
-      perPage: params.perPage,
-    });
-  }
 
-  async function listAgentLongTermMemoryThreadMessages(params: {
-    agentId: string;
-    page: number;
-    perPage: number;
-  }) {
-    return await listThreadMessages(workspaceBasePath, params.agentId, {
-      page: params.page,
-      perPage: params.perPage,
-      threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
-      tablePrefix: toMastraSafeIdentifier(params.agentId),
-    });
-  }
 
   async function getAgentRuntimeMemory(agentId: string) {
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
@@ -385,24 +375,6 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     return { ltmRecall };
   }
 
-  async function listAgentConversationMessages(params: {
-    agentId: string;
-    provider: string;
-    targetKey: string;
-    limit: number;
-    offset: number;
-  }) {
-    const messages = await (internalChat as InternalChatService).listMessages({
-      provider: params.provider,
-      targetKey: params.targetKey,
-      limit: params.limit,
-      offset: params.offset,
-    });
-    return {
-      items: messages.map((message: CommunicationMessageView) => ({ ...message, authorAgentId: null })),
-      hasMore: false,
-    };
-  }
 
   async function listAgentContracts(agentId: string) {
     const rows = await db.query.agentExecutionContracts.findMany({
