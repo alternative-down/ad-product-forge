@@ -34,7 +34,7 @@ export function createLlmSettingsStore(db: Database) {
 
       return rows.map(toProfileRecord);
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM profiles', context: { error: err } });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM profiles', context: { error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
   }
@@ -222,7 +222,7 @@ export function createLlmSettingsStore(db: Database) {
     try {
       existing = await getDefaultsRow();
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM defaults', context: { error: err } });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
 
@@ -238,7 +238,7 @@ export function createLlmSettingsStore(db: Database) {
           })
           .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
       } catch (err) {
-        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM defaults', context: { error: err } });
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
         throw err;
       }
     } else {

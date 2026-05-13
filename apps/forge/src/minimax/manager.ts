@@ -61,7 +61,7 @@ export class MiniMaxClient {
             try {
               return JSON.parse(rawBody) as MiniMaxJsonResponse;
             } catch (error) {
-              forgeDebug({ scope: 'minimax/manager', level: 'warn', message: 'Failed to parse MiniMax response', context: { error } });
+              forgeDebug({ scope: 'minimax/manager', level: 'warn', message: 'Failed to parse MiniMax response', context: { error: error instanceof Error ? error.message : String(error) } });
               return null;
             }
           })()

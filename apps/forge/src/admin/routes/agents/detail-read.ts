@@ -44,7 +44,7 @@ export function registerAgentBaseRoutes(
       if (!agent) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(agent);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -74,7 +74,7 @@ export function registerAgentStepsRoutes(
       });
       return jsonResponse({ items: rows, hasMore: rows.length === limit });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/steps", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/steps", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -96,7 +96,7 @@ export function registerAgentConversationsRoutes(
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       return jsonResponse(await listAgentRecentConversations(agentId));
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/conversations", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/conversations", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -118,7 +118,7 @@ export function registerAgentMemoryRoutes(
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       return jsonResponse(await getAgentRuntimeMemory(agentId));
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/memory", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/memory", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -146,7 +146,7 @@ export function registerAgentMetricsRoutes(
       });
       return jsonResponse({ items: rows });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/metrics", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/metrics", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -171,7 +171,7 @@ export function registerAgentContractRoutes(
       });
       return jsonResponse({ items: rows });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/contracts", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/contracts", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -221,7 +221,7 @@ export function registerAgentMcpRoutes(
         }),
       });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/mcp-servers", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/mcp-servers", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -246,7 +246,7 @@ export function registerAgentSchedulesRoutes(
       });
       return jsonResponse({ items: rows });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/schedules", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/schedules", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }
@@ -281,7 +281,7 @@ export function registerAgentNotificationsRoutes(
         })),
       });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/notifications", context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/notifications", context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     }

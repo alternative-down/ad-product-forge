@@ -12,7 +12,7 @@ export function createLlmModelPriceStore(db: Database) {
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM model prices', context: { error: err } });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM model prices', context: { error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
   }
