@@ -50,7 +50,6 @@ export async function renewAgentContract(
         availableBalanceUsd,
         requiredBudgetUsd: input.newBudgetUsd,
       } });
-      forgeDebug({ scope: "renew-agent-contract", level: "warn", runtimeId: input.agentId, message: "renewContract: insufficient company cash" });
       throw new Error('Insufficient company cash to renew this contract');
     }
 
