@@ -126,6 +126,7 @@ export function createInternalChatService(
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
   const getRequiredAccount = accounts.getRequiredAccount;
+  const getAccountsById = accounts.getAccountsById;
   const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
   const getAccountByTargetKey = accounts.getAccountByTargetKey;
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;

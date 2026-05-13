@@ -31,6 +31,7 @@ export interface SendingDeps {
     getAccountByAgentId: (agentId: string) => Promise<{ id: string; displayName: string; slug: string } | null>;
     getAccountBySlug: (slug: string) => Promise<{ id: string } | null>;
     getRequiredAccount: (accountId: string) => Promise<{ id: string; displayName: string; slug: string; agentId: string | null }>;
+    getAccountsById: (accountIds: string[]) => Promise<Map<string, { id: string; displayName: string; slug: string; agentId: string | null }>>;
   };
   serviceHelpers: {
     getRequiredConversationForAccount: (accountId: string, conversationKey: string) => Promise<InternalChatConversation>;
@@ -150,10 +151,9 @@ export function createChatSending(deps: SendingDeps) {
     }
     await attachments.storeMessageAttachments(messageId, input.attachments);
 
-    const memberAccounts = await Promise.all(
-      members.map((member) => accounts.getRequiredAccount(member.accountId)),
-    );
-    const readRows = memberAccounts
+    const accountIds = members.map((m) => m.accountId);
+    const accountMap = await accounts.getAccountsById(accountIds);
+    const readRows = Array.from(accountMap.values())
       .filter((memberAccount) => memberAccount.agentId)
       .map((memberAccount) => ({
         messageId,
@@ -171,11 +171,18 @@ export function createChatSending(deps: SendingDeps) {
     }
 
     await db
-      .update(internalChatConversations)
-      .set({
-        updatedAt: now,
-      })
-      .where(eq(internalChatConversations.id, conversation.id));
+    try {
+      await db
+        .update(internalChatConversations)
+        .set({
+          updatedAt: now,
+        })
+        .where(eq(internalChatConversations.id, conversation.id));
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage update conversation failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
+
 
     const author = await accounts.getRequiredAccount(input.accountId);
     const participants = await reads.listGroupMembersOrDmPeersByAccount(input.accountId, conversation.id);

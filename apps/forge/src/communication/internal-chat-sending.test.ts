@@ -14,6 +14,10 @@ function makeMockAccounts(overrides: {
   getRequiredAccountResult?: { id: string; displayName: string; slug: string; agentId: string | null };
   getRequiredAccountError?: Error;
 } = {}) {
+  const getAccountsById = async (accountIds: string[]) => {
+    const result = overrides.getRequiredAccountResult ?? { id: accountIds[0] ?? 'acct_1', displayName: 'User', slug: 'user', agentId: 'agent-1' };
+    return new Map(accountIds.map((id) => [id, result]));
+  };
   return {
     getAccountByAgentId: vi.fn().mockResolvedValue(overrides.getAccountByAgentIdResult ?? null),
     getAccountBySlug: vi.fn().mockResolvedValue(overrides.getAccountBySlugResult ?? null),
@@ -21,6 +25,7 @@ function makeMockAccounts(overrides: {
       if (overrides.getRequiredAccountError) throw overrides.getRequiredAccountError;
       return overrides.getRequiredAccountResult ?? { id, displayName: 'User', slug: 'user', agentId: 'agent-1' };
     }),
+    getAccountsById: vi.fn().mockImplementation(getAccountsById),
   };
 }
 
