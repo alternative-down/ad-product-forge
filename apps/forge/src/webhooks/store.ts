@@ -5,8 +5,7 @@ import type {Database} from '../database/schema';
 import { webhookRoutes, webhookEvents } from '../database/schema';
 import { createId } from '../utils/id';
 
-export type WebhookRoute = WebhookRoute;
-export type WebhookEvent = WebhookEvent;
+// WebhookRoute and WebhookEvent types are exported from the database schema
 
 export function createWebhookStore(db: Database) {
   async function createRoute(input: {
