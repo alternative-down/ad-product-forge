@@ -42,7 +42,6 @@ import {
 import { withTimeout } from '../../utils/async';
 
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
-const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_STEP_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 
@@ -160,42 +159,11 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   const registry = getInternalAgentRegistry();
 
   async function getDashboard() {
-    const [totals, cash] = await Promise.all([getTotals(), getCashData()]);
-    return { totals, cash };
-  }
-
-  async function getTotals() {
-    const rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, roleId: true } });
-    const loadedAgents = registry.list().length;
-    const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
-    const runningAgents = rows.filter((r) => r.executionState === 'running').length;
-    const absentAgents = rows.filter((r) => !r.executionState || r.executionState === 'absent').length;
-    const activeContracts = await db.query.agentExecutionContracts.findMany({
-      where: eq(agentExecutionContracts.isActive, 1),
-      columns: { id: true },
-    });
-    const roles = new Set(rows.map((r) => r.roleId).filter(Boolean)).size;
-    return {
-      agents: rows.length,
-      loadedAgents,
-      idleAgents,
-      runningAgents,
-      absentAgents,
-      roles,
-      activeContracts: activeContracts.length,
-    };
-  }
-
-  async function getCashData() {
-    const [balanceResult, recentResult] = await Promise.all([
-      finance.getCompanyCashBalance(),
-      finance.listCompanyCashMovements({ limit: RECENT_CASH_MOVEMENT_LIMIT }),
+    const [totals, cash] = await Promise.all([
+      getDashboardTotals({ db, registry }),
+      getDashboardCash(finance),
     ]);
-    return {
-      balanceUsd: balanceResult.balanceUsd,
-      summary: { income: 0, expenses: 0, net: 0 },
-      recentMovements: recentResult.items,
-    };
+    return { totals, cash };
   }
 
   async function listAgents(): Promise<AgentListItem[]> {
