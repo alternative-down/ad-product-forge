@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { OpsContext } from './context';
 
 const sharedOctokit = { request: vi.fn() };
 
-const makeCtx = (): OpsContext => ({
+const makeCtx = (): any => ({
   config: { db: vi.fn() as unknown as OpsContext['config']['db'], httpServer: vi.fn() as unknown as OpsContext['config']['httpServer'], publicBaseUrl: 'https://forge.example.com', integrations: vi.fn() as unknown as OpsContext['config']['integrations'] },
   notifications: vi.fn() as unknown as OpsContext['notifications'],
   routeCleanups: new Map(),
@@ -33,7 +33,7 @@ const makeCtx = (): OpsContext => ({
   normalizeAssignees: (a: string[]) => a,
   toIssueSummary: vi.fn() as unknown as OpsContext['toIssueSummary'],
   toIssueDetails: vi.fn() as unknown as OpsContext['toIssueDetails'],
-  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' },
+  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any,
   buildManifestEvents: () => ['issues'],
   buildManifestPermissions: () => ({}),
   createAppName: (n: string, id: string) => `${n}-${id}`,

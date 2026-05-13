@@ -4,7 +4,7 @@ import type { GitHubAppCredentials } from '../types';
 
 const sharedDb = { query: { agentProviders: { findFirst: vi.fn() } } };
 
-const baseCtx = (): OpsContext => ({
+const baseCtx = (): any => ({
   config: { db: sharedDb as unknown as OpsContext['config']['db'], httpServer: vi.fn() as unknown as OpsContext['config']['httpServer'], publicBaseUrl: 'https://forge.example.com', integrations: vi.fn() as unknown as OpsContext['config']['integrations'] },
   notifications: vi.fn() as unknown as OpsContext['notifications'],
   routeCleanups: new Map(),
@@ -34,7 +34,7 @@ const baseCtx = (): OpsContext => ({
   normalizeAssignees: (a: string[]) => a,
   toIssueSummary: vi.fn() as unknown as OpsContext['toIssueSummary'],
   toIssueDetails: vi.fn() as unknown as OpsContext['toIssueDetails'],
-  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' },
+  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any,
   buildManifestEvents: () => ['issues'],
   buildManifestPermissions: () => ({}),
   createAppName: (n: string, id: string) => `${n}-${id}`,
@@ -63,8 +63,8 @@ describe('createCredentialsOps', () => {
 
   it('getCredentials returns parsed credentials when provider found', async () => {
     const { createCredentialsOps } = await import('./credentials.js');
-    const creds: GitHubAppCredentials = {
-      status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x',
+    const creds: any = {
+      status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any, encryptedCredentials: 'x',
     };
     sharedDb.query.agentProviders.findFirst.mockResolvedValueOnce({ encryptedCredentials: 'encrypted-value' });
     const ctx = baseCtx();
@@ -76,8 +76,8 @@ describe('createCredentialsOps', () => {
 
   it('getActiveCredentials throws when credentials not active', async () => {
     const { createCredentialsOps } = await import('./credentials.js');
-    const pendingCreds: GitHubAppCredentials = {
-      status: 'pending', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x',
+    const pendingCreds: any = {
+      status: 'pending', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any, encryptedCredentials: 'x',
     };
     sharedDb.query.agentProviders.findFirst.mockResolvedValueOnce({ encryptedCredentials: 'e' });
     const ctx = baseCtx();
@@ -88,8 +88,8 @@ describe('createCredentialsOps', () => {
 
   it('getActiveCredentials returns credentials when active', async () => {
     const { createCredentialsOps } = await import('./credentials.js');
-    const activeCreds: GitHubAppCredentials = {
-      status: 'active', appSlug: 'my-app', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x',
+    const activeCreds: any = {
+      status: 'active', appSlug: 'my-app', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any, encryptedCredentials: 'x',
     };
     sharedDb.query.agentProviders.findFirst.mockResolvedValueOnce({ encryptedCredentials: 'e' });
     const ctx = baseCtx();
@@ -112,8 +112,8 @@ describe('createCredentialsOps — saveCredentials', () => {
     const saveMock = vi.fn().mockResolvedValue(undefined);
     const ctx = baseCtx();
     ctx.saveCredentials = saveMock as unknown as OpsContext['saveCredentials'];
-    const creds: GitHubAppCredentials = {
-      status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x',
+    const creds: any = {
+      status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any, encryptedCredentials: 'x',
     };
     const ops = createCredentialsOps(ctx);
     await ops.saveCredentials('agent-new', creds);
@@ -129,13 +129,13 @@ describe('createCredentialsOps — parseCredentials', () => {
 
   it('parseCredentials delegates to ctx.parseCredentials', async () => {
     const { createCredentialsOps } = await import('./credentials.js');
-    const parseMock = vi.fn().mockReturnValue({ status: 'pending', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' });
+    const parseMock = vi.fn().mockReturnValue({ status: 'pending', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any, encryptedCredentials: 'x' });
     const ctx = baseCtx();
     ctx.parseCredentials = parseMock as unknown as OpsContext['parseCredentials'];
     const ops = createCredentialsOps(ctx);
     const result = ops.parseCredentials('encrypted-string');
     expect(parseMock).toHaveBeenCalledWith('encrypted-string');
-    expect(result.status).toBe('pending');
+    expect((result as any).status).toBe('pending');
   });
 });
 
@@ -151,7 +151,7 @@ describe('createCredentialsOps — getInstallationOctokit', () => {
     const createOctoMock = vi.fn().mockResolvedValue(fakeOctokit);
     sharedDb.query.agentProviders.findFirst.mockResolvedValue({ encryptedCredentials: 'e' });
     const ctx = baseCtx();
-    ctx.parseCredentials = vi.fn().mockReturnValue({ status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' }) as unknown as OpsContext['parseCredentials'];
+    ctx.parseCredentials = vi.fn().mockReturnValue({ status: 'active', manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' } as any, encryptedCredentials: 'x' }) as unknown as OpsContext['parseCredentials'];
     ctx.createInstallationOctokit = createOctoMock as unknown as OpsContext['createInstallationOctokit'];
     const ops = createCredentialsOps(ctx);
     const result = await ops.getInstallationOctokit('agent-1');
@@ -170,7 +170,7 @@ describe('createCredentialsOps — getInstallationToken', () => {
     const tokenMock = vi.fn().mockResolvedValue('v1.ghp_xxx');
     const ctx = baseCtx();
     ctx.getInstallationToken = tokenMock as unknown as OpsContext['getInstallationToken'];
-    const creds = { status: 'active' as const, manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' };
+    const creds: any = { status: 'active' as const, manifestConfig: { name: 'T', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' };
     const ops = createCredentialsOps(ctx);
     const result = await ops.getInstallationToken(creds);
     expect(tokenMock).toHaveBeenCalledWith(creds);
