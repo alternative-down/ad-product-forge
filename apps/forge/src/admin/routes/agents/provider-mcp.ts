@@ -132,7 +132,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -158,7 +158,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -202,7 +202,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -242,7 +242,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -274,7 +274,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -327,7 +327,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -357,7 +357,7 @@ export function registerAgentProviderMcpRoutes({
           isActive: body.isActive,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
@@ -386,7 +386,7 @@ export function registerAgentProviderMcpRoutes({
           configId: body.configId,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error } });
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
