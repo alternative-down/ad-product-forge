@@ -10,7 +10,6 @@ import { createId } from '../../../utils/id';
 import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
-import { createCapabilityStore } from '../../../capabilities/store';
 import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
 import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills';
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
@@ -30,6 +29,7 @@ import {
 } from '../schemas/agents';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
+import { registerRoleOps } from './_split/role-ops';
 
 
 import type {Database} from '../../../../src/database/schema';
@@ -89,39 +89,6 @@ const deleteAgentSkillSchema = z.object({
   skillName: z.string(),
 }).strict();
 
-const createRoleSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-}).strict();
-
-const updateRoleSchema = z.object({
-  roleId: z.string(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-}).strict();
-
-const deleteRoleSchema = z.object({
-  roleId: z.string(),
-}).strict();
-
-const roleCapabilitySchema = z.object({
-  roleId: z.string(),
-  capabilityName: z.string(),
-  capabilityValue: z.boolean(),
-}).strict();
-
-const roleToolPermissionSchema = z.object({
-  roleId: z.string(),
-  toolName: z.string(),
-  allowed: z.boolean(),
-}).strict();
-
-const roleWorkflowPermissionSchema = z.object({
-  roleId: z.string(),
-  workflowName: z.string(),
-  allowed: z.boolean(),
-}).strict();
-
 interface RegistryEntry {
   runner: {
     notifyExternalEvent: (event: unknown) => void;
@@ -164,8 +131,6 @@ export function registerAgentWriteOpsRoutes(
   registry: Registry,
   ops: any
 ) {
-  const capabilities = createCapabilityStore(input.db);
-  const resolvePermissionId = (name: string) => name;
   // Lifecycle ops — extracted to _split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
   // Contract ops — extracted to _split/contract-ops.ts
@@ -465,118 +430,6 @@ export function registerAgentWriteOpsRoutes(
     },
   });
 
-  // POST /admin/roles/create
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/create',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createRoleSchema);
-        const result = await capabilities.createRole({ name: body.name, description: body.description });
-        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'createRole failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-    },
-  });
-
-  // POST /admin/roles/update
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/update',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateRoleSchema);
-      try {
-        const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
-        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: `updateRole failed: ${err}` });
-        if (msg.startsWith('Role not found')) return jsonResponse({ error: msg }, 404);
-        throw err;
-      }
-    },
-  });
-
-  // POST /admin/roles/delete
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/delete',
-    handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteRoleSchema);
-      try {
-        await capabilities.deleteRole(body.roleId);
-        return jsonResponse({ success: true, roleId: body.roleId });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
-        if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
-        throw err;
-      }
-    },
-  });
-
-  // POST /admin/roles/capabilities
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/capabilities',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
-        const toolId = resolvePermissionId(body.capabilityName);
-        if (body.capabilityValue) {
-          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-        } else {
-          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
-        }
-        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.capabilityValue });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleCapability failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-    },
-  });
-
-  // POST /admin/roles/tool-permissions
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/tool-permissions',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-        const toolId = resolvePermissionId(body.toolName);
-        if (body.allowed) {
-          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-        } else {
-          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
-        }
-        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-    },
-  });
-
-  // POST /admin/roles/workflow-permissions
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/workflow-permissions',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-        const workflowId = resolvePermissionId(body.workflowName);
-        if (body.allowed) {
-          await capabilities.addRoleWorkflowPermission({ roleId: body.roleId, workflowId });
-        } else {
-          await capabilities.removeRoleWorkflowPermission({ roleId: body.roleId, workflowId });
-        }
-        return jsonResponse({ success: true, roleId: body.roleId, workflowId, allowed: body.allowed });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleWorkflowPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
-    },
-  });
+  // Role ops — extracted to _split/role-ops.ts
+  registerRoleOps(httpServer, input.db);
 }
