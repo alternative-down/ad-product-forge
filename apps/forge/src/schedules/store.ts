@@ -66,6 +66,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'createSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+
       throw err;
     }
     return record;
@@ -230,7 +231,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: '_applyUpdate DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
 
@@ -263,7 +264,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: '_applyUpdate DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
     return true;
@@ -299,7 +300,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'deleteAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
 
@@ -319,7 +320,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'deleteAgentSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
     return true;
@@ -337,7 +338,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'deactivateSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
   }
@@ -352,7 +353,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'deleteHeartbeatSchedule DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
   }
@@ -370,7 +371,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'setNextTriggerAt DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
   }
@@ -391,7 +392,7 @@ export function createAgentScheduleStore(db: Database) {
         level: 'error',
         message: 'markTriggered DB write failed: ' + (err instanceof Error ? err.message : String(err)),
       });
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'schedules-store: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
   }
