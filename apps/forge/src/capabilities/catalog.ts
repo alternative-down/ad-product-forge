@@ -52,10 +52,6 @@ export function hasToolPermission(allowedToolIds: Set<string> | null | undefined
   return false;
 }
 
-export function isToolCapabilityId(capabilityId: string): capabilityId is ForgeCustomToolId {
-  return forgeCustomToolIds.some((toolId) => toolId === capabilityId);
-}
-
 export function normalizeToolPermissionIds(toolIds: readonly string[]) {
   return [...new Set(toolIds)].sort((left, right) => left.localeCompare(right));
 }

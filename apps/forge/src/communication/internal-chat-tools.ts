@@ -2,14 +2,7 @@ import { createTool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import type { InternalChatService } from './internal-chat-service';
-
-function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: string) {
-  if (!allowedToolIds) {
-    return true;
-  }
-
-  return allowedToolIds.has(toolId);
-}
+import { hasToolPermission } from '../../capabilities/catalog';
 
 export function createInternalChatTools(
   agentId: string,
