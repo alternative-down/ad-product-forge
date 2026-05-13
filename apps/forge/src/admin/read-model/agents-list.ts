@@ -281,21 +281,26 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const roleMap = new Map(allRoles.map((r) => [r.id, r]));
     const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
 
-    const recentStepsByAgentId = new Map(
-      await Promise.all(
-        agentRows.map(async (agent) => [
-          agent.id,
-          await db.query.agentExecutionSteps.findMany({
-            where: and(
-              eq(agentExecutionSteps.agentId, agent.id),
-              eq(agentExecutionSteps.kind, 'agent-step'),
-            ),
-            orderBy: [desc(agentExecutionSteps.createdAt)],
-            limit: 6,
-          }),
-        ] as const),
-      ),
-    );
+    // Batch query: single query for all agents instead of N queries (fixes N+1)
+    const recentStepsRows = agentRows.length > 0
+      ? await db.query.agentExecutionSteps.findMany({
+          where: and(
+            inArray(agentExecutionSteps.agentId, agentRows.map((a) => a.id)),
+            eq(agentExecutionSteps.kind, 'agent-step'),
+          ),
+          orderBy: [desc(agentExecutionSteps.createdAt)],
+        })
+      : [];
+
+    // Collect up to 6 steps per agent (ordered desc, so newest-first slice is correct)
+    const recentStepsByAgentId = new Map<string, typeof recentStepsRows>();
+    for (const step of recentStepsRows) {
+      const existing = recentStepsByAgentId.get(step.agentId) ?? [];
+      if (existing.length < 6) {
+        existing.push(step);
+        recentStepsByAgentId.set(step.agentId, existing);
+      }
+    }
 
     const runtimeMemoryByAgentId = new Map(
       await Promise.all(
