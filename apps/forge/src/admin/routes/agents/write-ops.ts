@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
 import { forgeDebug } from '../debug';
 import { createId } from '../../../utils/id';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { createCapabilityStore } from '../../../capabilities/store';
@@ -79,8 +79,7 @@ export function registerAgentWriteOpsRoutes(
   const resolvePermissionId = (name: string) => name;
   // Lifecycle ops — extracted to _split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
-
-// POST /admin/agent/providers/upsert
+  // POST /admin/agent/providers/upsert
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/providers/upsert',
@@ -164,6 +163,21 @@ export function registerAgentWriteOpsRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
+        const updates: Record<string, unknown> = {};
+        if (body.name !== undefined) updates.name = body.name;
+        if (body.description !== undefined) updates.description = normalizeOptionalText(body.description);
+        if (body.transport !== undefined) updates.transport = body.transport;
+        if (body.command !== undefined) updates.command = body.transport === 'stdio' ? body.command : null;
+        if (body.argsText !== undefined) updates.args = body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null;
+        if (body.envVarsText !== undefined) updates.envVars = body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null;
+        if (body.url !== undefined) updates.url = body.transport === 'http_streamable' ? body.url : null;
+        if (body.headersText !== undefined) updates.headers = body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null;
+        if (body.isActive !== undefined) updates.isActive = body.isActive ? 1 : 0;
+        if (Object.keys(updates).length > 0) {
+          updates.updatedAt = Date.now();
+          await input.db.update(mcpServerConfigs).set(updates).where(eq(mcpServerConfigs.id, body.serverId));
+          await reloadAgentMcp(input.db, input.loaderConfig, body.agentId ?? '');
+        }
         return jsonResponse({ success: true, serverId: body.serverId });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/update route handler failed', context: { path: '/admin/agent/mcp/update', error: error instanceof Error ? error.message : String(error) } });
@@ -179,6 +193,14 @@ export function registerAgentWriteOpsRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
+        const agentMcpRows = await input.db.query.agentMcpConfigs.findMany({
+          where: and(eq(agentMcpConfigs.serverId, body.serverId), eq(agentMcpConfigs.agentId, body.agentId)),
+        });
+        if (agentMcpRows.length > 0) {
+          await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, agentMcpRows[0].id));
+        }
+        await input.db.delete(mcpServerConfigs).where(eq(mcpServerConfigs.id, body.serverId));
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
         return jsonResponse({ success: true });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/delete route handler failed', context: { path: '/admin/agent/mcp/delete', error: error instanceof Error ? error.message : String(error) } });
@@ -194,6 +216,15 @@ export function registerAgentWriteOpsRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
+        await input.db.insert(agentMcpConfigs).values({
+          id: createId(),
+          agentId: body.agentId,
+          serverId: body.serverId,
+          isActive: 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
         return jsonResponse({ success: true });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/assign route handler failed', context: { path: '/admin/agent/mcp/assign', error: error instanceof Error ? error.message : String(error) } });
@@ -209,6 +240,13 @@ export function registerAgentWriteOpsRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
+        const agentMcpRows = await input.db.query.agentMcpConfigs.findMany({
+          where: and(eq(agentMcpConfigs.serverId, body.serverId), eq(agentMcpConfigs.agentId, body.agentId)),
+        });
+        if (agentMcpRows.length > 0) {
+          await input.db.update(agentMcpConfigs).set({ isActive: body.isActive ? 1 : 0, updatedAt: Date.now() }).where(eq(agentMcpConfigs.id, agentMcpRows[0].id));
+        }
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
         return jsonResponse({ success: true });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/set-active route handler failed', context: { path: '/admin/agent/mcp/set-active', error: error instanceof Error ? error.message : String(error) } });
@@ -224,6 +262,13 @@ export function registerAgentWriteOpsRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
+        const agentMcpRows = await input.db.query.agentMcpConfigs.findMany({
+          where: and(eq(agentMcpConfigs.serverId, body.serverId), eq(agentMcpConfigs.agentId, body.agentId)),
+        });
+        if (agentMcpRows.length > 0) {
+          await input.db.delete(agentMcpConfigs).where(eq(agentMcpConfigs.id, agentMcpRows[0].id));
+        }
+        await reloadAgentMcp(input.db, input.loaderConfig, body.agentId);
         return jsonResponse({ success: true });
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/detach route handler failed', context: { path: '/admin/agent/mcp/detach', error: error instanceof Error ? error.message : String(error) } });
