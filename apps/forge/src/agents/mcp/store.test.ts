@@ -1,5 +1,5 @@
  
-import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { describe, expect, it, test, vi, beforeEach } from 'vitest';
 import {
   createMcpServerConfig,
   getMcpServerConfig,
@@ -195,7 +195,7 @@ describe('createAgentMcpConfig', () => {
     const result = await createAgentMcpConfig({
       agentId: 'agent-1',
       serverId: 'server-1',
-      isActive: true,
+      isActive: 1,
     });
 
     expect(db.insert).toHaveBeenCalledOnce();
@@ -211,7 +211,7 @@ describe('getAgentMcpConfig', () => {
   test('returns config when found', async () => {
     makeMockDb([{ id: 'agent-config-1', agentId: 'agent-1' }]);
 
-    const result = await getAgentMcpConfig('agent-1', 'server-1');
+    const result = await getAgentMcpConfig('agent-1' as any);
 
     expect(result).toEqual({ id: 'agent-config-1', agentId: 'agent-1' });
   });
@@ -219,7 +219,7 @@ describe('getAgentMcpConfig', () => {
   test('returns undefined when not found', async () => {
     makeMockDb([]);
 
-    const result = await getAgentMcpConfig('agent-1', 'nonexistent');
+    const result = await getAgentMcpConfig('agent-1' as any);
 
     expect(result).toBeUndefined();
   });
@@ -258,7 +258,7 @@ describe('updateAgentMcpConfig', () => {
     makeMockDb([{ id: 'agent-config-1', isActive: 0 }]);
 
     const result = await updateAgentMcpConfig('agent-config-1', {
-      isActive: false,
+      isActive: 0,
     });
 
     expect(result?.isActive).toBe(0);
@@ -307,7 +307,7 @@ describe('getAgentMcpServers', () => {
       })),
     };
 
-    vi.mocked(getDatabase).mockReturnValue(mockDb as ReturnType<typeof getDatabase>);
+    vi.mocked(getDatabase).mockReturnValue(mockDb as any);
 
     const { getAgentMcpServers } = await import('./store');
     const result = await getAgentMcpServers('agent-1');
@@ -330,7 +330,7 @@ describe('getAgentMcpServers', () => {
       })),
     };
 
-    vi.mocked(getDatabase).mockReturnValue(mockDb as ReturnType<typeof getDatabase>);
+    vi.mocked(getDatabase).mockReturnValue(mockDb as any);
 
     const { getAgentMcpServers } = await import('./store');
     const result = await getAgentMcpServers('agent-no-configs');
@@ -350,7 +350,7 @@ describe('getAgentMcpServers', () => {
       })),
     };
 
-    vi.mocked(getDatabase).mockReturnValue(mockDb as ReturnType<typeof getDatabase>);
+    vi.mocked(getDatabase).mockReturnValue(mockDb as any);
 
     const { getAgentMcpServers } = await import('./store');
     await expect(getAgentMcpServers('agent-1')).rejects.toThrow('SQLITE_CONSTRAINT');

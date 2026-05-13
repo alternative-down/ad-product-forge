@@ -51,7 +51,7 @@ function createMockDb(rows: Record<string, unknown>[]) {
           });
         }),
         findFirst: vi.fn(async (opts: { where?: (q: unknown) => boolean }) => {
-          const conditions = opts['where'] as Array<{ 0: (q: unknown) => boolean }>;
+          const conditions = opts['where'] as unknown as Array<{ 0: (q: unknown) => boolean }>;
           if (!conditions || conditions.length === 0) return rows[0] ?? null;
           // Just return first matching row for simplicity
           return rows[0] ?? null;
@@ -264,7 +264,7 @@ describe('listActiveSchedules', () => {
 describe('getAgentSchedule', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.getAgentSchedule('ag_001', 'sch_nonexistent');
@@ -300,7 +300,7 @@ describe('getAgentSchedule', () => {
 describe('getScheduleById', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
     const result = await store.getScheduleById('sch_nonexistent');
     expect(result).toBeNull();
@@ -329,7 +329,7 @@ describe('getScheduleById', () => {
 describe('getOwnedSchedule', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.getOwnedSchedule('ag_001', 'sch_nonexistent');
@@ -360,7 +360,7 @@ describe('getOwnedSchedule', () => {
 describe('getScheduleByKind', () => {
   it('returns null when not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.getScheduleByKind('ag_001', 'agent');
@@ -382,7 +382,7 @@ describe('getScheduleByKind', () => {
     const rows = [createMockRow({ agentId: 'ag_001', kind: 'heartbeat' })];
     const db = createMockDb(rows);
     // heartbeat row found but agent query -> returns null (heartbeat kind filtered out)
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.getScheduleByKind('ag_001', 'agent');
@@ -393,7 +393,7 @@ describe('getScheduleByKind', () => {
 describe('getScheduleById', () => {
   it('returns null when not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.getScheduleById('sch_nonexistent');
@@ -425,7 +425,7 @@ describe('getScheduleById', () => {
 describe('updateAgentSchedule', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.updateAgentSchedule('ag_001', 'sch_nonexistent', { name: 'New Name' });
@@ -447,13 +447,13 @@ describe('updateAgentSchedule', () => {
     const db = createMockDb(rows);
     // First call: find existing, Second call: getAgentSchedule after update
     let findFirstCallCount = 0;
-    db.query.agentSchedules.findFirst = vi.fn(async () => {
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => {
       findFirstCallCount++;
       return findFirstCallCount === 1 ? rows[0] : null;
     });
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     await store.updateAgentSchedule('ag_001', 'sch_001', { name: 'New Name' });
@@ -465,7 +465,7 @@ describe('updateAgentSchedule', () => {
 describe('updateOwnedSchedule', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
     const result = await store.updateOwnedSchedule('ag_001', 'sch_nonexistent', { name: 'New Name' });
     expect(result).toBeNull();
@@ -484,13 +484,13 @@ describe('updateOwnedSchedule', () => {
     const rows = [createMockRow({ agentId: 'ag_001', kind: 'agent', name: 'Old Name' })];
     const db = createMockDb(rows);
     let findFirstCallCount = 0;
-    db.query.agentSchedules.findFirst = vi.fn(async () => {
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => {
       findFirstCallCount++;
       return findFirstCallCount === 1 ? rows[0] : null;
     });
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
     await store.updateOwnedSchedule('ag_001', 'sch_001', { name: 'New Name' });
     expect(db.update).toHaveBeenCalled();
@@ -501,7 +501,7 @@ describe('updateOwnedSchedule', () => {
 describe('deleteAgentSchedule', () => {
   it('returns false when schedule not found', async () => {
     const db = createMockDb([]);
-    db.query.agentSchedules.findFirst = vi.fn(async () => null);
+    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.deleteAgentSchedule('ag_001', 'sch_nonexistent');
@@ -523,7 +523,7 @@ describe('deleteAgentSchedule', () => {
     const db = createMockDb(rows);
     db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
     db.delete = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.deleteAgentSchedule('ag_001', 'sch_001');
@@ -537,7 +537,7 @@ describe('deactivateSchedule', () => {
     const db = createMockDb([]);
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     await store.deactivateSchedule('sch_001');
@@ -554,7 +554,7 @@ describe('setNextTriggerAt', () => {
     const db = createMockDb([]);
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     await store.setNextTriggerAt('sch_001', 1700100000000);
@@ -567,7 +567,7 @@ describe('setNextTriggerAt', () => {
     const db = createMockDb([]);
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     await store.setNextTriggerAt('sch_001', null);
@@ -581,7 +581,7 @@ describe('markTriggered', () => {
     const db = createMockDb([]);
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     await store.markTriggered({
@@ -602,7 +602,7 @@ describe('markTriggered', () => {
     const db = createMockDb([]);
     db.update = vi.fn().mockReturnThis();
     db.set = vi.fn().mockReturnThis();
-    db.where = vi.fn().mockResolvedValue(undefined);
+    (db as any).where = vi.fn().mockResolvedValue(undefined);
     const store = createAgentScheduleStore(db as any);
 
     await store.markTriggered({

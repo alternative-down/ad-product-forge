@@ -55,7 +55,7 @@ describe('validateGeneratedAgentProfile', () => {
       backstory: 'Agent developer',
     });
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('must not mention tool ids directly');
+    if (!result.valid) expect(result.error).toContain('must not mention tool ids directly');
   });
 
   it('returns invalid when secondaryGoals mentions a tool id', () => {
@@ -83,8 +83,7 @@ describe('validateGeneratedAgentProfile', () => {
       backstory: 'Expert',
     });
     expect(result.valid).toBe(false);
-    expect(result.hint).toContain('send_message');
-    expect(result.hint).toContain('list_contacts');
+    if (!result.valid) { expect(result.hint).toContain('send_message'); expect(result.hint).toContain('list_contacts'); }
   });
 
   it('returns valid for profile with no secondary goals', () => {
@@ -142,7 +141,7 @@ describe('validateHireAgentInput', () => {
     mockGetRole.mockResolvedValueOnce(null);
     const result = await validateHireAgentInput(mockCapabilities, 'nonexistent-role');
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('does not exist');
+    if (!result.valid) expect(result.error).toContain('does not exist');
   });
 
   it('returns valid when role has all base tools', async () => {
@@ -161,8 +160,7 @@ describe('validateHireAgentInput', () => {
     });
     const result = await validateHireAgentInput(mockCapabilities, 'developer');
     expect(result.valid).toBe(true);
-    expect((result as { valid: true }).roleId).toBe('developer');
-    expect((result as { valid: true }).roleName).toBe('Developer');
+    if (result.valid) { expect((result as any).roleId).toBe('developer'); expect((result as any).roleName).toBe('Developer'); }
   });
 
   it('returns invalid when role is missing base tools', async () => {
@@ -173,7 +171,7 @@ describe('validateHireAgentInput', () => {
     });
     const result = await validateHireAgentInput(mockCapabilities, 'incomplete-role');
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('missing required base tools');
+    if (!result.valid) expect(result.error).toContain('missing required base tools');
   });
 
   it('hint tells to call manage_role_capabilities', async () => {

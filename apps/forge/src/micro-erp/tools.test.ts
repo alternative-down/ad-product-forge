@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 import type { Tool } from '@forge-runtime/core';
 
 const mocks = vi.hoisted(() => ({
@@ -76,7 +76,7 @@ describe('createMicroErpTools', () => {
   test('returns balance on success', async () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['get_company_cash'] as Tool<unknown, unknown>;
-    const result = await tool.execute({});
+    const result = await (tool.execute as any)({});
     expect(result).toEqual({ balanceUsd: 1000 });
   });
 
@@ -84,7 +84,7 @@ describe('createMicroErpTools', () => {
     mocks.readModel.getCompanyCashBalance.mockRejectedValueOnce(new Error('DB unavailable'));
     const tools = createMicroErpTools({} as any);
     const tool = tools['get_company_cash'] as Tool<unknown, unknown>;
-    const result = await tool.execute({});
+    const result = await (tool.execute as any)({});
     expect(result).toMatchObject({ valid: false, error: 'DB unavailable' });
   });
 
@@ -93,7 +93,7 @@ describe('createMicroErpTools', () => {
   test('returns movements on success', async () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['list_company_cash'] as Tool<unknown, unknown>;
-    const result = await tool.execute({});
+    const result = await (tool.execute as any)({});
     expect(result).toMatchObject({ items: [] });
   });
 
@@ -101,7 +101,7 @@ describe('createMicroErpTools', () => {
     mocks.readModel.listCompanyCashMovements.mockRejectedValueOnce(new Error('query failed'));
     const tools = createMicroErpTools({} as any);
     const tool = tools['list_company_cash'] as Tool<unknown, unknown>;
-    const result = await tool.execute({});
+    const result = await (tool.execute as any)({});
     expect(result).toMatchObject({ valid: false, error: 'query failed' });
   });
 
@@ -110,7 +110,7 @@ describe('createMicroErpTools', () => {
   test('returns contracts on success', async () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['list_internal_agent_contracts'] as Tool<unknown, unknown>;
-    const result = await tool.execute({});
+    const result = await (tool.execute as any)({});
     expect(result).toMatchObject({ items: [] });
   });
 
@@ -118,7 +118,7 @@ describe('createMicroErpTools', () => {
     mocks.readModel.listActiveInternalAgentContracts.mockRejectedValueOnce(new Error('DB error'));
     const tools = createMicroErpTools({} as any);
     const tool = tools['list_internal_agent_contracts'] as Tool<unknown, unknown>;
-    const result = await tool.execute({});
+    const result = await (tool.execute as any)({});
     expect(result).toMatchObject({ valid: false, error: 'DB error' });
   });
 
@@ -134,7 +134,7 @@ describe('createMicroErpTools', () => {
   test('accepts valid record_in action', async () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['manage_company_cash_movement'] as Tool<unknown, unknown>;
-    const result = await tool.execute({
+    const result = await (tool.execute as any)({
       action: 'record_in',
       recordIn: { type: 'infrastructure', amountUsd: 500 },
     });
@@ -147,7 +147,7 @@ describe('createMicroErpTools', () => {
   test('accepts valid record_out action', async () => {
     const tools = createMicroErpTools({} as any);
     const tool = tools['manage_company_cash_movement'] as Tool<unknown, unknown>;
-    const result = await tool.execute({
+    const result = await (tool.execute as any)({
       action: 'record_out',
       recordOut: { type: 'payroll', amountUsd: 2000 },
     });

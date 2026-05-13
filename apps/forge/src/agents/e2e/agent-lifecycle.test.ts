@@ -89,7 +89,7 @@ vi.mock('../../admin/routes/index', () => ({
   parseJsonBody: (bodyText: string, schema: unknown) => {
     const data = bodyText.trim().length === 0 ? {} : JSON.parse(bodyText);
     try {
-      return schema.parse(data);
+      return (schema as any).parse(data);
     } catch (error: unknown) {
       const issues = (error as { issues?: Array<{ message: string }> }).issues;
       const message = issues?.map((i) => i.message).join(', ') ?? 'Validation failed';
@@ -210,18 +210,19 @@ vi.mock('../../schedules/manager', () => ({
 }));
 
 vi.mock('../internal-agent-registry', () => {
-  class MockRegistry extends Map {
+  class MockRegistry {
+    private _map = new Map();
     add = vi.fn();
     get = vi.fn().mockReturnValue(undefined);
     delete = vi.fn();
-    get size() { return super.size; }
+    get size() { return this._map.size; }
   }
   return { getInternalAgentRegistry: () => new MockRegistry() };
 });
 
 // ─── Imports after all mocks ─────────────────────────────────────────────────
 
-import type { Database } from '../../database/schema';
+// import type { Database } from '../../database/schema';
 import { registerAgentWriteOpsRoutes } from '../../admin/routes/agents/write-ops';
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -255,7 +256,7 @@ function getHandler(
   method: string,
   path: string,
 ): Function {
-  const calls = httpServer.registerRoute.mock.calls as Array<
+  const calls = (httpServer.registerRoute as any).mock.calls as Array<
     [{ method: string; path: string; handler: Function }]
   >;
   const match = calls.find(c => c[0].method === method && c[0].path === path);
@@ -264,16 +265,17 @@ function getHandler(
 }
 
 function makeMockRegistry() {
-  class MockRegistry extends Map {
+  class MockRegistry {
+    private _map = new Map();
     add = vi.fn();
     get = vi.fn().mockReturnValue(undefined);
     delete = vi.fn();
-    get size() { return super.size; }
+    get size() { return this._map.size; }
   }
   return new MockRegistry();
 }
 
-function makeMockDb(): Database {
+function makeMockDb(): any {
   return {
     insert: vi.fn().mockImplementation(() => ({
       values: vi.fn().mockResolvedValue(undefined),
@@ -294,10 +296,10 @@ function makeMockDb(): Database {
       agentRoles: { findFirst: vi.fn().mockResolvedValue(null) },
       agentProviders: { findFirst: vi.fn().mockResolvedValue(null) },
     },
-  } as unknown as Database;
+  } as unknown as any;
 }
 
-function makeWriteOpsInput(db: Database, overrides?: {
+function makeWriteOpsInput(db: any, overrides?: {
   schedules?: ReturnType<typeof makeMockSchedules>;
   internalChat?: ReturnType<typeof makeMockInternalChat>;
 }) {
@@ -550,11 +552,12 @@ describe('POST /admin/agent/force-idle — route handler', () => {
   it('calls forceIdle on a loaded agent', async () => {
     const mockRunner = { forceIdle: vi.fn().mockResolvedValue(undefined) };
 
-    class MockRegistry extends Map {
+    class MockRegistry {
+      private _map = new Map();
       add = vi.fn();
       get = vi.fn().mockReturnValue({ runner: mockRunner });
       delete = vi.fn();
-      get size() { return super.size; }
+      get size() { return this._map.size; }
     }
     const mockRegistry = new MockRegistry();
     const httpServer2 = { registerRoute: vi.fn() };

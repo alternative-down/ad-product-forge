@@ -39,7 +39,8 @@ const createMockConversationStore = () => ({
   updateMessage: vi.fn(),
   updateMessageMetadata: vi.fn(),
   listOperationalMemoryMessages: vi.fn(),
-});
+  upsertThread: vi.fn(),
+} as any);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -47,7 +48,7 @@ beforeEach(() => {
   vi.mocked(mockDb.delete).mockReset().mockReturnValue({
     where: vi.fn().mockResolvedValue(undefined),
   });
-  vi.mocked(eq).mockImplementation((field, value) => ({ field, value }));
+  vi.mocked(eq).mockImplementation((field: any, value: any) => ({ field, value } as any));
 });
 
 describe('migrateLegacyCheckpointedOmState', () => {

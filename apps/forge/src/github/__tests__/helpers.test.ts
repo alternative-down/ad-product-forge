@@ -69,7 +69,7 @@ describe('normalizeGitHubAppCredentials', () => {
         events: { push: true, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
       },
     };
-    const result = normalizeGitHubAppCredentials(credentials as unknown as Parameters<typeof normalizeGitHubAppCredentials>[0]);
+    const result = normalizeGitHubAppCredentials(credentials as unknown as any);
     expect(result.manifestConfig.permissions.administration).toBe(true);
     expect(result.manifestConfig.permissions.issues).toBe(false);
   });
@@ -79,7 +79,7 @@ describe('normalizeGitHubAppCredentials', () => {
       appId: '123',
       privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
     };
-    const result = normalizeGitHubAppCredentials(credentials as unknown as Parameters<typeof normalizeGitHubAppCredentials>[0]);
+    const result = normalizeGitHubAppCredentials(credentials as unknown as any);
     expect(result.manifestConfig.permissions.administration).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe('normalizeGitHubAppCredentials', () => {
       privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
       manifestConfig: 'not valid',
     };
-    const result = normalizeGitHubAppCredentials(credentials as unknown as Parameters<typeof normalizeGitHubAppCredentials>[0]);
+    const result = normalizeGitHubAppCredentials(credentials as unknown as any);
     expect(result.manifestConfig.permissions.administration).toBe(true);
   });
 });
@@ -156,7 +156,7 @@ describe('buildManifestPermissions', () => {
       pull_requests: false,
       repository_projects: true,
       workflows: false,
-    });
+    }) as any;
     const result = buildManifestPermissions(config);
     expect(result).toEqual({
       administration: 'write',
@@ -171,7 +171,7 @@ describe('buildManifestPermissions', () => {
   });
 
   it('always returns metadata as read', () => {
-    const config = makeConfig({ administration: true, contents: true, issues: true, metadata: true, organization_projects: true, pull_requests: true, repository_projects: true, workflows: true });
+    const config = makeConfig({ administration: true, contents: true, issues: true, metadata: true, organization_projects: true, pull_requests: true, repository_projects: true, workflows: true }) as any;
     const result = buildManifestPermissions(config);
     expect(result.metadata).toBe('read');
   });
@@ -194,7 +194,7 @@ describe('buildManifestEvents', () => {
       issue_comment: true,
       repository: true,
       workflow_run: false,
-    });
+    }) as any;
     const result = buildManifestEvents(config);
     expect(result).toEqual(['push', 'pull_request', 'issue_comment', 'repository']);
   });
@@ -208,7 +208,7 @@ describe('buildManifestEvents', () => {
       issue_comment: false,
       repository: false,
       workflow_run: false,
-    });
+    }) as any;
     expect(buildManifestEvents(config)).toEqual([]);
   });
 
@@ -221,7 +221,7 @@ describe('buildManifestEvents', () => {
       issue_comment: true,
       repository: true,
       workflow_run: true,
-    });
+    }) as any;
     const result = buildManifestEvents(config);
     expect(result).toHaveLength(7);
     expect(result).toContain('push');
@@ -232,7 +232,7 @@ describe('buildManifestEvents', () => {
 // ─── isGitHubSelfEvent ────────────────────────────────────────────────────────
 
 describe('isGitHubSelfEvent', () => {
-  const makeCreds = (appSlug) => ({ status: 'active' as const, appSlug });
+  const makeCreds = (appSlug: string) => ({ status: 'active' as const, appSlug } as any);
 
   it('returns true when sender matches appSlug', () => {
     expect(isGitHubSelfEvent('my-app', makeCreds('my-app'))).toBe(true);
@@ -606,7 +606,7 @@ describe('summarizeGitHubEvent', () => {
       event: 'check_run',
       action: 'completed',
       repository: 'owner/repo',
-    });
+    } as any);
     expect(result).toBe('check_run completed in owner/repo');
   });
 
@@ -614,7 +614,7 @@ describe('summarizeGitHubEvent', () => {
     const result = summarizeGitHubEvent({
       event: 'fork',
       repository: 'owner/repo',
-    });
+    } as any);
     expect(result).toBe('fork in owner/repo');
   });
 
