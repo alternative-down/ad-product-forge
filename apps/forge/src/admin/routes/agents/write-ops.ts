@@ -11,7 +11,6 @@ import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
-import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills';
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
@@ -30,6 +29,7 @@ import {
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
 import { registerRoleOps } from './_split/role-ops';
+import { registerSkillOps } from './_split/skill-ops';
 
 
 import type {Database} from '../../../../src/database/schema';
@@ -68,26 +68,6 @@ const createAgentMcpServerSchema = z.object({
 
 
 
-
-const publishAgentSkillToGlobalSchema = z.object({
-  agentId: z.string(),
-  skillName: z.string(),
-}).strict();
-
-const installGlobalSkillForAgentSchema = z.object({
-  agentId: z.string(),
-  skillName: z.string(),
-}).strict();
-
-const uploadAgentSkillsSchema = z.object({
-  agentId: z.string(),
-  skillsZipBase64: z.string(),
-}).strict();
-
-const deleteAgentSkillSchema = z.object({
-  agentId: z.string(),
-  skillName: z.string(),
-}).strict();
 
 interface RegistryEntry {
   runner: {
@@ -345,90 +325,10 @@ export function registerAgentWriteOpsRoutes(
     },
   });
 
-  // POST /admin/agent/skills/publish-to-global
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/skills/publish-to-global',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
-        const agent = await (input.db).query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-          columns: { id: true, workspaceFilesystem: true },
-        });
-        if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-        const result = await publishAgentWorkspaceSkillToGlobalCatalog({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-        return jsonResponse({ success: true, skillName: body.skillName, destPath: result.destPath });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/publish-to-global route handler failed', context: { path: '/admin/agent/skills/publish-to-global', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
 
-  // POST /admin/agent/skills/install-global
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/skills/install-global',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
-        const agent = await (input.db).query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-          columns: { id: true, workspaceFilesystem: true },
-        });
-        if (!agent) return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-        await installGlobalSkillToAgentWorkspace({
-          workspaceBasePath: input.workspaceBasePath,
-          agent,
-          skillName: body.skillName,
-        });
-        return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/install-global route handler failed', context: { path: '/admin/agent/skills/install-global', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
+  // Skill ops — extracted to _split/skill-ops.ts
+  registerSkillOps(httpServer, input.db, input);
 
-  // POST /admin/agent/skills/upload
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/skills/upload',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
-        const installedSkillNames = await installGlobalSkillsFromZip({
-          workspaceBasePath: input.workspaceBasePath,
-          zipBase64: body.skillsZipBase64,
-        });
-        return jsonResponse({ success: true, skillNames: installedSkillNames });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/upload route handler failed', context: { path: '/admin/agent/skills/upload', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/skills/delete
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/skills/delete',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
-        await deleteGlobalSkill({ workspaceBasePath: input.workspaceBasePath, skillName: body.skillName });
-        return jsonResponse({ success: true, skillName: body.skillName });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/delete route handler failed', context: { path: '/admin/agent/skills/delete', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
 
   // Role ops — extracted to _split/role-ops.ts
   registerRoleOps(httpServer, input.db);
