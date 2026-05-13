@@ -11,9 +11,6 @@ import { eq } from 'drizzle-orm';
 import { agents, agentRoles } from '../../../../src/database/schema';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
-import { normalizeJsonText, normalizeOptionalText } from '../helpers';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
-import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { jsonResponse, parseJsonBody } from '../index';
 import {
   agentActionSchema,
@@ -30,6 +27,7 @@ import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
 import { registerRoleOps } from './_split/role-ops';
 import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
+import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
 import { registerProviderOps } from './_split/provider-ops';
 import { registerConfigOps } from './_split/config-ops';
@@ -108,53 +106,8 @@ export function registerAgentWriteOpsRoutes(
   // Contract ops — extracted to _split/contract-ops.ts
   // Lifecycle delegate ops — extracted to _split/lifecycle-delegate-ops.ts
   registerLifecycleDelegateOps(httpServer, input, ops);
-
-  // POST /admin/agent/mcp/create
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/mcp/create',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createAgentMcpServerSchema);
-        const db = input.db;
-        const serverId = createId();
-        const configId = createId();
-
-        await db.insert(mcpServerConfigs).values({
-          id: serverId,
-          name: body.name,
-          description: normalizeOptionalText(body.description),
-          transport: body.transport,
-          command: body.transport === 'stdio' ? body.command : null,
-          args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-          envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
-          url: body.transport === 'http_streamable' ? body.url : null,
-          headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
-          version: 1,
-          isActive: body.isActive ? 1 : 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
-
-        await db.insert(agentMcpConfigs).values({
-          id: configId,
-          agentId: body.agentId,
-          serverId,
-          isActive: body.isActive ? 1 : 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
-
-        await reloadAgentMcp(db, input.loaderConfig, body.agentId);
-
-        return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent/mcp/create', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
+  // MCP ops — extracted to _split/mcp-ops.ts
+  registerMcpOps(httpServer, input.db, input.loaderConfig);
 
   // Skill ops — extracted to _split/skill-ops.ts
   registerSkillOps(httpServer, input.db, input);
