@@ -212,10 +212,16 @@ export function createInternalChatAccounts(db: Database) {
     });
   }
 
-  async function getAccountByTargetKey(_targetKey: string) {
-    // FIXME: always returns null; replace with real lookup by targetKey
-    // once internal-chat targetKey system is fully implemented.
-    return null;
+  async function getAccountByTargetKey(targetKey: string) {
+    // targetKey is used as a slug or id lookup
+    const account =
+      (await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.slug, targetKey),
+      })) ??
+      (await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.id, targetKey),
+      }));
+    return account ?? null;
   }
 
   async function getRequiredAccount(accountId: string) {
