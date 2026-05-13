@@ -55,7 +55,7 @@ function extractWhere(where: unknown): Record<string, unknown> {
 }
 
 interface AgentRow { id: string; executionState: 'idle' | 'running' | 'absent'; lastExecutionError: string | null; lastExecutionErrorAt: number | null; updatedAt: number; }
-interface ContractRow { id: string; agentId: string; budgetUsd: number; autoRenew: number; fundedAt: number | null; startsAt: number; endsAt: number; createdAt: number; }
+interface ContractRow { id: string; agentId: string; budgetUsd: number; autoRenew: number; fundedAt: number | null; startsAt: number; endsAt: number; createdAt: number; updatedAt: number; }
 interface StepRow { id: string; contractId: string; agentId: string; llmProfileId: string; modelKey: string; kind: string; inputTokens: number; cachedInputTokens: number; outputTokens: number; inputPerMillionUsd: number; inputCachePerMillionUsd: number; outputPerMillionUsd: number; contractCostMultiplier: number; costUsd: number; createdAt: number; }
 interface ModelPriceRow { modelKey: string; inputPerMillionUsd: number; inputCachePerMillionUsd: number; outputPerMillionUsd: number; }
 interface ProfileRow { id: string; name: string; contractCostMultiplier: number; isEnabled: number; }
@@ -180,7 +180,7 @@ function makeAgent(overrides: Partial<AgentRow> = {}) {
 }
 function makeContract(overrides: Partial<ContractRow> = {}) {
   const now = Date.now();
-  const c: ContractRow = { id: 'contract-1', agentId: 'agent-1', budgetUsd: 5, autoRenew: 1, fundedAt: null, startsAt: now - 1000, endsAt: now + WEEK_MS - 1000, createdAt: now - 1000, ...overrides };
+  const c: ContractRow = { id: 'contract-1', agentId: 'agent-1', budgetUsd: 5, autoRenew: 1, fundedAt: null, startsAt: now - 1000, endsAt: now + WEEK_MS - 1000, createdAt: now - 1000, updatedAt: now - 1000, ...overrides };
   collections.contracts.set(c.id, c);
   return c;
 }
