@@ -102,6 +102,7 @@ interface CashLedgerRow {
   dueAt?: number | null;
   effectiveAt?: number | null;
   createdAt: number;
+  updatedAt: number;
 }
 
 // ─── Mock DB factory ───────────────────────────────────────────────────────────
