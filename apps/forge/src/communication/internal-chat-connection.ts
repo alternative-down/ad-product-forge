@@ -95,7 +95,7 @@ function createConnectionImpl(
         level: "error",
         agentId,
         message: "Failed to replay unread messages",
-        context: { error },
+        context: { error: error instanceof Error ? error.message : String(error) },
       });
     });
   }

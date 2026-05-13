@@ -42,7 +42,7 @@ export function verifyAsaasWebhookRequest(
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
   } catch (error) {
-    forgeDebug({ scope: 'asaas', level: 'error', message: 'Asaas webhook JSON parse failed', context: { error } });
+    forgeDebug({ scope: 'asaas', level: 'error', message: 'Asaas webhook JSON parse failed', context: { error: error instanceof Error ? error.message : String(error) } });
     throw new Error('Asaas webhook: failed to parse JSON payload');
   }
 }

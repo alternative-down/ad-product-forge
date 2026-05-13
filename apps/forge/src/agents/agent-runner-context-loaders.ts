@@ -117,7 +117,7 @@ export async function loadAgentContextContent(
     filesystem.exists(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context existence check timed out for filesystem`,
-  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: err } }); return false; });
+  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: err instanceof Error ? err.message : String(err) } }); return false; });
 
   if (!exists) {
     return null;
@@ -127,7 +127,7 @@ export async function loadAgentContextContent(
     filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context read timed out for filesystem`,
-  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: err } }); return null; });
+  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: err instanceof Error ? err.message : String(err) } }); return null; });
 
   if (!data) {
     return null;

@@ -93,7 +93,7 @@ type RecallConfig = {
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
   const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
-  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => { forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: '[safe-catch] readdir', context: { error: err } }); return null; });
+  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => { forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: '[safe-catch] readdir', context: { error: err instanceof Error ? err.message : String(err) } }); return null; });
 
   if (!entries) {
     return 0;
@@ -364,7 +364,7 @@ export class AgentLongTermMemoryRecall {
 
       return recallText;
     } catch (error) {
-      forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: 'recall failed', context: { error } });
+      forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: 'recall failed', context: { error: error instanceof Error ? error.message : String(error) } });
       forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step failed', context: {
         agentId: this.agentId,
         threadId: input.threadId,

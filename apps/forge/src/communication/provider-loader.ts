@@ -134,7 +134,7 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error } });
+      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error: error instanceof Error ? error.message : String(error) } });
     }
   }
 
