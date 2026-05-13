@@ -1,151 +1,12 @@
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import { resolve } from 'node:path';
-import {
-  agentExecutionContracts,
-  agentExecutionSteps,
-  agentHomeMetricSnapshots,
-  agentMcpConfigs,
-  agentNotifications,
-  agentRoles,
-  agentSchedules,
-  agents,
-  llmProfiles,
-  mcpServerConfigs,
-} from '../../database/schema';
-import { createClient } from '@libsql/client';
-import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
-import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
-import { closeLibsqlClient, listRecentConversations, listThreadMessages } from './conversation-helpers';
-import {
-  formatWorkingMemoryValue,
-  isTextPart,
-  toScheduleSummary as toScheduleSummaryHelper,
-  extractLatestMessagePreview,
-  extractLatestMessageToolBadge,
-} from './helpers';
-import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
-import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
+import type { AgentListItem, AgentReadModel } from './agents-types';
 
-import type {Database} from '../../database/index';
-import { createSystemSettingsStore } from '../../system-settings/store';
-import { createMicroErpReadModel } from '../../micro-erp/read-model';
-import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
-import type { InternalChatService } from '../../communication/internal-chat-service';
-import { forgeDebug } from '@forge-runtime/core';
-import {
-  toMastraSafeIdentifier,
-  LibsqlConversationStore,
-  readOperationalMemoryState,
-  type CommunicationMessageView,
-  type CommunicationProviderMessage,
-} from '@forge-runtime/core';
-import { withTimeout } from '../../utils/async';
-
-import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
-const RECENT_CASH_MOVEMENT_LIMIT = 10;
-const RECENT_STEP_LIMIT = 10;
-const RECENT_NOTIFICATION_LIMIT = 10;
-
-
-type ClosableLibsqlClient = ReturnType<typeof createClient> & {
-  close?: () => void | Promise<void>;
-};
-
-
-export interface AgentListItem {
-  agentId: string;
-  name: string;
-  description: string | null;
-  role: string | null;
-  executionState: string;
-  lastExecutionError: string | null;
-  lastExecutionErrorAt: number | null;
-  roleName: string | null;
-  modelProfile: string | null;
-  omModelProfile: string | null;
-  loaded: boolean;
-  runner: unknown | null;
-  providerTypes: unknown[];
-  overview: {
-    lastStepAt: number | null;
-    lastStepContextTokens: number | null;
-    lastStepPreview: string | null;
-    lastToolBadge: string | null;
-    lastStepTokens: number | null;
-    lastStepCostUsd: number | null;
-    averageStepIntervalMs: number | null;
-    unreadNotificationCount: number;
-    om: {
-      generationCount: number;
-      checkpointGeneration: number;
-      recentRawTokenCount: number;
-      recentRawTokenLimit: number;
-      overflowTokenCount: number;
-      overflowTokenLimit: number;
-      observationTokenCount: number;
-      reflectionTriggerTokenLimit: number;
-      reflectionTokenCount: number;
-      reflectionTokenLimit: number;
-      checkpointTokenCount: number;
-    } | null;
-    ltm: {
-      running: boolean;
-      queued: boolean;
-      packageCount: number;
-    };
-  };
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface AgentReadModel {
-  getDashboard: () => Promise<{
-    totals: {
-      agents: number;
-      loadedAgents: number;
-      idleAgents: number;
-      runningAgents: number;
-      absentAgents: number;
-      roles: number;
-      activeContracts: number;
-    };
-    cash: {
-      balanceUsd: number;
-      summary: { income: number; expenses: number; net: number };
-      recentMovements: unknown[];
-    };
-  }>;
-  listAgents: () => Promise<unknown[]>;
-  getAgent: (agentId: string) => Promise<unknown>;
-  listAgentRecentConversations: (agentId: string) => Promise<unknown>;
-  listAgentExecutionSteps: (input: { agentId: string; limit: number; offset: number }) => Promise<unknown>;
-  listAgentThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
-  listAgentLongTermMemoryThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
-  getAgentRuntimeMemory: (agentId: string) => Promise<unknown>;
-  listRecentAgentHomeMetricSnapshots: (input: { agentId: string; limit: number }) => Promise<unknown[]>;
-  getAgentOmDebugExport: (agentId: string) => Promise<unknown>;
-  debugAgentLongTermMemoryRecallSearch: (agentId: string, input: AgentLongTermMemoryRecallDebugSearchInput) => Promise<unknown>;
-  listAgentConversationMessages: (params: {
-    agentId: string;
-    provider: string;
-    targetKey: string;
-    limit: number;
-    offset: number;
-  }) => Promise<unknown>;
-  // Sub-resource queries for fragmented routes (#1587)
-  listAgentContracts: (agentId: string) => Promise<unknown>;
-  listAgentSchedules: (agentId: string) => Promise<unknown>;
-  listAgentNotifications: (agentId: string) => Promise<unknown>;
-  listAgentMcpServers: (agentId: string) => Promise<unknown>;
-  listAgentLlmProfiles: (agentId: string) => Promise<unknown>;
-}
 
 interface AgentsReadModelDeps {
   db: Database;
-  finance: ReturnType<typeof createMicroErpReadModel>;
+  finance: object;
   internalChat: InternalChatService;
   workspaceBasePath: string;
-  systemSettings: ReturnType<typeof createSystemSettingsStore>;
+  systemSettings: object;
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
@@ -910,4 +771,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     listAgentMcpServers,
     listAgentLlmProfiles,
   };
+}
+
+// Re-export types so consumers can import from this module unchanged
+export type { AgentListItem, AgentReadModel } from './agents-types';
 }
