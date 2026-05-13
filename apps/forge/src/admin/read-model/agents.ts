@@ -187,13 +187,14 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function getCashData() {
-    const [balanceResult, recentResult] = await Promise.all([
+    const [balanceResult, cashSummary, recentResult] = await Promise.all([
       finance.getCompanyCashBalance(),
+      finance.getCompanyCashSummary(),
       finance.listCompanyCashMovements({ limit: RECENT_CASH_MOVEMENT_LIMIT }),
     ]);
     return {
       balanceUsd: balanceResult.balanceUsd,
-      summary: { income: 0, expenses: 0, net: 0 },
+      summary: { income: cashSummary.totalInUsd, expenses: cashSummary.totalOutUsd, net: cashSummary.netUsd },
       recentMovements: recentResult.items,
     };
   }
