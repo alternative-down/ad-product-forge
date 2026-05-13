@@ -89,7 +89,7 @@ type RecallConfig = {
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
   const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
-  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => { forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: '[safe-catch] readdir', context: { error: err instanceof Error ? err.message : String(err) } }); return null; });
+  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => { forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: '[safe-catch] readdir', context: { error: err instanceof Error ? { message: err.message, name: err.name, stack: err.stack } : err } }); return null; });
 
   if (!entries) {
     return 0;
@@ -161,7 +161,6 @@ export class AgentLongTermMemoryRecall {
     conversationStore: ConversationStore;
     recentRawTokens?: number;
     persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
-    model?: unknown;
   }) {
     this.agentId = input.agentId;
     this.agentMemoryPath = input.agentMemoryPath;
@@ -335,7 +334,7 @@ export class AgentLongTermMemoryRecall {
 
       return recallText;
     } catch (error) {
-      forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: 'recall failed', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'error', message: 'recall failed', context: { error: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : error } });
       forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step failed', context: {
         agentId: this.agentId,
         threadId: input.threadId,
@@ -347,7 +346,7 @@ export class AgentLongTermMemoryRecall {
       try {
         snapshotError = error instanceof Error ? error.message : String(error);
       } catch (e) {
-        forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'snapshotError from error failed', context: { error: e instanceof Error ? e.message : String(e) } });
+        forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'snapshotError from error failed', context: { error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e } });
         snapshotError = String(error);
       }
       try {
@@ -365,7 +364,7 @@ export class AgentLongTermMemoryRecall {
           error: snapshotError,
         }), persistedState?.history ?? undefined);
       } catch (e) {
-        forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'persistRecallSnapshot failed', context: { threadId: input.threadId, resourceId: input.resourceId, error: e instanceof Error ? e.message : String(e) } });
+        forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'persistRecallSnapshot failed', context: { threadId: input.threadId, resourceId: input.resourceId, error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e } });
       }
       return null;
     }
@@ -1158,7 +1157,6 @@ export function createAgentLongTermMemoryRecall(input: {
   conversationStore: ConversationStore;
   recentRawTokens?: number;
   persistenceStore: ReturnType<typeof createAgentLongTermMemoryStore>;
-  model?: unknown;
 }) {
   return new AgentLongTermMemoryRecall(input);
 }
