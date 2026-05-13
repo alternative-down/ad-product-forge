@@ -207,7 +207,7 @@ export function createAgentScheduleTools(
         forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_self_crons result', context: { count: result.length } });
         return result.map(toCronOutput);
       } catch (error) {
-        forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'list_self_crons failed: ' + (error instanceof Error ? error.message : String(error)) });
         return {
           valid: false,
           error: error instanceof Error ? error.message : String(error),
@@ -267,7 +267,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'manage_self_crons action=create failed: ' + (error instanceof Error ? error.message : String(error)) });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -315,7 +315,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -352,7 +352,7 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -377,7 +377,7 @@ export function createAgentScheduleTools(
           forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_crons result', context: { count: result.length } });
           return result.map(toCronOutput);
         } catch (error) {
-          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: list_crons failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -446,7 +446,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_crons action=create failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -494,7 +494,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -531,7 +531,7 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
