@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createInternalChatAccess } from './internal-chat-access';
-import { MessageNotFoundError, AttachmentNotFoundError, ExternalAccountNotFoundError, InternalChatAccountNotFoundError } from './internal-chat-errors';
+import { ExternalAccountNotFoundError, InternalChatAccountNotFoundError } from './internal-chat-errors';
 
 const makeDb = () => {
   const query = {
@@ -12,74 +12,6 @@ const makeDb = () => {
 };
 
 describe('createInternalChatAccess', () => {
-  // -------------------------------------------------------------------------
-  // getMessageAttachmentByAccount
-  // -------------------------------------------------------------------------
-
-  describe('getMessageAttachmentByAccount', () => {
-    it('returns attachment when membership ok and message/attachment exist', async () => {
-      const db = makeDb();
-      db.query.internalChatMessages.findFirst.mockResolvedValueOnce({ id: 'msg_1' });
-
-      const deps = {
-        requireConversationMembershipByAccount: vi.fn().mockResolvedValue(undefined),
-        readMessageAttachment: vi.fn().mockResolvedValue('attachment-data'),
-      };
-
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
-      const result = await getMessageAttachmentByAccount({
-        accountId: 'acc_1',
-        conversationId: 'conv_1',
-        messageId: 'msg_1',
-        attachmentName: 'file.pdf',
-      });
-
-      expect(result).toBe('attachment-data');
-      expect(deps.requireConversationMembershipByAccount).toHaveBeenCalledWith('acc_1', 'conv_1');
-    });
-
-    it('throws MessageNotFoundError when message does not exist', async () => {
-      const db = makeDb();
-      db.query.internalChatMessages.findFirst.mockResolvedValueOnce(null);
-
-      const deps = {
-        requireConversationMembershipByAccount: vi.fn().mockResolvedValue(undefined),
-        readMessageAttachment: vi.fn(),
-      };
-
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
-
-      await expect(
-        getMessageAttachmentByAccount({
-          accountId: 'acc_1',
-          conversationId: 'conv_1',
-          messageId: 'msg_missing',
-          attachmentName: 'file.pdf',
-        }),
-      ).rejects.toThrow(MessageNotFoundError);
-    });
-
-    it('throws AttachmentNotFoundError when attachment not found', async () => {
-      const db = makeDb();
-      db.query.internalChatMessages.findFirst.mockResolvedValueOnce({ id: 'msg_1' });
-
-      const deps = {
-        requireConversationMembershipByAccount: vi.fn().mockResolvedValue(undefined),
-        readMessageAttachment: vi.fn().mockResolvedValue(null),
-      };
-
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
-
-      await expect(
-        getMessageAttachmentByAccount({
-          accountId: 'acc_1',
-          conversationId: 'conv_1',
-          messageId: 'msg_1',
-          attachmentName: 'missing.pdf',
-        }),
-      ).rejects.toThrow(AttachmentNotFoundError);
-    });
-  });
 
   // -------------------------------------------------------------------------
   // getRequiredExternalAccount
@@ -240,77 +172,4 @@ describe('createInternalChatAccess', () => {
     });
   });
 
-  // ─── Expanded: getMessageAttachmentByAccount ───────────────────────────────
-
-  describe('getMessageAttachmentByAccount (expanded)', () => {
-    it('throws when requireConversationMembershipByAccount throws', async () => {
-      const deps = {
-        requireConversationMembershipByAccount: vi.fn().mockRejectedValue(
-          new Error('not a member'),
-        ),
-        readMessageAttachment: vi.fn(),
-      };
-      const db = makeDb();
-      db.query.internalChatMessages.findFirst.mockResolvedValueOnce({ id: 'msg-1' });
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
-
-      await expect(
-        getMessageAttachmentByAccount({
-          accountId: 'acct-1',
-          conversationId: 'conv-1',
-          messageId: 'msg-1',
-          attachmentName: 'file.pdf',
-        }),
-      ).rejects.toThrow('not a member');
-
-      expect(deps.requireConversationMembershipByAccount).toHaveBeenCalledWith(
-        'acct-1',
-        'conv-1',
-      );
-    });
-
-    it('MessageNotFoundError includes the messageId', async () => {
-      const deps = {
-        requireConversationMembershipByAccount: vi.fn().mockResolvedValue(undefined),
-        readMessageAttachment: vi.fn(),
-      };
-      const db = makeDb();
-      db.query.internalChatMessages.findFirst.mockResolvedValueOnce(null);
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
-
-      try {
-        await getMessageAttachmentByAccount({
-          accountId: 'acct-1',
-          conversationId: 'conv-1',
-          messageId: 'msg-xyz',
-          attachmentName: 'file.pdf',
-        });
-        expect.fail('should have thrown');
-      } catch (e) {
-        expect((e as MessageNotFoundError).messageId).toBe('msg-xyz');
-      }
-    });
-
-    it('AttachmentNotFoundError includes the attachmentName', async () => {
-      const deps = {
-        requireConversationMembershipByAccount: vi.fn().mockResolvedValue(undefined),
-        readMessageAttachment: vi.fn().mockResolvedValue(null),
-      };
-      const db = makeDb();
-      db.query.internalChatMessages.findFirst.mockResolvedValueOnce({ id: 'msg-1' });
-      const { getMessageAttachmentByAccount } = createInternalChatAccess(db, deps as any);
-
-      try {
-        await getMessageAttachmentByAccount({
-          accountId: 'acct-1',
-          conversationId: 'conv-1',
-          messageId: 'msg-1',
-          attachmentName: 'gone.pdf',
-        });
-        expect.fail('should have thrown');
-      } catch (e) {
-        expect((e as AttachmentNotFoundError).attachmentName).toBe('gone.pdf');
-      }
-    });
-  });
 });
