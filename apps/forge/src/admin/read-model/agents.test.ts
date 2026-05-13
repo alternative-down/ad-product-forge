@@ -317,20 +317,9 @@ describe('createAgentReadModel', () => {
   });
 
   describe('listAgentRecentConversations', () => {
-    it('returns empty when agent not found', async () => {
-      const db = makeMockDb() as ReturnType<typeof createMockDb>;
-      db.query.agents.findFirst.mockResolvedValue(null);
-      const model = makeReadModel({ db });
-      const result = await model.listAgentRecentConversations('ghost-agent');
-      expect(result).toEqual([]);
-    });
-
     it('returns conversations from conversation helper', async () => {
-      const agentRow = { id: 'agent-1', name: 'A', role: null, executionState: 'absent' as const, lastExecutionError: null, lastExecutionErrorAt: null, createdAt: '', updatedAt: '', workspaceFilesystem: null };
-      const db = makeMockDb() as ReturnType<typeof createMockDb>;
-      db.query.agents.findFirst.mockResolvedValue(agentRow);
       mockListRecentConversations.mockResolvedValue([{ id: 'conv-1' }]);
-      const model = makeReadModel({ db });
+      const model = makeReadModel();
       const result = await model.listAgentRecentConversations('agent-1');
       expect(result).toHaveLength(1);
     });
