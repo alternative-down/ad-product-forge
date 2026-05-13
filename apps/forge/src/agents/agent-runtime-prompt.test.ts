@@ -264,7 +264,7 @@ describe('buildAgentSystemPrompt', () => {
       agentSlug: 'dir-slug',
       agentName: 'Dir Name',
     });
-    const odMatch = result.match(/<operating_directives>([\s\S]*?)<\/operating_directives>/);
+    const odMatch = result.match(/<operating_directives>([\s\S]*?)<\/operating_directives>/) as any;
     expect(odMatch).toBeTruthy();
     const inner = odMatch[1];
     expect(inner).toContain('This is a real operating environment');
