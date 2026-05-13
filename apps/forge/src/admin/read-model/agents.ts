@@ -775,4 +775,3 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
 // Re-export types so consumers can import from this module unchanged
 export type { AgentListItem, AgentReadModel } from './agents-types';
-}
