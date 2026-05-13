@@ -17,6 +17,7 @@ import type {
   LongTermMemoryRecallSnapshot,
   createAgentLongTermMemoryStore,
 } from './store';
+import { withTimeout } from '../../utils/async';
 
 
 import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from '../agent-ltm-helpers';
@@ -115,31 +116,6 @@ async function countFiles(rootPath: string, relativePath: string): Promise<numbe
   }
 
   return total;
-}
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  message: string,
-  onTimeout?: () => void,
-) {
-  let timeoutId: NodeJS.Timeout | null = null;
-
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        onTimeout?.();
-        reject(new Error(message));
-      }, timeoutMs);
-    }),
-  ]).finally(() => {
-    if (!timeoutId) {
-      return;
-    }
-
-    clearTimeout(timeoutId);
-  });
 }
 
 export class AgentLongTermMemoryRecall {
