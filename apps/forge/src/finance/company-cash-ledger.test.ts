@@ -98,6 +98,7 @@ interface CashLedgerRow {
   dueAt?: number | null;
   effectiveAt?: number | null;
   createdAt: number;
+  updatedAt: number;
 }
 
 // ─── Mock DB factory ──────────────────────────────────────────────────────────
@@ -190,6 +191,7 @@ function makeEntry(overrides: Partial<CashLedgerRow> = {}): CashLedgerRow {
     status: 'posted',
     effectiveAt: Date.now(),
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     ...overrides,
   };
 }
