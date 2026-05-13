@@ -241,7 +241,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin runtime memory read timed out for ${agent.id}`,
           ).catch((error) => {
-            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load runtime memory', context: { agentId: agent.id, error } });
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load runtime memory', context: { agentId: agent.id, error: error instanceof Error ? error.message : String(error) } });
             return null;
           }),
         ] as const),
@@ -281,7 +281,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin LTM state read timed out for ${agent.id}`,
           ).catch((error) => {
-            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load LTM state', context: { agentId: agent.id, error } });
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load LTM state', context: { agentId: agent.id, error: error instanceof Error ? error.message : String(error) } });
             return null;
           }),
         ] as const),

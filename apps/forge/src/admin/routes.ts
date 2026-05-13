@@ -249,7 +249,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
         const body = parseJsonBody(request.bodyText, updateRoleSchema);
         const result = await capabilities.updateRole(body);
         void reloadAgentsForRole(input.db, input.loaderConfig, body.roleId).catch((error) => {
-          forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to reload agents for role', context: { roleId: body.roleId, error } });
+          forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to reload agents for role', context: { roleId: body.roleId, error: error instanceof Error ? error.message : String(error) } });
         });
         return jsonResponse(result);
       } catch (error) {

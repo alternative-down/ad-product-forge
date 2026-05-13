@@ -36,7 +36,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
       forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -75,7 +75,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
       forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -113,7 +113,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
       forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -149,7 +149,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
       forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -195,7 +195,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
       forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -231,7 +231,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, pullRequestNumber: input.pullRequestNumber, owner: input.owner },
       });
       forgeDebug({ scope: 'pull-requests', level: 'error', message: 'pull-requests: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
