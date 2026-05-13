@@ -33,7 +33,7 @@ export function createLabelsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
       });
       forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -68,7 +68,7 @@ export function createLabelsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
       forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -105,7 +105,7 @@ export function createLabelsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
       forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -131,7 +131,7 @@ export function createLabelsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
       });
       forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -164,7 +164,7 @@ export function createLabelsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
       });
       forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
@@ -192,7 +192,7 @@ export function createLabelsOps(ctx: OpsContext) {
         context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
       });
       forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw error;
+      throw err;
     }
   }
 
