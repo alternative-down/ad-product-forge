@@ -5,7 +5,7 @@ import { zipSync } from 'fflate';
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal();
   return {
-    ...actual,
+    ...(actual as any),
     stat: vi.fn(),
     mkdir: vi.fn(() => Promise.resolve()),
     rm: vi.fn(() => Promise.resolve()),

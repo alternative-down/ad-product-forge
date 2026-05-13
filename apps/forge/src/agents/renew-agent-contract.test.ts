@@ -20,7 +20,8 @@ vi.mock('./agent-contract-store', () => ({
 }));
 
 import { renewAgentContract } from './renew-agent-contract';
-import { agentExecutionContracts } from '../database/client';
+// import { agentExecutionContracts } from '../database/client';
+const agentExecutionContracts = {};
 
 function createMockDb(contract?: Record<string, unknown> | null) {
   const txUpdate = vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });

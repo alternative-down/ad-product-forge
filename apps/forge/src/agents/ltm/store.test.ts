@@ -4,7 +4,7 @@
  *          readRecallState, writeRecallState.
  * Zero prior coverage.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { Database } from '../../database';
 import type { LongTermMemoryState, LongTermMemoryRecallSnapshot, LongTermMemoryRecallHistory } from './store';
 
@@ -236,7 +236,7 @@ describe('createAgentLongTermMemoryStore', () => {
     });
 
     it('returns null when row has no recallIndexStamp', async () => {
-      mockDb.statesFindFirst.mockResolvedValue(mockRow({ recallIndexStamp: null }));
+      mockDb.statesFindFirst.mockResolvedValue(mockRow({ recallIndexStamp: undefined }));
 
       const result = await store.readRecallIndexStamp();
       expect(result).toBeNull();

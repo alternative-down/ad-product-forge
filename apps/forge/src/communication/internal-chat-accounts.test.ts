@@ -14,7 +14,7 @@ function createChain(result: unknown) {
     limit: vi.fn(() => chain),
     all: vi.fn(() => Promise.resolve(result)),
   };
-  chain[Symbol.iterator] = function* () {
+  (chain as any)[Symbol.iterator] = function* () {
     yield* (result as unknown[]);
   };
   Object.defineProperty(chain, 'then', {

@@ -169,12 +169,7 @@ function createMockCashDb(initialRows: CashLedgerRow[] = []) {
     query: {
       companyCashLedger: { findFirst },
     },
-  } as unknown as {
-    select: (table: unknown) => ReturnType<typeof select>;
-    insert: (table: unknown) => ReturnType<ReturnType<typeof insert>['values']> extends Promise<infer T> ? { values: (v: unknown) => Promise<T> } : never;
-    update: (table: unknown) => ReturnType<ReturnType<typeof update>>;
-    query: { companyCashLedger: { findFirst: typeof findFirst } };
-  };
+  } as any;
 
   return { db, rowStore };
 }
