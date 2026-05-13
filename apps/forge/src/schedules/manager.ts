@@ -71,8 +71,18 @@ export function createAgentScheduleManager(input: {
       const schedules = await store.listActiveSchedules();
 
       for (const scheduleRecord of schedules) {
-        cancelScheduledJob(scheduleRecord.scheduleId);
-        await registerSchedule(scheduleRecord);
+        try {
+          cancelScheduledJob(scheduleRecord.scheduleId);
+          await registerSchedule(scheduleRecord);
+        } catch (error) {
+          forgeDebug({
+            scope: 'schedules',
+            level: 'warn',
+            message: 'loadAll: skipped schedule due to registration failure',
+            context: { scheduleId: scheduleRecord.scheduleId, error: error instanceof Error ? error.message : String(error) },
+          });
+          // Continue loading remaining schedules instead of failing all
+        }
       }
     } catch (error) {
       forgeDebug({
@@ -81,7 +91,6 @@ export function createAgentScheduleManager(input: {
         message: `loadAll failed: ${error instanceof Error ? error.message : String(error)}`,
         context: {},
       });
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'loadAll: operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -102,12 +111,21 @@ export function createAgentScheduleManager(input: {
     const heartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
 
     if (!heartbeat) {
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createHeartbeatSchedule failed to load heartbeat', context: { agentId } });
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createHeartbeatSchedule: failed to load heartbeat', context: { recordId: record.id } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createHeartbeatSchedule failed to load heartbeat', context: { agentId, recordId: record.id } });
       throw new Error(`Failed to load heartbeat schedule: ${record.id}`);
     }
 
-    await registerSchedule(heartbeat);
+    try {
+      await registerSchedule(heartbeat);
+    } catch (error) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: 'createHeartbeatSchedule: registerSchedule failed',
+        context: { agentId, scheduleId: heartbeat.scheduleId, error: error instanceof Error ? error.message : String(error) },
+      });
+      throw error;
+    }
     return {
       scheduleId: heartbeat.scheduleId,
     };
@@ -380,7 +398,7 @@ export function createAgentScheduleManager(input: {
       // Delegate to updateSchedule with the target agent's ID
       return updateSchedule(schedule.agentId, scheduleId, rawInput);
     } catch (error) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'editCron failed', context: { error: error instanceof Error ? error.message : String(error) }});
+      // updateSchedule already logs the error; re-throw without duplicate forgeDebug
       throw error;
     }
   }
