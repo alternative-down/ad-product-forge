@@ -55,6 +55,7 @@ import { createAgentListReadModel } from './agents-list';
 import { createAgentConversationsReadModel } from './agents-conversations';
 import { createAgentMetricsReadModel } from './agents-metrics';
 import { createAgentDetailReadModel } from './agents-detail';
+import { createAgentDebugReadModel } from './agents-debug';
 import type { AgentListItem, AgentReadModel } from './agents-types';
 
 
@@ -321,69 +322,35 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
 
-  async function getAgentOmDebugExport(agentId: string) {
-    const [agent, runtimeMemory, snapshots] = await Promise.all([
-      getAgent(agentId),
-      withTimeout(
-        getAgentRuntimeMemory(agentId),
-        ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-        'getAgentOmDebugExport: runtime memory timed out',
-      ).catch((err) => {
-        forgeDebug({ scope: 'admin-read-model-agents', level: 'warn', message: 'getAgentOmDebugExport: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-        return null;
-      }),
-      listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
-    ]);
-    if (!agent) return null;
-    const ltm = await withTimeout(
-      readLongTermMemoryState(db, agentId),
-      ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-      'getAgentOmDebugExport: LTM state timed out',
-    ).catch((err) => {
-      forgeDebug({ scope: 'admin-read-model-agents', level: 'warn', message: 'getAgentOmDebugExport: LTM recall not available', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      return null;
-    });
-    return {
-      agent,
-      runtimeMemory,
-      snapshots,
-      ltm,
-    };
-  }
 
-  async function debugAgentLongTermMemoryRecallSearch(
-    agentId: string,
-    input: AgentLongTermMemoryRecallDebugSearchInput,
-  ) {
-    const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (!agent) return null;
-    const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId, input);
-    return { ltmRecall };
-  }
-
-
-
-
-
-
-
-  return {
-    getDashboard,
-    listAgents,
+  
+  const debugRM = createAgentDebugReadModel({
+    db,
     getAgent,
-    listAgentRecentConversations,
-    listAgentExecutionSteps,
-    listAgentThreadMessages,
-    listAgentLongTermMemoryThreadMessages,
     getAgentRuntimeMemory,
     listRecentAgentHomeMetricSnapshots,
+  });
+  const {
     getAgentOmDebugExport,
     debugAgentLongTermMemoryRecallSearch,
-    listAgentConversationMessages,
-    listAgentContracts,
-    listAgentSchedules,
-    listAgentNotifications,
-    listAgentMcpServers,
-    listAgentLlmProfiles,
-  };
-}
+  } = debugRM;
+
+return {
+  getDashboard,
+  listAgents,
+  getAgent,
+  listAgentRecentConversations,
+  listAgentExecutionSteps,
+  listAgentThreadMessages,
+  listAgentLongTermMemoryThreadMessages,
+  getAgentRuntimeMemory,
+  listRecentAgentHomeMetricSnapshots,
+  getAgentOmDebugExport,
+  debugAgentLongTermMemoryRecallSearch,
+  listAgentConversationMessages,
+  listAgentContracts,
+  listAgentSchedules,
+  listAgentNotifications,
+  listAgentMcpServers,
+  listAgentLlmProfiles,
+};
