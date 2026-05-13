@@ -12,9 +12,7 @@ import { buildConversationParticipantNames } from './internal-chat-helpers';
 import { forgeDebug } from '@forge-runtime/core';
 
 // =============================================================================
-// Conversation listing
-// =============================================================================
-
+// ======================================================================
 // Named types to avoid complex inline generics exceeding TS parser limits
 type MessageRowBase = {
   messageId: string; unread: number; replyToMessageId: string | null;
