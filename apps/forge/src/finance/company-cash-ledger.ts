@@ -26,7 +26,7 @@ export function createCompanyCashLedger(db: Database) {
 
       return rows[0]?.total ?? 0;
     } catch (error) {
-      forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'getCurrentBalanceUsd failed', context: { error } });
+      forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'getCurrentBalanceUsd failed', context: { error: error instanceof Error ? error.message : String(error) } });
       throw error;
     }
   }
