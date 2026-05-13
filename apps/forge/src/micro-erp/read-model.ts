@@ -35,7 +35,6 @@ export function createMicroErpReadModel(db: Database) {
         level: 'error',
         message: `getCurrentBalanceUsd failed: ${err instanceof Error ? err.message : String(err)}`,
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     return { balanceUsd };
@@ -81,7 +80,6 @@ export function createMicroErpReadModel(db: Database) {
         message: `listCompanyCashMovements: findMany failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { direction: input.direction, status: input.status, type: input.type },
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     let countRows;
@@ -98,7 +96,6 @@ export function createMicroErpReadModel(db: Database) {
         level: 'error',
         message: `listCompanyCashMovements: count query failed: ${err instanceof Error ? err.message : String(err)}`,
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -160,7 +157,6 @@ export function createMicroErpReadModel(db: Database) {
         message: `getCompanyCashSummary: postedTotals query failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { periodStart, periodEnd },
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     let scheduledTotals;
@@ -186,7 +182,6 @@ export function createMicroErpReadModel(db: Database) {
         message: `getCompanyCashSummary: scheduledTotals query failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { periodStart, periodEnd },
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     const totalInUsd = postedTotals[0]?.totalInUsd ?? 0;
@@ -203,7 +198,6 @@ export function createMicroErpReadModel(db: Database) {
         level: 'error',
         message: `getCompanyCashSummary: getCurrentBalanceUsd failed: ${err instanceof Error ? err.message : String(err)}`,
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -248,7 +242,6 @@ export function createMicroErpReadModel(db: Database) {
         level: 'error',
         message: `listActiveInternalAgentContracts query failed: ${err instanceof Error ? err.message : String(err)}`,
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
     let metricsByContractId;
@@ -260,7 +253,6 @@ export function createMicroErpReadModel(db: Database) {
         level: 'error',
         message: `listActiveInternalAgentContracts: getActiveContractMetrics failed: ${err instanceof Error ? err.message : String(err)}`,
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -305,7 +297,6 @@ export function createMicroErpReadModel(db: Database) {
         message: `getActiveInternalAgentContract query failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId },
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -323,7 +314,6 @@ export function createMicroErpReadModel(db: Database) {
         message: `getActiveInternalAgentContract: getActiveContractMetrics failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { agentId },
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
@@ -377,7 +367,6 @@ export function createMicroErpReadModel(db: Database) {
         message: `getActiveContractMetrics query failed: ${err instanceof Error ? err.message : String(err)}`,
         context: { contractIdCount: contractIds.length },
       });
-      forgeDebug({ scope: 'micro-erp-read-model', level: 'error', message: 'micro-erp-read-model: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
 
