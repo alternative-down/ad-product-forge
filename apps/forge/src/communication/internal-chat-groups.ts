@@ -89,123 +89,123 @@ export function createInternalChatGroups(
       displayName: string;
     }>;
   },
-) {
-  // -----------------------------------------------------------------------
-  // Internal helpers
-  // -----------------------------------------------------------------------
-
-  async function getRequiredConversationForAgent(
-    agentId: string,
-    conversationId: string,
-  ) {
-    const account = await deps.getRequiredAgentAccount(agentId);
-    return await getRequiredConversationForAccount(account.id, conversationId);
-  }
-
-  async function getRequiredConversationForAccount(
-    accountId: string,
-    conversationId: string,
-  ) {
-    await requireConversationMembershipByAccount(accountId, conversationId);
-
-    const conversation = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, conversationId),
-    });
-
-    if (!conversation) {
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversationForAccount conversation not found', context: { conversationId } });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
-      throw new Error(`Conversation not found: ${conversationId}`);
-    }
-
-    return conversation;
-  }
-
-  async function getRequiredGroupForAgent(agentId: string, groupId: string) {
-    const group = await getRequiredConversationForAgent(agentId, groupId);
-
-    if (group.type !== "group") {
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAgent type check failed', context: { groupId } });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroup: not found', context: { groupId } });
-      throw new Error(`Chat group not found: ${groupId}`);
-    }
-
-    return group;
-  }
-
-  async function getRequiredGroupForAccount(accountId: string, groupId: string) {
-    const group = await getRequiredConversationForAccount(accountId, groupId);
-
-    if (group.type !== "group") {
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAccount type check failed', context: { groupId } });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroup: not found', context: { groupId } });
-      throw new Error(`Chat group not found: ${groupId}`);
-    }
-
-    return group;
-  }
-
-  async function requireConversationMembership(
-    agentId: string,
-    conversationId: string,
-  ) {
-    const account = await deps.getRequiredAgentAccount(agentId);
-    return await requireConversationMembershipByAccount(account.id, conversationId);
-  }
-
-  async function requireConversationMembershipByAccount(
-    accountId: string,
-    conversationId: string,
-  ) {
-    const membership =
-      await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.accountId, accountId),
-          eq(internalChatConversationMembers.conversationId, conversationId),
-        ),
-      });
-
-    if (!membership) {
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'requireConversationMembershipByAccount membership not found', context: { conversationId } });
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
-      throw new Error(`Conversation not found: ${conversationId}`);
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // Public API — group CRUD
-  // -----------------------------------------------------------------------
-
-  async function createChatGroup(input: CreateChatGroupInput) {
-    try {
-    const existing = await db.query.internalChatConversations.findFirst({
-      where: eq(internalChatConversations.id, input.conversationKey),
-    });
-
-    if (existing) {
-      forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'createGroup: already exists', context: { conversationKey: input.conversationKey } });
-      throw new Error(`Chat group already exists: ${input.conversationKey}`);
-    }
-
-    const now = Date.now();
-    const creatorAccount = await deps.getRequiredAgentAccount(input.agentId);
-
-    await db.insert(internalChatConversations).values({
-      id: input.conversationKey,
-      type: "group",
-      name: input.name,
-      createdByAccountId: creatorAccount.id,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await db.insert(internalChatConversationMembers).values({
-      conversationId: input.conversationKey,
-      accountId: creatorAccount.id,
-      role: "admin",
-      createdAt: now,
-    });
-
+    ) {
+      // -----------------------------------------------------------------------
+      // Internal helpers
+      // -----------------------------------------------------------------------
+    
+      async function getRequiredConversationForAgent(
+        agentId: string,
+        conversationId: string,
+      ) {
+        const account = await deps.getRequiredAgentAccount(agentId);
+        return await getRequiredConversationForAccount(account.id, conversationId);
+      }
+    
+      async function getRequiredConversationForAccount(
+        accountId: string,
+        conversationId: string,
+      ) {
+        await requireConversationMembershipByAccount(accountId, conversationId);
+    
+        const conversation = await db.query.internalChatConversations.findFirst({
+          where: eq(internalChatConversations.id, conversationId),
+        });
+    
+        if (!conversation) {
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversationForAccount conversation not found', context: { conversationId } });
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
+          throw new Error(`Conversation not found: ${conversationId}`);
+        }
+    
+        return conversation;
+      }
+    
+      async function getRequiredGroupForAgent(agentId: string, groupId: string) {
+        const group = await getRequiredConversationForAgent(agentId, groupId);
+    
+        if (group.type !== "group") {
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAgent type check failed', context: { groupId } });
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroup: not found', context: { groupId } });
+          throw new Error(`Chat group not found: ${groupId}`);
+        }
+    
+        return group;
+      }
+    
+      async function getRequiredGroupForAccount(accountId: string, groupId: string) {
+        const group = await getRequiredConversationForAccount(accountId, groupId);
+    
+        if (group.type !== "group") {
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAccount type check failed', context: { groupId } });
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroup: not found', context: { groupId } });
+          throw new Error(`Chat group not found: ${groupId}`);
+        }
+    
+        return group;
+      }
+    
+      async function requireConversationMembership(
+        agentId: string,
+        conversationId: string,
+      ) {
+        const account = await deps.getRequiredAgentAccount(agentId);
+        return await requireConversationMembershipByAccount(account.id, conversationId);
+      }
+    
+      async function requireConversationMembershipByAccount(
+        accountId: string,
+        conversationId: string,
+      ) {
+        const membership =
+          await db.query.internalChatConversationMembers.findFirst({
+            where: and(
+              eq(internalChatConversationMembers.accountId, accountId),
+              eq(internalChatConversationMembers.conversationId, conversationId),
+            ),
+          });
+    
+        if (!membership) {
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'requireConversationMembershipByAccount membership not found', context: { conversationId } });
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
+          throw new Error(`Conversation not found: ${conversationId}`);
+        }
+      }
+    
+      // -----------------------------------------------------------------------
+      // Public API — group CRUD
+      // -----------------------------------------------------------------------
+    
+      async function createChatGroup(input: CreateChatGroupInput) {
+        try {
+        const existing = await db.query.internalChatConversations.findFirst({
+          where: eq(internalChatConversations.id, input.conversationKey),
+        });
+    
+        if (existing) {
+          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'createGroup: already exists', context: { conversationKey: input.conversationKey } });
+          throw new Error(`Chat group already exists: ${input.conversationKey}`);
+        }
+    
+        const now = Date.now();
+        const creatorAccount = await deps.getRequiredAgentAccount(input.agentId);
+    
+        await db.insert(internalChatConversations).values({
+          id: input.conversationKey,
+          type: "group",
+          name: input.name,
+          createdByAccountId: creatorAccount.id,
+          createdAt: now,
+          updatedAt: now,
+        });
+    
+        await db.insert(internalChatConversationMembers).values({
+          conversationId: input.conversationKey,
+          accountId: creatorAccount.id,
+          role: "admin",
+          createdAt: now,
+        });
+    
     return {
       groupId: input.conversationKey,
       name: input.name,
