@@ -31,10 +31,6 @@ export interface SendingDeps {
     getAccountByAgentId: (agentId: string) => Promise<{ id: string; displayName: string; slug: string } | null>;
     getAccountBySlug: (slug: string) => Promise<{ id: string } | null>;
     getRequiredAccount: (accountId: string) => Promise<{ id: string; displayName: string; slug: string; agentId: string | null }>;
-  } | {
-    getAccountByAgentId: (agentId: string) => Promise<{ id: string; displayName: string; slug: string } | null>;
-    getAccountBySlug: (slug: string) => Promise<{ id: string } | null>;
-    getRequiredAccount: (accountId: string) => Promise<{ id: string; displayName: string; slug: string; agentId: string | null }>;
   };
   serviceHelpers: {
     getRequiredConversationForAccount: (accountId: string, conversationKey: string) => Promise<InternalChatConversation>;
@@ -135,7 +131,7 @@ export function createChatSending(deps: SendingDeps) {
         where: eq(internalChatConversationMembers.conversationId, conversation.id),
       });
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage findMany members failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage findMany members failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
 
@@ -149,7 +145,7 @@ export function createChatSending(deps: SendingDeps) {
         createdAt: now,
       });
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage insert failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage insert failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
     await attachments.storeMessageAttachments(messageId, input.attachments);
@@ -169,7 +165,7 @@ export function createChatSending(deps: SendingDeps) {
       try {
         await db.insert(internalChatMessageReads).values(readRows);
       } catch (err) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'sendMessage insert reads failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage insert reads failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
         throw err;
       }
     }
