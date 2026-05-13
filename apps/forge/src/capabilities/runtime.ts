@@ -177,7 +177,6 @@ export async function changeAgentRoleFromAdmin(input: {
 
   if (!targetAgent) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
-    forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
