@@ -149,20 +149,15 @@ export function createAgentContractStore(
   }
 
   async function getActiveContract(agentId: string) {
-    try {
-      const now = time.now();
-      return db.query.agentExecutionContracts.findFirst({
-        where: and(
-          eq(agentExecutionContracts.agentId, agentId),
-          lte(agentExecutionContracts.startsAt, now),
-          gte(agentExecutionContracts.endsAt, now),
-        ),
-        orderBy: [desc(agentExecutionContracts.endsAt)],
-      });
-    } catch (error) {
-      logContractError('getActiveContract', agentId, error);
-      throw error;
-    }
+    const now = time.now();
+    return await db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
+      orderBy: [desc(agentExecutionContracts.endsAt)],
+    });
   }
 
   async function getLatestContract(agentId: string) {
@@ -204,7 +199,7 @@ export function createAgentContractStore(
     });
 
     if (!profile) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'estimateStepCost: LLM profile not found', context: { profileId: input.profileId } });
+      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: LLM profile not found', context: { profileId: input.profileId } });
       throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
     }
 
