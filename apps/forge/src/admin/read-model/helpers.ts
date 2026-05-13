@@ -506,12 +506,12 @@ export function collectConversationParticipants(input: {
   return [...participants];
 }
 
-type MessagePart = { type?: string; text?: string };
-type TextPart = Extract<MessagePart, { type: 'text' | 'reasoning' }>;
-
 /**
  * Type guard: true if the part is a text or reasoning part with a non-empty text field.
  */
+type MessagePart = { type?: string; text?: string };
+type TextPart = Extract<MessagePart, { type: 'text' | 'reasoning' }>;
+
 export function isTextPart(part: MessagePart): part is TextPart {
   return (part.type === 'text' || part.type === 'reasoning') && Boolean(part.text);
 }
