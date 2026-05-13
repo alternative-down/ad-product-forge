@@ -22,14 +22,14 @@ function makeState(overrides: Partial<MessageManagerState> = {}): MessageManager
   };
 }
 
-function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {
+function makeEvent(overrides: any = {}): any {
   return {
     id: overrides.id ?? 'evt-1',
     text: overrides.text ?? 'hello',
     timestamp: overrides.timestamp ?? Date.now(),
     idempotencyKey: overrides.idempotencyKey ?? 'key-1',
     type: overrides.type ?? 'message:dummy',
-    originIdleOnly: overrides.originIdleOnly ?? false,
+    // originIdleOnly removed to fix duplicate
     idleOnly: overrides.idleOnly ?? false,
     groupMetadata: overrides.groupMetadata ?? undefined,
   };
@@ -45,7 +45,7 @@ describe('appendPendingRunMessages', () => {
   it('adds event to pendingRunMessages', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
-    const event = makeEvent({ id: 'evt-a', text: 'hello', idempotencyKey: 'k1' });
+    const event = makeEvent({ text: 'hello', idempotencyKey: 'k1' });
 
     manager.appendPendingRunMessages([event]);
 
@@ -55,8 +55,8 @@ describe('appendPendingRunMessages', () => {
   it('overwrites existing event with same idempotencyKey', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
-    const event1 = makeEvent({ id: 'evt-1', text: 'first', idempotencyKey: 'k1' });
-    const event2 = makeEvent({ id: 'evt-2', text: 'second', idempotencyKey: 'k1' });
+    const event1 = makeEvent({ text: 'first', idempotencyKey: 'k1' });
+    const event2 = makeEvent({ text: 'second', idempotencyKey: 'k1' });
 
     manager.appendPendingRunMessages([event1]);
     manager.appendPendingRunMessages([event2]);
@@ -77,7 +77,7 @@ describe('appendPendingRunMessages', () => {
   it('includes idleOnly events when allowIdleOnly is true', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
-    const idleEvent = makeEvent({ idleOnly: true, idleOnly: true, originIdleOnly: false, idempotencyKey: 'k1' });
+    const idleEvent = makeEvent({ idleOnly: true, originIdleOnly: false, idempotencyKey: 'k1' });
 
     manager.appendPendingRunMessages([idleEvent], { allowIdleOnly: true });
 
