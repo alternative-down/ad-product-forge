@@ -42,12 +42,21 @@ export function createAgentContractStore(
   };
 
 
+  const VALID_STATES = ['idle', 'running', 'absent'] as const;
+  type ExecutionState = typeof VALID_STATES[number];
+  function toExecutionState(raw: string | null | undefined): 'idle' | 'running' | 'absent' {
+    if (raw && VALID_STATES.includes(raw as ExecutionState)) {
+      return raw as 'idle' | 'running' | 'absent';
+    }
+    return 'idle';
+  }
+
   async function getExecutionState(agentId: string): Promise<'idle' | 'running' | 'absent'> {
     try {
       const agent = await db.query.agents.findFirst({
         where: eq(agents.id, agentId),
       });
-      return (agent?.executionState as 'idle' | 'running' | 'absent' | undefined) ?? 'idle';
+      return toExecutionState(agent?.executionState);
     } catch (error) {
       logContractError('getExecutionState', agentId, error);
       throw error;
