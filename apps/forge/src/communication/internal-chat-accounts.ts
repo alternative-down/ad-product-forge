@@ -235,6 +235,18 @@ export function createInternalChatAccounts(db: Database) {
     return account;
   }
 
+  async function getAccountsById(accountIds: string[]) {
+    if (accountIds.length === 0) {
+      return new Map();
+    }
+    const accounts = await db.query.internalChatAccounts.findMany({
+      where: accountIds.length === 1
+        ? eq(internalChatAccounts.id, accountIds[0])
+        : inArray(internalChatAccounts.id, accountIds),
+    });
+    return new Map(accounts.map((a) => [a.id, a]));
+  }
+
   async function getRequiredAgentAccount(agentId: string) {
     const account = await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.agentId, agentId),
@@ -363,6 +375,7 @@ export function createInternalChatAccounts(db: Database) {
     getAccountByAgentId,
     getAccountByTargetKey,
     getRequiredAccount,
+    getAccountsById,
     getRequiredAgentAccount,
     getRequiredAccountBySlug,
     getConversationForAgent,
