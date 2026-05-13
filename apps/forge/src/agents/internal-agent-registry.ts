@@ -103,7 +103,6 @@ function createInternalAgentRegistry() {
     const githubApps = createPerAgentGitHubManager({
       db,
       httpServer: loaderConfig?.httpServer,
-      publicBaseUrl: loaderConfig?.publicBaseUrl,
       integrations: loaderConfig?.integrations,
     });
 
@@ -124,7 +123,6 @@ function createInternalAgentRegistry() {
         const reloadGitHubApps = createPerAgentGitHubManager({
           db,
           httpServer: loaderConfig!.httpServer,
-          publicBaseUrl: loaderConfig!.publicBaseUrl,
           integrations: loaderConfig!.integrations,
         });
         return await loadAgent(db, {
