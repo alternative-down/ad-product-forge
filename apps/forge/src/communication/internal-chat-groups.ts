@@ -16,6 +16,19 @@ import {
 } from "../database/schema";
 import type {Database} from "../database/client"
 
+const logInternalChatError = (
+  context: string,
+  error: unknown,
+  extra: Record<string, unknown> = {},
+) => {
+  forgeDebug({
+    scope: 'internal-chat-groups',
+    level: 'error',
+    ...extra,
+    message: `${context} failed: ${error instanceof Error ? error.message : String(error)}`,
+  });
+};
+
 export interface CreateChatGroupInput {
   agentId: string;
   conversationKey: string;
@@ -219,12 +232,7 @@ export function createInternalChatGroups(
       createdAt: new Date(now).toISOString(),
     };
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `createChatGroup failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { conversationKey: input.conversationKey, agentId: input.agentId },
-      });
+      logInternalChatError('createChatGroup', err, { conversationKey: input.conversationKey, agentId: input.agentId });
       throw err;
     }
   }
@@ -263,12 +271,7 @@ export function createInternalChatGroups(
     };
     } catch (err) {
       if (err instanceof Error && err.message.includes('already exists')) throw err;
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `addMemberToGroup failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug },
-      });
+      logInternalChatError('addMemberToGroup', err, { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug });
       throw err;
     }
   }
@@ -293,12 +296,7 @@ export function createInternalChatGroups(
       participantSlug: participant.slug,
     };
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `removeMemberFromGroup failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug },
-      });
+      logInternalChatError('removeMemberFromGroup', err, { groupId: input.groupId, agentId: input.agentId, participantSlug: input.participantSlug });
       throw err;
     }
   }
@@ -496,12 +494,7 @@ export function createInternalChatGroups(
     };
     } catch (err) {
       if (err instanceof Error && (err.message.includes('not found') || err.message.includes('Admin permission'))) throw err;
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `changeChatGroup failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { groupId: input.groupId, agentId: input.agentId },
-      });
+      logInternalChatError('changeChatGroup', err, { groupId: input.groupId, agentId: input.agentId });
       throw err;
     }
   }
@@ -537,12 +530,7 @@ export function createInternalChatGroups(
 
     return rows.map((row) => buildGroupRow(row satisfies InternalChatGroupRow));
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `listChatGroups failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId: input.agentId, limit: input.limit },
-      });
+      logInternalChatError('listChatGroups', err, { agentId: input.agentId, limit: input.limit });
       throw err;
     }
   }
@@ -576,12 +564,7 @@ export function createInternalChatGroups(
     }));
     } catch (err) {
       if (err instanceof Error && err.message.includes('not found')) throw err;
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `listGroupMembers failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { groupId: input.groupId, agentId: input.agentId },
-      });
+      logInternalChatError('listGroupMembers', err, { groupId: input.groupId, agentId: input.agentId });
       throw err;
     }
   }
@@ -617,12 +600,7 @@ export function createInternalChatGroups(
     }));
     } catch (err) {
       if (err instanceof Error && err.message.includes('not found')) throw err;
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `listGroupMembersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { groupId: input.groupId, accountId: input.accountId },
-      });
+      logInternalChatError('listGroupMembersByAccount', err, { groupId: input.groupId, accountId: input.accountId });
       throw err;
     }
   }
@@ -650,12 +628,7 @@ export function createInternalChatGroups(
 
     return sortParticipantsBySelfFirst(rows, accountId);
     } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'error',
-        message: `listGroupMembersOrDmPeersByAccount failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { accountId, conversationId },
-      });
+      logInternalChatError('listGroupMembersOrDmPeersByAccount', err, { accountId, conversationId });
       throw err;
     }
   }
