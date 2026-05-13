@@ -64,6 +64,75 @@ export function validateHireInternalAgentInput(
   return HireInternalAgentInputSchema.parse(input);
 }
 
+/** Shared rollback helper for hire failures at various stages.
+ *
+ * Cleans up external resources in reverse order of creation, then rolls back
+ * the DB transaction by deleting agent records.
+ *
+ * @param agentId - The agent ID being rolled back
+ * @param provisionedMailbox - Email mailbox provisioned (if any)
+ * @param emailMailboxes - Email manager (if configured)
+ * @param hasHeartbeat - Whether createHeartbeatSchedule succeeded
+ * @param hasLoadAgent - Whether loadAgent succeeded
+ * @param schedules - Schedule manager
+ * @param internalChat - Internal chat service
+ * @param tx - The active DB transaction
+ */
+async function rollbackHire(
+  agentId: string,
+  provisionedMailbox: { address: string } | null,
+  emailMailboxes: HireInternalAgentInput['emailMailboxes'],
+  hasHeartbeat: boolean,
+  hasLoadAgent: boolean,
+  schedules: HireInternalAgentInput['schedules'],
+  internalChat: HireInternalAgentInput['internalChat'],
+  tx: any,
+) {
+  // Undo external resources in reverse order of creation
+  if (hasHeartbeat || hasLoadAgent) {
+    try {
+      await schedules.removeAgent(agentId);
+    } catch (e) {
+      forgeDebug({
+        scope: 'hire-agent',
+        level: 'warn',
+        message: 'Rollback: removeAgent failed',
+        context: { agentId, error: e instanceof Error ? e.message : String(e) },
+      });
+    }
+  }
+
+  try {
+    await internalChat.deleteAgentAccount({ agentId });
+  } catch (e) {
+    forgeDebug({
+      scope: 'hire-agent',
+      level: 'warn',
+      message: 'Rollback: deleteAgentAccount failed',
+      context: { agentId, error: e instanceof Error ? e.message : String(e) },
+    });
+  }
+
+  // Roll back DB records — order matches insertion order
+  await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
+  await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
+  await tx.delete(agents).where(eq(agents.id, agentId));
+
+  // Best-effort email cleanup
+  if (provisionedMailbox && emailMailboxes) {
+    try {
+      await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
+    } catch (e) {
+      forgeDebug({
+        scope: 'hire-agent',
+        level: 'warn',
+        message: 'Rollback: deleteMailboxByAddress failed',
+        context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) },
+      });
+    }
+  }
+}
+
 export async function hireInternalAgent(db: Database, input: unknown) {
   const validated = validateHireInternalAgentInput(input);
   const agentId = validated.agentId ?? createId();
@@ -150,8 +219,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       });
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction (inside outer tx): rollback DB records.
-      // No external ops succeeded yet — no need to undo anything else.
+      // No external ops succeeded yet — undo DB records and email only
       await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
       await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
       await tx.delete(agents).where(eq(agents.id, agentId));
@@ -170,22 +238,16 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       await validated.schedules.createHeartbeatSchedule(agentId);
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: undo registerAgentAccount, then rollback DB
-      try {
-        await validated.internalChat.deleteAgentAccount({ agentId });
-      } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-      await tx.delete(agents).where(eq(agents.id, agentId));
-      if (provisionedMailbox && validated.emailMailboxes) {
-        try {
-          await validated.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
-        } catch (e) {
-          forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-        }
-      }
+      await rollbackHire(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        false, // hasHeartbeat
+        false, // hasLoadAgent
+        validated.schedules,
+        validated.internalChat,
+        tx,
+      );
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
@@ -203,27 +265,16 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       });
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: undo heartbeat schedule, undo chat account, rollback DB
-      try {
-        await validated.schedules.removeAgent(agentId);
-      } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: removeAgent failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      try {
-        await validated.internalChat.deleteAgentAccount({ agentId });
-      } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-      await tx.delete(agents).where(eq(agents.id, agentId));
-      if (provisionedMailbox && validated.emailMailboxes) {
-        try {
-          await validated.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
-        } catch (e) {
-          forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-        }
-      }
+      await rollbackHire(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        true, // hasHeartbeat
+        false, // hasLoadAgent
+        validated.schedules,
+        validated.internalChat,
+        tx,
+      );
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
@@ -232,27 +283,16 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       await getInternalAgentRegistry().add(db, runtime);
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // Compensating transaction: undo heartbeat schedule, undo chat account, rollback DB
-      try {
-        await validated.schedules.removeAgent(agentId);
-      } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: removeAgent failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      try {
-        await validated.internalChat.deleteAgentAccount({ agentId });
-      } catch (e) {
-        forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteAgentAccount failed', context: { agentId, error: e instanceof Error ? e.message : String(e) } });
-      }
-      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-      await tx.delete(agents).where(eq(agents.id, agentId));
-      if (provisionedMailbox && validated.emailMailboxes) {
-        try {
-          await validated.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
-        } catch (e) {
-          forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-        }
-      }
+      await rollbackHire(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        true, // hasHeartbeat
+        true, // hasLoadAgent
+        validated.schedules,
+        validated.internalChat,
+        tx,
+      );
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
