@@ -264,6 +264,12 @@ export function createGitHubAppManager(config: {
       const credentials = parseCredentials(providerRow.encryptedCredentials);
 
       if (!credentials) {
+        forgeDebug({
+          scope: 'github-manager',
+          level: 'warn',
+          message: 'loadAllAgents: skipped agent due to unparseable credentials',
+          context: { agentId: providerRow.agentId },
+        });
         continue;
       }
 
