@@ -28,6 +28,19 @@ export function createAgentContractStore(
   const time = timeProvider ?? createTimeProvider();
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
+  const logContractError = (
+    context: string,
+    runtimeId: string | undefined,
+    error: unknown,
+  ) => {
+    forgeDebug({
+      scope: 'agent-contract-store',
+      level: 'error',
+      runtimeId,
+      message: context + ' failed: ' + (error instanceof Error ? error.message : String(error)),
+    });
+  };
+
 
   async function getExecutionState(agentId: string): Promise<'idle' | 'running' | 'absent'> {
     try {
@@ -36,7 +49,7 @@ export function createAgentContractStore(
       });
       return (agent?.executionState as 'idle' | 'running' | 'absent' | undefined) ?? 'idle';
     } catch (error) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'getExecutionState failed: ' + (error instanceof Error ? error.message : String(error)) });
+      logContractError('getExecutionState', agentId, error);
       throw error;
     }
   }
@@ -53,7 +66,7 @@ export function createAgentContractStore(
         })
         .where(eq(agents.id, agentId));
     } catch (error) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'setExecutionState(' + executionState + ') failed: ' + (error instanceof Error ? error.message : String(error)) });
+      logContractError('setExecutionState(' + executionState + ')', agentId, error);
       throw error;
     }
   }
@@ -70,7 +83,7 @@ export function createAgentContractStore(
         })
         .where(eq(agents.id, agentId));
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'setExecutionAbsent failed: ' + (err instanceof Error ? err.message : String(err)) });
+      logContractError('setExecutionAbsent', agentId, err);
       throw err;
     }
   }
@@ -130,7 +143,7 @@ export function createAgentContractStore(
 
       return newContract;
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'getRunnableContract renewal/funding failed: ' + (err instanceof Error ? err.message : String(err)) });
+      logContractError('getRunnableContract renewal/funding', agentId, err);
       throw err;
     }
   }
@@ -147,7 +160,7 @@ export function createAgentContractStore(
         orderBy: [desc(agentExecutionContracts.endsAt)],
       });
     } catch (error) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'getActiveContract failed: ' + (error instanceof Error ? error.message : String(error)) });
+      logContractError('getActiveContract', agentId, error);
       throw error;
     }
   }
@@ -239,7 +252,7 @@ export function createAgentContractStore(
         updatedAt: createdAt,
       });
     } catch (error) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: input.agentId, message: 'recordAgentStep failed: ' + (error instanceof Error ? error.message : String(error)) });
+      logContractError('recordAgentStep', input.agentId, error);
       throw error;
     }
 
@@ -273,7 +286,7 @@ export function createAgentContractStore(
         await tx.insert(agentExecutionContracts).values(nextContract);
       });
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: agentId, message: 'renewContract transaction failed: ' + (err instanceof Error ? err.message : String(err)) });
+      logContractError('renewContract', agentId, err);
       throw err;
     }
     return nextContract;
@@ -310,7 +323,7 @@ export function createAgentContractStore(
       });
       return { ...contract, fundedAt: now };
     } catch (error) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', runtimeId: contract.agentId, message: 'fundContractIfNeeded failed: ' + (error instanceof Error ? error.message : String(error)) });
+      logContractError('fundContractIfNeeded', contract.agentId, error);
       throw error;
     }
   }
@@ -348,12 +361,7 @@ export function createAgentContractStore(
         );
       });
     } catch (err) {
-      forgeDebug({
-        scope: 'agent-contract-store',
-        level: 'error',
-        runtimeId: agentId,
-        message: 'refund cash-in failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
+      logContractError('refundActiveContractBalance', agentId, err);
       throw err;
     }
 
