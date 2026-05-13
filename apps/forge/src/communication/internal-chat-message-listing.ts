@@ -41,15 +41,15 @@ export function createMessageListing(db: Database, deps: ConversationListingDeps
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
       const conditions = [eq(internalChatMessageReads.messageId, internalChatMessages.id)];
-      if (input.dateFrom) {
+      if (input.dateFrom != null && input.dateFrom !== '') {
         const ts = new Date(input.dateFrom).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} >= ${ts}`);
       }
-      if (input.dateTo) {
+      if (input.dateTo != null && input.dateTo !== '') {
         const ts = new Date(input.dateTo).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} <= ${ts}`);
       }
-      if (input.query) {
+      if (input.query != null && input.query !== '') {
         conditions.push(sql`${internalChatMessages.content} LIKE ${'%' + input.query + '%'}`);
       }
 
@@ -174,15 +174,15 @@ export function createMessageListing(db: Database, deps: ConversationListingDeps
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
       const conditions = [];
-      if (input.dateFrom) {
+      if (input.dateFrom != null && input.dateFrom !== '') {
         const ts = new Date(input.dateFrom).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} >= ${ts}`);
       }
-      if (input.dateTo) {
+      if (input.dateTo != null && input.dateTo !== '') {
         const ts = new Date(input.dateTo).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} <= ${ts}`);
       }
-      if (input.query) {
+      if (input.query != null && input.query !== '') {
         conditions.push(sql`${internalChatMessages.content} LIKE ${'%' + input.query + '%'}`);
       }
 
