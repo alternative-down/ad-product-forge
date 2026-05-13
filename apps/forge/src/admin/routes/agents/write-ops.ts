@@ -1,8 +1,3 @@
-/**
- * Agent Admin Write Operations - Phase 2 of #689
- * POST routes for agent operations extracted from routes.ts
- */
-
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
 import { forgeDebug } from '../debug';
@@ -30,311 +25,62 @@ import {
 } from '../schemas/agents';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
-
-
-import type {Database} from '../../../../src/database/schema';
-import type { AgentLoaderConfig } from '../../../agents/agent-loader';
-import type { GitHubAppManager } from '../../../github/manager';
-import type { AgentEmailManager } from '../../../email/migadu-manager';
-import type { CoolifyManager } from '../../../coolify/manager';
-import type { createAgentScheduleManager } from '../../../schedules/manager';
-
-
-const upsertAgentProviderSchema = z.object({
-  agentId: z.string(),
-  providerType: z.string(),
-  credentials: z.record(z.string(), z.string()),
-}).strict();
-
-const deleteAgentProviderSchema = z.object({
-  agentId: z.string(),
-  providerType: z.string(),
-}).strict();
-
-const createAgentMcpServerSchema = z.object({
-  agentId: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  transport: z.string(),
-  command: z.string().optional(),
-  argsText: z.string().optional(),
-  envVarsText: z.string().optional(),
-  url: z.string().optional(),
-  headersText: z.string().optional(),
-  isActive: z.boolean().optional(),
-}).strict();
-
-const updateAgentMcpServerSchema = z.object({
-  serverId: z.string(),
-  agentId: z.string().optional(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-  transport: z.string().optional(),
-  command: z.string().optional(),
-  argsText: z.string().optional(),
-  envVarsText: z.string().optional(),
-  url: z.string().optional(),
-  headersText: z.string().optional(),
-  isActive: z.boolean().optional(),
-}).strict();
-
-const deleteAgentMcpServerSchema = z.object({
-  serverId: z.string(),
-  agentId: z.string(),
-}).strict();
-
-const assignAgentMcpServerSchema = z.object({
-  agentId: z.string(),
-  serverId: z.string(),
-}).strict();
-
-const setAgentMcpServerActiveSchema = z.object({
-  agentId: z.string(),
-  serverId: z.string(),
-  isActive: z.boolean(),
-}).strict();
-
-const detachAgentMcpServerSchema = z.object({
-  agentId: z.string(),
-  serverId: z.string(),
-}).strict();
-
-const publishAgentSkillToGlobalSchema = z.object({
-  agentId: z.string(),
-  skillName: z.string(),
-}).strict();
-
-const installGlobalSkillForAgentSchema = z.object({
-  agentId: z.string(),
-  skillName: z.string(),
-}).strict();
-
-const uploadAgentSkillsSchema = z.object({
-  agentId: z.string(),
-  skillsZipBase64: z.string(),
-}).strict();
-
-const deleteAgentSkillSchema = z.object({
-  agentId: z.string(),
-  skillName: z.string(),
-}).strict();
-
-const createRoleSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-}).strict();
-
-const updateRoleSchema = z.object({
-  roleId: z.string(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-}).strict();
-
-const deleteRoleSchema = z.object({
-  roleId: z.string(),
-}).strict();
-
-const roleCapabilitySchema = z.object({
-  roleId: z.string(),
-  capabilityName: z.string(),
-  capabilityValue: z.boolean(),
-}).strict();
-
-const roleToolPermissionSchema = z.object({
-  roleId: z.string(),
-  toolName: z.string(),
-  allowed: z.boolean(),
-}).strict();
-
-const roleWorkflowPermissionSchema = z.object({
-  roleId: z.string(),
-  workflowName: z.string(),
-  allowed: z.boolean(),
-}).strict();
-
-interface RegistryEntry {
-  runner: {
-    notifyExternalEvent: (event: unknown) => void;
-    forceIdle: () => Promise<void>;
-  };
-}
-
-interface Registry {
-  get(agentId: string): RegistryEntry | null;
-  add(db: unknown, runtime: unknown): Promise<RegistryEntry>;
-  remove(agentId: string): void;
-  list(): RegistryEntry[];
-}
-
-interface AgentRoutesInput {
-  db: Database;
-  workspaceBasePath: string;
-  loaderConfig: AgentLoaderConfig;
-  githubApps: GitHubAppManager;
-  emailMailboxes: AgentEmailManager | null;
-  coolify: CoolifyManager | null;
-  schedules: ReturnType<typeof createAgentScheduleManager>;
-  internalChat: InternalChatService;
-}
-
-interface InternalChatService {
-  registerExternalAccount: (opts: { slug: string; displayName: string }) => Promise<{ accountId: string }>;
-  sendMessage: (opts: { accountId: string; targetKey: string; content: string; attachments: unknown[] }) => Promise<{
-    conversationKey: string;
-    messageId: string;
-  }>;
-}
+import { Database } from '../../../../src/database/schema';
+import { AgentLoaderConfig } from '../../../agents/agent-loader';
+import { GitHubAppManager } from '../../../github/manager';
+import { AgentEmailManager } from '../../../email/migadu-manager';
+import { CoolifyManager } from '../../../coolify/manager';
+import { createAgentScheduleManager } from '../../../schedules/manager';
+import {
+  upsertAgentProviderSchema,
+  deleteAgentProviderSchema,
+  createAgentMcpServerSchema,
+  updateAgentMcpServerSchema,
+  deleteAgentMcpServerSchema,
+  assignAgentMcpServerSchema,
+  setAgentMcpServerActiveSchema,
+  detachAgentMcpServerSchema,
+  publishAgentSkillToGlobalSchema,
+  installGlobalSkillForAgentSchema,
+  uploadAgentSkillsSchema,
+  deleteAgentSkillSchema,
+  roleCreateSchema,
+  roleUpdateSchema,
+  roleDeleteSchema,
+  roleCapabilitiesSchema,
+  roleToolPermissionsSchema,
+  roleWorkflowPermissionsSchema,
+} from './_split/write-ops/write-ops-schemas';
 
 /**
  * Register POST routes for agent write operations (reload, force-idle, rewakeup, contracts, hire, terminate, roles, config, MCP, skills)
  */
 export function registerAgentWriteOpsRoutes(
   httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
-  input: AgentRoutesInput,
-  registry: Registry,
-  ops: any
+  input: {
+    db: Database;
+    workspaceBasePath: string;
+    loaderConfig: AgentLoaderConfig;
+    githubApps: GitHubAppManager;
+    emailMailboxes: AgentEmailManager | null;
+    coolify: CoolifyManager | null;
+    schedules: ReturnType<typeof createAgentScheduleManager>;
+    internalChat: InternalChatService;
+  },
+  registry: {
+    get(agentId: string): unknown;
+    add(db: unknown, runtime: unknown): Promise<unknown>;
+    remove(agentId: string): void;
+    list(): unknown[];
+  },
+  ops: unknown,
 ) {
   const capabilities = createCapabilityStore(input.db);
   const resolvePermissionId = (name: string) => name;
   // Lifecycle ops — extracted to _split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
-  // Contract ops — extracted to _split/contract-ops.ts
-  registerContractOps({ httpServer, db: input.db, ops });
-  // POST /admin/agent/hire
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/hire',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, hireAgentSchema);
-        const result = await ops.runInternalHiring(input.db, {
-          hiringRequest: body.hiringRequest,
-          additionalContext: body.additionalContext,
-          weeklyBudgetUsd: body.weeklyBudgetUsd,
-          workspaceBasePath: input.workspaceBasePath,
-          githubApps: input.githubApps,
-          emailMailboxes: input.emailMailboxes,
-          coolify: input.coolify,
-          schedules: input.schedules,
-          internalChat: input.internalChat,
-        });
-        return jsonResponse(result, 201);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
 
-  // POST /admin/agent/terminate
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/terminate',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, terminateAgentSchema);
-        return jsonResponse(await ops.runInternalTermination(input.db, {
-          agentId: body.agentId,
-          workspaceBasePath: input.workspaceBasePath,
-          githubApps: input.githubApps,
-          emailMailboxes: input.emailMailboxes,
-          coolify: input.coolify,
-          schedules: input.schedules,
-          internalChat: input.internalChat,
-        }));
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/change-role
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/change-role',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
-        await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
-        return jsonResponse({ success: true });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/github-manifest-config/update
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/github-manifest-config/update',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
-        if (!input.githubApps) {
-          return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
-        }
-        const provisioning = await input.githubApps.updateAgentManifestConfig({
-          agentId: body.agentId,
-          manifestConfig: body.manifestConfig,
-        });
-        return jsonResponse({ success: true, agentId: body.agentId, provisioning });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/github-manifest-config/update route handler failed', context: { path: '/admin/agent/github-manifest-config/update', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/update-config
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/update-config',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, updateAgentConfigSchema);
-        const agent = await (input.db).query.agents.findFirst({
-          where: eq(agents.id, body.agentId),
-        });
-        if (!agent) {
-          return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-        }
-        await (input.db)
-          .update(agents)
-          .set({
-            name: body.name,
-            description: body.description ?? null,
-            instructions: body.instructions,
-            workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
-            workspaceBm25: body.workspaceBm25 ? 1 : 0,
-            modelProfileId: body.modelProfileId,
-            omModelProfileId: body.omModelProfileId,
-            updatedAt: Date.now(),
-          })
-          .where(eq(agents.id, body.agentId));
-        const role = agent.roleId
-          ? await (input.db).query.agentRoles.findFirst({
-              where: eq(agentRoles.id, agent.roleId),
-            })
-          : null;
-        await updateInternalChatProviderProfile(input.db, {
-          agentId: body.agentId,
-          agentName: body.name ?? agent.name ?? '',
-          agentRole: role?.name ?? 'Unknown',
-          agentDescription: body.description ?? agent.description ?? '',
-        });
-        // Reload the agent runtime with new config
-        await reloadAgentIfLoaded(input.db, body.agentId);
-        return jsonResponse({ success: true, agentId: body.agentId });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/update-config route handler failed', context: { path: '/admin/agent/update-config', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/providers/upsert
+// POST /admin/agent/providers/upsert
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/providers/upsert',
