@@ -74,7 +74,7 @@ function makeMockDb() {
   const servers = new Map();
   const profiles = new Map();
   const lastInsertedId = { current: null };
-  const lastInsertedData = { current: null };
+  const lastInsertedData = { current: null as any };
 
   return {
     insert: vi.fn((table) => ({
@@ -369,7 +369,7 @@ describe('registerSystemWriteRoutes', () => {
         isActive: true,
       }))) as { body: string };
 
-      const parsed = JSON.parse(result.body);
+      const parsed = JSON.parse((result as any).body);
       expect(mockDb.insert).toHaveBeenCalled();
       expect(parsed.serverId).toBeDefined();
     });
@@ -419,7 +419,7 @@ describe('registerSystemWriteRoutes', () => {
       })));
 
       expect(mockDb.delete).toHaveBeenCalled();
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, serverId: 'server-to-delete' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, serverId: 'server-to-delete' });
     });
 
     it('deletes linked agent configs and reloads agents', async () => {
@@ -497,7 +497,7 @@ describe('registerSystemWriteRoutes', () => {
         skillName: 'to-delete',
       })));
 
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, skillName: 'to-delete' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, skillName: 'to-delete' });
     });
   });
 
@@ -569,7 +569,7 @@ describe('registerSystemWriteRoutes', () => {
         integrationId: 'int-abc',
       })));
 
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, integrationId: 'int-abc' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, integrationId: 'int-abc' });
     });
   });
 
@@ -608,7 +608,7 @@ describe('registerSystemWriteRoutes', () => {
         modelId: 'claude-3-5-sonnet',
       }))) as { body: string; status?: number };
 
-      const parsed = JSON.parse(result.body);
+      const parsed = JSON.parse((result as any).body);
       expect(parsed.profileId).toBe('profile-abc');
     });
   });
@@ -635,7 +635,7 @@ describe('registerSystemWriteRoutes', () => {
         profileId: 'profile-xyz',
       })));
 
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, profileId: 'profile-xyz' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, profileId: 'profile-xyz' });
     });
   });
 

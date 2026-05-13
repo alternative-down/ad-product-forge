@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type {Database} from '../database/schema';
+// import type {Database} from '../database/schema';
 import {
   agents,
   agentRoles,
@@ -97,7 +97,7 @@ const ROLE_INSPECTION_TOOL_IDS = [
   'list_role_capabilities',
   'manage_role_capabilities',
 ];
-function resolveLoadedToolIds(toolIds) {
+function resolveLoadedToolIds(toolIds: any[]) {
   const resolved = new Set(toolIds);
   const hasCrossAgentCron = resolved.has('manage_crons') || resolved.has('list_crons');
   const hasCrossAgentRole = resolved.has('change_agent_role');
@@ -105,7 +105,7 @@ function resolveLoadedToolIds(toolIds) {
   if (hasRoleInspection) resolved.add('list_agent_roles');
   if (resolved.has('manage_role_capabilities')) resolved.add('list_role_capabilities');
   if (!hasCrossAgentCron && !hasCrossAgentRole) {
-    return [...resolved].sort((a, b) => a.localeCompare(b));
+    return [...resolved].sort((a: any, b: any) => a.localeCompare(b));
   }
   return [...resolved]
     .filter((id) => {
@@ -113,7 +113,7 @@ function resolveLoadedToolIds(toolIds) {
         return false;
       return true;
     })
-    .sort((a, b) => a.localeCompare(b));
+    .sort((a: any, b: any) => a.localeCompare(b));
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -245,7 +245,7 @@ describe('capabilities/store', () => {
       const store = createCapabilityStore(db);
       await store.createRole({ name: 'Base Role' });
       const insertCalls = db.insert.mock.calls;
-      const toolPermCalls = insertCalls.filter(([table]) => table === roleToolPermissions);
+      const toolPermCalls = insertCalls.filter(([table]: any[]) => table === roleToolPermissions);
       expect(toolPermCalls.length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -462,7 +462,7 @@ describe('capabilities/store', () => {
       const store = createCapabilityStore(db);
       const result = await store.listRoleCapabilities('role-1');
       const ids = result.map((item) => item.capabilityId);
-      const sortedIds = [...ids].sort((a, b) => a.localeCompare(b));
+      const sortedIds = [...ids].sort((a: any, b: any) => a.localeCompare(b));
       expect(ids).toEqual(sortedIds);
     });
   });
@@ -596,7 +596,7 @@ describe('capabilities/store', () => {
         createMockAgent({ id: 'ag-2', executionState: 'idle' })
       ]);
       const store = createCapabilityStore(db);
-      const result = await store.listAgentStatuses();
+      const result = await store.listAgentStatuses({} as any);
       expect(result.length).toBe(2);
     });
     it('filters by agentId when provided', async () => {
