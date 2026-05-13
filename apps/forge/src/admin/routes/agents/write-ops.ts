@@ -29,6 +29,7 @@ import {
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
 import { registerRoleOps } from './_split/role-ops';
+import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
 import { registerSkillOps } from './_split/skill-ops';
 import { registerProviderOps } from './_split/provider-ops';
 import { registerConfigOps } from './_split/config-ops';
@@ -105,77 +106,8 @@ export function registerAgentWriteOpsRoutes(
   // Lifecycle ops — extracted to _split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
   // Contract ops — extracted to _split/contract-ops.ts
-  registerContractOps({ httpServer, db: input.db, ops });
-  // POST /admin/agent/hire
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/hire',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, hireAgentSchema);
-        const result = await ops.runInternalHiring(input.db, {
-          hiringRequest: body.hiringRequest,
-          additionalContext: body.additionalContext,
-          weeklyBudgetUsd: body.weeklyBudgetUsd,
-          workspaceBasePath: input.workspaceBasePath,
-          githubApps: input.githubApps,
-          emailMailboxes: input.emailMailboxes,
-          coolify: input.coolify,
-          schedules: input.schedules,
-          internalChat: input.internalChat,
-        });
-        return jsonResponse(result, 201);
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/terminate
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/terminate',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, terminateAgentSchema);
-        return jsonResponse(await ops.runInternalTermination(input.db, {
-          agentId: body.agentId,
-          workspaceBasePath: input.workspaceBasePath,
-          githubApps: input.githubApps,
-          emailMailboxes: input.emailMailboxes,
-          coolify: input.coolify,
-          schedules: input.schedules,
-          internalChat: input.internalChat,
-        }));
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/change-role
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/change-role',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, changeAgentRoleSchema);
-        await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
-        return jsonResponse({ success: true });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-  // Config ops — extracted to _split/config-ops.ts
-  registerConfigOps(httpServer, input.db, input);
-
-  // Provider ops — extracted to _split/provider-ops.ts
-  registerProviderOps(httpServer);
-
+  // Lifecycle delegate ops — extracted to _split/lifecycle-delegate-ops.ts
+  registerLifecycleDelegateOps(httpServer, input, ops);
 
   // POST /admin/agent/mcp/create
   httpServer.registerRoute({
