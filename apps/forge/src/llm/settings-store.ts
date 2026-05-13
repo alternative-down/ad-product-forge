@@ -123,7 +123,7 @@ export function createLlmSettingsStore(db: Database) {
           })
         : null;
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM profile', context: { profileId, error: err } });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM profile', context: { profileId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
 
@@ -142,7 +142,7 @@ export function createLlmSettingsStore(db: Database) {
           })
           .where(eq(llmProfiles.id, input.profileId!));
       } catch (err) {
-        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM profile', context: { profileId, error: err } });
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM profile', context: { profileId, error: err instanceof Error ? err.message : String(err) } });
         throw err;
       }
     } else {
@@ -159,7 +159,7 @@ export function createLlmSettingsStore(db: Database) {
           updatedAt: now,
         });
       } catch (err) {
-        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to insert LLM profile', context: { profileId, error: err } });
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to insert LLM profile', context: { profileId, error: err instanceof Error ? err.message : String(err) } });
         throw err;
       }
     }
@@ -190,7 +190,7 @@ export function createLlmSettingsStore(db: Database) {
     try {
       await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to delete LLM profile', context: { profileId, error: err } });
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to delete LLM profile', context: { profileId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
   }
@@ -252,7 +252,7 @@ export function createLlmSettingsStore(db: Database) {
           updatedAt: now,
         });
       } catch (err) {
-        forgeDebug("llm", "Failed to insert LLM defaults", { error: err });
+        forgeDebug("llm", "Failed to insert LLM defaults", { error: err instanceof Error ? err.message : String(err) });
         throw err;
       }
     }
@@ -266,7 +266,7 @@ export function createLlmSettingsStore(db: Database) {
         where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
       });
     } catch (err) {
-      forgeDebug("llm", "Failed to get LLM defaults row", { error: err });
+      forgeDebug("llm", "Failed to get LLM defaults row", { error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
