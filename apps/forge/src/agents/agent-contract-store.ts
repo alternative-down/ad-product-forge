@@ -170,10 +170,15 @@ export function createAgentContractStore(
   }
 
   async function getLatestContract(agentId: string) {
-    return db.query.agentExecutionContracts.findFirst({
-      where: eq(agentExecutionContracts.agentId, agentId),
-      orderBy: [desc(agentExecutionContracts.endsAt)],
-    });
+    try {
+      return await db.query.agentExecutionContracts.findFirst({
+        where: eq(agentExecutionContracts.agentId, agentId),
+        orderBy: [desc(agentExecutionContracts.endsAt)],
+      });
+    } catch (err) {
+      logContractError('getLatestContract', agentId, err);
+      throw err;
+    }
   }
 
   async function listRecentSteps(agentId: string, limit: number) {
@@ -185,14 +190,19 @@ export function createAgentContractStore(
   }
 
   async function getContractSpend(contractId: string) {
-    const rows = await db
-      .select({
-        total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
-      })
-      .from(agentExecutionSteps)
-      .where(eq(agentExecutionSteps.contractId, contractId));
+    try {
+      const rows = await db
+        .select({
+          total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+        })
+        .from(agentExecutionSteps)
+        .where(eq(agentExecutionSteps.contractId, contractId));
 
-    return rows[0]?.total ?? 0;
+      return rows[0]?.total ?? 0;
+    } catch (err) {
+      logContractError('getContractSpend', contractId, err);
+      throw err;
+    }
   }
 
   async function getUsagePricing(input: {
