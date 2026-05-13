@@ -53,6 +53,7 @@ type ClosableLibsqlClient = ReturnType<typeof createClient> & {
 
 import { createAgentListReadModel } from './agents-list';
 import { createAgentConversationsReadModel } from './agents-conversations';
+import { createAgentMetricsReadModel } from './agents-metrics';
 import type { AgentListItem, AgentReadModel } from './agents-types';
 
 
@@ -121,6 +122,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     workspaceBasePath,
     internalChat,
   });
+  const metricsRM = createAgentMetricsReadModel({ db });
+  const { listRecentAgentHomeMetricSnapshots } = metricsRM;
 
   const agentListRM = createAgentListReadModel({
     db,
@@ -136,8 +139,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     listAgentThreadMessages,
     listAgentLongTermMemoryThreadMessages,
   } = conversationsRM;
-
-
+  
   async function listAgentExecutionSteps(input: { agentId: string; limit: number; offset: number }) {
     const rows = await db.query.agentExecutionSteps.findMany({
       where: eq(agentExecutionSteps.agentId, input.agentId),
