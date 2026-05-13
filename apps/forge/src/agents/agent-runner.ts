@@ -354,7 +354,7 @@ export function createAgentRunner(
       syncExecuting: (val) => { executing = val; },
       syncTimer: (val) => { timer = val; },
       isStaleRun,
-      notifyError: (error) => forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error } }),
+      notifyError: (error) => forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error: error instanceof Error ? error.message : String(error) } }),
     });
   }
 
@@ -406,7 +406,7 @@ export function createAgentRunner(
 
       await queueNextStep(runEpoch);
     } catch (error) {
-      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to begin run', context: { error } });
+      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to begin run', context: { error: error instanceof Error ? error.message : String(error) } });
       if (!isStaleRun(runEpoch)) {
         await transitionToIdle(runEpoch);
       }
@@ -454,7 +454,7 @@ export function createAgentRunner(
       scheduler.setInstant(false);
       scheduler.scheduleNextStep(delayMs, () => executeStep(nextAttempt.contractId, runEpoch));
     } catch (error) {
-      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error } });
+      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error: error instanceof Error ? error.message : String(error) } });
       scheduler.setInstant(false);
       schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
     }

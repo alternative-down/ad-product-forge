@@ -320,7 +320,7 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
       await closeLibsqlClient(client);
     }
   } catch (error) {
-    forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId, message: 'Failed to load latest thread details', context: { error } });
+    forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId, message: 'Failed to load latest thread details', context: { error: error instanceof Error ? error.message : String(error) } });
     return {
       preview: null,
       toolBadge: null,
@@ -361,7 +361,7 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
       });
     } catch (error) {
       // Migration failure is non-fatal: state may already be up-to-date or in a compatible format
-      forgeDebug({ scope: 'agent-home-metrics', level: 'warn', agentId, message: 'Legacy checkpointed OM state migration failed', context: { error } });
+      forgeDebug({ scope: 'agent-home-metrics', level: 'warn', agentId, message: 'Legacy checkpointed OM state migration failed', context: { error: error instanceof Error ? error.message : String(error) } });
     }
 
     const operationalMemoryState = await readOperationalMemoryState({
@@ -475,7 +475,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Agent runtime memory read timed out for ${agent.id}`,
     ).catch((error) => {
-      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime memory', context: { error } });
+      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime memory', context: { error: error instanceof Error ? error.message : String(error) } });
       return null;
     }),
     withTimeout(
@@ -483,7 +483,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Latest thread details read timed out for ${agent.id}`,
     ).catch((error) => {
-      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load latest thread details', context: { error } });
+      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load latest thread details', context: { error: error instanceof Error ? error.message : String(error) } });
       return {
         preview: null,
         toolBadge: null,
@@ -496,7 +496,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Long-term memory state read timed out for ${agent.id}`,
     ).catch((error) => {
-      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load LTM state', context: { error } });
+      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load LTM state', context: { error: error instanceof Error ? error.message : String(error) } });
       return null;
     }),
     input.runtime?.longTermMemory
@@ -505,7 +505,7 @@ export async function readAgentHomeMetricSnapshot(input: {
         OBSERVABILITY_READ_TIMEOUT_MS,
         `Runtime LTM snapshot timed out for ${agent.id}`,
       ).catch((error) => {
-        forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime LTM snapshot', context: { error } });
+        forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime LTM snapshot', context: { error: error instanceof Error ? error.message : String(error) } });
         return null;
       })
       : Promise.resolve(null),
