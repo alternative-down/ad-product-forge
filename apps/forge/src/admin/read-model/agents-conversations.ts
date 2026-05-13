@@ -6,9 +6,7 @@
  * Issue: #2467 — extract submodules from admin/read-model/agents.ts
  */
 
-import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
-import { agents } from '../../database/schema';
 import { createClient } from '@libsql/client';
 import {
   closeLibsqlClient,
@@ -73,8 +71,6 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
     agentId: string,
     limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    const rows = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (!rows) return [];
     return await listRecentConversations(agentId, limit);
   }
 
