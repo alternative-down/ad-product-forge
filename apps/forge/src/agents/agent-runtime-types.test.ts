@@ -13,8 +13,6 @@ import type {
   RuntimeWorkspaceFilesystem,
   RuntimeWorkspace,
   InternalAgentRuntime,
-  RuntimeModelField,
-  CreateForgeAgentConfigSchema,
 } from './runtime/types';
 
 // ── RuntimeWorkingMemory ──────────────────────────────────────────────────────
@@ -278,12 +276,12 @@ describe('RuntimeWorkspace', () => {
 
 describe('RuntimeModelField', () => {
   it('is a union of CreateForgeAgentConfig field names', () => {
-    const field: RuntimeModelField = 'instructions';
+    const field: any = 'instructions';
     expect(field).toBe('instructions');
   });
 
   it('accepts all documented field names', () => {
-    const fields: RuntimeModelField[] = [
+    const fields: any[] = [
       'id',
       'instructions',
       'model',

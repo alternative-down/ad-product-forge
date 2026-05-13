@@ -70,7 +70,7 @@ describe('buildAgentSystemPrompt', () => {
       agentSlug: 'solo',
       agentName: 'Solo Agent',
     });
-    const ccMatch = result.match(/<company_context>([\s\S]*?)<\/company_context>/);
+    const ccMatch = result.match(/<company_context>([\s\S]*?)<\/company_context>/) as any;
     expect(ccMatch).toBeTruthy();
     expect(ccMatch[1].trim()).toBe('## Company Context');
   });
