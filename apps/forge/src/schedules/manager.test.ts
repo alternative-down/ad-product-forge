@@ -1,7 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 
 import { createAgentScheduleManager } from './manager';
-import type { Database } from '../db/database';
+// import type { Database } from '../db/database';
 // ─── extractWhere helpers ───────────────────────────────────────────────────────
 //
 // Drizzle 0.26.x chunk structure:
@@ -144,7 +144,7 @@ function toScheduleSummary(row: Record<string, unknown>) {
 
 // ─── Mock DB factory ──────────────────────────────────────────────────────────
 
-function createMockDb(rows: Record<string, unknown>[] = []) {
+function createMockDb(rows: Record<string, unknown>[] = []): any {
   const rowStore: Record<string, unknown>[] = [...rows];
   // Flag: next findFirst call returns null (for simulating reload failures)
   let reloadNext = false;
@@ -236,7 +236,7 @@ function createMockDb(rows: Record<string, unknown>[] = []) {
     update,
     delete: del,
     setReloadFails,
-  } as unknown as Database & { setReloadFails: () => void };
+  } as any;
 
   return db as ReturnType<typeof createMockDb>;
 }
@@ -283,11 +283,11 @@ describe('createAgentScheduleManager', () => {
     const mockDb = createMockDb(rows);
     const manager = createAgentScheduleManager({
       db: mockDb,
-      notifyAgent,
+      notifyAgent: notifyAgent as any,
       getCallback,
-    });
+    } as any);
     // Expose setReloadFails for tests that need to simulate reload failures
-    (manager as unknown as Record<string, unknown>).setReloadFails = mockDb.setReloadFails;
+    (manager as any).setReloadFails = mockDb.setReloadFails;
     return manager;
   }
 
@@ -295,7 +295,7 @@ describe('createAgentScheduleManager', () => {
 
   test('rejects invalid schema input', () => {
     const manager = makeManager();
-    expect(() => manager.validateScheduleInput('agent-1', {})).toThrow();
+    expect(() => (manager as any).validateScheduleInput('agent-1', {})).toThrow();
   });
 
   // ── listSchedules ─────────────────────────────────────────────────────────
@@ -379,7 +379,7 @@ describe('createAgentScheduleManager', () => {
   });
 
   test('throws when created schedule cannot be loaded', async () => {
-    const manager = makeManager([]);
+    const manager = makeManager([]) as any;
     manager.setReloadFails(); // Make the reload after insert return null
     const future = new Date(Date.now() + 86400000).toISOString();
     await expect(

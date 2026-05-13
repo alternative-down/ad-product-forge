@@ -18,7 +18,7 @@ describe('upsertSystemIntegrationSchema — migadu provider', () => {
       config: { apiUser: 'user@example.com', apiKey: 'secret-key-123' },
     });
     expect(result.providerType).toBe('migadu');
-    expect(result.config.apiUser).toBe('user@example.com');
+    expect((result.config as any).apiUser).toBe('user@example.com');
   });
 
   it('parses with isEnabled', () => {
@@ -56,7 +56,7 @@ describe('upsertSystemIntegrationSchema — coolify provider', () => {
       },
     });
     expect(result.providerType).toBe('coolify');
-    expect(result.config.serverId).toBe('srv-1');
+    expect((result.config as any).serverId).toBe('srv-1');
   });
 
   it('parses with optional applicationsBaseDomain', () => {
@@ -67,7 +67,7 @@ describe('upsertSystemIntegrationSchema — coolify provider', () => {
         applicationsBaseDomain: 'app.example.com',
       },
     });
-    expect(result.config.applicationsBaseDomain).toBe('app.example.com');
+    expect((result.config as any).applicationsBaseDomain).toBe('app.example.com');
   });
 
   it('rejects invalid baseUrl', () => {
@@ -101,7 +101,7 @@ describe('upsertSystemIntegrationSchema — github provider', () => {
       },
     });
     expect(result.providerType).toBe('github');
-    expect(result.config.organization).toBe('my-org');
+    expect((result.config as any).organization).toBe('my-org');
   });
 
   it('rejects invalid appHomeUrl', () => {
@@ -126,7 +126,7 @@ describe('upsertSystemIntegrationSchema — minimax provider', () => {
       config: { apiKey: 'minimax-api-key-123' },
     });
     expect(result.providerType).toBe('minimax');
-    expect(result.config.apiKey).toBe('minimax-api-key-123');
+    expect((result.config as any).apiKey).toBe('minimax-api-key-123');
   });
 
   it('rejects empty apiKey', () => {

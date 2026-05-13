@@ -77,11 +77,11 @@ function makeConfig(overrides?: Partial<SingleAgentLoaderConfig>): SingleAgentLo
   return {
     agentId: 'agent-1',
     workspaceBasePath: '/workspace',
-    githubApps: {},
-    emailMailboxes: {},
-    coolify: {},
-    minimax: {},
-    schedules: {},
+    githubApps: {} as any,
+    emailMailboxes: {} as any,
+    coolify: {} as any,
+    minimax: {} as any,
+    schedules: {} as any,
     internalChat: mockInternalChat as any,
     ...overrides,
   };
@@ -303,10 +303,10 @@ describe('loadAgents', () => {
     const config = {
       workspaceBasePath: '/workspace',
       githubApps: { app1: {} },
-      emailMailboxes: {},
-      coolify: {},
-      minimax: {},
-      schedules: {},
+      emailMailboxes: {} as any,
+      coolify: {} as any,
+      minimax: {} as any,
+      schedules: {} as any,
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
@@ -318,11 +318,11 @@ describe('loadAgents', () => {
   it('returns map keyed by agent ID', async () => {
     const config = {
       workspaceBasePath: '/workspace',
-      githubApps: {},
-      emailMailboxes: {},
-      coolify: {},
-      minimax: {},
-      schedules: {},
+      githubApps: {} as any,
+      emailMailboxes: {} as any,
+      coolify: {} as any,
+      minimax: {} as any,
+      schedules: {} as any,
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
@@ -336,11 +336,11 @@ describe('loadAgents', () => {
   it('logs agent count when starting load', async () => {
     const config = {
       workspaceBasePath: '/workspace',
-      githubApps: {},
-      emailMailboxes: {},
-      coolify: {},
-      minimax: {},
-      schedules: {},
+      githubApps: {} as any,
+      emailMailboxes: {} as any,
+      coolify: {} as any,
+      minimax: {} as any,
+      schedules: {} as any,
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
@@ -355,11 +355,11 @@ describe('loadAgents', () => {
   it('logs agent count when finished loading', async () => {
     const config = {
       workspaceBasePath: '/workspace',
-      githubApps: {},
-      emailMailboxes: {},
-      coolify: {},
-      minimax: {},
-      schedules: {},
+      githubApps: {} as any,
+      emailMailboxes: {} as any,
+      coolify: {} as any,
+      minimax: {} as any,
+      schedules: {} as any,
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
@@ -377,11 +377,11 @@ describe('loadAgents', () => {
       .mockResolvedValueOnce(mockRuntimeData);
     const config = {
       workspaceBasePath: '/workspace',
-      githubApps: {},
-      emailMailboxes: {},
-      coolify: {},
-      minimax: {},
-      schedules: {},
+      githubApps: {} as any,
+      emailMailboxes: {} as any,
+      coolify: {} as any,
+      minimax: {} as any,
+      schedules: {} as any,
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 
@@ -395,11 +395,11 @@ describe('loadAgents', () => {
     mockLoadAgentRuntimeData.mockRejectedValueOnce(new Error('agent-1-error'));
     const config = {
       workspaceBasePath: '/workspace',
-      githubApps: {},
-      emailMailboxes: {},
-      coolify: {},
-      minimax: {},
-      schedules: {},
+      githubApps: {} as any,
+      emailMailboxes: {} as any,
+      coolify: {} as any,
+      minimax: {} as any,
+      schedules: {} as any,
       internalChat: mockInternalChat as any,
     } as unknown as AgentLoaderConfig;
 

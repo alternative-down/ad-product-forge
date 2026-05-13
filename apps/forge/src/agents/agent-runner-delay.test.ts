@@ -5,7 +5,7 @@
  * - calculateBudgetDelayMs
  * - nextExponentialBackoffMs
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 
 // ─── Tests: calculateBudgetDelayMs ────────────────────────────────────────────

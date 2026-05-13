@@ -23,7 +23,7 @@ describe('registerAgentWriteRoutes', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes).toHaveLength(2);
   });
@@ -32,7 +32,7 @@ describe('registerAgentWriteRoutes', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes.find(r => r.path === '/admin/agent/clear-history' && r.method === 'POST')).toBeDefined();
   });
@@ -41,7 +41,7 @@ describe('registerAgentWriteRoutes', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes.find(r => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST')).toBeDefined();
   });
@@ -50,7 +50,7 @@ describe('registerAgentWriteRoutes', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     expect(routes.every(r => r.method === 'POST')).toBe(true);
   });
@@ -59,7 +59,7 @@ describe('registerAgentWriteRoutes', () => {
     registerAgentWriteRoutes(mockHttpServer as any, mockReadModel as any, {
       db: {},
       workspaceBasePath: '/tmp',
-      loaderConfig: {},
+      loaderConfig: {} as any,
     });
     for (const route of routes) {
       expect(typeof route.handler).toBe('function');
