@@ -116,7 +116,7 @@ describe('validateCreateTiming', () => {
   });
 
   it('returns error when scheduleType is missing', () => {
-    const r = validateCreateTiming({ name: 'Cron', content: 'x' });
+    const r = validateCreateTiming({ name: 'Cron', content: 'x' } as any);
     expect(r).not.toBeNull();
     expect(r!.error).toBe('scheduleType is required when action is create');
   });

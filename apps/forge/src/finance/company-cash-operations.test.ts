@@ -102,7 +102,7 @@ interface CashLedgerRow {
 
 // ─── Mock DB factory ────────────────────────────────────────────────────────
 
-function createMockDb(initialRows: CashLedgerRow[] = []) {
+function createMockDb(initialRows: CashLedgerRow[] = []): any {
   const rowStore: CashLedgerRow[] = [...initialRows];
 
   function findFirst(opts: { where?: unknown }) {
@@ -147,19 +147,7 @@ function createMockDb(initialRows: CashLedgerRow[] = []) {
     query: {
       companyCashLedger: { findFirst },
     },
-  } as unknown as {
-    insert: (table: unknown) => { values: (v: unknown) => Promise<{ rowCount: number }> };
-    update: (table: unknown) => ReturnType<ReturnType<NonNullable<ReturnType<ReturnType<{
-      insert: (table: unknown) => { values: (v: unknown) => Promise<{ rowCount: number }> };
-      update: (table: unknown) => {
-        set: (values: Record<string, unknown>) => {
-          where: (where: unknown) => Promise<{ rowCount: number }>;
-        };
-      };
-      query: { companyCashLedger: { findFirst: typeof findFirst } };
-    }>['update']>>['set']>>;
-    query: { companyCashLedger: { findFirst: typeof findFirst } };
-  };
+  } as any;
 
   return { db, rowStore };
 }

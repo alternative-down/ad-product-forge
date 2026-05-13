@@ -26,8 +26,8 @@ describe('buildScheduleUpdateInput', () => {
 
   it('uses normalized schedule fields regardless of parsed values', () => {
     const result = buildScheduleUpdateInput(
-      { scheduleType: 'should-be-ignored' },
-      { scheduleType: 'date', cronExpression: null, scheduledDate: 1700000000, wakeWhenRunning: false },
+      { scheduleType: 'should-be-ignored' } as any,
+      { scheduleType: 'date', cronExpression: null, scheduledDate: 1700000000, wakeWhenRunning: false } as any,
     );
     expect(result.scheduleType).toBe('date');
     expect(result.cronExpression).toBe(null);
@@ -54,7 +54,7 @@ describe('buildScheduleUpdateInput', () => {
   it('uses parsed content when provided', () => {
     const result = buildScheduleUpdateInput(
       { content: 'Do the thing' },
-      { scheduleType: 'date', cronExpression: null, scheduledDate: 1700000000, wakeWhenRunning: false },
+      { scheduleType: 'date', cronExpression: null, scheduledDate: 1700000000, wakeWhenRunning: false } as any,
     );
     expect(result.content).toBe('Do the thing');
   });

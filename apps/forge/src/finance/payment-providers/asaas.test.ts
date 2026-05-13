@@ -7,7 +7,7 @@ import {
   normalizeAsaasEvent,
 } from './asaas';
 
-function makePayload(event: string, payment: Record<string, unknown> = {}): import('./asaas').AsaasWebhookPayload {
+function makePayload(event: string, payment: Record<string, unknown> = {}): any {
   return { event, payment: { id: 'pay_test', customer: 'cust_1', value: 49.99, ...payment } };
 }
 

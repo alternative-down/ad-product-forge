@@ -7,7 +7,8 @@ import {
   requireScheduleEditor,
   requireScheduleDeleter,
 } from './schedule-impl-helpers';
-import type { StoredSchedule } from './store';
+// import type { StoredSchedule } from './store';
+type StoredSchedule = any;
 
 const makeSchedule = (overrides: Partial<StoredSchedule> = {}): StoredSchedule =>
   ({
