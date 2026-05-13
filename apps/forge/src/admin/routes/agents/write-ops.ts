@@ -8,11 +8,11 @@ import type { HttpHandler } from '../../../http/server';
 import { forgeDebug } from '../debug';
 import { createId } from '../../../utils/id';
 import { eq } from 'drizzle-orm';
-import { agents, agentRoles } from '../../../../src/database/schema';
+import { agents, agentRoles } from '../../../database/schema';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
-import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
+import { roleToolPermissions, roleWorkflowPermissions } from '../../../database/schema';
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { jsonResponse, parseJsonBody } from '../index';
 import {
@@ -32,7 +32,7 @@ import { registerRoleOps } from './_split/role-ops';
 import { registerSkillOps } from './_split/skill-ops';
 
 
-import type {Database} from '../../../../src/database/schema';
+import type {Database} from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../github/manager';
 import type { AgentEmailManager } from '../../../email/migadu-manager';
