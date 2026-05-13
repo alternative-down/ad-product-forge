@@ -585,7 +585,6 @@ export function createAgentScheduleManager(input: {
           agentId: scheduleRecord.agentId,
           scheduleId: scheduleRecord.scheduleId,
           kind: scheduleRecord.kind,
-          name: scheduleRecord.name,
           description: scheduleRecord.description,
           scheduleType: scheduleRecord.scheduleType,
           cronExpression: scheduleRecord.cronExpression,

@@ -52,7 +52,6 @@ export function createNotificationContent(input: {
   agentId: string;
   scheduleId: string;
   kind: 'agent' | 'heartbeat';
-  name: string;
   description?: string;
   scheduleType: 'cron' | 'date';
   cronExpression?: string | null;
