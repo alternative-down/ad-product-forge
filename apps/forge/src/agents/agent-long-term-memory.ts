@@ -137,7 +137,7 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
     await fs.access(absoluteRoot);
     exists = true;
   } catch (err) {
-    forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: '[safe-catch] access check', context: { error: err instanceof Error ? err.message : String(err) } });
+    forgeDebug({ scope: 'ltm', level: 'error', message: '[safe-catch] access check', context: { error: err instanceof Error ? err.message : String(err) } });
   }
 
   if (!exists) {
@@ -542,7 +542,7 @@ export function createAgentLongTermMemory(input: {
     await ensureInitialized();
 
     if (!memoryAgent) {
-      forgeDebug({ scope: 'agent-long-term-memory', level: 'warn', message: 'initializeLtmSession: runtime not available', context: { agentId: input.agentId } });
+      forgeDebug({ scope: 'ltm', level: 'warn', message: 'initializeLtmSession: runtime not available', context: { agentId: input.agentId } });
       throw new Error(`LTM runtime session is not available for ${input.agentId}`);
     }
 
@@ -601,7 +601,6 @@ export function createAgentLongTermMemory(input: {
         } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
-          forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'agent-long-term-memory: operation failed', error: error instanceof Error ? error.message : String(error) });
           throw error;
         }
 
@@ -612,7 +611,7 @@ export function createAgentLongTermMemory(input: {
     }
 
     if (!result) {
-      forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: 'generateLtmSummary: no result produced', context: { agentId: input.agentId } });
+      forgeDebug({ scope: 'ltm', level: 'error', message: 'generateLtmSummary: no result produced', context: { agentId: input.agentId } });
       throw new Error(`LTM generate produced no result for ${input.agentId}`);
     }
 
