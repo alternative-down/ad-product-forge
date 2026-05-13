@@ -137,7 +137,7 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
     await fs.access(absoluteRoot);
     exists = true;
   } catch (err) {
-    forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: '[safe-catch] access check', context: { error: err } });
+    forgeDebug({ scope: 'agent-long-term-memory', level: 'error', message: '[safe-catch] access check', context: { error: err instanceof Error ? err.message : String(err) } });
   }
 
   if (!exists) {

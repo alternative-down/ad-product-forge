@@ -62,7 +62,7 @@ async function resetVectorDatabase(input: {
   const exists = await fs
     .access(input.databasePath)
     .then(() => true)
-    .catch((err) => { forgeDebug({ scope: 'agent-embedder-maintenance', level: 'error', message: '[safe-catch] access check', context: { error: err } }); return false; });
+    .catch((err) => { forgeDebug({ scope: 'agent-embedder-maintenance', level: 'error', message: '[safe-catch] access check', context: { error: err instanceof Error ? err.message : String(err) } }); return false; });
 
   if (!exists) {
     return;

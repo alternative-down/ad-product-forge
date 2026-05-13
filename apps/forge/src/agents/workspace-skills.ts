@@ -70,7 +70,7 @@ export async function listAgentWorkspaceSkills(
       return [];
     }
 
-    forgeDebug({ scope: 'workspace-skills', level: 'error', message: 'listAgentWorkspaceSkills failed', context: { error } });
+    forgeDebug({ scope: 'workspace-skills', level: 'error', message: 'listAgentWorkspaceSkills failed', context: { error: error instanceof Error ? error.message : String(error) } });
     throw error;
   }
 }

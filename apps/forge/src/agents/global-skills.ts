@@ -72,7 +72,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
       return [];
     }
 
-    forgeDebug({ scope: 'agents', level: 'error', message: 'Global skill operation failed', context: { error } });
+    forgeDebug({ scope: 'agents', level: 'error', message: 'Global skill operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
     throw error;
   }
 }
