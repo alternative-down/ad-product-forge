@@ -12,7 +12,9 @@ function createMockStore() {
     getUsagePricing: vi.fn(),
     recordAgentStep: vi.fn(),
     refundActiveContractBalance: vi.fn<() => Promise<null>>(),
-  };
+    renewContract: vi.fn(),
+    fundContractIfNeeded: vi.fn(),
+  } as any;
 }
 
 function createMockRuntime(overrides: Partial<InternalAgentRuntime> = {}): InternalAgentRuntime {

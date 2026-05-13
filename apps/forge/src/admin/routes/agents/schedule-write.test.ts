@@ -73,21 +73,21 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
   describe('route registration', () => {
     it('registers POST /admin/agent-schedule/create', () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent-schedule/create');
       expect(route).toBeDefined();
       expect(route.method).toBe('POST');
     });
 
     it('registers POST /admin/agent-schedule/update', () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent-schedule/update');
       expect(route).toBeDefined();
       expect(route.method).toBe('POST');
     });
 
     it('registers POST /admin/agent-schedule/delete', () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent-schedule/delete');
       expect(route).toBeDefined();
       expect(route.method).toBe('POST');
@@ -96,7 +96,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
   describe('POST /admin/agent-schedule/create', () => {
     it('creates a cron schedule and returns 201', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/create');
 
       schedules.createSchedule.mockResolvedValueOnce({
@@ -133,7 +133,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
     });
 
     it('creates a date schedule with scheduledDate', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/create');
 
       schedules.createSchedule.mockResolvedValueOnce({
@@ -163,7 +163,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
     });
 
     it('returns 500 on createSchedule error', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/create');
 
       schedules.createSchedule.mockRejectedValueOnce(new Error('Database error'));
@@ -182,7 +182,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
   describe('POST /admin/agent-schedule/update', () => {
     it('updates a schedule with all fields', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/update');
 
       schedules.updateOwnedSchedule.mockResolvedValueOnce({
@@ -214,7 +214,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
     });
 
     it('updates schedule to date type', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/update');
 
       schedules.updateOwnedSchedule.mockResolvedValueOnce({
@@ -240,7 +240,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
     });
 
     it('returns 500 on updateOwnedSchedule error', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/update');
 
       schedules.updateOwnedSchedule.mockRejectedValueOnce(new Error('Not authorized'));
@@ -258,7 +258,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
   describe('POST /admin/agent-schedule/delete', () => {
     it('deletes a schedule', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/delete');
 
       schedules.deleteSchedule.mockResolvedValueOnce({ deleted: true });
@@ -273,7 +273,7 @@ describe('registerAgentSchedulesWriteRoutes', () => {
     });
 
     it('returns 500 on deleteSchedule error', async () => {
-      registerAgentSchedulesWriteRoutes(httpServer, { schedules });
+      registerAgentSchedulesWriteRoutes(httpServer, { schedules } as any);
       const handler = getHandler(httpServer, 'POST', '/admin/agent-schedule/delete');
 
       schedules.deleteSchedule.mockRejectedValueOnce(new Error('Schedule not found'));

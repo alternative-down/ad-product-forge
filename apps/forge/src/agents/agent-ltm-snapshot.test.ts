@@ -11,7 +11,7 @@ import {
   type LtmSnapshotContext,
   type LtmSnapshotDeps,
   type BuildSnapshotOptions,
-  type LongTermMemoryRecallSnapshot,
+  // type LongTermMemoryRecallSnapshot,
   type PartitionRecallResultsInput,
 } from './agent-ltm-snapshot';
 
@@ -177,18 +177,18 @@ describe('buildNextRecallHistory', () => {
 // ─── buildLtmRecallSnapshot ─────────────────────────────────────────────────
 
 describe('buildLtmRecallSnapshot', () => {
-  const minimalDeps: LtmSnapshotDeps = {
+  const minimalDeps: any = {
     recallConfig: undefined,
     recallSearch: undefined,
     filteredResults: undefined,
     dedupedGraph: undefined,
     queryText: undefined,
-    steps: undefined,
-    lastInitAt: undefined,
+    steps: undefined as any,
+    lastInitAt: undefined as any,
   };
 
-  const minimalContext: LtmSnapshotContext = {
-    indexStats: undefined,
+  const minimalContext: any = {
+    // indexStats: undefined,
   };
 
   it('returns status and query from options/deps', () => {
@@ -205,7 +205,7 @@ describe('buildLtmRecallSnapshot', () => {
   it('returns empty resultIds and zero counts when graphHit is true', () => {
     const deps: LtmSnapshotDeps = {
       ...minimalDeps,
-      recallSearch: { graph: { hit: true }, results: [{ id: 'r', content: 'c', score: 0.9 }] },
+      recallSearch: { graph: { hit: true }, results: [{ id: 'r', score: 0.9 }] },
       filteredResults: undefined,
     };
 
@@ -280,7 +280,7 @@ describe('buildLtmRecallSnapshot', () => {
     const deps: LtmSnapshotDeps = { ...minimalDeps };
     const err = new Error('search failed');
 
-    const result = buildLtmRecallSnapshot(deps, minimalContext, { status: 'error', error: err });
+    const result = buildLtmRecallSnapshot(deps, minimalContext, { status: 'error', error: err as any });
 
     expect(result.status).toBe('error');
     expect(result.error).toBe(err);

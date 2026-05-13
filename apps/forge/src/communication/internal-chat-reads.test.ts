@@ -24,7 +24,7 @@ describe('createInternalChatReads', () => {
 
   it('getUnreadSummary delegates to deps.unread.getUnreadSummary', async () => {
     const mockUnread = {
-      getUnreadSummary: vi.fn<() => Promise<{ count: number }>>().mockResolvedValue({ count: 5 }),
+      getUnreadSummary: vi.fn().mockResolvedValue({ count: 5 }),
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
@@ -40,7 +40,7 @@ describe('createInternalChatReads', () => {
   it('getUnreadSummary passes through thrown errors from unread dep', async () => {
     const mockError = new Error('unread store failed');
     const mockUnread = {
-      getUnreadSummary: vi.fn<() => Promise<unknown>>().mockRejectedValue(mockError),
+      getUnreadSummary: vi.fn().mockRejectedValue(mockError),
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
@@ -54,7 +54,7 @@ describe('createInternalChatReads', () => {
   it('getUnreadSummary passes through thrown errors with correct agentId', async () => {
     const mockError = new Error('access denied');
     const mockUnread = {
-      getUnreadSummary: vi.fn<() => Promise<unknown>>().mockRejectedValue(mockError),
+      getUnreadSummary: vi.fn().mockRejectedValue(mockError),
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
@@ -67,7 +67,7 @@ describe('createInternalChatReads', () => {
 
   it('listRecentConversations delegates to deps.listConversations with correct args', async () => {
     const mockConvs = [{ id: 'conv-1', name: 'General' }, { id: 'conv-2', name: 'Random' }];
-    const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockConvs);
+    const mockListConversations = vi.fn().mockResolvedValue(mockConvs);
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
       participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
@@ -80,7 +80,7 @@ describe('createInternalChatReads', () => {
   });
 
   it('listRecentConversations delegates with limit=0', async () => {
-    const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]);
+    const mockListConversations = vi.fn().mockResolvedValue([]);
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
       participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
@@ -94,7 +94,7 @@ describe('createInternalChatReads', () => {
   it('listGroupMembersOrDmPeers delegates to deps.participants.listGroupMembersOrDmPeers', async () => {
     const mockPeers = [{ id: 'user-1' }, { id: 'user-2' }];
     const mockParticipants = {
-      listGroupMembersOrDmPeers: vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockPeers),
+      listGroupMembersOrDmPeers: vi.fn().mockResolvedValue(mockPeers),
       listGroupMembersOrDmPeersByAccount: vi.fn(),
     };
     const reads = createInternalChatReads({
@@ -112,7 +112,7 @@ describe('createInternalChatReads', () => {
     const mockPeers = [{ id: 'user-3' }];
     const mockParticipants = {
       listGroupMembersOrDmPeers: vi.fn(),
-      listGroupMembersOrDmPeersByAccount: vi.fn<() => Promise<unknown[]>>().mockResolvedValue(mockPeers),
+      listGroupMembersOrDmPeersByAccount: vi.fn().mockResolvedValue(mockPeers),
     };
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
@@ -129,7 +129,7 @@ describe('createInternalChatReads', () => {
     // In DI pattern, deps are required at construction. There is no init() to skip.
     // So calling any method always has deps available — no "undefined" crash possible.
     const mockUnread = {
-      getUnreadSummary: vi.fn<() => Promise<{ count: number }>>().mockResolvedValue({ count: 0 }),
+      getUnreadSummary: vi.fn().mockResolvedValue({ count: 0 }),
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
@@ -143,7 +143,7 @@ describe('createInternalChatReads', () => {
   });
 
   it('listConversations dep receives only agentId and limit (not unread param)', async () => {
-    const mockListConversations = vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]);
+    const mockListConversations = vi.fn().mockResolvedValue([]);
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
       participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },

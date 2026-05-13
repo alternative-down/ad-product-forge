@@ -59,7 +59,7 @@ describe('buildAgentRuntimeConfig', () => {
     const runtimeData = makeMinimalRuntimeData();
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.id).toBe('agent-1');
     expect(result.name).toBe('Test Agent');
@@ -71,7 +71,7 @@ describe('buildAgentRuntimeConfig', () => {
     const runtimeData = makeMinimalRuntimeData();
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.model).toBe('gpt-4o');
     expect(result.pricingModelKey).toBe('gpt-4o');
@@ -85,7 +85,7 @@ describe('buildAgentRuntimeConfig', () => {
     const runtimeData = makeMinimalRuntimeData();
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.companyName).toBe('Acme');
     expect(result.companyContext).toBe('Testing context');
@@ -101,7 +101,7 @@ describe('buildAgentRuntimeConfig', () => {
     const runtimeData = makeMinimalRuntimeData();
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.checkpointedOmEnabled).toBe(true);
     expect(result.checkpointedOmTotalContextTokens).toBe(100000);
@@ -116,7 +116,7 @@ describe('buildAgentRuntimeConfig', () => {
     const runtimeData = makeMinimalRuntimeData();
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.ltmRecallScoreThreshold).toBe(0.7);
     expect(result.ltmRecallDocumentCount).toBe(5);
@@ -126,7 +126,7 @@ describe('buildAgentRuntimeConfig', () => {
     const runtimeData = makeMinimalRuntimeData();
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.roleName).toBe('Developer');
     expect(result.roleDescription).toBe('A developer agent');
@@ -137,7 +137,7 @@ describe('buildAgentRuntimeConfig', () => {
     const loaderConfig = makeLoaderConfig();
     const toolset = { tools: [{ id: 'tool-1' }], breakdown: { custom: 1 } };
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, toolset);
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, toolset as any);
 
     expect(result.tools).toEqual([{ id: 'tool-1' }]);
     expect(result.workspaceBasePath).toBe('/workspace');
@@ -151,7 +151,7 @@ describe('buildAgentRuntimeConfig', () => {
     runtimeData.agent.workspaceEmbedder = 'embedder-1' as never;
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.workspaceFilesystem).toEqual({ type: 's3', bucket: 'test' });
     expect(result.workspaceSandbox).toEqual({ type: 'docker' });
@@ -164,27 +164,27 @@ describe('buildAgentRuntimeConfig', () => {
     runtimeData.providers = [{ type: 'github' }] as never;
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.providers).toEqual([{ type: 'github' }]);
   });
 
   it('handles missing description', () => {
     const runtimeData = makeMinimalRuntimeData();
-    runtimeData.agent.description = undefined;
+    (runtimeData.agent as any).description = undefined;
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.description).toBeUndefined();
   });
 
   it('handles missing role', () => {
     const runtimeData = makeMinimalRuntimeData();
-    runtimeData.role = undefined;
+    (runtimeData as any).role = undefined;
     const loaderConfig = makeLoaderConfig();
 
-    const result = buildAgentRuntimeConfig(loaderConfig, runtimeData, { tools: [], breakdown: {} });
+    const result = buildAgentRuntimeConfig(loaderConfig as any, runtimeData as any, { tools: [], breakdown: {} } as any);
 
     expect(result.roleName).toBeUndefined();
     expect(result.roleDescription).toBeUndefined();
