@@ -219,7 +219,7 @@ export function createAgentScheduleStore(db: Database) {
     agentId: string,
     scheduleId: string,
     input: UpdateAgentScheduleInput,
-  ): Promise<boolean> {
+  ): Promise<AgentSchedule | null> {
     let existing: AgentSchedule | null | undefined;
     try {
       existing = await db.query.agentSchedules.findFirst({
@@ -236,7 +236,7 @@ export function createAgentScheduleStore(db: Database) {
     }
 
     if (!existing || existing.kind !== 'agent') {
-      return false;
+      return null;
     }
 
     try {
@@ -267,7 +267,21 @@ export function createAgentScheduleStore(db: Database) {
 
       throw err;
     }
-    return true;
+    return { ...existing,
+      name: input.name ?? existing.name,
+      description: input.description === undefined ? existing.description : input.description,
+      scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
+      cronExpression:
+        input.cronExpression === undefined ? existing.cronExpression : input.cronExpression,
+      scheduledDate:
+        input.scheduledDate === undefined ? existing.scheduledDate : input.scheduledDate,
+      timezone: input.timezone ?? existing.timezone,
+      content: input.content ?? existing.content,
+      wakeWhenRunning:
+        input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
+      isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
+      updatedAt: Date.now(),
+    };
   }
 
   async function updateAgentSchedule(
@@ -275,8 +289,7 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ) {
-    const updated = await _applyUpdate(agentId, scheduleId, input);
-    return updated ? await getAgentSchedule(agentId, scheduleId) : null;
+    return _applyUpdate(agentId, scheduleId, input);
   }
 
   async function updateOwnedSchedule(
@@ -284,8 +297,7 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ) {
-    const updated = await _applyUpdate(agentId, scheduleId, input);
-    return updated ? await getOwnedSchedule(agentId, scheduleId) : null;
+    return _applyUpdate(agentId, scheduleId, input);
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
