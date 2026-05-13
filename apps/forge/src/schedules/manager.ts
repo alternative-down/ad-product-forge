@@ -108,26 +108,19 @@ export function createAgentScheduleManager(input: {
       content: '',
       wakeWhenRunning: false,
     });
-    const heartbeat = await store.getScheduleByKind(agentId, 'heartbeat');
-
-    if (!heartbeat) {
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createHeartbeatSchedule failed to load heartbeat', context: { agentId, recordId: record.id } });
-      throw new Error(`Failed to load heartbeat schedule: ${record.id}`);
-    }
-
     try {
-      await registerSchedule(heartbeat);
+      await registerSchedule(record);
     } catch (error) {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
         message: 'createHeartbeatSchedule: registerSchedule failed',
-        context: { agentId, scheduleId: heartbeat.scheduleId, error: error instanceof Error ? error.message : String(error) },
+        context: { agentId, scheduleId: record.scheduleId, error: error instanceof Error ? error.message : String(error) },
       });
       throw error;
     }
     return {
-      scheduleId: heartbeat.scheduleId,
+      scheduleId: record.scheduleId,
     };
   }
 
@@ -152,22 +145,15 @@ export function createAgentScheduleManager(input: {
       content: parsed.content,
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
-    const scheduleRecord = await store.getAgentSchedule(agentId, record.id);
-
-    if (!scheduleRecord) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createSchedule: failed to load created schedule', context: { recordId: record.id } });
-      throw new Error(`Failed to load created schedule: ${record.id}`);
-    }
-
     try {
-      await registerSchedule(scheduleRecord);
+      await registerSchedule(record);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error } });
       throw error;
     }
 
-    return toToolOutput(scheduleRecord);
+    return toToolOutput(record);
   }
 
   async function listSchedules(agentId: string) {
@@ -354,15 +340,8 @@ export function createAgentScheduleManager(input: {
       creatorId: creatorAgentId,
     });
 
-    const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
-
-    if (!scheduleRecord) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createSchedule: failed to load created schedule', context: { recordId: record.id } });
-      throw new Error(`Failed to load created schedule: ${record.id}`);
-    }
-
     try {
-      await registerSchedule(scheduleRecord);
+      await registerSchedule(record);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error } });
@@ -372,7 +351,7 @@ export function createAgentScheduleManager(input: {
     return {
       targetAgentId: parsed.targetAgentId,
       createdBy: creatorAgentId,
-      ...toToolOutput(scheduleRecord),
+      ...toToolOutput(record),
     };
   }
 
