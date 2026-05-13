@@ -329,7 +329,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         'getAgentOmDebugExport: runtime memory timed out',
       ).catch((err) => {
-        forgeDebug({ scope: 'admin-read-model-agents', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({ scope: 'admin-read-model-agents', level: 'warn', message: 'getAgentOmDebugExport: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
@@ -340,7 +340,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
       ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
       'getAgentOmDebugExport: LTM state timed out',
     ).catch((err) => {
-      forgeDebug({ scope: 'admin-read-model-agents', level: 'warn', message: 'getAgentRuntimeStatus: LTM recall not available', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'admin-read-model-agents', level: 'warn', message: 'getAgentOmDebugExport: LTM recall not available', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       return null;
     });
     return {
