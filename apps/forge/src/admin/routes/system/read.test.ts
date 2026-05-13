@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerSystemReadRoutes } from './read';
-import type { SystemReadModel } from './read';
+// import type { SystemReadModel } from './read';
+type SystemReadModel = any;
 
 vi.mock('../../../database/schema', () => ({
   mcpServerConfigs: { id: null, name: null } as any,
@@ -48,47 +49,47 @@ describe('registerSystemReadRoutes', () => {
       registry: mockRegistry,
       readModel: mockReadModel,
       workspaceBasePath: '/tmp',
-    });
+    } as any);
     expect(routes).toHaveLength(8);
   });
 
   it('registers GET /admin/system/healthcheck', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/healthcheck' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/integrations', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/integrations' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/settings', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/settings' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/llm', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/llm' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/mcp', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/mcp' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/migrations', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/migrations' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/skills', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/skills' && r.method === 'GET')).toBeDefined();
   });
 
   it('registers GET /admin/system/oauth', () => {
-    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' });
+    registerSystemReadRoutes({ httpServer: mockHttpServer as any, db: mockDb, registry: mockRegistry, readModel: mockReadModel, workspaceBasePath: '/tmp' } as any);
     expect(routes.find(r => r.path === '/admin/system/oauth' && r.method === 'GET')).toBeDefined();
   });
 });

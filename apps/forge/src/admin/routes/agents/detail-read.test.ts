@@ -21,7 +21,7 @@ const mockListConversations = vi.fn();
 const mockGetAgentRuntimeMemory = vi.fn();
 
 vi.mock('../../index', () => ({
-  jsonResponse: mockJsonResponse,
+  jsonResponse: mockJsonResponse as any,
 }));
 
 vi.mock('../../read-model/agents', () => ({
@@ -73,6 +73,7 @@ describe('registerAgentBaseRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     httpServer = makeHttpServer();
@@ -122,6 +123,7 @@ describe('registerAgentStepsRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     httpServer = makeHttpServer();
@@ -184,6 +186,7 @@ describe('registerAgentConversationsRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockListConversations.mockResolvedValue([]);
@@ -225,6 +228,7 @@ describe('registerAgentMemoryRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockGetAgentRuntimeMemory.mockResolvedValue({ version: 1, packages: [] });
@@ -266,6 +270,7 @@ describe('registerAgentMetricsRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockDb = {
@@ -306,6 +311,7 @@ describe('registerAgentContractRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockDb = {
@@ -346,6 +352,7 @@ describe('registerAgentMcpRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockDb = {
@@ -404,6 +411,7 @@ describe('registerAgentSchedulesRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockDb = {
@@ -444,6 +452,7 @@ describe('registerAgentNotificationsRoutes', () => {
     vi.clearAllMocks();
     mockJsonResponse.mockImplementation((body: unknown, status?: number) => ({
       status: status ?? 200,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     mockDb = {

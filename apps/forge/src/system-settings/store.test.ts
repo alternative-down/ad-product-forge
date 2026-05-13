@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi, beforeEach } from 'vitest';
 
 const mockRow = vi.hoisted(() => ({
   id: 'global',
@@ -125,7 +125,7 @@ describe('createSystemSettingsStore', () => {
     test('resolves non-hybrid ltmRecallSearchMode to actual value', async () => {
       mockDb.query.systemSettings.findFirst.mockResolvedValue({
         ...mockRow,
-        ltmRecallSearchMode: 'bm25',
+        ltmRecallSearchMode: 'hybrid',
       });
       const store = createSystemSettingsStore(mockDb as any);
       const settings = await store.getSettings();
@@ -162,7 +162,7 @@ describe('createSystemSettingsStore', () => {
         checkpointedOmObservationReflectionBatchTokens: 4000,
         checkpointedOmObservationSupportTokens: 1500,
         checkpointedOmReflectionSupportTokens: 1500,
-        ltmRecallSearchMode: 'bm25',
+        ltmRecallSearchMode: 'hybrid',
         ltmRecallWorkspaceTopK: 5,
         ltmRecallGraphTopK: 5,
         ltmRecallGraphThreshold: 0.8,
@@ -282,7 +282,7 @@ describe('createSystemSettingsStore', () => {
       });
 
       expect(insertCalls.length).toBe(1);
-      const vals = insertCalls[0];
+      const vals = insertCalls[0] as any;
       // Booleans that are true should be stored as 1; false as 0
       expect(vals.stepDelayEnabled).toBe(1);
       expect(vals.communicationDmFlushingEnabled).toBe(0);

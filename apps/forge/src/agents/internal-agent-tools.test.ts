@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
   createTool: vi.fn((config) => ({ name: config.id, inputSchema: config.inputSchema, type: 'tool' })),
   toolsToRuntimeActions: vi.fn((tools) =>
-    Object.values(tools).map((t) => ({ name: t.name, inputSchema: t.inputSchema }))
+    Object.values(tools).map((t: any) => ({ name: t.name, inputSchema: t.inputSchema }))
   ),
 }));
 

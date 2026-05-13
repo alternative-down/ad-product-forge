@@ -7,7 +7,8 @@
  * Part of #1874 incremental coverage of admin/routes.ts inline handlers.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { HttpRequest } from '../../../http/server';
+// import type { HttpRequest } from '../../../http/server';
+type HttpRequest = any;
 
 // ─── Mock modules (all hoisted to avoid module-load-order issues) ─────────────
 
@@ -18,7 +19,7 @@ const { mockZod } = vi.hoisted(() => {
       'refine', 'transform', 'pipe', 'enum', 'email', 'url', 'cuid', 'uuid',
       'nonempty', 'readonly', 'array', 'record', 'pick', 'omit', 'partial',
       'required', 'brand', 'catch', 'innerType', 'output', 'input', 'and', 'or'];
-    for (const m of methods) { (fn as Record<string, unknown>)[m] = vi.fn().mockReturnThis(); }
+    for (const m of methods) { (fn as any)[m] = vi.fn().mockReturnThis(); }
     return fn;
   };
   return {
@@ -129,9 +130,9 @@ function makePostRequest(body: Record<string, unknown>) {
 function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>, capabilities: ReturnType<typeof createMockCapabilities>) {
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role/create',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null);
+        const body = mockParseJsonBody(request.bodyText);
         const result = await capabilities.createRole(body);
         return mockJsonResponse(result, 201);
       } catch (error) {
@@ -141,9 +142,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role/update',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; name?: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; name?: string };
         return mockJsonResponse(await capabilities.updateRole(body));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -152,9 +153,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role/delete',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string };
         return mockJsonResponse(await capabilities.deleteRole(body.roleId));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -163,9 +164,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role-capability/add',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; capabilityId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; capabilityId: string };
         return mockJsonResponse(await capabilities.manageRoleCapability({ action: 'add', roleId: body.roleId, capabilityId: body.capabilityId }));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -174,9 +175,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role-capability/remove',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; capabilityId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; capabilityId: string };
         return mockJsonResponse(await capabilities.manageRoleCapability({ action: 'remove', roleId: body.roleId, capabilityId: body.capabilityId }));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -185,9 +186,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role-tool-permission/add',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; toolId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; toolId: string };
         return mockJsonResponse(await capabilities.addRoleToolPermission(body));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -196,9 +197,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role-tool-permission/remove',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; toolId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; toolId: string };
         return mockJsonResponse(await capabilities.removeRoleToolPermission(body));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -207,9 +208,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role-workflow-permission/add',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; workflowId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; workflowId: string };
         return mockJsonResponse(await capabilities.addRoleWorkflowPermission(body));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -218,9 +219,9 @@ function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>,
   });
   httpServer.registerRoute({
     method: 'POST', path: '/admin/role-workflow-permission/remove',
-    handler: async (request: HttpRequest) => {
+    handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText, null) as { roleId: string; workflowId: string };
+        const body = mockParseJsonBody(request.bodyText) as { roleId: string; workflowId: string };
         return mockJsonResponse(await capabilities.removeRoleWorkflowPermission(body));
       } catch (error) {
         return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

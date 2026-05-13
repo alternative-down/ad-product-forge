@@ -1,7 +1,7 @@
 /**
  * Unit tests for webhooks/handler.ts — webhook HTTP handler.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createWebhookHandler } from './handler';
 import type { HttpRequest, HttpResponse } from '../http/server';
 
@@ -12,7 +12,7 @@ const makeReq = (overrides: Partial<HttpRequest> = {}): HttpRequest =>
     headers: { 'content-type': 'application/json' },
     bodyText: '{"action":"push","repository":"acme/repo"}',
     ...overrides,
-  } as HttpRequest);
+  } as unknown as HttpRequest);
 
 describe('createWebhookHandler', () => {
   const mockStore = vi.hoisted(() => ({
@@ -23,7 +23,7 @@ describe('createWebhookHandler', () => {
   const mockNotify = vi.hoisted(() => vi.fn());
 
   const makeHandler = () =>
-    createWebhookHandler({ store: mockStore as unknown as ReturnType<typeof mockStore>, notifyAgent: mockNotify });
+    createWebhookHandler({ store: mockStore as any, notifyAgent: mockNotify });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,7 +32,7 @@ describe('createWebhookHandler', () => {
   describe('route not found', () => {
     it('returns 404 for non-matching path', async () => {
       const handler = makeHandler();
-      const result = await handler.handleWebhook({ ...makeReq(), path: '/wrong/path' } as HttpRequest);
+      const result = await handler.handleWebhook({ ...makeReq(), path: '/wrong/path' } as unknown as HttpRequest);
       expect(result.status).toBe(404);
     });
 
@@ -55,7 +55,7 @@ describe('createWebhookHandler', () => {
     it('returns 401 when signature header missing on protected route', async () => {
       mockStore.getRoute.mockResolvedValue({ routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: 'valid-secret', isActive: true });
       const handler = makeHandler();
-      const result = await handler.handleWebhook(makeReq({ headers: { 'content-type': 'application/json' } } as HttpRequest));
+      const result = await handler.handleWebhook(makeReq({ headers: { 'content-type': 'application/json' } } as unknown as HttpRequest));
       expect(result.status).toBe(401);
       expect(result.body).toBe('Missing signature');
     });
@@ -64,7 +64,7 @@ describe('createWebhookHandler', () => {
       mockStore.getRoute.mockResolvedValue({ routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: 'correct-secret', isActive: true });
       const handler = makeHandler();
       const result = await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'x-forge-signature': 'sha256=invalidsignature' } } as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'x-forge-signature': 'sha256=invalidsignature' } } as unknown as HttpRequest),
       );
       expect(result.status).toBe(401);
       expect(result.body).toBe('Invalid signature');
@@ -81,7 +81,7 @@ describe('createWebhookHandler', () => {
 
       const handler = makeHandler();
       const result = await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'x-forge-signature': expected } } as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'x-forge-signature': expected } } as unknown as HttpRequest),
       );
       expect(result.status).toBe(202);
     });
@@ -97,7 +97,7 @@ describe('createWebhookHandler', () => {
 
       const handler = makeHandler();
       const result = await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'x-hub-signature-256': expected } } as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'x-hub-signature-256': expected } } as unknown as HttpRequest),
       );
       expect(result.status).toBe(202);
     });
@@ -116,7 +116,7 @@ describe('createWebhookHandler', () => {
       mockStore.getRoute.mockResolvedValue({ routeId: 'r1', agentId: 'agent-1', name: 'GitHub', secret: 'my-secret', isActive: true });
       const handler = makeHandler();
       const result = await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'x-forge-signature': ['sha256=bad'] } } as unknown as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'x-forge-signature': ['sha256=bad'] } } as unknown as unknown as HttpRequest),
       );
       expect(result.status).toBe(401);
     });
@@ -170,7 +170,7 @@ describe('createWebhookHandler', () => {
 
       const handler = makeHandler();
       await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'user-agent': 'GitHub-Hookshot', 'x-forwarded-for': '1.2.3.4' } } as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'user-agent': 'GitHub-Hookshot', 'x-forwarded-for': '1.2.3.4' } } as unknown as HttpRequest),
       );
       expect(mockStore.createEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -190,7 +190,7 @@ describe('createWebhookHandler', () => {
 
       const handler = makeHandler();
       await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'x-idempotency-key': 'unique-key-123' } } as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'x-idempotency-key': 'unique-key-123' } } as unknown as HttpRequest),
       );
       expect(mockStore.createEvent).toHaveBeenCalledWith(
         expect.objectContaining({ idempotencyKey: 'unique-key-123' }),
@@ -233,7 +233,7 @@ describe('createWebhookHandler', () => {
 
       const handler = makeHandler();
       await handler.handleWebhook(
-        makeReq({ headers: { 'content-type': 'application/json', 'x-forwarded-for': ['1.2.3.4', '5.6.7.8'] } } as unknown as HttpRequest),
+        makeReq({ headers: { 'content-type': 'application/json', 'x-forwarded-for': ['1.2.3.4', '5.6.7.8'] } } as unknown as unknown as HttpRequest),
       );
       expect(mockStore.createEvent).toHaveBeenCalledWith(
         expect.objectContaining({

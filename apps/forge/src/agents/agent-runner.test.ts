@@ -3,30 +3,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Shared mock refs ──────────────────────────────────────────────────────────
 
 type MockScheduler = {
-  startNewRunEpoch: ReturnType<typeof vi.fn>;
-  getState: ReturnType<typeof vi.fn>;
-  startHealthcheck: ReturnType<typeof vi.fn>;
-  stop: ReturnType<typeof vi.fn>;
-  clearHealthcheck: ReturnType<typeof vi.fn>;
-  clearTimer: ReturnType<typeof vi.fn>;
-  setInstant: ReturnType<typeof vi.fn>;
-  resetBackoff: ReturnType<typeof vi.fn>;
-  scheduleNextStep: ReturnType<typeof vi.fn>;
-  getSnapshot: ReturnType<typeof vi.fn>;
-  isStopped: ReturnType<typeof vi.fn>;
+  startNewRunEpoch: any;
+  getState: any;
+  startHealthcheck: any;
+  stop: any;
+  clearHealthcheck: any;
+  clearTimer: any;
+  setInstant: any;
+  resetBackoff: any;
+  scheduleNextStep: any;
+  getSnapshot: any;
+  isStopped: any;
 };
 
 type MockLoopDetector = {
-  reset: ReturnType<typeof vi.fn>;
-  register: ReturnType<typeof vi.fn>;
+  reset: any;
+  register: any;
 };
 
 type MockMessageManager = {
-  appendPendingRunMessages: ReturnType<typeof vi.fn>;
-  flushPendingRunMessages: ReturnType<typeof vi.fn>;
-  updateFlushSettings: ReturnType<typeof vi.fn>;
-  resetFlushedRunEventKeys: ReturnType<typeof vi.fn>;
-  getPendingCount: ReturnType<typeof vi.fn>;
+  appendPendingRunMessages: any;
+  flushPendingRunMessages: any;
+  updateFlushSettings: any;
+  resetFlushedRunEventKeys: any;
+  getPendingCount: any;
 };
 
 type MockStore = {
@@ -183,7 +183,7 @@ vi.mock('./agent-runner-scheduler', () => ({
         activeRunEpoch: 0, stopped: false, activeStepEpoch: 0,
       }),
       isStopped: vi.fn().mockReturnValue(false),
-      startNewRunEpoch: vi.fn(() => { const s = mockScheduler.getState(); return (s as any).activeRunEpoch + 1; }),
+      startNewRunEpoch: vi.fn(() => { const s = mockScheduler.getState(); return (s as any).activeRunEpoch + 1; }) as any,
     };
     return mockScheduler;
   }),
@@ -589,7 +589,7 @@ describe('runHealthcheck', () => {
       await runner.execute([
         { id: 'evt-1', type: 'message' as const },
         { id: 'evt-2', type: 'message' as const },
-      ]);
+      ] as any);
       expect(true).toBe(true);
     });
   });
@@ -752,7 +752,7 @@ describe('runHealthcheck', () => {
       mockStore.getRunnableContract.mockResolvedValue(null);
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
-      await runner.execute([{ id: 'ic-1', type: 'idle-check' as const, idleOnly: true }]);
+      await runner.execute([{ id: 'ic-1', type: 'idle-check' as const, idleOnly: true }] as any);
       expect(true).toBe(true);
     });
 
@@ -790,7 +790,7 @@ describe('beginRun — extra coverage', () => {
       activeRunEpoch: epoch, activeStepEpoch: 0, activeGenerateToken: 0,
       isStopped: false,
     }));
-    await runner.execute([{ type: 'agent-wake', agentId: rt.id, runId: 'run-1', timestamp: Date.now() }]);
+    await runner.execute([{ type: 'agent-wake', agentId: rt.id, runId: 'run-1', timestamp: Date.now() }] as any);
 
     const snapAfter = runner.getSnapshot();
     expect(snapAfter.activeRunEpoch).toBeGreaterThan(epochBefore);

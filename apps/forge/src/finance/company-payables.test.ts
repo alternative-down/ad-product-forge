@@ -55,10 +55,10 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
       !Array.isArray(valChunk)
     ) {
       if ('value' in valChunk) {
-        value = (valChunk as { value: unknown }).value;
+        value = (valChunk as unknown as any).value;
       } else if ('op' in valChunk) {
-        op = (valChunk as { op: string }).op ?? 'eq';
-        value = (valChunk as { value: unknown }).value;
+        op = (valChunk as unknown as any).op ?? 'eq';
+        value = (valChunk as unknown as any).value;
       }
     } else if (typeof valChunk === 'string' || typeof valChunk === 'number' || typeof valChunk === 'boolean') {
       value = valChunk;
@@ -138,9 +138,9 @@ function createMockPayablesDb(
   function findFirstInLedger(opts: { where?: unknown }): CashLedgerRow | null {
     if (!opts.where) return ledgerStore[0] ?? null;
     const conds = extractConditions(opts.where);
-    return ledgerStore.find((r) =>
+    return ledgerStore.find((r: any) =>
       conds.every(({ colName, value, op }) => {
-        const rv = (r as Record<string, unknown>)[snakeToCamel(colName)];
+        const rv = (r as unknown as any)[snakeToCamel(colName)];
         if (op === 'gte') return (rv as number) >= (value as number);
         return rv === value;
       }),
@@ -150,9 +150,9 @@ function createMockPayablesDb(
   function findFirstInPayables(opts: { where?: unknown }): RecurringPayableRow | null {
     if (!opts.where) return payablesStore[0] ?? null;
     const conds = extractConditions(opts.where);
-    return payablesStore.find((r) =>
+    return payablesStore.find((r: any) =>
       conds.every(({ colName, value }) => {
-        const rv = (r as Record<string, unknown>)[snakeToCamel(colName)];
+        const rv = (r as unknown as any)[snakeToCamel(colName)];
         return rv === value;
       }),
     ) ?? null;
@@ -176,9 +176,9 @@ function createMockPayablesDb(
     insert: () => ({
       values: async (values) => {
         if ('recurrencePeriod' in values) {
-          payablesStore.push(values as RecurringPayableRow);
+          payablesStore.push(values as unknown as any);
         } else {
-          ledgerStore.push(values as CashLedgerRow);
+          ledgerStore.push(values as unknown as any);
         }
         return { rowCount: 1 };
       },
@@ -188,7 +188,7 @@ function createMockPayablesDb(
         where: async (condition) => {
           const conds = extractConditions(condition);
           for (const row of payablesStore) {
-            if (conds.every(({ colName, value }) => (row as Record<string, unknown>)[snakeToCamel(colName)] === value)) {
+            if (conds.every(({ colName, value }) => (row as unknown as any)[snakeToCamel(colName)] === value)) {
               Object.assign(row, values);
             }
           }
@@ -201,9 +201,9 @@ function createMockPayablesDb(
         insert: () => ({
           values: async (values: Record<string, unknown>) => {
             if ('recurrencePeriod' in values) {
-              payablesStore.push(values as RecurringPayableRow);
+              payablesStore.push(values as unknown as any);
             } else {
-              ledgerStore.push(values as CashLedgerRow);
+              ledgerStore.push(values as unknown as any);
             }
             return { rowCount: 1 };
           },
@@ -213,7 +213,7 @@ function createMockPayablesDb(
             where: async (condition: unknown) => {
               const conds = extractConditions(condition);
               for (const row of payablesStore) {
-                if (conds.every(({ colName, value }: { colName: string; value: unknown }) => (row as Record<string, unknown>)[snakeToCamel(colName)] === value)) {
+                if (conds.every(({ colName, value }: { colName: string; value: unknown }) => (row as unknown as any)[snakeToCamel(colName)] === value)) {
                   Object.assign(row, values);
                 }
               }
@@ -245,7 +245,7 @@ describe('createCompanyPayables', () => {
       ]);
       const payables = createCompanyPayables(db);
       const result = await payables.listRecurringPayables();
-      expect(result.map((r) => r.name)).toEqual(['A vendor', 'B vendor', 'C vendor']);
+      expect(result.map((r: any) => r.name)).toEqual(['A vendor', 'B vendor', 'C vendor']);
     });
 
     test('maps isActive 1 to true, 0 to false', async () => {
@@ -255,8 +255,8 @@ describe('createCompanyPayables', () => {
       ]);
       const payables = createCompanyPayables(db);
       const result = await payables.listRecurringPayables();
-      expect(result.find((r) => r.name === 'Active')?.isActive).toBe(true);
-      expect(result.find((r) => r.name === 'Inactive')?.isActive).toBe(false);
+      expect(result.find((r: any) => r.name === 'Active')?.isActive).toBe(true);
+      expect(result.find((r: any) => r.name === 'Inactive')?.isActive).toBe(false);
     });
 
     test('maps id to payableId and returns correct shape', async () => {

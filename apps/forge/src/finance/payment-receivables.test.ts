@@ -4,7 +4,7 @@ import { createPaymentReceivablesStore } from './payment-receivables';
 // ─── Mock DB factory ────────────────────────────────────────────────────────
 const DRIZZLE_NAME = Symbol.for('drizzle:Name');
 
-function createMockDb() {
+function createMockDb(): any {
   const txStore: Record<string, unknown>[] = [];
   const ledgerStore: Record<string, unknown>[] = [];
 
@@ -17,7 +17,7 @@ function createMockDb() {
   }
 
   function insert(table: unknown) {
-    const name = table[DRIZZLE_NAME] ?? String(table);
+    const name = (table as any)[DRIZZLE_NAME] ?? String(table);
     return {
       values: (values: Record<string, unknown>) => {
         if (name === 'payment_transactions') txStore.push({ ...values });
@@ -76,15 +76,7 @@ function createMockDb() {
     transaction,
     _ledgerStore: ledgerStore,
     _txStore: txStore,
-  } as {
-    insert: (table: unknown) => { values: (v: unknown) => Promise<{ rowCount: number }> };
-    update: (table: unknown) => { set: (v: Record<string, unknown>) => { where: (w: unknown) => Promise<{ rowCount: number }> } };
-    select: () => { from: () => { where: (w: unknown) => { limit: (n: number) => Promise<Record<string, unknown>[]> }; orderBy: () => { limit: (n: number) => Promise<Record<string, unknown>[]> } } };
-    query: { paymentTransactions: { findFirst: (opts: { where?: unknown }) => Promise<Record<string, unknown> | null> } };
-    _ledgerStore: Record<string, unknown>[];
-    _txStore: Record<string, unknown>[];
-    transaction: typeof transaction;
-  };
+  } as unknown as any;
 }
 
 // ─── Condition extractor ───────────────────────────────────────────────────
@@ -142,55 +134,55 @@ describe('createPaymentReceivablesStore', () => {
   });
 
   it('creates a new transaction record', async () => {
-    const result = await store.processPaymentEvent({
+    const result = await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_123',
       customerId: 'cust_1',
       amountUsd: 49.99,
       status: 'completed',
-    });
+     } as any);
     expect(result.id).toBeDefined();
     expect(result.isNew).toBe(true);
   });
 
   it('returns isNew: false for a duplicate providerPaymentId', async () => {
-    await store.processPaymentEvent({
+    await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_dup',
       customerId: 'cust_1',
       amountUsd: 49.99,
       status: 'completed',
-    });
-    const result = await store.processPaymentEvent({
+     } as any);
+    const result = await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_dup',
       customerId: 'cust_1',
       amountUsd: 49.99,
       status: 'completed',
-    });
+     } as any);
     expect(result.isNew).toBe(false);
   });
 
   it('does NOT insert into company cash ledger for failed payments', async () => {
-    await store.processPaymentEvent({
+    await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_fail',
       customerId: 'cust_1',
       amountUsd: 49.99,
       status: 'failed',
       failureReason: 'card declined',
-    });
+     } as any);
     expect(db._ledgerStore).toHaveLength(0);
   });
 
   it('posts revenue to company cash ledger for completed payment', async () => {
-    await store.processPaymentEvent({
+    await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_completed',
       customerId: 'cust_1',
       amountUsd: 49.99,
       status: 'completed',
-    });
+     } as any);
     expect(db._ledgerStore).toHaveLength(1);
     const entry = db._ledgerStore[0];
     expect(entry.direction).toBe('in');
@@ -199,26 +191,26 @@ describe('createPaymentReceivablesStore', () => {
   });
 
   it('does not post duplicate ledger entry for an idempotent duplicate', async () => {
-    await store.processPaymentEvent({
+    await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_dup2',
       customerId: 'cust_1',
       amountUsd: 99.00,
       status: 'completed',
-    });
+     } as any);
     const initial = db._ledgerStore.length;
-    await store.processPaymentEvent({
+    await store.processPaymentEvent({ 
       provider: 'stripe',
       providerPaymentId: 'evt_dup2',
       customerId: 'cust_1',
       amountUsd: 99.00,
       status: 'completed',
-    });
+     } as any);
     expect(db._ledgerStore).toHaveLength(initial);
   });
 
   it('listRecentTransactions returns an empty array when no transactions exist', async () => {
-    const result = await store.listRecentTransactions();
+    const result = await store.listRecentTransactions({ limit: 10 } as any);
     expect(result).toHaveLength(0);
   });
 });

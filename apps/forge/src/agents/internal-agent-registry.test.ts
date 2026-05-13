@@ -10,7 +10,7 @@ const mockRunnerInstances = new Map<string, ReturnType<typeof vi.fn>>();
 
 vi.mock('./agent-runner', () => ({
   createAgentRunner: vi.fn((_db, runtime) => {
-    const runner = {
+    const runner: any = {
       start: vi.fn().mockResolvedValue(undefined),
       stop: vi.fn(),
       notifyExternalEvent: vi.fn(),
@@ -91,7 +91,7 @@ describe('internal-agent-registry', () => {
       const runtime = makeRuntime('start-agent');
       await registry().add(makeDb(), runtime);
 
-      const runner = mockRunnerInstances.get('start-agent');
+      const runner = mockRunnerInstances.get('start-agent') as any;
       expect(runner!.start).toHaveBeenCalled();
     });
 
@@ -108,13 +108,13 @@ describe('internal-agent-registry', () => {
       const runtime1 = makeRuntime('dup-id', 'First');
       await registry().add(makeDb(), runtime1);
 
-      const stopSpy = vi.spyOn(mockRunnerInstances.get('dup-id')!, 'stop');
+      const stopSpy = vi.spyOn(mockRunnerInstances.get('dup-id') as any, 'stop');
 
       const runtime2 = makeRuntime('dup-id', 'Second');
       await registry().add(makeDb(), runtime2);
 
       expect(stopSpy).toHaveBeenCalled();
-      expect(registry().get('dup-id')!.runtime.name).toBe('Second');
+      expect((registry().get('dup-id') as any).runtime.name).toBe('Second');
     });
 
     it('does nothing when removing unknown agent', () => {
@@ -144,7 +144,7 @@ describe('internal-agent-registry', () => {
       const { loadAgents } = await import('./agent-loader');
       vi.mocked(loadAgents).mockResolvedValue(new Map());
 
-      const result = await registry().loadAll(makeDb(), makeConfig());
+      const result = await registry().loadAll(makeDb(), makeConfig() as any);
       expect(result).toHaveLength(0);
       expect(loadAgents).toHaveBeenCalled();
     });
@@ -155,12 +155,12 @@ describe('internal-agent-registry', () => {
       runtimes.set('reload-agent', makeRuntime('reload-agent'));
       vi.mocked(loadAgents).mockResolvedValue(runtimes);
 
-      await registry().loadAll(makeDb(), makeConfig());
+      await registry().loadAll(makeDb(), makeConfig() as any);
       expect(registry().list()).toHaveLength(1);
 
       // Second call with empty map removes all
       vi.mocked(loadAgents).mockResolvedValue(new Map());
-      await registry().loadAll(makeDb(), makeConfig());
+      await registry().loadAll(makeDb(), makeConfig() as any);
       expect(registry().list()).toHaveLength(0);
     });
   });

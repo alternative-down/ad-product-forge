@@ -41,14 +41,14 @@ describe('registerAgentOperationRoutes', () => {
   });
 
   it('registers POST /admin/agent/wake route', () => {
-    registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+    registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
     const wakeRoute = httpServer._routes.find((r: any) => r.path === '/admin/agent/wake');
     expect(wakeRoute).toBeDefined();
     expect(wakeRoute.method).toBe('POST');
   });
 
   it('registers POST /admin/agent/internal-chat/send route', () => {
-    registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+    registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
     const chatRoute = httpServer._routes.find((r: any) => r.path === '/admin/agent/internal-chat/send');
     expect(chatRoute).toBeDefined();
     expect(chatRoute.method).toBe('POST');
@@ -56,7 +56,7 @@ describe('registerAgentOperationRoutes', () => {
 
   describe('wake handler', () => {
     it('returns 404 when agent not found in registry', async () => {
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/wake');
       const response = await route.handler({ bodyText: JSON.stringify({ agentId: 'unknown-agent' }) });
       expect(response.status).toBe(404);
@@ -66,7 +66,7 @@ describe('registerAgentOperationRoutes', () => {
     it('returns success when agent found and event dispatched', async () => {
       const notifyMock = vi.fn();
       registry.set('agent-123', { runner: { notifyExternalEvent: notifyMock } });
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/wake');
       const response = await route.handler({ bodyText: JSON.stringify({ agentId: 'agent-123' }) });
       expect(response.status).toBe(200);
@@ -76,7 +76,7 @@ describe('registerAgentOperationRoutes', () => {
     it('dispatches event with correct shape', async () => {
       const notifyMock = vi.fn();
       registry.set('agent-abc', { runner: { notifyExternalEvent: notifyMock } });
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/wake');
       await route.handler({ bodyText: JSON.stringify({ agentId: 'agent-abc' }) });
       expect(notifyMock).toHaveBeenCalledTimes(1);
@@ -90,7 +90,7 @@ describe('registerAgentOperationRoutes', () => {
 
   describe('internal-chat send handler', () => {
     it('registers external sender account before sending message', async () => {
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/internal-chat/send');
       await route.handler({
         bodyText: JSON.stringify({
@@ -108,7 +108,7 @@ describe('registerAgentOperationRoutes', () => {
     });
 
     it('sends message using registered account', async () => {
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/internal-chat/send');
       await route.handler({
         bodyText: JSON.stringify({
@@ -129,7 +129,7 @@ describe('registerAgentOperationRoutes', () => {
     });
 
     it('uses agentId as targetKey when targetKey not provided', async () => {
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/internal-chat/send');
       await route.handler({
         bodyText: JSON.stringify({
@@ -144,7 +144,7 @@ describe('registerAgentOperationRoutes', () => {
     });
 
     it('returns success response with conversation and message IDs', async () => {
-      registerAgentOperationRoutes(httpServer, { internalChat }, registry);
+      registerAgentOperationRoutes(httpServer, { internalChat }, registry as any);
       const route = httpServer._routes.find((r: any) => r.path === '/admin/agent/internal-chat/send');
       const response = await route.handler({
         bodyText: JSON.stringify({

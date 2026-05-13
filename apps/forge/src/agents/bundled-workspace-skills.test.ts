@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { ReaddirEntry } from 'node:fs/promises';
+type ReaddirEntry = { name: string; isDirectory: () => boolean; isFile: () => boolean };
 import { copyDirectoryContents } from './bundled-workspace-skills';
 import * as bundledWorkspaceSkills from './bundled-workspace-skills';
 
@@ -86,8 +86,8 @@ describe('BUNDLED_SKILL_DIRECTORY_NAMES', () => {
 describe('parseSkillName error cases', () => {
   it('throws when SKILL.md lacks opening frontmatter marker', async () => {
     pushReplies({
-      access: [null],
-      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as ReaddirEntry]],
+      access: [null as any],
+      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as any]],
       readFile: [`name: github-api\n---\n# Skill`], // no '---\n' prefix
     });
     await expect(
@@ -97,8 +97,8 @@ describe('parseSkillName error cases', () => {
 
   it('throws when frontmatter lacks closing marker', async () => {
     pushReplies({
-      access: [null],
-      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as ReaddirEntry]],
+      access: [null as any],
+      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as any]],
       readFile: [`---\nname: github-api\n# No closing marker`],
     });
     await expect(
@@ -108,8 +108,8 @@ describe('parseSkillName error cases', () => {
 
   it('throws when frontmatter is missing name key', async () => {
     pushReplies({
-      access: [null],
-      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as ReaddirEntry]],
+      access: [null as any],
+      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as any]],
       readFile: [`---\ndescription: GitHub API skill\n---\n# Skill`],
     });
     await expect(
@@ -121,14 +121,14 @@ describe('parseSkillName error cases', () => {
 // ─── resolveBundledSkillRoot ──────────────────────────────────────────────────
 describe('resolveBundledSkillRoot', () => {
   it('returns first accessible candidate root', async () => {
-    pushReplies({ access: [null] });
+    pushReplies({ access: [null as any] });
     const root = await bundledWorkspaceSkills.resolveBundledSkillRoot('github-api');
     expect(fsMocks.access).toHaveBeenCalledOnce();
     expect(root).toContain('github-api');
   });
 
   it('falls through inaccessible candidates until one succeeds', async () => {
-    pushReplies({ access: [new Error('ENOENT'), new Error('ENOENT'), null] });
+    pushReplies({ access: [new Error('ENOENT'), new Error('ENOENT'), null as any] });
     const root = await bundledWorkspaceSkills.resolveBundledSkillRoot('github-api');
     expect(fsMocks.access).toHaveBeenCalledTimes(3);
     expect(root).toContain('github-api');
@@ -171,7 +171,7 @@ describe('copyDirectoryContents', () => {
           { name: 'file.txt', isDirectory: () => false, isFile: () => true } as ReaddirEntry,
         ],
       ],
-      copyFile: [null],
+      copyFile: [null as any],
     });
     await copyDirectoryContents('/source', '/target');
     expect(fsMocks.copyFile).toHaveBeenCalledWith('/source/file.txt', '/target/file.txt');
@@ -186,7 +186,7 @@ describe('copyDirectoryContents', () => {
         ],
         [{ name: 'nested.txt', isDirectory: () => false, isFile: () => true } as ReaddirEntry],
       ],
-      copyFile: [null, null],
+      copyFile: [null as any, null as any],
     });
     await copyDirectoryContents('/source', '/target');
     expect(fsMocks.mkdir).toHaveBeenCalledWith('/target/subdir', { recursive: true });
@@ -215,10 +215,10 @@ describe('ensureBundledWorkspaceSkills', () => {
   it('installs all three bundled skills', async () => {
     // Each skill: access (resolveBundledSkillRoot) + readdir+readFile (installBundledSkill)
     pushReplies({
-      access: [null, null, null],
+      access: [null as any, null as any, null as any],
       readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as ReaddirEntry], [], []],
       readFile: [`---\nname: github-api\n---\n# Skill`, `---\nname: coolify-api\n---\n# Skill`, `---\nname: skills-creator\n---\n# Skill`],
-      copyFile: [null],
+      copyFile: [null as any],
     });
     await bundledWorkspaceSkills.ensureBundledWorkspaceSkills('/agent/workspace');
     expect(fsMocks.access).toHaveBeenCalledTimes(3);

@@ -64,14 +64,14 @@ describe('createAgentRuntimeMemory', () => {
   });
 
   it('returns object with longTermMemoryRecall when longTermMemory=true', async () => {
-    const result = await createAgentRuntimeMemory(makeInput({ longTermMemory: true }));
+    const result = await createAgentRuntimeMemory(makeInput({ longTermMemory: true }) as any);
     expect(result).toHaveProperty('longTermMemoryRecall');
     expect(result.longTermMemoryRecall).not.toBeNull();
   });
 
   it('calls createAgentLongTermMemoryRecall once when longTermMemory=true', async () => {
     const { createAgentLongTermMemoryRecall } = await import('../ltm/recall');
-    await createAgentRuntimeMemory(makeInput({ longTermMemory: true }));
+    await createAgentRuntimeMemory(makeInput({ longTermMemory: true }) as any);
     expect(createAgentLongTermMemoryRecall).toHaveBeenCalledTimes(1);
   });
 
@@ -82,7 +82,7 @@ describe('createAgentRuntimeMemory', () => {
       workspaceEmbedder: 'openai' as const,
       ltmRecallScoreThreshold: 0.6,
       ltmRecallDocumentCount: 15,
-    }));
+    }) as any);
     expect(createAgentLongTermMemoryRecall).toHaveBeenCalledWith(
       expect.objectContaining({
         agentId: 'agent-test-1',
@@ -96,28 +96,28 @@ describe('createAgentRuntimeMemory', () => {
   });
 
   it('returns null longTermMemoryRecall when longTermMemory=false', async () => {
-    const result = await createAgentRuntimeMemory(makeInput({ longTermMemory: false }));
+    const result = await createAgentRuntimeMemory(makeInput({ longTermMemory: false }) as any);
     expect(result.longTermMemoryRecall).toBeNull();
   });
 
   it('does not call createAgentLongTermMemoryRecall when longTermMemory=false', async () => {
     const { createAgentLongTermMemoryRecall } = await import('../ltm/recall');
-    await createAgentRuntimeMemory(makeInput({ longTermMemory: false }));
+    await createAgentRuntimeMemory(makeInput({ longTermMemory: false }) as any);
     expect(createAgentLongTermMemoryRecall).not.toHaveBeenCalled();
   });
 
   it('calls .initialize() on the recall object when longTermMemory=true', async () => {
-    await createAgentRuntimeMemory(makeInput({ longTermMemory: true }));
+    await createAgentRuntimeMemory(makeInput({ longTermMemory: true }) as any);
     expect(mockInitialize).toHaveBeenCalledTimes(1);
   });
 
   it('does not call .initialize() when longTermMemory=false', async () => {
-    await createAgentRuntimeMemory(makeInput({ longTermMemory: false }));
+    await createAgentRuntimeMemory(makeInput({ longTermMemory: false }) as any);
     expect(mockInitialize).not.toHaveBeenCalled();
   });
 
   it('accepts optional omModel override', async () => {
-    const result = await createAgentRuntimeMemory(makeInput({ omModel: { model: 'gpt-3.5' } }));
+    const result = await createAgentRuntimeMemory(makeInput({ omModel: { model: 'gpt-3.5' } }) as any);
     expect(result.longTermMemoryRecall).toBeNull();
   });
 
@@ -125,7 +125,7 @@ describe('createAgentRuntimeMemory', () => {
     const result = await createAgentRuntimeMemory(makeInput({
       memoryLastMessagesCount: 50,
       tokenCountFilterLimit: 4096,
-    }));
+    }) as any);
     expect(result.longTermMemoryRecall).toBeNull();
   });
 
@@ -134,7 +134,7 @@ describe('createAgentRuntimeMemory', () => {
     await createAgentRuntimeMemory(makeInput({
       longTermMemory: true,
       checkpointedOmLimits: { recentRawTokens: 2048 },
-    }));
+    }) as any);
     expect(createAgentLongTermMemoryRecall).toHaveBeenCalledWith(
       expect.objectContaining({ recentRawTokens: 2048 }),
     );
