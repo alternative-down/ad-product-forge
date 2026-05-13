@@ -26,7 +26,7 @@ export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfi
     await registry.add(db, runtime);
     forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Agent reloaded', context: { agentId } });
   } catch (error) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to reload agent', context: { agentId, error } });
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to reload agent', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
     throw error;
   }
 }
@@ -46,7 +46,7 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
       await reloadAgentIfLoaded(db, config, agent.id);
     }
   } catch (error) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to reload agents for role', context: { roleId, error } });
+    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to reload agents for role', context: { roleId, error: error instanceof Error ? error.message : String(error) } });
     throw error;
   }
 }
