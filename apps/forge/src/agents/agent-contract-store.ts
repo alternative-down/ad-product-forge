@@ -57,9 +57,9 @@ export function createAgentContractStore(
         where: eq(agents.id, agentId),
       });
       return toExecutionState(agent?.executionState);
-    } catch (error) {
-      logContractError('getExecutionState', agentId, error);
-      throw error;
+    } catch (err) {
+      logContractError('getExecutionState', agentId, err);
+      throw err;
     }
   }
 
@@ -74,9 +74,9 @@ export function createAgentContractStore(
           updatedAt: time.now(),
         })
         .where(eq(agents.id, agentId));
-    } catch (error) {
-      logContractError('setExecutionState(' + executionState + ')', agentId, error);
-      throw error;
+    } catch (err) {
+      logContractError('setExecutionState(' + executionState + ')', agentId, err);
+      throw err;
     }
   }
 
@@ -255,9 +255,9 @@ export function createAgentContractStore(
         createdAt,
         updatedAt: createdAt,
       });
-    } catch (error) {
-      logContractError('recordAgentStep', input.agentId, error);
-      throw error;
+    } catch (err) {
+      logContractError('recordAgentStep', input.agentId, err);
+      throw err;
     }
 
     return {
@@ -326,9 +326,9 @@ export function createAgentContractStore(
           .where(eq(agentExecutionContracts.id, contract.id));
       });
       return { ...contract, fundedAt: now };
-    } catch (error) {
-      logContractError('fundContractIfNeeded', contract.agentId, error);
-      throw error;
+    } catch (err) {
+      logContractError('fundContractIfNeeded', contract.agentId, err);
+      throw err;
     }
   }
 
