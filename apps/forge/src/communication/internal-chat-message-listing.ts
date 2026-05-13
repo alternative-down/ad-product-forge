@@ -1,5 +1,6 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
+  internalChatAccounts,
   internalChatConversationMembers,
   internalChatMessageAttachments,
   internalChatMessageReads,

@@ -1,5 +1,6 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
+  internalChatAccounts,
   internalChatConversations,
   internalChatConversationMembers,
   internalChatMessageReads,
@@ -13,6 +14,7 @@ import {
   type MessageRowFull,
   type ConversationParticipant,
 } from './internal-chat-listing-types';
+import { buildConversationParticipantNames } from './internal-chat-helpers';
 import { forgeDebug } from '@forge-runtime/core';
 
 export function createConversationListing(db: Database, deps: ConversationListingDeps) {
