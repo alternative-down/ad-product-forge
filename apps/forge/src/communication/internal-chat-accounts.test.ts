@@ -330,8 +330,33 @@ describe('createInternalChatAccounts', () => {
   // ── getAccountByTargetKey ─────────────────────────────────────────────────
 
   describe('getAccountByTargetKey', () => {
-    it('returns null (not yet implemented)', async () => {
-      const result = await accounts.getAccountByTargetKey('any-target-key');
+    it('returns account when found by slug', async () => {
+      const testDb = createMockDb({ accounts: [EXTERNAL_ACCOUNT] });
+      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(EXTERNAL_ACCOUNT)
+        .mockResolvedValueOnce(null);
+      const accounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const result = await accounts.getAccountByTargetKey('test-external');
+      expect(result).toEqual(EXTERNAL_ACCOUNT);
+    });
+
+    it('returns account when found by id', async () => {
+      const testDb = createMockDb({ accounts: [EXTERNAL_ACCOUNT] });
+      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(EXTERNAL_ACCOUNT);
+      const accounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const result = await accounts.getAccountByTargetKey('ext-acc-1');
+      expect(result).toEqual(EXTERNAL_ACCOUNT);
+    });
+
+    it('returns null when not found', async () => {
+      const testDb = createMockDb({ accounts: [EXTERNAL_ACCOUNT] });
+      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      const accounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const result = await accounts.getAccountByTargetKey('nonexistent');
       expect(result).toBeNull();
     });
   });
