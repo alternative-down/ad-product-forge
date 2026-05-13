@@ -132,18 +132,6 @@ async function sleep(ms: number) {
 
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);
-  let exists = false;
-  try {
-    await fs.access(absoluteRoot);
-    exists = true;
-  } catch (err) {
-    forgeDebug({ scope: 'ltm', level: 'error', message: '[safe-catch] access check', context: { error: err instanceof Error ? err.message : String(err) } });
-  }
-
-  if (!exists) {
-    return [];
-  }
-
   const entries = await fs.readdir(absoluteRoot, { withFileTypes: true });
   const files: string[] = [];
 
