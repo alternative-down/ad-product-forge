@@ -3,13 +3,13 @@ import type { HttpHandler } from '../../../http/server';
 import { forgeDebug } from '../debug';
 import { createId } from '../../../utils/id';
 import { and, eq } from 'drizzle-orm';
-import { agents, agentRoles } from '../../../../src/database/schema';
+import { agents, agentRoles } from '../../../database';
 import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { createCapabilityStore } from '../../../capabilities/store';
-import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
+import { roleToolPermissions, roleWorkflowPermissions } from '../../../database';
 import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../agents/global-skills';
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../../src/database/schema';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../database';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
 import { jsonResponse, parseJsonBody } from '../index';
 import {
@@ -25,7 +25,7 @@ import {
 } from '../schemas/agents';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
-import { Database } from '../../../../src/database/schema';
+import { Database } from '../../../database';
 import { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { GitHubAppManager } from '../../../github/manager';
 import { AgentEmailManager } from '../../../email/migadu-manager';
@@ -47,9 +47,9 @@ import {
   roleCreateSchema,
   roleUpdateSchema,
   roleDeleteSchema,
-  roleCapabilitiesSchema,
-  roleToolPermissionsSchema,
-  roleWorkflowPermissionsSchema,
+  roleCapabilitySchema,
+  roleToolPermissionSchema,
+  roleWorkflowPermissionSchema,
 } from './_split/write-ops/write-ops-schemas';
 
 /**
