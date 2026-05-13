@@ -252,7 +252,7 @@ export function createLlmSettingsStore(db: Database) {
           updatedAt: now,
         });
       } catch (err) {
-        forgeDebug("llm", "Failed to insert LLM defaults", { error: err });
+        forgeDebug("llm", "Failed to insert LLM defaults", { error: err instanceof Error ? err.message : String(err) });
         throw err;
       }
     }
@@ -266,7 +266,7 @@ export function createLlmSettingsStore(db: Database) {
         where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
       });
     } catch (err) {
-      forgeDebug("llm", "Failed to get LLM defaults row", { error: err });
+      forgeDebug("llm", "Failed to get LLM defaults row", { error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

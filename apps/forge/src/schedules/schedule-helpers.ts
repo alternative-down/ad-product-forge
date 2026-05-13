@@ -14,7 +14,7 @@ export function parseScheduleDate(value: string) {
   const timestamp = Date.parse(value);
 
   if (Number.isNaN(timestamp)) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: invalid date', context: { value } });
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: invalid date', context: { scheduledDate } });
     throw new Error(`Invalid scheduledDate: ${value}`);
   }
 
@@ -43,7 +43,7 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
   }
 
   if (scheduledDate <= Date.now()) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: must be in future', context: { value } });
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: must be in future', context: { scheduledDate } });
     throw new Error('scheduledDate must be in the future');
   }
 }
