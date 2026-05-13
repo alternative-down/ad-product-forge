@@ -164,11 +164,9 @@ export const agentExecutionContracts = sqliteTable('agent_execution_contracts', 
   endsAt: integer('ends_at').notNull(),
   isActive: integer('is_active').notNull().default(1),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentContractsAgentIdIdx: index('agent_execution_contracts_agent_id_idx').on(table.agentId),
   agentContractsEndsAtIdx: index('agent_execution_contracts_ends_at_idx').on(table.endsAt),
-  agentExecutionContractsUpdatedAtIdx: index('agent_execution_contracts_updated_at_idx').on(table.updatedAt),
 }));
 
 export type AgentExecutionContract = InferModel<typeof agentExecutionContracts>;
@@ -218,7 +216,6 @@ export const agentHomeMetricSnapshots = sqliteTable('agent_home_metric_snapshots
   stepCreatedAt: integer('step_created_at').notNull(),
   snapshot: text('snapshot').notNull(),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentHomeMetricSnapshotsAgentIdIdx: index('agent_home_metric_snapshots_agent_id_idx').on(table.agentId),
   agentHomeMetricSnapshotsCreatedAtIdx: index('agent_home_metric_snapshots_created_at_idx').on(table.createdAt),
@@ -385,7 +382,6 @@ export const internalChatConversationMembers = sqliteTable('forge_internal_chat_
     .references(() => internalChatAccounts.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('normal'),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   internalChatConversationMembersUniqueIdx: uniqueIndex('forge_internal_chat_conversation_members_unique_idx').on(table.conversationId, table.accountId),
   internalChatConversationMembersAccountIdx: index('forge_internal_chat_conversation_members_account_idx').on(table.accountId),
@@ -405,11 +401,9 @@ export const internalChatMessages = sqliteTable('forge_internal_chat_messages', 
   content: text('content').notNull(),
   replyToMessageId: text('reply_to_message_id'),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   internalChatMessagesConversationIdx: index('forge_internal_chat_messages_conversation_idx').on(table.conversationId),
   internalChatMessagesCreatedAtIdx: index('forge_internal_chat_messages_created_at_idx').on(table.createdAt),
-  internalChatMessagesUpdatedAtIdx: index('internal_chat_messages_updated_at_idx').on(table.updatedAt),
 }));
 
 export type InternalChatMessage = InferModel<typeof internalChatMessages>;
@@ -423,8 +417,6 @@ export const internalChatMessageReads = sqliteTable('forge_internal_chat_message
     .notNull()
     .references(() => agents.id, { onDelete: 'cascade' }),
   readAt: integer('read_at'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   internalChatMessageReadsUniqueIdx: uniqueIndex('forge_internal_chat_message_reads_unique_idx').on(table.messageId, table.agentId),
   internalChatMessageReadsAgentIdx: index('forge_internal_chat_message_reads_agent_idx').on(table.agentId),
@@ -445,11 +437,9 @@ export const internalChatMessageAttachments = sqliteTable('forge_internal_chat_m
   sizeBytes: integer('size_bytes').notNull(),
   data: blob('data', { mode: 'buffer' }).notNull(),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   internalChatMessageAttachmentsMessageIdx: index('forge_internal_chat_message_attachments_message_idx').on(table.messageId),
   internalChatMessageAttachmentsUniqueIdx: uniqueIndex('forge_internal_chat_message_attachments_unique_idx').on(table.messageId, table.attachmentIndex),
-  internalChatMessageAttachmentsUpdatedAtIdx: index('forge_internal_chat_message_attachments_updated_at_idx').on(table.updatedAt),
 }));
 
 export type InternalChatMessageAttachment = InferModel<typeof internalChatMessageAttachments>;
@@ -481,11 +471,9 @@ export const companyCashLedger = sqliteTable('company_cash_ledger', {
   dueAt: integer('due_at'),
   effectiveAt: integer('effective_at'),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   companyCashLedgerStatusIdx: index('company_cash_ledger_status_idx').on(table.status),
   companyCashLedgerEffectiveAtIdx: index('company_cash_ledger_effective_at_idx').on(table.effectiveAt),
-  companyCashLedgerUpdatedAtIdx: index('company_cash_ledger_updated_at_idx').on(table.updatedAt),
 }));
 
 export type CompanyCashLedgerEntry = InferModel<typeof companyCashLedger>;
@@ -604,7 +592,6 @@ export const agentProviders = sqliteTable('agent_providers', {
   providerType: text('provider_type').notNull(),
   encryptedCredentials: text('encrypted_credentials').notNull(),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   agentProviderUnique: uniqueIndex('agent_provider_unique').on(table.agentId, table.providerType),
 }));
@@ -883,8 +870,6 @@ export const webhookEvents = sqliteTable('webhook_events', {
   status: text('status').notNull().default('pending'), // 'pending' | 'processed' | 'failed'
   receivedAt: integer('received_at').notNull(),
   processedAt: integer('processed_at'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 });
 
 export const knowledgeDocuments = sqliteTable('knowledge_documents', {
@@ -948,11 +933,9 @@ export const ticketMessages = sqliteTable('forge_ticket_messages', {
   authorAgentId: text('author_agent_id'),
   content: text('content').notNull(),
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
 }, (table) => ({
   ticketMessagesTicketIdx: index('forge_ticket_messages_ticket_idx').on(table.ticketId),
   ticketMessagesCreatedAtIdx: index('forge_ticket_messages_created_at_idx').on(table.createdAt),
-  ticketMessagesUpdatedAtIdx: index('ticket_messages_updated_at_idx').on(table.updatedAt),
 }));
 
 export type TicketMessage = InferModel<typeof ticketMessages>;
