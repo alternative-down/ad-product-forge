@@ -4,6 +4,7 @@
  * Extracted from write-ops.ts (#2468)
  */
 
+import { z } from 'zod';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
@@ -31,7 +32,7 @@ export function registerLifecycleDelegateOps(
     path: '/admin/agent/hire',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, { hiringRequest: '', additionalContext: '', weeklyBudgetUsd: 0 });
+        const body = parseJsonBody(request.bodyText, z.object({ hiringRequest: z.string(), additionalContext: z.string().optional(), weeklyBudgetUsd: z.number() }));
         const result = await ops.runInternalHiring(input.db, {
           hiringRequest: body.hiringRequest,
           additionalContext: body.additionalContext,
@@ -57,7 +58,7 @@ export function registerLifecycleDelegateOps(
     path: '/admin/agent/terminate',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, { agentId: '' });
+        const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string() }));
         return jsonResponse(await ops.runInternalTermination(input.db, {
           agentId: body.agentId,
           workspaceBasePath: input.workspaceBasePath,
@@ -80,7 +81,7 @@ export function registerLifecycleDelegateOps(
     path: '/admin/agent/change-role',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, { agentId: '', roleId: '' });
+        const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string(), roleId: z.string() }));
         await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
         return jsonResponse({ success: true });
       } catch (error) {

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { jsonResponse, parseJsonBody } from '../../index';
 import { createCapabilityStore } from '../../../../capabilities/store';
 import type { HttpHandler } from '../../../../http/server';
+import { forgeDebug } from '../../debug';
 
 const createRoleSchema = z.object({
   name: z.string(),
