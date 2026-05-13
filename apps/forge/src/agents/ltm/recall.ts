@@ -20,13 +20,8 @@ import type {
 import { withTimeout } from '../../utils/async';
 
 
-import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from '../agent-ltm-helpers';
+import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
 import { buildLtmRecallSnapshot, partitionRecallResults, buildNextRecallHistory } from '../agent-ltm-snapshot';
-type SearchResult = {
-  id: string;
-  content: string;
-  score?: number;
-};
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
   query: string;
@@ -623,7 +618,7 @@ export class AgentLongTermMemoryRecall {
       scoreThreshold: 0,
       mode: 'hybrid',
     },
-  ): Promise<{ formatted: string; results: SearchResult[] }> {
+  ): Promise<{ formatted: string; results: LtmSearchResult[] }> {
     const stageStartedAt = Date.now();
 
     try {
@@ -654,7 +649,7 @@ export class AgentLongTermMemoryRecall {
         return { formatted: '', results: [] };
       }
 
-      const searchResults: SearchResult[] = results.map((result) => ({
+      const searchResults: LtmSearchResult[] = results.map((result) => ({
         id: result.id,
         content: result.text.trim(),
         score: result.score,
@@ -682,13 +677,13 @@ export class AgentLongTermMemoryRecall {
 
   private async searchGraph(
     queryText: string,
-    workspaceResults: SearchResult[],
+    workspaceResults: LtmSearchResult[],
     options: {
       topK: number;
       threshold: number;
       randomWalkSteps: number;
       includeSources: boolean;
-      contextResults: SearchResult[];
+      contextResults: LtmSearchResult[];
     } = {
       topK: 1,
       threshold: 0,
@@ -1033,7 +1028,7 @@ export class AgentLongTermMemoryRecall {
       rawJson: string | null;
       error: string | null;
     };
-    results: SearchResult[];
+    results: LtmSearchResult[];
     recentFingerprints: string[];
   }) {
     const seenFingerprints = new Set(input.recentFingerprints);
@@ -1066,7 +1061,7 @@ export class AgentLongTermMemoryRecall {
     };
   }
 
-  private buildWorkspaceFingerprint(result: SearchResult) {
+  private buildWorkspaceFingerprint(result: LtmSearchResult) {
     return `workspace:${result.id}`;
   }
 
@@ -1121,7 +1116,7 @@ export class AgentLongTermMemoryRecall {
       hit: boolean;
       sourcesCount: number;
     };
-    results: SearchResult[];
+    results: LtmSearchResult[];
     rawWindowMessageCount: number;
   }) {
     if (input.rawWindowMessageCount <= 0) {
