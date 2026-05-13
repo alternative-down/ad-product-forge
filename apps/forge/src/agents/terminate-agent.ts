@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 
 
 import type {Database} from '../database/schema';
-import { agents, agentExecutionContracts } from '../database/schema';
+import { agents, agentExecutionContracts, agentProviders } from '../database/schema';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import { createAgentContractStore } from './agent-contract-store';
 import type { GitHubAppManager } from '../github/manager';
@@ -102,6 +102,17 @@ export async function terminateInternalAgent(db: Database, input: {
     }
 
     try {
+      await db.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
+    } catch (providerErr) {
+      forgeDebug({
+        scope: 'terminate-agent',
+        level: 'error',
+        runtimeId: input.agentId,
+        message: 'provider delete failed during rollback: ' + (providerErr instanceof Error ? providerErr.message : String(providerErr)),
+      });
+    }
+
+    try {
       await db.delete(agents).where(eq(agents.id, input.agentId));
     } catch (deleteErr) {
       forgeDebug({
@@ -128,8 +139,10 @@ export async function terminateInternalAgent(db: Database, input: {
     });
   }
 
-  // Delete execution contracts — cascade handles steps and providers
+  // Delete execution contracts and providers explicitly
+  // (cascade in agentExecutionContracts may or may not cover agentProviders)
   await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
+  await db.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
 
   await db.delete(agents).where(eq(agents.id, input.agentId));
   getInternalAgentRegistry().remove(input.agentId);
