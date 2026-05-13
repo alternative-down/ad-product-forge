@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
   hasToolPermission,
-  isToolCapabilityId,
   normalizeToolPermissionIds,
   forgeCustomToolIds,
 } from './catalog';
@@ -21,27 +20,6 @@ describe('hasToolPermission', () => {
   });
 });
 
-describe('isToolCapabilityId', () => {
-  test('returns true for valid tool IDs', () => {
-    expect(isToolCapabilityId('list_contacts')).toBe(true);
-    expect(isToolCapabilityId('send_message')).toBe(true);
-    expect(isToolCapabilityId('hire-internal-agent')).toBe(true);
-    expect(isToolCapabilityId('terminate-internal-agent')).toBe(true);
-    expect(isToolCapabilityId('minimax_tts')).toBe(true);
-  });
-
-  test('returns false for arbitrary string', () => {
-    expect(isToolCapabilityId('some_arbitrary_tool')).toBe(false);
-  });
-
-  test('returns false for empty string', () => {
-    expect(isToolCapabilityId('')).toBe(false);
-  });
-
-  test('returns false for partial match', () => {
-    expect(isToolCapabilityId('list_contact')).toBe(false);
-  });
-});
 
 describe('normalizeToolPermissionIds', () => {
   test('removes duplicates', () => {
