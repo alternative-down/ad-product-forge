@@ -443,19 +443,6 @@ export function createAgentScheduleManager(input: {
       });
       throw err;
     }
-
-    // Also delete heartbeat schedules for this agent
-    try {
-      await store.deleteHeartbeatSchedule(agentId);
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'error',
-        message: `removeAgent: failed to delete heartbeat schedule: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId },
-      });
-      throw err;
-    }
   }
 
   async function stop() {
