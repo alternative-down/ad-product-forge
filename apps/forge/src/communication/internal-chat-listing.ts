@@ -15,6 +15,28 @@ import { forgeDebug } from '@forge-runtime/core';
 // Conversation listing
 // =============================================================================
 
+
+
+// Named types to fix TS parser errors with complex inline generics
+type MessageRowBase = {
+  messageId: string; unread: number; replyToMessageId: string | null;
+  authorAccountId: string; authorDisplayName: string; content: string; createdAt: number;
+};
+type MessageRowFull = MessageRowBase & { conversationId: string };
+
+
+// Typed message structures for Map declarations
+interface MessageListItemWithConversation {
+  messageId: string; provider: string; authorId: string; targetKey: string;
+  content: string; attachments: unknown[]; unread: boolean; createdAt: string;
+  authorDisplayName: string; replyToMessageId: string | null;
+}
+interface MessageListItem {
+  messageId: string; provider: string; authorId: string; targetKey: string;
+  content: string; attachments: unknown[]; unread: boolean; createdAt: string;
+  authorDisplayName: string; replyToMessageId: string | null;
+}
+
 export interface ConversationListingDeps {
   getRequiredAgentAccount(agentId: string): Promise<{
     id: string;
@@ -42,7 +64,6 @@ export interface ConversationListingDeps {
     agentId: string | null;
     slug: string;
   }>>;
-  readMessageAttachments(messageId: string): Promise<unknown[]>;
 }
 
 export function createInternalChatListing(db: Database, deps: ConversationListingDeps) {
@@ -106,9 +127,9 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         .where(inArray(internalChatMessages.conversationId, conversationIds))
         .orderBy(desc(internalChatMessages.createdAt)).all();
       const messageIdsToMarkRead = new Set<string>();
-      const messagesByConversationId = new Map<string, Array<unknown>>();
+      const messagesByConversationId = new Map<string, MessageListItemWithConversation[]>();
       const unreadCountByConversationId = new Map<string, number>();
-      for (const row of messageRows as Array<{ conversationId: string; messageId: string; unread: number; replyToMessageId: string | null }>) {
+      for (const row of messageRows as MessageRowFull[]) {
         unreadCountByConversationId.set(
           row.conversationId,
           (unreadCountByConversationId.get(row.conversationId) ?? 0) + (row.unread === 1 ? 1 : 0),
@@ -158,7 +179,12 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         agentId: string | null;
         slug: string;
       }>>();
-      for (const row of memberRows) {
+      for (const row of memberRows as Array<{
+        conversationId: string; accountId: string; role: string;
+        createdAt: number; updatedAt: number;
+        displayName: string; agentId: string | null; slug: string;
+        account: { id: string; slug: string; description: string | null; displayName: string; createdAt: number; updatedAt: number; agentId: string | null; };
+      }>) {
         const entry: { accountId: string; displayName: string; role: string; agentId: string | null; slug: string } = {
           accountId: row.accountId,
           displayName: row.displayName,
@@ -182,7 +208,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
           name: conversationName ?? '',
           participants: buildConversationParticipantNames(participants),
-          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
+          messages: [...(messagesByConversationId.get(conversation.id) as MessageListItemWithConversation[] ?? [])].reverse(),
         };
       });
     } catch (err) {
@@ -243,8 +269,8 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         .where(inArray(internalChatMessages.conversationId, conversationIds))
         .orderBy(desc(internalChatMessages.createdAt)).all();
 
-      const messagesByConversationId = new Map<string, Array<unknown>>();
-      for (const row of messageRows as Array<{ conversationId: string; messageId: string; replyToMessageId: string | null }>) {
+      const messagesByConversationId = new Map<string, MessageListItemWithConversation[]>();
+      for (const row of messageRows as MessageRowFull[]) {
         const existing = messagesByConversationId.get(row.conversationId) ?? [];
         if (existing.length < 5) {
           existing.push({
@@ -277,7 +303,12 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         agentId: string | null;
         slug: string;
       }>>();
-      for (const row of memberRows) {
+      for (const row of memberRows as Array<{
+        conversationId: string; accountId: string; role: string;
+        createdAt: number; updatedAt: number;
+        displayName: string; agentId: string | null; slug: string;
+        account: { id: string; slug: string; description: string | null; displayName: string; createdAt: number; updatedAt: number; agentId: string | null; };
+      }>) {
         const entry: { accountId: string; displayName: string; role: string; agentId: string | null; slug: string } = {
           accountId: row.accountId,
           displayName: row.displayName,
@@ -301,7 +332,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           unreadCount: 0,
           name: conversationName ?? '',
           participants: buildConversationParticipantNames(participants),
-          messages: [...(messagesByConversationId.get(conversation.id) ?? [])].reverse(),
+          messages: [...(messagesByConversationId.get(conversation.id) as MessageListItemWithConversation[] ?? [])].reverse(),
         };
       });
     } catch (err) {
@@ -407,9 +438,9 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         }
       }
 
-      const result = [];
-      for (const row of messageRows as Array<{ messageId: string; unread: number; replyToMessageId: string | null }>) {
-        const message: Record<string, unknown> = {
+      const result: MessageListItem[] = [];
+      for (const row of messageRows as MessageRowBase[]) {
+        const message: MessageListItem = {
           messageId: row.messageId,
           provider: 'internal-chat',
           authorId: row.authorAccountId,
@@ -531,8 +562,8 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         }
       }
 
-      const result = [];
-      for (const row of messageRows as Array<{ messageId: string; replyToMessageId: string | null }>) {
+      const result: MessageListItem[] = [];
+      for (const row of messageRows as MessageRowBase[]) {
         result.push({
           messageId: row.messageId,
           provider: 'internal-chat',
