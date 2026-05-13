@@ -27,7 +27,7 @@ export function createCompanyPayables(db: Database) {
         };
       });
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recurring payables', context: { error: err } });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recurring payables', context: { error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
   }

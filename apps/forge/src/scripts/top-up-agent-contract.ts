@@ -30,6 +30,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'top-up-contract', level: 'error', message: 'Failed to top up active contract', context: { error } });
+  forgeDebug({ scope: 'top-up-contract', level: 'error', message: 'Failed to top up active contract', context: { error: error instanceof Error ? error.message : String(error) } });
   process.exit(1);
 });

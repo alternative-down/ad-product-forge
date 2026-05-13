@@ -146,7 +146,7 @@ export function createDiscordProvider(config: {
             sizeBytes: attachment.size,
           };
         } catch (error) {
-          forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to download Discord attachment', context: { attachmentUrl: attachment.url, attachmentId: attachment.id, error } });
+          forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to download Discord attachment', context: { attachmentUrl: attachment.url, attachmentId: attachment.id, error: error instanceof Error ? error.message : String(error) } });
           return {
             name: attachment.name ?? attachment.id,
             data: new Uint8Array(0),
@@ -188,7 +188,7 @@ export function createDiscordProvider(config: {
         rememberOutboundMessage(lastSentMessage.channelId, chunk);
       }
     } catch (error) {
-      forgeDebug({ scope: 'discord-account', level: 'error', message: 'sendDiscordChunks failed', context: { channelId: input.channel.id, error } });
+      forgeDebug({ scope: 'discord-account', level: 'error', message: 'sendDiscordChunks failed', context: { channelId: input.channel.id, error: error instanceof Error ? error.message : String(error) } });
       throw error;
     }
 
@@ -335,7 +335,7 @@ export function createDiscordProvider(config: {
         await deliverMessage(inboundMessage);
         forgeDebug({ scope: 'discord-account', level: 'info', message: 'deliverMessage completed' });
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Error handling MessageCreate event', context: { error } });
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Error handling MessageCreate event', context: { error: error instanceof Error ? error.message : String(error) } });
       }
     });
 
@@ -370,7 +370,7 @@ export function createDiscordProvider(config: {
 
         channels.push(channel as DiscordSendableChannel);
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch channel', context: { channelId, error } });
+        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch channel', context: { channelId, error: error instanceof Error ? error.message : String(error) } });
       }
     }
 
@@ -397,7 +397,7 @@ export function createDiscordProvider(config: {
           rememberUser(member.user);
         }
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch members for guild', context: { guildId: guild.id, error } });
+        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch members for guild', context: { guildId: guild.id, error: error instanceof Error ? error.message : String(error) } });
       }
     }
 
@@ -436,7 +436,7 @@ export function createDiscordProvider(config: {
 
         return channel as DiscordSendableChannel;
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to fetch Discord channel by ID', context: { targetKey, error } });
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to fetch Discord channel by ID', context: { targetKey, error: error instanceof Error ? error.message : String(error) } });
         throw error;
       }
     }
@@ -452,7 +452,7 @@ export function createDiscordProvider(config: {
       const channel = await matchedUser.createDM();
       return channel as DiscordSendableChannel;
     } catch (error) {
-      forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to create DM with user', context: { targetKey, error } });
+      forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to create DM with user', context: { targetKey, error: error instanceof Error ? error.message : String(error) } });
       throw error;
     }
   }
@@ -483,7 +483,7 @@ export function createDiscordProvider(config: {
           ...(before ? { before } : {}),
         });
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'listChannelMessages: failed to fetch message batch', context: { channelId: input.channel.id, error } });
+        forgeDebug({ scope: 'discord-account', level: 'error', message: 'listChannelMessages: failed to fetch message batch', context: { channelId: input.channel.id, error: error instanceof Error ? error.message : String(error) } });
         break;
       }
 

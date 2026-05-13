@@ -128,7 +128,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       try {
         await queryClient.logout();
       } catch (error) {
-        forgeDebug({ scope: 'email-account', level: 'info', message: 'Logout failed (best-effort)', context: { error } });
+        forgeDebug({ scope: 'email-account', level: 'info', message: 'Logout failed (best-effort)', context: { error: error instanceof Error ? error.message : String(error) } });
       }
     }
   }
@@ -263,7 +263,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const currentClient = await connectImap();
       await processUnseenMessages(currentClient);
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'info', message: 'listen() failed', context: { error } });
+      forgeDebug({ scope: 'email-account', level: 'info', message: 'listen() failed', context: { error: error instanceof Error ? error.message : String(error) } });
     }
   }
 
