@@ -103,7 +103,7 @@ describe('HireInternalAgentInputSchema', () => {
 
   describe('optional fields', () => {
     it('accepts missing optional fields', () => {
-      const { roleName, roleDescription, description, providerCredentials, agentId, workspaceFilesystem, workspaceSandbox, ...input } = validBaseInput();
+      const { roleName, roleDescription, description, providerCredentials, agentId, workspaceFilesystem, workspaceSandbox, ...input } = validBaseInput() as any;
       const parsed = HireInternalAgentInputSchema.parse(input);
       expect(parsed.roleId).toBe('role-1');
     });
