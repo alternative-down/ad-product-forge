@@ -64,40 +64,10 @@ const createAgentMcpServerSchema = z.object({
   isActive: z.boolean().optional(),
 }).strict();
 
-const updateAgentMcpServerSchema = z.object({
-  serverId: z.string(),
-  agentId: z.string().optional(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-  transport: z.string().optional(),
-  command: z.string().optional(),
-  argsText: z.string().optional(),
-  envVarsText: z.string().optional(),
-  url: z.string().optional(),
-  headersText: z.string().optional(),
-  isActive: z.boolean().optional(),
-}).strict();
 
-const deleteAgentMcpServerSchema = z.object({
-  serverId: z.string(),
-  agentId: z.string(),
-}).strict();
 
-const assignAgentMcpServerSchema = z.object({
-  agentId: z.string(),
-  serverId: z.string(),
-}).strict();
 
-const setAgentMcpServerActiveSchema = z.object({
-  agentId: z.string(),
-  serverId: z.string(),
-  isActive: z.boolean(),
-}).strict();
 
-const detachAgentMcpServerSchema = z.object({
-  agentId: z.string(),
-  serverId: z.string(),
-}).strict();
 
 const publishAgentSkillToGlobalSchema = z.object({
   agentId: z.string(),
@@ -387,7 +357,6 @@ export function registerAgentWriteOpsRoutes(
           headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
           version: 1,
           isActive: body.isActive ? 1 : 0,
-          version: 1,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -406,81 +375,6 @@ export function registerAgentWriteOpsRoutes(
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent/mcp/create', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/mcp/update
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/mcp/update',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, updateAgentMcpServerSchema);
-        return jsonResponse({ success: true, serverId: body.serverId });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/update route handler failed', context: { path: '/admin/agent/mcp/update', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/mcp/delete
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/mcp/delete',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteAgentMcpServerSchema);
-        return jsonResponse({ success: true });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/delete route handler failed', context: { path: '/admin/agent/mcp/delete', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/mcp/assign
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/mcp/assign',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, assignAgentMcpServerSchema);
-        return jsonResponse({ success: true });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/assign route handler failed', context: { path: '/admin/agent/mcp/assign', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/mcp/set-active
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/mcp/set-active',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, setAgentMcpServerActiveSchema);
-        return jsonResponse({ success: true });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/set-active route handler failed', context: { path: '/admin/agent/mcp/set-active', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
-      }
-    },
-  });
-
-  // POST /admin/agent/mcp/detach
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/agent/mcp/detach',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
-        return jsonResponse({ success: true });
-      } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/mcp/detach route handler failed', context: { path: '/admin/agent/mcp/detach', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
     },
