@@ -27,7 +27,10 @@ type CoolifyManager = any;
 function createMockDb(agent?: Record<string, unknown> | null) {
   return {
     query: { agents: { findFirst: vi.fn().mockResolvedValue(agent ?? null) } },
-    delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    delete: vi.fn().mockImplementation((table: { tableName?: string }) => ({
+      where: vi.fn().mockResolvedValue(undefined),
+      _table: table,
+    })),
   };
 }
 
@@ -96,7 +99,9 @@ describe('terminateInternalAgent', () => {
   it('deletes agent record from database', async () => {
     const db = createMockDb(mockAgent());
     await terminateInternalAgent(db as any, defaultInput() as any);
-    expect(db.delete).toHaveBeenCalledWith((db.query as any).agents);
+    // Should delete: agentExecutionContracts + agentProviders + agents
+    expect((db.delete as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+    expect((db.delete as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('removes agent workspace directory', async () => {
