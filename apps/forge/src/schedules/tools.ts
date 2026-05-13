@@ -181,10 +181,10 @@ function normalizeOptionalText(value?: string) {
 
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
   const cronId = value.scheduleId ?? value.taskId;
-  const { scheduleId: _scheduleId, taskId: _taskId, ...rest } = value;
+  const { scheduleId: _scheduleId, taskId: _taskId, ...base } = value;
 
   return {
-    ...rest,
+    ...base,
     cronId,
   };
 }
@@ -194,7 +194,7 @@ export function createAgentScheduleTools(
   schedules: ReturnType<typeof createAgentScheduleManager>,
   allowedToolIds?: Set<string> | null,
 ) {
-  const tools: Record<string, unknown> = {};
+  const tools: Record<string, ReturnType<typeof createTool>> = {};
 
   tools.list_self_crons = createTool({
     id: 'list_self_crons',
