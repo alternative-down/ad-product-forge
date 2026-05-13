@@ -232,13 +232,12 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'cancelAgentSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (existing.isActive && restored) {
         await registerSchedule(restored);
       }
 
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'createSchedule: operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
 
@@ -293,7 +292,6 @@ export function createAgentScheduleManager(input: {
         await registerSchedule(restored);
       }
 
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listSchedules: operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
 
@@ -322,7 +320,6 @@ export function createAgentScheduleManager(input: {
         message: `deleteSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId, scheduleId },
       });
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listTasks: operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -421,12 +418,11 @@ export function createAgentScheduleManager(input: {
       };
     } catch (error) {
       forgeDebug({
-        scope: 'schedules',
+        scope: 'schedules-manager',
         level: 'error',
         message: `deleteCron failed: ${error instanceof Error ? error.message : String(error)}`,
         context: { editorAgentId, scheduleId },
       });
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'deleteCron: operation failed', error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
