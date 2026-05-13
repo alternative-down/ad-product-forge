@@ -372,59 +372,69 @@ export function createAgentLongTermMemory(input: {
       observationCount: payload.observations.length,
     } });
 
-    await fs.rm(tempPackagePath, { recursive: true, force: true });
-    await fs.mkdir(tempPackagePath, { recursive: true });
-    await fs.writeFile(
-      path.resolve(tempPackagePath, 'README.md'),
-      renderCheckpointPackageReadme({
-        payload,
-      }),
-    );
-
-    if (payload.reflections.length > 0) {
-      await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
-    }
-
-    for (const [index, reflection] of payload.reflections.entries()) {
+    try {
+      await fs.rm(tempPackagePath, { recursive: true, force: true });
+      await fs.mkdir(tempPackagePath, { recursive: true });
       await fs.writeFile(
-        path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
-        renderReflectionFile(reflection),
+        path.resolve(tempPackagePath, 'README.md'),
+        renderCheckpointPackageReadme({
+          payload,
+        }),
       );
+
+      if (payload.reflections.length > 0) {
+        await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
+      }
+
+      for (const [index, reflection] of payload.reflections.entries()) {
+        await fs.writeFile(
+          path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
+          renderReflectionFile(reflection),
+        );
+      }
+
+      if (payload.observations.length > 0) {
+        await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
+      }
+
+      for (const [index, observation] of payload.observations.entries()) {
+        await fs.writeFile(
+          path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
+          renderObservationFile(observation),
+        );
+      }
+
+      await fs.rm(packagePath, { recursive: true, force: true });
+      await fs.rename(tempPackagePath, packagePath);
+
+      const manifest: CheckpointPackageManifest = {
+        packageId,
+        checkpointGeneration: payload.toGeneration,
+        fromGeneration: payload.fromGeneration,
+        toGeneration: payload.toGeneration,
+        createdAt: checkpointTimestamp,
+        checkpointSummaryUpdatedAt: checkpointTimestamp,
+        reflectionCount: payload.reflections.length,
+        observationCount: payload.observations.length,
+      };
+
+      state.packages.push(manifest);
+      state.lastWrittenPackageId = packageId;
+      state.lastWrittenAt = checkpointTimestamp;
+      state.lastRunError = null;
+      state.lastRunErrorAt = null;
+      await writeState(state);
+      await markRecallIndexDirty('checkpoint-write');
+      await refreshRecallIndex?.();
+    } catch (err) {
+      await fs.rm(tempPackagePath, { recursive: true, force: true }).catch(() => {/* ignore */});
+      forgeDebug({ scope: 'ltm', level: 'error', message: 'writeCheckpointPackage failed', context: {
+        agentId: input.agentId,
+        packageId,
+        error: err instanceof Error ? err.message : String(err),
+      } });
+      throw err;
     }
-
-    if (payload.observations.length > 0) {
-      await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
-    }
-
-    for (const [index, observation] of payload.observations.entries()) {
-      await fs.writeFile(
-        path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
-        renderObservationFile(observation),
-      );
-    }
-
-    await fs.rm(packagePath, { recursive: true, force: true });
-    await fs.rename(tempPackagePath, packagePath);
-
-    const manifest: CheckpointPackageManifest = {
-      packageId,
-      checkpointGeneration: payload.toGeneration,
-      fromGeneration: payload.fromGeneration,
-      toGeneration: payload.toGeneration,
-      createdAt: checkpointTimestamp,
-      checkpointSummaryUpdatedAt: checkpointTimestamp,
-      reflectionCount: payload.reflections.length,
-      observationCount: payload.observations.length,
-    };
-
-    state.packages.push(manifest);
-    state.lastWrittenPackageId = packageId;
-    state.lastWrittenAt = checkpointTimestamp;
-    state.lastRunError = null;
-    state.lastRunErrorAt = null;
-    await writeState(state);
-    await markRecallIndexDirty('checkpoint-write');
-    await refreshRecallIndex?.();
 
     forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write complete', context: {
       agentId: input.agentId,
