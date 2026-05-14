@@ -45,6 +45,11 @@ import {
   resetBackoff,
   calculateDelayMs,
 } from './agent-runner-state';
+import {
+  startGenerateAttempt,
+  finishGenerateAttempt,
+  invalidateInFlightGenerate,
+} from './agent-runner-attempt-lifecycle';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { RUN_STOP_REMINDER } from './agent-runner-wake';
 import { forgeDebug } from '@forge-runtime/core';
@@ -151,36 +156,6 @@ export interface GenerateDeps {
 
 
 export type { GenerateTimeoutHandle, ProgressState } from './agent-runner-generate-timeout';
-
-// ─── Attempt lifecycle ────────────────────────────────────────────────────────
-
-function startGenerateAttempt(
-  deps: GenerateDeps,
-  controller: AbortController,
-): number {
-  advanceGenerateToken(deps.epochState);
-  deps.setCurrentGenerateAbortController(controller);
-  return deps.epochState.activeGenerateToken;
-}
-
-function finishGenerateAttempt(
-  generateToken: number,
-  controller: AbortController,
-  deps: GenerateDeps,
-) {
-  if (deps.epochState.activeGenerateToken === generateToken) {
-    deps.setCurrentGenerateAbortController(null);
-  }
-  controller.abort();
-}
-
-function invalidateInFlightGenerate(deps: GenerateDeps) {
-  advanceGenerateToken(deps.epochState);
-  deps.currentGenerateAbortController?.abort(
-    new Error('Agent generate invalidated'),
-  );
-  deps.setCurrentGenerateAbortController(null);
-}
 
 // ─── buildIterationFeedback ───────────────────────────────────────────────────
 
