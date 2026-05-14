@@ -19,6 +19,7 @@ import {
   type LongTermMemoryState,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
+import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 
 import { withTimeout } from '../utils/async';
 const CHECKPOINTS_DIR = 'checkpoints';
@@ -98,38 +99,6 @@ function diffTrackedFiles(before: Map<string, string>, after: Map<string, string
 
   return Array.from(changed).sort();
 }
-
-function renderCheckpointPackageReadme(input: {
-  payload: CheckpointedOmCheckpointPackageInput;
-}) {
-  return [
-    input.payload.checkpointSummary.text.trim(),
-    '',
-  ].join('\n');
-}
-
-function renderReflectionFile(reflection: CheckpointedOmCheckpointPackageInput['reflections'][number]) {
-  return [
-    '---',
-    `createdAt: ${reflection.createdAt}`,
-    '---',
-    '',
-    reflection.text.trim(),
-    '',
-  ].join('\n');
-}
-
-function renderObservationFile(observation: CheckpointedOmCheckpointPackageInput['observations'][number]) {
-  return [
-    '---',
-    `createdAt: ${observation.createdAt}`,
-    '---',
-    '',
-    observation.text.trim(),
-    '',
-  ].join('\n');
-}
-
 export function createAgentLongTermMemory(input: {
   agentId: string;
   agentName: string;
