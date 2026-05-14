@@ -75,6 +75,7 @@ export function createAgentScheduleManager(input: {
   type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
   async function getOwnedSchedule(agentId: string, scheduleId: string) {
+    try {
       return store.getOwnedSchedule(agentId, scheduleId);
     } catch (error) {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'getOwnedSchedule failed', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) }});
@@ -412,10 +413,29 @@ export function createAgentScheduleManager(input: {
       getLifecycle().cancel(scheduleRecord.scheduleId);
       try {
         await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
+      } catch (err) {
+        forgeDebug({
+          scope: 'schedules',
+          level: 'error',
+          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${err instanceof Error ? err.message : String(err)}`,
+          context: { agentId, scheduleId: scheduleRecord.scheduleId },
+        });
+        throw err;
+      }
     }
 
     // Also delete heartbeat schedules for this agent
+    try {
       await store.deleteHeartbeatSchedule(agentId);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'error',
+        message: `removeAgent: failed to delete heartbeat schedule: ${err instanceof Error ? err.message : String(err)}`,
+        context: { agentId },
+      });
+      throw err;
+    }
   }
 
     async function stop() {
