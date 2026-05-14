@@ -173,17 +173,40 @@ vi.mock('./agent-runner-scheduler', () => ({
       setInstant: vi.fn(),
       resetBackoff: vi.fn(),
       scheduleNextStep: vi.fn(),
-      getState: vi.fn().mockReturnValue({
-        nextStepAt: null, backoffMs: 60_000, instant: false,
-        activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0,
+      _state: {
+        nextStepAt: null as number | null,
+        backoffMs: 60_000,
+        instant: false,
+        activeRunEpoch: 0,
+        activeStepEpoch: 0,
+        activeGenerateToken: 0,
         isStopped: false,
+      },
+      getState: vi.fn().mockImplementation(() => ({ ...mockScheduler._state })),
+      getSnapshot: vi.fn().mockImplementation(() => ({
+        nextStepAt: mockScheduler._state.nextStepAt,
+        backoffMs: mockScheduler._state.backoffMs,
+        instant: mockScheduler._state.instant,
+        activeRunEpoch: mockScheduler._state.activeRunEpoch,
+        stopped: false,
+        activeStepEpoch: mockScheduler._state.activeStepEpoch,
+      })),
+      isStopped: vi.fn().mockImplementation(() => mockScheduler._state.isStopped),
+      startNewRunEpoch: vi.fn(() => {
+        mockScheduler._state.activeRunEpoch += 1;
+        mockScheduler._state.activeStepEpoch = 0;
+        mockScheduler._state.activeGenerateToken = 0;
+        return mockScheduler._state.activeRunEpoch;
       }),
-      getSnapshot: vi.fn().mockReturnValue({
-        nextStepAt: null, backoffMs: 60_000, instant: false,
-        activeRunEpoch: 0, stopped: false, activeStepEpoch: 0,
+      advanceStepEpoch: vi.fn().mockImplementation(() => {
+        mockScheduler._state.activeStepEpoch += 1;
+        mockScheduler._state.activeGenerateToken = 0;
       }),
-      isStopped: vi.fn().mockReturnValue(false),
-      startNewRunEpoch: vi.fn(() => { const s = mockScheduler.getState(); return (s as any).activeRunEpoch + 1; }) as any,
+      advanceGenerateToken: vi.fn().mockImplementation(() => {
+        mockScheduler._state.activeGenerateToken += 1;
+      }),
+      getActiveStepEpoch: vi.fn().mockImplementation(() => mockScheduler._state.activeStepEpoch),
+      getActiveRunEpoch: vi.fn().mockImplementation(() => mockScheduler._state.activeRunEpoch),
     };
     return mockScheduler;
   }),

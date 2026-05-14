@@ -128,9 +128,6 @@ export function createAgentRunner(
       }
     | null = null;
   const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
-  let activeRunEpoch = 0;
-  let activeStepEpoch = 0;
-  const activeGenerateToken = 0;
   let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
@@ -150,8 +147,9 @@ export function createAgentRunner(
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
 
-  const epochState = { activeRunEpoch, activeStepEpoch, activeGenerateToken, activeRunId };
-  const backoffState = { backoffMs, instant, nextStepAt };
+  // epochState removed — schedulerState is the single source of truth
+  // backoffState removed — scheduler manages backoff; let vars hold current values
+  // backoffState removed — scheduler manages backoff; let vars hold current values
 
   async function reloadRuntimeForNewRun(runEpoch: number) {
     if (!options.reloadRuntime) {
@@ -416,7 +414,7 @@ export function createAgentRunner(
     }
   }
 
-  async function queueNextStep(runEpoch = activeRunEpoch) {
+  async function queueNextStep(runEpoch: number) {
     if (stopped || executing || timer || isStaleRun(runEpoch)) {
       return;
     }
@@ -466,8 +464,8 @@ export function createAgentRunner(
     }
 
     executing = true;
-    advanceStepEpoch(epochState);
-    activeStepEpoch = epochState.activeStepEpoch;
+    scheduler.advanceStepEpoch();
+    activeStepEpoch = scheduler.getActiveStepEpoch();
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
     let prompt = '';
@@ -545,7 +543,6 @@ export function createAgentRunner(
           runLastMessages,
           flushPendingRunMessages,
           scheduler,
-          epochState,
           backoffState,
           progressState,
           loopState,
@@ -795,19 +792,16 @@ export function createAgentRunner(
   }
 
   function startNewRunEpoch() {
-    activeRunEpoch += 1;
-    activeStepEpoch = 0;
-    // Keep scheduler's state in sync for snapshot consistency
-    advanceGenerateToken(epochState);
+    // Advance both local activeRunId and scheduler's epoch state
+    activeRunId = createId();
+    scheduler.advanceGenerateToken();
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
-    // Also update scheduler state
-    scheduler.startNewRunEpoch();
-    return activeRunEpoch;
+    return scheduler.startNewRunEpoch();
   }
 
   function isStaleRun(runEpoch: number) {
-    return stopped || runEpoch !== activeRunEpoch;
+    return stopped || runEpoch !== scheduler.getActiveRunEpoch();
   }
 
   function isLocallyIdle() {
@@ -825,7 +819,7 @@ export function createAgentRunner(
     }
 
     clearTimer();
-    advanceGenerateToken(epochState);
+    scheduler.advanceGenerateToken();
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
     scheduler.setInstant(false);
