@@ -141,7 +141,6 @@ export function createInternalChatGroups(
     
         if (!conversation) {
           forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversationForAccount conversation not found', context: { conversationId } });
-          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
           throw new Error(`Conversation not found: ${conversationId}`);
         }
     
@@ -153,7 +152,6 @@ export function createInternalChatGroups(
     
         if (group.type !== "group") {
           forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAgent type check failed', context: { groupId } });
-          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroup: not found', context: { groupId } });
           throw new Error(`Chat group not found: ${groupId}`);
         }
     
@@ -165,7 +163,6 @@ export function createInternalChatGroups(
     
         if (group.type !== "group") {
           forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroupForAccount type check failed', context: { groupId } });
-          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredGroup: not found', context: { groupId } });
           throw new Error(`Chat group not found: ${groupId}`);
         }
     
@@ -194,7 +191,6 @@ export function createInternalChatGroups(
     
         if (!membership) {
           forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'requireConversationMembershipByAccount membership not found', context: { conversationId } });
-          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
           throw new Error(`Conversation not found: ${conversationId}`);
         }
       }
