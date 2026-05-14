@@ -284,7 +284,7 @@ export function createAgentScheduleManager(input: {
     const reloaded = await store.getOwnedSchedule(agentId, scheduleId);
 
     if (!reloaded) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: not found after update', context: { scheduleId } });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateOwnedSchedule: not found after update', context: { scheduleId } });
       throw new Error(`Schedule not found after update: ${scheduleId}`);
     }
 
