@@ -19,6 +19,7 @@ import {
   removeInternalChatGroupMemberSchema,
 } from '../schemas';
 import { jsonResponse, parseJsonBody } from '../index';
+import { createInternalChatSseHandler } from './events';
 import { forgeDebug } from '../debug';
 
 interface Request {
@@ -33,6 +34,13 @@ export function registerInternalChatRoutes(
   httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
   internalChat: InternalChatService
 ) {
+  // GET /admin/internal-chat/events — SSE stream of incoming messages
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/events',
+    handler: createInternalChatSseHandler(internalChat),
+  });
+
   // GET /admin/internal-chat/accounts
   httpServer.registerRoute({
     method: 'GET',

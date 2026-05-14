@@ -68,14 +68,15 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // Route registration
   // -------------------------------------------------------------------------
-  test('registers 16 routes total', () => { expect(httpServer.routes).toHaveLength(16); });
-  test('6 GET routes and 10 POST routes', () => {
-    expect(httpServer.routes.filter(r => r.method === 'GET')).toHaveLength(6);
+  test('registers 17 routes total (16 + SSE events)', () => { expect(httpServer.routes).toHaveLength(17); });
+  test('7 GET routes and 10 POST routes', () => {
+    expect(httpServer.routes.filter(r => r.method === 'GET')).toHaveLength(7);
     expect(httpServer.routes.filter(r => r.method === 'POST')).toHaveLength(10);
   });
   test('all expected paths are registered', () => {
     const paths = httpServer.routes.map(r => r.path).sort();
     expect(paths).toEqual([
+      '/admin/internal-chat/events',
       '/admin/internal-chat/accounts',
       '/admin/internal-chat/contacts',
       '/admin/internal-chat/account/create',
