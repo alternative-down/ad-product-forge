@@ -29,64 +29,27 @@ export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
 
   async function getProvider(provider: PaymentProviderType) {
-    try {
-      const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
-      return rows[0] ?? null;
+    const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
+    return rows[0] ?? null;
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get payment provider', context: { provider, error: err } });
-      throw err;
-    }
-  }
-
-  async function upsertProvider(input: {
-    provider: PaymentProviderType;
-    apiKeyEncrypted: string;
-    webhookSecretEncrypted: string;
-    isActive: boolean;
-    configJson?: string;
-  }) {
-    const now = Date.now();
-    try {
-      const existing = await getProvider(input.provider);
-      if (existing !== null) {
-        try {
-          await db
-            .update(paymentProviders)
-            .set({
-              apiKeyEncrypted: input.apiKeyEncrypted,
-              webhookSecretEncrypted: input.webhookSecretEncrypted,
-              isActive: input.isActive,
-              configJson: input.configJson ?? null,
-              updatedAt: now,
-            })
-            .where(eq(paymentProviders.provider, input.provider));
-        } catch (err) {
-          forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update payment provider', context: { provider: input.provider, error: err } });
-          throw err;
-        }
+    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get payment provider', context: { provider, error: err } });
+    throw err;
         return existing.id;
       }
       const id = createId();
-      try {
-        await db.insert(paymentProviders).values({
-          id,
-          provider: input.provider,
-          apiKeyEncrypted: input.apiKeyEncrypted,
-          webhookSecretEncrypted: input.webhookSecretEncrypted,
-          isActive: input.isActive,
-          configJson: input.configJson ?? null,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } catch (err) {
-        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert payment provider', context: { provider: input.provider, error: err } });
-        throw err;
-      }
-      return id;
+      await db.insert(paymentProviders).values({
+        id,
+        provider: input.provider,
+        apiKeyEncrypted: input.apiKeyEncrypted,
+        webhookSecretEncrypted: input.webhookSecretEncrypted,
+        isActive: input.isActive,
+        configJson: input.configJson ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to upsert payment provider', context: { provider: input.provider, error: err } });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert payment provider', context: { provider: input.provider, error: err } });
       throw err;
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -100,50 +63,32 @@ export function createPaymentReceivablesStore(db: Database) {
     name?: string;
   }) {
     const now = Date.now();
-    try {
-      const existing = await db
-        .select()
-        .from(paymentCustomers)
-        .where(
-          and(
-            eq(paymentCustomers.provider, input.provider),
-            eq(paymentCustomers.providerCustomerId, input.providerCustomerId),
-          ),
-        )
-        .limit(1);
+    const existing = await db
+      .select()
+      .from(paymentCustomers)
+      .where(
+        and(
+          eq(paymentCustomers.provider, input.provider),
+          eq(paymentCustomers.providerCustomerId, input.providerCustomerId),
+        ),
+      )
+      .limit(1);
 
-      if (existing[0] != null) {
-        try {
-          await db
-            .update(paymentCustomers)
-            .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
-            .where(eq(paymentCustomers.id, existing[0].id));
-        } catch (err) {
-          forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
-          throw err;
-        }
-        return existing[0].id;
+    if (existing[0] != null) {
+      try {
+        await db
+          .update(paymentCustomers)
+          .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
+          .where(eq(paymentCustomers.id, existing[0].id));
+      } catch (err) {
+        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
+        throw err;
       }
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
-      throw err;
+      return existing[0].id;
     }
-
-    const id = createId();
-    try {
-      await db.insert(paymentCustomers).values({
-        id,
-        provider: input.provider,
-        providerCustomerId: input.providerCustomerId,
-        email: input.email ?? null,
-        name: input.name ?? null,
-        createdAt: now,
-        updatedAt: now,
-      });
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
-      throw err;
-    }
+    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
+    throw err;
     return id;
   }
 
@@ -164,232 +109,112 @@ export function createPaymentReceivablesStore(db: Database) {
     canceledAt?: number;
   }) {
     const now = Date.now();
-    try {
-      const existing = await db
-        .select()
-        .from(paymentSubscriptions)
-        .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
-        .limit(1);
+    const existing = await db
+      .select()
+      .from(paymentSubscriptions)
+      .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
+      .limit(1);
 
-      if (existing[0] != null) {
-        try {
-          await db
-            .update(paymentSubscriptions)
-            .set({
-              status: input.status,
-              amountUsd: input.amountUsd,
-              currentPeriodStart: input.currentPeriodStart ?? null,
-              currentPeriodEnd: input.currentPeriodEnd ?? null,
-              canceledAt: input.canceledAt ?? null,
-              updatedAt: now,
-            })
-            .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId));
-        } catch (err) {
-          forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
-          throw err;
-        }
-        return existing[0].id;
+    if (existing[0] != null) {
+      try {
+        await db
+          .update(paymentSubscriptions)
+          .set({
+            status: input.status,
+            amountUsd: input.amountUsd,
+            currentPeriodStart: input.currentPeriodStart ?? null,
+            currentPeriodEnd: input.currentPeriodEnd ?? null,
+            canceledAt: input.canceledAt ?? null,
+            updatedAt: now,
+          })
+          .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId));
+      } catch (err) {
+        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
+        throw err;
       }
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
-      throw err;
+      return existing[0].id;
     }
-
-    const id = createId();
-    try {
-      await db.insert(paymentSubscriptions).values({
-        id,
-        customerId: input.customerId,
-        productId: input.productId,
-        provider: input.provider,
-        providerSubscriptionId: input.providerSubscriptionId,
-        status: input.status,
-        amountUsd: input.amountUsd,
-        billingCycle: input.billingCycle,
-        currentPeriodStart: input.currentPeriodStart ?? null,
-        currentPeriodEnd: input.currentPeriodEnd ?? null,
-        canceledAt: input.canceledAt ?? null,
-        createdAt: now,
-        updatedAt: now,
-      });
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
-      throw err;
-    }
+    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
+    throw err;
     return id;
   }
 
   async function getSubscriptionByProviderId(provider: PaymentProviderType, providerSubscriptionId: string) {
-    try {
-      const rows = await db
-        .select()
-        .from(paymentSubscriptions)
-        .where(
-          and(
-            eq(paymentSubscriptions.provider, provider),
-            eq(paymentSubscriptions.providerSubscriptionId, providerSubscriptionId),
-          ),
-        )
-        .limit(1);
-      return rows[0] ?? null;
+    const rows = await db
+      .select()
+      .from(paymentSubscriptions)
+      .where(
+        and(
+          eq(paymentSubscriptions.provider, provider),
+          eq(paymentSubscriptions.providerSubscriptionId, providerSubscriptionId),
+        ),
+      )
+      .limit(1);
+    return rows[0] ?? null;
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get subscription by provider id', context: { providerSubscriptionId, error: err } });
-      throw err;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Payment Events & Transactions
-  // ---------------------------------------------------------------------------
-
-  async function processPaymentEvent(input: {
-    provider: PaymentProviderType;
-    providerPaymentId: string;
-    providerSubscriptionId?: string;
-    status: 'pending' | 'completed' | 'failed' | 'refunded';
-    amountUsd: number;
-    currency: string;
-    customerEmail?: string;
-    paidAt?: number;
-  }) {
-    const now = Date.now();
-
-    try {
-      const existing = await db
-        .select()
-        .from(paymentTransactions)
-        .where(
-          and(
-            eq(paymentTransactions.provider, input.provider),
-            eq(paymentTransactions.providerPaymentId, input.providerPaymentId),
-          ),
-        )
-        .limit(1);
-
-      if (existing[0] != null) {
-        const tx = existing[0];
-        try {
-          await db
-            .update(paymentTransactions)
-            .set({ status: input.status, paidAt: input.paidAt ?? null, updatedAt: now })
-            .where(eq(paymentTransactions.id, tx.id));
-        } catch (err) {
-          forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-          throw err;
-        }
+    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get subscription by provider id', context: { providerSubscriptionId, error: err } });
+    throw err;
 
         if (input.status === 'completed' && tx.ledgerPosted === false) {
            
           const ledgerEntryId = createId();
-          try {
-            await db.transaction(async (tx) => {
-              await tx.insert(companyCashLedger).values({
-                id: ledgerEntryId,
-                type: 'payment_received',
-                direction: 'in',
-                amountUsd: input.amountUsd,
-                description: `Stripe payment ${input.providerPaymentId}`,
-                status: 'cleared',
-                effectiveAt: now,
-                createdAt: now,
-              });
-
-              await tx
-                .update(paymentTransactions)
-                .set({ ledgerEntryId, ledgerPosted: true })
-                .where(eq(paymentTransactions.id, tx.id));
+          await db.transaction(async (tx) => {
+            await tx.insert(companyCashLedger).values({
+              id: ledgerEntryId,
+              type: 'payment_received',
+              direction: 'in',
+              amountUsd: input.amountUsd,
+              description: `Stripe payment ${input.providerPaymentId}`,
+              status: 'cleared',
+              effectiveAt: now,
+              createdAt: now,
             });
-          } catch (err) {
-            forgeDebug({ scope: 'finance', level: 'error', message: 'Failed to post ledger and update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-            throw err;
-          }
 
-          return { id: tx.id, isNew: false, ledgerPosted: true };
-        }
-
-        return { id: tx.id, isNew: false, ledgerPosted: tx.ledgerPosted };
-      }
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-      throw err;
-    }
+            await tx
+              .update(paymentTransactions)
+              .set({ ledgerEntryId, ledgerPosted: true })
+              .where(eq(paymentTransactions.id, tx.id));
+          });
+        } catch (err) {
+          forgeDebug({ scope: 'finance', level: 'error', message: 'Failed to post ledger and update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
+          throw err;
 
     const id = createId();
-    try {
-      await db.insert(paymentTransactions).values({
-        id,
-        provider: input.provider,
-        providerPaymentId: input.providerPaymentId,
-        providerSubscriptionId: input.providerSubscriptionId ?? null,
-        status: input.status,
-        amountUsd: input.amountUsd,
-        currency: input.currency,
-        customerEmail: input.customerEmail ?? null,
-        ledgerEntryId: null,
-        ledgerPosted: false,
-        paidAt: input.paidAt ?? null,
-        createdAt: now,
-        updatedAt: now,
-      });
+    await db.insert(paymentTransactions).values({
+      id,
+      provider: input.provider,
+      providerPaymentId: input.providerPaymentId,
+      providerSubscriptionId: input.providerSubscriptionId ?? null,
+      status: input.status,
+      amountUsd: input.amountUsd,
+      currency: input.currency,
+      customerEmail: input.customerEmail ?? null,
+      ledgerEntryId: null,
+      ledgerPosted: false,
+      paidAt: input.paidAt ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-      throw err;
-    }
-
-    if (input.status === 'completed') {
-      const ledgerId = createId();
-      try {
-        await db.transaction(async (tx) => {
-          await tx.insert(companyCashLedger).values({
-            id: ledgerId,
-            type: 'payment_received',
-            direction: 'in',
-            amountUsd: input.amountUsd,
-            description: `Stripe payment ${input.providerPaymentId}`,
-            status: 'cleared',
-            effectiveAt: now,
-            createdAt: now,
-          });
-
-          await tx
-            .update(paymentTransactions)
-            .set({ ledgerEntryId: ledgerId, ledgerPosted: true })
-            .where(eq(paymentTransactions.id, id));
-        });
-      } catch (err) {
-        forgeDebug({ scope: 'finance', level: 'error', message: 'Failed to post ledger and update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-        throw err;
-      }
+    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
+    throw err;
     }
 
     return { id, isNew: true, ledgerPosted: input.status === 'completed' };
   }
 
   async function listRecentTransactions(provider: PaymentProviderType, limit = 20) {
-    try {
-      const rows = await db
-        .select()
-        .from(paymentTransactions)
-        .where(eq(paymentTransactions.provider, provider))
-        .orderBy(desc(paymentTransactions.createdAt))
-        .limit(limit);
-      return rows;
+    const rows = await db
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.provider, provider))
+      .orderBy(desc(paymentTransactions.createdAt))
+      .limit(limit);
+    return rows;
     } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recent transactions', context: { provider, error: err } });
-      throw err;
-    }
-  }
-
-  async function getTransactionByProviderId(provider: PaymentProviderType, providerPaymentId: string) {
-    try {
-      const rows = await db.select().from(paymentTransactions).where(
-        and(eq(paymentTransactions.provider, provider), eq(paymentTransactions.providerPaymentId, providerPaymentId))
-      ).limit(1);
-      return rows[0] ?? null;
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get transaction by provider id', context: { providerPaymentId, error: err } });
-      throw err;
-    }
+    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recent transactions', context: { provider, error: err } });
+    throw err;
   }
 
   async function getTransactionsBySubscription(subscriptionId: string) {

@@ -39,7 +39,7 @@ async function pathExists(targetPath: string) {
     await fs.stat(targetPath);
     return true;
   } catch (error) {
-    forgeDebug({ scope: 'agent-runtime-platform', level: 'warn', message: 'Path does not exist', context: { error, path: targetPath } });
+    forgeDebug({ scope: 'agent-runtime-platform', level: 'warn', message: 'Path does not exist', context: { error: error instanceof Error ? error.message : String(error), path: targetPath } });
     return false;
   }
 }

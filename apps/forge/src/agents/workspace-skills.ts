@@ -49,7 +49,7 @@ export async function listAgentWorkspaceSkills(
               updatedAt: stat.mtimeMs,
             };
           } catch (error) {
-            forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'Failed to read skill metadata', context: { error, skillName } });
+            forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'Failed to read skill metadata', context: { error: error instanceof Error ? error.message : String(error), skillName } });
             return null;
           }
         }),

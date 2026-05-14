@@ -59,7 +59,7 @@ export function createCompanyCashLedger(db: Database) {
         createdAt: now,
       });
     } catch (error) {
-      forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'postEntry failed', context: { error, input: { type: input.type, direction: input.direction, amountUsd: input.amountUsd } } });
+      forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'postEntry failed', context: { error: error instanceof Error ? error.message : String(error), input: { type: input.type, direction: input.direction, amountUsd: input.amountUsd } } });
       throw error;
     }
   }

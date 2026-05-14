@@ -88,7 +88,7 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
       await fs.access(skillFilePath);
       return path.resolve(candidateRoot, sourceDirectoryName);
     } catch (error) {
-      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error, skillFilePath } });
+      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error: error instanceof Error ? error.message : String(error), skillFilePath } });
       continue;
     }
   }

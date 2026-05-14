@@ -36,7 +36,7 @@ async function readTextFileIfPossible(filePath: string) {
   try {
     return await fs.readFile(filePath, 'utf8');
   } catch (error) {
-    forgeDebug({ scope: 'skills-tools', level: 'warn', message: 'Failed to read file', context: { error, filePath } });
+    forgeDebug({ scope: 'skills-tools', level: 'warn', message: 'Failed to read file', context: { error: error instanceof Error ? error.message : String(error), filePath } });
     return null;
   }
 }
