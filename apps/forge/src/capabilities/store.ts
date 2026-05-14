@@ -292,6 +292,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'addRoleToolPermission DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      throw err;
     }
 
     return {
@@ -311,6 +312,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'removeRoleToolPermission DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      throw err;
     }
 
     return {
@@ -356,6 +358,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'addRoleWorkflowPermission DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      throw err;
     }
 
     return {
@@ -375,6 +378,7 @@ export function createCapabilityStore(db: Database) {
         level: 'error',
         message: 'removeRoleWorkflowPermission DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
       });
+      throw err;
     }
 
     return {
