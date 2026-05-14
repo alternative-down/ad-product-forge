@@ -29,27 +29,45 @@ export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
 
   async function getProvider(provider: PaymentProviderType) {
-    const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
-    return rows[0] ?? null;
+    try {
+      const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
+      return rows[0] ?? null;
     } catch (err) {
-    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get payment provider', context: { provider, error: err } });
-    throw err;
-        return existing.id;
-      }
-      const id = createId();
-      await db.insert(paymentProviders).values({
-        id,
-        provider: input.provider,
-        apiKeyEncrypted: input.apiKeyEncrypted,
-        webhookSecretEncrypted: input.webhookSecretEncrypted,
-        isActive: input.isActive,
-        configJson: input.configJson ?? null,
-        createdAt: now,
-        updatedAt: now,
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert payment provider', context: { provider: input.provider, error: err } });
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get payment provider', context: { provider, error: err instanceof Error ? err.message : String(err) } });
       throw err;
+    }
+  }
+
+  async function upsertProvider(input: {
+    provider: PaymentProviderType;
+    apiKeyEncrypted: string;
+    webhookSecretEncrypted: string;
+    isActive: boolean;
+    configJson?: Record<string, unknown>;
+  }) {
+    const now = Date.now();
+    try {
+      const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, input.provider)).all();
+      if (rows.length > 0) {
+        await db.update(paymentProviders).set({ apiKeyEncrypted: input.apiKeyEncrypted, webhookSecretEncrypted: input.webhookSecretEncrypted, isActive: input.isActive, configJson: input.configJson ?? null, updatedAt: now }).where(eq(paymentProviders.provider, input.provider));
+        return rows[0].id;
+      }
+    } catch (err) {
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to upsert payment provider', context: { provider: input.provider, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
+    const id = createId();
+    await db.insert(paymentProviders).values({
+      id,
+      provider: input.provider,
+      apiKeyEncrypted: input.apiKeyEncrypted,
+      webhookSecretEncrypted: input.webhookSecretEncrypted,
+      isActive: input.isActive,
+      configJson: input.configJson ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
   }
 
   // ---------------------------------------------------------------------------
@@ -86,10 +104,6 @@ export function createPaymentReceivablesStore(db: Database) {
       }
       return existing[0].id;
     }
-    } catch (err) {
-    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
-    throw err;
-    return id;
   }
 
   // ---------------------------------------------------------------------------
@@ -134,10 +148,6 @@ export function createPaymentReceivablesStore(db: Database) {
       }
       return existing[0].id;
     }
-    } catch (err) {
-    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to query subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
-    throw err;
-    return id;
   }
 
   async function getSubscriptionByProviderId(provider: PaymentProviderType, providerSubscriptionId: string) {
@@ -151,57 +161,12 @@ export function createPaymentReceivablesStore(db: Database) {
         ),
       )
       .limit(1);
-    return rows[0] ?? null;
+    try {
+      return rows[0] ?? null;
     } catch (err) {
-    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get subscription by provider id', context: { providerSubscriptionId, error: err } });
-    throw err;
-
-        if (input.status === 'completed' && tx.ledgerPosted === false) {
-           
-          const ledgerEntryId = createId();
-          await db.transaction(async (tx) => {
-            await tx.insert(companyCashLedger).values({
-              id: ledgerEntryId,
-              type: 'payment_received',
-              direction: 'in',
-              amountUsd: input.amountUsd,
-              description: `Stripe payment ${input.providerPaymentId}`,
-              status: 'cleared',
-              effectiveAt: now,
-              createdAt: now,
-            });
-
-            await tx
-              .update(paymentTransactions)
-              .set({ ledgerEntryId, ledgerPosted: true })
-              .where(eq(paymentTransactions.id, tx.id));
-          });
-        } catch (err) {
-          forgeDebug({ scope: 'finance', level: 'error', message: 'Failed to post ledger and update transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-          throw err;
-
-    const id = createId();
-    await db.insert(paymentTransactions).values({
-      id,
-      provider: input.provider,
-      providerPaymentId: input.providerPaymentId,
-      providerSubscriptionId: input.providerSubscriptionId ?? null,
-      status: input.status,
-      amountUsd: input.amountUsd,
-      currency: input.currency,
-      customerEmail: input.customerEmail ?? null,
-      ledgerEntryId: null,
-      ledgerPosted: false,
-      paidAt: input.paidAt ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    } catch (err) {
-    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to insert transaction', context: { providerPaymentId: input.providerPaymentId, error: err } });
-    throw err;
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get subscription by provider id', context: { providerSubscriptionId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
     }
-
-    return { id, isNew: true, ledgerPosted: input.status === 'completed' };
   }
 
   async function listRecentTransactions(provider: PaymentProviderType, limit = 20) {
@@ -211,10 +176,12 @@ export function createPaymentReceivablesStore(db: Database) {
       .where(eq(paymentTransactions.provider, provider))
       .orderBy(desc(paymentTransactions.createdAt))
       .limit(limit);
-    return rows;
+    try {
+      return rows;
     } catch (err) {
-    forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recent transactions', context: { provider, error: err } });
-    throw err;
+      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recent transactions', context: { provider, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function getTransactionsBySubscription(subscriptionId: string) {
@@ -235,9 +202,7 @@ export function createPaymentReceivablesStore(db: Database) {
     upsertCustomer,
     upsertSubscription,
     getSubscriptionByProviderId,
-    processPaymentEvent,
     listRecentTransactions,
-    getTransactionByProviderId,
     getTransactionsBySubscription,
   };
 }
