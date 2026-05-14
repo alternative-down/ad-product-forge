@@ -84,7 +84,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       githubAppRegistrationUrl: githubApp?.registrationUrl ?? null,
     };
   } catch (error) {
-    forgeDebug({ scope: 'agents', level: 'error', message: 'Internal agent lifecycle failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'internal-agent-lifecycle', level: 'error', message: 'Internal agent lifecycle failed', context: { error: error instanceof Error ? error.message : String(error) } });
     await terminateInternalAgent(db, {
       agentId: hired.agentId,
       workspaceBasePath: input.workspaceBasePath,

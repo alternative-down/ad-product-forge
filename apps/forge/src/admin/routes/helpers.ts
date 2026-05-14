@@ -157,7 +157,7 @@ export async function fsPathExists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch (err) {
-    forgeDebug({ scope: 'helpers', level: 'warn', message: '[helpers] fsPathExists failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'admin-routes-helpers', level: 'warn', message: '[helpers] fsPathExists failed', context: { error: err instanceof Error ? err.message : String(err) }});
     // Safe: path does not exist — return false to signal absence
     return false;
   }
@@ -193,7 +193,7 @@ export async function clearAgentHistory(opts: {
       await db.delete(agentLongTermMemoryRecallStates).where(eq(agentLongTermMemoryRecallStates.agentId, agentId));
     }
   } catch (err) {
-    forgeDebug({ scope: 'helpers', level: 'error', message: '[helpers] clearAgentHistory failed', context: { agentId, includeLongTermMemoryThread, error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'admin-routes-helpers', level: 'error', message: '[helpers] clearAgentHistory failed', context: { agentId, includeLongTermMemoryThread, error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }

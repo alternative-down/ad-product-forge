@@ -97,7 +97,7 @@ export function createAdminReadModel(input: {
         }),
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-readmodel', level: 'error', message: '[admin-readmodel] getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[admin-readmodel] getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
