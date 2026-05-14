@@ -5,12 +5,20 @@
 import type { OpsContext } from './context';
 import { forgeDebug } from '@forge-runtime/core';
 
+const SCOPE = 'github-ops-prs';
+
+function serializeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 export function createPullRequestsOps(ctx: OpsContext) {
   async function listPullRequests(agentId: string, input: {
     owner?: string;
     repositoryName: string;
     state?: 'open' | 'closed' | 'all';
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
@@ -27,6 +35,10 @@ export function createPullRequestsOps(ctx: OpsContext) {
         head: pr.head.ref,
         base: pr.base.ref,
       }));
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'listPullRequests failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function createPullRequest(agentId: string, input: {
@@ -37,6 +49,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
     base: string;
     body?: string;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('POST /repos/{owner}/{repo}/pulls', {
@@ -55,6 +68,10 @@ export function createPullRequestsOps(ctx: OpsContext) {
         head: response.data.head.ref,
         base: response.data.base.ref,
       };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'createPullRequest failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function getPullRequest(agentId: string, input: {
@@ -62,6 +79,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
     repositoryName: string;
     pullRequestNumber: number;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -82,6 +100,10 @@ export function createPullRequestsOps(ctx: OpsContext) {
         createdAt: response.data.created_at,
         updatedAt: response.data.updated_at,
       };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'getPullRequest failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function listPullRequestComments(agentId: string, input: {
@@ -91,6 +113,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
     direction?: 'asc' | 'desc';
     limit?: number;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/comments', {
@@ -107,6 +130,10 @@ export function createPullRequestsOps(ctx: OpsContext) {
         createdAt: comment.created_at,
         updatedAt: comment.updated_at,
       }));
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'listPullRequestComments failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function updatePullRequest(agentId: string, input: {
@@ -118,6 +145,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
     base?: string;
     state?: 'open' | 'closed';
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -142,6 +170,10 @@ export function createPullRequestsOps(ctx: OpsContext) {
         createdAt: response.data.created_at,
         updatedAt: response.data.updated_at,
       };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'updatePullRequest failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function mergePullRequest(agentId: string, input: {
@@ -152,6 +184,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
     commitTitle?: string;
     commitMessage?: string;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge', {
@@ -167,6 +200,10 @@ export function createPullRequestsOps(ctx: OpsContext) {
         message: response.data.message,
         sha: response.data.sha,
       };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'mergePullRequest failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   return {
