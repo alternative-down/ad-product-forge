@@ -110,7 +110,6 @@ export function createAgentRunner(
     setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
   let timer: NodeJS.Timeout | null = null;
-  const healthcheckTimer: NodeJS.Timeout | null = null;
   let stopped = false;
   let instant = false;
   let startingRun = false;
