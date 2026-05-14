@@ -16,6 +16,7 @@ import {
   llmProfiles,
   mcpServerConfigs,
 } from '../../database/schema';
+import { forgeDebug } from '@forge-runtime/core';
 import { toScheduleSummary as toScheduleSummaryHelper } from './helpers';
 import type { Database } from '../../database/index';
 
@@ -27,10 +28,16 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
   const { db } = deps;
 
   async function listAgentContracts(agentId: string) {
-    const rows = await db.query.agentExecutionContracts.findMany({
-      where: eq(agentExecutionContracts.agentId, agentId),
-      orderBy: desc(agentExecutionContracts.startsAt),
-    });
+    let rows;
+    try {
+      rows = await db.query.agentExecutionContracts.findMany({
+        where: eq(agentExecutionContracts.agentId, agentId),
+        orderBy: desc(agentExecutionContracts.startsAt),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentContracts: read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return rows.map((row) => {
       const { id, ...rest } = row;
       return { ...rest, contractId: id };
@@ -38,19 +45,31 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
   }
 
   async function listAgentSchedules(agentId: string) {
-    const rows = await db.query.agentSchedules.findMany({
-      where: eq(agentSchedules.agentId, agentId),
-      orderBy: desc(agentSchedules.nextTriggerAt),
-    });
+    let rows;
+    try {
+      rows = await db.query.agentSchedules.findMany({
+        where: eq(agentSchedules.agentId, agentId),
+        orderBy: desc(agentSchedules.nextTriggerAt),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentSchedules: read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return rows.map((row) => toScheduleSummaryHelper(row));
   }
 
   async function listAgentNotifications(agentId: string) {
-    const rows = await db.query.agentNotifications.findMany({
-      where: eq(agentNotifications.agentId, agentId),
-      orderBy: desc(agentNotifications.createdAt),
-      limit: 50,
-    });
+    let rows;
+    try {
+      rows = await db.query.agentNotifications.findMany({
+        where: eq(agentNotifications.agentId, agentId),
+        orderBy: desc(agentNotifications.createdAt),
+        limit: 50,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentNotifications: read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return rows.map((n) => ({
       id: n.id,
       content: n.content,
@@ -60,13 +79,27 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
   }
 
   async function listAgentMcpServers(agentId: string) {
-    const rows = await db.query.agentMcpConfigs.findMany({
-      where: eq(agentMcpConfigs.agentId, agentId),
-    });
+    let rows;
+    try {
+      rows = await db.query.agentMcpConfigs.findMany({
+        where: eq(agentMcpConfigs.agentId, agentId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentMcpServers: read mcpConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     const serverIds = rows.map((r) => r.serverId).filter(Boolean);
-    const servers = serverIds.length > 0
-      ? await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, serverIds) })
-      : [];
+    let servers;
+    if (serverIds.length > 0) {
+      try {
+        servers = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, serverIds) });
+      } catch (err) {
+        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentMcpServers: read serverConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
+    } else {
+      servers = [];
+    }
     const serverIdToLink = new Map(rows.map((link) => [link.serverId, link]));
     return servers.map((server) => {
       const link = serverIdToLink.get(server.id);
@@ -89,16 +122,28 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
   }
 
   async function listAgentLlmProfiles(agentId: string) {
-    const agent = await db.query.agents.findFirst({
-      where: eq(agents.id, agentId),
-      columns: { modelProfileId: true, omModelProfileId: true },
-    });
+    let agent;
+    try {
+      agent = await db.query.agents.findFirst({
+        where: eq(agents.id, agentId),
+        columns: { modelProfileId: true, omModelProfileId: true },
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles: read agent failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     if (!agent) return { profiles: [] };
     const profileIds = [agent.modelProfileId, agent.omModelProfileId].filter(Boolean);
     if (profileIds.length === 0) return { profiles: [] };
-    const profiles = await db.query.llmProfiles.findMany({
-      where: inArray(llmProfiles.id, profileIds),
-    });
+    let profiles;
+    try {
+      profiles = await db.query.llmProfiles.findMany({
+        where: inArray(llmProfiles.id, profileIds),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles: read profiles failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return { profiles };
   }
 
