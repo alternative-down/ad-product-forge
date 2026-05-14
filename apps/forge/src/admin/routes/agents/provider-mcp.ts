@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { reloadAgentMcp } from '../../routes/mcp-helpers';
+import { adminRouteError } from './admin-route-error-helper';
 import { agentProviders, agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
 import { parseProviderCredentials } from '../../../communication/provider-loader';
 import { encryptSecret } from '../../../encryption/crypto';
@@ -132,8 +133,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -158,8 +158,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -202,8 +201,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -242,8 +240,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -274,8 +271,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -327,8 +323,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -357,8 +352,7 @@ export function registerAgentProviderMcpRoutes({
           isActive: body.isActive,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
@@ -386,8 +380,7 @@ export function registerAgentProviderMcpRoutes({
           configId: body.configId,
         });
       } catch (error) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return adminRouteError(error);
       }
     },
   });
