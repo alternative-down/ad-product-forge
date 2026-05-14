@@ -25,10 +25,10 @@ export function parseRequest<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (err) {
-    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: error instanceof Error ? error.message : String(error) }});
+    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: err instanceof Error ? err.message : String(err) }});
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Validation failed',
+      error: err instanceof Error ? err.message : 'Validation failed',
     };
   }
 }
@@ -48,10 +48,10 @@ export function parseQueryParams<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (err) {
-    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: error instanceof Error ? error.message : String(error) }});
+    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: err instanceof Error ? err.message : String(err) }});
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Query validation failed',
+      error: err instanceof Error ? err.message : 'Query validation failed',
     };
   }
 }

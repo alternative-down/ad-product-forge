@@ -32,8 +32,8 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await input.companyCash.getOverview());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -46,8 +46,8 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await input.companyCash.listContractSummaries());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
