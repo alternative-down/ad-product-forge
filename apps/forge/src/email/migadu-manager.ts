@@ -54,7 +54,7 @@ export function createAgentEmailManager(config: {
     try {
       return Boolean(await getOptionalProviderConfig());
     } catch (err) {
-      forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'isConfigured failed: ' + (err instanceof Error ? err.message : String(err)) });
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] isConfigured failed: ' + (err instanceof Error ? err.message : String(err)) });
       return false;
     }
   }
@@ -124,7 +124,7 @@ export function createAgentEmailManager(config: {
         return;
       }
 
-      forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'migadu-manager: delete mailbox failed', context: { status: response.status } });
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] delete mailbox failed', context: { status: response.status } });
       throw await buildMigaduError('delete mailbox', response);
     } catch (err) {
       forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] deleteMailboxByAddress failed', context: { error: err instanceof Error ? err.message : String(err) }});
@@ -164,7 +164,7 @@ export function createAgentEmailManager(config: {
         return null;
       }
 
-      forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'migadu-manager: load mailbox failed', context: { status: response.status } });
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] load mailbox failed', context: { status: response.status } });
       throw await buildMigaduError('load mailbox', response);
     } catch (err) {
       forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] getMailbox failed', context: { error: err instanceof Error ? err.message : String(err) }});
@@ -186,7 +186,7 @@ export function createAgentEmailManager(config: {
       });
 
       if (!response.ok) {
-        forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'migadu-manager: create mailbox failed', context: { status: response.status } });
+        forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] create mailbox failed', context: { status: response.status } });
         throw await buildMigaduError('create mailbox', response);
       }
 
@@ -210,7 +210,7 @@ export function createAgentEmailManager(config: {
       });
 
       if (!response.ok) {
-        forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'migadu-manager: update mailbox failed', context: { status: response.status } });
+        forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] update mailbox failed', context: { status: response.status } });
         throw await buildMigaduError('update mailbox', response);
       }
 
@@ -232,7 +232,7 @@ export function createAgentEmailManager(config: {
       const domain = integration.apiUser.split('@')[1];
 
       if (!domain) {
-        forgeDebug({ scope: "migadu-manager", level: "warn", message: "buildMigaduConfig: cannot derive Migadu domain from API user", context: { apiUser: integration.apiUser } });
+        forgeDebug({ scope: 'migadu-manager', level: 'warn', message: '[migadu-manager] buildMigaduConfig: cannot derive Migadu domain from API user', context: { apiUser: integration.apiUser } });
         throw new Error(`Cannot derive Migadu domain from API user: ${integration.apiUser}`);
       }
 
@@ -253,7 +253,7 @@ export function createAgentEmailManager(config: {
       const providerConfig = await getOptionalProviderConfig();
 
       if (!providerConfig) {
-        forgeDebug({ scope: "migadu-manager", level: "warn", message: "getRequiredProviderConfig: Migadu email provisioning not configured" });
+        forgeDebug({ scope: 'migadu-manager', level: 'warn', message: '[migadu-manager] getRequiredProviderConfig: Migadu email provisioning not configured' });
         throw new Error(
           'Migadu email provisioning requires a configured admin connection in system integrations',
         );
@@ -261,7 +261,7 @@ export function createAgentEmailManager(config: {
 
       return providerConfig;
     } catch (err) {
-      forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'getRequiredProviderConfig failed: ' + (err instanceof Error ? err.message : String(err)) });
+      forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] getRequiredProviderConfig failed: ' + (err instanceof Error ? err.message : String(err)) });
       throw err;
     }
   }
@@ -316,7 +316,7 @@ function buildMailboxLocalPart(agentId: string) {
     .replace(/^-+|-+$/g, '');
 
   if (!normalized) {
-    forgeDebug({ scope: "migadu-manager", level: "warn", message: "getRequiredProviderConfig: Migadu email provisioning not configured" });
+    forgeDebug({ scope: 'migadu-manager', level: 'warn', message: '[migadu-manager] buildMailboxLocalPart: cannot derive local part from agent id' });
     throw new Error(`Cannot derive mailbox local part from agent id: ${agentId}`);
   }
 
@@ -331,7 +331,7 @@ function getLocalPart(address: string) {
   const [localPart] = address.split('@');
 
   if (!localPart) {
-    forgeDebug({ scope: "migadu-manager", level: "warn", message: "getRequiredProviderConfig: Migadu email provisioning not configured" });
+    forgeDebug({ scope: 'migadu-manager', level: 'warn', message: '[migadu-manager] getLocalPart: invalid address format' });
     throw new Error(`Invalid mailbox address: ${address}`);
   }
 
@@ -350,7 +350,7 @@ function parseStoredCredentials(encryptedCredentials: string) {
     const decrypted = decryptSecret(encryptedCredentials);
     return emailProviderCredentialsSchema.parse(JSON.parse(decrypted));
   } catch (error) {
-    forgeDebug({ scope: 'migadu-manager', level: 'error', message: 'Failed to decrypt/parse email credentials: ' + String(error) });
+    forgeDebug({ scope: 'migadu-manager', level: 'error', message: '[migadu-manager] decryptCredentials failed: ' + String(error) });
     throw error;
   }
 }
