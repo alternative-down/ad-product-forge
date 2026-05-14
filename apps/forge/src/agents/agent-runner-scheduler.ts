@@ -13,6 +13,7 @@ import {
   advanceStepEpoch as epochAdvanceStepEpoch,
 } from './agent-runner-scheduler-epoch';
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
+import { createSchedulerSteps } from './agent-runner-scheduler-steps';
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
@@ -66,6 +67,25 @@ export function createScheduler(
   const timerManager = createTimerManager(state);
   const runLifecycle = createRunLifecycle(state, { get stopped() { return stopped; } });
   const healthcheck = createSchedulerHealthcheck({ runtimeId: deps.runtimeId });
+  const steps = createSchedulerSteps({
+    runtimeId: deps.runtimeId,
+    getRunnableContract: deps.getRunnableContract,
+    onAgentIdle: deps.onAgentIdle,
+    isStaleRun,
+    startNewRunEpoch,
+    scheduleNextStep,
+    planNextStepDelay,
+    resetBackoff,
+    advanceStepEpoch,
+    getActiveRunEpoch: () => state.activeRunEpoch,
+    setInstant,
+    flushManager,
+    getExecuting: () => executing,
+    isTimerActive: () => timerManager.isTimerActive(),
+    isStopped: () => stopped,
+    getStartingRun: () => ({ running: startingRun, startedAt: startingRunStartedAt }),
+    setStartingRun: (r: boolean, s: number | null) => { startingRun = r; startingRunStartedAt = s; },
+  });
 
   // Step callback — set by the runner orchestrator
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
@@ -319,108 +339,7 @@ export function createScheduler(
   }
 
 
-  // ─── Step orchestration ─────────────────────────────────────────────────────
-
-  async function beginRun(
-    runEpoch: number,
-    input: {
-      reloadRuntime: boolean;
-      wakeStartedAt: number;
-      markRunning: boolean;
-      onReloadRuntime: (runEpoch: number) => Promise<void>;
-      setExecutionState: (runtimeId: string, state: 'idle' | 'running' | 'absent') => Promise<void>;
-      onAgentRunning: () => void;
-      onRunnerIdle: () => Promise<void>;
-      getPendingCount: () => number;
-    },
-  ) {
-    if (stopped || startingRun) {
-      return;
-    }
-
-    startingRun = true;
-    startingRunStartedAt = Date.now();
-    const myRunEpoch = startNewRunEpoch();
-
-    try {
-      activeRunId = createId();
-      state.instant = true;
-      // Store healthcheck callbacks from beginRun input
-      resetBackoff();
-      flushManager.resetFlushedRunEventKeys();
-      await flushManager.refreshRunFlushSettings();
-
-      if (input.reloadRuntime) {
-        await input.onReloadRuntime(myRunEpoch);
-      }
-
-      if (isStaleRun(myRunEpoch)) {
-        return;
-      }
-
-      input.onAgentRunning();
-
-      if (input.markRunning) {
-        await withTimeout(
-          input.setExecutionState(deps.runtimeId, 'running'),
-          RUNNER_AWAIT_TIMEOUT_MS,
-          `Agent execution state update timed out for ${deps.runtimeId}`,
-        );
-      }
-
-      if (isStaleRun(myRunEpoch)) {
-        return;
-      }
-
-      await queueNextStep();
-    } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'beginRun queueNextStep failed', context: { error: error instanceof Error ? error.message : String(error), runtimeId: deps.runtimeId } });
-      if (!isStaleRun(myRunEpoch)) {
-        await transitionToIdle(myRunEpoch, input.setExecutionState, input.onRunnerIdle, {
-          deferWakeQueueDrain: true,
-        });
-      }
-    } finally {
-      startingRun = false;
-      startingRunStartedAt = null;
-    }
-  }
-
-  async function queueNextStep() {
-    if (stopped || executing || timerManager.isTimerActive() || isStaleRun(state.activeRunEpoch)) {
-      return;
-    }
-
-    const executionState = await withTimeout(
-      deps.getRunnableContract(deps.runtimeId)
-        .then(c => c ? 'running' : 'idle')
-        .catch(() => 'idle'),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state lookup timed out for ${deps.runtimeId}`,
-    );
-
-    if (executionState === 'idle' || isStaleRun(state.activeRunEpoch)) {
-      return;
-    }
-
-    const nextDelayMs = await planNextStepDelay();
-
-    if (isStaleRun(state.activeRunEpoch)) {
-      return;
-    }
-
-    if (nextDelayMs < 0) {
-      // Signal to go idle
-      return;
-    }
-
-    scheduleNextStep(nextDelayMs, () => {
-      if (stepCallback) {
-        void stepCallback(state.activeRunEpoch);
-      }
-    });
-  }
-
+  // Step orchestration — delegated to steps module
   // ─── Flush settings — delegated to flush manager ──────────────────────────
   // See agent-runner-flush-manager.ts
 
@@ -511,9 +430,9 @@ export function createScheduler(
     shouldRunHealthcheckAt: healthcheck.shouldRunHealthcheckAt.bind(healthcheck),
     getHealthcheckIntervalMs: healthcheck.getHealthcheckIntervalMs.bind(healthcheck),
     scheduleAt,
-    // Step orchestration
-    beginRun,
-    queueNextStep,
+    // Step orchestration — delegated to steps module
+    beginRun: steps.beginRun.bind(steps),
+    queueNextStep: steps.queueNextStep.bind(steps),
     // Flush settings — delegated to flush manager
     refreshRunFlushSettings: flushManager.refreshRunFlushSettings.bind(flushManager),
     resetFlushedRunEventKeys: flushManager.resetFlushedRunEventKeys.bind(flushManager),
