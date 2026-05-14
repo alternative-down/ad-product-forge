@@ -1,12 +1,28 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const { mockRefundBalance, mockRemoveAgent, mockRemoveSchedule, mockDeleteMailbox, mockDeleteApp, mockRm } = vi.hoisted(() => ({
+const {
+  mockRefundBalance,
+  mockRemoveAgent,
+  mockRemoveSchedule,
+  mockDeleteMailbox,
+  mockDeleteApp,
+  mockRm,
+  mockDbTransaction,
+} = vi.hoisted(() => ({
   mockRefundBalance: vi.fn().mockResolvedValue(undefined),
   mockRemoveAgent: vi.fn(),
   mockRemoveSchedule: vi.fn().mockResolvedValue(undefined),
   mockDeleteMailbox: vi.fn().mockResolvedValue(undefined),
   mockDeleteApp: vi.fn().mockResolvedValue(undefined),
   mockRm: vi.fn().mockResolvedValue(undefined),
+  mockDbTransaction: vi.fn().mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+    // tx receives a Drizzle tx-like object with delete returning a chain
+    const txDelete = vi.fn().mockImplementation(() => ({
+      where: vi.fn().mockResolvedValue(undefined),
+    }));
+    await fn({ delete: txDelete });
+    return txDelete;
+  }),
 }));
 
 vi.mock('./agent-contract-store', () => ({
@@ -31,6 +47,7 @@ function createMockDb(agent?: Record<string, unknown> | null) {
       where: vi.fn().mockResolvedValue(undefined),
       _table: table,
     })),
+    transaction: mockDbTransaction,
   };
 }
 
@@ -99,9 +116,9 @@ describe('terminateInternalAgent', () => {
   it('deletes agent record from database', async () => {
     const db = createMockDb(mockAgent());
     await terminateInternalAgent(db as any, defaultInput() as any);
-    // Should delete: agentExecutionContracts + agentProviders + agents
-    expect((db.delete as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
-    expect((db.delete as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(2);
+    // All 3 deletes (contracts + providers + agents) are wrapped in one transaction.
+    expect(mockDbTransaction).toHaveBeenCalled();
+    expect(mockDbTransaction).toHaveBeenCalledTimes(1);
   });
 
   it('removes agent workspace directory', async () => {
