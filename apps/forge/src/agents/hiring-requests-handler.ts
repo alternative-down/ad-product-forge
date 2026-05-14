@@ -184,7 +184,7 @@ export async function generateHiredAgentInstructions(
     HIRING_RH_TOOL_IDS,
   );
 
-  forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Tools loaded', context: { toolCount: Object.keys(tools).length } });
+  forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'Tools loaded', context: { toolCount: Object.keys(tools).length } });
 
   if (currentBalanceUsd < estimatedCostUsd) {
     throw new Error('Insufficient company cash for hiring workflow');
@@ -282,7 +282,7 @@ export async function generateHiredAgentInstructions(
       }),
       execute: async ({ status }) => {
         try {
-          forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'Agent status report', context: { status } });
+          forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'Agent status report', context: { status } });
           return { valid: true, logged: status };
         } catch (error) {
           return {
@@ -299,7 +299,7 @@ export async function generateHiredAgentInstructions(
       inputSchema,
       execute: async ({ agent }) => {
         try {
-          forgeDebug({ scope: 'hiring-rh', level: 'debug', message: 'hireAgent called', context: { agentName: agent.agentName } });
+          forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'hireAgent called', context: { agentName: agent.agentName } });
           const currentAgents = await db.query.agents.findMany({
             columns: {
               name: true,
@@ -328,7 +328,7 @@ export async function generateHiredAgentInstructions(
           const validation = await validateHireAgentInput(capabilities, agent.roleId);
 
           if (!validation.valid) {
-            forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent validation error', context: { error: validation.error } });
+            forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent validation error', context: { error: validation.error } });
             return validation;
           }
 
@@ -340,10 +340,10 @@ export async function generateHiredAgentInstructions(
             roleDescription: validation.roleDescription,
             valid: true,
           };
-          forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
+          forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -385,22 +385,22 @@ export async function generateHiredAgentInstructions(
     (inputTokens / 1_000_000) * modelPrice.inputPerMillionUsd +
     (outputTokens / 1_000_000) * modelPrice.outputPerMillionUsd;
 
-  forgeDebug({ scope: 'hiring-rh', level: 'debug', message: 'generateText completed' });
-  forgeDebug({ scope: 'hiring-rh', level: 'debug', message: 'response messages', context: { messages: buildStepDiagnostics(messages) } });
+  forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'generateText completed' });
+  forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'response messages', context: { messages: buildStepDiagnostics(messages) } });
 
   if (hireAgentActionResult) {
     const toolOutput = isToolResultWithOutput(hireAgentActionResult)
       ? hireAgentActionResult.output
       : hireAgentActionResult;
-    forgeDebug({ scope: 'hiring-rh', level: 'debug', message: 'hireAgent action result', context: { hasOutput: !!toolOutput } });
+    forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'hireAgent action result', context: { hasOutput: !!toolOutput } });
     const parsedToolResult = hireAgentToolResultSchema.safeParse(toolOutput);
 
     if (!parsedToolResult.success) {
-      forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'hireAgent tool result failed schema validation', context: { parseError: parsedToolResult.error.flatten() } });
+      forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent tool result failed schema validation', context: { parseError: parsedToolResult.error.flatten() } });
     }
 
     if (parsedToolResult.success && parsedToolResult.data.valid) {
-      forgeDebug({ scope: 'hiring-rh', level: 'info', message: 'agentHired from toolResult', context: { agentName: parsedToolResult.data.agentName } });
+      forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'agentHired from toolResult', context: { agentName: parsedToolResult.data.agentName } });
       return {
         agentName: parsedToolResult.data.agentName,
         agentDescription: parsedToolResult.data.agentDescription,
@@ -415,13 +415,13 @@ export async function generateHiredAgentInstructions(
     }
 
     if (parsedToolResult.success && !parsedToolResult.data.valid) {
-      forgeDebug({ scope: 'hiring-rh', level: 'warn', message: 'hireAgent returned validation failure', context: { error: parsedToolResult.data.error, hint: parsedToolResult.data.hint } });
+      forgeDebug({ scope: 'hiring-requests-handler', level: 'warn', message: 'hireAgent returned validation failure', context: { error: parsedToolResult.data.error, hint: parsedToolResult.data.hint } });
       return parsedToolResult.data;
     }
   }
 
-  forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'Could not extract hiring data from response' });
-  forgeDebug({ scope: 'hiring-rh', level: 'error', message: 'Error details', context: { finishReason: lastRunFinishReason } });
+  forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'Could not extract hiring data from response' });
+  forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'Error details', context: { finishReason: lastRunFinishReason } });
   return {
     error: 'Hiring process did not return valid agent data. Please try again.',
     valid: false,

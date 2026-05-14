@@ -155,8 +155,8 @@ export function createRoutingOps(
     if (!event || !delivery) return html(400, '<h1>Missing webhook headers</h1>');
     let payload: Record<string, unknown>;
     try { payload = JSON.parse(bodyText); } catch { return html(400, '<h1>Invalid JSON</h1>'); }
-    if (ctx.isGitHubSelfEvent(payload)) { ctx.forgeDebug({ scope: 'github-manager', level: 'info', message: 'Ignoring self event', context: { agentId, event } }); return html(200, 'ok'); }
-    ctx.forgeDebug({ scope: 'github-manager', level: 'info', message: `Webhook ${event}`, context: { agentId, delivery } });
+    if (ctx.isGitHubSelfEvent(payload)) { ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: 'Ignoring self event', context: { agentId, event } }); return html(200, 'ok'); }
+    ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: `Webhook ${event}`, context: { agentId, delivery } });
     await ctx.notifications.createNotification({
       agentId,
       content: ctx.createGitHubWebhookWakeContent({ event, delivery, payload }),
