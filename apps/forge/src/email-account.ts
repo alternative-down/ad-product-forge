@@ -286,7 +286,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         try {
           await client.logout();
         } catch { // @ts-expect-error non-fatal — logout failure is safe to swallow
-        client = null;
+          client = null;
+        }
       }
     },
 
