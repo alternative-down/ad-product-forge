@@ -68,7 +68,6 @@ export async function changeAgentRole(input: {
 
   if (!actorAgent) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: actor agent not found', context: { actorAgentId: input.actorAgentId } });
-    forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: actor agent not found', context: { actorAgentId: input.actorAgentId } });
     throw new Error(`Actor agent not found: ${input.actorAgentId}`);
   }
 
@@ -83,7 +82,6 @@ export async function changeAgentRole(input: {
   }
 
   if (!targetAgent) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
