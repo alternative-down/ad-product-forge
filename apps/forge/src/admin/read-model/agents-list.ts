@@ -20,6 +20,7 @@ import {
   mcpServerConfigs,
 } from '../../database/schema';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
+import { longTermMemoryStateSchema, createEmptyLongTermMemoryState } from '../../agents/ltm/store';
 import { listThreadMessages } from './conversation-helpers';
 import {
   formatWorkingMemoryValue,
@@ -281,21 +282,23 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const roleMap = new Map(allRoles.map((r) => [r.id, r]));
     const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
 
-    const recentStepsByAgentId = new Map(
-      await Promise.all(
-        agentRows.map(async (agent) => {
-          const steps = await db.query.agentExecutionSteps.findMany({
-            where: and(
-              eq(agentExecutionSteps.agentId, agent.id),
-              eq(agentExecutionSteps.kind, 'agent-step'),
-            ),
-            orderBy: [desc(agentExecutionSteps.createdAt)],
-            limit: 6,
-          });
-          return [agent.id, steps] as const;
-        }),
-      ),
-    );
+    // Batch-fetch recent steps for all agents in a single query, then group by agentId
+    const agentIds = agentRows.map((a) => a.id);
+    const allRecentSteps = agentIds.length > 0
+      ? await db.query.agentExecutionSteps.findMany({
+          where: and(
+            inArray(agentExecutionSteps.agentId, agentIds),
+            eq(agentExecutionSteps.kind, 'agent-step'),
+          ),
+          orderBy: [desc(agentExecutionSteps.createdAt)],
+        })
+      : [];
+    const recentStepsByAgentId = new Map<string, typeof allRecentSteps>();
+    for (const step of allRecentSteps) {
+      const existing = recentStepsByAgentId.get(step.agentId) ?? [];
+      if (existing.length < 6) existing.push(step);
+      recentStepsByAgentId.set(step.agentId, existing);
+    }
 
     const runtimeMemoryByAgentId = new Map(
       await Promise.all(
@@ -336,18 +339,36 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       ),
     );
 
-    const longTermMemoryStateByAgentId = new Map(
-      await Promise.all(
-        agentRows.map(async (agent) => [
-          agent.id,
-          await withTimeout(
-            readLongTermMemoryState(db, agent.id),
-            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            `Admin LTM state read timed out for ${agent.id}`,
-          ).catch(() => null),
-        ] as const),
-      ),
-    );
+    // Batch-fetch LTM state for all agents in a single query, then group by agentId
+    const ltmStateRows = agentIds.length > 0
+      ? await withTimeout(
+          (async () => {
+            const rows = await db.query.agentLongTermMemoryStates.findMany({
+              where: inArray(agentLongTermMemoryStates.agentId, agentIds),
+            });
+            return rows;
+          })(),
+          ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+          'Admin LTM state batch read timed out',
+        ).catch(() => null)
+      : null;
+
+    const longTermMemoryStateByAgentId = new Map<string, LongTermMemoryState | null>();
+    if (ltmStateRows) {
+      for (const row of ltmStateRows) {
+        try {
+          const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
+          longTermMemoryStateByAgentId.set(row.agentId, parsed.success ? parsed.data : createEmptyLongTermMemoryState());
+        } catch {
+          longTermMemoryStateByAgentId.set(row.agentId, createEmptyLongTermMemoryState());
+        }
+      }
+    }
+    for (const id of agentIds) {
+      if (!longTermMemoryStateByAgentId.has(id)) {
+        longTermMemoryStateByAgentId.set(id, null);
+      }
+    }
 
     return agentRows.map((agent) => {
       const loadedAgent = registry.get(agent.id) as { runner?: { getSnapshot: () => unknown } } | undefined;
