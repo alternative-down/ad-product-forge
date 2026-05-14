@@ -27,31 +27,141 @@ const DEFAULTS_ROW_ID = 'default';
 
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
-    const rows = await db.query.llmProfiles.findMany({
-      orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+    try {
+      const rows = await db.query.llmProfiles.findMany({
+        orderBy: (fields, { asc }) => [asc(fields.modelKey)],
+      });
+
+      return rows.map(toProfileRecord);
+    } catch (err) {
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM profiles', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
+  }
+
+  async function getDefaults() {
+    const row = await getDefaultsRow();
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      primaryProfileId: row.primaryProfileId,
+      omProfileId: row.omProfileId,
+      hiringRhProfileId: row.hiringRhProfileId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async function getResolvedDefaults() {
+    const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
+
+    if (!defaults) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'System LLM defaults not configured' });
+      throw new Error('System LLM defaults are not configured');
+    }
+
+    const profileMap = new Map(profiles.map((profile) => [profile.profileId, profile]));
+    const primaryProfile = profileMap.get(defaults.primaryProfileId);
+    const omProfile = profileMap.get(defaults.omProfileId);
+    const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
+
+    if (!primaryProfile || !primaryProfile.isEnabled) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default primary LLM profile missing or disabled' });
+      throw new Error('Default primary LLM profile is missing or disabled');
+    }
+
+    if (!omProfile || !omProfile.isEnabled) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default OM LLM profile missing or disabled' });
+      throw new Error('Default OM LLM profile is missing or disabled');
+    }
+
+    if (!hiringRhProfile || !hiringRhProfile.isEnabled) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default hiring RH LLM profile missing or disabled' });
+      throw new Error('Default hiring RH LLM profile is missing or disabled');
+    }
+
+    return {
+      primaryProfile,
+      omProfile,
+      hiringRhProfile,
+    };
+  }
+
+  async function getProfile(profileId: string) {
+    const row = await db.query.llmProfiles.findFirst({
+      where: eq(llmProfiles.id, profileId),
     });
 
-    return rows.map(toProfileRecord);
+    if (!row) {
+      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
+      throw new Error(`LLM profile not found: ${profileId}`);
+    }
+
+    return toProfileRecord(row);
+  }
+
+  async function upsertProfile(input: {
+    profileId?: string;
+    name: string;
+    modelKey: string;
+    baseUrl?: string | null;
+    apiKey: string;
+    contractCostMultiplier?: number;
+    isEnabled?: boolean;
+  }) {
+    const parsed = llmProfileSchema.parse(input);
+    const now = Date.now();
+    const profileId = input.profileId ?? createId();
+    let existing: LlmProfile | null = null;
+    try {
+      existing = input.profileId
+        ? await db.query.llmProfiles.findFirst({
+            where: eq(llmProfiles.id, input.profileId),
+          })
+        : null;
     } catch (err) {
-    forgeDebug({ scope: 'llm-settings', level: 'info', message: 'Failed to list LLM profiles', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw err;
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM profile', context: { profileId, error: err } });
+      throw err;
+    }
 
     if (existing) {
-      await db
-        .update(llmProfiles)
-        .set({
+      try {
+        await db
+          .update(llmProfiles)
+          .set({
+            name: parsed.name.trim(),
+            modelKey: parsed.modelKey,
+            baseUrl: parsed.baseUrl?.trim() ?? null,
+            encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
+            contractCostMultiplier: parsed.contractCostMultiplier,
+            isEnabled: parsed.isEnabled ? 1 : 0,
+            updatedAt: now,
+          })
+          .where(eq(llmProfiles.id, input.profileId!));
+      } catch (err) {
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM profile', context: { profileId, error: err } });
+        throw err;
+      }
+    } else {
+      try {
+        await db.insert(llmProfiles).values({
+          id: profileId,
           name: parsed.name.trim(),
           modelKey: parsed.modelKey,
           baseUrl: parsed.baseUrl?.trim() ?? null,
           encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
           contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(llmProfiles.id, input.profileId!));
-    } catch (err) {
-      forgeDebug({ scope: 'llm-settings', level: 'info', message: 'Failed to update LLM profile', context: { profileId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
+        });
+      } catch (err) {
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to insert LLM profile', context: { profileId, error: err } });
+        throw err;
+      }
     }
 
     return {
@@ -77,33 +187,88 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('Cannot delete an LLM profile that is currently selected as a system default');
     }
 
-    await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
+    try {
+      await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
     } catch (err) {
-    forgeDebug({ scope: 'llm-settings', level: 'info', message: 'Failed to delete LLM profile', context: { profileId, error: err instanceof Error ? err.message : String(err) } });
-    throw err;
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to delete LLM profile', context: { profileId, error: err } });
+      throw err;
+    }
+  }
+
+  async function updateDefaults(input: {
+    primaryProfileId: string;
+    omProfileId: string;
+    hiringRhProfileId: string;
+  }) {
+    const parsed = llmDefaultsSchema.parse(input);
+    const profiles = await listProfiles();
+    const profileMap = new Map(profiles.map((profile) => [profile.profileId, profile]));
+
+    for (const profileId of [parsed.primaryProfileId, parsed.omProfileId, parsed.hiringRhProfileId]) {
+      const profile = profileMap.get(profileId);
+
+      if (!profile) {
+        forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
+        throw new Error(`LLM profile not found: ${profileId}`);
+      }
+
+      if (!profile.isEnabled) {
+        throw new Error(`Default LLM profile must be enabled: ${profile.profileId}`);
+      }
+    }
+
+    const now = Date.now();
+    let existing: SystemLlmDefaults | null = null;
+    try {
+      existing = await getDefaultsRow();
+    } catch (err) {
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (existing) {
-      await db
-        .update(systemLlmDefaults)
-        .set({
+      try {
+        await db
+          .update(systemLlmDefaults)
+          .set({
+            primaryProfileId: parsed.primaryProfileId,
+            omProfileId: parsed.omProfileId,
+            hiringRhProfileId: parsed.hiringRhProfileId,
+            updatedAt: now,
+          })
+          .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
+      } catch (err) {
+        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
+    } else {
+      try {
+        await db.insert(systemLlmDefaults).values({
+          id: DEFAULTS_ROW_ID,
           primaryProfileId: parsed.primaryProfileId,
           omProfileId: parsed.omProfileId,
           hiringRhProfileId: parsed.hiringRhProfileId,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
-    } catch (err) {
-      forgeDebug({ scope: 'llm-settings', level: 'info', message: 'Failed to update LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
-      throw err;
+        });
+      } catch (err) {
+        forgeDebug("llm", "Failed to insert LLM defaults", { error: err instanceof Error ? err.message : String(err) });
+        throw err;
+      }
     }
 
     return parsed;
   }
 
   async function getDefaultsRow() {
+    try {
       return await db.query.systemLlmDefaults.findFirst({
         where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
       });
+    } catch (err) {
+      forgeDebug("llm", "Failed to get LLM defaults row", { error: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
   }
 
   return {
