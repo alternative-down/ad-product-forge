@@ -71,31 +71,21 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   }
 
   async function getRequiredExternalAccount(accountId: string): Promise<HelperAccount> {
-    try {
       const account = await accounts.getRequiredAccount(accountId);
       if (account.agentId) {
         forgeDebug({ scope: 'internal-chat-service-helpers', level: 'warn', message: 'getRequiredExternalAccount: not found', context: { accountId } });
         throw new ExternalAccountNotFoundError(accountId, 'External internal chat account not found');
       }
       return account;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'getRequiredExternalAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function getRequiredAccountBySlug(slug: string): Promise<HelperAccount> {
-    try {
       const account = await accounts.getAccountBySlug(slug);
       if (!account) {
         forgeDebug({ scope: 'internal-chat-service-helpers', level: 'warn', message: 'getRequiredInternalChatAccount: not found', context: { slug } });
         throw new InternalChatAccountNotFoundError(slug);
       }
       return account;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'getRequiredAccountBySlug failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function requireConversationMembership(agentId: string, conversationId: string): Promise<void> {
@@ -104,7 +94,6 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string): Promise<void> {
-    try {
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
           eq(internalChatConversationMembers.accountId, accountId),
@@ -115,10 +104,6 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
         forgeDebug({ scope: 'internal-chat-service-helpers', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
         throw new ConversationNotFoundError(conversationId);
       }
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'requireConversationMembershipByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function getRequiredConversationForAgent(
@@ -133,7 +118,6 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
     accountId: string,
     conversationId: string,
   ): Promise<{ id: string; type: string; name: string | null }> {
-    try {
       await requireConversationMembershipByAccount(accountId, conversationId);
       const conversation = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, conversationId),
@@ -143,10 +127,6 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
         throw new ConversationNotFoundError(conversationId);
       }
       return conversation;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-service-helpers', level: 'error', message: 'getRequiredConversationForAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function getRequiredGroupForAgent(

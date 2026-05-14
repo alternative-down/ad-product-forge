@@ -45,12 +45,7 @@ export function createCredentialsOps(ctx: OpsContext) {
 
   async function getInstallationOctokit(agentId: string) {
     let credentials;
-    try {
       credentials = await getActiveCredentials(agentId);
-    } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     return await ctx.createInstallationOctokit(credentials.installationId);
   }
 

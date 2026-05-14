@@ -55,14 +55,9 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/create',
     handler: async (request) => {
-      try {
         const body = parseJsonBody(request.bodyText, createRoleSchema);
         const result = await capabilities.createRole({ name: body.name, description: body.description });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'createRole failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
     },
   });
 
@@ -72,15 +67,8 @@ export function registerRoleOps(
     path: '/admin/roles/update',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateRoleSchema);
-      try {
         const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: `updateRole failed: ${err}` });
-        if (msg.startsWith('Role not found')) return jsonResponse({ error: msg }, 404);
-        throw err;
-      }
     },
   });
 

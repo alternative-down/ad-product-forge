@@ -29,13 +29,8 @@ export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
 
   async function getProvider(provider: PaymentProviderType) {
-    try {
       const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
       return rows[0] ?? null;
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get payment provider', context: { provider, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
   }
 
   async function upsertProvider(input: {
@@ -46,16 +41,11 @@ export function createPaymentReceivablesStore(db: Database) {
     configJson?: Record<string, unknown>;
   }) {
     const now = Date.now();
-    try {
       const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, input.provider)).all();
       if (rows.length > 0) {
         await db.update(paymentProviders).set({ apiKeyEncrypted: input.apiKeyEncrypted, webhookSecretEncrypted: input.webhookSecretEncrypted, isActive: input.isActive, configJson: input.configJson ?? null, updatedAt: now }).where(eq(paymentProviders.provider, input.provider));
         return rows[0].id;
       }
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to upsert payment provider', context: { provider: input.provider, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     const id = createId();
     await db.insert(paymentProviders).values({
       id,
@@ -93,15 +83,10 @@ export function createPaymentReceivablesStore(db: Database) {
       .limit(1);
 
     if (existing[0] != null) {
-      try {
         await db
           .update(paymentCustomers)
           .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
           .where(eq(paymentCustomers.id, existing[0].id));
-      } catch (err) {
-        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update payment customer', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err } });
-        throw err;
-      }
       return existing[0].id;
     }
   }
@@ -130,7 +115,6 @@ export function createPaymentReceivablesStore(db: Database) {
       .limit(1);
 
     if (existing[0] != null) {
-      try {
         await db
           .update(paymentSubscriptions)
           .set({
@@ -142,10 +126,6 @@ export function createPaymentReceivablesStore(db: Database) {
             updatedAt: now,
           })
           .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId));
-      } catch (err) {
-        forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to update subscription', context: { providerSubscriptionId: input.providerSubscriptionId, error: err } });
-        throw err;
-      }
       return existing[0].id;
     }
   }
@@ -161,12 +141,7 @@ export function createPaymentReceivablesStore(db: Database) {
         ),
       )
       .limit(1);
-    try {
       return rows[0] ?? null;
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get subscription by provider id', context: { providerSubscriptionId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
   }
 
   async function listRecentTransactions(provider: PaymentProviderType, limit = 20) {
@@ -176,24 +151,14 @@ export function createPaymentReceivablesStore(db: Database) {
       .where(eq(paymentTransactions.provider, provider))
       .orderBy(desc(paymentTransactions.createdAt))
       .limit(limit);
-    try {
       return rows;
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to list recent transactions', context: { provider, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
   }
 
   async function getTransactionsBySubscription(subscriptionId: string) {
-    try {
       return await db
         .select()
         .from(paymentTransactions)
         .where(eq(paymentTransactions.subscriptionId, subscriptionId));
-    } catch (err) {
-      forgeDebug({ scope: 'finance', level: 'info', message: 'Failed to get transactions by subscription', context: { subscriptionId, error: err } });
-      throw err;
-    }
   }
 
   return {

@@ -142,12 +142,7 @@ export async function generateHiredAgentInstructions(
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
   let existingRoles;
-  try {
     existingRoles = await db.query.agentRoles.findMany();
-  } catch (err) {
-    forgeDebug({ scope: 'agent-hiring', level: 'error', message: 'hireAgent: read agentRoles failed', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
   const existingRoleNamesById = new Map(existingRoles.map((role) => [role.id, role.name]));
   const existingAgents = await db.query.agents.findMany({
     columns: {

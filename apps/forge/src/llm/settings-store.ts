@@ -101,14 +101,9 @@ export function createLlmSettingsStore(db: Database) {
   }
 
   async function getDefaultsRow() {
-    try {
       return await db.query.systemLlmDefaults.findFirst({
         where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
       });
-    } catch (err) {
-      forgeDebug("llm", "Failed to get LLM defaults row", { error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   return {

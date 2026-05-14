@@ -50,7 +50,6 @@ export async function validateHireAgentInput(
   | { valid: true; roleId: string; roleName: string; roleDescription: string | undefined }
   | { valid: false; error: string; hint?: string }
 > {
-  try {
     const role = await capabilities.getRole(roleId);
 
     if (!role) {
@@ -82,8 +81,4 @@ export async function validateHireAgentInput(
       roleName: role.name,
       roleDescription: role.description ?? undefined,
     };
-  } catch (err) {
-    forgeDebug({ scope: 'hiring-validators', level: 'error', message: 'validateHireAgentInput failed', context: { error: err instanceof Error ? err.message : String(err) }});
-    throw err;
-  }
 }

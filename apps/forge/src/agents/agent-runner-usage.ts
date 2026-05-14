@@ -21,7 +21,6 @@ export function createAgentRunnerUsage(input: {
   runtime: InternalAgentRuntime;
 }) {
   async function estimateStepCostUsd() {
-    try {
       if (!input.runtime.modelProfileId) {
         forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: 'agent-runner-usage: validation/requirement failed' });
         throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
@@ -56,10 +55,6 @@ export function createAgentRunnerUsage(input: {
           + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
         * pricing.contractCostMultiplier
       );
-    } catch (err) {
-      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: 'estimateStepCostUsd failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function recordAgentStep(
@@ -68,7 +63,6 @@ export function createAgentRunnerUsage(input: {
     cachedInputTokens: number,
     outputTokens: number,
   ) {
-    try {
       if (!input.runtime.modelProfileId) {
         forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: 'agent-runner-usage: validation/requirement failed' });
         throw new Error(`Agent runtime is missing primary model profile: ${input.runtime.id}`);
@@ -104,10 +98,6 @@ export function createAgentRunnerUsage(input: {
         contractCostMultiplier: pricing.contractCostMultiplier,
         costUsd,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: 'recordAgentStep failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function recordObservationalMemorySteps(

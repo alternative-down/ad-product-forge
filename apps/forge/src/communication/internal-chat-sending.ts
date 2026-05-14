@@ -97,14 +97,9 @@ export function createChatSending(deps: SendingDeps) {
     let resolvedReplyTo: string | null = null;
     if (input.replyToMessageId) {
       let parentMessage;
-      try {
         parentMessage = await db.query.internalChatMessages.findFirst({
           where: eq(internalChatMessages.id, input.replyToMessageId),
         });
-      } catch (err) {
-        forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: '[internal-chat-sending] sendMessage replyToMessageId lookup failed', context: { error: err instanceof Error ? err.message : String(err), replyToMessageId: input.replyToMessageId } });
-        throw err;
-      }
       if (!parentMessage) {
         forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'reply target message not found', context: { replyToMessageId: input.replyToMessageId } });
         throw new Error('Reply target message not found: ' + input.replyToMessageId);
@@ -118,16 +113,10 @@ export function createChatSending(deps: SendingDeps) {
 
     const messageId = createId();
     let members;
-    try {
       members = await db.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, conversation.id),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage findMany members failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
-    try {
       await db.insert(internalChatMessages).values({
         id: messageId,
         conversationId: conversation.id,
@@ -136,10 +125,6 @@ export function createChatSending(deps: SendingDeps) {
         replyToMessageId: resolvedReplyTo,
         createdAt: now,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage insert failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     await attachments.storeMessageAttachments(messageId, input.attachments);
 
     const accountIds = members.map((m) => m.accountId);
@@ -153,26 +138,16 @@ export function createChatSending(deps: SendingDeps) {
       }));
 
     if (readRows.length > 0) {
-      try {
         await db.insert(internalChatMessageReads).values(readRows);
-      } catch (err) {
-        forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage insert reads failed', context: { messageId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
     }
 
     await db
-    try {
       await db
         .update(internalChatConversations)
         .set({
           updatedAt: now,
         })
         .where(eq(internalChatConversations.id, conversation.id));
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'sendMessage update conversation failed', context: { conversationId: conversation.id, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
 
     const author = await accounts.getRequiredAccount(input.accountId);

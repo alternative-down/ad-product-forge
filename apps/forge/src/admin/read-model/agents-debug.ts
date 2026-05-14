@@ -55,12 +55,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
     input: AgentLongTermMemoryRecallDebugSearchInput,
   ) {
     let agent;
-    try {
       agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-agents-debug', level: 'error', message: '[admin-read-model-agents-debug] debugAgentLongTermMemoryRecallSearch agent lookup failed', context: { error: err instanceof Error ? err.message : String(err), agentId } });
-      throw err;
-    }
     if (!agent) return null;
     const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId, input);
     return { ltmRecall };

@@ -252,7 +252,6 @@ export function createAgentLongTermMemory(input: {
       observationCount: payload.observations.length,
     } });
 
-    try {
       await fs.rm(tempPackagePath, { recursive: true, force: true });
       await fs.mkdir(tempPackagePath, { recursive: true });
       await fs.writeFile(
@@ -306,15 +305,6 @@ export function createAgentLongTermMemory(input: {
       await writeState(state);
       await markRecallIndexDirty('checkpoint-write');
       await refreshRecallIndex?.();
-    } catch (err) {
-      await fs.rm(tempPackagePath, { recursive: true, force: true }).catch(() => {/* ignore */});
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'writeCheckpointPackage failed', context: {
-        agentId: input.agentId,
-        packageId,
-        error: err instanceof Error ? err.message : String(err),
-      } });
-      throw err;
-    }
 
     forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write complete', context: {
       agentId: input.agentId,

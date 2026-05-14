@@ -213,7 +213,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
 
     let client: { url: string };
-    try {
       const { createClient } = await import('@libsql/client');
       const c = createClient({ url: `file:${agentDatabasePath}` });
       c.execute('PRAGMA foreign_keys = ON');
@@ -294,10 +293,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
               orderBy: [desc(agentExecutionSteps.createdAt)],
               limit: 6,
             });
-          } catch (err) {
-            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgents: read steps failed', context: { agentId: agent.id, error: err instanceof Error ? err.message : String(err) } });
-            throw err;
-          }
           return [agent.id, steps] as const;
         }),
       ),
@@ -434,12 +429,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
   async function getAgent(agentId: string): Promise<AgentDetail | null> {
     let agent;
-    try {
       agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getAgent: read agent failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     if (!agent) return null;
 
     const loadedAgent = registry.get(agentId) as { runner?: { getSnapshot: () => unknown } } | undefined;
@@ -468,12 +458,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
     let agentMcpServerRows;
     if (mcpServerIds.length > 0) {
-      try {
         agentMcpServerRows = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, mcpServerIds) });
-      } catch (err) {
-        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getAgent: read mcpServerConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
     } else {
       agentMcpServerRows = [];
     }
@@ -483,7 +468,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       const currentPeriodStart = new Date();
       currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
       let steps;
-      try {
         steps = await db.query.agentExecutionSteps.findMany({
           where: and(
             eq(agentExecutionSteps.agentId, agentId),
@@ -491,10 +475,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
           ),
           columns: { costUsd: true },
         });
-      } catch (err) {
-        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getAgent: read steps for spend failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
       spentUsd = steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
     }
 

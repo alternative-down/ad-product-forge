@@ -22,7 +22,6 @@ export async function adjustAgentContractBudget(
 
   // Get the active contract
   let activeContract;
-  try {
     activeContract = await db.query.agentExecutionContracts.findFirst({
       where: and(
         eq(agentExecutionContracts.agentId, input.agentId),
@@ -30,15 +29,6 @@ export async function adjustAgentContractBudget(
         gte(agentExecutionContracts.endsAt, now),
       ),
     });
-  } catch (err) {
-    forgeDebug({
-      scope: 'agent-contract-budget',
-      level: 'error',
-      agentId: input.agentId,
-      message: `Failed to query active contract: ${err instanceof Error ? err.message : String(err)}`,
-    });
-    throw err;
-  }
 
   if (!activeContract) {
     forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: no active contract', context: { agentId: input.agentId } });
@@ -63,18 +53,7 @@ export async function adjustAgentContractBudget(
   // Upward adjustment (increase budget) - requires company cash
   if (budgetDelta > 0) {
     let currentBalanceUsd;
-    try {
       currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
-    } catch (err) {
-      forgeDebug({
-        scope: 'agent-contract-budget',
-        level: 'error',
-        agentId: input.agentId,
-        contractId: activeContract.id,
-        message: `Failed to get company cash balance: ${err instanceof Error ? err.message : String(err)}`,
-      });
-      throw err;
-    }
 
     if (currentBalanceUsd < budgetDelta) {
       forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: insufficient company cash' });
@@ -82,7 +61,6 @@ export async function adjustAgentContractBudget(
     }
 
     // Deduct from company cash and update budget atomically
-    try {
       await db.transaction(async (tx) => {
         await companyCashOperations.recordCashOut(
           {
@@ -100,17 +78,6 @@ export async function adjustAgentContractBudget(
           .set({ budgetUsd: input.newBudgetUsd })
           .where(eq(agentExecutionContracts.id, activeContract.id));
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'agent-contract-budget',
-        level: 'error',
-        agentId: input.agentId,
-        contractId: activeContract.id,
-        message: `Budget increase transaction failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { budgetDelta, newBudgetUsd: input.newBudgetUsd },
-      });
-      throw err;
-    }
 
     forgeDebug({
       scope: 'agent-contract-budget',
@@ -133,18 +100,7 @@ export async function adjustAgentContractBudget(
   // Downward adjustment (decrease budget) - requires validation
   const contractStore = createAgentContractStore(db);
   let contractSpend;
-  try {
     contractSpend = await contractStore.getContractSpend(activeContract.id);
-  } catch (err) {
-    forgeDebug({
-      scope: 'agent-contract-budget',
-      level: 'error',
-      agentId: input.agentId,
-      contractId: activeContract.id,
-      message: `Failed to get contract spend: ${err instanceof Error ? err.message : String(err)}`,
-    });
-    throw err;
-  }
 
   // New budget cannot be less than what's already spent
   if (input.newBudgetUsd < contractSpend) {
@@ -156,7 +112,6 @@ export async function adjustAgentContractBudget(
   const refundAmount = Math.abs(budgetDelta);
 
   // Refund unused funds and update budget atomically
-  try {
     await db.transaction(async (tx) => {
       await companyCashOperations.recordCashIn(
         {
@@ -174,17 +129,6 @@ export async function adjustAgentContractBudget(
         .set({ budgetUsd: input.newBudgetUsd })
         .where(eq(agentExecutionContracts.id, activeContract.id));
     });
-  } catch (err) {
-    forgeDebug({
-      scope: 'agent-contract-budget',
-      level: 'error',
-      agentId: input.agentId,
-      contractId: activeContract.id,
-      message: `Budget decrease transaction failed: ${err instanceof Error ? err.message : String(err)}`,
-      context: { refundAmount, newBudgetUsd: input.newBudgetUsd },
-    });
-    throw err;
-  }
 
   forgeDebug({
     scope: 'agent-contract-budget',

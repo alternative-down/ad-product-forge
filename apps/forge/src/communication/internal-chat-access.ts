@@ -32,7 +32,6 @@ export interface InternalChatAccessDeps {
 export function createInternalChatAccess(db: Database, deps: InternalChatAccessDeps) {
 
   async function getRequiredExternalAccount(accountId: string) {
-    try {
       const account = await deps.getRequiredAccount(accountId);
 
       if (account.agentId) {
@@ -41,14 +40,9 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
       }
 
       return account;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-access', level: 'error', message: '[internal-chat-access] getRequiredExternalAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function getRequiredAccountBySlug(slug: string) {
-    try {
       const account = await deps.getAccountBySlug(slug);
 
       if (!account) {
@@ -57,10 +51,6 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
       }
 
       return account;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-access', level: 'error', message: '[internal-chat-access] getRequiredAccountBySlug failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   return { getRequiredExternalAccount, getRequiredAccountBySlug };

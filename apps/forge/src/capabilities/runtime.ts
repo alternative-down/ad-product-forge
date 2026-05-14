@@ -17,7 +17,6 @@ export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfi
     return;
   }
 
-  try {
     const runtime = await loadAgent(db, {
       ...config,
       agentId,
@@ -25,14 +24,9 @@ export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfi
 
     await registry.add(db, runtime);
     forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Agent reloaded', context: { agentId } });
-  } catch (error) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to reload agent', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
-    throw error;
-  }
 }
 
 export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfig, roleId: string) {
-  try {
     const assignedAgents = await db.query.agents.findMany({
       where: eq(agents.roleId, roleId),
       columns: {
@@ -43,10 +37,6 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
     forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Reloading agents for role', context: { roleId, agentCount: assignedAgents.length } });
 
     await Promise.all(assignedAgents.map((agent) => reloadAgentIfLoaded(db, config, agent.id)));
-  } catch (error) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'Failed to reload agents for role', context: { roleId, error: error instanceof Error ? error.message : String(error) } });
-    throw error;
-  }
 }
 
 export async function changeAgentRole(input: {
@@ -57,14 +47,9 @@ export async function changeAgentRole(input: {
   roleId: string;
 }) {
   let actorAgent;
-  try {
     actorAgent = await input.db.query.agents.findFirst({
       where: eq(agents.id, input.actorAgentId),
     });
-  } catch (err) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole read actor failed', context: { actorAgentId: input.actorAgentId, error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
 
   if (!actorAgent) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: actor agent not found', context: { actorAgentId: input.actorAgentId } });
@@ -72,14 +57,9 @@ export async function changeAgentRole(input: {
   }
 
   let targetAgent;
-  try {
     targetAgent = await input.db.query.agents.findFirst({
       where: eq(agents.id, input.targetAgentId),
     });
-  } catch (err) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole read target failed', context: { targetAgentId: input.targetAgentId, error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
 
   if (!targetAgent) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
@@ -87,20 +67,14 @@ export async function changeAgentRole(input: {
   }
 
   let agentRole;
-  try {
     agentRole = await input.db.query.agentRoles.findFirst({
       where: eq(agentRoles.id, input.roleId),
     });
-  } catch (err) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole read role failed', context: { roleId: input.roleId, error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
 
   if (!agentRole) {
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
-  try {
     await input.db
       .update(agents)
       .set({
@@ -108,10 +82,6 @@ export async function changeAgentRole(input: {
         updatedAt: Date.now(),
       })
       .where(eq(agents.id, input.targetAgentId));
-  } catch (err) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: 'changeAgentRole update failed', context: { targetAgentId: input.targetAgentId, error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
 
   forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Changing agent role', context: { actorAgentId: input.actorAgentId, targetAgentId: input.targetAgentId, roleId: input.roleId } });
 

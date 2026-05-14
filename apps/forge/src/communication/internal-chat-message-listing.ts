@@ -29,7 +29,6 @@ export function createMessageListing(db: Database, deps: ConversationListingDeps
     content: string; attachments: unknown[]; unread: boolean; createdAt: string; authorDisplayName: string;
     replyToMessageId: string | null;
   }>> {
-    try {
       const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
@@ -143,10 +142,6 @@ export function createMessageListing(db: Database, deps: ConversationListingDeps
       }
 
       return result;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] getMessages failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function getMessagesByAccount(input: {
@@ -162,7 +157,6 @@ export function createMessageListing(db: Database, deps: ConversationListingDeps
     content: string; attachments: unknown[]; unread: boolean; createdAt: string; authorDisplayName: string;
     replyToMessageId: string | null;
   }>> {
-    try {
       await deps.getRequiredExternalAccount(input.accountId);
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
@@ -254,10 +248,6 @@ export function createMessageListing(db: Database, deps: ConversationListingDeps
       }
 
       return result;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] getMessagesByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   return {

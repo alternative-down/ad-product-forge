@@ -123,12 +123,7 @@ export function createSystemIntegrationStore(db: Database) {
   }
 
   async function deleteIntegration(providerType: SystemIntegrationProviderType) {
-    try {
       await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
-    } catch (err) {
-      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] deleteIntegration failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function getEnabledIntegration(providerType: SystemIntegrationProviderType) {

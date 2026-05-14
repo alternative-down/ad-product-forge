@@ -90,7 +90,6 @@ async function rollbackHire(
 ) {
   // Undo external resources in reverse order of creation
   if (hasHeartbeat || hasLoadAgent) {
-    try {
       await schedules.removeAgent(agentId);
     } catch (e) {
       forgeDebug({
@@ -231,39 +230,10 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         roleName: validated.roleName,
         roleDescription: validated.roleDescription,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      // No external ops succeeded yet — undo DB records and email only
-      await rollbackHireDbAndEmail(
-        agentId,
-        provisionedMailbox,
-        validated.emailMailboxes,
-        tx,
-      );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
 
-    try {
       await validated.schedules.createHeartbeatSchedule(agentId);
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      await rollbackHire(
-        agentId,
-        provisionedMailbox,
-        validated.emailMailboxes,
-        false, // hasHeartbeat
-        false, // hasLoadAgent
-        validated.schedules,
-        validated.internalChat,
-        tx,
-      );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
 
     let runtime;
-    try {
       runtime = await loadAgent(db, {
         agentId,
         workspaceBasePath: validated.workspaceBasePath,
@@ -273,39 +243,8 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         schedules: validated.schedules,
         internalChat: validated.internalChat,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      await rollbackHire(
-        agentId,
-        provisionedMailbox,
-        validated.emailMailboxes,
-        true, // hasHeartbeat
-        false, // hasLoadAgent
-        validated.schedules,
-        validated.internalChat,
-        tx,
-      );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
 
-    try {
       await getInternalAgentRegistry().add(db, runtime);
-    } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      await rollbackHire(
-        agentId,
-        provisionedMailbox,
-        validated.emailMailboxes,
-        true, // hasHeartbeat
-        true, // hasLoadAgent
-        validated.schedules,
-        validated.internalChat,
-        tx,
-      );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   });
 
   return {

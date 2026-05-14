@@ -58,7 +58,6 @@ export function createAdminReadModel(input: {
   const financeRM = createFinanceReadModel({ db });
 
   async function getApplicationMigrations() {
-    try {
       const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
       const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
         entries: Array<{
@@ -96,10 +95,6 @@ export function createAdminReadModel(input: {
           };
         }),
       };
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[admin-readmodel] getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   return {

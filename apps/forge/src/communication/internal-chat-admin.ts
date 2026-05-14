@@ -49,14 +49,9 @@ export function createInternalChatAdmin(db: Database) {
       roleDescription: input.roleDescription,
     });
     let existing;
-    try {
       existing = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.agentId, input.agentId),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-admin', level: 'error', message: '[internal-chat-admin] registerAgentAccount: lookup failed', context: { error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
     if (existing) {
       await db
@@ -198,22 +193,12 @@ export function createInternalChatAdmin(db: Database) {
   // ── Account listing ────────────────────────────────────────────────────
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
-    try {
       if (input.excludeAgentId) {
         return await db.query.internalChatAccounts.findMany({
           where: ne(internalChatAccounts.agentId, input.excludeAgentId),
         });
       }
       return await db.query.internalChatAccounts.findMany({});
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-admin',
-        level: 'error',
-        message: `listAccounts failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { excludeAgentId: input.excludeAgentId },
-      });
-      throw err;
-    }
   }
 
   // ── Admin read-only views ──────────────────────────────────────────────

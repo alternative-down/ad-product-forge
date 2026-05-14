@@ -25,7 +25,6 @@ export function createChatAttachments(
       return;
     }
 
-    try {
       await db.insert(internalChatMessageAttachments).values(
         attachments.map((attachment, index) => ({
           id: createId(),
@@ -38,19 +37,9 @@ export function createChatAttachments(
           createdAt: Date.now(),
         })),
       );
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-attachments',
-        level: 'error',
-        message: `storeMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { messageId, attachmentCount: attachments.length },
-      });
-      throw err;
-    }
   }
 
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
-    try {
       const rows = await db.query.internalChatMessageAttachments.findMany({
         where: eq(internalChatMessageAttachments.messageId, messageId),
         orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
@@ -62,15 +51,6 @@ export function createChatAttachments(
         contentType: row.contentType ?? resolveContentType(row.name),
         sizeBytes: row.sizeBytes,
       }));
-    } catch (err) {
-      forgeDebug({
-        scope: 'internal-chat-attachments',
-        level: 'error',
-        message: `readMessageAttachments failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { messageId },
-      });
-      throw err;
-    }
   }
 
   async function readMessageAttachment(

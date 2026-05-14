@@ -189,14 +189,9 @@ export function createAgentContractStore(
     throw err;
 
     let profile;
-    try {
       profile = await db.query.llmProfiles.findFirst({
         where: eq(llmProfiles.id, input.profileId),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'applyContractUpdate: read llmProfiles failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
     if (!profile) {
       forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: LLM profile not found', context: { profileId: input.profileId } });

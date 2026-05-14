@@ -60,7 +60,6 @@ export function createInternalChatAccountOps(
     conversationKey: string;
     name: string;
   }) {
-    try {
       const existing = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, input.conversationKey),
       });
@@ -100,10 +99,6 @@ export function createInternalChatAccountOps(
         },
         createdAt: new Date(now).toISOString(),
       };
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] createExternalChatGroup failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   /**
@@ -118,7 +113,6 @@ export function createInternalChatAccountOps(
     name: string;
     memberAccountIds: string[];
   }) {
-    try {
       // Check if group already exists (outside transaction — not worth locking early)
       const existing = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, input.conversationKey),
@@ -196,16 +190,11 @@ export function createInternalChatAccountOps(
         })),
         createdAt: new Date(now).toISOString(),
       };
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] createExternalChatGroupWithMembers failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
   async function ensureDirectConversationByAccount(input: {
     accountId: string;
     participantAccountId: string;
   }) {
-    try {
       await deps.getRequiredExternalAccount(input.accountId);
       await deps.getRequiredAccount(input.participantAccountId);
       const conversation = await deps.ensureDirectConversation(input.accountId, input.participantAccountId);
@@ -214,10 +203,6 @@ export function createInternalChatAccountOps(
         throw new Error('Direct conversation creation failed');
       }
       return { conversationId: conversation.id, conversationKey: conversation.id };
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] ensureDirectConversationByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function addMemberToGroupByAccount(input: {
@@ -226,7 +211,6 @@ export function createInternalChatAccountOps(
     participantAccountId: string;
     role?: string;
   }) {
-    try {
       const group = await deps.getRequiredGroupForAccount(input.accountId, input.groupId);
       const participant = await deps.getRequiredAccount(input.participantAccountId);
 
@@ -249,10 +233,6 @@ export function createInternalChatAccountOps(
       });
 
       return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] addMemberToGroupByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function updateMemberRoleByAccount(input: {
@@ -261,7 +241,6 @@ export function createInternalChatAccountOps(
     participantAccountId: string;
     role: string;
   }) {
-    try {
       await deps.getRequiredGroupForAccount(input.accountId, input.groupId);
       await db
         .update(internalChatConversationMembers)
@@ -271,10 +250,6 @@ export function createInternalChatAccountOps(
           eq(internalChatConversationMembers.accountId, input.participantAccountId),
         ));
       return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] updateMemberRoleByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function removeMemberFromGroupByAccount(input: {
@@ -282,7 +257,6 @@ export function createInternalChatAccountOps(
     groupId: string;
     participantAccountId: string;
   }) {
-    try {
       await deps.getRequiredGroupForAccount(input.accountId, input.groupId);
       await db
         .delete(internalChatConversationMembers)
@@ -291,10 +265,6 @@ export function createInternalChatAccountOps(
           eq(internalChatConversationMembers.accountId, input.participantAccountId),
         ));
       return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] removeMemberFromGroupByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   async function updateGroupByAccount(input: {
@@ -303,7 +273,6 @@ export function createInternalChatAccountOps(
     name?: string;
     conversationKey?: string;
   }) {
-    try {
       const group = await deps.getRequiredGroupForAccount(input.accountId, input.groupId);
       const now = Date.now();
       await db
@@ -311,10 +280,6 @@ export function createInternalChatAccountOps(
         .set({ name: input.name ?? group.name, updatedAt: now })
         .where(eq(internalChatConversations.id, input.groupId));
       return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: '[internal-chat-account-ops] updateGroupByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
   }
 
   return {
