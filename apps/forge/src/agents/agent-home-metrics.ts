@@ -264,75 +264,65 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
 }
 
 async function readLatestThreadDetails(workspaceBasePath: string, agentId: string) {
-    const threadId = toMastraSafeIdentifier(agentId);
-    const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
-    const client: ClosableLibsqlClient = createClient({
-      url: `file:${agentDatabasePath}`,
+  const threadId = toMastraSafeIdentifier(agentId);
+  const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
+  const client: ClosableLibsqlClient = createClient({
+    url: `file:${agentDatabasePath}`,
+  });
+  client.execute('PRAGMA foreign_keys = ON');
+  const conversationStore = new LibsqlConversationStore({
+    client,
+    tablePrefix: threadId,
+  });
+
+  try {
+    const messages = await conversationStore.listMessages({
+      threadId,
+      limit: 8,
+      order: 'desc',
     });
-    client.execute('PRAGMA foreign_keys = ON');
-    const conversationStore = new LibsqlConversationStore({
-      client,
-      tablePrefix: threadId,
-    });
+    const mergedMessages = mergeToolLogMessages([...messages].reverse()).reverse();
+    let preview: string | null = null;
+    let toolBadge: { icon: string; label: string } | null = null;
 
-    try {
-      const messages = await conversationStore.listMessages({
-        threadId,
-        limit: 8,
-        order: 'desc',
-      });
-      const mergedMessages = mergeToolLogMessages([...messages].reverse()).reverse();
-      let preview: string | null = null;
-      let toolBadge: { icon: string; label: string } | null = null;
-
-      for (const message of mergedMessages) {
-        if (message.role !== 'assistant') {
-          continue;
-        }
-
-        const content = {
-          parts: [
-            ...message.parts.map((part) =>
-              part.type === 'text' || part.type === 'reasoning'
-                ? {
-                    type: part.type,
-                    text: part.text,
-                  }
-                : part),
-            ...buildThreadToolInvocationParts(message.metadata),
-          ],
-        };
-
-        preview ??= extractLatestMessagePreview(content);
-        toolBadge ??= extractLatestMessageToolBadge(content);
-
-        if (preview) {
-          break;
-        }
+    for (const message of mergedMessages) {
+      if (message.role !== 'assistant') {
+        continue;
       }
 
-      return {
-        preview,
-        toolBadge,
+      const content = {
+        parts: [
+          ...message.parts.map((part) =>
+            part.type === 'text' || part.type === 'reasoning'
+              ? {
+                  type: part.type,
+                  text: part.text,
+                }
+              : part),
+          ...buildThreadToolInvocationParts(message.metadata),
+        ],
       };
-    } finally {
-      await closeLibsqlClient(client);
+
+      preview ??= extractLatestMessagePreview(content);
+      toolBadge ??= extractLatestMessageToolBadge(content);
+
+      if (preview) {
+        break;
+      }
     }
-  } catch (error) {
-    forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId, message: 'Failed to load latest thread details', context: { error: error instanceof Error ? error.message : String(error) } });
+
     return {
-      preview: null,
-      toolBadge: null,
+      preview,
+      toolBadge,
     };
+  } finally {
+    await closeLibsqlClient(client);
   }
 }
-
 async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
-  let agent;
-  try {
-    agent = await db.query.agents.findFirst({
-      where: eq(agents.id, agentId),
-    });
+  const agent = await db.query.agents.findFirst({
+    where: eq(agents.id, agentId),
+  });
 
   if (!agent) {
     return null;
@@ -353,17 +343,12 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
   try {
     const settings = await systemSettings.getSettings();
 
-    try {
-      await migrateLegacyCheckpointedOmState({
-        db,
-        agentId,
-        threadId: mastraAgentId,
-        conversationStore,
-      });
-    } catch (error) {
-      // Migration failure is non-fatal: state may already be up-to-date or in a compatible format
-      forgeDebug({ scope: 'agent-home-metrics', level: 'warn', agentId, message: 'Legacy checkpointed OM state migration failed', context: { error: error instanceof Error ? error.message : String(error) } });
-    }
+    await migrateLegacyCheckpointedOmState({
+      db,
+      agentId,
+      threadId: mastraAgentId,
+      conversationStore,
+    });
 
     const operationalMemoryState = await readOperationalMemoryState({
       threadId: mastraAgentId,
@@ -577,3 +562,5 @@ export async function readAgentHomeMetricSnapshot(input: {
     updatedAt: agent.updatedAt,
   } satisfies AgentHomeMetricSnapshot;
 }
+
+
