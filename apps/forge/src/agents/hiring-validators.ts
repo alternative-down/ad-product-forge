@@ -83,7 +83,7 @@ export async function validateHireAgentInput(
       roleDescription: role.description ?? undefined,
     };
   } catch (err) {
-    forgeDebug({ scope: 'hiring-validators', level: 'error', message: '[hiring-validators] validateHireAgentInput failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'hiring-validators', level: 'error', message: 'validateHireAgentInput failed', context: { error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }

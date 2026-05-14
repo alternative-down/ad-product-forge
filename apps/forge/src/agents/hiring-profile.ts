@@ -17,7 +17,7 @@ export async function buildHiredAgentProfile(db: Database, input: {
       omModelProfileId: defaults.omProfile.profileId,
     };
   } catch (err) {
-    forgeDebug({ scope: 'hiring-profile', level: 'error', message: '[hiring-profile] buildHiredAgentProfile failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'hiring-profile', level: 'error', message: 'buildHiredAgentProfile failed', context: { error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }

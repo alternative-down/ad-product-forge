@@ -74,7 +74,7 @@ export async function countSkillFiles(skillRoot: string): Promise<number> {
 
     return fileCount;
   } catch (err) {
-    forgeDebug({ scope: 'skills-shared', level: 'error', message: '[skills-shared] countSkillFiles failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'skills-shared', level: 'error', message: 'countSkillFiles failed', context: { error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }
