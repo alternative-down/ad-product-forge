@@ -61,7 +61,7 @@ export function registerDashboardRoutes({
             recentMovements: recentResult.items,
           },
         });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Dashboard overview failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

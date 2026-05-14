@@ -33,7 +33,7 @@ export function registerConfigOps(
           manifestConfig: body.manifestConfig,
         });
         return jsonResponse({ success: true, agentId: body.agentId, provisioning });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/github-manifest-config/update route handler failed', context: { path: '/admin/agent/github-manifest-config/update', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -68,7 +68,7 @@ export function registerConfigOps(
           .where(sql`id = ${body.agentId}`);
         await reloadAgentIfLoaded(db, input.loaderConfig as any, body.agentId);
         return jsonResponse({ success: true, agentId: body.agentId });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/update-config route handler failed', context: { path: '/admin/agent/update-config', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

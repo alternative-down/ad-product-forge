@@ -43,7 +43,7 @@ export function registerAgentSchedulesWriteRoutes(
             };
         const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
         return jsonResponse(schedule, 201);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/create', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -69,7 +69,7 @@ export function registerAgentSchedulesWriteRoutes(
           isActive: body.isActive,
         });
         return jsonResponse(schedule);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/update', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -85,7 +85,7 @@ export function registerAgentSchedulesWriteRoutes(
         const body = parseJsonBody(request.bodyText, deleteScheduleSchema);
         const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
         return jsonResponse(result);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/delete', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

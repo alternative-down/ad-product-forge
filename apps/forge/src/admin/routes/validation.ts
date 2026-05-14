@@ -24,7 +24,7 @@ export function parseRequest<T>(
   try {
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
-  } catch (error) {
+  } catch (err) {
     forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: error instanceof Error ? error.message : String(error) }});
     return {
       success: false,
@@ -47,7 +47,7 @@ export function parseQueryParams<T>(
     });
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
-  } catch (error) {
+  } catch (err) {
     forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: error instanceof Error ? error.message : String(error) }});
     return {
       success: false,

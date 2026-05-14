@@ -80,7 +80,7 @@ export function registerAgentOperationRoutes(
           timestamp,
         });
         return jsonResponse({ success: true });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent wake route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -110,7 +110,7 @@ export function registerAgentOperationRoutes(
           conversationKey: sent.conversationKey,
           messageId: sent.messageId,
         });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Internal chat send route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

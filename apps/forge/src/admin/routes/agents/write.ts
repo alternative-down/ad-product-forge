@@ -51,7 +51,7 @@ export function registerAgentWriteRoutes(
           agentId: body.agentId,
           includeLongTermMemoryThread: body.includeLongTermMemoryThread,
         });
-      } catch (error) {
+      } catch (err) {
         if (error instanceof ZodError) throw error;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -71,7 +71,7 @@ export function registerAgentWriteRoutes(
             query: body.query,
           }),
         );
-      } catch (error) {
+      } catch (err) {
         if (error instanceof ZodError) throw error;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);

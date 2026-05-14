@@ -56,7 +56,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         const healthcheck = await buildSystemHealthcheck(registry, readModel);
         return jsonResponse(healthcheck);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/healthcheck', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -69,7 +69,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     handler: async () => {
       try {
         return jsonResponse(await integrations.listIntegrations());
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'System integrations route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -83,7 +83,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     handler: async () => {
       try {
         return jsonResponse(await systemSettings.getSettings());
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'System settings route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -102,7 +102,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           llmModelPrices.listPrices(),
         ]);
         return jsonResponse({ profiles, defaults, prices });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -132,7 +132,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           }))
           .sort((a, b) => a.name.localeCompare(b.name));
         return jsonResponse(formatted);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -145,7 +145,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     handler: async () => {
       try {
         return jsonResponse(await readModel.getApplicationMigrations());
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'System migrations route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -159,7 +159,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     handler: async () => {
       try {
         return jsonResponse(await listGlobalSkills(workspaceBasePath));
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'System skills route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -173,7 +173,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     handler: async () => {
       try {
         return jsonResponse(await buildOauthState());
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'System oauth route failed', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

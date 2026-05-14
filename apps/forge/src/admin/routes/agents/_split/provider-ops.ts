@@ -29,7 +29,7 @@ export function registerProviderOps(
       try {
         const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
         return jsonResponse({ success: true, agentId: body.agentId });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/upsert route handler failed', context: { path: '/admin/agent/providers/upsert', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -44,7 +44,7 @@ export function registerProviderOps(
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
         return jsonResponse({ success: true, agentId: body.agentId });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/delete route handler failed', context: { path: '/admin/agent/providers/delete', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
