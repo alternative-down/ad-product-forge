@@ -7,9 +7,6 @@ import type { HttpHandler } from '../../../http/server';
 import { z } from 'zod';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import {
-  createExternalInternalChatAccountSchema,
-  updateExternalInternalChatAccountSchema,
-  deleteExternalInternalChatAccountSchema,
   createInternalChatConversationSchema,
   sendInternalChatConversationMessageSchema,
   updateInternalChatConversationSchema,
@@ -20,6 +17,7 @@ import {
 } from '../schemas';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createInternalChatSseHandler } from './events';
+import { registerAccountRoutes } from './internal-chat-account-routes';
 import { forgeDebug } from '../debug';
 
 interface Request {
@@ -41,104 +39,9 @@ export function registerInternalChatRoutes(
     handler: createInternalChatSseHandler(internalChat),
   });
 
-  // GET /admin/internal-chat/accounts
-  httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/internal-chat/accounts',
-    handler: async () => {
-      try {
-        const accounts = await internalChat.listAccounts();
-        return jsonResponse(
-          accounts
-            .filter((account) => account.agentId === null)
-            .map((account) => ({
-              accountId: account.id,
-              slug: account.slug,
-              displayName: account.displayName,
-              description: account.description ?? '',
-            })),
-        );
-      } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/accounts', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
-      }
-    },  });
-
-  // GET /admin/internal-chat/contacts
-  httpServer.registerRoute({
-    method: 'GET',
-    path: '/admin/internal-chat/contacts',
-    handler: async () => {
-      try {
-        const accounts = await internalChat.listAccounts();
-        return jsonResponse(
-          accounts.map((account) => ({
-            accountId: account.id,
-            agentId: account.agentId,
-            slug: account.slug,
-            displayName: account.displayName,
-            description: account.description ?? '',
-            isAgent: Boolean(account.agentId),
-          })),
-        );
-      } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/contacts', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
-      }
-    },  });
-
-  // POST /admin/internal-chat/account/create
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/internal-chat/account/create',
-    handler: async (request: Request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
-        return jsonResponse(
-          await internalChat.registerExternalAccount({
-            slug: body.targetKey,
-            displayName: body.name ?? body.targetKey,
-          }),
-        );
-      } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/account/create', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
-      }
-    },  });
-
-  // POST /admin/internal-chat/account/update
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/internal-chat/account/update',
-    handler: async (request: Request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
-        return jsonResponse(
-          await internalChat.updateExternalAccount({
-            accountId: body.accountId,
-            displayName: body.name,
-            webhookUrl: body.webhookUrl,
-          }),
-        );
-      } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/account/update', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
-      }
-    },  });
-
-  // POST /admin/internal-chat/account/delete
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/internal-chat/account/delete',
-    handler: async (request: Request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
-        return jsonResponse(await internalChat.deleteExternalAccount(body));
-      } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/internal-chat/account/delete', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
-      }
-    },  });
+  // GET /admin/internal-chat/accounts, /contacts
+  // POST /admin/internal-chat/account/create, /update, /delete
+  registerAccountRoutes(httpServer, internalChat);
 
   // GET /admin/internal-chat/conversations
   httpServer.registerRoute({

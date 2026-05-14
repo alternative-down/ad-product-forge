@@ -21,14 +21,14 @@ export interface InternalChatRequest {
  * Wraps an HTTP handler with consistent error handling.
  * Logs via forgeDebug and returns a 500 JSON response on failure.
  */
-export function withRouteErrorHandler(
+export function withRouteErrorHandler<Args extends unknown[]>(
   scope: string,
   path: string,
-  handler: () => ReturnType<HttpHandler>,
-): () => ReturnType<HttpHandler> {
-  return () => {
+  handler: (...args: Args) => ReturnType<HttpHandler>,
+): (...args: Args) => ReturnType<HttpHandler> {
+  return (...args: Args) => {
     try {
-      return handler();
+      return handler(...args);
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       forgeDebug({
