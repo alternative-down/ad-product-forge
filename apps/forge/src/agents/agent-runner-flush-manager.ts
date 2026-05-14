@@ -5,8 +5,8 @@
  * Manages flush settings, run-event deduplication, and run-last-messages count.
  */
 import { withTimeout } from '../utils/async';
+import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 
-const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;

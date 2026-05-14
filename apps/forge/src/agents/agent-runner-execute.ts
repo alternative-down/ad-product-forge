@@ -31,7 +31,6 @@ import {
   formatAbsentExecutionError,
 } from './agent-runner-error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
-const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
 
 // ─── State types (same shapes as agent-runner-generate.ts) ────────────────────
 

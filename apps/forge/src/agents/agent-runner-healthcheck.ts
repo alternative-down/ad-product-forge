@@ -8,10 +8,9 @@
  * keeping agent-runner.ts as the sole source of state truth.
  */
 import { withTimeout } from '../utils/async';
+import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
-const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
-const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 
 export type HealthcheckDeps = {
   runtimeId: string;

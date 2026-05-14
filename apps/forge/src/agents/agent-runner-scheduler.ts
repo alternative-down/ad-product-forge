@@ -1,4 +1,5 @@
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
+import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { withTimeout } from '../utils/async';
@@ -11,8 +12,6 @@ import {
 import {
   advanceStepEpoch as epochAdvanceStepEpoch,
 } from './agent-runner-scheduler-epoch';
-const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
-const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
