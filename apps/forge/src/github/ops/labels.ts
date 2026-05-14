@@ -5,12 +5,20 @@
 import type { OpsContext } from './context';
 import { forgeDebug } from '@forge-runtime/core';
 
+const SCOPE = 'github-ops-labels';
+
+function serializeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 export function createLabelsOps(ctx: OpsContext) {
   async function listLabels(agentId: string, input: {
     owner?: string;
     repositoryName: string;
     limit?: number;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('GET /repos/{owner}/{repo}/labels', {
@@ -24,6 +32,10 @@ export function createLabelsOps(ctx: OpsContext) {
         color: label.color,
         default: label.default,
       }));
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'listLabels failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function createLabel(agentId: string, input: {
@@ -33,6 +45,7 @@ export function createLabelsOps(ctx: OpsContext) {
     color: string;
     description?: string;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('POST /repos/{owner}/{repo}/labels', {
@@ -48,6 +61,10 @@ export function createLabelsOps(ctx: OpsContext) {
         color: response.data.color,
         default: response.data.default,
       };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'createLabel failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function updateLabel(agentId: string, input: {
@@ -58,6 +75,7 @@ export function createLabelsOps(ctx: OpsContext) {
     color?: string;
     description?: string;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('PATCH /repos/{owner}/{repo}/labels/{name}', {
@@ -74,6 +92,10 @@ export function createLabelsOps(ctx: OpsContext) {
         color: response.data.color,
         default: response.data.default,
       };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'updateLabel failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function deleteLabel(agentId: string, input: {
@@ -81,6 +103,7 @@ export function createLabelsOps(ctx: OpsContext) {
     repositoryName: string;
     labelName: string;
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       await octokit.request('DELETE /repos/{owner}/{repo}/labels/{name}', {
@@ -89,6 +112,10 @@ export function createLabelsOps(ctx: OpsContext) {
         name: input.labelName,
       });
       return { success: true };
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'deleteLabel failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function addIssueLabels(agentId: string, input: {
@@ -97,6 +124,7 @@ export function createLabelsOps(ctx: OpsContext) {
     issueNumber: number;
     labels: string[];
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
@@ -111,6 +139,10 @@ export function createLabelsOps(ctx: OpsContext) {
         color: label.color,
         default: label.default,
       }));
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'addIssueLabels failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   async function removeIssueLabels(agentId: string, input: {
@@ -119,15 +151,25 @@ export function createLabelsOps(ctx: OpsContext) {
     issueNumber: number;
     labels: string[];
   }) {
+    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
-      await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+      const response = await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels', {
         owner,
         repo: input.repositoryName,
         issue_number: input.issueNumber,
-        labels: input.labels.join(','),
+        labels: input.labels,
       });
-      return { success: true };
+      return response.data.map((label) => ({
+        name: label.name,
+        description: label.description ?? null,
+        color: label.color,
+        default: label.default,
+      }));
+    } catch (err) {
+      forgeDebug({ scope: SCOPE, level: 'error', message: 'removeIssueLabels failed', context: { agentId, error: serializeError(err) } });
+      throw err;
+    }
   }
 
   return {
