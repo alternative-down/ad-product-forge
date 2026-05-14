@@ -75,16 +75,14 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function getTotals() {
-    let rows;
-      rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, roleId: true } });
+    const rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, roleId: true } });
 
     const loadedAgents = registry.list().length;
     const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
     const runningAgents = rows.filter((r) => r.executionState === 'running').length;
     const absentAgents = rows.filter((r) => !r.executionState || r.executionState === 'absent').length;
 
-    let activeContracts;
-      activeContracts = await db.query.agentExecutionContracts.findMany({
+    const activeContracts = await db.query.agentExecutionContracts.findMany({
         where: eq(agentExecutionContracts.isActive, 1),
         columns: { id: true },
       });
@@ -147,8 +145,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   } = conversationsRM;
 
   async function listAgentExecutionSteps(input: { agentId: string; limit: number; offset: number }) {
-    let rows;
-      rows = await db.query.agentExecutionSteps.findMany({
+    const rows = await db.query.agentExecutionSteps.findMany({
         where: eq(agentExecutionSteps.agentId, input.agentId),
         orderBy: desc(agentExecutionSteps.createdAt),
         limit: input.limit,
