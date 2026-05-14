@@ -90,18 +90,8 @@ export function createChatSending(deps: SendingDeps) {
 
     // Guard: reject messages to archived/closed conversations (no-op: closedAt column not in schema)
 
-    // Guard: validate the server-generated timestamp is not absurdly far in the future (clock skew)
-    const ONE_DAY_MS = 86_400_000;
+    // Guard: validate clock skew (no-op: now > now+ONE_DAY_MS always false — clock skew handled at DB schema level)
     const now = Date.now();
-    const maxAcceptable = now + ONE_DAY_MS;
-    if (now > maxAcceptable) {
-      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'invalid timestamp detected' });
-      throw new Error('Invalid timestamp');
-    }
-
-    // NOTE: the above timestamp guard checks `now > maxAcceptable` where
-    // maxAcceptable = now + 86_400s. This condition is always false — the guard
-    // has never fired. Clock skew is handled at the DB schema level.
 
     // Guard: validate replyToMessageId belongs to the same conversation
     let resolvedReplyTo: string | null = null;
