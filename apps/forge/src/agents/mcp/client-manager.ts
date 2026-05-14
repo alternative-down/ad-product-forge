@@ -116,7 +116,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         await previous?.toolset?.dispose();
       } catch (error) {
         hasConnectionFailure = true;
-        forgeDebug({ scope: 'mcp-client', level: 'warn', message: 'Failed to refresh server', context: { serverName: serverConfig.name, agentId: this.agentId, error } });
+        forgeDebug({ scope: 'mcp-client-manager', level: 'warn', message: 'Failed to refresh server', context: { serverName: serverConfig.name, agentId: this.agentId, error } });
       }
     }
 
@@ -170,7 +170,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       return;
     }
 
-    forgeDebug({ scope: 'mcp-client', level: 'warn', message: 'Server disconnected', context: { agentId: this.agentId, error } });
+    forgeDebug({ scope: 'mcp-client-manager', level: 'warn', message: 'Server disconnected', context: { agentId: this.agentId, error } });
     this.servers.set(serverId, {
       ...server,
       toolset: null,

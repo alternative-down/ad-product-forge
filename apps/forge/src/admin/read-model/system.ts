@@ -89,7 +89,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
         })),
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-readmodel-system', level: 'error', message: 'listRoles failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: 'listRoles failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -108,7 +108,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
 
       return { profiles, defaults, prices };
     } catch (err) {
-      forgeDebug({ scope: 'admin-readmodel-system', level: 'error', message: 'getSystemLlm failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: 'getSystemLlm failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -157,7 +157,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
         }),
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-readmodel-system', level: 'error', message: 'getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: 'getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }

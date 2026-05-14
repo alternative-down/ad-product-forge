@@ -5,7 +5,7 @@ function validateCronExpression(expression: string): boolean {
     parseExpression(expression, { utc: true });
     return true;
   } catch (error) {
-    forgeDebug({ scope: 'schedules', level: 'error', message: 'Cron expression validation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'schedule-helpers', level: 'error', message: 'Cron expression validation failed', context: { error: error instanceof Error ? error.message : String(error) } });
     return false;
   }
 }

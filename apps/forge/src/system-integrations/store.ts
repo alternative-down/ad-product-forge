@@ -103,7 +103,7 @@ export function createSystemIntegrationStore(db: Database) {
         };
       });
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] listIntegrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] listIntegrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -113,7 +113,7 @@ export function createSystemIntegrationStore(db: Database) {
       const row = await getEnabledIntegration('migadu');
       return row ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig) : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getMigaduConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] getMigaduConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -123,7 +123,7 @@ export function createSystemIntegrationStore(db: Database) {
       const row = await getEnabledIntegration('coolify');
       return row ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig) : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getCoolifyConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] getCoolifyConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -133,7 +133,7 @@ export function createSystemIntegrationStore(db: Database) {
       const row = await getEnabledIntegration('github');
       return row ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig) : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getGitHubConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] getGitHubConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -143,7 +143,7 @@ export function createSystemIntegrationStore(db: Database) {
       const row = await getEnabledIntegration('minimax');
       return row ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig) : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getMinimaxConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] getMinimaxConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -203,7 +203,7 @@ export function createSystemIntegrationStore(db: Database) {
         config: parsedConfig,
       };
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] upsertIntegration failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] upsertIntegration failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -212,7 +212,7 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] deleteIntegration failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: '[system-integrations] deleteIntegration failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -259,7 +259,7 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       return parseIntegrationConfig(providerType, encryptedConfig);
     } catch (error) {
-      forgeDebug({ scope: 'system-integrations', level: 'info', message: 'Failed to parse integration config', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'system-integrations-store', level: 'info', message: 'Failed to parse integration config', context: { error: error instanceof Error ? error.message : String(error) } });
       return null;
     }
   }

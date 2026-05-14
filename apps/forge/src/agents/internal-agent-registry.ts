@@ -158,7 +158,7 @@ function createInternalAgentRegistry() {
     } catch (error) {
       runner.stop();
       await runtime.dispose().catch((disposeError) => {
-        forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose replacement runtime', context: { runtimeId: runtime.id, error: disposeError } });
+        forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'Failed to dispose replacement runtime', context: { runtimeId: runtime.id, error: disposeError } });
       });
       throw error;
     }
@@ -173,7 +173,7 @@ function createInternalAgentRegistry() {
 
     agent.runner.stop();
     void agent.runtime.dispose().catch((error) => {
-      forgeDebug({ scope: 'agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
+      forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
     });
 
     agents.delete(agentId);
