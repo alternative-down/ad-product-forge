@@ -1,4 +1,5 @@
 import http, { type IncomingHttpHeaders } from 'node:http';
+import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
 
@@ -16,12 +17,20 @@ export type HttpRequest = {
   headers: IncomingHttpHeaders;
   body: Buffer;
   bodyText: string;
+  /** The raw Node.js incoming message. Handlers can attach 'close' listeners
+   *  to detect when the client drops the connection (e.g. SSE client gone). */
+  req: http.IncomingMessage;
 };
 
 export type HttpResponse = {
   status: number;
   headers?: Record<string, string>;
   body?: string | Buffer;
+  /** When set, the response is a streaming body (e.g. SSE). The server writes
+   *  HTTP headers immediately and pipes the Readable to the socket. The caller
+   *  is responsible for setting appropriate Content-Type headers (e.g.
+   *  'text/event-stream') in `headers`. */
+  stream?: Readable;
 };
 
 export type HttpHandler = (request: HttpRequest) => Promise<HttpResponse> | HttpResponse;
@@ -127,7 +136,6 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
     if (url.pathname.startsWith('/admin/')) {
       if (!config.adminApiKey) {
         if (config.allowInsecureLocal) {
-           
           console.warn(
             '[forge-http] WARNING: /admin/* served without authentication.'
             + ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
@@ -183,7 +191,22 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
         headers: req.headers,
         body: bodyResult.buffer,
         bodyText: bodyResult.buffer.toString('utf8'),
+        req,
       });
+
+      // Streaming response — write headers and pipe the body stream
+      if (response.stream) {
+        const rateLimitHeaders = getRateLimitHeaders();
+        res.writeHead(response.status, {
+          ...corsHeaders,
+          ...rateLimitHeaders,
+          ...(response.headers ?? {}),
+          // Disable buffering so chunks go straight to the client
+          'x-accel-buffering': 'no',
+        });
+        response.stream.pipe(res);
+        return;
+      }
 
       const rateLimitHeaders = getRateLimitHeaders();
       res.writeHead(response.status, {
@@ -244,29 +267,9 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
 
   async function start() {
     await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(config.port, () => {
-        server.off('error', reject);
-        resolve();
-      });
-    });
-    // Override port getter to return the actual assigned port
-    // (especially when config.port was 0, causing OS to pick a random free port)
-    const addr = server.address();
-    if (addr && typeof addr === 'object') {
-      // Re-expose the actual port on the returned object
-      (server as any)._actualPort = addr.port;
-    }
-  }
-
-  let actualPort = config.port;
-
-  async function start() {
-    await new Promise<void>((resolve, reject) => {
       server.on('error', reject);
       server.listen(config.port, () => {
         server.off('error', reject);
-        actualPort = (server.address() as { port: number }).port;
         resolve();
       });
     });
