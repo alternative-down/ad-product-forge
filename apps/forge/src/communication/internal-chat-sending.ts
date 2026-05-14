@@ -88,12 +88,7 @@ export function createChatSending(deps: SendingDeps) {
       throw new Error('Conversation not found: ' + input.targetKey);
     }
 
-    // Guard: reject messages to archived/closed conversations
-    const closedAt = (conversation as { closedAt?: number | null }).closedAt;
-    if (closedAt != null) {
-      forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'cannot send to archived conversation', context: { conversationId: conversation.id } });
-      throw new Error('Conversation is archived: ' + input.targetKey);
-    }
+    // Guard: reject messages to archived/closed conversations (no-op: closedAt column not in schema)
 
     // Guard: validate the server-generated timestamp is not absurdly far in the future (clock skew)
     const ONE_DAY_MS = 86_400_000;
