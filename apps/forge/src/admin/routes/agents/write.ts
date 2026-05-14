@@ -53,8 +53,8 @@ export function registerAgentWriteRoutes(
         });
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -73,8 +73,8 @@ export function registerAgentWriteRoutes(
         );
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });

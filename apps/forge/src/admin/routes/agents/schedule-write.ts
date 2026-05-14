@@ -44,8 +44,8 @@ export function registerAgentSchedulesWriteRoutes(
         const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
         return jsonResponse(schedule, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/create', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/create', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -70,8 +70,8 @@ export function registerAgentSchedulesWriteRoutes(
         });
         return jsonResponse(schedule);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/update', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/update', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -86,8 +86,8 @@ export function registerAgentSchedulesWriteRoutes(
         const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/delete', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/delete', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });

@@ -62,8 +62,8 @@ export function registerDashboardRoutes({
           },
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Dashboard overview failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Dashboard overview failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });

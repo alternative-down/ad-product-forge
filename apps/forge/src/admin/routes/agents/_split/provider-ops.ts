@@ -30,8 +30,8 @@ export function registerProviderOps(
         const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
         return jsonResponse({ success: true, agentId: body.agentId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/upsert route handler failed', context: { path: '/admin/agent/providers/upsert', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/upsert route handler failed', context: { path: '/admin/agent/providers/upsert', error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -45,8 +45,8 @@ export function registerProviderOps(
         const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
         return jsonResponse({ success: true, agentId: body.agentId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/delete route handler failed', context: { path: '/admin/agent/providers/delete', error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/providers/delete route handler failed', context: { path: '/admin/agent/providers/delete', error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });

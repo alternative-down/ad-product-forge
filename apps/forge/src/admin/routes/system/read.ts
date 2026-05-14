@@ -57,8 +57,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         const healthcheck = await buildSystemHealthcheck(registry, readModel);
         return jsonResponse(healthcheck);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/healthcheck', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/healthcheck', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },  });
 
@@ -70,8 +70,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await integrations.listIntegrations());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'System integrations route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System integrations route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -84,8 +84,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await systemSettings.getSettings());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'System settings route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System settings route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -103,8 +103,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
         ]);
         return jsonResponse({ profiles, defaults, prices });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },  });
 
@@ -133,8 +133,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           .sort((a, b) => a.name.localeCompare(b.name));
         return jsonResponse(formatted);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },  });
 
@@ -146,8 +146,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await readModel.getApplicationMigrations());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'System migrations route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System migrations route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -160,8 +160,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await listGlobalSkills(workspaceBasePath));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'System skills route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System skills route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -174,8 +174,8 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         return jsonResponse(await buildOauthState());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'System oauth route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'System oauth route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });

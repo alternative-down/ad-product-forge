@@ -79,9 +79,9 @@ export function registerFinanceWriteRoutes(
         return jsonResponse({ success: true });
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        if (error instanceof Error && error.message.startsWith('Invalid')) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        if (err instanceof Error && err.message.startsWith('Invalid')) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -130,9 +130,9 @@ export function registerFinanceWriteRoutes(
         }, 201);
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        if (error instanceof Error && error.message.startsWith('Invalid')) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        if (err instanceof Error && err.message.startsWith('Invalid')) throw error;
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -154,8 +154,8 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -176,8 +176,8 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
@@ -193,8 +193,8 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (error instanceof ZodError) throw error;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error: error instanceof Error ? error.message : String(error) } });
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
