@@ -84,7 +84,13 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
  */
 export async function loadAgents(db: Database, config: AgentLoaderConfig) {
   // Fetch all agent configurations from database
-  const agentConfigs = await db.query.agents.findMany();
+  let agentConfigs;
+  try {
+    agentConfigs = await db.query.agents.findMany();
+  } catch (err) {
+    forgeDebug({ scope: 'agent-loader', level: 'error', message: 'loadAgents: read failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
   if (agentConfigs.length === 0) {
     forgeDebug({ scope: 'agent-loader', level: 'info', message: 'No agents found in registry' });

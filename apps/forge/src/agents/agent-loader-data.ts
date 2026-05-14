@@ -19,9 +19,15 @@ const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
 };
 
 export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoaderConfig) {
-  const agent = await db.query.agents.findFirst({
-    where: eq(agents.id, config.agentId),
-  });
+  let agent;
+  try {
+    agent = await db.query.agents.findFirst({
+      where: eq(agents.id, config.agentId),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'loadAgentRuntimeData: read agents failed', context: { agentId: config.agentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
   if (!agent) {
     forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent not in registry', context: { agentId: config.agentId } });
@@ -36,9 +42,15 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
   const llmSettings = createLlmSettingsStore(db);
   const systemSettings = createSystemSettingsStore(db);
   const capabilities = createCapabilityStore(db);
-  const providerConfigs = await db.query.agentProviders.findMany({
-    where: eq(agentProviders.agentId, config.agentId),
-  });
+  let providerConfigs;
+  try {
+    providerConfigs = await db.query.agentProviders.findMany({
+      where: eq(agentProviders.agentId, config.agentId),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'loadAgentRuntimeData: read agentProviders failed', context: { agentId: config.agentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   const providerCredentials: ProviderCredentialsMap = {};
 
   for (const providerConfig of providerConfigs) {
