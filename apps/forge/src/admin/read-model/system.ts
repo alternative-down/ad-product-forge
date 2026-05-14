@@ -58,7 +58,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
     try {
       return await fn();
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: `${label} failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: `${label} failed`, context: { err: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }

@@ -20,7 +20,7 @@ export async function readLongTermMemoryRecallSnapshot(
 
     return state.snapshot;
   } catch (err) {
-    forgeDebug({ scope: 'helpers-ltm', level: 'error', message: '[helpers-ltm] readLongTermMemoryRecallSnapshot failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    forgeDebug({ scope: 'helpers-ltm', level: 'error', message: '[helpers-ltm] readLongTermMemoryRecallSnapshot failed', context: { err: err instanceof Error ? err.message : String(err) } });
     throw err;
   }
 }
@@ -36,7 +36,7 @@ export async function readLongTermMemoryState(
 
     return state;
   } catch (err) {
-    forgeDebug({ scope: 'helpers-ltm', level: 'error', message: '[helpers-ltm] readLongTermMemoryState failed', context: { error: err instanceof Error ? err.message : String(err) } });
+    forgeDebug({ scope: 'helpers-ltm', level: 'error', message: '[helpers-ltm] readLongTermMemoryState failed', context: { err: err instanceof Error ? err.message : String(err) } });
     throw err;
   }
 }

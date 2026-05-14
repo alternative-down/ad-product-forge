@@ -44,7 +44,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
         recurringPayables,
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-finance', level: 'error', message: '[finance-readmodel] getFinance failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-finance', level: 'error', message: '[finance-readmodel] getFinance failed', context: { err: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -93,7 +93,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
         }),
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-finance', level: 'error', message: '[finance-readmodel] getFinanceContracts failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-finance', level: 'error', message: '[finance-readmodel] getFinanceContracts failed', context: { err: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }

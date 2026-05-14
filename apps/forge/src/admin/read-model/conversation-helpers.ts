@@ -100,7 +100,7 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
         };
       });
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load external conversations', context: { agentId: _agentId, error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load external conversations', context: { agentId: _agentId, err: err instanceof Error ? err.message : String(err) } });
     return [];
   }
 }
@@ -142,7 +142,7 @@ async function listRecentInternalChatConversations(
       };
     }));
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load internal chat conversations', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load internal chat conversations', context: { agentId, err: err instanceof Error ? err.message : String(err) } });
     return [];
   }
 }
@@ -161,7 +161,7 @@ async function listInternalChatGroupParticipants(
 
     return conversation.participants.map((participant: { displayName?: string }) => participant.displayName ?? 'Unknown participant');
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, err: err instanceof Error ? err.message : String(err) } });
     return [];
   }
 }
@@ -234,7 +234,7 @@ async function listThreadMessages(
       await closeLibsqlClient(client);
     }
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load recent thread messages', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load recent thread messages', context: { agentId, err: err instanceof Error ? err.message : String(err) } });
     return {
       items: [],
       hasMore: false,
