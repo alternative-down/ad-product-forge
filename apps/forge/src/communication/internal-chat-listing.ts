@@ -167,12 +167,18 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       }
 
       // Batch-load all members for all conversations (was N+1 per conversation)
-      const memberRows = await db.query.internalChatConversationMembers.findMany({
-        where: inArray(internalChatConversationMembers.conversationId, conversationIds),
-        with: {
-          account: true,
-        },
-      });
+      let memberRows;
+      try {
+        memberRows = await db.query.internalChatConversationMembers.findMany({
+          where: inArray(internalChatConversationMembers.conversationId, conversationIds),
+          with: {
+            account: true,
+          },
+        });
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] listMessages memberRows lookup failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
       const membersByConversationId = new Map<string, Array<{
         accountId: string;
         displayName: string;
@@ -288,12 +294,18 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       }
 
       // Batch-load all members for all conversations (was N+1 per conversation)
-      const memberRows = await db.query.internalChatConversationMembers.findMany({
-        where: inArray(internalChatConversationMembers.conversationId, conversationIds),
-        with: {
-          account: true,
-        },
-      });
+      let memberRows;
+      try {
+        memberRows = await db.query.internalChatConversationMembers.findMany({
+          where: inArray(internalChatConversationMembers.conversationId, conversationIds),
+          with: {
+            account: true,
+          },
+        });
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] listMessages memberRows lookup failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
       const membersByConversationId = new Map<string, Array<{
         accountId: string;
         displayName: string;

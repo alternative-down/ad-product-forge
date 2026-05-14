@@ -246,13 +246,19 @@ export function createInternalChatAccounts(db: Database) {
 
   async function getAccountByTargetKey(targetKey: string) {
     // targetKey is used as a slug or id lookup
-    const account =
-      (await db.query.internalChatAccounts.findFirst({
-        where: eq(internalChatAccounts.slug, targetKey),
-      })) ??
-      (await db.query.internalChatAccounts.findFirst({
-        where: eq(internalChatAccounts.id, targetKey),
-      }));
+    let account;
+    try {
+      account =
+        (await db.query.internalChatAccounts.findFirst({
+          where: eq(internalChatAccounts.slug, targetKey),
+        })) ??
+        (await db.query.internalChatAccounts.findFirst({
+          where: eq(internalChatAccounts.id, targetKey),
+        }));
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-accounts', level: 'error', message: '[internal-chat-accounts] getAccountByTargetKey failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return account ?? null;
   }
 
