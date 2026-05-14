@@ -69,6 +69,7 @@ const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
 export const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
+export const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 
 // ─── Dependencies interface ─────────────────────────────────────────────────────
 

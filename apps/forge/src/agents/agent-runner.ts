@@ -56,6 +56,8 @@ import {
   clearGenerateTimeout,
   startGenerateAttempt,
   finishGenerateAttempt,
+  RUNNER_AWAIT_TIMEOUT_MS,
+  STARTING_RUN_TIMEOUT_MS,
   type GenerateTimeoutHandle,
 } from './agent-runner-generate';
 
@@ -66,8 +68,6 @@ const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
-const STARTING_RUN_TIMEOUT_MS = RUNNER_AWAIT_TIMEOUT_MS * 2;
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
