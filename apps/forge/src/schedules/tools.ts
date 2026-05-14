@@ -201,10 +201,10 @@ export function createAgentScheduleTools(
     description: 'List all crons that belong to you. This includes crons you created yourself and crons created for you by other agents. Use this to understand your scheduled work and get the cronId for any cron you are allowed to inspect.',
     inputSchema: z.object({}),
     execute: async () => {
-      forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_self_crons called', context: { agentId } });
+      forgeDebug({ scope: 'schedules-tools', level: 'info', message: 'list_self_crons called', context: { agentId } });
       try {
         const result = await schedules.listSchedules(agentId);
-        forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_self_crons result', context: { count: result.length } });
+        forgeDebug({ scope: 'schedules-tools', level: 'info', message: 'list_self_crons result', context: { count: result.length } });
         return result.map(toCronOutput);
       } catch (error) {
         forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'list_self_crons failed: ' + (error instanceof Error ? error.message : String(error)) });
@@ -223,7 +223,7 @@ export function createAgentScheduleTools(
       description: 'Use this to create, update, or delete automatic tasks for yourself. Do not rely on your own memory to remember future work. Use crons proactively to trigger your future and recurring work dynamically, and prefer simple, directed tasks.',
       inputSchema: manageSelfCronsInputSchema,
       execute: async (input) => {
-        forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'manage_self_crons called', context: { agentId, action: input.action, input } });
+        forgeDebug({ scope: 'schedules-tools', level: 'info', message: 'manage_self_crons called', context: { agentId, action: input.action, input } });
 
         if (input.action === 'create') {
           const createInput = input.action === 'create' ? input.create ?? null : null;
@@ -315,7 +315,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -352,7 +352,7 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -371,13 +371,13 @@ export function createAgentScheduleTools(
         targetAgentId: z.string().min(1).optional().describe('Optional target agent id if you want to see only crons aimed at one specific agent.'),
       }),
       execute: async (input) => {
-        forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_crons called', context: { agentId, targetAgentId: input.targetAgentId } });
+        forgeDebug({ scope: 'schedules-tools', level: 'info', message: 'list_crons called', context: { agentId, targetAgentId: input.targetAgentId } });
         try {
           const result = await schedules.listTasks(agentId, input.targetAgentId ?? undefined);
-          forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_crons result', context: { count: result.length } });
+          forgeDebug({ scope: 'schedules-tools', level: 'info', message: 'list_crons result', context: { count: result.length } });
           return result.map(toCronOutput);
         } catch (error) {
-          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: list_crons failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'list_crons failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -394,7 +394,7 @@ export function createAgentScheduleTools(
       description: 'Use this to create, update, or delete automatic tasks for other agents. Use delegated crons proactively when another agent should receive future or recurring work without relying on someone to remember manually. Prefer simple, directed tasks.',
       inputSchema: manageCronsInputSchema,
       execute: async (input) => {
-        forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'manage_crons called', context: { agentId, action: input.action, input } });
+        forgeDebug({ scope: 'schedules-tools', level: 'info', message: 'manage_crons called', context: { agentId, action: input.action, input } });
 
         if (input.action === 'create') {
           const createInput = input.action === 'create' ? input.create ?? null : null;
@@ -446,7 +446,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_crons action=create failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'manage_crons action=create failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -494,7 +494,7 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
+            forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
             return {
               valid: false,
               error: error instanceof Error ? error.message : String(error),
@@ -531,7 +531,7 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'schedules-tools: manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'schedules-tools', level: 'error', message: 'manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)), context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
