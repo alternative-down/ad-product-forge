@@ -1,12 +1,12 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { gracefulShutdown, scheduleJob, cancelJob as cancelScheduledJob, type Job, type RecurrenceSpecDateRange } from 'node-schedule';
-import cronParser from 'cron-parser';
+import { scheduleJob, type RecurrenceSpecDateRange } from 'node-schedule';
 import { z } from 'zod';
 
 
 import type {Database} from '../database/schema';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentScheduleStore } from './store';
+import { createScheduleLifecycle } from './schedule-lifecycle';
 import {
   parseScheduleDate,
   validateScheduleShape,
@@ -36,6 +36,8 @@ const HEARTBEAT_TIMEZONE = 'UTC';
 
 export function createAgentScheduleManager(input: {
   db: Database;
+  /** Injected lifecycle for testability. */
+  lifecycle?: ReturnType<typeof createScheduleLifecycle>;
   getAgentPendingSummary?(agentId: string): Promise<{
     unreadNotificationCount: number;
     unreadConversationCount: number;
@@ -54,7 +56,22 @@ export function createAgentScheduleManager(input: {
 }) {
   const store = createAgentScheduleStore(input.db);
   const notifications = createAgentNotificationStore(input.db);
-  const jobs = new Map<string, Job>();
+  let lifecycle: ReturnType<typeof createScheduleLifecycle> | null = null;
+  const getLifecycle = (): ReturnType<typeof createScheduleLifecycle> => {
+    if (input.lifecycle) {
+      if (!lifecycle) lifecycle = input.lifecycle;
+      return lifecycle;
+    }
+    if (!lifecycle) {
+      lifecycle = createScheduleLifecycle({
+        db: input.db,
+        onFire: async (record, fireDate) => {
+          await triggerSchedule(record as StoredSchedule, fireDate, true);
+        },
+      });
+    }
+    return lifecycle;
+  };
   type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
   async function getOwnedSchedule(agentId: string, scheduleId: string) {
@@ -66,34 +83,11 @@ export function createAgentScheduleManager(input: {
     }
   }
 
-  async function loadAll() {
-    try {
-      const schedules = await store.listActiveSchedules();
-
-      for (const scheduleRecord of schedules) {
-        try {
-          cancelScheduledJob(scheduleRecord.scheduleId);
-          await registerSchedule(scheduleRecord);
-        } catch (error) {
-          forgeDebug({
-            scope: 'schedules',
-            level: 'warn',
-            message: 'loadAll: skipped schedule due to registration failure',
-            context: { scheduleId: scheduleRecord.scheduleId, error: error instanceof Error ? error.message : String(error) },
-          });
-          // Continue loading remaining schedules instead of failing all
-        }
-      }
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'error',
-        message: `loadAll failed: ${error instanceof Error ? error.message : String(error)}`,
-        context: {},
-      });
-      throw error;
-    }
+    async function loadAll() {
+    if (!lifecycle) return;
+    await lifecycle.loadAll();
   }
+
 
   async function createHeartbeatSchedule(agentId: string) {
     const record = await store.createSchedule({
@@ -109,7 +103,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: false,
     });
     try {
-      await registerSchedule(record);
+      await getLifecycle().register(record as any);
     } catch (error) {
       forgeDebug({
         scope: 'schedules',
@@ -123,7 +117,6 @@ export function createAgentScheduleManager(input: {
       scheduleId: record.scheduleId,
     };
   }
-
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
     const parsed = createScheduleSchema.parse(rawInput);
     const scheduledDate = parsed.scheduledDate ? parseScheduleDate(parsed.scheduledDate) : undefined;
@@ -146,7 +139,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
-      await registerSchedule(record);
+      await getLifecycle().register(record as any);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error } });
@@ -208,11 +201,11 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    cancelScheduledJob(scheduleId);
+    getLifecycle().cancel(scheduleId);
 
     try {
       if (updated.isActive) {
-        await registerSchedule(updated);
+        await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -221,7 +214,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (existing.isActive && restored) {
-        await registerSchedule(restored);
+        await getLifecycle().register(restored as any);
       }
 
       throw error;
@@ -262,11 +255,11 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    cancelScheduledJob(scheduleId);
+    getLifecycle().cancel(scheduleId);
 
     try {
       if (updated.isActive) {
-        await registerSchedule(updated);
+        await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -275,7 +268,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (existing.isActive && restored) {
-        await registerSchedule(restored);
+        await getLifecycle().register(restored as any);
       }
 
       throw error;
@@ -293,7 +286,7 @@ export function createAgentScheduleManager(input: {
 
   async function deleteSchedule(agentId: string, scheduleId: string) {
     try {
-      cancelScheduledJob(scheduleId);
+      getLifecycle().cancel(scheduleId);
       const deleted = await store.deleteAgentSchedule(agentId, scheduleId);
       if (!deleted) {
         throw new Error(`Schedule not found or not authorized: ${scheduleId}`);
@@ -340,8 +333,15 @@ export function createAgentScheduleManager(input: {
       creatorId: creatorAgentId,
     });
 
+    const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
+
+    if (!scheduleRecord) {
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent failed to load schedule', context: { agentId: parsed.targetAgentId, recordId: record.id } });
+      throw new Error(`Failed to load created schedule: ${record.id}`);
+    }
+
     try {
-      await registerSchedule(record);
+      await getLifecycle().register(scheduleRecord as any);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error } });
@@ -351,7 +351,7 @@ export function createAgentScheduleManager(input: {
     return {
       targetAgentId: parsed.targetAgentId,
       createdBy: creatorAgentId,
-      ...toToolOutput(record),
+      ...toToolOutput(scheduleRecord),
     };
   }
 
@@ -391,7 +391,7 @@ export function createAgentScheduleManager(input: {
       // Authorization: only creator can delete (or null creator = self-created, only agentId can delete)
       requireScheduleDeleter(schedule, editorAgentId);
 
-      cancelScheduledJob(scheduleId);
+      getLifecycle().cancel(scheduleId);
       return {
         success: await store.deleteAgentSchedule(schedule.agentId, scheduleId),
       };
@@ -410,7 +410,7 @@ export function createAgentScheduleManager(input: {
     const schedules = await store.listAgentSchedules(agentId);
 
     for (const scheduleRecord of schedules) {
-      cancelScheduledJob(scheduleRecord.scheduleId);
+      getLifecycle().cancel(scheduleRecord.scheduleId);
       try {
         await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
       } catch (err) {
@@ -438,97 +438,17 @@ export function createAgentScheduleManager(input: {
     }
   }
 
-  async function stop() {
-    try {
-      for (const [scheduleId, job] of jobs) {
-        job.cancel();
-        jobs.delete(scheduleId);
-      }
-
-      await gracefulShutdown();
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'error',
-        message: `stop failed: ${error instanceof Error ? error.message : String(error)}`,
-        context: {},
-      });
-    }
+    async function stop() {
+    if (!lifecycle) return;
+    await lifecycle.stop();
   }
 
-  async function registerSchedule(scheduleRecord: StoredSchedule | null) {
-    if (!scheduleRecord || !scheduleRecord.isActive) {
-      return;
-    }
 
-    try {
-      // Cancel any existing node-schedule timer for this ID to prevent duplicate
-      // registrations (e.g. from concurrent updateSchedule + loadAll). Without this,
-      // node-schedule keeps both old and new timer references and fires twice.
-      cancelScheduledJob(scheduleRecord.scheduleId);
-
-      if (scheduleRecord.scheduleType === 'date') {
-        if (!scheduleRecord.scheduledDate) {
-          throw new Error(`Date schedule ${scheduleRecord.scheduleId} is missing scheduledDate`);
-        }
-
-        const scheduledDate = new Date(scheduleRecord.scheduledDate);
-
-        if (scheduledDate.getTime() <= Date.now()) {
-          await store.deactivateSchedule(scheduleRecord.scheduleId);
-          return;
-        }
-
-        const job = scheduleJob(scheduleRecord.scheduleId, scheduledDate, async (fireDate) => {
-          await triggerSchedule(scheduleRecord, fireDate, false);
-        });
-
-        jobs.set(scheduleRecord.scheduleId, job);
-        await store.setNextTriggerAt(scheduleRecord.scheduleId, scheduledDate.getTime());
-        return;
-      }
-
-      if (!scheduleRecord.cronExpression) {
-        throw new Error(`Cron schedule ${scheduleRecord.scheduleId} is missing cronExpression`);
-      }
-
-      // Validate cron expression syntax before scheduling — node-schedule silently
-      // accepts malformed expressions and creates a job that never fires.
-      try {
-        (cronParser.parseExpression as any)(scheduleRecord.cronExpression);
-      } catch {
-        forgeDebug({ scope: 'schedules', level: 'error', message: 'Invalid cron expression for schedule', context: { scheduleId: scheduleRecord.scheduleId, cronExpression: scheduleRecord.cronExpression } });
-        throw new Error(`Invalid cron expression for schedule ${scheduleRecord.scheduleId}: ${scheduleRecord.cronExpression}`);
-      }
-
-      const spec: RecurrenceSpecDateRange = {
-        rule: scheduleRecord.cronExpression,
-        tz: scheduleRecord.timezone,
-      };
-      const job = scheduleJob(scheduleRecord.scheduleId, spec, async (fireDate) => {
-        const nextInvocation = jobs.get(scheduleRecord.scheduleId)?.nextInvocation();
-
-        await triggerSchedule(
-          scheduleRecord,
-          fireDate,
-          true,
-          nextInvocation?.getTime() ?? null,
-        );
-      });
-
-      jobs.set(scheduleRecord.scheduleId, job);
-      await store.setNextTriggerAt(scheduleRecord.scheduleId, job.nextInvocation()?.getTime() ?? null);
-    } catch (error) {
-      forgeDebug({
-        scope: 'schedules',
-        level: 'error',
-        message: `registerSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
-        context: { scheduleId: scheduleRecord.scheduleId, kind: scheduleRecord.kind },
-      });
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'registerSchedule: operation failed', error: error instanceof Error ? error.message : String(error) });
-      throw error;
-    }
+  async function registerSchedule(record: StoredSchedule | null) {
+    if (!record || !record.isActive) return;
+    await getLifecycle().register(record as any);
   }
+
 
   async function triggerSchedule(
     scheduleRecord: StoredSchedule,
@@ -537,7 +457,7 @@ export function createAgentScheduleManager(input: {
     nextTriggerAt: number | null = null,
   ) {
     try {
-    cancelCompletedDateJob(scheduleRecord.scheduleId, remainsActive);
+    // Cancellation handled by schedule-lifecycle
     if (scheduleRecord.kind === 'heartbeat') {
       const executionState =
         await (input.getAgentExecutionState?.(scheduleRecord.agentId) ?? Promise.resolve<'idle' | 'running' | 'absent'>('idle'));
@@ -617,24 +537,9 @@ export function createAgentScheduleManager(input: {
     }
   }
 
-  function cancelCompletedDateJob(scheduleId: string, remainsActive: boolean) {
-    if (remainsActive) {
-      return;
-    }
 
-    cancelScheduledJob(scheduleId);
-  }
 
-  function cancelScheduledJob(scheduleId: string) {
-    const job = jobs.get(scheduleId);
 
-    if (!job) {
-      return;
-    }
-
-    job.cancel();
-    jobs.delete(scheduleId);
-  }
 
   return {
     loadAll,

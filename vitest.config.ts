@@ -37,6 +37,7 @@ export default defineConfig({
       // Discord.js is not installed in the test environment.
       // Stub it so modules that import 'discord' (e.g. discord-account.ts) can load in tests.
       discord: path.resolve(__dirname, './__mocks__/discord.js'),
+      'node-schedule': path.resolve(__dirname, './apps/forge/__mocks__/node-schedule.js'),
     },
   },
 });

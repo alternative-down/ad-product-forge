@@ -110,6 +110,7 @@ interface ScheduleRow {
 function toScheduleRecord(row: Record<string, unknown>): ScheduleRow {
   return {
     id: row.id as string,
+    scheduleId: (row.scheduleId as string | undefined) ?? (row.id as string),
     agentId: row.agentId as string,
     name: row.name as string,
     description: row.description as string | undefined,
@@ -190,7 +191,10 @@ function createMockDb(rows: Record<string, unknown>[] = []) {
   function insert(_table: unknown) {
     return {
       values: (values: Record<string, unknown>) => {
-        rowStore.push(values as Record<string, unknown>);
+        // store.createSchedule returns record with id, not scheduleId.
+        // Add scheduleId for tests that check record.scheduleId.
+        const record = { ...values, scheduleId: values.id as string };
+        rowStore.push(record);
         return Promise.resolve({ rowCount: 1 });
       },
     };
