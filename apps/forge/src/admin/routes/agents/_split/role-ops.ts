@@ -55,9 +55,9 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/create',
     handler: async (request) => {
-        const body = parseJsonBody(request.bodyText, createRoleSchema);
-        const result = await capabilities.createRole({ name: body.name, description: body.description });
-        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      const body = parseJsonBody(request.bodyText, createRoleSchema);
+      const result = await capabilities.createRole({ name: body.name, description: body.description });
+      return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
     },
   });
 
@@ -67,8 +67,8 @@ export function registerRoleOps(
     path: '/admin/roles/update',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, updateRoleSchema);
-        const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
-        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
+      return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
     },
   });
 
@@ -77,14 +77,16 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/delete',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, deleteRoleSchema);
-      await capabilities.deleteRole(body.roleId);
-      return jsonResponse({ success: true, roleId: body.roleId });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
-      if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
-      throw err;
+      try {
+        const body = parseJsonBody(request.bodyText, deleteRoleSchema);
+        await capabilities.deleteRole(body.roleId);
+        return jsonResponse({ success: true, roleId: body.roleId });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
+        if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
+        throw err;
+      }
     },
   });
 
@@ -93,17 +95,19 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/tool-permissions',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-      const toolId = resolvePermissionId(body.toolName);
-      if (body.allowed) {
-        await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-      } else {
-        await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+      try {
+        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
+        const toolId = resolvePermissionId(body.toolName);
+        if (body.allowed) {
+          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+        } else {
+          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
+        }
+        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
+      } catch (err) {
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        throw err;
       }
-      return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
-    } catch (err) {
-      forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
-      throw err;
     },
   });
 }
