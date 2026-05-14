@@ -31,7 +31,7 @@
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.1",
     "onnxruntime-node": "1.21.0",
-    "zod": "3.25.76"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
