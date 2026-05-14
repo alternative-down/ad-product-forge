@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   addHomeInternalChatGroupMember,
   archiveHomeInternalChatConversation,
+  createInternalChatEventSource,
   getHomeInternalChatGroupMembers,
   getHomeInternalChatMessages,
   removeHomeInternalChatGroupMember,
@@ -113,15 +114,17 @@ function HomeConversationDetailIndexRoute() {
     initialScrollDoneRef.current = false;
   }, [selectedConversationId]);
 
+  // Real-time message delivery via SSE — replaces 2s polling.
   useEffect(() => {
     if (!selectedAccountId || !selectedConversationId) {
       return;
     }
 
-    let cancelled = false;
     const conversationKey = `${selectedAccountId}:${selectedConversationId}`;
 
-    const interval = window.setInterval(() => {
+    // Fallback polling safety-net: if SSE fails or is not yet connected,
+    // a slow poll catches any messages that may have been missed.
+    const pollingFallback = window.setInterval(() => {
       void (async () => {
         const messageResult = await getHomeInternalChatMessages(
           selectedAccountId,
@@ -130,27 +133,58 @@ function HomeConversationDetailIndexRoute() {
           0,
         );
 
-        if (cancelled || activeConversationKeyRef.current !== conversationKey) {
+        if (activeConversationKeyRef.current !== conversationKey) {
           return;
         }
 
         setMessages(messageResult.items);
+      })();
+    }, 10_000);
+
+    const es = createInternalChatEventSource(
+      selectedAccountId,
+      selectedConversationId,
+      (sseMessage) => {
+        if (activeConversationKeyRef.current !== conversationKey) {
+          return;
+        }
+
+        setMessages((prev) => {
+          // Deduplicate in case reconnect caused a replay.
+          if (prev.some((m) => m.messageId === sseMessage.messageId)) {
+            return prev;
+          }
+          return [
+            {
+              messageId: sseMessage.messageId,
+              authorAccountId: sseMessage.authorId,
+              authorDisplayName: sseMessage.authorDisplayName,
+              content: sseMessage.content,
+              createdAt: new Date(sseMessage.createdAt).getTime(),
+              attachments: sseMessage.attachments.map((a) => ({
+                name: a.name,
+                contentType: a.contentType,
+                sizeBytes: a.sizeBytes,
+              })),
+            },
+            ...prev,
+          ];
+        });
 
         if (autoScrollEnabled) {
           requestAnimationFrame(() => {
-            const nextViewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
-
-            if (nextViewport instanceof HTMLDivElement) {
-              nextViewport.scrollTop = nextViewport.scrollHeight;
+            const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+            if (viewport instanceof HTMLDivElement) {
+              viewport.scrollTop = 0; // Newest message at top → scroll to 0.
             }
           });
         }
-      })();
-    }, 2_000);
+      },
+    );
 
     return () => {
-      cancelled = true;
-      window.clearInterval(interval);
+      window.clearInterval(pollingFallback);
+      es.close();
     };
   }, [autoScrollEnabled, selectedAccountId, selectedConversationId]);
 
