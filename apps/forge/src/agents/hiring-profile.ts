@@ -6,7 +6,6 @@ export async function buildHiredAgentProfile(db: Database, input: {
   agentName: string;
   agentDescription?: string;
 }) {
-  try {
     const llmSettings = createLlmSettingsStore(db);
     const defaults = await llmSettings.getResolvedDefaults();
 
@@ -16,8 +15,4 @@ export async function buildHiredAgentProfile(db: Database, input: {
       modelProfileId: defaults.primaryProfile.profileId,
       omModelProfileId: defaults.omProfile.profileId,
     };
-  } catch (err) {
-    forgeDebug({ scope: 'hiring-profile', level: 'error', message: 'buildHiredAgentProfile failed', context: { error: err instanceof Error ? err.message : String(err) }});
-    throw err;
-  }
 }

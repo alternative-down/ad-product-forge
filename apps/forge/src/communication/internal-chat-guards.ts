@@ -24,17 +24,12 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
     let membership;
-    try {
       membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
           eq(internalChatConversationMembers.accountId, accountId),
           eq(internalChatConversationMembers.conversationId, conversationId),
         ),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-guards', level: 'error', message: '[internal-chat-guards] requireConversationMembershipByAccount lookup failed', context: { error: err instanceof Error ? err.message : String(err), accountId, conversationId } });
-      throw err;
-    }
 
     if (!membership) {
       forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
@@ -51,14 +46,9 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     await requireConversationMembershipByAccount(accountId, conversationId);
 
     let conversation;
-    try {
       conversation = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, conversationId),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-guards', level: 'error', message: '[internal-chat-guards] getRequiredConversationForAccount lookup failed', context: { error: err instanceof Error ? err.message : String(err), accountId, conversationId } });
-      throw err;
-    }
 
     if (!conversation) {
       forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });

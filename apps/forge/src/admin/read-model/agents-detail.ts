@@ -29,15 +29,10 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
 
   async function listAgentContracts(agentId: string) {
     let rows;
-    try {
       rows = await db.query.agentExecutionContracts.findMany({
         where: eq(agentExecutionContracts.agentId, agentId),
         orderBy: desc(agentExecutionContracts.startsAt),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentContracts: read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     return rows.map((row) => {
       const { id, ...rest } = row;
       return { ...rest, contractId: id };
@@ -46,30 +41,20 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
 
   async function listAgentSchedules(agentId: string) {
     let rows;
-    try {
       rows = await db.query.agentSchedules.findMany({
         where: eq(agentSchedules.agentId, agentId),
         orderBy: desc(agentSchedules.nextTriggerAt),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentSchedules: read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     return rows.map((row) => toScheduleSummaryHelper(row));
   }
 
   async function listAgentNotifications(agentId: string) {
     let rows;
-    try {
       rows = await db.query.agentNotifications.findMany({
         where: eq(agentNotifications.agentId, agentId),
         orderBy: desc(agentNotifications.createdAt),
         limit: 50,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentNotifications: read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     return rows.map((n) => ({
       id: n.id,
       content: n.content,
@@ -80,23 +65,13 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
 
   async function listAgentMcpServers(agentId: string) {
     let rows;
-    try {
       rows = await db.query.agentMcpConfigs.findMany({
         where: eq(agentMcpConfigs.agentId, agentId),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentMcpServers: read mcpConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     const serverIds = rows.map((r) => r.serverId).filter(Boolean);
     let servers;
     if (serverIds.length > 0) {
-      try {
         servers = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, serverIds) });
-      } catch (err) {
-        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentMcpServers: read serverConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
     } else {
       servers = [];
     }
@@ -123,27 +98,17 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
 
   async function listAgentLlmProfiles(agentId: string) {
     let agent;
-    try {
       agent = await db.query.agents.findFirst({
         where: eq(agents.id, agentId),
         columns: { modelProfileId: true, omModelProfileId: true },
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles: read agent failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     if (!agent) return { profiles: [] };
     const profileIds = [agent.modelProfileId, agent.omModelProfileId].filter(Boolean);
     if (profileIds.length === 0) return { profiles: [] };
     let profiles;
-    try {
       profiles = await db.query.llmProfiles.findMany({
         where: inArray(llmProfiles.id, profileIds),
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles: read profiles failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     return { profiles };
   }
 

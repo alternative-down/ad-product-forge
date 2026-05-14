@@ -199,16 +199,11 @@ export function createIssuesOps(ctx: OpsContext) {
     forgeDebug({ scope: SCOPE, level: 'error', message: 'deleteIssueComment: getInstallationOctokit failed', context: { agentId, error: serializeError(err) } });
     throw err;
 
-    try {
       await octokit.request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
         owner,
         repo: input.repositoryName,
         comment_id: input.commentId,
       });
-    } catch (err) {
-      forgeDebug({ scope: SCOPE, level: 'error', message: 'deleteIssueComment: octokit.request failed', context: { agentId, owner, repo: input.repositoryName, commentId: input.commentId, error: serializeError(err) } });
-      throw err;
-    }
 
     return { success: true };
   }

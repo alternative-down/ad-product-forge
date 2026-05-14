@@ -17,7 +17,6 @@ export async function buildSystemHealthcheck(
   agents: HealthcheckEntry[];
   timestamp: number;
 }> {
-  try {
     const entries = registry.list();
     const agents: HealthcheckEntry[] = [];
 
@@ -38,16 +37,4 @@ export async function buildSystemHealthcheck(
       agents,
       timestamp: Date.now(),
     };
-  } catch (err) {
-    forgeDebug({
-      scope: 'system-healthcheck',
-      level: 'error',
-      message: '[system-healthcheck] buildSystemHealthcheck failed',
-      context: {
-        agentCount: entries.length,
-        error: err instanceof Error ? err.message : String(err),
-      },
-    });
-    throw err;
-  }
 }

@@ -85,12 +85,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
   async function getTotals() {
     let rows;
-    try {
       rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, roleId: true } });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getTotals: read agents failed', context: { error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
     const loadedAgents = registry.list().length;
     const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
@@ -98,15 +93,10 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     const absentAgents = rows.filter((r) => !r.executionState || r.executionState === 'absent').length;
 
     let activeContracts;
-    try {
       activeContracts = await db.query.agentExecutionContracts.findMany({
         where: eq(agentExecutionContracts.isActive, 1),
         columns: { id: true },
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getTotals: read contracts failed', context: { error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
     const roles = new Set(rows.map((r) => r.roleId).filter(Boolean)).size;
     return {
@@ -167,17 +157,12 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
   async function listAgentExecutionSteps(input: { agentId: string; limit: number; offset: number }) {
     let rows;
-    try {
       rows = await db.query.agentExecutionSteps.findMany({
         where: eq(agentExecutionSteps.agentId, input.agentId),
         orderBy: desc(agentExecutionSteps.createdAt),
         limit: input.limit,
         offset: input.offset,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentExecutionSteps: read steps failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
     return rows.map((row) => {
       const { id, ...rest } = row;
       return { ...rest, stepId: id };

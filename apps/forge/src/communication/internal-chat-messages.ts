@@ -198,25 +198,15 @@ export function createInternalChatMessages(
       ));
 
     let remainingMembers;
-    try {
       remainingMembers = await db.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, input.conversationId),
         limit: 1,
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation findMany failed', context: { conversationId: input.conversationId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
     if (remainingMembers.length === 0) {
-      try {
         await db
           .delete(internalChatConversations)
           .where(eq(internalChatConversations.id, input.conversationId));
-      } catch (err) {
-        forgeDebug({ scope: 'internal-chat', level: 'error', message: 'archiveConversation delete failed', context: { conversationId: input.conversationId, error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
     }
 
     return {

@@ -18,7 +18,6 @@ export async function reloadLinkedAgentsForMcpServer(
   loaderConfig: AgentLoaderConfig,
   serverId: string,
 ): Promise<void> {
-  try {
     const linkedConfigs = await db.query.agentMcpConfigs.findMany({
       where: eq(agentMcpConfigs.serverId, serverId),
       columns: { agentId: true },
@@ -30,8 +29,4 @@ export async function reloadLinkedAgentsForMcpServer(
         }),
       ),
     );
-  } catch (err) {
-    forgeDebug({ scope: 'mcp-helpers', level: 'error', message: 'reloadLinkedAgentsForMcpServer failed', context: { error: err instanceof Error ? err.message : String(err) }});
-    throw err;
-  }
 }

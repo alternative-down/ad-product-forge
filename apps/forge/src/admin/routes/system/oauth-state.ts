@@ -28,7 +28,6 @@ export type SystemOauthState = {
  * ms timestamps, matching the number | null declared in the client type).
  */
 export async function buildOauthState(): Promise<SystemOauthState> {
-  try {
     const store = oauthStore;
     const storePath = store.getDefaultPath();
     const raw = await store.read();
@@ -51,8 +50,4 @@ export async function buildOauthState(): Promise<SystemOauthState> {
     }
 
     return { storePath, providers };
-  } catch (err) {
-    forgeDebug({ scope: 'oauth-state', level: 'error', message: '[oauth-state] buildOauthState failed', context: { error: err instanceof Error ? err.message : String(err) }});
-    throw err;
-  }
 }

@@ -58,17 +58,7 @@ export function createAgentScheduleStore(db: Database) {
       updatedAt: now,
     };
 
-    try {
       await db.insert(agentSchedules).values(record);
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'createSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
     // Expose scheduleId as an alias for id — callers (including schedule-lifecycle)
     // expect a .scheduleId field on records returned from createSchedule.
     (record as Record<string, unknown>).scheduleId = record.id;
@@ -224,25 +214,14 @@ export function createAgentScheduleStore(db: Database) {
     input: UpdateAgentScheduleInput,
   ): Promise<AgentSchedule | null> {
     let existing: AgentSchedule | null | undefined;
-    try {
       existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: '_applyUpdate DB read failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
 
     if (!existing || existing.kind !== 'agent') {
       return null;
     }
 
-    try {
       await db
         .update(agentSchedules)
         .set({
@@ -261,15 +240,6 @@ export function createAgentScheduleStore(db: Database) {
           updatedAt: Date.now(),
         })
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: '_applyUpdate DB write failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
     return { ...existing,
       name: input.name ?? existing.name,
       description: input.description === undefined ? existing.description : input.description,
@@ -305,19 +275,9 @@ export function createAgentScheduleStore(db: Database) {
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
     let existing: AgentSchedule | null | undefined;
-    try {
       existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'deleteAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
 
     if (!existing) {
       return false;
@@ -327,72 +287,31 @@ export function createAgentScheduleStore(db: Database) {
       return false;
     }
 
-    try {
       await db.delete(agentSchedules).where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'deleteAgentSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
     return true;
   }
 
   async function deactivateSchedule(scheduleId: string) {
-    try {
       await db
         .update(agentSchedules)
         .set({ isActive: 0, nextTriggerAt: null, updatedAt: Date.now() })
         .where(eq(agentSchedules.id, scheduleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'deactivateSchedule DB write failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
   }
   async function deleteHeartbeatSchedule(agentId: string) {
-    try {
       await db
         .delete(agentSchedules)
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, 'heartbeat')));
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'deleteHeartbeatSchedule DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
   }
 
 
   async function setNextTriggerAt(scheduleId: string, nextTriggerAt: number | null) {
-    try {
       await db
         .update(agentSchedules)
         .set({ nextTriggerAt, updatedAt: Date.now() })
         .where(eq(agentSchedules.id, scheduleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'setNextTriggerAt DB write failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
   }
 
   async function markTriggered(input: { scheduleId: string; lastTriggeredAt: number; nextTriggerAt: number | null; isActive: boolean }) {
-    try {
       await db
         .update(agentSchedules)
         .set({
@@ -401,15 +320,6 @@ export function createAgentScheduleStore(db: Database) {
           isActive: input.isActive ? 1 : 0,
         })
         .where(eq(agentSchedules.id, input.scheduleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'markTriggered DB write failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-
-      throw err;
-    }
   }
 
   type StoredSchedule = Awaited<ReturnType<typeof listActiveSchedules>>[number];

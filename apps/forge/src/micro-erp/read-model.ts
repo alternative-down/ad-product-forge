@@ -27,16 +27,7 @@ export function createMicroErpReadModel(db: Database) {
 
   async function getCompanyCashBalance() {
     let balanceUsd: number;
-    try {
       balanceUsd = await companyCash.getCurrentBalanceUsd();
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getCurrentBalanceUsd failed: ${err instanceof Error ? err.message : String(err)}`,
-      });
-      throw err;
-    }
     return { balanceUsd };
   }
 
@@ -66,38 +57,19 @@ export function createMicroErpReadModel(db: Database) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     let rows;
-    try {
       rows = await db.query.companyCashLedger.findMany({
         where,
         orderBy: [desc(companyCashLedger.createdAt)],
         limit,
         offset,
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `listCompanyCashMovements: findMany failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { direction: input.direction, status: input.status, type: input.type },
-      });
-      throw err;
-    }
     let countRows;
-    try {
       countRows = await db
         .select({
           total: sql<number>`count(*)`,
         })
         .from(companyCashLedger)
         .where(where);
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `listCompanyCashMovements: count query failed: ${err instanceof Error ? err.message : String(err)}`,
-      });
-      throw err;
-    }
 
     let summary;
     try {
@@ -136,7 +108,6 @@ export function createMicroErpReadModel(db: Database) {
     const periodStart = input.periodStart ?? startOfCurrentMonth(now);
     const periodEnd = input.periodEnd ?? now;
     let postedTotals;
-    try {
       postedTotals = await db
         .select({
           totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
@@ -150,17 +121,7 @@ export function createMicroErpReadModel(db: Database) {
             lte(companyCashLedger.effectiveAt, periodEnd),
           ),
         );
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getCompanyCashSummary: postedTotals query failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { periodStart, periodEnd },
-      });
-      throw err;
-    }
     let scheduledTotals;
-    try {
       scheduledTotals = await db
         .select({
           scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
@@ -175,31 +136,13 @@ export function createMicroErpReadModel(db: Database) {
             lte(companyCashLedger.dueAt, periodEnd),
           ),
         );
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getCompanyCashSummary: scheduledTotals query failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { periodStart, periodEnd },
-      });
-      throw err;
-    }
     const totalInUsd = postedTotals[0]?.totalInUsd ?? 0;
     const totalOutUsd = postedTotals[0]?.totalOutUsd ?? 0;
     const scheduledInUsd = scheduledTotals[0]?.scheduledInUsd ?? 0;
     const scheduledOutUsd = scheduledTotals[0]?.scheduledOutUsd ?? 0;
 
     let balanceUsd;
-    try {
       balanceUsd = await companyCash.getCurrentBalanceUsd();
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getCompanyCashSummary: getCurrentBalanceUsd failed: ${err instanceof Error ? err.message : String(err)}`,
-      });
-      throw err;
-    }
 
     return {
       periodStart,
@@ -216,7 +159,6 @@ export function createMicroErpReadModel(db: Database) {
   async function listActiveInternalAgentContracts() {
     const now = Date.now();
     let rows;
-    try {
       rows = await db
         .select({
           contractId: agentExecutionContracts.id,
@@ -236,25 +178,8 @@ export function createMicroErpReadModel(db: Database) {
           ),
         )
         .orderBy(desc(agentExecutionContracts.endsAt)).all();
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `listActiveInternalAgentContracts query failed: ${err instanceof Error ? err.message : String(err)}`,
-      });
-      throw err;
-    }
     let metricsByContractId;
-    try {
       metricsByContractId = await getActiveContractMetrics(rows, now);
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `listActiveInternalAgentContracts: getActiveContractMetrics failed: ${err instanceof Error ? err.message : String(err)}`,
-      });
-      throw err;
-    }
 
     return {
       items: rows.map((row) => ({
@@ -268,7 +193,6 @@ export function createMicroErpReadModel(db: Database) {
   async function getActiveInternalAgentContract(agentId: string) {
     const now = Date.now();
     let row;
-    try {
       row = await db
         .select({
           contractId: agentExecutionContracts.id,
@@ -290,32 +214,13 @@ export function createMicroErpReadModel(db: Database) {
         )
         .orderBy(desc(agentExecutionContracts.endsAt))
         .limit(1);
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getActiveInternalAgentContract query failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId },
-      });
-      throw err;
-    }
 
     const contract = row[0];
     if (!contract) {
       return null;
     }
     let metricsByContractId;
-    try {
       metricsByContractId = await getActiveContractMetrics([contract], now);
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getActiveInternalAgentContract: getActiveContractMetrics failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId },
-      });
-      throw err;
-    }
 
     return {
       ...contract,
@@ -345,7 +250,6 @@ export function createMicroErpReadModel(db: Database) {
 
     let spendRows: Array<{ contractId: string; total: number }>;
     let stepRows;
-    try {
       [spendRows, stepRows] = await Promise.all([
         db
           .select({
@@ -360,15 +264,6 @@ export function createMicroErpReadModel(db: Database) {
           orderBy: [desc(agentExecutionSteps.createdAt)],
         }),
       ]);
-    } catch (err) {
-      forgeDebug({
-        scope: 'micro-erp-read-model',
-        level: 'error',
-        message: `getActiveContractMetrics query failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { contractIdCount: contractIds.length },
-      });
-      throw err;
-    }
 
     const spentUsdByContractId = new Map(
       spendRows.map((row) => [row.contractId, row.total]),

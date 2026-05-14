@@ -11,7 +11,6 @@ export function createLabelsOps(ctx: OpsContext) {
     repositoryName: string;
     limit?: number;
   }) {
-    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('GET /repos/{owner}/{repo}/labels', {
@@ -25,16 +24,6 @@ export function createLabelsOps(ctx: OpsContext) {
         color: label.color,
         default: label.default,
       }));
-    } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: `listLabels failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId, repositoryName: input.repositoryName, owner: input.owner },
-      });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   async function createLabel(agentId: string, input: {
@@ -44,7 +33,6 @@ export function createLabelsOps(ctx: OpsContext) {
     color: string;
     description?: string;
   }) {
-    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('POST /repos/{owner}/{repo}/labels', {
@@ -60,16 +48,6 @@ export function createLabelsOps(ctx: OpsContext) {
         color: response.data.color,
         default: response.data.default,
       };
-    } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: `createLabel failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
-      });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   async function updateLabel(agentId: string, input: {
@@ -80,7 +58,6 @@ export function createLabelsOps(ctx: OpsContext) {
     color?: string;
     description?: string;
   }) {
-    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('PATCH /repos/{owner}/{repo}/labels/{name}', {
@@ -97,16 +74,6 @@ export function createLabelsOps(ctx: OpsContext) {
         color: response.data.color,
         default: response.data.default,
       };
-    } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: `updateLabel failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
-      });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   async function deleteLabel(agentId: string, input: {
@@ -114,7 +81,6 @@ export function createLabelsOps(ctx: OpsContext) {
     repositoryName: string;
     labelName: string;
   }) {
-    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       await octokit.request('DELETE /repos/{owner}/{repo}/labels/{name}', {
@@ -123,16 +89,6 @@ export function createLabelsOps(ctx: OpsContext) {
         name: input.labelName,
       });
       return { success: true };
-    } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: `deleteLabel failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId, repositoryName: input.repositoryName, labelName: input.labelName, owner: input.owner },
-      });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   async function addIssueLabels(agentId: string, input: {
@@ -141,7 +97,6 @@ export function createLabelsOps(ctx: OpsContext) {
     issueNumber: number;
     labels: string[];
   }) {
-    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
@@ -156,16 +111,6 @@ export function createLabelsOps(ctx: OpsContext) {
         color: label.color,
         default: label.default,
       }));
-    } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: `addIssueLabels failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
-      });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   async function removeIssueLabels(agentId: string, input: {
@@ -174,7 +119,6 @@ export function createLabelsOps(ctx: OpsContext) {
     issueNumber: number;
     labels: string[];
   }) {
-    try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       await octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels', {
@@ -184,16 +128,6 @@ export function createLabelsOps(ctx: OpsContext) {
         labels: input.labels.join(','),
       });
       return { success: true };
-    } catch (err) {
-      forgeDebug({
-        scope: 'github-ops',
-        level: 'error',
-        message: `removeIssueLabels failed: ${err instanceof Error ? err.message : String(err)}`,
-        context: { agentId, repositoryName: input.repositoryName, issueNumber: input.issueNumber, owner: input.owner },
-      });
-      forgeDebug({ scope: 'labels', level: 'error', message: 'labels: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   return {

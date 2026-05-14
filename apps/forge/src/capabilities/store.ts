@@ -116,32 +116,14 @@ export function createCapabilityStore(db: Database) {
       updatedAt: now,
     };
 
-    try {
       await db.insert(agentRoles).values(record);
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'createRole DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
-    try {
       await Promise.all(
         AGENT_BASE_TOOL_IDS.map((toolId) => addRoleToolPermission({
           roleId: record.id,
           toolId,
         })),
       );
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'createRole add base tools failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return {
       roleId: record.id,
@@ -152,25 +134,15 @@ export function createCapabilityStore(db: Database) {
 
   async function updateRole(input: { roleId: string; name?: string; description?: string | null }) {
     let existing;
-    try {
       existing = await db.query.agentRoles.findFirst({
         where: eq(agentRoles.id, input.roleId),
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'updateRole read existing failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     if (!existing) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'requireRole: not found', context: { roleId: input.roleId } });
       throw new Error(`Role not found: ${input.roleId}`);
     }
 
-    try {
       await db
         .update(agentRoles)
         .set({
@@ -179,14 +151,6 @@ export function createCapabilityStore(db: Database) {
           updatedAt: Date.now(),
         })
         .where(eq(agentRoles.id, input.roleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'updateRole DB update failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return {
       roleId: existing.id,
@@ -197,59 +161,23 @@ export function createCapabilityStore(db: Database) {
 
   async function deleteRole(roleId: string) {
     let assignedAgent;
-    try {
       assignedAgent = await db.query.agents.findFirst({
         where: eq(agents.roleId, roleId),
         columns: {
           id: true,
         },
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'deleteRole check assigned agent failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     if (assignedAgent) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
       throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
     }
 
-    try {
       await db.delete(roleToolPermissions).where(eq(roleToolPermissions.roleId, roleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'deleteRole remove tool permissions failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
-    try {
       await db.delete(roleWorkflowPermissions).where(eq(roleWorkflowPermissions.roleId, roleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'deleteRole remove workflow permissions failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
-    try {
       await db.delete(agentRoles).where(eq(agentRoles.id, roleId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'deleteRole DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return { roleId, success: true };
   }
@@ -274,7 +202,6 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function addRoleToolPermission(input: { roleId: string; toolId: string }) {
-    try {
       await db
         .insert(roleToolPermissions)
         .values({
@@ -284,14 +211,6 @@ export function createCapabilityStore(db: Database) {
           updatedAt: Date.now(),
         })
         .onConflictDoNothing();
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'addRoleToolPermission DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return {
       roleId: input.roleId,
@@ -300,18 +219,9 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function removeRoleToolPermission(input: { roleId: string; toolId: string }) {
-    try {
       await db
         .delete(roleToolPermissions)
         .where(and(eq(roleToolPermissions.roleId, input.roleId), eq(roleToolPermissions.toolId, input.toolId)));
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'removeRoleToolPermission DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return {
       roleId: input.roleId,
@@ -340,7 +250,6 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function addRoleWorkflowPermission(input: { roleId: string; workflowId: string }) {
-    try {
       await db
         .insert(roleWorkflowPermissions)
         .values({
@@ -350,14 +259,6 @@ export function createCapabilityStore(db: Database) {
           updatedAt: Date.now(),
         })
         .onConflictDoNothing();
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'addRoleWorkflowPermission DB insert failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return {
       roleId: input.roleId,
@@ -366,18 +267,9 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function removeRoleWorkflowPermission(input: { roleId: string; workflowId: string }) {
-    try {
       await db
         .delete(roleWorkflowPermissions)
         .where(and(eq(roleWorkflowPermissions.roleId, input.roleId), eq(roleWorkflowPermissions.workflowId, input.workflowId)));
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'removeRoleWorkflowPermission DB delete failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     return {
       roleId: input.roleId,
@@ -512,18 +404,9 @@ export function createCapabilityStore(db: Database) {
 
   async function getAgentCapabilities(agentId: string): Promise<CapabilitySet> {
     let agent;
-    try {
       agent = await db.query.agents.findFirst({
         where: eq(agents.id, agentId),
       });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'getAgentCapabilities DB read failed: ' + (err instanceof Error ? err.message : String(err)),
-      });
-      throw err;
-    }
 
     if (!agent) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent not found', context: { agentId } });

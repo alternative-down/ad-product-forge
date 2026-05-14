@@ -25,7 +25,6 @@ export async function resolveProfileRuntimeModel(
       throw new Error(`Invalid account OAuth model key: ${profile.modelKey}`);
     }
 
-    try {
       const gateway = createOAuthGateway();
       const apiKey = await gateway.getApiKey(profile.modelKey);
 
@@ -34,15 +33,6 @@ export async function resolveProfileRuntimeModel(
         providerId: providerId as 'openai-codex' | 'claude-code',
         apiKey,
       });
-    } catch (err) {
-      forgeDebug(
-        'llm-runtime-model',
-        `Failed to resolve OAuth runtime model: ${profile.modelKey}`,
-        { error: err instanceof Error ? err.message : String(err) },
-      );
-      forgeDebug({ scope: 'llm-runtime-model', level: 'error', message: 'llm-runtime-model: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   if (profile.modelKey.startsWith('minimax-coding-plan/')) {
@@ -59,22 +49,12 @@ export async function resolveProfileRuntimeModel(
         ? 'https://api.minimax.io/anthropic/v1'
         : profile.baseUrl || 'https://api.minimax.io/anthropic/v1';
 
-    try {
       const model = createAnthropic({
         authToken: profile.apiKey,
         baseURL: baseUrl,
       })(modelId);
 
       return wrapAnthropicPromptCacheModel(model);
-    } catch (err) {
-      forgeDebug(
-        'llm-runtime-model',
-        `Failed to create MiniMax runtime model: ${profile.modelKey}`,
-        { error: err instanceof Error ? err.message : String(err) },
-      );
-      forgeDebug({ scope: 'llm-runtime-model', level: 'error', message: 'llm-runtime-model: operation failed', error: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
   }
 
   return {

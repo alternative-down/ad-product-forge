@@ -264,7 +264,6 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
 }
 
 async function readLatestThreadDetails(workspaceBasePath: string, agentId: string) {
-  try {
     const threadId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = path.resolve(workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({
@@ -334,10 +333,6 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
     agent = await db.query.agents.findFirst({
       where: eq(agents.id, agentId),
     });
-  } catch (err) {
-    forgeDebug({ scope: 'agent-home-metrics', level: 'error', message: 'readAgentRuntimeMemory: read agent failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
 
   if (!agent) {
     return null;
