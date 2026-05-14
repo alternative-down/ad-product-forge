@@ -447,20 +447,11 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function recordLtmStep(usage: LtmUsage) {
-    if (!input.modelProfileId) {
-      return;
-    }
-
-    const contract = await input.contractStore.getRunnableContract(input.agentId);
-
+    const { contract, pricing } = await getBudgetContext();
     if (!contract) {
       return;
     }
 
-    const pricing = await input.contractStore.getUsagePricing({
-      pricingModelKey: input.pricingModelKey,
-      profileId: input.modelProfileId,
-    });
     let costUsd = 0;
 
     if (pricing.modelPrice) {
@@ -490,16 +481,10 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function estimateNextLtmDelayMs() {
-    const contract = await input.contractStore.getRunnableContract(input.agentId);
-
-    if (!contract || !input.modelProfileId) {
+    const { contract, pricing } = await getBudgetContext();
+    if (!contract) {
       return 0;
     }
-
-    const pricing = await input.contractStore.getUsagePricing({
-      pricingModelKey: input.pricingModelKey,
-      profileId: input.modelProfileId,
-    });
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
