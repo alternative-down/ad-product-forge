@@ -397,7 +397,7 @@ async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, a
         checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
       },
     };
-  } catch {
+  } catch { // @ts-expect-error non-fatal — caller handles null
     return null;
   } finally {
     await closeLibsqlClient(client);

@@ -161,7 +161,7 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
     }
 
     return entries.join('\n');
-  } catch {
+  } catch { // @ts-expect-error non-fatal — caller handles null
     // Safe: malformed JSON from external source — return null to signal no valid content
     return null;
   }

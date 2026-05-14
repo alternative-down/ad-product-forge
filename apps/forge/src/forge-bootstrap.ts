@@ -67,7 +67,7 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
         return decoded;
       }
     }
-  } catch {
+  } catch { // @ts-expect-error non-fatal — fall through to raw value
     // Fall through to raw value
   }
 

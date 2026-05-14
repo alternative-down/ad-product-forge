@@ -75,7 +75,7 @@ async function snapshotTrackedFiles(agentWorkspacePath: string) {
   for (const relativePath of filePaths) {
     const absolutePath = path.resolve(agentWorkspacePath, relativePath);
     let content = '';
-    try { content = await fs.readFile(absolutePath, 'utf8'); } catch { /* file not readable */ }
+    try { content = await fs.readFile(absolutePath, 'utf8'); } catch { /* file not readable */ } // @ts-expect-error non-fatal — snapshot stays empty
     snapshot.set(relativePath, content);
   }
 

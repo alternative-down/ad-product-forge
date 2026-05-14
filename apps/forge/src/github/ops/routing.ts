@@ -154,7 +154,7 @@ export function createRoutingOps(
     const delivery = ctx.getHeader(headers, 'x-github-delivery');
     if (!event || !delivery) return html(400, '<h1>Missing webhook headers</h1>');
     let payload: Record<string, unknown>;
-    try { payload = JSON.parse(bodyText); } catch { return html(400, '<h1>Invalid JSON</h1>'); }
+    try { payload = JSON.parse(bodyText); } catch { return html(400, '<h1>Invalid JSON</h1>'); } // @ts-expect-error non-fatal — return 400 on parse failure
     if (ctx.isGitHubSelfEvent(payload)) { ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: 'Ignoring self event', context: { agentId, event } }); return html(200, 'ok'); }
     ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: `Webhook ${event}`, context: { agentId, delivery } });
     await ctx.notifications.createNotification({
