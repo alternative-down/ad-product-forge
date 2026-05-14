@@ -97,13 +97,65 @@ function mapRow(row: SystemSettings | null): SystemSettingsValue {
 
 export function createSystemSettingsStore(db: Database) {
   async function getSettings(): Promise<SystemSettingsValue> {
-    const row = await db.query.systemSettings.findFirst({
-      where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
-    });
-    return mapRow(row);
+    try {
+      const row = await db.query.systemSettings.findFirst({
+        where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
+      });
+      return mapRow(row);
     } catch (err) {
-    forgeDebug({ scope: 'system-settings', level: 'error', message: '[system-settings] getSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw err;
+      forgeDebug({ scope: 'system-settings', level: 'info', message: 'getSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      return { ...DEFAULTS, updatedAt: null };
+    }
+  }
+
+  async function upsertSettings(input: SystemSettingsInput): Promise<SystemSettingsValue> {
+    try {
+      const now = Date.now();
+      const existing = await db.query.systemSettings.findFirst({
+        where: eq(systemSettings.id, SYSTEM_SETTINGS_ID),
+      });
+
+      const row = {
+        id: SYSTEM_SETTINGS_ID,
+        companyName: input.companyName,
+        companyContext: input.companyContext,
+        stepDelayEnabled: input.stepDelayEnabled ? 1 : 0,
+        communicationDmFlushingEnabled: input.communicationDmFlushingEnabled ? 1 : 0,
+        communicationGroupFlushingEnabled: input.communicationGroupFlushingEnabled ? 1 : 0,
+        memoryLastMessagesFullEnabled: input.memoryLastMessagesFullEnabled ? 1 : 0,
+        memoryLastMessagesCount: input.memoryLastMessagesCount,
+        tokenCountFilterEnabled: input.tokenCountFilterEnabled ? 1 : 0,
+        tokenCountFilterLimit: input.tokenCountFilterLimit,
+        checkpointedOmEnabled: input.checkpointedOmEnabled ? 1 : 0,
+        checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
+        checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
+        checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
+        checkpointedOmObservationReflectionBatchTokens: input.checkpointedOmObservationReflectionBatchTokens,
+        checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
+        checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
+        ltmRecallSearchMode: input.ltmRecallSearchMode,
+        ltmRecallWorkspaceTopK: input.ltmRecallWorkspaceTopK,
+        ltmRecallGraphTopK: input.ltmRecallGraphTopK,
+        ltmRecallGraphThreshold: input.ltmRecallGraphThreshold,
+        ltmRecallGraphRandomWalkSteps: input.ltmRecallGraphRandomWalkSteps,
+        ltmRecallGraphIncludeSources: input.ltmRecallGraphIncludeSources ? 1 : 0,
+        ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
+        ltmRecallDocumentCount: input.ltmRecallDocumentCount,
+        updatedAt: now,
+        createdAt: existing?.createdAt ?? now,
+      };
+
+      if (existing) {
+        await db.update(systemSettings).set(row).where(eq(systemSettings.id, SYSTEM_SETTINGS_ID));
+      } else {
+        await db.insert(systemSettings).values(row);
+      }
+
+      return { ...input, updatedAt: now };
+    } catch (err) {
+      forgeDebug({ scope: 'system-settings', level: 'info', message: 'upsertSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   return { getSettings, upsertSettings };

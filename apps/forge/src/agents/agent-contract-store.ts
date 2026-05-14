@@ -150,9 +150,6 @@ export function createAgentContractStore(
     });
 
     return newContract;
-    } catch (err) {
-    logContractError('getRunnableContract renewal/funding', agentId, err);
-    throw err;
   }
 
   async function getLatestContract(agentId: string) {
@@ -184,14 +181,16 @@ export function createAgentContractStore(
       .where(eq(agentExecutionSteps.contractId, contractId));
 
     return rows[0]?.total ?? 0;
-    } catch (err) {
-    logContractError('getContractSpend', contractId, err);
-    throw err;
 
     let profile;
+    try {
       profile = await db.query.llmProfiles.findFirst({
         where: eq(llmProfiles.id, input.profileId),
       });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'applyContractUpdate: read llmProfiles failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (!profile) {
       forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: LLM profile not found', context: { profileId: input.profileId } });
