@@ -11,6 +11,15 @@ import type {Database} from '../database/client'
 import { buildConversationParticipantNames } from './internal-chat-helpers';
 import { forgeDebug } from '@forge-runtime/core';
 
+async function withChatListingError<T>(operation: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: `[internal-chat-listing] ${operation} failed`, context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
+}
+
 // =============================================================================
 // ======================================================================
 // Named types to avoid complex inline generics exceeding TS parser limits
@@ -77,7 +86,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       replyToMessageId: string | null;
     }>;
   }>> {
-    try {
+    return await withChatListingError('listConversations', async () => {
       const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
       const conversationRows = await db
         .select({
@@ -203,10 +212,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           messages: [...(messagesByConversationId.get(conversation.id) as MessageListItem[] || [])].reverse(),
         };
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] listConversations failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   async function listConversationsByAccount(input: {
@@ -225,7 +231,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       replyToMessageId: string | null;
     }>;
   }>> {
-    try {
+    return await withChatListingError('listConversationsByAccount', async () => {
       await deps.getRequiredExternalAccount(input.accountId);
       const conversationRows = await db
         .select({
@@ -327,10 +333,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
           messages: [...(messagesByConversationId.get(conversation.id) as MessageListItem[] || [])].reverse(),
         };
       });
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] listConversationsByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   async function getMessages(input: {
@@ -346,7 +349,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
     content: string; attachments: unknown[]; unread: boolean; createdAt: string; authorDisplayName: string;
     replyToMessageId: string | null;
   }>> {
-    try {
+    return await withChatListingError('getMessages', async () => {
       const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
@@ -460,10 +463,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       }
 
       return result;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] getMessages failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   async function getMessagesByAccount(input: {
@@ -479,7 +479,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
     content: string; attachments: unknown[]; unread: boolean; createdAt: string; authorDisplayName: string;
     replyToMessageId: string | null;
   }>> {
-    try {
+    return await withChatListingError('getMessagesByAccount', async () => {
       await deps.getRequiredExternalAccount(input.accountId);
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
@@ -571,10 +571,7 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       }
 
       return result;
-    } catch (err) {
-      forgeDebug({ scope: 'internal-chat-listing', level: 'error', message: '[internal-chat-listing] getMessagesByAccount failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   return {
