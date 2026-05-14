@@ -56,6 +56,14 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+import {
+  createGenerateTimeoutGuard,
+  touchGenerateTimeout,
+  clearGenerateTimeout,
+  type GenerateTimeoutHandle,
+  type ProgressState,
+} from './agent-runner-generate-timeout';
+
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
@@ -75,16 +83,6 @@ interface BackoffState {
   backoffMs: number;
   instant: boolean;
   nextStepAt: number | null;
-}
-
-interface ProgressState {
-  lastStepStartedAt: number | null;
-  lastStepStage: string | null;
-  lastGenerateProgress: {
-    stage: string;
-    at: number;
-    detail: Record<string, unknown> | null;
-  } | null;
 }
 
 interface LoopState {
@@ -150,63 +148,8 @@ export interface GenerateDeps {
   isStopped: () => boolean;
 }
 
-// ─── Timeout handle ───────────────────────────────────────────────────────────
 
-export interface GenerateTimeoutHandle {
-  promise: Promise<never>;
-  timeoutId: NodeJS.Timeout | null;
-  rejectTimeout: ((error: Error) => void) | null;
-}
-
-function createGenerateTimeoutGuard(_controller: AbortController): GenerateTimeoutHandle {
-  let timeoutId: NodeJS.Timeout | null = null;
-  let rejectTimeout: ((error: Error) => void) | null = null;
-  const promise = new Promise<never>((_, reject) => {
-    rejectTimeout = reject;
-  });
-
-  return {
-    promise,
-    get timeoutId() {
-      return timeoutId;
-    },
-    set timeoutId(value: NodeJS.Timeout | null) {
-      timeoutId = value;
-    },
-    rejectTimeout,
-  };
-}
-
-function touchGenerateTimeout(
-  timeout: GenerateTimeoutHandle,
-  controller: AbortController,
-  lastStepStage: string | null,
-  lastGenerateProgress: ProgressState['lastGenerateProgress'],
-) {
-  if (timeout.timeoutId) {
-    clearTimeout(timeout.timeoutId);
-  }
-
-  timeout.timeoutId = setTimeout(() => {
-    const timeoutError = new Error(
-      `Agent generate timed out after ${GENERATE_TIMEOUT_MS}ms without iteration progress`,
-    );
-    (timeoutError as Error & { context?: Record<string, unknown> }).context = {
-      lastStepStage,
-      lastGenerateProgress,
-    };
-    controller.abort(timeoutError);
-    timeout.rejectTimeout?.(timeoutError);
-  }, GENERATE_TIMEOUT_MS);
-}
-
-function clearGenerateTimeout(timeout: GenerateTimeoutHandle) {
-  if (!timeout.timeoutId) {
-    return;
-  }
-  clearTimeout(timeout.timeoutId);
-  timeout.timeoutId = null;
-}
+export type { GenerateTimeoutHandle, ProgressState } from './agent-runner-generate-timeout';
 
 // ─── Attempt lifecycle ────────────────────────────────────────────────────────
 
