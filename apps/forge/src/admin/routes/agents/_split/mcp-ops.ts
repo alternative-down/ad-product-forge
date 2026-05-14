@@ -52,7 +52,7 @@ export function registerMcpOps(
         await reloadAgentMcp(db, loaderConfig, body.agentId);
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent/mcp/create', context: { error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

@@ -99,7 +99,7 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
           })),
         };
       });
-  } catch (error) {
+  } catch (err) {
     forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load external conversations', context: { agentId: _agentId, error: error instanceof Error ? error.message : String(error) } });
     return [];
   }
@@ -141,7 +141,7 @@ async function listRecentInternalChatConversations(
         })),
       };
     }));
-  } catch (error) {
+  } catch (err) {
     forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load internal chat conversations', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
     return [];
   }
@@ -160,7 +160,7 @@ async function listInternalChatGroupParticipants(
     }
 
     return conversation.participants.map((participant: { displayName?: string }) => participant.displayName ?? 'Unknown participant');
-  } catch (error) {
+  } catch (err) {
     forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, error: error instanceof Error ? error.message : String(error) } });
     return [];
   }
@@ -233,7 +233,7 @@ async function listThreadMessages(
     } finally {
       await closeLibsqlClient(client);
     }
-  } catch (error) {
+  } catch (err) {
     forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load recent thread messages', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
     return {
       items: [],

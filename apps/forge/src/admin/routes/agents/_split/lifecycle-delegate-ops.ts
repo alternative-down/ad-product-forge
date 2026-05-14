@@ -45,7 +45,7 @@ export function registerLifecycleDelegateOps(
           internalChat: input.internalChat,
         });
         return jsonResponse(result, 201);
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -68,7 +68,7 @@ export function registerLifecycleDelegateOps(
           schedules: input.schedules,
           internalChat: input.internalChat,
         }));
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -84,7 +84,7 @@ export function registerLifecycleDelegateOps(
         const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string(), roleId: z.string() }));
         await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
         return jsonResponse({ success: true });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

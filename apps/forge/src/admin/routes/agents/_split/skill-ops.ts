@@ -55,7 +55,7 @@ export function registerSkillOps(
           skillName: body.skillName,
         });
         return jsonResponse({ success: true, skillName: body.skillName, destPath: (result as any).destPath });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/publish-to-global route handler failed', context: { path: '/admin/agent/skills/publish-to-global', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -80,7 +80,7 @@ export function registerSkillOps(
           skillName: body.skillName,
         });
         return jsonResponse({ success: true, agentId: body.agentId, skillName: body.skillName });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/install-global route handler failed', context: { path: '/admin/agent/skills/install-global', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -99,7 +99,7 @@ export function registerSkillOps(
           zipBase64: body.skillsZipBase64,
         });
         return jsonResponse({ success: true, skillNames: installedSkillNames });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/upload route handler failed', context: { path: '/admin/agent/skills/upload', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
@@ -115,7 +115,7 @@ export function registerSkillOps(
         const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
         await deleteGlobalSkill({ workspaceBasePath, skillName: body.skillName });
         return jsonResponse({ success: true, skillName: body.skillName });
-      } catch (error) {
+      } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/skills/delete route handler failed', context: { path: '/admin/agent/skills/delete', error: error instanceof Error ? error.message : String(error) } });
         return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
       }
