@@ -69,6 +69,9 @@ export function createAgentScheduleStore(db: Database) {
 
       throw err;
     }
+    // Expose scheduleId as an alias for id — callers (including schedule-lifecycle)
+    // expect a .scheduleId field on records returned from createSchedule.
+    (record as Record<string, unknown>).scheduleId = record.id;
     return record;
   }
 
