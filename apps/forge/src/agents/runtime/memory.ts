@@ -63,7 +63,7 @@ export async function createAgentRuntimeMemory(input: {
       longTermMemoryRecall,
     };
   } catch (err) {
-    forgeDebug({ scope: 'runtime-memory', level: 'error', message: '[runtime-memory] createAgentRuntimeMemory failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'runtime-memory', level: 'error', message: 'createAgentRuntimeMemory failed', context: { error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }

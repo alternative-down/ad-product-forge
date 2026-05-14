@@ -67,7 +67,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
 
     return skills.sort((left, right) => left.skillName.localeCompare(right.skillName));
   } catch (error) {
-    forgeDebug({ scope: 'global-skills', level: 'error', message: '[global-skills] loadCustomSkills failed', context: { error: error instanceof Error ? error.message : String(error) }});
+    forgeDebug({ scope: 'global-skills', level: 'error', message: 'loadCustomSkills failed', context: { error: error instanceof Error ? error.message : String(error) }});
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
     }
