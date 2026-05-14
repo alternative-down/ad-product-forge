@@ -221,20 +221,12 @@ export class AgentLongTermMemoryRecall {
       const recallThreadState = await this.readRecallThreadState(input.threadId);
 
       if (!queryText) {
-        await this.persistRecallSnapshot({
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, buildLtmRecallSnapshot({
-          lastInitAt: this.lastInitAt,
-          steps: input.steps,
-        }, {
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, {
+        await this.persistRecallSnapshotWithInput(input, {
           status: 'miss',
-        }), {
-          recentFingerprints: recallThreadState.recentFingerprints,
-          updatedAt: Date.now(),
+          history: {
+            recentFingerprints: recallThreadState.recentFingerprints,
+            updatedAt: Date.now(),
+          },
         });
         return null;
       }
@@ -257,23 +249,15 @@ export class AgentLongTermMemoryRecall {
         results,
         rawWindowMessageCount: recallThreadState.rawWindowMessageCount,
       })) {
-        await this.persistRecallSnapshot({
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, buildLtmRecallSnapshot({
-          lastInitAt: this.lastInitAt,
-          steps: input.steps,
+        await this.persistRecallSnapshotWithInput(input, {
           queryText,
           recallConfig,
           indexStats,
           dedupedGraph: graph,
           filteredResults: results,
-        }, {
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, {
           status: 'hit',
-        }), nextHistory);
+          history: nextHistory,
+        });
         return null;
       }
 
@@ -286,43 +270,27 @@ export class AgentLongTermMemoryRecall {
       });
 
       if (!recallText) {
-        await this.persistRecallSnapshot({
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, buildLtmRecallSnapshot({
-          lastInitAt: this.lastInitAt,
-          steps: input.steps,
+        await this.persistRecallSnapshotWithInput(input, {
           queryText,
           recallConfig,
           indexStats,
           dedupedGraph: graph,
           filteredResults: results,
-        }, {
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, {
           status: 'hit',
-        }), nextHistory);
+          history: nextHistory,
+        });
         return null;
       }
 
-      await this.persistRecallSnapshot({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      }, buildLtmRecallSnapshot({
-        lastInitAt: this.lastInitAt,
-        steps: input.steps,
+      await this.persistRecallSnapshotWithInput(input, {
         queryText,
         recallConfig,
         indexStats,
         dedupedGraph: graph,
         filteredResults: results,
-      }, {
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      }, {
         status: 'hit',
-      }), nextHistory);
+        history: nextHistory,
+      });
 
       forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step complete', context: {
         agentId: this.agentId,
@@ -350,19 +318,11 @@ export class AgentLongTermMemoryRecall {
         snapshotError = String(error);
       }
       try {
-        await this.persistRecallSnapshot({
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, buildLtmRecallSnapshot({
-          lastInitAt: this.lastInitAt,
-          steps: input.steps,
-        }, {
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, {
+        await this.persistRecallSnapshotWithInput(input, {
           status: 'error',
           error: snapshotError,
-        }), persistedState?.history ?? undefined);
+          history: persistedState?.history ?? undefined,
+        });
       } catch (e) {
         forgeDebug({ scope: 'ltm-recall', level: 'warn', message: 'persistRecallSnapshot failed', context: { threadId: input.threadId, resourceId: input.resourceId, error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e } });
       }
@@ -1011,6 +971,46 @@ export class AgentLongTermMemoryRecall {
       snapshot,
       history,
     });
+  }
+
+
+  /**
+   * Persist an LTM recall snapshot with consistent threadContext from input.
+   * Replaces 5 call sites in recallFromStep that all share:
+   * - same threadId/resourceId extraction from input
+   * - same buildLtmRecallSnapshot base (this.lastInitAt, input.steps)
+   */
+  private async persistRecallSnapshotWithInput(
+    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    deps: {
+      queryText?: string;
+      recallConfig?: unknown;
+      indexStats?: unknown;
+      dedupedGraph?: unknown;
+      filteredResults?: unknown[];
+      history?: LongTermMemoryRecallHistory;
+      status: 'miss' | 'hit' | 'error';
+      error?: string;
+    },
+  ) {
+    const threadContext = {
+      threadId: input.threadId,
+      resourceId: input.resourceId,
+    };
+    const snapshot = buildLtmRecallSnapshot(
+      {
+        lastInitAt: this.lastInitAt,
+        steps: input.steps,
+        queryText: deps.queryText,
+        recallConfig: deps.recallConfig,
+        indexStats: deps.indexStats,
+        dedupedGraph: deps.dedupedGraph,
+        filteredResults: deps.filteredResults,
+      },
+      threadContext,
+      { status: deps.status, error: deps.error },
+    );
+    await this.persistRecallSnapshot(threadContext, snapshot, deps.history);
   }
 
   private partitionRecallResults(input: {

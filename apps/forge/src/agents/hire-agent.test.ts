@@ -200,4 +200,30 @@ describe('hireInternalAgent', () => {
     expect(input.emailMailboxes.deleteMailboxByAddress).toHaveBeenCalledWith('agent@test.com');
   });
 
+
+  it('calls rollbackHireDbAndEmail (no external ops) on registerAgentAccount failure', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat failed');
+    // DB deletes called exactly 3 times (one per table) as part of rollbackHireDbAndEmail
+    expect(mockDelete).toHaveBeenCalledTimes(3);
+  });
+
+  it('skips email cleanup in rollbackHireDbAndEmail when mailbox is not provisioned', async () => {
+    const db = createMockDb();
+    const input = createInput();
+    input.emailMailboxes = null;
+    input.internalChat = {
+      ...input.internalChat,
+      registerAgentAccount: vi.fn().mockRejectedValue(new Error('chat failed')),
+    } as any;
+    await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat failed');
+    // mockDelete still called (DB rollback), but no email attempts
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
 });

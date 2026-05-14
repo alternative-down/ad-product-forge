@@ -113,12 +113,26 @@ async function rollbackHire(
     });
   }
 
-  // Roll back DB records — order matches insertion order
+  // Delegate DB record + email cleanup to shared helper
+  await rollbackHireDbAndEmail(agentId, provisionedMailbox, emailMailboxes, tx);
+}
+/**
+ * Rolls back DB records and cleans up email after a failed hire.
+ * @param agentId - The agent ID being rolled back
+ * @param provisionedMailbox - Email mailbox provisioned (if any)
+ * @param emailMailboxes - Email manager (if configured)
+ * @param tx - The active DB transaction
+ */
+async function rollbackHireDbAndEmail(
+  agentId: string,
+  provisionedMailbox: { address: string } | null,
+  emailMailboxes: HireInternalAgentInput['emailMailboxes'],
+  tx: any,
+) {
   await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
   await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
   await tx.delete(agents).where(eq(agents.id, agentId));
 
-  // Best-effort email cleanup
   if (provisionedMailbox && emailMailboxes) {
     try {
       await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -220,16 +234,12 @@ export async function hireInternalAgent(db: Database, input: unknown) {
     } catch (err) {
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       // No external ops succeeded yet — undo DB records and email only
-      await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
-      await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
-      await tx.delete(agents).where(eq(agents.id, agentId));
-      if (provisionedMailbox && validated.emailMailboxes) {
-        try {
-          await validated.emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
-        } catch (e) {
-          forgeDebug({ scope: 'hire-agent', level: 'warn', message: 'Rollback: deleteMailboxByAddress failed', context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) } });
-        }
-      }
+      await rollbackHireDbAndEmail(
+        agentId,
+        provisionedMailbox,
+        validated.emailMailboxes,
+        tx,
+      );
       forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
