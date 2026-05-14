@@ -122,56 +122,37 @@ export function createAgentContractStore(
       createdAt: now,
     } as const;
 
-    try {
-      const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
-      if (cashBalanceUsd < newContract.budgetUsd) {
-        return null;
-      }
-
-      // Wrap insert + funding in same transaction — if funding fails, contract insert rolls back
-      await db.transaction(async (tx: import("drizzle-orm").sql.SQL) => {
-        await tx.insert(agentExecutionContracts).values(newContract);
-
-        await companyCashOperations.recordCashOut(
-          {
-            type: 'agent-contract-funding',
-            amountUsd: newContract.budgetUsd,
-            description: `Contract funding for ${agentId}`,
-            referenceType: 'agent-execution-contract',
-            referenceId: newContract.id,
-            effectiveAt: now,
-          },
-          tx,
-        );
-
-        await tx
-          .update(agentExecutionContracts)
-          .set({ fundedAt: now })
-          .where(eq(agentExecutionContracts.id, newContract.id));
-      });
-
-      return newContract;
-    } catch (err) {
-      logContractError('getRunnableContract renewal/funding', agentId, err);
-      throw err;
+    const cashBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    if (cashBalanceUsd < newContract.budgetUsd) {
+      return null;
     }
-  }
 
-  async function getActiveContract(agentId: string) {
-    const now = time.now();
-    try {
-      return await db.query.agentExecutionContracts.findFirst({
-        where: and(
-          eq(agentExecutionContracts.agentId, agentId),
-          lte(agentExecutionContracts.startsAt, now),
-          gte(agentExecutionContracts.endsAt, now),
-        ),
-        orderBy: [desc(agentExecutionContracts.endsAt)],
-      });
+    // Wrap insert + funding in same transaction — if funding fails, contract insert rolls back
+    await db.transaction(async (tx: import("drizzle-orm").sql.SQL) => {
+      await tx.insert(agentExecutionContracts).values(newContract);
+
+      await companyCashOperations.recordCashOut(
+        {
+          type: 'agent-contract-funding',
+          amountUsd: newContract.budgetUsd,
+          description: `Contract funding for ${agentId}`,
+          referenceType: 'agent-execution-contract',
+          referenceId: newContract.id,
+          effectiveAt: now,
+        },
+        tx,
+      );
+
+      await tx
+        .update(agentExecutionContracts)
+        .set({ fundedAt: now })
+        .where(eq(agentExecutionContracts.id, newContract.id));
+    });
+
+    return newContract;
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: '[agent-contract-store] getActiveContract failed', context: { error: err instanceof Error ? err.message : String(err), agentId } });
-      throw err;
-    }
+    logContractError('getRunnableContract renewal/funding', agentId, err);
+    throw err;
   }
 
   async function getLatestContract(agentId: string) {
@@ -195,34 +176,17 @@ export function createAgentContractStore(
   }
 
   async function getContractSpend(contractId: string) {
-    try {
-      const rows = await db
-        .select({
-          total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
-        })
-        .from(agentExecutionSteps)
-        .where(eq(agentExecutionSteps.contractId, contractId));
+    const rows = await db
+      .select({
+        total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+      })
+      .from(agentExecutionSteps)
+      .where(eq(agentExecutionSteps.contractId, contractId));
 
-      return rows[0]?.total ?? 0;
+    return rows[0]?.total ?? 0;
     } catch (err) {
-      logContractError('getContractSpend', contractId, err);
-      throw err;
-    }
-  }
-
-  async function getUsagePricing(input: {
-    pricingModelKey: string;
-    profileId: string;
-  }) {
-    let modelPrice;
-    try {
-      modelPrice = await db.query.llmModelPrices.findFirst({
-        where: eq(llmModelPrices.modelKey, input.pricingModelKey),
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'applyContractUpdate: read llmModelPrices failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
+    logContractError('getContractSpend', contractId, err);
+    throw err;
 
     let profile;
     try {

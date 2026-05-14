@@ -90,36 +90,13 @@ export function registerRoleOps(
     path: '/admin/roles/delete',
     handler: async (request) => {
       const body = parseJsonBody(request.bodyText, deleteRoleSchema);
-      try {
-        await capabilities.deleteRole(body.roleId);
-        return jsonResponse({ success: true, roleId: body.roleId });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
-        if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
-        throw err;
-      }
-    },
-  });
-
-  // POST /admin/roles/capabilities
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/capabilities',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, roleCapabilitySchema);
-        const toolId = resolvePermissionId(body.capabilityName);
-        if (body.capabilityValue) {
-          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-        } else {
-          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
-        }
-        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.capabilityValue });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleCapability failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
+      await capabilities.deleteRole(body.roleId);
+      return jsonResponse({ success: true, roleId: body.roleId });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
+      if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
+      throw err;
     },
   });
 
@@ -128,40 +105,17 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/tool-permissions',
     handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-        const toolId = resolvePermissionId(body.toolName);
-        if (body.allowed) {
-          await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
-        } else {
-          await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
-        }
-        return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
+      const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
+      const toolId = resolvePermissionId(body.toolName);
+      if (body.allowed) {
+        await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
+      } else {
+        await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
       }
-    },
-  });
-
-  // POST /admin/roles/workflow-permissions
-  httpServer.registerRoute({
-    method: 'POST',
-    path: '/admin/roles/workflow-permissions',
-    handler: async (request) => {
-      try {
-        const body = parseJsonBody(request.bodyText, roleWorkflowPermissionSchema);
-        const workflowId = resolvePermissionId(body.workflowName);
-        if (body.allowed) {
-          await capabilities.addRoleWorkflowPermission({ roleId: body.roleId, workflowId });
-        } else {
-          await capabilities.removeRoleWorkflowPermission({ roleId: body.roleId, workflowId });
-        }
-        return jsonResponse({ success: true, roleId: body.roleId, workflowId, allowed: body.allowed });
-      } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleWorkflowPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
-      }
+      return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
+    } catch (err) {
+      forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
     },
   });
 }
