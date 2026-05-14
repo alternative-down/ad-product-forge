@@ -209,13 +209,25 @@ export function createAgentContractStore(
     pricingModelKey: string;
     profileId: string;
   }) {
-    const modelPrice = await db.query.llmModelPrices.findFirst({
-      where: eq(llmModelPrices.modelKey, input.pricingModelKey),
-    });
+    let modelPrice;
+    try {
+      modelPrice = await db.query.llmModelPrices.findFirst({
+        where: eq(llmModelPrices.modelKey, input.pricingModelKey),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'applyContractUpdate: read llmModelPrices failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
-    const profile = await db.query.llmProfiles.findFirst({
-      where: eq(llmProfiles.id, input.profileId),
-    });
+    let profile;
+    try {
+      profile = await db.query.llmProfiles.findFirst({
+        where: eq(llmProfiles.id, input.profileId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'applyContractUpdate: read llmProfiles failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (!profile) {
       forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: LLM profile not found', context: { profileId: input.profileId } });

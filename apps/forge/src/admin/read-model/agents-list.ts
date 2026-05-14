@@ -32,7 +32,7 @@ import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 
 import type { Database } from '../../database/index';
 import { createSystemSettingsStore } from '../../system-settings/store';
-import { toMastraSafeIdentifier, readOperationalMemoryState, LibsqlConversationStore, type CommunicationMessageView } from '@forge-runtime/core';
+import { toMastraSafeIdentifier, readOperationalMemoryState, LibsqlConversationStore, forgeDebug, type CommunicationMessageView } from '@forge-runtime/core';
 import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
@@ -283,17 +283,23 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     const recentStepsByAgentId = new Map(
       await Promise.all(
-        agentRows.map(async (agent) => [
-          agent.id,
-          await db.query.agentExecutionSteps.findMany({
-            where: and(
-              eq(agentExecutionSteps.agentId, agent.id),
-              eq(agentExecutionSteps.kind, 'agent-step'),
-            ),
-            orderBy: [desc(agentExecutionSteps.createdAt)],
-            limit: 6,
-          }),
-        ] as const),
+        agentRows.map(async (agent) => {
+          let steps;
+          try {
+            steps = await db.query.agentExecutionSteps.findMany({
+              where: and(
+                eq(agentExecutionSteps.agentId, agent.id),
+                eq(agentExecutionSteps.kind, 'agent-step'),
+              ),
+              orderBy: [desc(agentExecutionSteps.createdAt)],
+              limit: 6,
+            });
+          } catch (err) {
+            forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgents: read steps failed', context: { agentId: agent.id, error: err instanceof Error ? err.message : String(err) } });
+            throw err;
+          }
+          return [agent.id, steps] as const;
+        }),
       ),
     );
 
@@ -427,7 +433,13 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
   }
 
   async function getAgent(agentId: string): Promise<AgentDetail | null> {
-    const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
+    let agent;
+    try {
+      agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getAgent: read agent failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     if (!agent) return null;
 
     const loadedAgent = registry.get(agentId) as { runner?: { getSnapshot: () => unknown } } | undefined;
@@ -454,21 +466,35 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     ]);
 
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
-    const agentMcpServerRows = mcpServerIds.length > 0
-      ? await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, mcpServerIds) })
-      : [];
+    let agentMcpServerRows;
+    if (mcpServerIds.length > 0) {
+      try {
+        agentMcpServerRows = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, mcpServerIds) });
+      } catch (err) {
+        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getAgent: read mcpServerConfigs failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
+    } else {
+      agentMcpServerRows = [];
+    }
 
     let spentUsd = 0;
     if (activeContractRows.length > 0) {
       const currentPeriodStart = new Date();
       currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
-      const steps = await db.query.agentExecutionSteps.findMany({
-        where: and(
-          eq(agentExecutionSteps.agentId, agentId),
-          gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
-        ),
-        columns: { costUsd: true },
-      });
+      let steps;
+      try {
+        steps = await db.query.agentExecutionSteps.findMany({
+          where: and(
+            eq(agentExecutionSteps.agentId, agentId),
+            gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
+          ),
+          columns: { costUsd: true },
+        });
+      } catch (err) {
+        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'getAgent: read steps for spend failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+        throw err;
+      }
       spentUsd = steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
     }
 

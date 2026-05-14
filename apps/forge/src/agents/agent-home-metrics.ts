@@ -329,9 +329,15 @@ async function readLatestThreadDetails(workspaceBasePath: string, agentId: strin
 }
 
 async function readAgentRuntimeMemory(db: Database, workspaceBasePath: string, agentId: string) {
-  const agent = await db.query.agents.findFirst({
-    where: eq(agents.id, agentId),
-  });
+  let agent;
+  try {
+    agent = await db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+    });
+  } catch (err) {
+    forgeDebug({ scope: 'agent-home-metrics', level: 'error', message: 'readAgentRuntimeMemory: read agent failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
   if (!agent) {
     return null;
