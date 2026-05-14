@@ -1,5 +1,15 @@
 import { vi } from 'vitest';
 
+/** Replaces MockFn for mock functions. */
+type MockFn<T = unknown> = {
+  mockReset: () => void;
+  mockResolvedValue: (val: T) => MockFn<T>;
+  mockRejectedValue: (err: unknown) => MockFn<T>;
+  mockImplementation: (fn: (...args: unknown[]) => unknown) => MockFn<T>;
+  mockReturnValue: (val: T) => MockFn<T>;
+};
+
+
 /**
  * Creates a minimal mock DB object matching what the read-model factories expect.
  * This is the canonical mock DB factory shared across admin read-model test files.
@@ -49,22 +59,7 @@ export function createMockDb(overrides = {}) {
     }),
     ...overrides,
   };
-  const MockDb = {
-  query: {
-    agents: ReturnType<typeof vi.fn>,
-    agentNotifications: ReturnType<typeof vi.fn>,
-    agentExecutionContracts: ReturnType<typeof vi.fn>,
-    agentRoles: ReturnType<typeof vi.fn>,
-    llmProfiles: ReturnType<typeof vi.fn>,
-    agentExecutionSteps: ReturnType<typeof vi.fn>,
-    agentMcpConfigs: ReturnType<typeof vi.fn>,
-    agentSchedules: ReturnType<typeof vi.fn>,
-    mcpServerConfigs: ReturnType<typeof vi.fn>,
-    agentHomeMetricSnapshots: ReturnType<typeof vi.fn>,
-  },
-  select: ReturnType<typeof vi.fn>,
-};
-return db as typeof db & Record<string, unknown>;
+  return db as typeof db & Record<string, unknown>;
 }
 
 /**
@@ -76,9 +71,9 @@ return db as typeof db & Record<string, unknown>;
  *   mockReadLongTermMemoryState
  */
 export function resetAgentReadModelMocks(sharedMocks: {
-  mockReadOperationalMemoryState: ReturnType<typeof vi.fn>;
-  mockListThreadMessages: ReturnType<typeof vi.fn>;
-  mockReadLongTermMemoryState: ReturnType<typeof vi.fn>;
+  mockReadOperationalMemoryState: MockFn;
+  mockListThreadMessages: MockFn;
+  mockReadLongTermMemoryState: MockFn;
 }) {
   sharedMocks.mockReadOperationalMemoryState.mockReset();
   sharedMocks.mockReadOperationalMemoryState.mockResolvedValue(null);
