@@ -394,46 +394,45 @@ export function mergeToolLogMessages(messages: Array<{
   return merged;
 }
 
-export function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
-  const toolInvocations = Array.isArray(metadata?.toolInvocations)
-    ? metadata.toolInvocations
-    : [];
-  const toolResults = Array.isArray(metadata?.toolResults)
-    ? metadata.toolResults
-    : [];
+function indexToolResultsByToolCallId(toolResults: unknown[]) {
   const resultIndexesByToolCallId = new Map<string, number>();
-  const parts: Array<Record<string, unknown>> = [];
-  const matchedResultIndexes = new Set<number>();
-
   for (const [index, toolResult] of toolResults.entries()) {
     if (
-      typeof toolResult !== 'object'
-      || toolResult === null
-      || typeof toolResult.toolCallId !== 'string'
+      typeof toolResult === 'object'
+      && toolResult !== null
+      && typeof (toolResult as Record<string, unknown>).toolCallId === 'string'
     ) {
-      continue;
+      resultIndexesByToolCallId.set((toolResult as { toolCallId: string }).toolCallId, index);
     }
-
-    resultIndexesByToolCallId.set(toolResult.toolCallId, index);
   }
+  return resultIndexesByToolCallId;
+}
+
+function processToolInvocations(
+  toolInvocations: unknown[],
+  resultIndexesByToolCallId: Map<string, number>,
+  toolResults: unknown[],
+) {
+  const parts: Array<Record<string, unknown>> = [];
+  const matchedResultIndexes = new Set<number>();
 
   for (const toolInvocation of toolInvocations) {
     if (
       typeof toolInvocation !== 'object'
       || toolInvocation === null
-      || typeof toolInvocation.toolName !== 'string'
+      || typeof (toolInvocation as Record<string, unknown>).toolName !== 'string'
     ) {
       continue;
     }
 
-    const toolCallId = typeof toolInvocation.toolCallId === 'string'
-      ? toolInvocation.toolCallId
+    const toolCallId = typeof (toolInvocation as Record<string, unknown>).toolCallId === 'string'
+      ? (toolInvocation as Record<string, unknown>).toolCallId as string
       : null;
     const matchingResultIndex = toolCallId
       ? resultIndexesByToolCallId.get(toolCallId)
       : undefined;
     const matchingResult = matchingResultIndex !== undefined
-      ? toolResults[matchingResultIndex]
+      ? toolResults[matchingResultIndex] as Record<string, unknown> | null
       : null;
 
     if (matchingResultIndex !== undefined) {
@@ -456,6 +455,15 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
     });
   }
 
+  return { parts, matchedResultIndexes };
+}
+
+function collectUnmatchedResults(
+  toolResults: unknown[],
+  matchedResultIndexes: Set<number>,
+) {
+  const parts: Array<Record<string, unknown>> = [];
+
   for (const [index, toolResult] of toolResults.entries()) {
     if (
       matchedResultIndexes.has(index)
@@ -468,13 +476,32 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
     parts.push({
       type: 'tool-result',
       toolResult: {
-        toolCallId: toolResult.toolCallId,
-        result: toolResult.result,
+        toolCallId: (toolResult as Record<string, unknown>).toolCallId,
+        result: (toolResult as Record<string, unknown>).result,
       },
     });
   }
 
   return parts;
+}
+
+export function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
+  const toolInvocations = Array.isArray(metadata?.toolInvocations)
+    ? metadata.toolInvocations
+    : [];
+  const toolResults = Array.isArray(metadata?.toolResults)
+    ? metadata.toolResults
+    : [];
+
+  const resultIndexesByToolCallId = indexToolResultsByToolCallId(toolResults);
+  const { parts: invocationParts, matchedResultIndexes } = processToolInvocations(
+    toolInvocations,
+    resultIndexesByToolCallId,
+    toolResults,
+  );
+  const unmatchedResultParts = collectUnmatchedResults(toolResults, matchedResultIndexes);
+
+  return [...invocationParts, ...unmatchedResultParts];
 }
 
 
