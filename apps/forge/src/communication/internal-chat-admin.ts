@@ -48,9 +48,15 @@ export function createInternalChatAdmin(db: Database) {
       roleName: input.roleName,
       roleDescription: input.roleDescription,
     });
-    const existing = await db.query.internalChatAccounts.findFirst({
-      where: eq(internalChatAccounts.agentId, input.agentId),
-    });
+    let existing;
+    try {
+      existing = await db.query.internalChatAccounts.findFirst({
+        where: eq(internalChatAccounts.agentId, input.agentId),
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'internal-chat-admin', level: 'error', message: '[internal-chat-admin] registerAgentAccount: lookup failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (existing) {
       await db

@@ -121,9 +121,15 @@ export function createInternalChatGroups(
       ) {
         await requireConversationMembershipByAccount(accountId, conversationId);
     
-        const conversation = await db.query.internalChatConversations.findFirst({
-          where: eq(internalChatConversations.id, conversationId),
-        });
+        let conversation;
+        try {
+          conversation = await db.query.internalChatConversations.findFirst({
+            where: eq(internalChatConversations.id, conversationId),
+          });
+        } catch (err) {
+          forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: '[internal-chat-groups] getRequiredConversationForAccount lookup failed', context: { error: err instanceof Error ? err.message : String(err), conversationId } });
+          throw err;
+        }
     
         if (!conversation) {
           forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'getRequiredConversationForAccount conversation not found', context: { conversationId } });

@@ -103,8 +103,8 @@ export function createSystemSettingsStore(db: Database) {
       });
       return mapRow(row);
     } catch (err) {
-      forgeDebug({ scope: 'system-settings', level: 'info', message: 'getSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
-      return { ...DEFAULTS, updatedAt: null };
+      forgeDebug({ scope: 'system-settings', level: 'error', message: '[system-settings] getSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      throw err;
     }
   }
 

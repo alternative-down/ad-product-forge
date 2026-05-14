@@ -96,9 +96,15 @@ export function createChatSending(deps: SendingDeps) {
     // Guard: validate replyToMessageId belongs to the same conversation
     let resolvedReplyTo: string | null = null;
     if (input.replyToMessageId) {
-      const parentMessage = await db.query.internalChatMessages.findFirst({
-        where: eq(internalChatMessages.id, input.replyToMessageId),
-      });
+      let parentMessage;
+      try {
+        parentMessage = await db.query.internalChatMessages.findFirst({
+          where: eq(internalChatMessages.id, input.replyToMessageId),
+        });
+      } catch (err) {
+        forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: '[internal-chat-sending] sendMessage replyToMessageId lookup failed', context: { error: err instanceof Error ? err.message : String(err), replyToMessageId: input.replyToMessageId } });
+        throw err;
+      }
       if (!parentMessage) {
         forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'reply target message not found', context: { replyToMessageId: input.replyToMessageId } });
         throw new Error('Reply target message not found: ' + input.replyToMessageId);
