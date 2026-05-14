@@ -15,11 +15,28 @@ import { z } from 'zod';
 
 import {
   createAgentLongTermMemoryStore,
-  type CheckpointPackageManifest,
   type LongTermMemoryState,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
 import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
+import {
+  readLtmState,
+  writeLtmState,
+  markLtmRecallIndexDirty,
+  scheduleLtmRun,
+  clearLtmTimer,
+  applyLtmStateToSnapshot,
+} from './agent-ltm-schedule-helpers';
+import {
+  computeCheckpointTimestamp,
+  formatCheckpointPackageId,
+  writeCheckpointFiles,
+  buildCheckpointPackageManifest,
+  commitCheckpointPackage,
+  cleanupTempPackage,
+  getTempPackagePath,
+  prepareTempPackageDirectory,
+} from './agent-ltm-checkpoint-io-helpers';
 
 import { withTimeout } from '../utils/async';
 const CHECKPOINTS_DIR = 'checkpoints';
@@ -128,7 +145,7 @@ export function createAgentLongTermMemory(input: {
   let idle = false;
   let running = false;
   let stopped = false;
-  let timer: NodeJS.Timeout | null = null;
+  const timerRef = { current: null as NodeJS.Timeout | null };
   let currentAbortController: AbortController | null = null;
   let refreshRecallIndex: (() => Promise<void>) | null = null;
   let snapshot: LtmSnapshot = {
@@ -143,12 +160,7 @@ export function createAgentLongTermMemory(input: {
   };
 
   function clearTimer() {
-    if (!timer) {
-      return;
-    }
-
-    clearTimeout(timer);
-    timer = null;
+    clearLtmTimer(timerRef);
   }
 
   async function ensureInitialized() {
@@ -182,38 +194,22 @@ export function createAgentLongTermMemory(input: {
 
   async function readState() {
     await ensureInitialized();
-    return input.persistenceStore.readState();
+    return readLtmState(input.persistenceStore);
   }
 
   async function writeState(state: LongTermMemoryState) {
     await ensureInitialized();
-    const persistedState = await input.persistenceStore.writeState(state);
-    snapshot = {
-      ...snapshot,
-      lastRunAt: persistedState.lastRunAt ? Date.parse(persistedState.lastRunAt) : snapshot.lastRunAt,
-      lastRunError: persistedState.lastRunError,
-      lastRunErrorAt: persistedState.lastRunErrorAt ? Date.parse(persistedState.lastRunErrorAt) : null,
-      lastWrittenPackageId: persistedState.lastWrittenPackageId,
-      lastWrittenAt: persistedState.lastWrittenAt ? Date.parse(persistedState.lastWrittenAt) : null,
-      packageCount: persistedState.packages.length,
-    };
+    const persistedState = await writeLtmState(input.persistenceStore, state);
+    applyLtmStateToSnapshot(snapshot, persistedState);
   }
 
   async function markRecallIndexDirty(reason: string) {
     await ensureInitialized();
-    await input.persistenceStore.writeRecallIndexStamp(reason);
+    await markLtmRecallIndexDirty(input.persistenceStore, reason);
   }
 
   function scheduleRun(delayMs: number) {
-    if (stopped || !idle) {
-      return;
-    }
-
-    clearTimer();
-    timer = setTimeout(() => {
-      timer = null;
-      void runMemoryWorkflow();
-    }, delayMs);
+    scheduleLtmRun(delayMs, stopped, idle, timerRef, runMemoryWorkflow);
   }
 
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
@@ -224,24 +220,14 @@ export function createAgentLongTermMemory(input: {
       return existing;
     }
 
-    // Bugfix #1098: checkpoint timestamp must be the oldest reflection's createdAt,
-    // not the current summary.updatedAt. This ensures the checkpoint preserves the
-    // temporal ordering of the replaced block.
-    const allCreatedAts = [
-      ...payload.reflections.map(r => r.createdAt),
-      ...payload.observations.map(o => o.createdAt),
-    ];
-    const checkpointTimestamp = allCreatedAts.length > 0
-      ? allCreatedAts.reduce((earliest, ts) => ts < earliest ? ts : earliest, allCreatedAts[0])
-      : payload.checkpointSummary.updatedAt;
-
-    const dayKey = checkpointTimestamp.slice(0, 10);
+    const checkpointTimestamp = computeCheckpointTimestamp(payload);
+    const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
     const sequence = state.packages
       .filter((entry) => entry.packageId.startsWith(`${dayKey}_`))
       .length + 1;
-    const packageId = `${dayKey}_${String(sequence).padStart(3, '0')}`;
+    const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
-    const tempPackagePath = `${packagePath}.${createId()}.tmp`;
+    const tempPackagePath = getTempPackagePath(packagePath);
 
     forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write start', context: {
       agentId: input.agentId,
@@ -252,50 +238,8 @@ export function createAgentLongTermMemory(input: {
       observationCount: payload.observations.length,
     } });
 
-      await fs.rm(tempPackagePath, { recursive: true, force: true });
-      await fs.mkdir(tempPackagePath, { recursive: true });
-      await fs.writeFile(
-        path.resolve(tempPackagePath, 'README.md'),
-        renderCheckpointPackageReadme({
-          payload,
-        }),
-      );
 
-      if (payload.reflections.length > 0) {
-        await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
-      }
-
-      for (const [index, reflection] of payload.reflections.entries()) {
-        await fs.writeFile(
-          path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
-          renderReflectionFile(reflection),
-        );
-      }
-
-      if (payload.observations.length > 0) {
-        await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
-      }
-
-      for (const [index, observation] of payload.observations.entries()) {
-        await fs.writeFile(
-          path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
-          renderObservationFile(observation),
-        );
-      }
-
-      await fs.rm(packagePath, { recursive: true, force: true });
-      await fs.rename(tempPackagePath, packagePath);
-
-      const manifest: CheckpointPackageManifest = {
-        packageId,
-        checkpointGeneration: payload.toGeneration,
-        fromGeneration: payload.fromGeneration,
-        toGeneration: payload.toGeneration,
-        createdAt: checkpointTimestamp,
-        checkpointSummaryUpdatedAt: checkpointTimestamp,
-        reflectionCount: payload.reflections.length,
-        observationCount: payload.observations.length,
-      };
+      const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
 
       state.packages.push(manifest);
       state.lastWrittenPackageId = packageId;
