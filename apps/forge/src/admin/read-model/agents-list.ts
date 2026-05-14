@@ -212,7 +212,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
 
-    let client: { url: string };
+    let client: { url: string } | null = null;
+    try {
       const { createClient } = await import('@libsql/client');
       const c = createClient({ url: `file:${agentDatabasePath}` });
       c.execute('PRAGMA foreign_keys = ON');
@@ -283,16 +284,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const recentStepsByAgentId = new Map(
       await Promise.all(
         agentRows.map(async (agent) => {
-          let steps;
-          try {
-            steps = await db.query.agentExecutionSteps.findMany({
-              where: and(
-                eq(agentExecutionSteps.agentId, agent.id),
-                eq(agentExecutionSteps.kind, 'agent-step'),
-              ),
-              orderBy: [desc(agentExecutionSteps.createdAt)],
-              limit: 6,
-            });
+          const steps = await db.query.agentExecutionSteps.findMany({
+            where: and(
+              eq(agentExecutionSteps.agentId, agent.id),
+              eq(agentExecutionSteps.kind, 'agent-step'),
+            ),
+            orderBy: [desc(agentExecutionSteps.createdAt)],
+            limit: 6,
+          });
           return [agent.id, steps] as const;
         }),
       ),
