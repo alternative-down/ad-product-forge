@@ -15,7 +15,8 @@ import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
-import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
+import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
+import { createRunnerMessageManager, type RunnerMessageManagerState } from './agent-runner-message-manager';
 
 import {
   AGENT_CONTEXT_WARNING_CHAR_LIMIT,
@@ -127,8 +128,7 @@ export function createAgentRunner(
         detail: Record<string, unknown> | null;
       }
     | null = null;
-  const loopState: { lastLoopSignature: string | null; repeatedLoopCount: number } = { lastLoopSignature: null, repeatedLoopCount: 0 };
-  const loopDetector = createLoopDetector(loopState);
+  const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
   let activeRunEpoch = 0;
   let activeStepEpoch = 0;
   const activeGenerateToken = 0;
@@ -136,17 +136,18 @@ export function createAgentRunner(
   let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
   let pendingLongTermMemoryRecallSystemText: string | null = null;
-  const messageManagerState: MessageManagerState = {
-    flushedRunEventKeys: new Set<string>(),
-    flushedRunEventKeyOrder: [] as string[],
-    currentFlushSettings: {
-      communicationDmFlushingEnabled: true,
-      communicationGroupFlushingEnabled: true,
+  const messageManager = createRunnerMessageManager(
+    {
+      flushedRunEventKeys: new Set<string>(),
+      flushedRunEventKeyOrder: [] as string[],
+      currentFlushSettings: {
+        communicationDmFlushingEnabled: true,
+        communicationGroupFlushingEnabled: true,
+      },
+      pendingRunMessages: new Map<string, AgentWakeEvent>(),
     },
-    pendingRunMessages: new Map<string, AgentWakeEvent>(),
-  };
-
-  const messageManager = createMessageManager(messageManagerState, formatPendingRunEvents);
+    formatPendingRunEvents,
+  );
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
 
@@ -292,7 +293,7 @@ export function createAgentRunner(
     clearTimer();
     clearHealthcheck();
     wakeQueue.stop();
-    messageManager.resetFlushedRunEventKeys();
+    messageManager.reset();
   }
 
   async function forceIdle(options: {
@@ -305,9 +306,9 @@ export function createAgentRunner(
     clearTimer();
     if (!options.preserveQueuedWork) {
       wakeQueue.stop();
-      messageManagerState.pendingRunMessages.clear();
+      messageManager.getState().pendingRunMessages.clear();
     }
-    messageManager.resetFlushedRunEventKeys();
+    messageManager.reset();
     scheduler.setInstant(false);
     resetLoopDetector();
     await withTimeout(
@@ -377,7 +378,7 @@ export function createAgentRunner(
       scheduler.resetBackoff();
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
-      messageManager.resetFlushedRunEventKeys();
+      messageManager.reset();
       pendingLongTermMemoryRecallSystemText = null;
       await refreshRunFlushSettings();
       await resetRunLastMessages();
@@ -549,7 +550,7 @@ export function createAgentRunner(
           backoffState,
           progressState,
           loopState,
-          loopDetector,
+          loopManager,
           currentGenerateAbortController,
           setCurrentGenerateAbortController: (c) => {
             currentGenerateAbortController = c;
@@ -565,9 +566,9 @@ export function createAgentRunner(
             nextStepAt = v;
           },
           setLoopSignature: (sig) => {
-            loopState.lastLoopSignature = sig;
+            loopManager.getState().lastLoopSignature = sig;
           },
-          loopSignature: loopState.lastLoopSignature ?? '',
+          loopSignature: loopManager.getState().lastLoopSignature ?? '',
           activeRunId,
           loadAgentContextInstructions,
           isStopped: () => stopped,
@@ -647,7 +648,7 @@ export function createAgentRunner(
   }
 
   function resetLoopDetector() {
-    loopDetector.reset();
+    loopManager.reset();
   }
 
   async function resetRunLastMessages() {
@@ -675,7 +676,7 @@ export function createAgentRunner(
     messageManager.updateFlushSettings(settings);
   }
   function registerLoopSignature(signature: string) {
-    return loopDetector.register(signature);
+    return loopManager.register(signature);
   }
 
   async function planNextAttempt(): Promise<
@@ -757,7 +758,7 @@ export function createAgentRunner(
       estimatedDelayMs: s.nextStepAt ? Math.max(s.nextStepAt - Date.now(), 0) : null,
       lastStepStartedAt,
       lastStepStage,
-      pendingRunEvents: Array.from(messageManagerState.pendingRunMessages.values()),
+      pendingRunEvents: Array.from(messageManager.getState().pendingRunMessages.values()),
       wake: wakeQueue.getSnapshot(),
       lastWakeStartedAt,
     };
