@@ -27,7 +27,7 @@
     "@mastra/fastembed": "^1.0.1",
     "@mastra/libsql": "^1.8.1",
     "@mastra/memory": "^1.15.0",
-    "@mendable/firecrawl-js": "^4.18.1",
+    "@mendable/firecrawl-js": "^4.23.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.1",
     "onnxruntime-node": "1.21.0",
