@@ -159,14 +159,19 @@ export function createAgentContractStore(
 
   async function getActiveContract(agentId: string) {
     const now = time.now();
-    return await db.query.agentExecutionContracts.findFirst({
-      where: and(
-        eq(agentExecutionContracts.agentId, agentId),
-        lte(agentExecutionContracts.startsAt, now),
-        gte(agentExecutionContracts.endsAt, now),
-      ),
-      orderBy: [desc(agentExecutionContracts.endsAt)],
-    });
+    try {
+      return await db.query.agentExecutionContracts.findFirst({
+        where: and(
+          eq(agentExecutionContracts.agentId, agentId),
+          lte(agentExecutionContracts.startsAt, now),
+          gte(agentExecutionContracts.endsAt, now),
+        ),
+        orderBy: [desc(agentExecutionContracts.endsAt)],
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: '[agent-contract-store] getActiveContract failed', context: { error: err instanceof Error ? err.message : String(err), agentId } });
+      throw err;
+    }
   }
 
   async function getLatestContract(agentId: string) {

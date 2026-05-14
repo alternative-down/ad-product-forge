@@ -25,11 +25,17 @@ export function createAgentMetricsReadModel(deps: AgentMetricsReadModelDeps) {
   const { db } = deps;
 
   async function listRecentAgentHomeMetricSnapshots(input: { agentId: string; limit: number }) {
-    const rows = await db.query.agentHomeMetricSnapshots.findMany({
-      where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
-      orderBy: desc(agentHomeMetricSnapshots.createdAt),
-      limit: input.limit,
-    });
+    let rows;
+    try {
+      rows = await db.query.agentHomeMetricSnapshots.findMany({
+        where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
+        orderBy: desc(agentHomeMetricSnapshots.createdAt),
+        limit: input.limit,
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model-agents-metrics', level: 'error', message: '[admin-read-model-agents-metrics] listRecentAgentHomeMetricSnapshots failed', context: { error: err instanceof Error ? err.message : String(err), agentId: input.agentId } });
+      throw err;
+    }
     return rows.map((row) => {
       const { id, ...rest } = row;
       return { ...rest, snapshotId: id };
