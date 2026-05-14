@@ -47,7 +47,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
           return { status: 401, body: 'Invalid signature' };
         }
-      } catch {
+      } catch { // @ts-expect-error non-fatal — return 401 on any error
         return { status: 401, body: 'Invalid signature' };
       }
     }
@@ -55,7 +55,7 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     let payload: Record<string, unknown>;
     try {
       payload = JSON.parse(request.bodyText);
-    } catch {
+    } catch { // @ts-expect-error non-fatal — return 400 on parse error
       return { status: 400, body: 'Invalid JSON payload' };
     }
 

@@ -67,7 +67,7 @@ export function createFlushManager(deps: FlushManagerDependencies): FlushManager
       }
 
       runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
-    } catch {
+    } catch { // @ts-expect-error non-fatal — swallow errors so flush manager never breaks the run loop
       // non-fatal — swallow errors so flush manager never breaks the scheduler
     }
   }
