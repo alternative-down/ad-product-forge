@@ -133,21 +133,20 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
         }
       }
 
-      const result = [];
-      for (const row of messageRows as MessageRowBase[]) {
-        const message: MessageListItem = {
+      const result: MessageListItem[] = [];
+      for (const row of messageRows) {
+        result.push({
           messageId: row.messageId,
           provider: 'internal-chat',
           authorId: row.authorAccountId,
           targetKey: input.conversationKey,
-          content: row.content ?? '',
+          content: row.content,
           attachments: attachmentsByMessageId.get(row.messageId) ?? [],
           unread: row.unread === 1,
-          createdAt: new Date(row.createdAt ?? 0).toISOString(),
-          authorDisplayName: row.authorDisplayName ?? '',
-          replyToMessageId: row.replyToMessageId ?? null,
-        };
-        result.push(message);
+          createdAt: new Date(row.createdAt).toISOString(),
+          authorDisplayName: row.authorDisplayName,
+          replyToMessageId: row.replyToMessageId,
+        });
         if (row.unread === 1) messageIdsToMarkRead.add(row.messageId);
       }
 
@@ -255,18 +254,18 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
       }
 
       const result: MessageListItem[] = [];
-      for (const row of messageRows as MessageRowBase[]) {
+      for (const row of messageRows) {
         result.push({
           messageId: row.messageId,
           provider: 'internal-chat',
           authorId: row.authorAccountId,
           targetKey: input.conversationKey,
-          content: row.content ?? '',
+          content: row.content,
           attachments: attachmentsByMessageId.get(row.messageId) ?? [],
           unread: false,
-          createdAt: new Date(row.createdAt ?? 0).toISOString(),
-          authorDisplayName: row.authorDisplayName ?? '',
-          replyToMessageId: row.replyToMessageId ?? null,
+          createdAt: new Date(row.createdAt).toISOString(),
+          authorDisplayName: row.authorDisplayName,
+          replyToMessageId: row.replyToMessageId,
         });
       }
 
