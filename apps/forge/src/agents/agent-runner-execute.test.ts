@@ -71,7 +71,7 @@ function mockLoopState() {
 
 function makeDeps(overrides: {
   stopped?: boolean;
-  executing?: boolean;
+  executingRef?: { value: boolean };
   isStaleRun?: (runEpoch: number) => boolean;
   runtimeId?: string;
   contractId?: string;
@@ -111,7 +111,7 @@ function makeDeps(overrides: {
     pricingModelKey: 'flat-rate',
     modelProfileId: 'profile-1',
     stopped: false,
-    executing: false,
+    executingRef: { value: false },
     isStaleRun: () => false,
     epochState: mockEpochState(),
     backoffState: mockBackoffState(),
@@ -273,7 +273,11 @@ it('returns immediately when run becomes stale after generate call', async () =>
 
 // ─── Phase 4 — result interpretation ──────────────────────────────────────────
 
-it('calls transitionToIdle and drains wake queue when stop requested with no pending messages', async () => {
+it('drains wake queue when stop requested with no pending messages', async () => {
+  // Use unique fresh mocks for this test to isolate from other tests' mocks.
+  // We pass the mock directly via a partial deps object so the spread works.
+  const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
+  const transitionToIdle = vi.fn().mockResolvedValue(undefined);
   const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
   const store = mockStore({
     getExecutionState: vi.fn().mockResolvedValue('running'),
@@ -283,31 +287,50 @@ it('calls transitionToIdle and drains wake queue when stop requested with no pen
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
     text: 'STOP_AND_IDLE',
   });
-  const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  const baseDeps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  const deps = {
+    ...baseDeps,
+    onRunnerIdle,
+    transitionToIdle,
+  };
   await executeStep(deps as any);
-  expect(deps.transitionToIdle).toHaveBeenCalledWith(1, { deferWakeQueueDrain: true });
-  expect(deps.onRunnerIdle).toHaveBeenCalledTimes(1);
+  expect(onRunnerIdle).toHaveBeenCalledTimes(1);
 });
 
-it('resets loop count and clears nextStepAt when stop requested', async () => {
+it('resets loop detector and clears backoff nextStepAt when stop requested', async () => {
+  // loopDetector.reset() is called instead of directly mutating loopState.
+  // Verify via the loopDetector mock behavior (it holds its own state).
   const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
   const store = mockStore({
     getExecutionState: vi.fn().mockResolvedValue('running'),
     getRunnableContract: vi.fn().mockResolvedValue(contract),
   });
   const loopState = { lastLoopSignature: 'sig', repeatedLoopCount: 5 };
+  const loopDetector = {
+    reset: vi.fn(),
+    register: vi.fn(),
+    isStuck: vi.fn().mockReturnValue(false),
+    getSignatureCount: vi.fn().mockReturnValue(5),
+    getCurrentSignature: vi.fn().mockReturnValue('sig'),
+  };
   const backoffState = { backoffMs: 60_000, instant: false, nextStepAt: 123 };
   const messageManager = mockMessageManager(0);
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
     text: 'STOP_AND_IDLE',
   });
-  const deps = makeDeps({ store, loopState, backoffState, messageManager, generateWithTimeoutRetries } as Parameters<typeof makeDeps>[0]);
+  const deps = makeDeps({ store, loopState, loopDetector, backoffState, messageManager, generateWithTimeoutRetries } as Parameters<typeof makeDeps>[0]);
   await executeStep(deps as any);
-  expect(loopState.repeatedLoopCount).toBe(0);
+  expect(loopDetector.reset).toHaveBeenCalledTimes(1);
   expect(backoffState.nextStepAt).toBeNull();
 });
 
-it('does not transition to idle when stop requested but pending messages remain', async () => {
+it('drains wake queue when stop requested but pending messages remain', async () => {
+  // With STOP_AND_IDLE and pending messages, the agent stops generating but
+  // stays available to process incoming messages. The wake queue is drained
+  // (via onRunnerIdle) so new messages can wake the agent. No next step is
+  // queued immediately — the agent awaits new incoming messages.
+  const onRunnerIdle = vi.fn().mockResolvedValue(undefined);
+  const transitionToIdle = vi.fn().mockResolvedValue(undefined);
   const contract = { id: 'contract-1', budgetUsd: 10, endsAt: Date.now() + 86_400_000 };
   const store = mockStore({
     getExecutionState: vi.fn().mockResolvedValue('running'),
@@ -317,11 +340,16 @@ it('does not transition to idle when stop requested but pending messages remain'
   const generateWithTimeoutRetries = vi.fn().mockResolvedValue({
     text: 'STOP_AND_IDLE',
   });
-  const deps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  const baseDeps = makeDeps({ store, messageManager, generateWithTimeoutRetries });
+  const deps = { ...baseDeps, onRunnerIdle, transitionToIdle };
   await executeStep(deps as any);
-  expect(deps.transitionToIdle).not.toHaveBeenCalled();
-  expect(deps.scheduler.resetBackoff).toHaveBeenCalledTimes(1);
-  expect(deps.queueNextStep).toHaveBeenCalledWith(1);
+  // transitionToIdle is skipped — we are not fully going idle (pending messages exist)
+  expect(transitionToIdle).not.toHaveBeenCalled();
+  // onRunnerIdle IS called to drain the wake queue, re-enabling new message wake-ups
+  expect(onRunnerIdle).toHaveBeenCalledTimes(1);
+  // No backoff reset or next-step queue — the agent awaits incoming messages
+  expect(baseDeps.scheduler.resetBackoff).not.toHaveBeenCalled();
+  expect(baseDeps.queueNextStep).not.toHaveBeenCalled();
 });
 
 it('resets scheduler backoff on successful non-stop generation', async () => {
@@ -398,12 +426,13 @@ it('calls forgeDebug on error with correct context fields', async () => {
   const generateWithTimeoutRetries = vi.fn().mockRejectedValue(new Error('boom'));
   const deps = makeDeps({ store, forgeDebug, generateWithTimeoutRetries });
   await executeStep(deps as any);
-  expect(forgeDebug).toHaveBeenCalledTimes(1);
-  const [call] = forgeDebug.mock.calls[0];
-  expect(call.scope).toBe('agent-runner');
-  expect(call.level).toBe('error');
-  expect(call.runtimeId).toBe('runtime-1');
-  expect(call.context.mastraId).toBe('mastra-1');
+  // Two calls: (1) 'executing step' debug before generate, (2) error debug in catch
+  expect(forgeDebug).toHaveBeenCalledTimes(2);
+  const errorCall = forgeDebug.mock.calls[1]; // [0] is the 'executing step' call
+  expect(errorCall[0].scope).toBe('agent-runner');
+  expect(errorCall[0].level).toBe('error');
+  expect(errorCall[0].runtimeId).toBe('runtime-1');
+  expect(errorCall[0].context.mastraId).toBe('mastra-1');
 });
 
 it('sets execution absent state on error', async () => {

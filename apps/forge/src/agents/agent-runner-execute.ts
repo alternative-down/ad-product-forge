@@ -76,7 +76,7 @@ export interface ExecuteStepDeps {
 
   // ── Runner state guards ───────────────────────────────────────────────────
   stopped: boolean;
-  executing: boolean;
+  executingRef: { value: boolean };
   isStaleRun: (runEpoch: number) => boolean;
 
   // ── State containers (shared with agent-runner.ts) ─────────────────────────
@@ -129,6 +129,7 @@ export interface ExecuteStepDeps {
   setCurrentGenerateAbortController: (c: AbortController | null) => void;
 
   // ── Error logging ──────────────────────────────────────────────────────────
+  runtime: InternalAgentRuntime;
   forgeDebug: (opts: { scope: string; level: string; runtimeId: string; message: string; context?: Record<string, unknown> }) => void;
 }
 
@@ -152,16 +153,19 @@ type GenerateResult = {
 
 export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
   const {
-    contractId, runEpoch, stopped, executing, isStaleRun,
+    contractId, runEpoch, stopped, executingRef, isStaleRun,
     epochState, backoffState, progressState, loopState,
-    store, messageManager, scheduler, onRunnerIdle,
+    store, messageManager, scheduler, loopDetector, onRunnerIdle,
     transitionToIdle, queueNextStep, generateWithTimeoutRetries,
     markGenerateProgress, setLoopSignature, loopSignature,
     loadAgentContextInstructions, currentRuntime, db,
-    forgeDebug,
+    forgeDebug, runtime, usage, notifications, homeMetricSnapshots,
+    runLastMessages, flushPendingRunMessages,
+    currentGenerateAbortController, setCurrentGenerateAbortController,
+    pendingLongTermMemoryRecallSystemText,
   } = deps;
 
-  if (stopped || executing || isStaleRun(runEpoch)) {
+  if (stopped || executingRef.value || isStaleRun(runEpoch)) {
     return;
   }
 
@@ -174,19 +178,26 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
   let drainWakeQueueAfterStep = false;
   let prompt = '';
 
+  // Check execution state BEFORE taking the executing lock.
+  // If already idle, exit without ever setting executingRef,
+  // so the runner stays in a consistent state (no stale lock).
+  progressState.lastStepStage = 'checking-execution-state';
+  const executionState = await withTimeout(
+    store.getExecutionState(deps.runtimeId),
+    RUNNER_AWAIT_TIMEOUT_MS,
+    `Agent execution state lookup timed out for ${deps.runtimeId}`,
+  );
+
+  if (executionState === 'idle' || isStaleRun(runEpoch)) {
+    progressState.lastStepStartedAt = null;
+    progressState.lastStepStage = null;
+    return;
+  }
+
+  // Now take the lock — we're committed to executing
+  executingRef.value = true;
+
   try {
-    // ── Phase 1: check execution state ──────────────────────────────────────
-    progressState.lastStepStage = 'checking-execution-state';
-    const executionState = await withTimeout(
-      store.getExecutionState(deps.runtimeId),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state lookup timed out for ${deps.runtimeId}`,
-    );
-
-    if (executionState === 'idle' || isStaleRun(runEpoch)) {
-      return;
-    }
-
     if (executionState === 'absent') {
       await withTimeout(
         store.setExecutionState(deps.runtimeId, 'running'),
@@ -219,9 +230,11 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
 
     // ── Phase 3: build prompt and run generation ────────────────────────────
-    const stepLongTermMemoryRecallSystemText = null; // TODO: extract from agent-runner.ts
+    const stepLongTermMemoryRecallSystemText = pendingLongTermMemoryRecallSystemText;
     progressState.lastStepStage = 'flushing-pending-run-messages';
-    prompt = ''; // TODO: wire flushPendingRunMessages from agent-runner.ts
+    prompt = flushPendingRunMessages({ allowOriginIdleOnly: true }) ?? '';
+
+    forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: deps.runtimeId, message: 'executing step' });
 
     progressState.lastStepStage = 'agent-generate';
     const result = await generateWithTimeoutRetries(
@@ -232,23 +245,23 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       stepLongTermMemoryRecallSystemText,
       {
         db,
-        runtime: null as never,         // TODO: wire from agent-runner.ts
+        runtime,
         currentRuntime,
         store,
-        usage: null as never,         // TODO: wire from agent-runner.ts
-        notifications: null as never, // TODO: wire from agent-runner.ts
-        homeMetricSnapshots: null as never, // TODO: wire from agent-runner.ts
+        usage,
+        notifications,
+        homeMetricSnapshots,
         messageManager,
-        runLastMessages: 0,            // TODO: wire from agent-runner.ts
-        flushPendingRunMessages: () => null, // TODO: wire from agent-runner.ts
+        runLastMessages,
+        flushPendingRunMessages,
         scheduler,
         epochState,
         backoffState,
         progressState,
         loopState,
-        loopDetector: null as never,  // TODO: wire from agent-runner.ts
-        currentGenerateAbortController: null,
-        setCurrentGenerateAbortController: () => {},
+        loopDetector,
+        currentGenerateAbortController,
+        setCurrentGenerateAbortController,
         markGenerateProgress,
         setBackoffMs: (ms: number) => { backoffState.backoffMs = ms; },
         setInstant: (v: boolean) => { backoffState.instant = v; },
@@ -267,13 +280,20 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
 
     // ── Phase 4: interpret result ────────────────────────────────────────────
     progressState.lastStepStage = 'finalizing-run';
-    const controlDirective = extractRunnerControlDirective(result ?? { text: '' });
+    const controlDirective = extractRunnerControlDirective(result);
     const stopRequested = controlDirective === 'stop';
 
-    if (stopRequested && messageManager.getPendingCount() === 0) {
-      backoffState.nextStepAt = null;
-      loopState.repeatedLoopCount = 0;
-      await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
+    if (stopRequested) {
+      // Signal the finally block to drain the wake queue.
+      // Only call transitionToIdle when there are no pending messages.
+      // With pending messages, we stop generating but stay available.
+      if (messageManager.getPendingCount() === 0) {
+        backoffState.nextStepAt = null;
+        if (loopDetector?.reset) {
+          loopDetector.reset();
+        }
+        await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
+      }
       drainWakeQueueAfterStep = true;
       return;
     }
@@ -301,37 +321,34 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         error: serializeError(error),
       },
     });
-
     await withTimeout(
       store.setExecutionAbsent(deps.runtimeId, formatAbsentExecutionError({
-        stage: progressState.lastStepStage ?? 'unknown',
+        stage: progressState.lastStepStage,
         lastGenerateProgress: progressState.lastGenerateProgress,
         error,
       })),
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state update timed out for ${deps.runtimeId}`,
     ).catch((stateError) => {
-      forgeDebug({
-        scope: 'agent-runner', level: 'error',
-        runtimeId: deps.runtimeId,
-        message: 'failed to set absent state',
-        context: { stateError },
-      });
+      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: deps.runtimeId, message: 'failed to set absent state', context: { stateError } });
     });
-
     scheduler.scheduleNextStep(
       nextExponentialBackoffMs(backoffState.backoffMs).current,
+      () => executeStep({ ...deps, stopped: false, executingRef: { value: false } }),
     );
   } finally {
     progressState.lastStepStartedAt = null;
     progressState.lastStepStage = null;
     progressState.lastGenerateProgress = null;
-
     if (epochState.activeStepEpoch === runEpoch) {
       epochState.activeStepEpoch = 0;
+      executingRef.value = false;
     }
 
     if (drainWakeQueueAfterStep && !isStaleRun(runEpoch)) {
+      // Drain the wake queue so new incoming messages can wake the agent.
+      // loopDetector.reset() and backoffState.nextStepAt = null are already
+      // set in the STOP block before this finally runs.
       await onRunnerIdle();
     }
 
@@ -340,3 +357,4 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
   }
 }
+
