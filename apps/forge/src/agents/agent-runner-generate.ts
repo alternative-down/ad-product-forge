@@ -40,11 +40,20 @@ import {
 } from './agent-runner-iteration-helpers';
 import {
   isStaleRun,
-  advanceGenerateToken,
   nextBackoff,
   resetBackoff,
   calculateDelayMs,
 } from './agent-runner-state';
+import {
+  startGenerateAttempt,
+  finishGenerateAttempt,
+  invalidateInFlightGenerate,
+} from './agent-runner-attempt-lifecycle';
+import {
+  buildIterationFeedback,
+  type BuildIterationFeedbackDeps,
+  type BuildIterationFeedbackInput,
+} from './agent-runner-feedback';
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { RUN_STOP_REMINDER } from './agent-runner-wake';
 import { forgeDebug } from '@forge-runtime/core';
@@ -151,157 +160,6 @@ export interface GenerateDeps {
 
 
 export type { GenerateTimeoutHandle, ProgressState } from './agent-runner-generate-timeout';
-
-// ─── Attempt lifecycle ────────────────────────────────────────────────────────
-
-function startGenerateAttempt(
-  deps: GenerateDeps,
-  controller: AbortController,
-): number {
-  advanceGenerateToken(deps.epochState);
-  deps.setCurrentGenerateAbortController(controller);
-  return deps.epochState.activeGenerateToken;
-}
-
-function finishGenerateAttempt(
-  generateToken: number,
-  controller: AbortController,
-  deps: GenerateDeps,
-) {
-  if (deps.epochState.activeGenerateToken === generateToken) {
-    deps.setCurrentGenerateAbortController(null);
-  }
-  controller.abort();
-}
-
-function invalidateInFlightGenerate(deps: GenerateDeps) {
-  advanceGenerateToken(deps.epochState);
-  deps.currentGenerateAbortController?.abort(
-    new Error('Agent generate invalidated'),
-  );
-  deps.setCurrentGenerateAbortController(null);
-}
-
-// ─── buildIterationFeedback ───────────────────────────────────────────────────
-
-export interface BuildIterationFeedbackDeps {
-  suppressNoToolCallReminderForRun: boolean;
-  setSuppressNoToolCallReminder: (val: boolean) => void;
-  setNextStepAt: (val: number | null) => void;
-  loopDetector: LoopDetector;
-  loopSignature: string;
-  runtime: { id: string };
-  notifications: { createNotification: (n: { agentId: string; content: string }) => Promise<unknown> };
-  currentRuntime: {
-    mastraId: string;
-    longTermMemoryRecall?: {
-      recallFromStep: (opts: {
-        step: unknown; steps: unknown[]; threadId: string; resourceId: string;
-      }) => Promise<string | null>;
-    };
-  };
-  flushPendingRunMessages: (opts: { allowOriginIdleOnly: boolean }) => string | null;
-  markGenerateProgress: (
-    timeout: GenerateTimeoutHandle,
-    controller: AbortController,
-    info: { stage: string; detail: Record<string, unknown> },
-  ) => void;
-  controller: AbortController;
-  isStopped: () => boolean;
-}
-
-export async function buildIterationFeedback(
-  iteration: {
-    iteration: { iteration: number; finishReason: string };
-    finishReason: string;
-    text: string;
-    toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
-    toolResults: Array<{ name: string; error?: Error }>;
-  },
-  deps: BuildIterationFeedbackDeps,
-): Promise<
-  | {
-    continue: boolean;
-    feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }>;
-  }
-  | undefined
-> {
-  const {
-    suppressNoToolCallReminderForRun,
-    setSuppressNoToolCallReminder,
-    setNextStepAt,
-    loopDetector,
-    loopSignature,
-    runtime,
-    notifications,
-    currentRuntime,
-    flushPendingRunMessages,
-  } = deps;
-
-  const controlDirective = extractRunnerControlDirectiveFromIteration(iteration);
-  const ignoredTextRequested = controlDirective === 'ignore';
-  const stopRequested = controlDirective === 'stop';
-
-  if (loopDetector.isStuck()) {
-    await withTimeout(
-      notifications.createNotification({
-        agentId: runtime.id,
-        content: [
-          'Stuck loop detected.',
-          'Repeated signature count: ' + loopDetector.getSignatureCount(),
-          'The agent repeated the same tool/text pattern and was forced to stop.',
-          '',
-          'Signature:',
-          loopSignature,
-        ].join('\n'),
-      }),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      'Agent notification creation timed out for ' + runtime.id,
-    );
-    setNextStepAt(null);
-    return { continue: false, feedbackMessages: [] };
-  }
-
-  if (iteration.toolCalls.length === 0 && ignoredTextRequested) {
-    setSuppressNoToolCallReminder(true);
-  }
-
-  if (stopRequested) {
-    setNextStepAt(null);
-    return { continue: false, feedbackMessages: [] };
-  }
-
-  const producedVisibleAssistantText = didIterationProduceVisibleAssistantText(iteration);
-  const feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> = [];
-  const flushedPrompt = flushPendingRunMessages({ allowOriginIdleOnly: true });
-  if (flushedPrompt) {
-    feedbackMessages.push({ role: 'user', content: flushedPrompt });
-  }
-  if (
-    iteration.toolCalls.length === 0 &&
-    producedVisibleAssistantText &&
-    !stopRequested &&
-    !suppressNoToolCallReminderForRun
-  ) {
-    feedbackMessages.push({ role: 'user', content: RUN_STOP_REMINDER });
-  }
-
-  const recallStep = buildRecallStepFromIteration(iteration);
-  const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
-    step: recallStep,
-    steps: [recallStep],
-    threadId: currentRuntime.mastraId,
-    resourceId: currentRuntime.mastraId,
-  }) ?? null;
-  if (recallFeedback?.trim()) {
-    feedbackMessages.push({ role: 'assistant', content: recallFeedback.trim() });
-  }
-  if (feedbackMessages.length > 0) {
-    return { continue: true, feedbackMessages };
-  }
-
-  return undefined;
-}
 
 // ─── Main generation function ──────────────────────────────────────────────────
 
