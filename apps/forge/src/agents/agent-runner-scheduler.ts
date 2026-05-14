@@ -12,6 +12,7 @@ import {
 import {
   advanceStepEpoch as epochAdvanceStepEpoch,
 } from './agent-runner-scheduler-epoch';
+import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
@@ -51,13 +52,7 @@ export function createScheduler(
   state: SchedulerState,
   deps: SchedulerDependencies,
 ) {
-  let healthcheckTimer: NodeJS.Timeout | null = null;
   // Healthcheck callbacks — set when the runner starts and when beginRun is configured
-  let healthcheckGetExecutionState: ((runtimeId: string) => Promise<'idle' | 'running' | 'absent'>) | null = null;
-  let healthcheckOnRunnerIdle: (() => Promise<void>) | null = null;
-  let healthcheckBeginRunFn: ((opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>) | null = null;
-  let healthcheckGetPendingCount: (() => number) | null = null;
-  let healthcheckNextAt: number | null = null;
   // timer managed by timerManager
   let stopped = false;
   let startingRun = false;
@@ -70,6 +65,7 @@ export function createScheduler(
   });
   const timerManager = createTimerManager(state);
   const runLifecycle = createRunLifecycle(state, { get stopped() { return stopped; } });
+  const healthcheck = createSchedulerHealthcheck({ runtimeId: deps.runtimeId });
 
   // Step callback — set by the runner orchestrator
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
@@ -186,10 +182,7 @@ export function createScheduler(
     }
 
     try {
-      healthcheckGetExecutionState = getExecutionState;
-      healthcheckBeginRunFn = beginRunFn;
-      startHealthcheck();
-      healthcheckNextAt = Date.now() + RUNNER_HEALTHCHECK_INTERVAL_MS;
+          healthcheck.startHealthcheck();
       await flushManager.refreshRunFlushSettings();
 
       const executionState = await withTimeout(
@@ -232,7 +225,7 @@ export function createScheduler(
     invalidateInFlightGenerate();
     executing = false;
     clearTimer();
-    clearHealthcheck();
+    healthcheck.clearHealthcheck();
     flushManager.resetFlushedRunEventKeys();
   }
 
@@ -325,39 +318,6 @@ export function createScheduler(
     }
   }
 
-  // ─── Healthcheck ────────────────────────────────────────────────────────────
-
-  /**
-   * startHealthcheck is a no-op when using external timer management.
-   */
-  function startHealthcheck() {
-    // No-op: external code manages the interval via getHealthcheckIntervalMs()
-  }
-
-  function clearHealthcheck() {
-    if (!healthcheckTimer) {
-      return;
-    }
-
-    clearInterval(healthcheckTimer);
-    healthcheckTimer = null;
-  }
-
-  /**
-   * External healthcheck interface.
-   * shouldRunHealthcheckAt: returns true if a healthcheck should run now.
-   * getHealthcheckIntervalMs: returns the interval in ms.
-   */
-  function shouldRunHealthcheckAt(now: number): boolean {
-    if (!healthcheckNextAt) return false;
-    return now >= healthcheckNextAt;
-  }
-
-  function getHealthcheckIntervalMs(): number {
-    return RUNNER_HEALTHCHECK_INTERVAL_MS;
-  }
-
-
 
   // ─── Step orchestration ─────────────────────────────────────────────────────
 
@@ -386,8 +346,6 @@ export function createScheduler(
       activeRunId = createId();
       state.instant = true;
       // Store healthcheck callbacks from beginRun input
-      healthcheckOnRunnerIdle = input.onRunnerIdle;
-      healthcheckGetPendingCount = input.getPendingCount;
       resetBackoff();
       flushManager.resetFlushedRunEventKeys();
       await flushManager.refreshRunFlushSettings();
@@ -521,9 +479,6 @@ export function createScheduler(
     return runLifecycle.getAbortController();
   }
 
-  function getHealthcheckTimer(): NodeJS.Timeout | null {
-    return healthcheckTimer;
-  }
 
 
 
@@ -550,11 +505,11 @@ export function createScheduler(
     stop,
     forceIdle,
     transitionToIdle,
-    // Healthcheck
-    startHealthcheck,
-    clearHealthcheck,
-    shouldRunHealthcheckAt,
-    getHealthcheckIntervalMs,
+    // Healthcheck — delegated to healthcheck module
+    startHealthcheck: healthcheck.startHealthcheck.bind(healthcheck),
+    clearHealthcheck: healthcheck.clearHealthcheck.bind(healthcheck),
+    shouldRunHealthcheckAt: healthcheck.shouldRunHealthcheckAt.bind(healthcheck),
+    getHealthcheckIntervalMs: healthcheck.getHealthcheckIntervalMs.bind(healthcheck),
     scheduleAt,
     // Step orchestration
     beginRun,
@@ -583,7 +538,7 @@ export function createScheduler(
     advanceStepEpoch,
     setStepCallback,
     getAbortController,
-    getHealthcheckTimer,
+    getHealthcheckTimer: healthcheck.getHealthcheckTimer.bind(healthcheck),
     getState: () => ({ ...state }),
     isStopped: () => stopped,
   };
