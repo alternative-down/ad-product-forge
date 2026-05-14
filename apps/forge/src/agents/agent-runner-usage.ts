@@ -57,7 +57,7 @@ export function createAgentRunnerUsage(input: {
         * pricing.contractCostMultiplier
       );
     } catch (err) {
-      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: '[agent-runner-usage] estimateStepCostUsd failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: 'estimateStepCostUsd failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }
@@ -105,7 +105,7 @@ export function createAgentRunnerUsage(input: {
         costUsd,
       });
     } catch (err) {
-      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: '[agent-runner-usage] recordAgentStep failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'agent-runner-usage', level: 'error', message: 'recordAgentStep failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
     }
   }

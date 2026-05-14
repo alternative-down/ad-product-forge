@@ -49,7 +49,7 @@ export async function normalizeOperationalMemoryMessages(input: {
       });
     }
   } catch (err) {
-    forgeDebug({ scope: 'normalize-opmem', level: 'error', message: '[normalize-opmem] normalizeOperationalMemoryMessages failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'normalize-opmem', level: 'error', message: 'normalizeOperationalMemoryMessages failed', context: { error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }
