@@ -23,12 +23,15 @@ export async function reloadLinkedAgentsForMcpServer(
       where: eq(agentMcpConfigs.serverId, serverId),
       columns: { agentId: true },
     });
-
-    for (const linkedConfig of linkedConfigs) {
-      await reloadAgentMcp(db, loaderConfig, linkedConfig.agentId);
-    }
+    await Promise.all(
+      linkedConfigs.map((linkedConfig) =>
+        reloadAgentMcp(db, loaderConfig, linkedConfig.agentId).catch((err) => {
+          forgeDebug({ scope: 'mcp-helpers', level: 'error', message: 'reloadLinkedAgentsForMcpServer: reload failed', context: { agentId: linkedConfig.agentId, error: err instanceof Error ? err.message : String(err) }});
+        }),
+      ),
+    );
   } catch (err) {
-    forgeDebug({ scope: 'mcp-helpers', level: 'error', message: '[mcp-helpers] reloadLinkedAgentsForMcpServer failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'mcp-helpers', level: 'error', message: 'reloadLinkedAgentsForMcpServer failed', context: { error: err instanceof Error ? err.message : String(err) }});
     throw err;
   }
 }
