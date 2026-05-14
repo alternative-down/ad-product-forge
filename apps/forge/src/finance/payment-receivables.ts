@@ -82,7 +82,7 @@ export function createPaymentReceivablesStore(db: Database) {
       )
       .limit(1);
 
-    if (existing[0] != null) {
+    if (existing.length > 0) {
         await db
           .update(paymentCustomers)
           .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
@@ -114,7 +114,7 @@ export function createPaymentReceivablesStore(db: Database) {
       .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
       .limit(1);
 
-    if (existing[0] != null) {
+    if (existing.length > 0) {
         await db
           .update(paymentSubscriptions)
           .set({
