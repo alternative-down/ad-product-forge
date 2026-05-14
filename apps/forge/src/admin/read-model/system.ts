@@ -54,9 +54,19 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   const llmSettings = createLlmSettingsStore(db);
   const llmModelPrices = createLlmModelPriceStore(db);
   const systemSettings = createSystemSettingsStore(db);
+  async function withErrorScope<T>(label: string, fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (err) {
+      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: `${label} failed`, context: { error: err instanceof Error ? err.message : String(err) }});
+      throw err;
+    }
+  }
+
+
 
   async function listRoles() {
-    try {
+    return await withErrorScope('listRoles', async () => {
       const [roles, agentCounts] = await Promise.all([
         capabilities.listRoles(),
         db
@@ -88,10 +98,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
           updatedAt: role.updatedAt,
         })),
       };
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: 'listRoles failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   async function listSystemIntegrations() {
@@ -99,7 +106,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   }
 
   async function getSystemLlm() {
-    try {
+    return await withErrorScope('getSystemLlm', async () => {
       const [profiles, defaults, prices] = await Promise.all([
         llmSettings.listProfiles(),
         llmSettings.getDefaults(),
@@ -107,10 +114,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
       ]);
 
       return { profiles, defaults, prices };
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: 'getSystemLlm failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   async function getSystemSettings() {
@@ -118,7 +122,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
   }
 
   async function getApplicationMigrations() {
-    try {
+    return await withErrorScope('getApplicationMigrations', async () => {
       const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
       const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
         entries: Array<{
@@ -156,10 +160,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
           };
         }),
       };
-    } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: 'getApplicationMigrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
-      throw err;
-    }
+    });
   }
 
   // ─── Fragmented LLM routes (#1588) — removed dead wrappers (no routes call these)
