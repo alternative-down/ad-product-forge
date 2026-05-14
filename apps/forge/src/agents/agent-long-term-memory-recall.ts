@@ -300,30 +300,21 @@ export class AgentLongTermMemoryRecall {
       const recallThreadState = await this.readRecallThreadState(input.threadId);
 
       if (!queryText) {
-        await this.persistRecallSnapshot({
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, {
-          status: 'miss',
-          query: '',
-          resultIds: [],
-          resultCount: 0,
-          resultScores: [],
-          graphHit: false,
-          stepsJson: safeSerializeRecallSteps(input.steps),
-          updatedAt: new Date().toISOString(),
-          lastInitAt: this.lastInitAt,
-          searchMode: RECALL_SEARCH_MODE,
-          topK: recallConfig.documentCount,
-          graphTopK: recallConfig.documentCount,
-          graphThreshold: recallConfig.scoreThreshold,
-          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-          workspaceFileCount: indexStats.workspaceFileCount,
-          memoryFileCount: indexStats.memoryFileCount,
-          checkpointFileCount: indexStats.checkpointFileCount,
-          error: 'No current step content was available for the recall query.',
-        });
+        await this.persistRecallSnapshot(
+          { threadId: input.threadId, resourceId: input.resourceId },
+          this.buildRecallSnapshot({ threadId: input.threadId, resourceId: input.resourceId }, {
+            status: 'miss',
+            query: '',
+            resultIds: [],
+            resultCount: 0,
+            resultScores: [],
+            graphHit: false,
+            stepsJson: safeSerializeRecallSteps(input.steps),
+            error: 'No current step content was available for the recall query.',
+            indexStats,
+            recallConfig,
+          }),
+        );
         return null;
       }
 
@@ -341,61 +332,44 @@ export class AgentLongTermMemoryRecall {
       });
 
       if (!recallText) {
-        await this.persistRecallSnapshot({
-          threadId: input.threadId,
-          resourceId: input.resourceId,
-        }, {
-          status: 'miss',
-          query: queryText,
-          resultIds: [],
-          resultCount: 0,
-          resultScores: [],
-          graphHit: false,
-          stepsJson: safeSerializeRecallSteps(input.steps),
-          updatedAt: new Date().toISOString(),
-          lastInitAt: this.lastInitAt,
-          searchMode: RECALL_SEARCH_MODE,
-          topK: recallConfig.documentCount,
-          graphTopK: recallConfig.documentCount,
-          graphThreshold: recallConfig.scoreThreshold,
-          graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-          indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-          workspaceFileCount: indexStats.workspaceFileCount,
-          memoryFileCount: indexStats.memoryFileCount,
-          checkpointFileCount: indexStats.checkpointFileCount,
-          error: null,
-        });
+        await this.persistRecallSnapshot(
+          { threadId: input.threadId, resourceId: input.resourceId },
+          this.buildRecallSnapshot({ threadId: input.threadId, resourceId: input.resourceId }, {
+            status: 'miss',
+            query: queryText,
+            resultIds: [],
+            resultCount: 0,
+            resultScores: [],
+            graphHit: false,
+            stepsJson: safeSerializeRecallSteps(input.steps),
+            error: null,
+            indexStats,
+            recallConfig,
+          }),
+        );
         return null;
       }
 
-      await this.persistRecallSnapshot({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      }, {
-        status: 'hit',
-        query: queryText,
-        resultIds: graph.hit ? [] : results.map((result) => result.id),
-        resultCount: graph.hit ? 0 : results.length,
-        resultScores: graph.hit ? [] : results.map((result) => result.score ?? 0),
-        graphHit: graph.hit,
-        stepsJson: safeSerializeRecallSteps(input.steps),
-        updatedAt: new Date().toISOString(),
-        lastInitAt: this.lastInitAt,
-        searchMode: RECALL_SEARCH_MODE,
-        topK: recallConfig.documentCount,
-        graphTopK: recallConfig.documentCount,
-        graphThreshold: recallConfig.scoreThreshold,
-        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-        workspaceFileCount: indexStats.workspaceFileCount,
-        memoryFileCount: indexStats.memoryFileCount,
-        checkpointFileCount: indexStats.checkpointFileCount,
-        error: null,
-      }, this.buildNextRecallHistory({
-        recentFingerprints: recallThreadState.recentFingerprints,
-        candidateFingerprints,
-        windowSize: recallThreadState.windowSize,
-      }));
+      await this.persistRecallSnapshot(
+        { threadId: input.threadId, resourceId: input.resourceId },
+        this.buildRecallSnapshot({ threadId: input.threadId, resourceId: input.resourceId }, {
+          status: 'hit',
+          query: queryText,
+          resultIds: graph.hit ? [] : results.map((result) => result.id),
+          resultCount: graph.hit ? 0 : results.length,
+          resultScores: graph.hit ? [] : results.map((result) => result.score ?? 0),
+          graphHit: graph.hit,
+          stepsJson: safeSerializeRecallSteps(input.steps),
+          error: null,
+          indexStats,
+          recallConfig,
+        }),
+        this.buildNextRecallHistory({
+          recentFingerprints: recallThreadState.recentFingerprints,
+          candidateFingerprints,
+          windowSize: recallThreadState.windowSize,
+        }),
+      );
 
       forgeDebug('ltm', 'ltm recall step complete', {
         agentId: this.agentId,
@@ -414,30 +388,21 @@ export class AgentLongTermMemoryRecall {
         durationMs: Date.now() - recallStartedAt,
         error: error instanceof Error ? error.message : String(error),
       });
-      await this.persistRecallSnapshot({
-        threadId: input.threadId,
-        resourceId: input.resourceId,
-      }, {
-        status: 'error',
-        query: this.buildRecallQueryFromStep(input.step),
-        resultIds: [],
-        resultCount: 0,
-        resultScores: [],
-        graphHit: false,
-        stepsJson: safeSerializeRecallSteps(input.steps),
-        updatedAt: new Date().toISOString(),
-        lastInitAt: this.lastInitAt,
-        searchMode: RECALL_SEARCH_MODE,
-        topK: this.recallConfig.documentCount,
-        graphTopK: this.recallConfig.documentCount,
-        graphThreshold: this.recallConfig.scoreThreshold,
-        graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
-        indexPaths: [...RECALL_AUTO_INDEX_PATHS],
-        workspaceFileCount: 0,
-        memoryFileCount: 0,
-        checkpointFileCount: 0,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      await this.persistRecallSnapshot(
+        { threadId: input.threadId, resourceId: input.resourceId },
+        this.buildRecallSnapshot({ threadId: input.threadId, resourceId: input.resourceId }, {
+          status: 'error',
+          query: this.buildRecallQueryFromStep(input.step),
+          resultIds: [],
+          resultCount: 0,
+          resultScores: [],
+          graphHit: false,
+          stepsJson: safeSerializeRecallSteps(input.steps),
+          error: error instanceof Error ? error.message : String(error),
+          indexStats: { workspaceFileCount: 0, memoryFileCount: 0, checkpointFileCount: 0 },
+          recallConfig: this.recallConfig,
+        }),
+      );
       return null;
     }
   }
@@ -1233,6 +1198,45 @@ export class AgentLongTermMemoryRecall {
       title: thread?.title ?? '',
       metadata,
     });
+  }
+
+
+  private buildRecallSnapshot(
+    threadContext: { threadId: string | null; resourceId?: string },
+    params: {
+      status: 'hit' | 'miss' | 'error';
+      query: string;
+      resultIds: string[];
+      resultCount: number;
+      resultScores: number[];
+      graphHit: boolean;
+      stepsJson: string;
+      error: string | null;
+      indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number };
+      recallConfig: RecallConfig;
+    },
+  ): RecallSnapshot {
+    return {
+      status: params.status,
+      query: params.query,
+      resultIds: params.resultIds,
+      resultCount: params.resultCount,
+      resultScores: params.resultScores,
+      graphHit: params.graphHit,
+      stepsJson: params.stepsJson,
+      updatedAt: new Date().toISOString(),
+      lastInitAt: this.lastInitAt,
+      searchMode: RECALL_SEARCH_MODE,
+      topK: params.recallConfig.documentCount,
+      graphTopK: params.recallConfig.documentCount,
+      graphThreshold: params.recallConfig.scoreThreshold,
+      graphRandomWalkSteps: RECALL_GRAPH_RANDOM_WALK_STEPS,
+      indexPaths: [...RECALL_AUTO_INDEX_PATHS],
+      workspaceFileCount: params.indexStats.workspaceFileCount,
+      memoryFileCount: params.indexStats.memoryFileCount,
+      checkpointFileCount: params.indexStats.checkpointFileCount,
+      error: params.error,
+    };
   }
 
   private dedupeRecallResults(input: {
