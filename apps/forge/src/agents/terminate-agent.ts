@@ -92,35 +92,17 @@ export async function terminateInternalAgent(db: Database, input: {
     }
 
     try {
-      await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
-    } catch (contractErr) {
-      forgeDebug({
-        scope: 'terminate-agent',
-        level: 'error',
-        runtimeId: input.agentId,
-        message: 'contract delete failed during rollback: ' + (contractErr instanceof Error ? contractErr.message : String(contractErr)),
+      await db.transaction(async (tx) => {
+        await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
+        await tx.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
+        await tx.delete(agents).where(eq(agents.id, input.agentId));
       });
-    }
-
-    try {
-      await db.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
-    } catch (providerErr) {
-      forgeDebug({
-        scope: 'terminate-agent',
-        level: 'error',
-        runtimeId: input.agentId,
-        message: 'provider delete failed during rollback: ' + (providerErr instanceof Error ? providerErr.message : String(providerErr)),
-      });
-    }
-
-    try {
-      await db.delete(agents).where(eq(agents.id, input.agentId));
     } catch (deleteErr) {
       forgeDebug({
         scope: 'terminate-agent',
         level: 'error',
         runtimeId: input.agentId,
-        message: 'DB delete failed during rollback: ' + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr)),
+        message: 'db cleanup transaction failed during rollback: ' + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr)),
       });
     }
     getInternalAgentRegistry().remove(input.agentId);
@@ -140,10 +122,13 @@ export async function terminateInternalAgent(db: Database, input: {
     });
   }
 
-  // Delete execution contracts (cascade handles steps); delete providers explicitly
-  await db.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
-  await db.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
-  await db.delete(agents).where(eq(agents.id, input.agentId));
+  // Delete execution contracts (cascade handles steps); delete providers explicitly.
+  // All 3 deletes in one transaction — any failure rolls back the full cascade.
+  await db.transaction(async (tx) => {
+    await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
+    await tx.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
+    await tx.delete(agents).where(eq(agents.id, input.agentId));
+  });
   getInternalAgentRegistry().remove(input.agentId);
 
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
