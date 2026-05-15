@@ -194,7 +194,7 @@ export function createAgentLongTermMemory(input: {
 
   async function readState() {
     await ensureInitialized();
-    return readLtmState(input.persistenceStore);
+    return await readLtmState(input.persistenceStore);
   }
 
   async function writeState(state: LongTermMemoryState) {

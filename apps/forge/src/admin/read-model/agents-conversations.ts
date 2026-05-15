@@ -71,7 +71,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
     agentId: string,
     limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    return listRecentConversations(agentId, limit);
+    return await listRecentConversations(agentId, limit);
   }
 
   async function listAgentConversationMessages(
