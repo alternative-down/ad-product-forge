@@ -14,18 +14,13 @@ import {
   agentLongTermMemoryStates,
   agentNotifications,
   agentMcpConfigs,
-  agentRoles,
   agentSchedules,
   agents,
-  llmProfiles,
   mcpServerConfigs,
 } from '../../database/schema';
-import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { longTermMemoryStateSchema, createEmptyLongTermMemoryState } from '../../agents/ltm/store';
 import { listThreadMessages } from './conversation-helpers';
 import {
-  formatWorkingMemoryValue,
-  isTextPart,
   toScheduleSummary as toScheduleSummaryHelper,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
@@ -34,7 +29,7 @@ import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 
 import type { Database } from '../../database/index';
 import { createSystemSettingsStore } from '../../system-settings/store';
-import { toMastraSafeIdentifier, readOperationalMemoryState, LibsqlConversationStore, forgeDebug, type CommunicationMessageView } from '@forge-runtime/core';
+import { toMastraSafeIdentifier, readOperationalMemoryState, LibsqlConversationStore } from '@forge-runtime/core';
 import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
@@ -216,6 +211,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     let client: { url: string } | null = null;
     try {
+      // eslint-disable-next-line no-dynamic-imports/no-dynamic-imports
       const { createClient } = await import('@libsql/client');
       const c = createClient({ url: `file:${agentDatabasePath}` });
       c.execute('PRAGMA foreign_keys = ON');
@@ -224,6 +220,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const conversationStore = new LibsqlConversationStore({ client: client as any, tablePrefix: mastraAgentId });
     const settings = await systemSettings.getSettings();
 
@@ -235,7 +232,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
     const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
 
-    const runtimeLtmSnapshot = loadedAgent?.runtime?.longTermMemory
+    const _runtimeLtmSnapshot = loadedAgent?.runtime?.longTermMemory
       ? await withTimeout(
           loadedAgent.runtime.longTermMemory.readSnapshot(),
           ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
@@ -332,7 +329,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
             preview ??= extractLatestMessagePreview(content as Parameters<typeof extractLatestMessagePreview>[0]);
             const tb = extractLatestMessageToolBadge(content as Parameters<typeof extractLatestMessageToolBadge>[0]);
             toolBadge ??= tb ? (tb.label ?? null) : null;
-            if (preview) break;
+            if ((preview ?? '') !== '') break;
           }
 
           return [agent.id, { preview, toolBadge }] as const;
@@ -359,6 +356,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       for (const row of ltmStateRows) {
         try {
           const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           longTermMemoryStateByAgentId.set(row.agentId, parsed.success ? parsed.data : createEmptyLongTermMemoryState());
         } catch {
           longTermMemoryStateByAgentId.set(row.agentId, createEmptyLongTermMemoryState());
@@ -406,9 +404,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         executionState,
         lastExecutionError: agent.lastExecutionError ?? null,
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-        roleName: (agent as { roleId?: string }).roleId ? (roleMap.get((agent as { roleId: string }).roleId)?.name ?? null) : null,
-        modelProfile: (agent as { modelProfileId?: string }).modelProfileId ? (profileMap.get((agent as { modelProfileId: string }).modelProfileId)?.name ?? null) : null,
-        omModelProfile: (agent as { omModelProfileId?: string }).omModelProfileId ? (profileMap.get((agent as { omModelProfileId: string }).omModelProfileId)?.name ?? null) : null,
+        roleName: ((agent as { roleId?: string }).roleId ?? '') !== '' ? (roleMap.get((agent as { roleId: string }).roleId)?.name ?? null) : null,
+        modelProfile: ((agent as { modelProfileId?: string }).modelProfileId ?? '') !== '' ? (profileMap.get((agent as { modelProfileId: string }).modelProfileId)?.name ?? null) : null,
+        omModelProfile: ((agent as { omModelProfileId?: string }).omModelProfileId ?? '') !== '' ? (profileMap.get((agent as { omModelProfileId: string }).omModelProfileId)?.name ?? null) : null,
         loaded: Boolean(loadedAgent),
         runner: runnerSnapshot,
         providerTypes: [],
@@ -450,6 +448,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
   async function getAgent(agentId: string): Promise<AgentDetail | null> {
     let agent;
+    // eslint-disable-next-line prefer-const
       agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
 
@@ -484,11 +483,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       agentMcpServerRows = [];
     }
 
-    let spentUsd = 0;
+    const spentUsd = 0;
     if (activeContractRows.length > 0) {
       const currentPeriodStart = new Date();
       currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
       let steps;
+      // eslint-disable-next-line prefer-const
         steps = await db.query.agentExecutionSteps.findMany({
           where: and(
             eq(agentExecutionSteps.agentId, agentId),
@@ -549,9 +549,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       description: agent.description ?? null,
       executionState: agent.executionState ?? 'absent',
       role: agentRoleId ?? null,
-      roleName: agentRoleId ? (roleMap.get(agentRoleId)?.name ?? null) : null,
-      modelProfile: agentModelProfileId ? (profileMap.get(agentModelProfileId)?.name ?? null) : null,
-      omModelProfile: agentOmModelProfileId ? (profileMap.get(agentOmModelProfileId)?.name ?? null) : null,
+      roleName: (agentRoleId ?? '') !== '' ? (roleMap.get(agentRoleId)?.name ?? null) : null,
+      modelProfile: (agentModelProfileId ?? '') !== '' ? (profileMap.get(agentModelProfileId)?.name ?? null) : null,
+      omModelProfile: (agentOmModelProfileId ?? '') !== '' ? (profileMap.get(agentOmModelProfileId)?.name ?? null) : null,
       workspaceFilesystem: (agent as { workspaceFilesystem?: { basePath: string } | null }).workspaceFilesystem ?? null,
       lastExecutionError: agent.lastExecutionError ?? null,
       lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
@@ -563,7 +563,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       recentNotifications: recentNotifications_,
       githubProvisioning,
       skills: await listAgentWorkspaceSkills(workspaceBasePath, agent),
-      activeContract: activeContractRow ? {
+      activeContract: activeContractRow !== null && activeContractRow !== undefined ? {
         contractId: activeContractRow.id,
         agentId: activeContractRow.agentId,
         agentName: agent.name ?? '',
