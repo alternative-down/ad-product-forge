@@ -6,8 +6,9 @@ import type { LlmProfile, SystemLlmDefaults } from '../database/client';
 
 // ─── mock db factory ─────────────────────────────────────────────────────────
 
+const _mockDbRefs: Database[] = [];
 function createMockDb(overrides?: Partial<Database>): Database {
-  return {
+  const mockDb = {
     query: {
       llmProfiles: {
         findMany: vi.fn().mockResolvedValue([]),
@@ -28,8 +29,13 @@ function createMockDb(overrides?: Partial<Database>): Database {
     delete: vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue(undefined),
     }),
+    transaction: vi.fn(async (fn: (tx: Database) => Promise<void>) => {
+      await fn(mockDb as Database);
+    }),
     ...overrides,
   } as unknown as Database;
+  _mockDbRefs.push(mockDb);
+  return mockDb;
 }
 
 // ─── mock row helpers ─────────────────────────────────────────────────────────
