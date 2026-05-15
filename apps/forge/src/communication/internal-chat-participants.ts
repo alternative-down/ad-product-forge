@@ -45,7 +45,7 @@ export function createInternalChatParticipants(db: Database) {
         where: eq(internalChatAccounts.agentId, agentId),
       });
       if (!account) return [];
-      return listGroupMembersOrDmPeersByAccount(account.id, conversationId);
+      return await listGroupMembersOrDmPeersByAccount(account.id, conversationId);
   }
 
   return { listGroupMembersOrDmPeers, listGroupMembersOrDmPeersByAccount };

@@ -273,7 +273,7 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ) {
-    return _applyUpdate(agentId, scheduleId, input);
+    return await _applyUpdate(agentId, scheduleId, input);
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {

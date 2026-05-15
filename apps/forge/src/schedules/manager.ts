@@ -76,7 +76,7 @@ export function createAgentScheduleManager(input: {
 
   async function getOwnedSchedule(agentId: string, scheduleId: string) {
     try {
-      return store.getOwnedSchedule(agentId, scheduleId);
+      return await store.getOwnedSchedule(agentId, scheduleId);
     } catch (error) {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'getOwnedSchedule failed', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) }});
       throw error;
@@ -372,7 +372,7 @@ export function createAgentScheduleManager(input: {
       requireScheduleEditor(schedule, editorAgentId);
 
       // Delegate to updateSchedule with the target agent's ID
-      return updateSchedule(schedule.agentId, scheduleId, rawInput);
+      return await updateSchedule(schedule.agentId, scheduleId, rawInput);
     } catch (error) {
       // updateSchedule already logs the error; re-throw without duplicate forgeDebug
       throw error;

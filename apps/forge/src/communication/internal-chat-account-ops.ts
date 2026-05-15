@@ -222,7 +222,7 @@ export function createInternalChatAccountOps(
       });
 
       if (existing) {
-        return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
+        return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
       }
 
       await db.insert(internalChatConversationMembers).values({
@@ -232,7 +232,7 @@ export function createInternalChatAccountOps(
         createdAt: Date.now(),
       });
 
-      return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
+      return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
   }
 
   async function updateMemberRoleByAccount(input: {
@@ -249,7 +249,7 @@ export function createInternalChatAccountOps(
           eq(internalChatConversationMembers.conversationId, input.groupId),
           eq(internalChatConversationMembers.accountId, input.participantAccountId),
         ));
-      return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
+      return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
   }
 
   async function removeMemberFromGroupByAccount(input: {
@@ -264,7 +264,7 @@ export function createInternalChatAccountOps(
           eq(internalChatConversationMembers.conversationId, input.groupId),
           eq(internalChatConversationMembers.accountId, input.participantAccountId),
         ));
-      return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
+      return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
   }
 
   async function updateGroupByAccount(input: {
@@ -279,7 +279,7 @@ export function createInternalChatAccountOps(
         .update(internalChatConversations)
         .set({ name: input.name ?? group.name, updatedAt: now })
         .where(eq(internalChatConversations.id, input.groupId));
-      return deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
+      return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
   }
 
   return {
