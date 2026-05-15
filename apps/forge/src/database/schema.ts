@@ -975,3 +975,7 @@ export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
     references: [tickets.id],
   }),
 }));
+
+// Re-export Database type for backwards compatibility
+// Consumers import Database from this module
+export type { Database } from './client.js';
