@@ -16,7 +16,6 @@ import {
   llmProfiles,
   mcpServerConfigs,
 } from '../../database/schema';
-import { forgeDebug } from '@forge-runtime/core';
 import { toScheduleSummary as toScheduleSummaryHelper } from './helpers';
 import type { Database } from '../../database/index';
 

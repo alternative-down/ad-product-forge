@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
   agentExecutionSteps,
+  agentLongTermMemoryStates,
   agentNotifications,
   agentMcpConfigs,
   agentRoles,
