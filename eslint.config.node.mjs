@@ -161,6 +161,9 @@ function makeNoUnnecessaryReexportsRule() {
 export default defineConfig([
   globalIgnores(['dist', 'node_modules', '.turbo']),
 
+  // Ignore all compiled dist files regardless of location
+  { ignores: ['**/dist/**/*.js', '**/dist/**/*.mjs'] },
+
   // ── Test files ───────────────────────────────────────────────────────────────
   {
     files: ['**/*.test.ts', '**/*.test.tsx'],
@@ -185,7 +188,11 @@ export default defineConfig([
   // ── Source files ────────────────────────────────────────────────────────────
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    ignores: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      '**/dist/**/*.js',
+    ],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,
