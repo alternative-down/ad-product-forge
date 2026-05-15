@@ -7,7 +7,7 @@ import type { LongTermMemoryState } from '../ltm/store';
 export async function readLtmState(persistenceStore: {
   readState(): Promise<LongTermMemoryState>;
 }) {
-  return persistenceStore.readState();
+  return await persistenceStore.readState();
 }
 
 /**
@@ -30,7 +30,7 @@ export async function writeLtmState(
   },
   state: LongTermMemoryState,
 ) {
-  return persistenceStore.writeState(state);
+  return await persistenceStore.writeState(state);
 }
 
 /**
