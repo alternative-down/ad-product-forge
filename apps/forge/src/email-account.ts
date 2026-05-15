@@ -291,7 +291,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       }
     },
 
-    async getSelfContact(): Promise<CommunicationProviderContact | null> {
+    getSelfContact(): Promise<CommunicationProviderContact | null> {
       return {
         targetKey: config.imap.user,
         slug: config.imap.user,

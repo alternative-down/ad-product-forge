@@ -276,7 +276,7 @@ export async function generateHiredAgentInstructions(
       inputSchema: z.object({
         status: z.string().describe('Describe what you currently see, what tools you have access to, what you are trying to do, and any issues or difficulties.'),
       }),
-      execute: async ({ status }) => {
+      execute: ({ status }) => {
         try {
           forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'Agent status report', context: { status } });
           return { valid: true, logged: status };
