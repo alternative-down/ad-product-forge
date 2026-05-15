@@ -30,9 +30,9 @@ import {
 } from '../capabilities/runtime';
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
+import { createCompanyPayables } from '../finance/company-payables';
 import { createAdminReadModel } from './read-model';
 import { createSystemReadModel } from './read-model/system';
-import { createCompanyPayables } from '../finance/company-payables';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { runInternalHiring, runInternalTermination } from '../agents/internal-agent-lifecycle';
 import type { AgentEmailManager } from '../email/migadu-manager';
@@ -135,7 +135,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   // Stores created locally in route files (finance in finance/read.ts)
   const finance = createMicroErpReadModel(input.db);
-  const payables = createCompanyPayables(input.db);
   const companyPayables = createCompanyPayables(input.db);
   const capabilities = createCapabilityStore(input.db);
   const integrations = input.integrations;

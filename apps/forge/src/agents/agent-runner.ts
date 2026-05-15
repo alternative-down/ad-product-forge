@@ -46,7 +46,7 @@ import {
 } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
 import { createLoopDetector } from './agent-runner-loop-detector';
-import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, nextBackoff, resetBackoff, calculateDelayMs } from './agent-runner-state';
+import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, resetBackoff } from './agent-runner-state';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
