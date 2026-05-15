@@ -1,5 +1,4 @@
 import { nanoid } from 'nanoid';
-import { z } from 'zod';
 
 import {
   githubAppManifestConfigSchema,
@@ -123,7 +122,7 @@ export function isGitHubSelfEvent(
   sender: string | undefined,
   credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
 ): boolean {
-  if (!sender) {
+  if ((sender ?? '') === '') {
     return false;
   }
   return sender === credentials.appSlug || sender === `${credentials.appSlug}[bot]`;
@@ -284,9 +283,9 @@ type GitHubEventInput = {
 
 function buildSuffix(action?: string, repository?: string, sender?: string) {
   return {
-    actionText: action ? ' ' + action : '',
-    repositoryText: repository ? ' in ' + repository : '',
-    senderText: sender ? ' by ' + sender : '',
+    actionText: (action ?? '') !== '' ? ' ' + action : '',
+    repositoryText: (repository ?? '') !== '' ? ' in ' + repository : '',
+    senderText: (sender ?? '') !== '' ? ' by ' + sender : '',
   };
 }
 
@@ -304,7 +303,7 @@ function formatIssueRef(
   suffix: { actionText: string; repositoryText: string; senderText: string },
 ) {
   const { number, title } = extractIssueRef(issue);
-  const titlePart = title ? ' ' + title : '';
+  const titlePart = (title ?? '') !== '' ? ' ' + title : '';
   return (prefix + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + suffix.senderText).trim();
 }
 
@@ -314,7 +313,7 @@ function formatPullRequestRef(
 ) {
   if (!isRecord(pullRequest)) return null;
   const { number, title } = extractIssueRef(pullRequest);
-  const titlePart = title ? ' ' + title : '';
+  const titlePart = (title ?? '') !== '' ? ' ' + title : '';
   return ('Pull request' + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + suffix.senderText).trim();
 }
 
@@ -341,7 +340,7 @@ const eventFormatters: Record<string, EventFormatter> = {
       isRecord(review) && typeof review.state === 'string'
         ? ' (' + review.state.toLowerCase() + ')'
         : '';
-    const titlePart = title ? ' ' + title : '';
+    const titlePart = (title ?? '') !== '' ? ' ' + title : '';
     return ('Pull request review' + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + reviewState + suffix.senderText).trim();
   },
 
@@ -350,7 +349,7 @@ const eventFormatters: Record<string, EventFormatter> = {
       typeof payloadRecord.ref === 'string'
         ? payloadRecord.ref.replace('refs/heads/', '')
         : null;
-    const refPart = ref ? ' on ' + ref : '';
+    const refPart = (ref ?? '') !== '' ? ' on ' + ref : '';
     return ('Push' + suffix.repositoryText + refPart + suffix.senderText).trim();
   },
 
@@ -382,9 +381,9 @@ export function summarizeGitHubEvent(input: GitHubEventInput): string {
   const payloadRecord = isRecord(input.payload) ? (input.payload as Record<string, unknown>) : {};
   const suffix = buildSuffix(input.action, input.repository, input.sender);
   const formatter = eventFormatters[input.event];
-  if (formatter) {
+  if (formatter !== undefined) {
     const result = formatter(payloadRecord, suffix);
-    if (result) return result;
+    if ((result ?? '') !== '') return result;
   }
   return (input.event + suffix.repositoryText + suffix.senderText).trim();
 }
@@ -428,15 +427,15 @@ export function createGitHubWebhookWakeContent(input: {
     `Timestamp: ${new Date(input.timestamp).toISOString()}`,
   ];
 
-  if (input.action) {
+  if ((input.action ?? '') !== '') {
     lines.push(`Action: ${input.action}`);
   }
 
-  if (input.repository) {
+  if ((input.repository ?? '') !== '') {
     lines.push(`Repository: ${input.repository}`);
   }
 
-  if (input.sender) {
+  if ((input.sender ?? '') !== '') {
     lines.push(`Sender: ${input.sender}`);
   }
 
