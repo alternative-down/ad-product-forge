@@ -119,7 +119,7 @@ export function createInternalChatService(
   // Only listGroupMembersOrDmPeersByAccount is used before actualReads exists,
   // so we only stub that one method here.
   const reads = createInternalChatReads(db, {
-    participants: { listGroupMembersOrDmPeersByAccount: async () => { throw new Error("reads not yet initialized"); } },
+    participants: { listGroupMembersOrDmPeersByAccount: () => { throw new Error("reads not yet initialized"); } },
   });
 
   // ── Attachments (delegated to internal-chat-attachments.ts) ──────────────

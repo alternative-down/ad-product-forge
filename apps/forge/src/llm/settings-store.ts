@@ -29,7 +29,7 @@ export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
     try {
       const rows = await db.query.llmProfiles.findMany({
-  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
+  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
 

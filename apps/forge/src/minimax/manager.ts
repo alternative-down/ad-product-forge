@@ -429,22 +429,22 @@ export function createMiniMaxManager(config: {
 
   return {
     async textToSpeech(input: Parameters<MiniMaxClient['textToSpeech']>[0]) {
-      return getClient().then((c) => c.textToSpeech(input));
+      return await getClient().then((c) => c.textToSpeech(input));
     },
     async listVoices(type: string) {
-      return getClient().then((c) => c.listVoices(type));
+      return await getClient().then((c) => c.listVoices(type));
     },
     async generateImage(input: Parameters<MiniMaxClient['generateImage']>[0]) {
-      return getClient().then((c) => c.generateImage(input));
+      return await getClient().then((c) => c.generateImage(input));
     },
     async createVideoGenerationTask(input: Parameters<MiniMaxClient['createVideoGenerationTask']>[0]) {
-      return getClient().then((c) => c.createVideoGenerationTask(input));
+      return await getClient().then((c) => c.createVideoGenerationTask(input));
     },
     async queryVideoGeneration(taskId: string) {
-      return getClient().then((c) => c.queryVideoGeneration(taskId));
+      return await getClient().then((c) => c.queryVideoGeneration(taskId));
     },
     async retrieveFile(fileId: string) {
-      return getClient().then((c) => c.retrieveFile(fileId));
+      return await getClient().then((c) => c.retrieveFile(fileId));
     },
   };
 }

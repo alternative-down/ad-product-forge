@@ -533,7 +533,7 @@ export function createDiscordProvider(config: {
       onInboundMessage = callback;
       void flushPendingMessages();
     },
-    async dispose() {
+    dispose() {
       disposed = true;
       for (const timer of pendingTypingTimers) clearInterval(timer);
       pendingTypingTimers.clear();

@@ -330,7 +330,7 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
-  async dispose() {
+  dispose() {
     this.retrievalWorkspace.dispose();
   }
 

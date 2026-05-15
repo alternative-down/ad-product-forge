@@ -147,15 +147,13 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     serverId: string,
     action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
   ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
-    const manager = this;
-
     return {
       ...action,
       async execute(input: Record<string, unknown>, context: { runtimeId: string; stepId: string; stepNumber: number }) {
         try {
           return await action.execute(input, context);
         } catch (error) {
-          void manager.handleServerDisconnect(serverId, error);
+          void this.handleServerDisconnect(serverId, error);
           forgeDebug({ scope: 'mcp-client-manager', level: 'error', message: 'mcp-client-manager operation failed', error: error instanceof Error ? error.message : String(error) });
           throw error;
         }

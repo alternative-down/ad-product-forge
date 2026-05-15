@@ -139,7 +139,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
   ): Promise<Octokit> {
     try {
-      return createGitHubApp(credentials).getInstallationOctokit(credentials.installationId);
+      return await createGitHubApp(credentials).getInstallationOctokit(credentials.installationId);
     } catch (err) {
       forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createInstallationOctokit failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
