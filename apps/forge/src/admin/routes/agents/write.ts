@@ -52,7 +52,7 @@ export function registerAgentWriteRoutes(
           includeLongTermMemoryThread: body.includeLongTermMemoryThread,
         });
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -72,7 +72,7 @@ export function registerAgentWriteRoutes(
           }),
         );
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
