@@ -133,7 +133,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -158,7 +158,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -201,7 +201,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId }, 201);
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -240,7 +240,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -271,7 +271,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId: body.configId, serverId: body.serverId });
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -323,7 +323,7 @@ export function registerAgentProviderMcpRoutes({
 
         return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -352,7 +352,7 @@ export function registerAgentProviderMcpRoutes({
           isActive: body.isActive,
         });
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });
@@ -380,7 +380,7 @@ export function registerAgentProviderMcpRoutes({
           configId: body.configId,
         });
       } catch (err) {
-        return adminRouteError(error);
+        return adminRouteError(err);
       }
     },
   });

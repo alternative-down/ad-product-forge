@@ -172,15 +172,22 @@ export function createAgentContractStore(
     });
   }
 
-  async function getContractSpend(contractId: string) {
-    const rows = await db
-      .select({
-        total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
-      })
-      .from(agentExecutionSteps)
-      .where(eq(agentExecutionSteps.contractId, contractId));
 
-    return rows[0]?.total ?? 0;
+  async function getUsagePricing(input: { pricingModelKey: string; profileId: string }) {
+    let modelPrice;
+    try {
+      const priceRow = await db.query.llmModelPrices.findFirst({
+        where: eq(llmModelPrices.modelKey, input.pricingModelKey),
+      });
+      if (!priceRow) {
+        forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: model price not found', context: { pricingModelKey: input.pricingModelKey } });
+        return { modelPrice: null, contractCostMultiplier: 1 };
+      }
+      modelPrice = priceRow;
+    } catch (err) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: read llmModelPrices failed', context: { pricingModelKey: input.pricingModelKey, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     let profile;
     try {
@@ -188,7 +195,7 @@ export function createAgentContractStore(
         where: eq(llmProfiles.id, input.profileId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'applyContractUpdate: read llmProfiles failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: read llmProfiles failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
 
@@ -201,6 +208,16 @@ export function createAgentContractStore(
       modelPrice,
       contractCostMultiplier: profile.contractCostMultiplier,
     };
+  }
+  async function getContractSpend(contractId: string) {
+    const rows = await db
+      .select({
+        total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+      })
+      .from(agentExecutionSteps)
+      .where(eq(agentExecutionSteps.contractId, contractId));
+
+    return rows[0]?.total ?? 0;
   }
 
   async function recordAgentStep(input: {
