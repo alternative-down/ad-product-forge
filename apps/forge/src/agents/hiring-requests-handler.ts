@@ -149,7 +149,7 @@ export async function generateHiredAgentInstructions(
       name: true,
       roleId: true,
     },
-  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
+  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
     orderBy: (fields, { asc }) => [asc(fields.name)],
   });
   const modelPrice = await db.query.llmModelPrices.findFirst({

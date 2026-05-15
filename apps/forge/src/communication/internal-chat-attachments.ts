@@ -42,7 +42,7 @@ export function createChatAttachments(
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
       const rows = await db.query.internalChatMessageAttachments.findMany({
         where: eq(internalChatMessageAttachments.messageId, messageId),
-  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
+  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
         orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
       });
 
