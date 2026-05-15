@@ -5,24 +5,6 @@
 
 import { z } from 'zod';
 import type { HttpHandler } from '../../../http/server';
-import { forgeDebug } from '../debug';
-import { createId } from '../../../utils/id';
-import { eq } from 'drizzle-orm';
-import { agents, agentRoles } from '../../../../src/database/schema';
-import { changeAgentRoleFromAdmin, updateInternalChatProviderProfile, reloadAgentIfLoaded } from '../../../capabilities/runtime';
-import { roleToolPermissions, roleWorkflowPermissions } from '../../../../src/database/schema';
-import { jsonResponse, parseJsonBody } from '../index';
-import {
-  agentActionSchema,
-  topUpAgentContractSchema,
-  adjustAgentContractBudgetSchema,
-  renewAgentContractSchema,
-  hireAgentSchema,
-  terminateAgentSchema,
-  changeAgentRoleSchema,
-  updateAgentGitHubManifestConfigSchema,
-  updateAgentConfigSchema,
-} from '../schemas/agents';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
 import { registerRoleOps } from './_split/role-ops';
@@ -41,18 +23,6 @@ import type { CoolifyManager } from '../../../coolify/manager';
 import type { createAgentScheduleManager } from '../../../schedules/manager';
 
 
-const createAgentMcpServerSchema = z.object({
-  agentId: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  transport: z.string(),
-  command: z.string().optional(),
-  argsText: z.string().optional(),
-  envVarsText: z.string().optional(),
-  url: z.string().optional(),
-  headersText: z.string().optional(),
-  isActive: z.boolean().optional(),
-}).strict();
 
 
 
