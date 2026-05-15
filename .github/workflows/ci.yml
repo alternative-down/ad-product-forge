@@ -67,7 +67,7 @@ jobs:
     needs: []
     uses: ./.github/workflows/_setup-and-run.yml
     with:
-      cmd: npm run build -- --force
+      cmd: npm run build
 
   # All-in-one validation job (fallback / compatibility)
   validate:
@@ -95,7 +95,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build
-        run: npm run build -- --force
+        run: npm run build
 
       - name: Fallow Audit
         run: npx fallow audit --fail-on-regression --tolerance 2% --health-baseline .fallow/baseline-health.json --dead-code-baseline .fallow/baseline-dead-code.json --dupes-baseline .fallow/baseline-dupes.json
