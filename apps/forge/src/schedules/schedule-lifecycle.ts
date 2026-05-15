@@ -8,7 +8,7 @@
 import {
   gracefulShutdown,
   scheduleJob,
-  cancelJob as cancelScheduledJob,
+  cancelJob as cancelScheduledJob, // eslint-disable-line @typescript-eslint/no-unused-vars
   type Job,
   type RecurrenceSpecDateRange,
 } from 'node-schedule';
@@ -115,7 +115,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     cancelJob(record.scheduleId);
 
     if (record.scheduleType === 'date') {
-      if (!record.scheduledDate) {
+      if ((record.scheduledDate ?? '') === '') {
         throw new Error(`Date schedule ${record.scheduleId} is missing scheduledDate`);
       }
       const scheduledDate = new Date(record.scheduledDate);
@@ -132,7 +132,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
       return;
     }
 
-    if (!record.cronExpression) {
+    if ((record.cronExpression ?? '') === '') {
       throw new Error(`Cron schedule ${record.scheduleId} is missing cronExpression`);
     }
 

@@ -69,7 +69,7 @@ export const updateScheduleSchema = z.object({
 });
 
 /** Schema for deleting a schedule. */
-const deleteScheduleSchema = z.object({
+const _deleteScheduleSchema = z.object({
   scheduleId: z.string().min(1),
 });
 
@@ -90,7 +90,7 @@ const baseUpdate = {
 };
 
 /** Input schema for the self-schedule tool (manageSelfCrons). */
-const manageSelfCronsInputSchema = z.object({
+const _manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
   create: z.object({
     ...baseCreate,
@@ -106,7 +106,7 @@ const manageSelfCronsInputSchema = z.object({
 });
 
 /** Input schema for the delegated-schedule tool (manageCrons). */
-const manageCronsInputSchema = z.object({
+const _manageCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
   create: z.object({
     targetAgentId: z.string().describe('Required target agent id for delegated cron creation.'),
