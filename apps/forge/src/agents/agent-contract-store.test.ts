@@ -160,6 +160,13 @@ const wh = extractWhere(opts?.where);
         };
       }),
     })),
+    transaction: vi.fn(async (fn: (tx: typeof db) => Promise<void>) => {
+      await fn({
+        insert: db.insert,
+        update: db.update,
+        select: db.select,
+      });
+    }),
   };
   return { db, collections };
 }
@@ -309,7 +316,7 @@ describe('agent-contract-store', () => {
 
   describe('recordAgentStep', () => {
     test('creates step and returns id + timestamp', async () => {
-      const { db } = createMockDb(collections);
+      const { db, collections: c2 } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.recordAgentStep({
         agentId: 'sa', contractId: 'sc', llmProfileId: 'sp', modelKey: 'gpt-4o-mini',
@@ -319,14 +326,14 @@ describe('agent-contract-store', () => {
       });
       expect(result.stepId).toBeTruthy();
       expect(typeof result.createdAt).toBe('number');
-      const step = collections.steps.get(result.stepId);
+      const step = c2.steps.get(result.stepId);
       expect(step?.agentId).toBe('sa');
       expect(step?.modelKey).toBe('gpt-4o-mini');
       expect(step?.inputTokens).toBe(500);
       expect(step?.cachedInputTokens).toBe(100);
     });
     test('records all step kinds', async () => {
-      const { db } = createMockDb(collections);
+      const { db, collections: c2 } = createMockDb(collections);
       const store = createAgentContractStore(db);
       for (const kind of ['agent-step', 'om', 'ltm'] as const) {
         const result = await store.recordAgentStep({
@@ -335,7 +342,7 @@ describe('agent-contract-store', () => {
           inputPerMillionUsd: 2.5, inputCachePerMillionUsd: 0, outputPerMillionUsd: 10,
           contractCostMultiplier: 1, costUsd: 0.001,
         });
-        expect(collections.steps.get(result.stepId)?.kind).toBe(kind);
+        expect(c2.steps.get(result.stepId)?.kind).toBe(kind);
       }
     });
   });
