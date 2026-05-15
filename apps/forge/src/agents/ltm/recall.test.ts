@@ -55,7 +55,6 @@ describe('createAgentLongTermMemoryRecall', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
-      model: makeMockModel(),
     });
     expect(recall).toBeDefined();
     expect(typeof recall.initialize).toBe('function');
@@ -82,7 +81,6 @@ describe('buildRecallQueryFromStep', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
-      model: makeMockModel(),
     });
     recall = instance as any;
   });
@@ -188,7 +186,6 @@ describe('shouldSkipRecallInjection', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
-      model: makeMockModel(),
     });
     recall = instance as any;
   });
@@ -273,7 +270,6 @@ describe('AgentLongTermMemoryRecall initialize', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
     (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
     await recall.initialize();
@@ -303,7 +299,6 @@ describe('AgentLongTermMemoryRecall refreshIndex', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     (recall as { workspaceInitialized: boolean }).workspaceInitialized = true;
@@ -325,7 +320,6 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
-      model: makeMockModel(),
     }) as any;
     expect((recall as { pendingRecallOperationCount: number }).pendingRecallOperationCount).toBe(0);
   });
@@ -338,7 +332,6 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
-      model: makeMockModel(),
     }) as any;
     expect((recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince).toBeNull();
   });
@@ -377,7 +370,6 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     const result = await (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
@@ -409,7 +401,6 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     await expect(
@@ -441,7 +432,6 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     await expect(
@@ -463,7 +453,6 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
       readRuntimeMemorySettings: vi.fn().mockResolvedValue(null),
     }) as any;
 
@@ -486,7 +475,6 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
       readRuntimeMemorySettings: vi.fn().mockResolvedValue({
         ltmRecallSearchMode: 'hybrid' as const,
         ltmRecallWorkspaceTopK: 5,
@@ -535,7 +523,6 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
@@ -566,7 +553,6 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     await expect(
@@ -597,7 +583,6 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
@@ -633,7 +618,6 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
@@ -683,7 +667,6 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       mastraId: 'mastra-1',
       conversationStore: makeMockConversationStore(),
       persistenceStore: persistence,
-      model: makeMockModel(),
     }) as any;
 
     const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
