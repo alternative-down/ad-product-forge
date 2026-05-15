@@ -41,10 +41,27 @@
  * @module
  */
 
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from "drizzle-orm";
+import path from "node:path";
+import { customAlphabet } from "nanoid";
 
+import type {
+  CommunicationFile,
+  CommunicationInboundMessage,
+  CommunicationProviderConversation,
+  CommunicationProviderMessage,
+} from "@forge-runtime/core";
+import { forgeDebug } from "@forge-runtime/core";
 
 import type {Database} from "../database/schema";
-
+import {
+  internalChatAccounts,
+  internalChatConversationMembers,
+  internalChatConversations,
+  internalChatMessageAttachments,
+  internalChatMessageReads,
+  internalChatMessages,
+} from "../database/schema";
 import { createId } from "../utils/id";
 import {
   buildAgentAccountDescription,

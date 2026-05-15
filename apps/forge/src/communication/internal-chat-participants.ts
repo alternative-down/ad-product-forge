@@ -1,6 +1,12 @@
-import { eq } from 'drizzle-orm';
-;
-import { internalChatAccounts, internalChatConversationMembers } from '../database/schema';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { forgeDebug } from '@forge-runtime/core';
+import {
+  internalChatAccounts,
+  internalChatConversationMembers,
+  internalChatConversations,
+  internalChatMessageReads,
+  internalChatMessages,
+} from '../database/schema';
 import type {Database} from '../database/client'
 import { sortParticipantsBySelfFirst } from './internal-chat-helpers';
 
