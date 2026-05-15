@@ -78,6 +78,8 @@ export function createChatSending(deps: SendingDeps) {
     attachments: CommunicationFile[];
     replyToMessageId?: string | null;
   }): Promise<{ success: true; messageId: string; conversationKey: string }> {
+try {
+
     const directAccount = await accounts.getAccountByAgentId(input.targetKey) ?? await accounts.getAccountBySlug(input.targetKey);
     const conversation = directAccount
       ? await groups.ensureDirectConversation(input.accountId, directAccount.id)
@@ -190,6 +192,11 @@ export function createChatSending(deps: SendingDeps) {
       messageId,
       conversationKey: conversation.id,
     };
+  
+  } catch (err) {
+    forgeDebug({ scope: 'internal-chat-sending', level: 'info', message: 'Failed to execute sendMessage', context: { error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
   }
 
   async function getMessageAttachmentByAccount(input: {
