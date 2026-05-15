@@ -124,9 +124,7 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   test('GET /admin/internal-chat/conversations — returns 400 when accountId missing', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversations');
-    const res = await route!.handler({ query: new Map(), bodyText: '' });
-    expect(res.status).toBe(400);
-    expect(JSON.parse(res.body).error).toBe('accountId required');
+    await expect(route!.handler({ query: new Map(), bodyText: '' })).rejects.toThrow('accountId required');
   });
   test('GET /admin/internal-chat/conversations — delegates with limit 100', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversations');
@@ -162,16 +160,13 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   // GET /admin/internal-chat/messages
   // -------------------------------------------------------------------------
-  test('GET /admin/internal-chat/messages — returns 400 when accountId missing', async () => {
+  test('GET /admin/internal-chat/messages — throws when accountId missing', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/messages');
-    const res = await route!.handler({ query: new Map(), bodyText: '' });
-    expect(res.status).toBe(400);
-    expect(JSON.parse(res.body).error).toBe('accountId and conversationId required');
+    await expect(route!.handler({ query: new Map(), bodyText: '' })).rejects.toThrow('accountId required');
   });
-  test('GET /admin/internal-chat/messages — returns 400 when conversationId missing', async () => {
+  test('GET /admin/internal-chat/messages — throws when conversationId missing', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/messages');
-    const res = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: '' });
-    expect(res.status).toBe(400);
+    await expect(route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: '' })).rejects.toThrow('conversationId required');
   });
   test('GET /admin/internal-chat/messages — delegates with parsed limit and offset', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/messages');
@@ -205,9 +200,7 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   test('GET /admin/internal-chat/message-attachment — returns 400 when params missing', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/message-attachment');
-    const res = await route!.handler({ query: new Map(), bodyText: '' });
-    expect(res.status).toBe(400);
-    expect(JSON.parse(res.body).error).toBe('Missing required query params');
+    await expect(route!.handler({ query: new Map(), bodyText: '' })).rejects.toThrow();
   });
   test('GET /admin/internal-chat/message-attachment — returns file with correct headers', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/message-attachment');
@@ -224,9 +217,9 @@ describe('registerInternalChatRoutes', () => {
   // -------------------------------------------------------------------------
   test('GET /admin/internal-chat/group-members — returns 400 when accountId missing', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-members');
-    const res = await route!.handler({ query: new Map(), bodyText: '' });
+    const res = await route!.handler({ query: new Map([['conversationId', 'conv-001']]), bodyText: '' }) as { status: number; body: string };
     expect(res.status).toBe(400);
-    expect(JSON.parse(res.body).error).toBe('accountId and conversationId required');
+    expect(JSON.parse(res.body)).toEqual({ error: 'accountId and conversationId required' });
   });
   test('GET /admin/internal-chat/group-members — delegates to listGroupMembersByAccount', async () => {
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/group-members');
