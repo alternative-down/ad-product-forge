@@ -197,7 +197,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // Wrap ALL DB writes inside a single transaction.
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);
 

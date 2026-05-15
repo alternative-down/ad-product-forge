@@ -20,7 +20,7 @@ export function validateGeneratedAgentProfile(profile: z.infer<typeof generatedA
 } {
   const mentionedToolIds = forgeCustomToolIds.filter((toolId) =>
     profile.primaryGoal.includes(toolId)
-    || profile.secondaryGoals.some((goal) => goal.includes(toolId))
+    || profile.secondaryGoals.some((goal: object) => goal.includes(toolId))
     || profile.backstory.includes(toolId),
   );
 

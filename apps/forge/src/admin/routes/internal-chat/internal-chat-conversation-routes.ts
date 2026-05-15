@@ -154,7 +154,7 @@ function buildSendMessageHandler(
         accountId: body.accountId,
         targetKey: body.conversationId,
         content: body.content,
-        attachments: (body.attachments ?? []).map((attachment) => ({
+        attachments: (body.attachments ?? []).map((attachment: { name: string; contentType: string; dataBase64: string }) => ({
           name: attachment.name,
           contentType: attachment.contentType,
           data: Uint8Array.from(Buffer.from(attachment.dataBase64, 'base64')),

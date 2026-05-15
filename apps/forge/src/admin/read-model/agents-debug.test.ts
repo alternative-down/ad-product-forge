@@ -110,7 +110,7 @@ describe('createAgentDebugReadModel', () => {
     it('handles LTM state timeout gracefully', async () => {
       const agent = { id: 'agent-1' };
       mockReadLongTermMemoryState.mockRejectedValue(new Error('DB timeout'));
-      mockWithTimeout.mockImplementation(async (promise, _ms, _msg) => {
+      mockWithTimeout.mockImplementation(async (promise: Promise<unknown>, _ms: number, _msg: string) => {
         try {
           return await promise;
         } catch {

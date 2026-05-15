@@ -127,7 +127,7 @@ export function createChatSending(deps: SendingDeps) {
       });
     await attachments.storeMessageAttachments(messageId, input.attachments);
 
-    const accountIds = members.map((m) => m.accountId);
+    const accountIds = members.map((m: object) => m.accountId);
     const accountMap = await accounts.getAccountsById(accountIds);
     const readRows = Array.from(accountMap.values())
       .filter((memberAccount) => memberAccount.agentId)

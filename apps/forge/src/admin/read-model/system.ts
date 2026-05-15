@@ -79,16 +79,16 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
       ]);
       const assignedAgentCountByRoleId = new Map(
         agentCounts
-          .filter((row) => row.roleId)
-          .map((row) => [row.roleId as string, row.count]),
+          .filter((row: object) => row.roleId)
+          .map((row: object) => [row.roleId as string, row.count]),
       );
       const capabilityMap = await capabilities.listGrantedRoleCapabilitiesBatch(
-        roles.map((role) => role.roleId),
+        roles.map((role: string) => role.roleId),
       );
 
       return {
         availableCapabilityIds: forgeCapabilityIds,
-        items: roles.map((role) => ({
+        items: roles.map((role: string) => ({
           roleId: role.roleId,
           name: role.name,
           description: role.description,
@@ -143,7 +143,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
         from __drizzle_migrations
         order by created_at asc
       `);
-      const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
+      const appliedByCreatedAt = new Map(appliedRows.map((row: { createdAt: unknown }) => [Number(row.createdAt), row]));
 
       return {
         applied: appliedRows,

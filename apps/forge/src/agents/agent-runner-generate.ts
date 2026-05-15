@@ -301,7 +301,7 @@ export async function generateWithTimeoutRetries(
             args: Record<string, unknown>;
           }>,
           toolResults: steps.flatMap((s) =>
-            (s.toolResults ?? []).map((tr) => ({ name: tr.name, error: tr.error as Error })),
+            (s.toolResults ?? []).map((tr: { name: string; error?: unknown }) => ({ name: tr.name, error: tr.error as Error })),
           ) as Array<{ name: string; error?: Error }>,
         },
         {
@@ -342,7 +342,7 @@ export async function generateWithTimeoutRetries(
           args: Record<string, unknown>;
         }>,
         toolResults: steps.flatMap((s) =>
-          (s.toolResults ?? []).map((tr) => ({ name: tr.name, error: tr.error as Error })),
+          (s.toolResults ?? []).map((tr: { name: string; error?: unknown }) => ({ name: tr.name, error: tr.error as Error })),
         ) as Array<{ name: string; error?: Error }>,
         finishReason: result?.finishReason ?? 'unknown',
         inputTokens,

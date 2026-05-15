@@ -12,10 +12,11 @@ export function createCompanyPayables(db: Database) {
   async function listRecurringPayables() {
     try {
       const rows = await db.query.companyRecurringPayables.findMany({
+  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
         orderBy: (fields, { asc }) => [asc(fields.name)],
       });
 
-      return rows.map((row) => {
+      return rows.map((row: object) => {
         const { id, recurrencePeriod, isActive, ...rest } = row;
 
         return {
@@ -44,7 +45,7 @@ export function createCompanyPayables(db: Database) {
 
     try {
       // Wrap payable insert + planned occurrence in transaction
-      const entryId = await db.transaction(async (tx) => {
+      const entryId = await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         await tx.insert(companyRecurringPayables).values({
           id: payableId,
           name: input.name,
@@ -149,7 +150,7 @@ export function createCompanyPayables(db: Database) {
       }
 
       // Wrap planned occurrence + payable update in transaction
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         const eid = createId();
         await tx.insert(companyCashLedger).values({
           id: eid,

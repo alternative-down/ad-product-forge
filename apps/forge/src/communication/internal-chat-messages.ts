@@ -100,7 +100,7 @@ export function createInternalChatMessages(
       .offset(input.offset)
       .limit(input.limit).all();
 
-    const unreadMessageIds = rows.filter((row) => row.unread === 1).map((row) => row.messageId);
+    const unreadMessageIds = rows.filter((row: object) => row.unread === 1).map((row: object) => row.messageId);
 
     if (unreadMessageIds.length > 0) {
       await db
@@ -113,7 +113,7 @@ export function createInternalChatMessages(
     }
 
     return await Promise.all(
-      rows.reverse().map(async (row) => ({
+      rows.reverse().map(async (row: object) => ({
         messageId: row.messageId,
         provider: 'internal-chat',
         authorId: row.authorAccountId,
@@ -168,7 +168,7 @@ export function createInternalChatMessages(
       .limit(input.limit).all();
 
     return await Promise.all(
-      rows.reverse().map(async (row) => ({
+      rows.reverse().map(async (row: object) => ({
         messageId: row.messageId,
         provider: 'internal-chat',
         authorId: row.authorAccountId,

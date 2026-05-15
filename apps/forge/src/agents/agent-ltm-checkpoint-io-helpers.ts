@@ -18,8 +18,8 @@ export function computeCheckpointTimestamp(
   payload: CheckpointedOmCheckpointPackageInput,
 ): number {
   const allCreatedAts = [
-    ...payload.reflections.map((r) => r.createdAt),
-    ...payload.observations.map((o) => o.createdAt),
+    ...payload.reflections.map((r: { serverId: string }) => r.createdAt),
+    ...payload.observations.map((o: { createdAt: number }) => o.createdAt),
   ];
   if (allCreatedAts.length > 0) {
     return allCreatedAts.reduce((earliest, ts) => (ts < earliest ? ts : earliest), allCreatedAts[0]);

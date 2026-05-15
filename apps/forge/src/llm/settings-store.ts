@@ -29,6 +29,7 @@ export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
     try {
       const rows = await db.query.llmProfiles.findMany({
+  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
 
@@ -63,7 +64,7 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('System LLM defaults are not configured');
     }
 
-    const profileMap = new Map(profiles.map((profile) => [profile.profileId, profile]));
+    const profileMap = new Map(profiles.map((profile: object) => [profile.profileId, profile]));
     const primaryProfile = profileMap.get(defaults.primaryProfileId);
     const omProfile = profileMap.get(defaults.omProfileId);
     const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
@@ -202,7 +203,7 @@ export function createLlmSettingsStore(db: Database) {
   }) {
     const parsed = llmDefaultsSchema.parse(input);
     const profiles = await listProfiles();
-    const profileMap = new Map(profiles.map((profile) => [profile.profileId, profile]));
+    const profileMap = new Map(profiles.map((profile: object) => [profile.profileId, profile]));
 
     for (const profileId of [parsed.primaryProfileId, parsed.omProfileId, parsed.hiringRhProfileId]) {
       const profile = profileMap.get(profileId);

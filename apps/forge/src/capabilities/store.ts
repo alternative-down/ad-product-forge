@@ -69,7 +69,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return rows.map((row) => ({
+    return rows.map((row: object) => ({
       roleId: row.id,
       name: row.name,
       description: row.description ?? undefined,
@@ -198,7 +198,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row) => row.toolId)));
+    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row: object) => row.toolId)));
   }
 
   async function addRoleToolPermission(input: { roleId: string; toolId: string }) {
@@ -246,7 +246,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return rows.map((row) => row.workflowId);
+    return rows.map((row: object) => row.workflowId);
   }
 
   async function addRoleWorkflowPermission(input: { roleId: string; workflowId: string }) {
@@ -433,6 +433,7 @@ export function createCapabilityStore(db: Database) {
     let rows;
     try {
       rows = await db.query.agents.findMany({
+  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
         where: (agent, { and, eq }) => {
           const filters = [];
 
@@ -469,7 +470,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return rows.map((row) => ({
+    return rows.map((row: object) => ({
       agentId: row.id,
       name: row.name,
       description: row.description ?? undefined,

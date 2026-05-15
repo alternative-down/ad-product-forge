@@ -78,7 +78,7 @@ export function createAdminReadModel(input: {
         from __drizzle_migrations
         order by created_at asc
       `);
-      const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
+      const appliedByCreatedAt = new Map(appliedRows.map((row: { createdAt: unknown }) => [Number(row.createdAt), row]));
 
       return {
         applied: appliedRows,

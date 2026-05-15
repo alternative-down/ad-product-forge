@@ -20,8 +20,8 @@ function buildListAccountsHandler(internalChat: InternalChatService): () => Retu
     const accounts = await internalChat.listAccounts();
     return jsonResponse(
       accounts
-        .filter((account) => account.agentId === null)
-        .map((account) => ({
+        .filter((account: object) => account.agentId === null)
+        .map((account: object) => ({
           accountId: account.id,
           slug: account.slug,
           displayName: account.displayName,
@@ -35,7 +35,7 @@ function buildListContactsHandler(internalChat: InternalChatService): () => Retu
   return withRouteErrorHandler('admin', '/admin/internal-chat/contacts', async () => {
     const accounts = await internalChat.listAccounts();
     return jsonResponse(
-      accounts.map((account) => ({
+      accounts.map((account: object) => ({
         accountId: account.id,
         agentId: account.agentId,
         slug: account.slug,

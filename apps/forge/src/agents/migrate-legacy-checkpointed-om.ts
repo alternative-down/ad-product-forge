@@ -97,7 +97,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       continue;
     }
 
-    const reflection = state.activeReflectionBlocks.find((item) => item.generationCount === observation.reflectedGeneration);
+    const reflection = state.activeReflectionBlocks.find((item: object) => item.generationCount === observation.reflectedGeneration);
 
     if (reflection) {
       await input.conversationStore.updateMessageReplacement({
