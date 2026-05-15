@@ -113,7 +113,7 @@ export function createDiscordProvider(config: {
   }
 
   function parseFilterDate(value: string | undefined, fieldName: string) {
-    if (!value) {
+    if ((value ?? '') === '') {
       return null;
     }
 
@@ -364,7 +364,7 @@ export function createDiscordProvider(config: {
       try {
         const channel = await client.channels.fetch(channelId);
 
-        if (!channel?.isTextBased() || !channel.isSendable()) {
+        if (channel?.isTextBased() === false || !channel.isSendable()) {
           continue;
         }
 
@@ -430,7 +430,7 @@ export function createDiscordProvider(config: {
       try {
         const channel = await client.channels.fetch(targetKey);
 
-        if (!channel?.isSendable()) {
+        if (channel?.isSendable() === false) {
           throw new Error(`Discord target is not sendable: ${targetKey}`);
         }
 
@@ -468,7 +468,7 @@ export function createDiscordProvider(config: {
     const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
     const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
     const matchesMessage = (message: Message) =>
-      (!input.query || message.content.includes(input.query) || message.attachments.size > 0) &&
+      ((input.query ?? '') !== '' || message.content.includes(input.query) || message.attachments.size > 0) &&
       (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
       (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
     const targetCount = input.limit + input.offset;
@@ -480,7 +480,7 @@ export function createDiscordProvider(config: {
       try {
         batch = await input.channel.messages.fetch({
           limit: Math.min(MEMBER_FETCH_LIMIT, targetCount - collected.size),
-          ...(before ? { before } : {}),
+          ...((before ?? '') !== '' ? { before } : {}),
         });
       } catch (error) {
         forgeDebug({ scope: 'discord-account', level: 'error', message: 'listChannelMessages: failed to fetch message batch', context: { channelId: input.channel.id, error: error instanceof Error ? error.message : String(error) } });
@@ -587,7 +587,7 @@ export function createDiscordProvider(config: {
       await getReadyClient();
       const channel = await client.channels.fetch(targetKey);
 
-      if (!channel?.isTextBased() || !channel.isSendable()) {
+      if (channel?.isTextBased() === false || channel?.isSendable() === false) {
         forgeDebug({ scope: 'discord-account', level: 'error', message: 'getMessages discord target not readable', context: { targetKey } });
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
@@ -622,7 +622,7 @@ export function createDiscordProvider(config: {
 }
 
 function extractDiscordMessageContent(message: Message, botUserId?: string) {
-  const textContent = (botUserId
+  const textContent = ((botUserId ?? '') !== ''
     ? message.content
       .replaceAll(`<@${botUserId}>`, '')
       .replaceAll(`<@!${botUserId}>`, '')
@@ -641,7 +641,7 @@ function extractDiscordMessageContent(message: Message, botUserId?: string) {
         embed.footer?.text?.trim(),
         embed.url?.trim(),
       ]
-        .filter((value) => value && value.length > 0)
+        .filter((value) => value !== undefined && value !== null && value.length > 0)
         .join('\n'),
     )
     .filter((value) => value.length > 0)
@@ -708,7 +708,7 @@ function getDiscordConversationParticipants(channel: unknown, messages: Array<{ 
   }
 
   for (const message of messages) {
-    if (message.authorDisplayName) {
+    if (message.authorDisplayName !== undefined && message.authorDisplayName !== '') {
       participants.add(message.authorDisplayName);
     }
   }
