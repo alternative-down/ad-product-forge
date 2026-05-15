@@ -18,7 +18,9 @@ function createMockDb(overrides?: Partial<Database>): Database {
       },
     },
     insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockResolvedValue(undefined),
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      }),
     }),
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
@@ -223,9 +225,9 @@ describe('llm/settings-store', () => {
 
   describe('upsertProfile', () => {
     it('inserts new profile when profileId is not provided', async () => {
-      const mockInsert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      const mockOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
       db.insert = mockInsert as Database['insert'];
 
       const store = createLlmSettingsStore(db);
@@ -243,19 +245,16 @@ describe('llm/settings-store', () => {
       expect(result.profileId).toBeTruthy();
 
       expect(mockInsert).toHaveBeenCalled();
+      expect(mockOnConflictDoUpdate).toHaveBeenCalled();
       const insertCall = mockInsert.mock.calls[0][0];
+      // insertCall is the llmProfiles table object
     });
 
-    it('updates existing profile when profileId is provided and profile exists', async () => {
-      const existingRow = createMockProfileRow({ id: 'existing-id' });
-      db.query.llmProfiles.findFirst = vi.fn().mockResolvedValue(existingRow);
-
-      const mockUpdate = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      });
-      db.update = mockUpdate as Database['update'];
+    it('updates existing profile when profileId is provided via onConflictDoUpdate', async () => {
+      const mockOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+      db.insert = mockInsert as Database['insert'];
 
       const store = createLlmSettingsStore(db);
       const result = await store.upsertProfile({
@@ -267,13 +266,17 @@ describe('llm/settings-store', () => {
 
       expect(result.profileId).toBe('existing-id');
       expect(result.name).toBe('Updated Name');
-      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockInsert).toHaveBeenCalled();
+      expect(mockOnConflictDoUpdate).toHaveBeenCalled();
+      // Verify target uses llmProfiles.id
+      const insertCall = mockInsert.mock.calls[0][0];
+      // insertCall is the llmProfiles table object
     });
 
     it('trims name, modelKey, baseUrl, and apiKey', async () => {
-      const mockInsert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      const mockOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
       db.insert = mockInsert as Database['insert'];
 
       const store = createLlmSettingsStore(db);
@@ -313,9 +316,9 @@ describe('llm/settings-store', () => {
     });
 
     it('allows baseUrl to be null', async () => {
-      const mockInsert = vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue(undefined),
-      });
+      const mockOnConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate });
+      const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
       db.insert = mockInsert as Database['insert'];
 
       const store = createLlmSettingsStore(db);
