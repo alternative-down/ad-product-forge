@@ -88,7 +88,7 @@ export class MiniMaxClient {
         if (statusCode !== undefined && statusCode !== 0) {
           return this.buildError(
             String(statusCode),
-            this.getString(baseResp.status_msg) || 'MiniMax returned an error response',
+            (this.getString(baseResp.status_msg) ?? '') || 'MiniMax returned an error response',
           );
         }
       }
@@ -96,7 +96,7 @@ export class MiniMaxClient {
       if (typeof body.baseRespStatusCode === 'number' && body.baseRespStatusCode !== 0) {
         return this.buildError(
           String(body.baseRespStatusCode),
-          this.getString(body.baseRespStatusMsg) || 'MiniMax returned an error response',
+          (this.getString(body.baseRespStatusMsg) ?? '') || 'MiniMax returned an error response',
         );
       }
 
@@ -117,23 +117,23 @@ export class MiniMaxClient {
     rawBody: string,
     fallback: string,
   ) {
-    if (!body) {
+    if (body === undefined || body === '') {
       return rawBody.trim() || fallback;
     }
 
     const baseResp = this.getObject(body.base_resp);
     if (baseResp) {
       const message = this.getString(baseResp.status_msg);
-      if (message) {
+      if ((message ?? '') !== '') {
         return message;
       }
     }
 
     return (
-      this.getString(body.status_msg) ||
-      this.getString(body.message) ||
-      this.getString(body.error) ||
-      rawBody.trim() ||
+      (this.getString(body.status_msg) ?? '') ||
+      (this.getString(body.message) ?? '') ||
+      (this.getString(body.error) ?? '') ||
+      (rawBody.trim() ?? '') ||
       fallback
     );
   }
@@ -185,7 +185,7 @@ export class MiniMaxClient {
       body.audio_setting = { format: input.outputFormat };
     }
 
-    if (input.languageBoost) {
+    if ((input.languageBoost ?? '') !== '') {
       body.language_boost = input.languageBoost;
     }
 
@@ -204,7 +204,7 @@ export class MiniMaxClient {
 
     const audioHex = this.getString(this.getObject(response.data.data)?.audio);
 
-    if (!audioHex) {
+    if (audioHex === undefined || audioHex === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax TTS response missing audio data');
     }
 
@@ -227,15 +227,15 @@ export class MiniMaxClient {
 
     const apiData = (response.data as MiniMaxJsonResponse | undefined)?.data as Record<string, unknown> | undefined;
 
-    if (!apiData) {
+    if (apiData === undefined || apiData === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax list_voices response missing data');
     }
 
     const parseVoice = (v: unknown): { voiceId: string; voiceName?: string; description: string[]; createdTime?: string } | null => {
       const obj = this.getObject(v);
-      if (!obj) return null;
+      if (obj === undefined || obj === '') return null;
       const voiceId = this.getString(obj.voice_id);
-      if (!voiceId) return null;
+      if (voiceId === undefined || voiceId === '') return null;
       const description = Array.isArray(obj.description) ? obj.description.filter((x) => typeof x === 'string') as string[] : [];
       return {
         voiceId,
@@ -272,10 +272,10 @@ export class MiniMaxClient {
       prompt: input.prompt,
       response_format: 'base64',
     };
-    if (input.aspectRatio) body.aspect_ratio = input.aspectRatio;
-    if (input.width) body.width = input.width;
-    if (input.height) body.height = input.height;
-    if (input.imageCount) body.num_images = input.imageCount;
+    if ((input.aspectRatio ?? '') !== '') body.aspect_ratio = input.aspectRatio;
+    if ((input.width ?? 0) !== 0) body.width = input.width;
+    if ((input.height ?? 0) !== 0) body.height = input.height;
+    if ((input.imageCount ?? 0) !== 0) body.num_images = input.imageCount;
     if (input.subjectReference) {
       body.subject_reference = input.subjectReference.map((s) => ({
         type: s.type ?? 'image',
@@ -311,8 +311,8 @@ export class MiniMaxClient {
       duration: input.duration ?? 6,
       resolution: input.resolution ?? '1080P',
     };
-    if (input.firstFrameImage) body.first_frame_image = input.firstFrameImage;
-    if (input.lastFrameImage) body.last_frame_image = input.lastFrameImage;
+    if ((input.firstFrameImage ?? '') !== '') body.first_frame_image = input.firstFrameImage;
+    if ((input.lastFrameImage ?? '') !== '') body.last_frame_image = input.lastFrameImage;
 
     const response = await this.requestJson('/v1/video_generation', { method: 'POST', body: JSON.stringify(body) });
 
@@ -321,7 +321,7 @@ export class MiniMaxClient {
     }
 
     const taskId = this.getString(this.getObject(response.data.data)?.task_id);
-    if (!taskId) {
+    if (taskId === undefined || taskId === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax video generation response missing task_id');
     }
 
@@ -344,13 +344,13 @@ export class MiniMaxClient {
     }
 
     const d = this.getObject(response.data.data);
-    if (!d) {
+    if (d === undefined || d === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax video query response missing data');
     }
 
     const outTaskId = this.getString(d.task_id);
     const status = this.getString(d.status);
-    if (!outTaskId || !status) {
+    if ((outTaskId ?? '') === '' || (status ?? '') === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax video query response missing task_id or status');
     }
 
@@ -381,12 +381,12 @@ export class MiniMaxClient {
 
     const fileObj = this.getObject(response.data.data)?.file;
     const f = this.getObject(fileObj);
-    if (!f) {
+    if (f === undefined || f === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax file retrieve response missing file object');
     }
 
     const downloadUrl = this.getString(f.download_url);
-    if (!downloadUrl) {
+    if (downloadUrl === undefined || downloadUrl === '') {
       return this.buildError('INVALID_RESPONSE', 'MiniMax file retrieve response missing download_url');
     }
 
@@ -403,9 +403,9 @@ export class MiniMaxClient {
 }
 
 export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
-  const key = apiKey || process.env.MINIMAX_API_KEY;
+  const key = (apiKey ?? '') !== '' ? apiKey : process.env.MINIMAX_API_KEY;
 
-  if (!key) {
+  if (key === undefined || key === '') {
     forgeDebug({ scope: 'minimax', level: 'error', message: 'createMinimaxManager: MINIMAX_API_KEY not set' });
     throw new Error('MINIMAX_API_KEY environment variable is not set');
   }
@@ -419,7 +419,7 @@ export function createMiniMaxManager(config: {
   async function getClient() {
     const cfg = await config.integrations.getMinimaxConfig();
 
-    if (!cfg) {
+    if (cfg === undefined || cfg === '') {
       forgeDebug({ scope: 'minimax', level: 'warn', message: 'getClient MiniMax integration not configured' });
       throw new Error('MiniMax integration is not configured');
     }
