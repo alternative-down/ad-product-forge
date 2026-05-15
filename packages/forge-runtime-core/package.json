@@ -9,7 +9,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run -w agent-runtime-core build && tsup && tsc -p tsconfig.json --emitDeclarationOnly",
+    "build": "tsup && tsc -p tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --config ../../eslint.config.node.mjs \"src/**/*.ts\"",
     "test": "vitest run"
