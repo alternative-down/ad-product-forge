@@ -59,7 +59,7 @@ export function registerAgentReadRoutes(
         if (!agent) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(agent);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent get route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -77,7 +77,7 @@ export function registerAgentReadRoutes(
         if (!conversations) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(conversations);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent conversations route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -97,7 +97,7 @@ export function registerAgentReadRoutes(
         });
         return jsonResponse(await readModel.listAgentExecutionSteps(query));
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent execution-steps route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -117,7 +117,7 @@ export function registerAgentReadRoutes(
         });
         return jsonResponse(await readModel.listAgentThreadMessages(query));
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent thread-messages route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -143,7 +143,7 @@ export function registerAgentReadRoutes(
           }),
         );
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-thread-messages route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -161,7 +161,7 @@ export function registerAgentReadRoutes(
         if (!snapshot) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(snapshot);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent runtime-memory route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -179,7 +179,7 @@ export function registerAgentReadRoutes(
         if (!snapshot) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(snapshot);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent om-debug-export route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -209,7 +209,7 @@ export function registerAgentReadRoutes(
           }),
         );
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Agent conversation-messages route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
