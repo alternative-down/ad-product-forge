@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 // --- Mock factories (vi.mock is hoisted, so these run before the SUT import) ---
 
@@ -42,7 +43,7 @@ const mockDb = {
       findFirst: vi.fn(),
     },
   },
-};
+} as unknown as LibSQLDatabase<any>;
 
 const { createAgentSkillTools } = await import('./skills-tools');
 

@@ -46,8 +46,27 @@ vi.mock('../../agents/workspace-skills', () => ({
   listAgentWorkspaceSkills: vi.fn().mockResolvedValue([]),
 }));
 
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+
 function makeMockDb() {
   return {
+
+    batch: vi.fn().mockReturnThis(),
+    resultKind: vi.fn().mockReturnThis(),
+    _: vi.fn().mockReturnThis(),
+    $with: vi.fn().mockReturnThis(),
+    run: vi.fn().mockReturnThis(),
+    prepare: vi.fn().mockReturnThis(),
+    transaction: vi.fn().mockReturnThis(),
+    drizzle: vi.fn().mockReturnThis(),
+    $primary: vi.fn().mockReturnThis(),
+    $client: vi.fn().mockReturnThis(),
+    $nodes: vi.fn().mockReturnThis(),
+    $docs: vi.fn().mockReturnThis(),
+    $count: vi.fn().mockResolvedValue(0),
+    $relation: vi.fn().mockReturnThis(),
+    $get: vi.fn().mockReturnThis(),
+    with: vi.fn().mockReturnThis(),
     query: {
       agents: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn().mockResolvedValue(null) },
       agentRoles: { findMany: vi.fn().mockResolvedValue([]) },
@@ -63,7 +82,7 @@ function makeMockDb() {
         }),
       }),
     }),
-  };
+  } as unknown as LibSQLDatabase<any>;
 }
 
 function makeMockRegistry(agents = new Map()) {

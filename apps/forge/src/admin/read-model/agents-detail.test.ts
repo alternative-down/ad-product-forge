@@ -16,6 +16,8 @@ vi.mock('@forge-runtime/core', () => ({ forgeDebug: mockForgeDebug }));
 vi.mock('./helpers', () => ({ toScheduleSummary: mockToScheduleSummary }));
 
 function makeMockDb(overrides = {}) {
+  // NOTE: LibSQLDatabase type has dozens of methods; type cast bypasses TS2740
+  // The read model only uses query.* methods at runtime
   return {
     query: {
       agents: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -27,7 +29,7 @@ function makeMockDb(overrides = {}) {
       llmProfiles: { findMany: vi.fn().mockResolvedValue([]) },
     },
     ...overrides,
-  };
+  } as unknown as LibSQLDatabase<any>;
 }
 
 describe('createAgentDetailReadModel', () => {
