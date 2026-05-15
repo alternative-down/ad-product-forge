@@ -1,6 +1,3 @@
-import { forgeDebug } from '@forge-runtime/core';
-import { eq, and } from 'drizzle-orm';
-import { agentSchedules } from '../database/schema';
 import { createId } from '../utils/id';
 import { createAgentWakeQueue } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -13,8 +10,7 @@ import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
-import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
-import { formatPendingRunEvents, RUN_STOP_REMINDER } from './agent-runner-wake';
+import { formatPendingRunEvents } from './agent-runner-wake';
 import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
 import { createRunnerMessageManager, type RunnerMessageManagerState } from './agent-runner-message-manager';
 
@@ -64,15 +60,8 @@ import {
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
-const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
-const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
-const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
-const GENERATE_MAX_STEPS_PER_RUN = 10_000;
-const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
-const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
-const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
 export function createAgentRunner(
   db: Database,
   runtime: InternalAgentRuntime,
