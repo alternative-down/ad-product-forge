@@ -129,7 +129,7 @@ export function createAgentsRuntimeMemoryReadModel(
       await migrateLegacyCheckpointedOmState({ db, agentId, threadId: mastraAgentId, conversationStore });
 
       const agentWorkspaceRoot = resolve(workspaceBasePath, agentId);
-      const agentWorkspaceDir = agent.workspaceFilesystem?.basePath
+      const agentWorkspaceDir = (agent.workspaceFilesystem?.basePath ?? '') !== ''
         ? resolve(agentWorkspaceRoot, agent.workspaceFilesystem.basePath)
         : resolve(agentWorkspaceRoot, 'workspace');
 
@@ -180,14 +180,14 @@ export function createAgentsRuntimeMemoryReadModel(
         .join('\n');
 
       const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
-      const updatedAt = operationalMemoryState.metrics.latestThreadMessageAt
+      const updatedAt = (operationalMemoryState.metrics.latestThreadMessageAt ?? '') !== ''
         ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt)
         : null;
       const lastObservedAt = operationalMemoryState.observationMessages.length
         ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
         : null;
 
-      const runtimeLtmSnapshot = loadedAgent?.runtime.longTermMemory
+      const runtimeLtmSnapshot: { running?: boolean; queued?: boolean } | null = loadedAgent?.runtime.longTermMemory !== undefined
         ? await withTimeout(
             loadedAgent.runtime.longTermMemory.readSnapshot(),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
@@ -201,7 +201,7 @@ export function createAgentsRuntimeMemoryReadModel(
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
       ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: err instanceof Error ? err.message : String(err) } }); return null; });
 
-      const ltm = (runtimeLtmSnapshot
+      const ltm = (runtimeLtmSnapshot !== null
         ? {
             ...runtimeLtmSnapshot,
             running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
@@ -211,11 +211,11 @@ export function createAgentsRuntimeMemoryReadModel(
         ? {
             running: false,
             queued: false,
-            lastRunAt: persistedLtmState.lastRunAt ? Date.parse(persistedLtmState.lastRunAt) : null,
+            lastRunAt: (persistedLtmState.lastRunAt ?? '') !== '' ? Date.parse(persistedLtmState.lastRunAt) : null,
             lastRunError: persistedLtmState.lastRunError,
-            lastRunErrorAt: persistedLtmState.lastRunErrorAt ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
+            lastRunErrorAt: (persistedLtmState.lastRunErrorAt ?? '') !== '' ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
             lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
-            lastWrittenAt: persistedLtmState.lastWrittenAt ? Date.parse(persistedLtmState.lastWrittenAt) : null,
+            lastWrittenAt: (persistedLtmState.lastWrittenAt ?? '') !== '' ? Date.parse(persistedLtmState.lastWrittenAt) : null,
             packageCount: persistedLtmState.packages.length,
           }
         : null);
@@ -234,7 +234,7 @@ export function createAgentsRuntimeMemoryReadModel(
         checkpointMessageId: checkpointSummaryMessage?.id ?? null,
         checkpointGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
         checkpointSummary: checkpointSummaryText,
-        checkpointUpdatedAt: checkpointSummaryMessage?.createdAt
+        checkpointUpdatedAt: (checkpointSummaryMessage?.createdAt ?? '') !== ''
           ? Date.parse(checkpointSummaryMessage.createdAt)
           : null,
         ltmRecall: ltmRecall
@@ -272,7 +272,7 @@ export function createAgentsRuntimeMemoryReadModel(
           ),
           checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
           checkpointSummaryUpToGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
-          latestThreadMessageAt: operationalMemoryState.metrics.latestThreadMessageAt
+          latestThreadMessageAt: (operationalMemoryState.metrics.latestThreadMessageAt ?? '') !== ''
             ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt)
             : null,
         },
