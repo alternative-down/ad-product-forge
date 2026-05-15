@@ -1,6 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 
-function validateCronExpression(expression: string): boolean {
+function _validateCronExpression(expression: string): boolean {
   try {
     parseExpression(expression, { utc: true });
     return true;
@@ -26,19 +26,19 @@ export function validateScheduleShape(input: {
   cronExpression?: string;
   scheduledDate?: number;
 }) {
-  if (input.scheduleType === 'cron' && !input.cronExpression) {
+  if (input.scheduleType === 'cron' && (input.cronExpression ?? '') === '') {
     forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduleInput: cronExpression required for cron' });
     throw new Error('cronExpression is required when scheduleType is cron');
   }
 
-  if (input.scheduleType === 'date' && !input.scheduledDate) {
+  if (input.scheduleType === 'date' && (input.scheduledDate ?? 0) === 0) {
     forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduleInput: scheduledDate required for date' });
     throw new Error('scheduledDate is required when scheduleType is date');
   }
 }
 
 export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', scheduledDate?: number) {
-  if (scheduleType !== 'date' || !scheduledDate) {
+  if (scheduleType !== 'date' || (scheduledDate ?? 0) === 0) {
     return;
   }
 
@@ -65,7 +65,7 @@ export function createNotificationContent(input: {
   const description = input.description?.trim();
   const content = input.content.trim();
 
-  if (description) {
+  if (description !== undefined && description !== '') {
     sections.push(`Description: ${description}`);
   }
 
@@ -99,19 +99,19 @@ export function createWakeContent(input: {
     `Wake while running: ${input.wakeWhenRunning ? 'enabled' : 'only when idle'}`,
   ];
 
-  if (input.description?.trim()) {
+  if (input.description !== undefined && input.description.trim() !== '') {
     lines.push(`Description: ${input.description.trim()}`);
   }
 
-  if (input.scheduleType === 'cron' && input.cronExpression) {
+  if (input.scheduleType === 'cron' && input.cronExpression !== undefined) {
     lines.push(`Cron expression: ${input.cronExpression}`);
   }
 
-  if (input.scheduleType === 'date' && input.scheduledDate) {
+  if (input.scheduleType === 'date' && input.scheduledDate !== undefined) {
     lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
   }
 
-  if (input.nextTriggerAt) {
+  if (input.nextTriggerAt !== undefined) {
     lines.push(`Next trigger at: ${new Date(input.nextTriggerAt).toISOString()}`);
   }
 
@@ -122,7 +122,7 @@ export function createWakeContent(input: {
 export function createHeartbeatWakeInstruction(content?: string) {
   const customContent = content?.trim();
 
-  if (customContent) {
+  if (customContent !== undefined && customContent !== '') {
     return customContent;
   }
 
@@ -179,12 +179,12 @@ export function toToolOutput(scheduleRecord: {
     description: scheduleRecord.description,
     scheduleType: scheduleRecord.scheduleType,
     cronExpression: scheduleRecord.cronExpression,
-    scheduledDate: scheduleRecord.scheduledDate ? new Date(scheduleRecord.scheduledDate).toISOString() : undefined,
+    scheduledDate: scheduleRecord.scheduledDate !== undefined ? new Date(scheduleRecord.scheduledDate).toISOString() : undefined,
     timezone: scheduleRecord.timezone,
     content: scheduleRecord.content,
     wakeWhenRunning: scheduleRecord.wakeWhenRunning,
     isActive: scheduleRecord.isActive,
-    lastTriggeredAt: scheduleRecord.lastTriggeredAt ? new Date(scheduleRecord.lastTriggeredAt).toISOString() : undefined,
-    nextTriggerAt: scheduleRecord.nextTriggerAt ? new Date(scheduleRecord.nextTriggerAt).toISOString() : undefined,
+    lastTriggeredAt: scheduleRecord.lastTriggeredAt !== undefined ? new Date(scheduleRecord.lastTriggeredAt).toISOString() : undefined,
+    nextTriggerAt: scheduleRecord.nextTriggerAt !== undefined ? new Date(scheduleRecord.nextTriggerAt).toISOString() : undefined,
   };
 }
