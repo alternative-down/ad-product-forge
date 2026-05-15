@@ -1,4 +1,3 @@
-import type { z } from 'zod';
 
 export type NormalizedScheduleUpdate = {
   scheduleType: string;
