@@ -12,38 +12,40 @@ import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm
 import type { Database } from '../../database/index';
 import { withTimeout } from '../../utils/async';
 import { forgeDebug } from '@forge-runtime/core';
+import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
 export interface AgentDebugReadModelDeps {
   db: Database;
+  workspaceBasePath: string;
   // Function dependencies (passed as thunks to avoid circular reference issues)
   getAgent: (agentId: string) => Promise<unknown>;
-  getAgentRuntimeMemory: (agentId: string) => Promise<unknown>;
+  getAgentRuntimeMemory?: (agentId: string) => Promise<unknown>;
   listRecentAgentHomeMetricSnapshots: (input: { agentId: string; limit: number }) => Promise<unknown>;
+  registry?: { get(agentId: string): unknown };
 }
 
 export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
-  const { db, getAgent, getAgentRuntimeMemory, listRecentAgentHomeMetricSnapshots } = deps;
+  const { db, workspaceBasePath, getAgent, getAgentRuntimeMemory: getAgentRuntimeMemory_, listRecentAgentHomeMetricSnapshots, registry } = deps;
+
+  // Resolve getAgentRuntimeMemory — use provided or lazy-init from agents-runtime-memory
+  let getAgentRuntimeMemoryFn = getAgentRuntimeMemory_;
+  if (!getAgentRuntimeMemoryFn && registry) {
+    const armRM = createAgentsRuntimeMemoryReadModel({ db, registry, workspaceBasePath });
+    getAgentRuntimeMemoryFn = armRM.getAgentRuntimeMemory;
+  }
 
   async function getAgentOmDebugExport(agentId: string) {
     const [agent, runtimeMemory, snapshots] = await Promise.all([
       getAgent(agentId),
-      withTimeout(
-        getAgentRuntimeMemory(agentId),
-        ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-        'getAgentOmDebugExport: runtime memory timed out',
-      ).catch((err) => {
+      (getAgentRuntimeMemoryFn ?? (async () => null))(agentId).catch((err) => {
         forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
     ]);
     if (!agent) return null;
-    const ltm = await withTimeout(
-      readLongTermMemoryState(db, agentId),
-      ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-      'getAgentOmDebugExport: LTM state timed out',
-    ).catch((err) => {
+    const ltm = await readLongTermMemoryState(db, agentId).catch((err) => {
       forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: LTM recall not available', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       return null;
     });
@@ -57,9 +59,9 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
     let agent;
       agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
-    const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId, input);
+    const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
     return { ltmRecall };
   }
 
-  return { getAgentOmDebugExport, debugAgentLongTermMemoryRecallSearch };
+  return { getAgentOmDebugExport, debugAgentLongTermMemoryRecallSearch, getAgentRuntimeMemory: getAgentRuntimeMemoryFn };
 }
