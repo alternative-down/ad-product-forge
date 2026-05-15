@@ -29,8 +29,13 @@ export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
 
   async function getProvider(provider: PaymentProviderType) {
+    try {
       const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
       return rows[0] ?? null;
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'getProvider DB read failed', context: { provider, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function upsertProvider(input: {
@@ -41,23 +46,28 @@ export function createPaymentReceivablesStore(db: Database) {
     configJson?: Record<string, unknown>;
   }) {
     const now = Date.now();
+    try {
       const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, input.provider)).all();
       if (rows.length > 0) {
         await db.update(paymentProviders).set({ apiKeyEncrypted: input.apiKeyEncrypted, webhookSecretEncrypted: input.webhookSecretEncrypted, isActive: input.isActive, configJson: input.configJson ?? null, updatedAt: now }).where(eq(paymentProviders.provider, input.provider));
         return rows[0].id;
       }
-    const id = createId();
-    await db.insert(paymentProviders).values({
-      id,
-      provider: input.provider,
-      apiKeyEncrypted: input.apiKeyEncrypted,
-      webhookSecretEncrypted: input.webhookSecretEncrypted,
-      isActive: input.isActive,
-      configJson: input.configJson ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
+      const id = createId();
+      await db.insert(paymentProviders).values({
+        id,
+        provider: input.provider,
+        apiKeyEncrypted: input.apiKeyEncrypted,
+        webhookSecretEncrypted: input.webhookSecretEncrypted,
+        isActive: input.isActive,
+        configJson: input.configJson ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return id;
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'upsertProvider failed', context: { provider: input.provider, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -71,23 +81,28 @@ export function createPaymentReceivablesStore(db: Database) {
     name?: string;
   }) {
     const now = Date.now();
-    const existing = await db
-      .select()
-      .from(paymentCustomers)
-      .where(
-        and(
-          eq(paymentCustomers.provider, input.provider),
-          eq(paymentCustomers.providerCustomerId, input.providerCustomerId),
-        ),
-      )
-      .limit(1);
+    try {
+      const existing = await db
+        .select()
+        .from(paymentCustomers)
+        .where(
+          and(
+            eq(paymentCustomers.provider, input.provider),
+            eq(paymentCustomers.providerCustomerId, input.providerCustomerId),
+          ),
+        )
+        .limit(1);
 
-    if (existing.length > 0) {
+      if (existing.length > 0) {
         await db
           .update(paymentCustomers)
           .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
           .where(eq(paymentCustomers.id, existing[0].id));
-      return existing[0].id;
+        return existing[0].id;
+      }
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'upsertCustomer DB read failed', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
     }
   }
 
@@ -108,13 +123,14 @@ export function createPaymentReceivablesStore(db: Database) {
     canceledAt?: number;
   }) {
     const now = Date.now();
-    const existing = await db
-      .select()
-      .from(paymentSubscriptions)
-      .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
-      .limit(1);
+    try {
+      const existing = await db
+        .select()
+        .from(paymentSubscriptions)
+        .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId))
+        .limit(1);
 
-    if (existing.length > 0) {
+      if (existing.length > 0) {
         await db
           .update(paymentSubscriptions)
           .set({
@@ -126,39 +142,58 @@ export function createPaymentReceivablesStore(db: Database) {
             updatedAt: now,
           })
           .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId));
-      return existing[0].id;
+        return existing[0].id;
+      }
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'upsertSubscription DB read failed', context: { providerSubscriptionId: input.providerSubscriptionId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
     }
   }
 
   async function getSubscriptionByProviderId(provider: PaymentProviderType, providerSubscriptionId: string) {
-    const rows = await db
-      .select()
-      .from(paymentSubscriptions)
-      .where(
-        and(
-          eq(paymentSubscriptions.provider, provider),
-          eq(paymentSubscriptions.providerSubscriptionId, providerSubscriptionId),
-        ),
-      )
-      .limit(1);
+    try {
+      const rows = await db
+        .select()
+        .from(paymentSubscriptions)
+        .where(
+          and(
+            eq(paymentSubscriptions.provider, provider),
+            eq(paymentSubscriptions.providerSubscriptionId, providerSubscriptionId),
+          ),
+        )
+        .limit(1);
       return rows[0] ?? null;
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'getSubscriptionByProviderId DB read failed', context: { provider, providerSubscriptionId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function listRecentTransactions(provider: PaymentProviderType, limit = 20) {
-    const rows = await db
-      .select()
-      .from(paymentTransactions)
-      .where(eq(paymentTransactions.provider, provider))
-      .orderBy(desc(paymentTransactions.createdAt))
-      .limit(limit);
+    try {
+      const rows = await db
+        .select()
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.provider, provider))
+        .orderBy(desc(paymentTransactions.createdAt))
+        .limit(limit);
       return rows;
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'listRecentTransactions DB read failed', context: { provider, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function getTransactionsBySubscription(subscriptionId: string) {
+    try {
       return await db
         .select()
         .from(paymentTransactions)
         .where(eq(paymentTransactions.subscriptionId, subscriptionId));
+    } catch (err) {
+      forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'getTransactionsBySubscription DB read failed', context: { subscriptionId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   return {
