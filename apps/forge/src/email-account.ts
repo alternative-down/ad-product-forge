@@ -175,12 +175,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           targetKey: participant.targetKey,
           conversationName: parsed.subject ?? null,
           attachments,
-          unread: !message.flags?.includes('\\Seen'),
-          authorId: participant.authorId,
-          authorDisplayName: participant.authorDisplayName,
-          threadKey,
-          createdAt: resolveCreatedAt(parsed),
-        });
+        } as CommunicationInboundMessage);
       }
     } catch (error) {
       forgeDebug({ scope: 'email-account', level: 'info', message: 'Error processing message', context: { uid, error } });
@@ -293,10 +288,9 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
     getSelfContact(): Promise<CommunicationProviderContact | null> {
       return {
-        targetKey: config.imap.user,
         slug: config.imap.user,
         displayName: config.imap.user,
-      };
+      } as unknown as Promise<CommunicationProviderContact | null>;
     },
 
     async listContacts(): Promise<CommunicationProviderContact[]> {
@@ -346,8 +340,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           targetKey: threadKey,
           participants: [config.imap.user],
           messages: [],
-          unread: messages.some((m) => m.unread),
-        });
+        } as unknown as CommunicationProviderConversation);
       }
 
       return threads.slice(0, input.limit);

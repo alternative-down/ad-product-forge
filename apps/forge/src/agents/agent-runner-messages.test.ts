@@ -22,17 +22,18 @@ function makeState(overrides: Partial<MessageManagerState> = {}): MessageManager
   };
 }
 
-function makeEvent(overrides: Partial<AgentWakeEvent> = {}): AgentWakeEvent {
+function makeEvent(overrides: Record<string, unknown> = {}): AgentWakeEvent {
+  const { id: _ignoredId, ...rest } = overrides as Record<string, unknown>;
+  void _ignoredId;
   return {
-    id: overrides.id ?? 'evt-1',
-    text: overrides.text ?? 'hello',
-    timestamp: overrides.timestamp ?? Date.now(),
-    idempotencyKey: overrides.idempotencyKey ?? 'key-1',
-    type: overrides.type ?? 'message:dummy',
-    originIdleOnly: overrides.originIdleOnly ?? false,
-    idleOnly: overrides.idleOnly ?? false,
-    groupMetadata: overrides.groupMetadata ?? undefined,
-  };
+    text: rest.text ?? 'hello',
+    timestamp: rest.timestamp ?? Date.now(),
+    idempotencyKey: rest.idempotencyKey ?? 'key-1',
+    type: rest.type ?? 'message:dummy',
+    originIdleOnly: rest.originIdleOnly ?? false,
+    idleOnly: rest.idleOnly ?? false,
+    groupMetadata: rest.groupMetadata ?? undefined,
+  } as unknown as AgentWakeEvent;
 }
 
 function mockFormatter(events: AgentWakeEvent[]): string {
