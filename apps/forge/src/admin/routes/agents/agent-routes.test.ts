@@ -192,7 +192,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
     registerAgentWriteRoutes(httpServer as any, {} as any, {
-      db: {},
+      db: {} as any,
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
@@ -205,7 +205,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
     registerAgentWriteRoutes(httpServer as any, {} as any, {
-      db: {},
+      db: {} as any,
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
@@ -218,7 +218,7 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
     registerAgentWriteRoutes(httpServer as any, {} as any, {
-      db: {},
+      db: {} as any,
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
