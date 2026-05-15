@@ -71,7 +71,7 @@ function validateCreateTiming(input: {
   scheduledDate?: string | null;
   content?: string | null;
 }) {
-  if (!input.name) {
+  if ((input.name ?? '') === '') {
     return {
       valid: false as const,
       error: 'name is required when action is create',
@@ -87,7 +87,7 @@ function validateCreateTiming(input: {
     };
   }
 
-  if (input.scheduleType === 'cron' && !input.cronExpression) {
+  if (input.scheduleType === 'cron' && (input.cronExpression ?? '') === '') {
     return {
       valid: false as const,
       error: 'cronExpression is required when scheduleType is cron',
@@ -95,7 +95,7 @@ function validateCreateTiming(input: {
     };
   }
 
-  if (input.scheduleType === 'date' && !input.scheduledDate) {
+  if (input.scheduleType === 'date' && (input.scheduledDate ?? 0) === 0) {
     return {
       valid: false as const,
       error: 'scheduledDate is required when scheduleType is date',
@@ -103,7 +103,7 @@ function validateCreateTiming(input: {
     };
   }
 
-  if (!input.content) {
+  if ((input.content ?? '') === '') {
     return {
       valid: false as const,
       error: 'content is required when action is create',
@@ -125,7 +125,7 @@ async function resolveSelfCronId(input: {
 }, agentId: string, schedules: ReturnType<typeof createAgentScheduleManager>) {
   const cronId = normalizeCronId(input);
 
-  if (cronId) {
+  if (cronId !== undefined && cronId !== null && cronId !== '') {
     return cronId;
   }
 
@@ -144,7 +144,7 @@ async function resolveDelegatedCronId(input: {
 }, creatorAgentId: string, schedules: ReturnType<typeof createAgentScheduleManager>) {
   const cronId = normalizeCronId(input);
 
-  if (cronId) {
+  if (cronId !== undefined && cronId !== null && cronId !== '') {
     return cronId;
   }
 
@@ -158,7 +158,7 @@ async function resolveDelegatedCronId(input: {
 }
 
 function validateDelegatedCronCreateTarget(input: { targetAgentId?: string }) {
-  if (input.targetAgentId) {
+  if (input.targetAgentId !== undefined && input.targetAgentId !== '') {
     return null;
   }
 
@@ -289,7 +289,7 @@ export function createAgentScheduleTools(
 
           const cronId = await resolveSelfCronId(updateInput, agentId, schedules);
 
-          if (!cronId) {
+          if (cronId === null || cronId === undefined) {
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
@@ -336,7 +336,7 @@ export function createAgentScheduleTools(
 
         const cronId = await resolveSelfCronId(deleteInput, agentId, schedules);
 
-        if (!cronId) {
+        if (cronId === null || cronId === undefined) {
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
@@ -468,7 +468,7 @@ export function createAgentScheduleTools(
 
           const cronId = await resolveDelegatedCronId(updateInput, agentId, schedules);
 
-          if (!cronId) {
+          if (cronId === null || cronId === undefined) {
             return {
               valid: false as const,
               error: 'cronId is required for update and delete',
@@ -515,7 +515,7 @@ export function createAgentScheduleTools(
 
         const cronId = await resolveDelegatedCronId(deleteInput, agentId, schedules);
 
-        if (!cronId) {
+        if (cronId === null || cronId === undefined) {
           return {
             valid: false as const,
             error: 'cronId is required for update and delete',
