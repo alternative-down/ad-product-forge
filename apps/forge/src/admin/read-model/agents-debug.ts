@@ -12,6 +12,7 @@ import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm
 import type { Database } from '../../database/index';
 import { withTimeout } from '../../utils/async';
 import { forgeDebug } from '@forge-runtime/core';
+import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
 export interface AgentDebugReadModelDeps {
@@ -23,9 +24,16 @@ export interface AgentDebugReadModelDeps {
 }
 
 export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
-  const { db, getAgent, getAgentRuntimeMemory, listRecentAgentHomeMetricSnapshots } = deps;
+  const { db, getAgent, getAgentRuntimeMemory: getAgentRuntimeMemory_, listRecentAgentHomeMetricSnapshots } = deps;
 
   async function getAgentOmDebugExport(agentId: string) {
+
+    let getAgentRuntimeMemory = getAgentRuntimeMemory_;
+    if (!getAgentRuntimeMemory) {
+      const armRM = createAgentsRuntimeMemoryReadModel({ db, workspaceBasePath });
+      getAgentRuntimeMemory = armRM.getAgentRuntimeMemory;
+    }
+
     const [agent, runtimeMemory, snapshots] = await Promise.all([
       getAgent(agentId),
       withTimeout(

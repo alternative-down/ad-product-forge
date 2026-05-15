@@ -1,4 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
+import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 
 import {
   agentExecutionContracts,
@@ -15,6 +16,15 @@ import {
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
 } from './helpers';
+import { createAgentConversationsReadModel } from './agents-conversations';
+import { createAgentMetricsReadModel } from './agents-metrics';
+import { createAgentDetailReadModel } from './agents-detail';
+import { createAgentListReadModel } from './agents-list';
+import { createAgentDebugReadModel } from './agents-debug';
+import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
+import { closeLibsqlClient, listRecentConversations, listThreadMessages } from './conversation-helpers';
+import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
+import { createSystemSettingsStore } from '../../system-settings/store';
 
 import type {Database} from '../../database/index';
 import {
@@ -142,7 +152,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     db,
     getAgent,
     
-    getAgentRuntimeMemory,
+    workspaceBasePath,
+
     listRecentAgentHomeMetricSnapshots,
   });
   const {
@@ -159,7 +170,6 @@ return {
   listAgentThreadMessages,
   listAgentLongTermMemoryThreadMessages,
   
-    getAgentRuntimeMemory,
   listRecentAgentHomeMetricSnapshots,
   getAgentOmDebugExport,
   debugAgentLongTermMemoryRecallSearch,

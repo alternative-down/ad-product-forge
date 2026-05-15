@@ -7,7 +7,7 @@ import { createMockDb, resetAgentReadModelMocks } from './shared-test-helpers';
 // before vi.mock factories run.
 // ---------------------------------------------------------------------
 const mockForgeDebug = vi.hoisted(() => vi.fn());
-const mockGetInternalAgentRegistry = vi.hoisted(() => vi.fn(() => ({ size: 0, get: vi.fn() })));
+const mockGetInternalAgentRegistry = vi.hoisted(() => vi.fn(() => ({ size: 0, list: vi.fn(() => []), get: vi.fn() })));
 const mockReadLongTermMemoryState = vi.hoisted(() => vi.fn());
 const mockReadLongTermMemoryRecallSnapshot = vi.hoisted(() => vi.fn());
 const mockMigrateLegacyCheckpointedOmState = vi.hoisted(() => vi.fn());
@@ -32,6 +32,23 @@ vi.mock('@forge-runtime/core', () => ({
 }));
 
 
+
+
+vi.mock('./agents-runtime-memory', () => ({
+  getAgentRuntimeMemory: vi.fn(),
+  createAgentsRuntimeMemoryReadModel: vi.fn(({ db, workspaceBasePath }) => ({
+    getAgentRuntimeMemory: vi.fn(),
+  })),
+}));
+
+
+vi.mock('./agents-debug', () => ({
+  createAgentDebugReadModel: vi.fn(({ db, getAgent, listRecentAgentHomeMetricSnapshots, workspaceBasePath }) => ({
+    getAgentOmDebugExport: vi.fn(),
+    debugAgentLongTermMemoryRecallSearch: vi.fn(),
+    getAgentRuntimeMemory: vi.fn(),
+  })),
+}));
 
 vi.mock('./conversation-helpers', () => ({
   closeLibsqlClient: mockCloseLibsqlClient,
@@ -181,7 +198,7 @@ describe('createAgentReadModel', () => {
     });
 
     it('counts loaded agents from registry size', async () => {
-      const registry = { size: 3, get: vi.fn() };
+      const registry = { size: 3, list: vi.fn(() => []), get: vi.fn() };
       mockGetInternalAgentRegistry.mockReturnValue(registry);
       const model = makeReadModel();
       const result = await model.getDashboard();
@@ -546,7 +563,7 @@ describe('createAgentReadModel', () => {
     });
 
     it('returns empty when provider is unknown and agent not in registry', async () => {
-      mockGetInternalAgentRegistry.mockReturnValue({ size: 0, get: vi.fn().mockReturnValue(null) });
+      mockGetInternalAgentRegistry.mockReturnValue({ size: 0, list: vi.fn(() => []), get: vi.fn().mockReturnValue(null) });
       const model = makeReadModel();
       const result = await model.listAgentConversationMessages({
         agentId: 'agent-1',
