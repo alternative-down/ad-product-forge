@@ -25,9 +25,14 @@ export async function terminateInternalAgent(db: Database, input: {
   internalChat: InternalChatService;
 }) {
   let agent;
+  try {
     agent = await db.query.agents.findFirst({
       where: eq(agents.id, input.agentId),
     });
+  } catch (err) {
+    forgeDebug({ scope: 'terminate-agent', level: 'error', message: 'terminateAgent DB read failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+    throw err;
+  }
 
    
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions

@@ -12,6 +12,7 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
   }) {
     const createdAt = Date.now();
 
+    try {
       await db.insert(agentHomeMetricSnapshots).values({
         id: createId(),
         agentId: input.agentId,
@@ -20,6 +21,10 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
         snapshot: input.snapshot,
         createdAt,
       });
+    } catch (err) {
+      forgeDebug({ scope: 'agent-home-metric-snapshot', level: 'error', message: 'recordSnapshot DB insert failed', context: { agentId: input.agentId, stepId: input.stepId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     return {
       createdAt,
