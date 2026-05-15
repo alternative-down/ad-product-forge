@@ -49,7 +49,7 @@ export async function terminateInternalAgent(db: Database, input: {
     forgeDebug({
       scope: 'terminate-agent',
       level: 'warn',
-      runtimeId: input.agentId,
+      context: { agentId: input.agentId },
       message: 'refundActiveContractBalance failed (non-fatal): ' + (err instanceof Error ? err.message : String(err)),
     });
   }
@@ -71,7 +71,7 @@ export async function terminateInternalAgent(db: Database, input: {
       forgeDebug({
         scope: 'terminate-agent',
         level: 'warn',
-        runtimeId: input.agentId,
+        context: { agentId: input.agentId },
         message: 'internal chat cleanup failed (non-fatal): ' + (chatErr instanceof Error ? chatErr.message : String(chatErr)),
       });
     }
@@ -79,7 +79,7 @@ export async function terminateInternalAgent(db: Database, input: {
     forgeDebug({
       scope: 'terminate-agent',
       level: 'error',
-      runtimeId: input.agentId,
+      context: { agentId: input.agentId },
       message: 'external cleanup failed during terminate: ' + (err instanceof Error ? err.message : String(err)),
     });
 
@@ -91,7 +91,7 @@ export async function terminateInternalAgent(db: Database, input: {
       forgeDebug({
         scope: 'terminate-agent',
         level: 'warn',
-        runtimeId: input.agentId,
+        context: { agentId: input.agentId },
         message: 'internal chat cleanup failed during rollback: ' + (chatErr instanceof Error ? chatErr.message : String(chatErr)),
       });
     }
@@ -106,12 +106,12 @@ export async function terminateInternalAgent(db: Database, input: {
       forgeDebug({
         scope: 'terminate-agent',
         level: 'error',
-        runtimeId: input.agentId,
+        context: { agentId: input.agentId },
         message: 'db cleanup transaction failed during rollback: ' + (deleteErr instanceof Error ? deleteErr.message : String(deleteErr)),
       });
     }
     getInternalAgentRegistry().remove(input.agentId);
-    forgeDebug({ scope: 'terminate-agent', level: 'error', message: 'terminate-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
+    forgeDebug({ scope: 'terminate-agent', level: 'error', message: 'terminate-agent: operation failed', context: { error: err instanceof Error ? err.message : String(err) } });
     throw err;
   }
 
@@ -122,7 +122,7 @@ export async function terminateInternalAgent(db: Database, input: {
     forgeDebug({
       scope: 'terminate-agent',
       level: 'warn',
-      runtimeId: input.agentId,
+      context: { agentId: input.agentId },
       message: 'internal chat cleanup failed (non-fatal): ' + (err instanceof Error ? err.message : String(err)),
     });
   }
@@ -146,7 +146,7 @@ export async function terminateInternalAgent(db: Database, input: {
     forgeDebug({
       scope: 'terminate-agent',
       level: 'warn',
-      runtimeId: input.agentId,
+      context: { agentId: input.agentId },
       message: 'workspace rm failed (non-fatal): ' + (rmErr instanceof Error ? rmErr.message : String(rmErr)),
     });
   }
