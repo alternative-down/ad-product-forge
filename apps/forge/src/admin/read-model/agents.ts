@@ -21,6 +21,8 @@ import { createAgentMetricsReadModel } from './agents-metrics';
 import { createAgentDetailReadModel } from './agents-detail';
 import { createAgentListReadModel } from './agents-list';
 import { createAgentDebugReadModel } from './agents-debug';
+import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
+import type { InternalChatService } from '../../communication/internal-chat-service';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { closeLibsqlClient, listRecentConversations, listThreadMessages } from './conversation-helpers';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
@@ -41,9 +43,15 @@ const RECENT_NOTIFICATION_LIMIT = 10;
 
 import type { AgentListItem, AgentReadModel } from './agents-types';
 
+interface FinanceReadModel {
+  getCompanyCashBalance: () => Promise<{ balanceUsd: number }>;
+  getCompanyCashSummary: () => Promise<{ totalInUsd: number; totalOutUsd: number; netUsd: number }>;
+  listCompanyCashMovements: (opts: { limit: number }) => Promise<{ items: unknown[] }>;
+}
+
 interface AgentsReadModelDeps {
   db: Database;
-  finance: object;
+  finance: FinanceReadModel;
   internalChat: InternalChatService;
   workspaceBasePath: string;
   systemSettings: object;
@@ -59,6 +67,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   } = deps;
 
   const registry = getInternalAgentRegistry();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const registryWithSize = registry as unknown as { get(agentId: string): unknown; size: number };
 
   async function getDashboard() {
     const [totals, cash] = await Promise.all([getTotals(), getCashData()]);
@@ -122,9 +132,8 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
 
   const agentListRM = createAgentListReadModel({
     db,
-    registry,
+    registry: registryWithSize,
     workspaceBasePath,
-    systemSettings,
   });
   const listAgents = agentListRM.listAgents;
   const getAgent = agentListRM.getAgent;
@@ -148,12 +157,13 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     });
   }
 
+  const armRM = createAgentsRuntimeMemoryReadModel({ db, registry: registryWithSize, workspaceBasePath });
+  const getAgentRuntimeMemory = armRM.getAgentRuntimeMemory;
   const debugRM = createAgentDebugReadModel({
     db,
-    getAgent,
-    
     workspaceBasePath,
-
+    getAgent,
+    getAgentRuntimeMemory,
     listRecentAgentHomeMetricSnapshots,
   });
   const {
@@ -169,7 +179,6 @@ return {
   listAgentExecutionSteps,
   listAgentThreadMessages,
   listAgentLongTermMemoryThreadMessages,
-  
   listRecentAgentHomeMetricSnapshots,
   getAgentOmDebugExport,
   debugAgentLongTermMemoryRecallSearch,
@@ -179,5 +188,6 @@ return {
   listAgentNotifications,
   listAgentMcpServers,
   listAgentLlmProfiles,
+  getAgentRuntimeMemory,
 };
 }
