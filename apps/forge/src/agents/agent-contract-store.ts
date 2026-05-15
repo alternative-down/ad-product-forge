@@ -239,26 +239,29 @@ export function createAgentContractStore(
     const createdAt = time.now();
 
     try {
-      await db.insert(agentExecutionSteps).values({
-        id,
-        agentId: input.agentId,
-        contractId: input.contractId,
-        llmProfileId: input.llmProfileId,
-        modelKey: input.modelKey,
-        kind: input.kind,
-        inputTokens: input.inputTokens,
-        cachedInputTokens: input.cachedInputTokens,
-        outputTokens: input.outputTokens,
-        inputPerMillionUsd: input.inputPerMillionUsd,
-        inputCachePerMillionUsd: input.inputCachePerMillionUsd,
-        outputPerMillionUsd: input.outputPerMillionUsd,
-        contractCostMultiplier: input.contractCostMultiplier,
-        costUsd: input.costUsd,
-        createdAt,
-        updatedAt: createdAt,
+      await db.transaction(async (tx) => {
+        await tx.insert(agentExecutionSteps).values({
+          id,
+          agentId: input.agentId,
+          contractId: input.contractId,
+          llmProfileId: input.llmProfileId,
+          modelKey: input.modelKey,
+          kind: input.kind,
+          inputTokens: input.inputTokens,
+          cachedInputTokens: input.cachedInputTokens,
+          outputTokens: input.outputTokens,
+          inputPerMillionUsd: input.inputPerMillionUsd,
+          inputCachePerMillionUsd: input.inputCachePerMillionUsd,
+          outputPerMillionUsd: input.outputPerMillionUsd,
+          contractCostMultiplier: input.contractCostMultiplier,
+          costUsd: input.costUsd,
+          createdAt,
+          updatedAt: createdAt,
+        });
       });
     } catch (err) {
       logContractError('recordAgentStep', input.agentId, err);
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'recordAgentStep: db.transaction failed', context: { agentId: input.agentId, contractId: input.contractId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
 
