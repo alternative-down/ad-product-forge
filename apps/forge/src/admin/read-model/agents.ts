@@ -1,4 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
+import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 
 import {
   agentExecutionContracts,
