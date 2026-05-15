@@ -3,11 +3,10 @@ import { access } from 'node:fs/promises';
 import { z } from 'zod';
 
 
-import type {Database} from '../../database/schema';
 
 export function normalizeOptionalText(value?: string): string | null {
   const normalized = value?.trim();
-  return normalized ? normalized : null;
+  return (normalized ?? '') !== '' ? normalized : null;
 }
 
 export function normalizeJsonText(
@@ -17,7 +16,7 @@ export function normalizeJsonText(
 ): string | null {
   const normalized = value?.trim();
 
-  if (!normalized) {
+  if ((normalized ?? '') === '') {
     return null;
   }
 
@@ -61,7 +60,7 @@ export function summarizeHealthcheckThreadMessage(message: {
   type: string | null;
   content?: unknown;
 }) {
-  const content = message.content && typeof message.content === 'object'
+  const content = message.content !== undefined && message.content !== null && typeof message.content === 'object'
     ? message.content as {
         content?: unknown;
         reasoning?: unknown;
@@ -71,7 +70,7 @@ export function summarizeHealthcheckThreadMessage(message: {
   const parts = Array.isArray(content?.parts) ? content.parts : [];
   const partTypes = parts
     .flatMap((part) =>
-      part && typeof part === 'object' && 'type' in part && typeof part.type === 'string'
+      part !== null && part !== undefined && typeof part === 'object' && 'type' in part && typeof part.type === 'string'
         ? [part.type]
         : [])
     .slice(0, 20);
@@ -79,7 +78,7 @@ export function summarizeHealthcheckThreadMessage(message: {
   const hasReasoning =
     typeof content?.reasoning === 'string' && content.reasoning.trim().length > 0
     || parts.some((part) =>
-      part && typeof part === 'object' && 'type' in part && part.type === 'reasoning');
+      part !== null && part !== undefined && typeof part === 'object' && 'type' in part && part.type === 'reasoning');
 
   return {
     id: message.id,
@@ -93,7 +92,7 @@ export function summarizeHealthcheckThreadMessage(message: {
 }
 
 export function extractLatestHealthcheckMessagePreview(content: unknown): string | null {
-  if (!content || typeof content !== 'object') {
+  if (content === null || content === undefined || typeof content !== 'object') {
     return null;
   }
 
@@ -105,14 +104,17 @@ export function extractLatestHealthcheckMessagePreview(content: unknown): string
   const parts = Array.isArray(record.parts) ? record.parts : [];
 
   for (const part of [...parts].reverse()) {
+     
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       part
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       && typeof part === 'object'
       && 'type' in part
       && 'text' in part
       && (part.type === 'text' || part.type === 'reasoning')
       && typeof part.text === 'string'
-      && part.text.trim()
+      && part.text !== undefined && part.text !== null && part.text.trim()
     ) {
       return part.text.trim().slice(0, 280);
     }
