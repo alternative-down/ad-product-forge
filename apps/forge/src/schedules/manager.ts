@@ -1,5 +1,4 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { scheduleJob, type RecurrenceSpecDateRange } from 'node-schedule';
 import { z } from 'zod';
 
 
@@ -103,7 +102,9 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: false,
     });
     try {
-      await getLifecycle().register(record as any);
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await getLifecycle().register(record as any);
     } catch (error) {
       forgeDebug({
         scope: 'schedules',
@@ -119,7 +120,7 @@ export function createAgentScheduleManager(input: {
   }
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
     const parsed = createScheduleSchema.parse(rawInput);
-    const scheduledDate = parsed.scheduledDate ? parseScheduleDate(parsed.scheduledDate) : undefined;
+    const scheduledDate = (parsed.scheduledDate ?? '') !== '' ? parseScheduleDate(parsed.scheduledDate) : undefined;
     validateScheduleShape({
       scheduleType: parsed.scheduleType,
       cronExpression: parsed.cronExpression,
@@ -139,7 +140,9 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
-      await getLifecycle().register(record as any);
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await getLifecycle().register(record as any);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error } });
@@ -178,7 +181,7 @@ export function createAgentScheduleManager(input: {
     const parsed = updateScheduleSchema.parse(rawInput);
     const existing = await store.getAgentSchedule(agentId, scheduleId);
 
-    if (!existing) {
+    if (existing === null || existing === undefined) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
@@ -196,7 +199,7 @@ export function createAgentScheduleManager(input: {
       buildScheduleUpdateInput(parsed, normalized),
     );
 
-    if (!updated) {
+    if (updated === null || updated === undefined) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
@@ -204,8 +207,9 @@ export function createAgentScheduleManager(input: {
     getLifecycle().cancel(scheduleId);
 
     try {
-      if (updated.isActive) {
-        await getLifecycle().register(updated as any);
+      if (updated.isActive !== false) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -213,8 +217,9 @@ export function createAgentScheduleManager(input: {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
-      if (existing.isActive && restored) {
-        await getLifecycle().register(restored as any);
+      if (existing.isActive !== false && restored !== null && restored !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await getLifecycle().register(restored as any);
       }
 
       throw error;
@@ -222,7 +227,7 @@ export function createAgentScheduleManager(input: {
 
     const reloaded = await store.getAgentSchedule(agentId, scheduleId);
 
-    if (!reloaded) {
+    if (reloaded === null || reloaded === undefined) {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: not found after update', context: { scheduleId } });
       throw new Error(`Schedule not found after update: ${scheduleId}`);
     }
@@ -234,7 +239,7 @@ export function createAgentScheduleManager(input: {
     const parsed = updateScheduleSchema.parse(rawInput);
     const existing = await store.getOwnedSchedule(agentId, scheduleId);
 
-    if (!existing) {
+    if (existing === null || existing === undefined) {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
@@ -251,15 +256,16 @@ export function createAgentScheduleManager(input: {
       buildScheduleUpdateInput(parsed, normalized),
     );
 
-    if (!updated) {
+    if (updated === null || updated === undefined) {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
     getLifecycle().cancel(scheduleId);
 
     try {
-      if (updated.isActive) {
-        await getLifecycle().register(updated as any);
+      if (updated.isActive !== false) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -267,8 +273,9 @@ export function createAgentScheduleManager(input: {
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
-      if (existing.isActive && restored) {
-        await getLifecycle().register(restored as any);
+      if (existing.isActive !== false && restored !== null && restored !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await getLifecycle().register(restored as any);
       }
 
       throw error;
@@ -276,7 +283,7 @@ export function createAgentScheduleManager(input: {
 
     const reloaded = await store.getOwnedSchedule(agentId, scheduleId);
 
-    if (!reloaded) {
+    if (reloaded === null || reloaded === undefined) {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateOwnedSchedule: not found after update', context: { scheduleId } });
       throw new Error(`Schedule not found after update: ${scheduleId}`);
     }
@@ -310,7 +317,7 @@ export function createAgentScheduleManager(input: {
     rawInput: z.input<typeof createScheduleForAgentSchema>,
   ) {
     const parsed = createScheduleForAgentSchema.parse(rawInput);
-    const scheduledDate = parsed.scheduledDate ? parseScheduleDate(parsed.scheduledDate) : undefined;
+    const scheduledDate = (parsed.scheduledDate ?? '') !== '' ? parseScheduleDate(parsed.scheduledDate) : undefined;
     validateScheduleShape({
       scheduleType: parsed.scheduleType,
       cronExpression: parsed.cronExpression,
@@ -335,12 +342,13 @@ export function createAgentScheduleManager(input: {
 
     const scheduleRecord = await store.getAgentSchedule(parsed.targetAgentId, record.id);
 
-    if (!scheduleRecord) {
+    if (scheduleRecord === null || scheduleRecord === undefined) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent failed to load schedule', context: { agentId: parsed.targetAgentId, recordId: record.id } });
       throw new Error(`Failed to load created schedule: ${record.id}`);
     }
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await getLifecycle().register(scheduleRecord as any);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
@@ -361,22 +369,17 @@ export function createAgentScheduleManager(input: {
     scheduleId: string,
     rawInput: z.input<typeof updateScheduleSchema>,
   ) {
-    try {
-      const schedule = await store.getScheduleById(scheduleId);
+    const schedule = await store.getScheduleById(scheduleId);
 
-      if (!schedule) {
-        throw new Error(`Schedule not found: ${scheduleId}`);
-      }
-
-      // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
-      requireScheduleEditor(schedule, editorAgentId);
-
-      // Delegate to updateSchedule with the target agent's ID
-      return await updateSchedule(schedule.agentId, scheduleId, rawInput);
-    } catch (error) {
-      // updateSchedule already logs the error; re-throw without duplicate forgeDebug
-      throw error;
+    if (schedule === null || schedule === undefined) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
     }
+
+    // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
+    requireScheduleEditor(schedule, editorAgentId);
+
+    // Delegate to updateSchedule with the target agent's ID
+    return await updateSchedule(schedule.agentId, scheduleId, rawInput);
   }
 
   // Cross-agent: Delete schedule (only creator can delete)
@@ -384,7 +387,7 @@ export function createAgentScheduleManager(input: {
     try {
       const schedule = await store.getScheduleById(scheduleId);
 
-      if (!schedule) {
+      if (schedule === null || schedule === undefined) {
         throw new Error(`Schedule not found: ${scheduleId}`);
       }
 
@@ -444,8 +447,9 @@ export function createAgentScheduleManager(input: {
   }
 
 
-  async function registerSchedule(record: StoredSchedule | null) {
-    if (!record || !record.isActive) return;
+  async function __registerSchedule(record: StoredSchedule | null) {
+    if (record === null || record === undefined || record.isActive === false) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await getLifecycle().register(record as any);
   }
 
