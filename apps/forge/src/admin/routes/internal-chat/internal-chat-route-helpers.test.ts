@@ -52,7 +52,6 @@ describe('withRouteErrorHandler', () => {
 
   it('converts non-Error thrown values to string', () => {
     const wrapped = withRouteErrorHandler('admin', '/test', () => {
-      // eslint-disable-next-line @typescript-eslint/no-throw-literals
       throw 'string error';
     });
     const result = wrapped() as { status: number; body: string };

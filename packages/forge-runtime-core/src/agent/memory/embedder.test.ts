@@ -67,7 +67,6 @@ describe('resolveWorkspaceEmbedderId', () => {
   });
 
   it('returns fastembed as default for non-string values', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(resolveWorkspaceEmbedderId(42 as any)).toBe('fastembed');
   });
 });
