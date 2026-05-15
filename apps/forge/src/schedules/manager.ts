@@ -1,5 +1,4 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { scheduleJob, type RecurrenceSpecDateRange } from 'node-schedule';
 import { z } from 'zod';
 
 
@@ -103,6 +102,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: false,
     });
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await getLifecycle().register(record as any);
     } catch (error) {
       forgeDebug({
@@ -139,6 +139,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await getLifecycle().register(record as any);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
@@ -205,6 +206,7 @@ export function createAgentScheduleManager(input: {
 
     try {
       if (isActiveSchedule(updated) === true) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
@@ -214,6 +216,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (isActiveSchedule(existing) === true && isActiveSchedule(restored) === true) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(restored as any);
       }
 
@@ -259,6 +262,7 @@ export function createAgentScheduleManager(input: {
 
     try {
       if (isActiveSchedule(updated) === true) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
@@ -268,6 +272,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
       if (isActiveSchedule(existing) === true && isActiveSchedule(restored) === true) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(restored as any);
       }
 
@@ -341,6 +346,7 @@ export function createAgentScheduleManager(input: {
     }
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await getLifecycle().register(scheduleRecord as any);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
@@ -361,22 +367,17 @@ export function createAgentScheduleManager(input: {
     scheduleId: string,
     rawInput: z.input<typeof updateScheduleSchema>,
   ) {
-    try {
-      const schedule = await store.getScheduleById(scheduleId);
+    const schedule = await store.getScheduleById(scheduleId);
 
-      if (schedule === null) {
-        throw new Error(`Schedule not found: ${scheduleId}`);
-      }
-
-      // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
-      requireScheduleEditor(schedule, editorAgentId);
-
-      // Delegate to updateSchedule with the target agent's ID
-      return await updateSchedule(schedule.agentId, scheduleId, rawInput);
-    } catch (error) {
-      // updateSchedule already logs the error; re-throw without duplicate forgeDebug
-      throw error;
+    if (schedule === null) {
+      throw new Error(`Schedule not found: ${scheduleId}`);
     }
+
+    // Authorization: only creator can edit (or null creator = self-created, only agentId can edit)
+    requireScheduleEditor(schedule, editorAgentId);
+
+    // Delegate to updateSchedule with the target agent's ID
+    return await updateSchedule(schedule.agentId, scheduleId, rawInput);
   }
 
   // Cross-agent: Delete schedule (only creator can delete)
@@ -444,9 +445,10 @@ export function createAgentScheduleManager(input: {
   }
 
 
-  async function registerSchedule(record: StoredSchedule | null) {
+  async function __registerSchedule(record: StoredSchedule | null) {
     if (isActiveSchedule(record) !== true) return;
-    await getLifecycle().register(record as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await getLifecycle().register(record as any);
   }
 
 
