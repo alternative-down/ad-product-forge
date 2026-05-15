@@ -35,7 +35,6 @@ type ClosableLibsqlClient = ReturnType<typeof createClient> & {
 };
 
 const RECENT_CONVERSATION_LIMIT = 10;
-import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
 // shared utility — imported from utils/async
 

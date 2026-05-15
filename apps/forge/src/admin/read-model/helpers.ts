@@ -1,7 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { decryptSecret } from '../../encryption/crypto';
 
-
 type RuntimeStoredMessagePart = {
   type: 'text' | 'tool-call' | 'tool-result';
   text?: { content: string };
@@ -504,7 +503,6 @@ export function buildThreadToolInvocationParts(metadata: Record<string, unknown>
   return [...invocationParts, ...unmatchedResultParts];
 }
 
-
 /**
  * Extracts participant names from conversation data.
  * Used for displaying conversation participants in the admin UI.
@@ -542,6 +540,4 @@ type TextPart = Extract<MessagePart, { type: 'text' | 'reasoning' }>;
 export function isTextPart(part: MessagePart): part is TextPart {
   return (part.type === 'text' || part.type === 'reasoning') && Boolean(part.text);
 }
-
-
 

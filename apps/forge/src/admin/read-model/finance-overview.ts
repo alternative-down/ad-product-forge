@@ -1,4 +1,3 @@
-import { forgeDebug } from '@forge-runtime/core';
 import type { MicroErpReadModel } from '../../micro-erp/read-model';
 
 export async function getFinanceOverview(finance: MicroErpReadModel) {
