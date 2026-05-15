@@ -96,7 +96,6 @@ describe('createAgentSkillTools', () => {
         .mockResolvedValueOnce('{"key":"value"}');
       const tools = createAgentSkillTools({ db: mockDb, workspaceBasePath: '/base', agentId: 'agent-42', allowedToolIds: null });
       const result = await tools.load_workspace_skill.execute({ skillName: 'my-skill' }, {} as any) as any;
-    (result as any);
       expect(result.skillName).toBe('my-skill');
       expect(result.skillMarkdown).toBe('# My Skill description');
       expect(result.supportFiles).toHaveLength(1);
@@ -112,7 +111,6 @@ describe('createAgentSkillTools', () => {
       mockFs.readFile.mockResolvedValue('# Skill');
       const tools = createAgentSkillTools({ db: mockDb, workspaceBasePath: '/base', agentId: 'agent-42', allowedToolIds: null });
       const result = await tools.load_workspace_skill.execute({ skillName: 'my-skill' }, {} as any) as any;
-    (result as any);
       expect(result.supportFiles).toHaveLength(0);
     });
 
@@ -133,7 +131,6 @@ describe('createAgentSkillTools', () => {
         .mockResolvedValueOnce('{"nested":true}');
       const tools = createAgentSkillTools({ db: mockDb, workspaceBasePath: '/base', agentId: 'agent-42', allowedToolIds: null });
       const result = await tools.load_workspace_skill.execute({ skillName: 'my-skill' }, {} as any) as any;
-    (result as any);
       expect(result.supportFiles).toHaveLength(1);
       expect(result.supportFiles[0].path).toBe('skills/my-skill/subdir/nested.json');
     });
@@ -149,7 +146,6 @@ describe('createAgentSkillTools', () => {
         .mockRejectedValueOnce(new Error('ENOENT'));
       const tools = createAgentSkillTools({ db: mockDb, workspaceBasePath: '/base', agentId: 'agent-42', allowedToolIds: null });
       const result = await tools.load_workspace_skill.execute({ skillName: 'my-skill' }, {} as any) as any;
-    (result as any);
       expect(result.supportFiles[0].content).toBeNull();
       expect(mockForgeDebug).toHaveBeenCalledWith(expect.objectContaining({
         level: 'warn',
@@ -166,7 +162,6 @@ describe('createAgentSkillTools', () => {
       mockFs.readFile.mockResolvedValue('# Skill');
       const tools = createAgentSkillTools({ db: mockDb, workspaceBasePath: '/base', agentId: 'agent-42', allowedToolIds: null });
       const result = await tools.load_workspace_skill.execute({ skillName: 'my-tool' }, {} as any) as any;
-    (result as any);
       expect(result.skillPath).toBe('skills/my-tool');
       expect(result.skillMarkdownPath).toBe('skills/my-tool/SKILL.md');
     });
@@ -185,7 +180,6 @@ describe('createAgentSkillTools', () => {
       mockDb.query.agents.findFirst.mockResolvedValue({ id: 'agent-42', workspaceFilesystem: null });
       const tools = createAgentSkillTools({ db: mockDb, workspaceBasePath: '/base', agentId: 'agent-42', allowedToolIds: new Set(['publish_skill_to_catalog']) });
       const result = await tools.publish_skill_to_catalog.execute({ skillName: 'my-skill' }, {} as any) as any;
-    (result as any);
       expect(result).toEqual({ success: true, skillName: 'my-skill' });
       expect(mockPublishGlobalCatalog).toHaveBeenCalledOnce();
       expect(mockPublishGlobalCatalog).toHaveBeenCalledWith({

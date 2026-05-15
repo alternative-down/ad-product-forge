@@ -45,7 +45,6 @@ describe('limit(1) guard — existing.length > 0 (#2705)', () => {
       let buggyCalled = false;
 
       // Simulates the ORIGINAL buggy guard
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (existing[0] != null) {
         buggyCalled = true;
       }
@@ -83,7 +82,6 @@ describe('limit(1) guard — existing.length > 0 (#2705)', () => {
       const existing: Array<{ id: string }> = [];
       let buggyCalled = false;
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (existing[0] != null) {
         buggyCalled = true;
       }
