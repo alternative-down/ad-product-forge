@@ -8,7 +8,7 @@ type RuntimeStoredMessagePart = {
   toolResult?: { toolCallId: string; result: unknown };
 };
 
-import { agentSchedules, type AgentSchedule } from '../../database/schema';
+import type { AgentSchedule } from '../../database/schema';
 
 // Tool name patterns for badge extraction
 const TOOL_NAME_BADGES: Array<{ pattern: RegExp; icon: string; label: string }> = [
@@ -140,14 +140,14 @@ export function humanizeMemoryKey(value: string) {
  * Format a working memory value (JSON string) to markdown bullet points
  */
 export function formatWorkingMemoryValue(value: string | null | undefined) {
-  if (!value) {
+  if ((value ?? '') === '') {
     return null;
   }
 
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
 
-    if (!parsed || typeof parsed !== 'object') {
+    if (parsed === null || parsed === undefined || typeof parsed !== 'object') {
       return null;
     }
 
@@ -170,7 +170,7 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
  * Render working memory value as markdown sections
  */
 export function renderWorkingMemoryMarkdown(value: unknown) {
-  if (!value || typeof value !== 'object') {
+  if (value === null || value === undefined || typeof value !== 'object') {
     return null;
   }
 
@@ -181,7 +181,7 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
     const sectionKey = key.replace(/^working_memory_/, '');
     const formattedValue = formatWorkingMemoryValue(String(item));
 
-    if (formattedValue) {
+    if ((formattedValue ?? '') !== '') {
       const existing = sections.get(sectionKey) ?? [];
       existing.push(formattedValue);
       sections.set(sectionKey, existing);
@@ -226,7 +226,7 @@ export function toScheduleSummary(row: AgentSchedule) {
  * Extract preview text from message content (text, reasoning, or parts)
  */
 export function extractLatestMessagePreview(content: unknown) {
-  if (!content || typeof content !== 'object') {
+  if (content === null || content === undefined || typeof content !== 'object') {
     return null;
   }
 
@@ -238,7 +238,7 @@ export function extractLatestMessagePreview(content: unknown) {
   const parts = Array.isArray(record.parts) ? record.parts : [];
 
   for (const part of [...parts].reverse()) {
-    if (!part || typeof part !== 'object') {
+    if (part === null || part === undefined || typeof part !== 'object') {
       continue;
     }
 
@@ -283,7 +283,7 @@ export function extractLatestMessagePreview(content: unknown) {
  * Extract tool badge from message content (memory-recall or tool invocations)
  */
 export function extractLatestMessageToolBadge(content: unknown) {
-  if (!content || typeof content !== 'object') {
+  if (content === null || content === undefined || typeof content !== 'object') {
     return null;
   }
 
@@ -296,7 +296,7 @@ export function extractLatestMessageToolBadge(content: unknown) {
   const topLevelToolInvocations = Array.isArray(record.toolInvocations) ? record.toolInvocations : [];
 
   for (const part of [...parts].reverse()) {
-    if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'text' || typeof part.text !== 'string') {
+    if (part === null || part === undefined || typeof part !== 'object' || !('type' in part) || part.type !== 'text' || typeof part.text !== 'string') {
       continue;
     }
 
@@ -313,11 +313,11 @@ export function extractLatestMessageToolBadge(content: unknown) {
   }
 
   for (const part of [...parts].reverse()) {
-    if (!part || typeof part !== 'object' || !('type' in part) || part.type !== 'tool-invocation') {
+    if (part === null || part === undefined || typeof part !== 'object' || !('type' in part) || part.type !== 'tool-invocation') {
       continue;
     }
 
-    if (!('toolInvocation' in part) || !part.toolInvocation || typeof part.toolInvocation !== 'object') {
+    if (!('toolInvocation' in part) || part.toolInvocation === null || part.toolInvocation === undefined || typeof part.toolInvocation !== 'object') {
       continue;
     }
 
@@ -325,13 +325,13 @@ export function extractLatestMessageToolBadge(content: unknown) {
       ? part.toolInvocation.toolName
       : null;
 
-    if (toolName) {
+    if ((toolName ?? '') !== '') {
       return toToolBadge(toolName);
     }
   }
 
   for (const invocation of [...topLevelToolInvocations].reverse()) {
-    if (!invocation || typeof invocation !== 'object' || !('toolName' in invocation) || typeof invocation.toolName !== 'string') {
+    if (invocation === null || invocation === undefined || typeof invocation !== 'object' || !('toolName' in invocation) || typeof invocation.toolName !== 'string') {
       continue;
     }
 
@@ -427,7 +427,7 @@ function processToolInvocations(
     const toolCallId = typeof (toolInvocation as Record<string, unknown>).toolCallId === 'string'
       ? (toolInvocation as Record<string, unknown>).toolCallId as string
       : null;
-    const matchingResultIndex = toolCallId
+    const matchingResultIndex = (toolCallId ?? '') !== ''
       ? resultIndexesByToolCallId.get(toolCallId)
       : undefined;
     const matchingResult = matchingResultIndex !== undefined
@@ -523,7 +523,7 @@ export function collectConversationParticipants(input: {
   }
 
   for (const message of input.messages) {
-    if (message.authorDisplayName && message.authorDisplayName !== input.name) {
+    if ((message.authorDisplayName ?? '') !== '' && message.authorDisplayName !== input.name) {
       participants.add(message.authorDisplayName);
     }
   }

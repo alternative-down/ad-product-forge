@@ -20,7 +20,7 @@ import type {
 import { withTimeout } from '../../utils/async';
 
 
-import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
+import { buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
 import { buildLtmRecallSnapshot, partitionRecallResults, buildNextRecallHistory } from '../agent-ltm-snapshot';
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
@@ -74,7 +74,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   injectedSystemMessage: string | null;
 };
 
-const RECALL_AUTO_INDEX_PATHS = [
+const _RECALL_AUTO_INDEX_PATHS = [
   '.',
 ] as const;
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
@@ -170,7 +170,7 @@ export class AgentLongTermMemoryRecall {
     this.conversationStore = input.conversationStore;
     this.recentRawTokens = input.recentRawTokens ?? 0;
     this.persistenceStore = input.persistenceStore;
-    if (input.retrievalWorkspace) {
+    if (input.retrievalWorkspace !== undefined) {
       this.retrievalWorkspace = input.retrievalWorkspace;
     } else {
       this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
@@ -205,7 +205,7 @@ export class AgentLongTermMemoryRecall {
           agentId: this.agentId,
           threadId: input.threadId,
           pendingRecallOperationCount: this.pendingRecallOperationCount,
-          lingeringRecallOperationSince: this.lingeringRecallOperationSince
+          lingeringRecallOperationSince: this.lingeringRecallOperationSince !== undefined
             ? new Date(this.lingeringRecallOperationSince).toISOString()
             : null,
         } });
@@ -269,7 +269,7 @@ export class AgentLongTermMemoryRecall {
         results,
       });
 
-      if (!recallText) {
+      if ((recallText ?? '') === '') {
         await this.persistRecallSnapshotWithInput(input, {
           queryText,
           recallConfig,
@@ -443,8 +443,8 @@ export class AgentLongTermMemoryRecall {
       results,
       rawWorkspaceResults,
       graph: graphSearch,
-      effectiveGraphTopK,
-      effectiveGraphThreshold,
+      effectiveGraphTopK: _effectiveGraphTopK,
+      effectiveGraphThreshold: _effectiveGraphThreshold,
     } = recallSearch;
     const vectorResults = await this.queryVectorIndex(
       queryEmbedding,
@@ -808,7 +808,7 @@ export class AgentLongTermMemoryRecall {
         timeoutMs,
         settled,
         pendingRecallOperationCount: this.pendingRecallOperationCount,
-        lingeringRecallOperationSince: this.lingeringRecallOperationSince
+        lingeringRecallOperationSince: this.lingeringRecallOperationSince !== undefined
           ? new Date(this.lingeringRecallOperationSince).toISOString()
           : null,
         error: error instanceof Error ? error.message : String(error),
@@ -841,7 +841,7 @@ export class AgentLongTermMemoryRecall {
         .join('\n');
     }
 
-    if (!value || typeof value !== 'object') {
+    if (value === null || value === undefined || typeof value !== 'object') {
       return '';
     }
 
@@ -864,7 +864,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private readGraphRelevantContext(result: unknown) {
-    if (!result || typeof result !== 'object') {
+    if (result === null || result === undefined || typeof result !== 'object') {
       return null;
     }
 
@@ -885,7 +885,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private readGraphSources(result: unknown) {
-    if (!result || typeof result !== 'object') {
+    if (result === null || result === undefined || typeof result !== 'object') {
       return [];
     }
 
@@ -894,7 +894,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private readGraphSourceDocument(source: unknown) {
-    if (!source || typeof source !== 'object') {
+    if (source === null || source === undefined || typeof source !== 'object') {
       return '';
     }
 
@@ -903,7 +903,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private buildRecallQueryFromStep(step: unknown) {
-    if (!step || typeof step !== 'object') {
+    if (step === null || step === undefined || typeof step !== 'object') {
       return '';
     }
 
@@ -916,7 +916,7 @@ export class AgentLongTermMemoryRecall {
       typeof record.reasoningText === 'string' ? record.reasoningText : '',
       toolCalls
         .map((toolCall) => {
-          if (!toolCall || typeof toolCall !== 'object') {
+          if (toolCall === null || toolCall === undefined || typeof toolCall !== 'object') {
             return '';
           }
 
@@ -936,7 +936,7 @@ export class AgentLongTermMemoryRecall {
         .join('\n\n'),
       toolResults
         .map((toolResult) => {
-          if (!toolResult || typeof toolResult !== 'object') {
+          if (toolResult === null || toolResult === undefined || typeof toolResult !== 'object') {
             return '';
           }
 
@@ -1043,7 +1043,7 @@ export class AgentLongTermMemoryRecall {
       : null;
     const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
     const historyFingerprints = [
-      ...(graphFingerprint ? [graphFingerprint] : []),
+      ...((graphFingerprint ?? '') !== '' ? [graphFingerprint] : []),
       ...workspaceFingerprints.map((entry) => entry.fingerprint),
     ];
 
@@ -1089,7 +1089,7 @@ export class AgentLongTermMemoryRecall {
         (value): value is string => typeof value === 'string' && value.length > 0,
       )
       : [];
-    const operationalMemoryState = threadId
+    const operationalMemoryState = (threadId ?? '') !== ''
       ? await readOperationalMemoryState({
           threadId,
           store: this.conversationStore,
