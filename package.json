@@ -29,6 +29,7 @@
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^9.39.4",
+    "@types/chai": "^5.2.3",
     "@types/node": "^25.5.2",
     "eslint": "^9.39.4",
     "fallow": "^2.62.0",
