@@ -204,6 +204,7 @@ export default defineConfig([
         project: [
           './apps/forge/tsconfig.json',
           './packages/forge-runtime-core/tsconfig.json',
+          './packages/agent-runtime-core/tsconfig.json',
         ],
         projectFolderIgnoreList: ['dist', 'node_modules', '.turbo', 'examples'],
       },
