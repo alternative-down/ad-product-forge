@@ -165,11 +165,16 @@ export function createAgentContractStore(
   }
 
   async function listRecentSteps(agentId: string, limit: number) {
-    return db.query.agentExecutionSteps.findMany({
-      where: eq(agentExecutionSteps.agentId, agentId),
-      orderBy: [desc(agentExecutionSteps.createdAt)],
-      limit,
-    });
+    try {
+      return await db.query.agentExecutionSteps.findMany({
+        where: eq(agentExecutionSteps.agentId, agentId),
+        orderBy: [desc(agentExecutionSteps.createdAt)],
+        limit,
+      });
+    } catch (err) {
+      logContractError('listRecentSteps', agentId, err);
+      throw err;
+    }
   }
 
 
