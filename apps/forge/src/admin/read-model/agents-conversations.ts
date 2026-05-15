@@ -71,7 +71,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
     agentId: string,
     limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    return await listRecentConversations(agentId, limit);
+    return listRecentConversations(agentId, limit);
   }
 
   async function listAgentConversationMessages(
@@ -95,7 +95,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentThreadMessages(
     params: AgentThreadMessagesInput,
   ): Promise<AgentThreadMessagesResult> {
-    return await listThreadMessages(workspaceBasePath, params.agentId, {
+    return listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
     });
@@ -104,7 +104,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentLongTermMemoryThreadMessages(
     params: AgentThreadMessagesInput,
   ): Promise<AgentThreadMessagesResult> {
-    return await listThreadMessages(workspaceBasePath, params.agentId, {
+    return listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
       threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
