@@ -115,53 +115,32 @@ export function createLlmSettingsStore(db: Database) {
     const parsed = llmProfileSchema.parse(input);
     const now = Date.now();
     const profileId = input.profileId ?? createId();
-    let existing: LlmProfile | null = null;
     try {
-      existing = input.profileId
-        ? await db.query.llmProfiles.findFirst({
-            where: eq(llmProfiles.id, input.profileId),
-          })
-        : null;
-    } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM profile', context: { profileId, error: err } });
-      throw err;
-    }
-
-    if (existing) {
-      try {
-        await db
-          .update(llmProfiles)
-          .set({
-            name: parsed.name.trim(),
-            modelKey: parsed.modelKey,
-            baseUrl: parsed.baseUrl?.trim() ?? null,
-            encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
-            contractCostMultiplier: parsed.contractCostMultiplier,
-            isEnabled: parsed.isEnabled ? 1 : 0,
-            updatedAt: now,
-          })
-          .where(eq(llmProfiles.id, input.profileId!));
-      } catch (err) {
-        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM profile', context: { profileId, error: err } });
-        throw err;
-      }
-    } else {
-      try {
-        await db.insert(llmProfiles).values({
-          id: profileId,
+      await db.insert(llmProfiles).values({
+        id: profileId,
+        name: parsed.name.trim(),
+        modelKey: parsed.modelKey,
+        baseUrl: parsed.baseUrl?.trim() ?? null,
+        encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
+        contractCostMultiplier: parsed.contractCostMultiplier,
+        isEnabled: parsed.isEnabled ? 1 : 0,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoUpdate({
+        target: llmProfiles.id,
+        set: {
           name: parsed.name.trim(),
           modelKey: parsed.modelKey,
           baseUrl: parsed.baseUrl?.trim() ?? null,
           encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
           contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
-          createdAt: now,
           updatedAt: now,
-        });
-      } catch (err) {
-        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to insert LLM profile', context: { profileId, error: err } });
-        throw err;
-      }
+        },
+      });
+    } catch (err) {
+      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to upsert LLM profile', context: { profileId, error: err } });
+      throw err;
     }
 
     return {
