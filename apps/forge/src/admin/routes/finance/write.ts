@@ -5,7 +5,7 @@
 
 import { z, ZodError } from 'zod';
 import { forgeDebug } from '../debug';
-import type { HttpRequest } from '../../../http/server';
+import type { HttpRequest, HttpHandler } from '../../../http/server';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
 
@@ -78,8 +78,8 @@ export function registerFinanceWriteRoutes(
 
         return jsonResponse({ success: true });
       } catch (err) {
-        if (error instanceof ZodError) throw error;
-        if (err instanceof Error && err.message.startsWith('Invalid')) throw error;
+        if (err instanceof ZodError) throw err;
+        if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -129,8 +129,8 @@ export function registerFinanceWriteRoutes(
           entryId: result.entryId,
         }, 201);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
-        if (err instanceof Error && err.message.startsWith('Invalid')) throw error;
+        if (err instanceof ZodError) throw err;
+        if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -153,7 +153,7 @@ export function registerFinanceWriteRoutes(
 
         return jsonResponse(result);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -175,7 +175,7 @@ export function registerFinanceWriteRoutes(
 
         return jsonResponse(result);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
@@ -192,7 +192,7 @@ export function registerFinanceWriteRoutes(
         const result = await input.companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
         return jsonResponse(result);
       } catch (err) {
-        if (error instanceof ZodError) throw error;
+        if (err instanceof ZodError) throw err;
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
