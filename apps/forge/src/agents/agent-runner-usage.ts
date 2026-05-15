@@ -38,15 +38,15 @@ export function createAgentRunnerUsage(input: {
       });
 
       if (!pricing.modelPrice) {
-        return recentSteps.reduce((total, step) => total + step.costUsd, 0) / recentSteps.length;
+        return recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number; costUsd: number }) => total + step.costUsd, 0) / recentSteps.length;
       }
 
       const averageInputTokens =
-        recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
+        recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number; costUsd: number }) => total + step.inputTokens, 0) / recentSteps.length;
       const averageCachedInputTokens =
-        recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
+        recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number; costUsd: number }) => total + step.cachedInputTokens, 0) / recentSteps.length;
       const averageOutputTokens =
-        recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
+        recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number; costUsd: number }) => total + step.outputTokens, 0) / recentSteps.length;
       const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
 
       return (

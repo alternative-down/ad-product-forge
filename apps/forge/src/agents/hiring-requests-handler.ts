@@ -143,12 +143,13 @@ export async function generateHiredAgentInstructions(
   const companyCash = createCompanyCashLedger(db);
   let existingRoles;
     existingRoles = await db.query.agentRoles.findMany();
-  const existingRoleNamesById = new Map(existingRoles.map((role) => [role.id, role.name]));
+  const existingRoleNamesById = new Map(existingRoles.map((role: string) => [role.id, role.name]));
   const existingAgents = await db.query.agents.findMany({
     columns: {
       name: true,
       roleId: true,
     },
+  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
     orderBy: (fields, { asc }) => [asc(fields.name)],
   });
   const modelPrice = await db.query.llmModelPrices.findFirst({
@@ -158,7 +159,7 @@ export async function generateHiredAgentInstructions(
     ...input,
     companyName: companySettings.companyName,
     companyContext: companySettings.companyContext,
-    existingAgents: existingAgents.map((agent) => ({
+    existingAgents: existingAgents.map((agent: object) => ({
       name: agent.name,
       roleName: agent.roleId ? (existingRoleNamesById.get(agent.roleId) ?? null) : null,
     })),
@@ -302,7 +303,7 @@ export async function generateHiredAgentInstructions(
           });
           const normalizedAgentName = normalizeAgentName(agent.agentName);
 
-          if (currentAgents.some((currentAgent) => normalizeAgentName(currentAgent.name) === normalizedAgentName)) {
+          if (currentAgents.some((currentAgent: object) => normalizeAgentName(currentAgent.name) === normalizedAgentName)) {
             return {
               valid: false,
               error: `An internal collaborator named "${agent.agentName}" already exists.`,

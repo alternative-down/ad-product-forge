@@ -97,7 +97,7 @@ const ROLE_INSPECTION_TOOL_IDS = [
   'list_role_capabilities',
   'manage_role_capabilities',
 ];
-function resolveLoadedToolIds(toolIds) {
+function resolveLoadedToolIds(toolIds: object) {
   const resolved = new Set(toolIds);
   const hasCrossAgentCron = resolved.has('manage_crons') || resolved.has('list_crons');
   const hasCrossAgentRole = resolved.has('change_agent_role');

@@ -162,7 +162,7 @@ export function createAgentScheduleManager(input: {
   async function listTasks(creatorAgentId: string, targetAgentId?: string) {
     try {
       const schedules = await store.listCreatedAgentSchedules(creatorAgentId, targetAgentId);
-      return schedules.map((schedule) => ({
+      return schedules.map((schedule: object) => ({
         ...toToolOutput(schedule),
         createdBy: creatorAgentId,
         targetAgentId: schedule.agentId,

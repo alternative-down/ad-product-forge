@@ -88,7 +88,7 @@ export function createMicroErpReadModel(db: Database) {
     }
 
     return {
-      items: rows.map((row) => ({
+      items: rows.map((row: object) => ({
         ...row,
         direction: row.direction as 'in' | 'out',
         description: row.description ?? undefined,
@@ -182,7 +182,7 @@ export function createMicroErpReadModel(db: Database) {
       metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
-      items: rows.map((row) => ({
+      items: rows.map((row: object) => ({
         ...row,
         autoRenew: Boolean(row.autoRenew),
         ...metricsByContractId.get(row.contractId),

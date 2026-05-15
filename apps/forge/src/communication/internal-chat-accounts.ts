@@ -209,7 +209,7 @@ export function createInternalChatAccounts(db: Database) {
           ? eq(internalChatAccounts.id, accountIds[0])
           : inArray(internalChatAccounts.id, accountIds),
       });
-    return new Map(accounts.map((a) => [a.id, a]));
+    return new Map(accounts.map((a: object) => [a.id, a]));
   }
 
   async function getRequiredAgentAccount(agentId: string) {

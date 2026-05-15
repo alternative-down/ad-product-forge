@@ -214,7 +214,7 @@ export function createAgentLongTermMemory(input: {
 
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
     const state = await readState();
-    const existing = state.packages.find((entry) => entry.checkpointGeneration === payload.toGeneration);
+    const existing = state.packages.find((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.checkpointGeneration === payload.toGeneration);
 
     if (existing) {
       return existing;
@@ -223,7 +223,7 @@ export function createAgentLongTermMemory(input: {
     const checkpointTimestamp = computeCheckpointTimestamp(payload);
     const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
     const sequence = state.packages
-      .filter((entry) => entry.packageId.startsWith(`${dayKey}_`))
+      .filter((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId.startsWith(`${dayKey}_`))
       .length + 1;
     const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
@@ -307,11 +307,11 @@ export function createAgentLongTermMemory(input: {
     }
 
     const averageInputTokens =
-      recentSteps.reduce((total, step) => total + step.inputTokens, 0) / recentSteps.length;
+      recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) => total + step.inputTokens, 0) / recentSteps.length;
     const averageCachedInputTokens =
-      recentSteps.reduce((total, step) => total + step.cachedInputTokens, 0) / recentSteps.length;
+      recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) => total + step.cachedInputTokens, 0) / recentSteps.length;
     const averageOutputTokens =
-      recentSteps.reduce((total, step) => total + step.outputTokens, 0) / recentSteps.length;
+      recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) => total + step.outputTokens, 0) / recentSteps.length;
     const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
     const estimatedStepUsd =
       ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
@@ -438,7 +438,7 @@ export function createAgentLongTermMemory(input: {
     try {
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow start', context: {
         agentId: input.agentId,
-        packageIds: availablePackages.map((entry) => entry.packageId),
+        packageIds: availablePackages.map((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId),
         packageCount: state.packages.length,
       } });
 
@@ -462,7 +462,7 @@ export function createAgentLongTermMemory(input: {
 
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow complete', context: {
         agentId: input.agentId,
-        packageIds: state.packages.map((entry) => entry.packageId),
+        packageIds: state.packages.map((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
       } });
 

@@ -81,7 +81,7 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
       return null;
     }
 
-    const lines = rows.map((s) => {
+    const lines = rows.map((s: { id: string; name?: string; cronExpression?: string; timezone?: string }) => {
       const cron = s.cronExpression ?? '';
       const tz = s.timezone ?? 'UTC';
       const name = s.name ?? '(unnamed)';

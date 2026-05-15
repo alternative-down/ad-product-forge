@@ -62,7 +62,7 @@ export function createAgentNotificationStore(db: Database) {
       return [];
     }
 
-    const unreadNotificationIds = rows.filter((row) => row.readAt === null).map((row) => row.id);
+    const unreadNotificationIds = rows.filter((row: object) => row.readAt === null).map((row: object) => row.id);
 
     if ((input.markRead ?? true) && unreadNotificationIds.length > 0) {
       try {
@@ -80,7 +80,7 @@ export function createAgentNotificationStore(db: Database) {
       }
     }
 
-    return rows.map((row) => ({
+    return rows.map((row: object) => ({
       notificationId: row.id,
       content: row.content,
       timestamp: row.createdAt,

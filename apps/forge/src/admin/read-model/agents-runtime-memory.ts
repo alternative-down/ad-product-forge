@@ -163,7 +163,7 @@ export function createAgentsRuntimeMemoryReadModel(
         .map((message: CommunicationMessageView) =>
           message.parts
             .filter(isTextPart)
-            .map((part) => part.text!.trim())
+            .map((part: import("@forge-runtime/core").TextPart) => part.text!.trim())
             .filter(Boolean)
             .join('\n'))
         .filter(Boolean)
@@ -173,7 +173,7 @@ export function createAgentsRuntimeMemoryReadModel(
         .map((message: CommunicationMessageView) =>
           message.parts
             .filter(isTextPart)
-            .map((part) => part.text!.trim())
+            .map((part: import("@forge-runtime/core").TextPart) => part.text!.trim())
             .filter(Boolean)
             .join('\n'))
         .filter(Boolean)

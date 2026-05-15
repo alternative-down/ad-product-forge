@@ -118,7 +118,7 @@ async function listRecentInternalChatConversations(
       const participants = collectConversationParticipants({
         name: conversation.name,
         participants: groupParticipants.length > 0 ? groupParticipants : conversation.participants,
-        messages: conversation.messages.map((message) => ({
+        messages: conversation.messages.map((message: { authorDisplayName?: string }) => ({
           authorDisplayName: message.authorDisplayName ?? agentName,
         })),
       });
@@ -131,7 +131,7 @@ async function listRecentInternalChatConversations(
         name: conversation.name ?? undefined,
         participants,
         updatedAt: Date.parse(conversation.latestMessageAt) || 0,
-        messages: conversation.messages.map((message) => ({
+        messages: conversation.messages.map((message: { authorDisplayName?: string }) => ({
           messageId: message.messageId,
           content: message.content,
           unread: message.unread,

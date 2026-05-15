@@ -61,7 +61,7 @@ export async function adjustAgentContractBudget(
     }
 
     // Deduct from company cash and update budget atomically
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         await companyCashOperations.recordCashOut(
           {
             type: 'agent-contract-budget-increase',
@@ -112,7 +112,7 @@ export async function adjustAgentContractBudget(
   const refundAmount = Math.abs(budgetDelta);
 
   // Refund unused funds and update budget atomically
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
       await companyCashOperations.recordCashIn(
         {
           type: 'agent-contract-budget-decrease',

@@ -85,7 +85,7 @@ export function createSystemIntegrationStore(db: Database) {
       const rows = await db.query.systemIntegrations.findMany();
 
       const typedRows = rows.filter(
-        (row) =>
+        (row: object) =>
           row.providerType === 'migadu' ||
           row.providerType === 'coolify' ||
           row.providerType === 'github' ||

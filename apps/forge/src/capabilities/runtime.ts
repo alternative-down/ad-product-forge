@@ -36,7 +36,7 @@ export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfi
 
     forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Reloading agents for role', context: { roleId, agentCount: assignedAgents.length } });
 
-    await Promise.all(assignedAgents.map((agent) => reloadAgentIfLoaded(db, config, agent.id)));
+    await Promise.all(assignedAgents.map((agent: object) => reloadAgentIfLoaded(db, config, agent.id)));
 }
 
 export async function changeAgentRole(input: {

@@ -196,14 +196,14 @@ export function registerAgentMcpRoutes(
       });
       if (agentMcpRows.length === 0) return jsonResponse({ servers: [] });
 
-      const serverIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
+      const serverIds = agentMcpRows.map((r: { serverId: string }) => r.serverId).filter(Boolean);
       const agentMcpServerRows = await db.query.mcpServerConfigs.findMany({
         where: inArray(mcpServerConfigs.id, serverIds),
       });
 
-      const serverIdToLink = new Map(agentMcpRows.map((link) => [link.serverId, link]));
+      const serverIdToLink = new Map(agentMcpRows.map((link: string) => [link.serverId, link]));
       return jsonResponse({
-        servers: agentMcpServerRows.map((server) => {
+        servers: agentMcpServerRows.map((server: { id: string; name: string; description?: string | null }) => {
           const link = serverIdToLink.get(server.id);
           return {
             configId: link?.id ?? null,
@@ -273,7 +273,7 @@ export function registerAgentNotificationsRoutes(
         limit,
       });
       return jsonResponse({
-        items: rows.map((n) => ({
+        items: rows.map((n: number) => ({
           notificationId: n.id,
           content: n.content,
           timestamp: n.createdAt,

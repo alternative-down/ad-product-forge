@@ -27,7 +27,7 @@ export async function prepareAgentEmbeddersForStartup(input: {
   const agentRows = await input.db.query.agents.findMany();
 
   const fastembedAgents = agentRows.filter(
-    (agent) => agent.workspaceEmbedder === 'fastembed',
+    (agent: { id: string; workspaceEmbedder?: string }) => agent.workspaceEmbedder === 'fastembed',
   );
 
   await withConcurrencyLimit(fastembedAgents, async (agent) => {

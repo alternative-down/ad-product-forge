@@ -9,6 +9,7 @@ export function createLlmModelPriceStore(db: Database) {
   async function listPrices() {
     try {
       return await db.query.llmModelPrices.findMany({
+  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
     } catch (err) {

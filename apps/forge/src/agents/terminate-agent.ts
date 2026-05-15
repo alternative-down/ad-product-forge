@@ -92,7 +92,7 @@ export async function terminateInternalAgent(db: Database, input: {
     }
 
     try {
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
         await tx.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
         await tx.delete(agents).where(eq(agents.id, input.agentId));
@@ -124,7 +124,7 @@ export async function terminateInternalAgent(db: Database, input: {
 
   // Delete execution contracts (cascade handles steps); delete providers explicitly.
   // All 3 deletes in one transaction — any failure rolls back the full cascade.
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
     await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, input.agentId));
     await tx.delete(agentProviders).where(eq(agentProviders.agentId, input.agentId));
     await tx.delete(agents).where(eq(agents.id, input.agentId));

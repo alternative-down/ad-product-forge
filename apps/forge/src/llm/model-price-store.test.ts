@@ -36,6 +36,7 @@ describe('createLlmModelPriceStore', () => {
       const { createLlmModelPriceStore } = await import('./model-price-store.js');
       const store = createLlmModelPriceStore(db as unknown as import('../database/index.js').Database);
       const result = await store.listPrices();
+  // @ts-ignore — drizzle callback parameter (noImplicitAny limitation)
       expect(result.map(p => p.modelKey)).toEqual(['claude-3', 'gpt-4']);
     });
 

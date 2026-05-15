@@ -222,7 +222,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       : null,
     loaded: Boolean(input.runtime),
     runner: input.runnerSnapshot,
-    providerTypes: providerRows.map((row) => row.providerType).sort(),
+    providerTypes: providerRows.map((row: { providerType: string }) => row.providerType).sort(),
     overview: {
       lastStepAt: lastStep?.createdAt ?? null,
       lastStepContextTokens: lastStep?.inputTokens ?? null,
