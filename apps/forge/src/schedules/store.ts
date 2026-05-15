@@ -109,7 +109,7 @@ export function createAgentScheduleStore(db: Database) {
   async function listCreatedAgentSchedules(creatorId: string, targetAgentId?: string) {
     try {
       const rows = await db.query.agentSchedules.findMany({
-        where: targetAgentId
+        where: targetAgentId !== undefined
           ? and(eq(agentSchedules.creatorId, creatorId), eq(agentSchedules.agentId, targetAgentId))
           : eq(agentSchedules.creatorId, creatorId),
         orderBy: [desc(agentSchedules.createdAt)],
@@ -216,8 +216,7 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ): Promise<AgentSchedule | null> {
-    let existing: AgentSchedule | null | undefined;
-      existing = await db.query.agentSchedules.findFirst({
+    const existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
 
@@ -265,7 +264,7 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ) {
-    return _applyUpdate(agentId, scheduleId, input);
+    return await _applyUpdate(agentId, scheduleId, input);
   }
 
   async function updateOwnedSchedule(
@@ -277,7 +276,7 @@ export function createAgentScheduleStore(db: Database) {
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
-    let existing: AgentSchedule | null | undefined;
+    const existing: AgentSchedule | null | undefined;
     try {
       existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
@@ -287,6 +286,7 @@ export function createAgentScheduleStore(db: Database) {
       throw err;
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!existing) {
       return false;
     }
@@ -365,7 +365,7 @@ export function createAgentScheduleStore(db: Database) {
       scheduledDate: row.scheduledDate ?? undefined,
       timezone: row.timezone,
       content: row.content,
-      wakeWhenRunning: !!row.wakeWhenRunning,
+      wakeWhenRunning: row.wakeWhenRunning !== 0,
       isActive: row.isActive === 1,
       lastTriggeredAt: row.lastTriggeredAt ?? undefined,
       nextTriggerAt: row.nextTriggerAt ?? undefined,
@@ -388,7 +388,7 @@ export function createAgentScheduleStore(db: Database) {
       scheduledDate: row.scheduledDate ?? undefined,
       timezone: row.timezone,
       content: row.content,
-      wakeWhenRunning: !!row.wakeWhenRunning,
+      wakeWhenRunning: row.wakeWhenRunning !== 0,
       isActive: row.isActive === 1,
       creatorId: row.creatorId ?? undefined,
       createdAt: row.createdAt,
