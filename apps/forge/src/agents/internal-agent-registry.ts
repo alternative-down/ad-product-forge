@@ -88,7 +88,7 @@ function createInternalAgentRegistry() {
     return list();
   }
 
-  async function add(db: Database, runtime: InternalAgentRuntime, config?: typeof loaderConfig) {
+  async function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents = existingAgent
       ? [
@@ -98,9 +98,9 @@ function createInternalAgentRegistry() {
       : [];
 
     // Each running agent gets its own fresh managers — lifetime matched to this agent.
-    const emailMailboxes = createPerAgentEmailManager(db);
-    const coolify = createPerAgentCoolifyManager(db);
-    const githubApps = createPerAgentGitHubManager({
+    const _emailMailboxes = createPerAgentEmailManager(db);
+    const _coolify = createPerAgentCoolifyManager(db);
+    const _githubApps = createPerAgentGitHubManager({
       db,
       httpServer: loaderConfig?.httpServer,
       integrations: loaderConfig?.integrations,

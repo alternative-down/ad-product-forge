@@ -1,4 +1,4 @@
-import { createId } from '../utils/id';
+import { _createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
-import { forgeCustomToolIds } from '../capabilities/catalog';
+import { _forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 import {
@@ -81,14 +81,14 @@ async function executeHireAgentTool(input: {
   db: Database;
   capabilities: ReturnType<typeof createCapabilityStore>;
 }) {
-  const { tool, toolInput, db, capabilities } = input;
+  const { tool, toolInput, _db, _capabilities } = input;
   // execute is typed; call with the right input shape
    
   const result = await (tool.execute as (arg: unknown) => Promise<unknown>)(toolInput);
   return result;
 }
 
-function getLastAssistantText(messages: NativeToolLoopMessage[]): string | null {
+function _getLastAssistantText(messages: NativeToolLoopMessage[]): string | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string') {
@@ -363,7 +363,7 @@ export async function generateHiredAgentInstructions(
   const messages = runResult.messages;
   const inputTokens = runResult.usage.inputTokens;
   const outputTokens = runResult.usage.outputTokens;
-  const lastRunText = runResult.text;
+  const _lastRunText = runResult.text;
   const lastRunFinishReason = runResult.finishReason;
   const hireAgentActionResult = (
     runResult.deferredToolCall
