@@ -17,11 +17,11 @@ export type HealthcheckDeps = {
   getExecutionState(id: string): Promise<'idle' | 'running' | 'absent'>;
   isLocallyIdle(): boolean;
   getPendingCount(): number;
-  getWakeSnapshot(): { pending: number; waitingForIdle: boolean };
+  getWakeSnapshot(): { pending: number; waitingForIdle: boolean; firstPendingAt?: number | null; nextTriggerAt?: number | null; events?: unknown[]; };
   onRunnerIdle(): Promise<void>;
   beginRun(opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }): Promise<void>;
-  queueNextStep(): Promise<void>;
-  onStartingRunTimeout(): void;
+  queueNextStep(runEpoch?: number): Promise<void>;
+  onStartingRunTimeout(runEpoch?: number): void;
   syncStarterState(running: boolean, startedAt: number | null): void;
   syncExecuting(val: boolean): void;
   syncTimer(val: ReturnType<typeof setTimeout> | null): void;
@@ -97,7 +97,7 @@ export async function runHealthcheck(deps: HealthcheckDeps): Promise<void> {
  * Call this when you detect the runner is in a starting state for too long.
  */
 export function handleStartingRunTimeout(deps: {
-  onStartingRunTimeout(): void;
+  onStartingRunTimeout(runEpoch?: number): void;
   syncStarterState(running: boolean, startedAt: number | null): void;
 }) {
   deps.onStartingRunTimeout();

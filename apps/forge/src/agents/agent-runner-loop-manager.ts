@@ -23,6 +23,7 @@ export interface LoopManager {
   isStuck(): boolean;
   getSignatureCount(): number;
   getCurrentSignature(): string | null;
+  getState(): LoopManagerState;
 }
 
 export function createLoopManager(
