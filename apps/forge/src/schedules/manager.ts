@@ -293,8 +293,12 @@ export function createAgentScheduleManager(input: {
         await store.setNextTriggerAt(scheduleId, null);
       }
     } catch (error) {
+      // DB update succeeded but scheduler registration failed — rollback DB state
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back', context: { agentId, scheduleId, error } });
+
+      // Cancel any residual registered entry so the old schedule cannot fire against stale DB state
+      getLifecycle().cancel(scheduleId);
 
       if (isActiveSchedule(existing) === true && isActiveSchedule(restored) === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
