@@ -100,6 +100,7 @@ export function createAgentRunnerUsage(input: {
       });
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async function recordObservationalMemorySteps(
     _contractId: string,
     steps: Array<{
