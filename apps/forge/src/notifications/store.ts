@@ -6,6 +6,8 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type {Database} from '../database/schema';
 import { agentNotifications } from '../database/schema';
 
+export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;
+
 export function createAgentNotificationStore(db: Database) {
   async function createNotification(input: {
     agentId: string;

@@ -3,6 +3,8 @@ import { forgeDebug } from '@forge-runtime/core';
 import { agentHomeMetricSnapshots } from '../database/schema';
 import { createId } from '../utils/id';
 
+export type AgentHomeMetricSnapshotStore = ReturnType<typeof createAgentHomeMetricSnapshotStore>;
+
 export function createAgentHomeMetricSnapshotStore(db: Database) {
   async function recordSnapshot(input: {
     agentId: string;

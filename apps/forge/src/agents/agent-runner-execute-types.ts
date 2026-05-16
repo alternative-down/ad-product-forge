@@ -22,7 +22,7 @@ import type { AgentNotificationStore } from '../notifications/store';
 import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage } from './agent-runner-usage';
 import type { Scheduler } from './agent-runner-scheduler';
-import type { MessageManager } from './agent-runner-messages';
+import type { MessageManagerState } from './agent-runner-messages';
 import type { LoopDetector } from './agent-runner-loop-detector';
 import type { GenerateDeps } from './agent-runner-generate';
 
@@ -110,7 +110,7 @@ export interface ExecuteStepDeps {
 
   // ── Stores & managers ─────────────────────────────────────────────────────
   store: AgentContractStore;
-  messageManager: MessageManager;
+  messageManager: MessageManagerState;
   scheduler: Scheduler;
   loopDetector: LoopDetector;
 
