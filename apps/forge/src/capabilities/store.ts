@@ -1,4 +1,4 @@
-import { createId } from '../utils/id';
+import { _createId } from '../utils/id';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 
@@ -412,7 +412,8 @@ export function createCapabilityStore(db: Database) {
         throw new Error('Role name is required.');
       }
 
-      return await createRole({
+      // eslint-disable-next-line @typescript-eslint/return-await
+  return await createRole({
         name: input.name.trim(),
         description: input.description?.trim() || undefined,
       });

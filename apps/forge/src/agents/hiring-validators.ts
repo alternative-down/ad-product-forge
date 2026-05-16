@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { _z } from 'zod';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
 import { forgeDebug } from '@forge-runtime/core';

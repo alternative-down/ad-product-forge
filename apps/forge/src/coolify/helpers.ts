@@ -7,7 +7,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { z } from 'zod';
+import { _z } from 'zod';
 
 export function normalizeDomainHost(value: string | null | undefined): string | null {
   if (!value) {

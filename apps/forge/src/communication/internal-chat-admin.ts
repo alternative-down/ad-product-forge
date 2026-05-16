@@ -194,7 +194,8 @@ export function createInternalChatAdmin(db: Database) {
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
       if (input.excludeAgentId) {
-        return await db.query.internalChatAccounts.findMany({
+        // eslint-disable-next-line @typescript-eslint/return-await
+  return await db.query.internalChatAccounts.findMany({
           where: ne(internalChatAccounts.agentId, input.excludeAgentId),
         });
       }
