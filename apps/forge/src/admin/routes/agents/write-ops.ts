@@ -3,16 +3,16 @@
  * POST routes for agent operations extracted from routes.ts
  */
 
-import { z } from 'zod';
+import { _z } from 'zod';
 import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
-import { registerContractOps } from './_split/contract-ops';
+import { _registerContractOps } from './_split/contract-ops';
 import { registerRoleOps } from './_split/role-ops';
 import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
 import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
-import { registerProviderOps } from './_split/provider-ops';
-import { registerConfigOps } from './_split/config-ops';
+import { _registerProviderOps } from './_split/provider-ops';
+import { _registerConfigOps } from './_split/config-ops';
 
 
 import type {Database} from '../../../../src/database/schema';

@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { forgeDebug } from '@forge-runtime/core';
+import { _forgeDebug } from '@forge-runtime/core';
 import {
   internalChatAccounts,
   internalChatConversationMembers,
