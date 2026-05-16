@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (account management routes).
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler, HttpResponse } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import {
   createExternalInternalChatAccountSchema,
@@ -20,12 +20,12 @@ function buildListAccountsHandler(internalChat: InternalChatService): () => Retu
     const accounts = await internalChat.listAccounts();
     return jsonResponse(
       accounts
-        .filter((account: object) => account.agentId === null)
+        .filter((account: object) => (account as { agentId: unknown }).agentId === null)
         .map((account: object) => ({
-          accountId: account.id,
-          slug: account.slug,
-          displayName: account.displayName,
-          description: account.description ?? '',
+          accountId: (account as { id: string }).id,
+          slug: (account as { slug: string }).slug,
+          displayName: (account as { displayName: string }).displayName,
+          description: (account as { description: string | undefined }).description ?? '',
         })),
     );
   });
@@ -36,12 +36,12 @@ function buildListContactsHandler(internalChat: InternalChatService): () => Retu
     const accounts = await internalChat.listAccounts();
     return jsonResponse(
       accounts.map((account: object) => ({
-        accountId: account.id,
-        agentId: account.agentId,
-        slug: account.slug,
-        displayName: account.displayName,
-        description: account.description ?? '',
-        isAgent: Boolean(account.agentId),
+        accountId: (account as { id: string }).id,
+        agentId: (account as { agentId: string | null }).agentId,
+        slug: (account as { slug: string }).slug,
+        displayName: (account as { displayName: string }).displayName,
+        description: (account as { description: string | undefined }).description ?? '',
+        isAgent: Boolean((account as { agentId: unknown }).agentId),
       })),
     );
   });
@@ -66,7 +66,6 @@ function buildUpdateAccountHandler(internalChat: InternalChatService): (request:
       await internalChat.updateExternalAccount({
         accountId: body.accountId,
         displayName: body.name,
-        webhookUrl: body.webhookUrl,
       }),
     );
   });
@@ -82,7 +81,7 @@ function buildDeleteAccountHandler(internalChat: InternalChatService): (request:
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 export function registerAccountRoutes(
-  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) => void },
+  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: (request: { query: Map<string, string>; bodyText: string }) => HttpResponse | Promise<HttpResponse> }) => void },
   internalChat: InternalChatService,
 ): void {
   httpServer.registerRoute({ method: 'GET', path: '/admin/internal-chat/accounts', handler: buildListAccountsHandler(internalChat) });
