@@ -8,9 +8,9 @@ import {
   internalChatMessages,
 } from '../database/schema';
 import type {Database} from '../database/client'
-import { buildConversationParticipantNames } from './internal-chat-helpers';
+import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
 import { createInternalChatConversationListing } from './internal-chat-conversation-listing';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 async function withChatListingError<T>(operation: string, fn: () => Promise<T>): Promise<T> {
     return await fn();
