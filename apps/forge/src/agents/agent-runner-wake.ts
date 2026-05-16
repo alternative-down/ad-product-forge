@@ -65,9 +65,9 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 
   const label = [
     `[${timeLabel}]`,
-    messageId ? `[messageId: ${messageId}]` : '',
-    actor
-      ? actorKey
+    (messageId ?? '') !== '' ? `[messageId: ${messageId}]` : '',
+    (actor ?? '') !== ''
+      ? (actorKey ?? '') !== ''
         ? `${actor} (${actorKey})`
         : actor
       : '',
@@ -75,7 +75,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     .filter(Boolean)
     .join('');
 
-  const suffix = attachments ? ` (attachments: ${attachments})` : '';
+  const suffix = (attachments ?? '') !== '' ? ` (attachments: ${attachments})` : '';
 
   if (text.includes('\n')) {
     return actor
@@ -92,7 +92,7 @@ function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
     const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
     const lines = [
-      ...(event.groupMetadata?.Provider ? [`provider: ${event.groupMetadata.Provider}`] : []),
+      ...((event.groupMetadata?.Provider ?? '') !== '' ? [`provider: ${event.groupMetadata!.Provider}`] : []),
       `targetKey: ${targetKey}`,
     ];
 
@@ -100,11 +100,11 @@ function describeWakeGroup(event: AgentWakeEvent) {
       lines.push('conversationType: group');
     }
 
-    if (event.groupMetadata?.ConversationName) {
+    if ((event.groupMetadata?.ConversationName ?? '') !== '') {
       lines.push(`conversationName: ${event.groupMetadata.ConversationName}`);
     }
 
-    if (event.groupMetadata?.Participants) {
+    if ((event.groupMetadata?.Participants ?? '') !== '') {
       lines.push(`participants: ${event.groupMetadata.Participants}`);
     }
 
@@ -116,8 +116,8 @@ function describeWakeGroup(event: AgentWakeEvent) {
       return 'scheduler';
     }
 
-    return event.groupMetadata?.ScheduleId
-      ? `scheduler: ${event.groupMetadata.ScheduleId}`
+    return (event.groupMetadata?.ScheduleId ?? '') !== ''
+       ? `scheduler: ${event.groupMetadata!.ScheduleId}`
       : 'scheduler';
   }
 
@@ -144,7 +144,7 @@ function formatWakeLabel(value: string) {
 }
 
 function normalizeProviderCode(value?: string) {
-  if (!value) {
+  if ((value ?? '') === '') {
     return value;
   }
 
