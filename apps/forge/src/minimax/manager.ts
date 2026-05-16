@@ -117,7 +117,7 @@ export class MiniMaxClient {
     rawBody: string,
     fallback: string,
   ) {
-    if (body === undefined || body === '') {
+    if (body == null) {
       return rawBody.trim() || fallback;
     }
 
@@ -227,13 +227,13 @@ export class MiniMaxClient {
 
     const apiData = (response.data as MiniMaxJsonResponse | undefined)?.data as Record<string, unknown> | undefined;
 
-    if (apiData === undefined || apiData === '') {
+    if (apiData == null) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax list_voices response missing data');
     }
 
     const parseVoice = (v: unknown): { voiceId: string; voiceName?: string; description: string[]; createdTime?: string } | null => {
       const obj = this.getObject(v);
-      if (obj === undefined || obj === '') return null;
+      if (obj == null) return null;
       const voiceId = this.getString(obj.voice_id);
       if (voiceId === undefined || voiceId === '') return null;
       const description = Array.isArray(obj.description) ? obj.description.filter((x) => typeof x === 'string') as string[] : [];
@@ -344,7 +344,7 @@ export class MiniMaxClient {
     }
 
     const d = this.getObject(response.data.data);
-    if (d === undefined || d === '') {
+    if (d == null) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax video query response missing data');
     }
 
@@ -381,7 +381,7 @@ export class MiniMaxClient {
 
     const fileObj = this.getObject(response.data.data)?.file;
     const f = this.getObject(fileObj);
-    if (f === undefined || f === '') {
+    if (f == null) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax file retrieve response missing file object');
     }
 
@@ -419,7 +419,7 @@ export function createMiniMaxManager(config: {
   async function getClient() {
     const cfg = await config.integrations.getMinimaxConfig();
 
-    if (cfg === undefined || cfg === '') {
+    if (cfg == null) {
       forgeDebug({ scope: 'minimax', level: 'warn', message: 'getClient MiniMax integration not configured' });
       throw new Error('MiniMax integration is not configured');
     }
