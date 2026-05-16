@@ -100,6 +100,18 @@ export function createPaymentReceivablesStore(db: Database) {
           .where(eq(paymentCustomers.id, existing[0].id));
         return existing[0].id;
       }
+      const [inserted] = await db
+        .insert(paymentCustomers)
+        .values({
+          provider: input.provider,
+          providerCustomerId: input.providerCustomerId,
+          email: input.email ?? null,
+          name: input.name ?? null,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: paymentCustomers.id });
+      return inserted.id;
     } catch (err) {
       forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'upsertCustomer DB read failed', context: { provider: input.provider, providerCustomerId: input.providerCustomerId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
