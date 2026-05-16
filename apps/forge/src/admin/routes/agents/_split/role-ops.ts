@@ -55,9 +55,14 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/create',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, createRoleSchema);
-      const result = await capabilities.createRole({ name: body.name, description: body.description });
-      return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      try {
+        const body = parseJsonBody(request.bodyText, createRoleSchema);
+        const result = await capabilities.createRole({ name: body.name, description: body.description });
+        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      } catch (err) {
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/create", context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
     },
   });
 
@@ -66,9 +71,14 @@ export function registerRoleOps(
     method: 'POST',
     path: '/admin/roles/update',
     handler: async (request) => {
-      const body = parseJsonBody(request.bodyText, updateRoleSchema);
-      const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
-      return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      try {
+        const body = parseJsonBody(request.bodyText, updateRoleSchema);
+        const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
+        return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
+      } catch (err) {
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/update", context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
     },
   });
 
@@ -105,8 +115,8 @@ export function registerRoleOps(
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
       } catch (err) {
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: 'addRoleToolPermission failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        throw err;
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles/tool-permissions', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
   });
