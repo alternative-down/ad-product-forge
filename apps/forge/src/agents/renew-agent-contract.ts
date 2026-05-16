@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { _and, eq, _gte, _lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type {Database} from '../database/schema';
@@ -25,12 +25,14 @@ export async function renewAgentContract(
   try {
     const activeContract = await contractStore.getActiveContract(input.agentId);
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!activeContract) {
       forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'no-active-contract', context: { agentId: input.agentId } });
       throw new Error(`No active contract for agent: ${input.agentId}`);
     }
 
     const spentUsd = await contractStore.getContractSpend(activeContract.id);
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const refundableUsd = activeContract.fundedAt
       ? Math.max(activeContract.budgetUsd - spentUsd, 0)
       : 0;

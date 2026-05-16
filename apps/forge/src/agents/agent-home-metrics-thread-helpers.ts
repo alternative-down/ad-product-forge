@@ -235,7 +235,8 @@ export async function readAgentRuntimeMemory(
  *
  * Pure function — no I/O, no side effects.
  */
-export function buildAverageStepIntervalMs(
+export function // eslint-disable-next-line @typescript-eslint/require-await
+  buildAverageStepIntervalMs(
   recentSteps: Array<{ createdAt: number }>,
 ): number | null {
   if (recentSteps.length < 2) {

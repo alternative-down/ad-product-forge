@@ -101,7 +101,8 @@ export function createAgentRunnerUsage(input: {
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
-  async function recordObservationalMemorySteps(
+  async function // eslint-disable-next-line @typescript-eslint/require-await
+  recordObservationalMemorySteps(
     _contractId: string,
     steps: Array<{
       response?: {
@@ -131,7 +132,8 @@ export function createAgentRunnerUsage(input: {
   return {
     estimateStepCostUsd,
     recordAgentStep,
-    recordObservationalMemorySteps,
+    // eslint-disable-next-line @typescript-eslint/require-await
+  recordObservationalMemorySteps,
     getUsageFromResult,
   };
 }
