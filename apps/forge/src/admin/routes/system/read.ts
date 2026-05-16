@@ -20,11 +20,11 @@ import { buildOauthState } from './oauth-state';
 import { buildSystemHealthcheck } from './healthcheck';
 import { listGlobalSkills } from '../../../agents/global-skills';
 import { jsonResponse } from '../index';
-import type { CapabilityStore } from '../../../capabilities/store';
-import type { SystemIntegrationStore } from '../../../system-integrations/store';
-import type { LlmSettingsStore } from '../../../llm/settings-store';
-import type { LlmModelPriceStore } from '../../../llm/model-price-store';
-import type { SystemSettingsStore } from '../../../system-settings/store';
+import type { createCapabilityStore } from '../../../capabilities/store';
+import type { createSystemIntegrationStore } from '../../../system-integrations/store';
+import type { createLlmSettingsStore } from '../../../llm/settings-store';
+import type { createLlmModelPriceStore } from '../../../llm/model-price-store';
+import type { createSystemSettingsStore } from '../../../system-settings/store';
 
 interface SystemReadRoutesInput {
   httpServer: ReturnType<typeof createForgeHttpServer>;
@@ -32,11 +32,11 @@ interface SystemReadRoutesInput {
   registry: InternalAgentRegistry;
   workspaceBasePath: string;
   // Individual stores instead of a read-model wrapper
-  capabilities: CapabilityStore;
-  integrations: SystemIntegrationStore;
-  llmSettings: LlmSettingsStore;
-  llmModelPrices: LlmModelPriceStore;
-  systemSettings: SystemSettingsStore;
+  capabilities: ReturnType<typeof createCapabilityStore>;
+  integrations: ReturnType<typeof createSystemIntegrationStore>;
+  llmSettings: ReturnType<typeof createLlmSettingsStore>;
+  llmModelPrices: ReturnType<typeof createLlmModelPriceStore>;
+  systemSettings: ReturnType<typeof createSystemSettingsStore>;
   readModel: {
     getAgent: (agentId: string) => Promise<unknown>;
     getApplicationMigrations: () => Promise<unknown>;
