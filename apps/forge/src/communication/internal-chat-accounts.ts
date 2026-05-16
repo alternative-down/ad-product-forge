@@ -55,7 +55,7 @@ try {
       roleName: input.roleName,
       roleDescription: input.roleDescription,
     });
-    let existing;
+    const existing;
       existing = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.agentId, input.agentId),
       });
@@ -93,7 +93,7 @@ try {
       });
 
     // Create DM conversations with all existing agent accounts
-    let existingAgentAccounts;
+    const existingAgentAccounts;
       existingAgentAccounts = await db.query.internalChatAccounts.findMany({
         where: and(
           isNotNull(internalChatAccounts.agentId),
@@ -227,7 +227,7 @@ try {
 try {
 
     // targetKey is used as a slug or id lookup
-    let account;
+    const account;
       account =
         (await db.query.internalChatAccounts.findFirst({
           where: eq(internalChatAccounts.slug, targetKey),
