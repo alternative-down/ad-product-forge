@@ -13,14 +13,14 @@ import {
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import { encryptSecret } from '../encryption/crypto';
-import type { CreateAgentConfig } from './runtime/types';
+import type { _CreateAgentConfig } from './runtime/types';
 import { getInternalAgentRegistry } from './internal-agent-registry';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
-import type { GitHubAppManager } from '../github/manager';
-import type { AgentEmailManager } from '../email/migadu-manager';
-import type { CoolifyManager } from '../coolify/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
-import type { InternalChatService } from '../communication/internal-chat-service';
+import type { _WorkspaceFilesystemConfig, _WorkspaceSandboxConfig } from '../database/schema';
+import type { _GitHubAppManager } from '../github/manager';
+import type { _AgentEmailManager } from '../email/migadu-manager';
+import type { _CoolifyManager } from '../coolify/manager';
+import type { _createAgentScheduleManager } from '../schedules/manager';
+import type { _InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import { forgeDebug } from '@forge-runtime/core';
@@ -46,7 +46,7 @@ export const HireInternalAgentInputSchema = z.object({
   githubApps: z.custom<{
     installForRepo: (repo: string) => Promise<void>;
     getInstallationId: (repo: string) => Promise<string>;
-  }>().optional().default({} as any),
+  }>().optional().default({} as object),
   emailMailboxes: z.any().nullable().optional(),
   coolify: z.any().nullable().optional(),
   schedules: z.any(),
@@ -197,7 +197,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // Wrap ALL DB writes inside a single transaction.
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
-  await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+  await db.transaction(async (tx: import("better-sqlite3").Transaction<object>) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);
 
