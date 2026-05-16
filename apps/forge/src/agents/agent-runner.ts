@@ -11,20 +11,14 @@ import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
-import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
-import { createRunnerMessageManager, type RunnerMessageManagerState } from './agent-runner-message-manager';
+
+import { createRunnerMessageManager, 
 
 import {
-  AGENT_CONTEXT_WARNING_CHAR_LIMIT,
-  WORKING_MEMORY_WARNING_CHAR_LIMIT,
-  AGENT_CONTEXT_FILE_PATH,
-} from '../utils/constants';
+  
 
 import {
-  serializeError,
-  formatAbsentExecutionError,
-  extractAbsentErrorDetails,
-} from './agent-runner-error-formatting';
+  
 import {
   _delay,
   _buildIterationLoopSignature,
@@ -41,8 +35,8 @@ import {
   _hasExactControlDirective,
 } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
-import { createLoopDetector } from './agent-runner-loop-detector';
-import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, resetBackoff } from './agent-runner-state';
+
+import { 
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
@@ -100,7 +94,7 @@ export function createAgentRunner(
   });
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
-  let instant = false;
+   false;
   let startingRun = false;
   let startingRunStartedAt: number | null = null;
   let executing = false;
