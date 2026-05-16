@@ -41,43 +41,38 @@
  * @module
  */
 
-import { _and, _desc, _eq, _gte, _inArray, _isNotNull, _isNull, _like, _lte, _ne, _sql } from 'drizzle-orm';
-import _path from 'node:path';
-import { _customAlphabet } from 'nanoid';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from 'drizzle-orm';
+import path from 'node:path';
+import { customAlphabet } from 'nanoid';
 
-import type {
-  _CommunicationFile,
-  _CommunicationInboundMessage,
-  _CommunicationProviderConversation,
-  _CommunicationProviderMessage,
-} from "@forge-runtime/core";
-import { _forgeDebug } from '@forge-runtime/core';
+import type { CommunicationFile, CommunicationInboundMessage, CommunicationProviderConversation, CommunicationProviderMessage } from "@forge-runtime/core";
+import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from "../database/schema";
+import type { Database } from "../database/schema";
 import {
-  _internalChatAccounts,
-  _internalChatConversationMembers,
-  _internalChatConversations,
-  _internalChatMessageAttachments,
-  _internalChatMessageReads,
-  _internalChatMessages,
+  internalChatAccounts,
+  internalChatConversationMembers,
+  internalChatConversations,
+  internalChatMessageAttachments,
+  internalChatMessageReads,
+  internalChatMessages,
 } from "../database/schema";
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import {
-  _buildAgentAccountDescription,
-  _buildGroupMemberViews,
-  _buildGroupRow,
-  _buildConversationParticipantNames,
-  _createInternalChatSlug,
-  _parseFilterDate,
-  _resolveContentType,
-  _sanitizeAttachmentName,
-  _sortParticipantsBySelfFirst,
-  type _InternalChatGroupMember,
-  type _InternalChatGroupParticipant,
-  type _InternalChatGroupRow,
+  buildAgentAccountDescription,
+  buildGroupMemberViews,
+  buildGroupRow,
+  buildConversationParticipantNames,
+  createInternalChatSlug,
+  parseFilterDate,
+  resolveContentType,
+  sanitizeAttachmentName,
+  sortParticipantsBySelfFirst,
+  type InternalChatGroupMember,
+  type InternalChatGroupParticipant,
+  type InternalChatGroupRow,
 } from "./internal-chat-helpers";
-import { createInternalChatConnection, type _InternalChatDeliveryMessage } from "./internal-chat-connection";
+import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
 import { createInternalChatAccountOps } from "./internal-chat-account-ops";
 import { createInternalChatListing } from "./internal-chat-listing";
@@ -85,19 +80,17 @@ import { createInternalChatParticipants } from "./internal-chat-participants";
 import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatGuards } from "./internal-chat-guards";
 import {
-  _ConversationNotFoundError,
-  _ChatGroupNotFoundError,
-  _ChatGroupAlreadyExistsError,
-  _GroupMemberAlreadyExistsError,
-  _OnlyAdminsCanUpdateGroupError,
-  _NameRequiredForNewGroupError,
-  _InternalChatParticipantNotFoundError,
-  _InternalChatAccountNotFoundError,
-  _MessageNotFoundError,
-  _ExternalAccountNotFoundError,
-  _InternalChatAccountSlugAlreadyExistsError,
-  _DirectConversationFailedError,
-  _AttachmentNotFoundError,
+  ConversationNotFoundError,
+  ChatGroupNotFoundError,
+  ChatGroupAlreadyExistsError,
+  OnlyAdminsCanUpdateGroupError,
+  NameRequiredForNewGroupError,
+  InternalChatAccountNotFoundError,
+  MessageNotFoundError,
+  ExternalAccountNotFoundError,
+  InternalChatAccountSlugAlreadyExistsError,
+  DirectConversationFailedError,
+  AttachmentNotFoundError,
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createInternalChatAdmin } from "./internal-chat-admin";

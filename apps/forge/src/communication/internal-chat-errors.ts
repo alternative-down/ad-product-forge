@@ -45,14 +45,14 @@ export class ChatGroupAlreadyExistsError extends Error {
   }
 }
 
-class _OnlyAdminsCanUpdateGroupError extends Error {
+export class OnlyAdminsCanUpdateGroupError extends Error {
   constructor() {
     super("Only admins can update the group.");
     this.name = "OnlyAdminsCanUpdateGroupError";
   }
 }
 
-class _NameRequiredForNewGroupError extends Error {
+export class NameRequiredForNewGroupError extends Error {
   constructor() {
     super("name is required when creating a group.");
     this.name = "NameRequiredForNewGroupError";
@@ -101,7 +101,7 @@ export class ExternalAccountNotFoundError extends Error {
   }
 }
 
-class _InternalChatAccountSlugAlreadyExistsError extends Error {
+export class InternalChatAccountSlugAlreadyExistsError extends Error {
   readonly slug: string;
 
   constructor(slug: string) {
@@ -111,7 +111,7 @@ class _InternalChatAccountSlugAlreadyExistsError extends Error {
   }
 }
 
-class _DirectConversationFailedError extends Error {
+export class DirectConversationFailedError extends Error {
   constructor() {
     super("Failed to create direct conversation.");
     this.name = "DirectConversationFailedError";

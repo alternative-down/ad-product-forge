@@ -20,7 +20,7 @@ import type { _GitHubAppManager } from '../github/manager';
 import type { _AgentEmailManager } from '../email/migadu-manager';
 import type { _CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
-import type { _InternalChatService } from '../communication/internal-chat-service';
+import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import { forgeDebug } from '@forge-runtime/core';
