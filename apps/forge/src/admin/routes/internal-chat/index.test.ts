@@ -1,7 +1,9 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { registerInternalChatRoutes } from './index';
 
-type Route = { method: string; path: string; handler: (req?: unknown) => any };
+import type { HttpHandler } from '../../../http/server';
+
+type Route = { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler };
 
 function createMockHttpServer() {
   const routes: Route[] = [];

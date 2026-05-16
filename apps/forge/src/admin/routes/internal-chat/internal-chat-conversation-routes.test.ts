@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerConversationRoutes } from './internal-chat-conversation-routes';
+import type { HttpHandler } from '../../../http/server';
 
 // ─── Mock setup ──────────────────────────────────────────────────────────────
 
@@ -11,9 +12,9 @@ vi.mock('../debug', () => ({
 // ─── Test factory ────────────────────────────────────────────────────────────
 
 interface Route {
-  method: string;
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   path: string;
-  handler: (req?: unknown) => unknown;
+  handler: HttpHandler;
 }
 
 function createMockHttpServer() {
