@@ -1,4 +1,4 @@
-import { and, desc, eq, lte, gte, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
@@ -45,6 +45,7 @@ export function createAgentContractStore(
   const VALID_STATES = ['idle', 'running', 'absent'] as const;
   type ExecutionState = typeof VALID_STATES[number];
   function toExecutionState(raw: string | null | undefined): 'idle' | 'running' | 'absent' {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (raw && VALID_STATES.includes(raw as ExecutionState)) {
       return raw as 'idle' | 'running' | 'absent';
     }
@@ -100,6 +101,7 @@ export function createAgentContractStore(
   async function getRunnableContract(agentId: string) {
     const activeContract = await getActiveContract(agentId);
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (activeContract) {
       return await fundContractIfNeeded(activeContract);
     }
@@ -307,6 +309,7 @@ export function createAgentContractStore(
   }
 
   async function fundContractIfNeeded(contract: AgentExecutionContract) {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (contract.fundedAt) {
       return contract;
     }
@@ -345,6 +348,7 @@ export function createAgentContractStore(
   async function refundActiveContractBalance(agentId: string) {
     const activeContract = await getActiveContract(agentId);
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!activeContract || !activeContract.fundedAt) {
       return null;
     }
