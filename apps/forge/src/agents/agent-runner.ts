@@ -26,19 +26,19 @@ import {
   extractAbsentErrorDetails,
 } from './agent-runner-error-formatting';
 import {
-  _delay,
-  _buildIterationLoopSignature,
-  _buildStepSystemPrompt,
+  delay,
+  buildIterationLoopSignature,
+  buildStepSystemPrompt,
   extractRunnerControlDirective,
-  _extractRunnerControlDirectiveFromIteration,
+  extractRunnerControlDirectiveFromIteration,
 } from './agent-runner-control-directives';
 import {
-  _buildRecallStepFromIteration,
-  _didIterationProduceVisibleAssistantText,
+  buildRecallStepFromIteration,
+  didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
 import {
-  _collectStepTextParts,
-  _hasExactControlDirective,
+  collectStepTextParts,
+  extractControlDirective,
 } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
 import { createLoopDetector } from './agent-runner-loop-detector';
@@ -47,19 +47,19 @@ import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
-  _createGenerateTimeoutGuard,
-  _touchGenerateTimeout,
-  _clearGenerateTimeout,
-  _startGenerateAttempt,
-  _finishGenerateAttempt,
+  createGenerateTimeoutGuard,
+  touchGenerateTimeout,
+  clearGenerateTimeout,
+  startGenerateAttempt,
+  finishGenerateAttempt,
   RUNNER_AWAIT_TIMEOUT_MS,
   STARTING_RUN_TIMEOUT_MS,
-  type _GenerateTimeoutHandle,
+  type GenerateTimeoutHandle,
 } from './agent-runner-generate';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
-import { ONE_MINUTE_MS, _TEN_MINUTES_MS, _FIFTEEN_MINUTES_MS } from './time-constants';
+import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 export function createAgentRunner(
