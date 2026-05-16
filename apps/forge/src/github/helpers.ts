@@ -206,19 +206,45 @@ export function escapeHtml(value: string): string {
 }
 
 /**
- * Summarizes a GitHub issue into a lightweight summary.
+ * Payload type for GitHub issue API responses (used by toIssueSummary/toIssueDetails).
  */
-export function toIssueSummary(issue: {
+export interface IssuePayload {
   number: number;
   title: string;
+  body?: string | null;
   state: string;
   html_url: string;
   labels: Array<string | { name: string }>;
   assignees?: Array<{ login: string }>;
-  milestone?: { title: string } | null;
+  milestone?: { title: string; number?: number } | null;
+  comments?: number;
   created_at: string;
   updated_at: string;
-}) {
+}
+
+/** Lightweight issue summary returned by toIssueSummary. */
+export interface IssueSummary {
+  number: number;
+  title: string;
+  state: string;
+  url: string;
+  labels: string[];
+  assignees: string[];
+  milestone: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Detailed issue summary returned by toIssueDetails. */
+export interface IssueDetails extends IssueSummary {
+  body: string;
+  comments: number;
+}
+
+/**
+ * Summarizes a GitHub issue into a lightweight summary.
+ */
+export function toIssueSummary(issue: IssuePayload) {
   return {
     number: issue.number,
     title: issue.title,
@@ -235,19 +261,7 @@ export function toIssueSummary(issue: {
 /**
  * Summarizes a GitHub issue into detailed summary including body and comments count.
  */
-export function toIssueDetails(issue: {
-  number: number;
-  title: string;
-  body?: string | null;
-  state: string;
-  html_url: string;
-  labels: Array<string | { name: string }>;
-  assignees?: Array<{ login: string }>;
-  milestone?: { number: number; title: string } | null;
-  comments?: number;
-  created_at: string;
-  updated_at: string;
-}) {
+export function toIssueDetails(issue: IssuePayload) {
   return {
     number: issue.number,
     title: issue.title,

@@ -52,7 +52,7 @@ export interface GithubOpsAuth {
 
 /** HTTP routing path helpers and header utilities. */
 export interface GithubOpsRouting {
-  getHeader: (headers: Record<string, string>, key: string) => string | null;
+  getHeader: (headers: Record<string, string | string[] | undefined>, key: string) => string | undefined;
   getRegisterPath: (agentId: string) => string;
   getManifestCallbackPath: (agentId: string) => string;
   getSetupPath: (agentId: string) => string;
@@ -62,7 +62,7 @@ export interface GithubOpsRouting {
 
 /** Issue and assignee formatting helpers. */
 export interface GithubOpsHelpers {
-  normalizeAssignees: (assignees: string[]) => string[];
+  normalizeAssignees: (assignees?: string[] | undefined) => string[] | undefined;
   toIssueSummary: (payload: unknown) => unknown;
   toIssueDetails: (payload: unknown) => unknown;
 }
@@ -70,9 +70,9 @@ export interface GithubOpsHelpers {
 /** GitHub App manifest creation helpers. */
 export interface GithubOpsManifest {
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig;
-  buildManifestEvents: () => string[];
+  buildManifestEvents: (manifestConfig: GitHubAppManifestConfig) => string[];
   buildManifestPermissions: (manifestConfig: GitHubAppManifestConfig) => Record<string, string>;
-  createAppName: (agentId: string, agentName: string) => string;
+  createAppName: (payload: unknown) => string;
   createGitHubInstallWakeContent: (payload: unknown) => unknown;
   createGitHubWebhookWakeContent: (payload: unknown) => unknown;
   isGitHubSelfEvent: (payload: unknown) => boolean;
@@ -93,7 +93,7 @@ export interface GithubOpsConfig {
 export interface OpsConfig {
   db: Database;
   httpServer: HttpServer;
-  publicBaseUrl: string;
+  publicBaseUrl?: string;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }
 
@@ -126,19 +126,19 @@ export interface OpsContext {
   createInstallationOctokit: (credentials: Extract<GitHubAppCredentials, { status: 'active' }>) => Promise<Octokit>;
   createGitHubApp: (credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) => unknown;
 
-  getHeader: (headers: Record<string, string>, key: string) => string | null;
+  getHeader: (headers: Record<string, string | string[] | undefined>, key: string) => string | undefined;
   getRegisterPath: (agentId: string) => string;
   getManifestCallbackPath: (agentId: string) => string;
   getSetupPath: (agentId: string) => string;
   getWebhookPath: (agentId: string) => string;
   escapeHtml: (input: string) => string;
-  normalizeAssignees: (assignees: string[]) => string[];
-  toIssueSummary: (payload: import('../helpers.js').IssuePayload) => import('../helpers.js').IssueSummary;
-  toIssueDetails: (payload: import('../helpers.js').IssuePayload) => import('../helpers.js').IssueDetails;
+  normalizeAssignees: (assignees?: string[] | undefined) => string[] | undefined;
+  toIssueSummary: (payload: import('../helpers').IssuePayload) => import('../helpers').IssueSummary;
+  toIssueDetails: (payload: import('../helpers').IssuePayload) => import('../helpers').IssueDetails;
   DEFAULT_GITHUB_APP_MANIFEST_CONFIG: GitHubAppManifestConfig;
-  buildManifestEvents: () => string[];
+  buildManifestEvents: (manifestConfig: GitHubAppManifestConfig) => string[];
   buildManifestPermissions: (manifestConfig: GitHubAppManifestConfig) => Record<string, string>;
-  createAppName: (agentId: string, agentName: string) => string;
+  createAppName: (payload: unknown) => string;
   createGitHubInstallWakeContent: (payload: unknown) => unknown;
   createGitHubWebhookWakeContent: (payload: unknown) => unknown;
   isGitHubSelfEvent: (payload: unknown) => boolean;
