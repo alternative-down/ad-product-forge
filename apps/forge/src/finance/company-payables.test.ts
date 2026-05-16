@@ -163,31 +163,31 @@ function createMockPayablesDb(
   return {
     query: {
       companyRecurringPayables: {
-        findMany: async (opts) => {
+        findMany: async (opts: unknown) => {
           let rows = [...payablesStore];
-          if (opts?.orderBy) rows = rows.sort((a, b) => a.name.localeCompare(b.name));
+          if ((opts as any)?.orderBy) rows = rows.sort((a: any, b: any) => a.name.localeCompare(b.name));
           return rows;
         },
-        findFirst: async (opts) => findFirstInPayables(opts),
+        findFirst: async (opts: unknown) => findFirstInPayables(opts as any),
       },
       companyCashLedger: {
         findMany: async () => [...ledgerStore],
-        findFirst: async (opts) => findFirstInLedger(opts),
+        findFirst: async (opts: unknown) => findFirstInLedger(opts as any),
       },
     },
     insert: () => ({
-      values: async (values) => {
-        if ('recurrencePeriod' in values) {
+      values: async (values: unknown) => {
+        if ('recurrencePeriod' in (values as any)) {
           payablesStore.push(values as unknown as any);
         } else {
-          ledgerStore.push(values as unknown as any);
+          ledgerStore.push(values as any);
         }
         return { rowCount: 1 };
       },
     }),
     update: () => ({
-      set: (values) => ({
-        where: async (condition) => {
+      set: (values: unknown) => ({
+        where: async (condition: unknown) => {
           const conds = extractConditions(condition);
           for (const row of payablesStore) {
             if (conds.every(({ colName, value }) => (row as unknown as any)[snakeToCamel(colName)] === value)) {
@@ -341,7 +341,7 @@ describe('createCompanyPayables', () => {
         dueAt: 1700000000000,
       });
 
-      const entry = await db.query.companyCashLedger.findFirst({ where: {} });
+      const entry = await db.query.companyCashLedger.findFirst({ where: undefined as any });
       expect(entry?.id).toBe(result.entryId);
       expect(entry?.referenceId).toBe(result.payableId);
       expect(entry?.status).toBe('planned');
@@ -363,7 +363,7 @@ describe('createCompanyPayables', () => {
         dueAt: 1700000000000,
       });
 
-      const entry = await db.query.companyCashLedger.findFirst({ where: {} });
+      const entry = await db.query.companyCashLedger.findFirst({ where: undefined as any });
       expect(entry?.description).toBe('Netflix');
     });
   });
@@ -393,7 +393,7 @@ describe('createCompanyPayables', () => {
       ]);
       const payables = createCompanyPayables(db);
       await payables.setRecurringPayableActive('p1', true);
-      const row = await db.query.companyRecurringPayables.findFirst({ where: {} });
+      const row = await db.query.companyRecurringPayables.findFirst({ where: undefined as any });
       expect(row?.updatedAt).toBeGreaterThan(0);
     });
 
@@ -416,7 +416,7 @@ describe('createCompanyPayables', () => {
 
     test('returns null when entry has no referenceType', async () => {
       const db = createMockPayablesDb([], [
-        { id: 'e1', type: 'one-time', direction: 'out', amountUsd: 100, status: 'planned', createdAt: 0 },
+        { id: 'e1', type: 'one-time', direction: 'out', amountUsd: 100, status: 'planned', updatedAt: 0, createdAt: 0 },
       ]);
       const payables = createCompanyPayables(db);
       const result = await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
@@ -426,7 +426,7 @@ describe('createCompanyPayables', () => {
     test('returns null when payable is inactive', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Test', amountUsd: 100, recurrencePeriod: 'monthly', nextDueAt: 1700000000000, isActive: 0, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       const result = await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
@@ -437,8 +437,8 @@ describe('createCompanyPayables', () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Test', amountUsd: 100, recurrencePeriod: 'weekly', nextDueAt: 1700000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
         [
-          { id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 },
-          { id: 'e2', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000 + 7 * 86400000, createdAt: 0 },
+          { id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 },
+          { id: 'e2', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000 + 7 * 86400000, updatedAt: 0, createdAt: 0 },
         ],
       );
       const payables = createCompanyPayables(db);
@@ -449,7 +449,7 @@ describe('createCompanyPayables', () => {
     test('creates next planned occurrence when none exists', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Test', amountUsd: 100, recurrencePeriod: 'monthly', nextDueAt: 1700000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       const result = await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
@@ -462,12 +462,12 @@ describe('createCompanyPayables', () => {
     test('updates payable nextDueAt to the advanced date', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Test', amountUsd: 100, recurrencePeriod: 'yearly', nextDueAt: 1700000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
 
-      const updated = await db.query.companyRecurringPayables.findFirst({ where: {} });
+      const updated = await db.query.companyRecurringPayables.findFirst({ where: undefined as any });
       expect(updated?.nextDueAt).toBeGreaterThan(1700000000000);
     });
   });
@@ -476,12 +476,12 @@ describe('createCompanyPayables', () => {
     test('adds 7 days to the due date', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Weekly', amountUsd: 50, recurrencePeriod: 'weekly', nextDueAt: 1700000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 50, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 50, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
 
-      const payable = await db.query.companyRecurringPayables.findFirst({ where: {} });
+      const payable = await db.query.companyRecurringPayables.findFirst({ where: undefined as any });
       const expectedAdvance = 7 * 86400000;
       expect(payable?.nextDueAt).toBe(1700000000000 + expectedAdvance);
     });
@@ -491,12 +491,12 @@ describe('createCompanyPayables', () => {
     test('advances to next month', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Monthly', amountUsd: 50, recurrencePeriod: 'monthly', nextDueAt: 1700000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 50, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 50, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
 
-      const payable = await db.query.companyRecurringPayables.findFirst({ where: {} });
+      const payable = await db.query.companyRecurringPayables.findFirst({ where: undefined as any });
       expect(payable?.nextDueAt).toBeGreaterThan(1700000000000);
     });
   });
@@ -505,12 +505,12 @@ describe('createCompanyPayables', () => {
     test('advances to next year', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Yearly', amountUsd: 50, recurrencePeriod: 'yearly', nextDueAt: 1700000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 50, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 50, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: 1700000000000, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
 
-      const payable = await db.query.companyRecurringPayables.findFirst({ where: {} });
+      const payable = await db.query.companyRecurringPayables.findFirst({ where: undefined as any });
       expect(payable?.nextDueAt).toBeGreaterThan(1700000000000 + 365 * 86400000);
     });
   });
@@ -519,12 +519,12 @@ describe('createCompanyPayables', () => {
     test('uses payable nextDueAt when entry dueAt is undefined', async () => {
       const db = createMockPayablesDb(
         [{ id: 'p1', name: 'Test', amountUsd: 100, recurrencePeriod: 'weekly', nextDueAt: 1800000000000, isActive: 1, createdAt: 0, updatedAt: 0 }],
-        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: undefined, createdAt: 0 }],
+        [{ id: 'e1', type: 'recurring-payable', direction: 'out', amountUsd: 100, referenceType: 'recurring-payable', referenceId: 'p1', status: 'planned', dueAt: undefined, updatedAt: 0, createdAt: 0 }],
       );
       const payables = createCompanyPayables(db);
       await payables.syncRecurringPayableOccurrence({ entryId: 'e1' });
 
-      const payable = await db.query.companyRecurringPayables.findFirst({ where: {} });
+      const payable = await db.query.companyRecurringPayables.findFirst({ where: undefined as any });
       const expectedAdvance = 7 * 86400000;
       expect(payable?.nextDueAt).toBe(1800000000000 + expectedAdvance);
     });

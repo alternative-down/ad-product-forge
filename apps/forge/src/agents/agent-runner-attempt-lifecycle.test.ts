@@ -19,7 +19,7 @@ function makeDeps(overrides?: Partial<{
     setCurrentGenerateAbortController: setFn,
     currentGenerateAbortController: null as AbortController | null,
     ...overrides,
-  };
+  } as any;
 }
 
 describe('startGenerateAttempt', () => {
