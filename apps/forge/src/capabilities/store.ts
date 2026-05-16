@@ -38,19 +38,13 @@ function resolveLoadedToolIds(toolIds: string[]) {
     resolvedToolIds.add('list_role_capabilities');
   }
 
-  if (!hasCrossAgentCronTools && !hasCrossAgentRoleTool) {
-    return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));
+  // Cross-agent cron tools replace self-cron tools
+  if (hasCrossAgentCronTools) {
+    resolvedToolIds.delete('manage_self_crons');
+    resolvedToolIds.delete('list_self_crons');
   }
 
-  return [...resolvedToolIds]
-    .filter((toolId) => {
-      if (hasCrossAgentCronTools && (toolId === 'manage_self_crons' || toolId === 'list_self_crons')) {
-        return false;
-      }
-
-      return true;
-    })
-    .sort((left, right) => left.localeCompare(right));
+  return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));
 }
 
 export type CapabilityStore = Awaited<ReturnType<typeof createCapabilityStore>>;
