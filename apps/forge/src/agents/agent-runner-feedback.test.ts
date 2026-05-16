@@ -17,6 +17,8 @@ import type { BuildIterationFeedbackDeps } from './agent-runner-feedback';
 
 function makeLoopDetector(stuck = false, signatureCount = 0) {
   return {
+    recordIteration: vi.fn<() => boolean>().mockReturnValue(false),
+    reset: vi.fn<() => void>(),
     isStuck: vi.fn<() => boolean>().mockReturnValue(stuck),
     getSignatureCount: vi.fn<() => number>().mockReturnValue(signatureCount),
   };
@@ -64,7 +66,7 @@ function makeDeps(overrides?: Partial<BuildIterationFeedbackDeps>): BuildIterati
     controller: new AbortController(),
     isStopped: vi.fn<() => boolean>().mockReturnValue(false),
     ...overrides,
-  } as BuildIterationFeedbackDeps;
+  } as unknown as BuildIterationFeedbackDeps;
 }
 
 // ─── Stuck loop detection ────────────────────────────────────────────────────
@@ -82,14 +84,10 @@ describe('stuck loop detection', () => {
 
   it('returns continue:false when loop is stuck', async () => {
     const loopDetector = makeLoopDetector(true, 5);
-    const deps = makeDeps({
-      loopDetector,
-      notifications: { createNotification },
-      setNextStepAt,
-    });
+    const deps = makeDeps();
 
     const result = await buildIterationFeedback(
-      makeArg({ innerIteration: 0 }),
+      makeArg({ innerIteration: 0 }) as any,
       deps,
     );
 
@@ -99,12 +97,12 @@ describe('stuck loop detection', () => {
   it('creates notification with stuck loop details', async () => {
     const loopDetector = makeLoopDetector(true, 7);
     const deps = makeDeps({
-      loopDetector,
-      notifications: { createNotification },
-      setNextStepAt,
+      loopDetector: loopDetector as any,
+      notifications: { createNotification } as any,
+      setNextStepAt: setNextStepAt as any,
     });
 
-    await buildIterationFeedback(makeArg({ innerIteration: 0 }), deps);
+    await buildIterationFeedback(makeArg({ innerIteration: 0 }) as any, deps);
 
     expect(createNotification).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -117,11 +115,9 @@ describe('stuck loop detection', () => {
   it('sets next step to null', async () => {
     const deps = makeDeps({
       loopDetector: makeLoopDetector(true),
-      notifications: { createNotification },
-      setNextStepAt,
     });
 
-    await buildIterationFeedback(makeArg({ innerIteration: 0 }), deps);
+    await buildIterationFeedback(makeArg({ innerIteration: 0 }) as any, deps);
 
     expect(setNextStepAt).toHaveBeenCalledWith(null);
   });
@@ -135,7 +131,7 @@ describe('stop directive', () => {
     const deps = makeDeps({ setNextStepAt });
 
     const result = await buildIterationFeedback(
-      makeArg({ text: 'STOP_AND_IDLE' }),
+      makeArg({ text: 'STOP_AND_IDLE' }) as any,
       deps,
     );
 
@@ -148,7 +144,7 @@ describe('stop directive', () => {
     const deps = makeDeps({ setNextStepAt });
 
     const result = await buildIterationFeedback(
-      makeArg({ text: 'NO_ACTION_NEEDED' }),
+      makeArg({ text: 'NO_ACTION_NEEDED' }) as any,
       deps,
     );
 
@@ -173,11 +169,11 @@ describe('no-tool-call reminder', () => {
   it('adds RUN_STOP_REMINDER when no tools and has text', async () => {
     const deps = makeDeps({
       suppressNoToolCallReminderForRun: false,
-      setSuppressNoToolCallReminder,
+      setSuppressNoToolCallReminder: setSuppressNoToolCallReminder as any,
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ text: 'Here is my response.', toolCalls: [] }),
+      makeArg({ text: 'Here is my response.', toolCalls: [] }) as any,
       deps,
     );
 
@@ -190,11 +186,11 @@ describe('no-tool-call reminder', () => {
   it('does not add reminder when tools are present', async () => {
     const deps = makeDeps({
       suppressNoToolCallReminderForRun: false,
-      setSuppressNoToolCallReminder,
+      setSuppressNoToolCallReminder: setSuppressNoToolCallReminder as any,
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ text: 'Using a tool', toolCalls: [{ name: 'test_tool', args: {} }] }),
+      makeArg({ text: 'Using a tool', toolCalls: [{ name: 'test_tool', args: {} }] }) as any,
       deps,
     );
 
@@ -204,11 +200,11 @@ describe('no-tool-call reminder', () => {
   it('does not add reminder when suppressed', async () => {
     const deps = makeDeps({
       suppressNoToolCallReminderForRun: true,
-      setSuppressNoToolCallReminder,
+      setSuppressNoToolCallReminder: setSuppressNoToolCallReminder as any,
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ text: 'Plain text', toolCalls: [] }),
+      makeArg({ text: 'Plain text', toolCalls: [] }) as any,
       deps,
     );
 
@@ -218,11 +214,11 @@ describe('no-tool-call reminder', () => {
   it('suppresses reminder when ignore directive and no tool calls', async () => {
     const deps = makeDeps({
       suppressNoToolCallReminderForRun: false,
-      setSuppressNoToolCallReminder,
+      setSuppressNoToolCallReminder: setSuppressNoToolCallReminder as any,
     });
 
     await buildIterationFeedback(
-      makeArg({ text: 'NO_ACTION_NEEDED some text', toolCalls: [] }),
+      makeArg({ text: 'NO_ACTION_NEEDED some text', toolCalls: [] }) as any,
       deps,
     );
 
@@ -241,7 +237,7 @@ describe('flush pending run messages', () => {
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }),
+      makeArg({ toolCalls: [] }) as any,
       deps,
     );
 
@@ -258,7 +254,7 @@ describe('flush pending run messages', () => {
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }),
+      makeArg({ toolCalls: [] }) as any,
       deps,
     );
 
@@ -272,7 +268,7 @@ describe('flush pending run messages', () => {
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ text: 'Hello', toolCalls: [] }),
+      makeArg({ text: 'Hello', toolCalls: [] }) as any,
       deps,
     );
 
@@ -300,7 +296,7 @@ describe('LTM recall', () => {
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }),
+      makeArg({ toolCalls: [] }) as any,
       deps,
     );
 
@@ -317,7 +313,7 @@ describe('LTM recall', () => {
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }),
+      makeArg({ toolCalls: [] }) as any,
       deps,
     );
 
@@ -343,7 +339,7 @@ describe('combined feedback', () => {
     });
 
     const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }),
+      makeArg({ toolCalls: [] }) as any,
       deps,
     );
 
