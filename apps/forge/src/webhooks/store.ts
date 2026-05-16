@@ -2,10 +2,13 @@ import { eq, desc } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type {Database} from '../database/schema';
-import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../database/schema';
+import { webhookRoutes, webhookEvents, WebhookRoute } from '../database/schema';
 import { createId } from '../utils/id';
 
 // WebhookRoute and WebhookEvent types are exported from the database schema
+// Type for webhook event rows
+type WebhookEvent = typeof webhookEvents.$inferSelect;
+
 
 export function createWebhookStore(db: Database) {
   async function createRoute(input: {

@@ -24,6 +24,8 @@ export const paymentProviders = sqliteTable('payment_providers', {
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
+export type PaymentProviderType = 'stripe' | 'asaas';
+
 // =============================================================================
 // Payment Customers
 // =============================================================================
