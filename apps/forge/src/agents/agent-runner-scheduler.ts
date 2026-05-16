@@ -19,6 +19,15 @@ import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
 import { createRunLifecycle } from './agent-runner-run-lifecycle';
 
+export type Scheduler = {
+  getState(): SchedulerState;
+  scheduleNext(now: number): void;
+  markInstant(now: number): void;
+  markRunning(now: number): void;
+  clear(): void;
+  isStopped(): boolean;
+};
+
 export type SchedulerState = {
   nextStepAt: number | null;
   backoffMs: number;
