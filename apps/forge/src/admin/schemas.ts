@@ -90,3 +90,13 @@ const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
 
 
 
+
+export const updateRoleSchema = z.object({
+  roleId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+});
+
+export const deleteRoleSchema = z.object({
+  roleId: z.string().min(1),
+});

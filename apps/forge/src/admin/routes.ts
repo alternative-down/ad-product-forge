@@ -1,20 +1,20 @@
-import { _z } from 'zod';
-import { _eq, _and } from 'drizzle-orm';
-import _fs from 'node:fs';
-import _fsPromises from 'node:fs/promises';
-import _path from 'node:path';
-import _v8 from 'node:v8';
-import { _createClient } from '@libsql/client';
+import { z } from 'zod';
+import { eq, and } from 'drizzle-orm';
+import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
+import path from 'node:path';
+import v8 from 'node:v8';
+import { createClient } from '@libsql/client';
 import {
-  _getAnthropicCliAuthFilePath,
-  _getAnthropicSetupTokenFilePath,
-  _getOpenAICodexCliAuthFilePath,
-  _LibsqlConversationStore,
-  _oauthStore,
-  _syncAnthropicCredential,
-  _syncOpenAICodexCredential,
+  getAnthropicCliAuthFilePath,
+  getAnthropicSetupTokenFilePath,
+  getOpenAICodexCliAuthFilePath,
+  LibsqlConversationStore,
+  oauthStore,
+  syncAnthropicCredential,
+  syncOpenAICodexCredential,
   forgeDebug,
-  _toMastraSafeIdentifier,
+  toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
 import type {Database} from '../database/client'
@@ -24,9 +24,9 @@ import { getInternalAgentRegistry, createPerAgentEmailManager } from '../agents/
 import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentRoleFromAdmin,
-  _reloadAgentIfLoaded,
+  reloadAgentIfLoaded,
   reloadAgentsForRole,
-  _updateInternalChatProviderProfile,
+  updateInternalChatProviderProfile,
 } from '../capabilities/runtime';
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
@@ -39,18 +39,18 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
 import {
-  _agentCheckpointedOmStates,
-  _agentLongTermMemoryStates,
-  _agentLongTermMemoryRecallStates,
-  _agentMcpConfigs,
-  _agents,
-  _agentProviders,
-  _agentRoles,
-  _mcpServerConfigs,
+  agentCheckpointedOmStates,
+  agentLongTermMemoryStates,
+  agentLongTermMemoryRecallStates,
+  agentMcpConfigs,
+  agents,
+  agentProviders,
+  agentRoles,
+  mcpServerConfigs,
 } from '../database/schema';
-import { _encryptSecret } from '../encryption/crypto';
-import { _parseProviderCredentials } from '../communication/provider-loader';
-import { _createId } from '../utils/id';
+import { encryptSecret } from '../encryption/crypto';
+import { parseProviderCredentials } from '../communication/provider-loader';
+import { createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
@@ -62,40 +62,40 @@ import { renewAgentContract } from '../agents/renew-agent-contract';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentContractStore } from '../agents/agent-contract-store';
 import {
-  _deleteAgentWorkspaceSkill,
-  _installAgentWorkspaceSkillsFromZip,
+  deleteAgentWorkspaceSkill,
+  installAgentWorkspaceSkillsFromZip,
 } from '../agents/workspace-skills';
 import {
-  _deleteGlobalSkill,
-  _installGlobalSkillToAgentWorkspace,
-  _installGlobalSkillsFromZip,
-  _listGlobalSkills,
-  _publishAgentWorkspaceSkillToGlobalCatalog,
+  deleteGlobalSkill,
+  installGlobalSkillToAgentWorkspace,
+  installGlobalSkillsFromZip,
+  listGlobalSkills,
+  publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { _mcpServerFieldsSchema, _discordProviderDeleteSignalSchema, createRoleSchema, updateRoleSchema, deleteRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema } from './schemas';
+import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema, createRoleSchema, updateRoleSchema, deleteRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema } from './schemas';
 import { roleCapabilitySchema } from './routes/schemas/roles';
 import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
-import { _registerInternalChatRoutes } from './routes/internal-chat/index';
+import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import { registerAgentBaseRoutes, registerAgentStepsRoutes,
   registerAgentConversationsRoutes, registerAgentMemoryRoutes,
   registerAgentMetricsRoutes, registerAgentContractRoutes,
   registerAgentMcpRoutes, registerAgentSchedulesRoutes,
   registerAgentNotificationsRoutes } from './routes/agents/detail-read';
-import { _registerAgentReadRoutes } from './routes/agents/read';
-import { _registerAgentWriteRoutes } from './routes/agents/write';
+import { registerAgentReadRoutes } from './routes/agents/read';
+import { registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
 import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops';
 import { registerAgentSkillsWriteRoutes } from './routes/agents/skills-write';
 import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-write';
 import {
-  _normalizeOptionalText,
-  _normalizeJsonText,
+  normalizeOptionalText,
+  normalizeJsonText,
   parseJsonBody,
   jsonResponse,
-  _summarizeHealthcheckThreadMessage,
-  _extractLatestHealthcheckMessagePreview,
-  _summarizeActiveItems,
+  summarizeHealthcheckThreadMessage,
+  extractLatestHealthcheckMessagePreview,
+  summarizeActiveItems,
 } from './routes/helpers';
 
 import { registerFinanceReadRoutes } from './routes/finance/read';
@@ -107,7 +107,7 @@ import { createWebhookHandler } from '../webhooks/handler';
 import { registerSystemReadRoutes } from './routes/system/read';
 import { registerSystemWriteRoutes } from './routes/system/write';
 import { registerDashboardRoutes } from './routes/dashboard';
-import { _reloadAgentMcp, _reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
+import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
 
 
 export interface AdminRouteContext {
