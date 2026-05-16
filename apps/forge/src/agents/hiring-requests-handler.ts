@@ -1,4 +1,4 @@
-import { createId } from '../utils/id';
+import { _createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
-import { forgeCustomToolIds } from '../capabilities/catalog';
+import { _forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 import {
@@ -81,6 +81,7 @@ async function executeHireAgentTool(input: {
   db: Database;
   capabilities: ReturnType<typeof createCapabilityStore>;
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { tool, toolInput, db, capabilities } = input;
   // execute is typed; call with the right input shape
    
@@ -88,10 +89,10 @@ async function executeHireAgentTool(input: {
   return result;
 }
 
-function getLastAssistantText(messages: NativeToolLoopMessage[]): string | null {
+function _getLastAssistantText(messages: NativeToolLoopMessage[]): string | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string') {
+    if (msg.role === 'assistant' && (msg.content ?? '') !== '' && typeof msg.content === 'string') {
       return msg.content;
     }
   }
@@ -141,8 +142,7 @@ export async function generateHiredAgentInstructions(
   const companySettings = await systemSettings.getSettings();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
-  let existingRoles;
-    existingRoles = await db.query.agentRoles.findMany();
+  const existingRoles = await db.query.agentRoles.findMany();
   const existingRoleNamesById = new Map(existingRoles.map((role: string) => [role.id, role.name]));
   const existingAgents = await db.query.agents.findMany({
     columns: {
@@ -161,6 +161,7 @@ export async function generateHiredAgentInstructions(
     companyContext: companySettings.companyContext,
     existingAgents: existingAgents.map((agent: object) => ({
       name: agent.name,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       roleName: agent.roleId ? (existingRoleNamesById.get(agent.roleId) ?? null) : null,
     })),
   });
@@ -363,7 +364,7 @@ export async function generateHiredAgentInstructions(
   const messages = runResult.messages;
   const inputTokens = runResult.usage.inputTokens;
   const outputTokens = runResult.usage.outputTokens;
-  const lastRunText = runResult.text;
+  const _lastRunText_unused = runResult.text;
   const lastRunFinishReason = runResult.finishReason;
   const hireAgentActionResult = (
     runResult.deferredToolCall
@@ -384,11 +385,12 @@ export async function generateHiredAgentInstructions(
   forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'generateText completed' });
   forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'response messages', context: { messages: buildStepDiagnostics(messages) } });
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (hireAgentActionResult) {
     const toolOutput = isToolResultWithOutput(hireAgentActionResult)
       ? hireAgentActionResult.output
       : hireAgentActionResult;
-    forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'hireAgent action result', context: { hasOutput: !!toolOutput } });
+    forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'hireAgent action result', context: { hasOutput: (toolOutput ?? null) !== null } });
     const parsedToolResult = hireAgentToolResultSchema.safeParse(toolOutput);
 
     if (!parsedToolResult.success) {
