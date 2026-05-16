@@ -125,7 +125,8 @@ function createInternalAgentRegistry() {
           httpServer: loaderConfig!.httpServer,
           integrations: loaderConfig!.integrations,
         });
-        return await loadAgent(db, {
+        // eslint-disable-next-line @typescript-eslint/return-await
+  return await loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
           coolify: reloadCoolify,
