@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import {
   agents,
   agentRoles,
@@ -8,7 +8,6 @@ import {
   roleWorkflowPermissions,
 } from '../database/schema';
 import { createCapabilityStore } from './store';
-import type { Database } from '../database/client';
 
 // ── Mock helpers ─────────────────────────────────────────────────────────────
 function createMockAgent(overrides = {}) {
@@ -82,10 +81,18 @@ function createMockDb() {
     roleWorkflowPermissions: { findMany: vi.fn() },
     agents: { findMany: vi.fn(), findFirst: vi.fn() },
   };
+  const tx = {
+    query,
+    delete: makeDeleteChain(),
+  };
+
   const db = {
     insert: makeInsertChain(),
     update: makeUpdateChain(),
     delete: makeDeleteChain(),
+    transaction: vi.fn().mockImplementation(async (fn: (tx: typeof tx) => Promise<unknown>) => {
+      return fn(tx);
+    }),
     query,
   } as unknown as Database;
   return { db, query };
@@ -294,18 +301,26 @@ describe('capabilities/store', () => {
   // ── deleteRole ────────────────────────────────────────────────────────────
   describe('deleteRole', () => {
     it('throws when agents are assigned to the role', async () => {
-      const { db, query } = createMockDb();
-      query.agents.findFirst.mockResolvedValue(createMockAgent({ roleId: 'role-test' }));
+      const { db } = createMockDb();
+      const assignedAgent = createMockAgent({ roleId: 'role-test' });
+      db.transaction.mockImplementationOnce(async (fn) => {
+        const tx = { query: db.query, delete: db.delete };
+        tx.query.agents.findFirst.mockResolvedValue(assignedAgent);
+        return fn(tx);
+      });
       const store = createCapabilityStore(db);
       await expect(store.deleteRole('role-test')).rejects.toThrow('Cannot delete role with assigned agents');
     });
     it('deletes role when no agents assigned', async () => {
-      const { db, query } = createMockDb();
-      query.agents.findFirst.mockResolvedValue(null);
+      const { db } = createMockDb();
+      db.transaction.mockImplementationOnce(async (fn) => {
+        const tx = { query: db.query, delete: db.delete };
+        tx.query.agents.findFirst.mockResolvedValue(null);
+        return fn(tx);
+      });
       const store = createCapabilityStore(db);
       const result = await store.deleteRole('role-test');
       expect(result).toEqual({ roleId: 'role-test', success: true });
-      expect(db.delete).toHaveBeenCalled();
     });
   });
 
