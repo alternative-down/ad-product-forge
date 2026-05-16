@@ -1,4 +1,4 @@
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
 
@@ -13,12 +13,12 @@ import {
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import { encryptSecret } from '../encryption/crypto';
-import type { _CreateAgentConfig } from './runtime/types';
+import type { CreateAgentConfig } from './runtime/types';
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
-import type { _GitHubAppManager } from '../github/manager';
-import type { _AgentEmailManager } from '../email/migadu-manager';
-import type { _CoolifyManager } from '../coolify/manager';
+import type { GitHubAppManager } from '../github/manager';
+import type { AgentEmailManager } from '../email/migadu-manager';
+import type { CoolifyManager } from '../coolify/manager';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
