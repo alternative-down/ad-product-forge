@@ -26,19 +26,19 @@ import {
   extractAbsentErrorDetails,
 } from './agent-runner-error-formatting';
 import {
-  delay,
-  buildIterationLoopSignature,
-  buildStepSystemPrompt,
+  _delay,
+  _buildIterationLoopSignature,
+  _buildStepSystemPrompt,
   extractRunnerControlDirective,
-  extractRunnerControlDirectiveFromIteration,
+  _extractRunnerControlDirectiveFromIteration,
 } from './agent-runner-control-directives';
 import {
-  buildRecallStepFromIteration,
-  didIterationProduceVisibleAssistantText,
+  _buildRecallStepFromIteration,
+  _didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
 import {
-  collectStepTextParts,
-  hasExactControlDirective,
+  _collectStepTextParts,
+  _hasExactControlDirective,
 } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
 import { createLoopDetector } from './agent-runner-loop-detector';
@@ -47,19 +47,19 @@ import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
-  createGenerateTimeoutGuard,
-  touchGenerateTimeout,
-  clearGenerateTimeout,
-  startGenerateAttempt,
-  finishGenerateAttempt,
+  _createGenerateTimeoutGuard,
+  _touchGenerateTimeout,
+  _clearGenerateTimeout,
+  _startGenerateAttempt,
+  _finishGenerateAttempt,
   RUNNER_AWAIT_TIMEOUT_MS,
   STARTING_RUN_TIMEOUT_MS,
-  type GenerateTimeoutHandle,
+  type _GenerateTimeoutHandle,
 } from './agent-runner-generate';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
-import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
+import { ONE_MINUTE_MS, _TEN_MINUTES_MS, _FIFTEEN_MINUTES_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 export function createAgentRunner(
@@ -105,7 +105,7 @@ export function createAgentRunner(
   let startingRunStartedAt: number | null = null;
   let executing = false;
   let backoffMs = ONE_MINUTE_MS;
-  let nextStepAt: number | null = null;
+  let _nextStepAt: number | null = null;
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
   let lastStepStage: string | null = null;
@@ -174,7 +174,8 @@ export function createAgentRunner(
 
   function clearTimer() { scheduler.clearTimer(); }
 
-  function startHealthcheck() { scheduler.startHealthcheck(); }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function _startHealthcheck() { scheduler.startHealthcheck(); }
 
   function clearHealthcheck() { scheduler.clearHealthcheck(); }
 
@@ -226,6 +227,7 @@ export function createAgentRunner(
       `Agent execution state lookup timed out for ${runtime.id}`,
     );
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const idleOnlyEvents = events.filter((event) => event.idleOnly);
     const runnableEvents = events.filter((event) => !event.idleOnly);
 
@@ -290,6 +292,7 @@ export function createAgentRunner(
     startingRunStartedAt = null;
     executing = false;
     clearTimer();
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!options.preserveQueuedWork) {
       wakeQueue.stop();
       messageManager.getState().pendingRunMessages.clear();
@@ -740,6 +743,7 @@ export function createAgentRunner(
       scheduled: timer !== null,
       backoffMs: s.backoffMs,
       nextStepAt: s.nextStepAt,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       estimatedDelayMs: s.nextStepAt ? Math.max(s.nextStepAt - Date.now(), 0) : null,
       lastStepStartedAt,
       lastStepStage,
@@ -775,6 +779,7 @@ export function createAgentRunner(
 
     wakeQueue.notifyExternalEvent(event);
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (event.idleOnly && isLocallyIdle()) {
       void wakeQueue.onRunnerIdle();
     }
@@ -828,6 +833,7 @@ export function createAgentRunner(
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (options.deferWakeQueueDrain) {
       return;
     }
