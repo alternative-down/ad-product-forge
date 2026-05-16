@@ -394,6 +394,53 @@ describe('agent-contract-store', () => {
     });
   });
 
+
+  describe('getActiveContract', () => {
+    test('returns null when no contracts exist', async () => {
+      makeAgent({ id: 'a-none' });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.getActiveContract('a-none')).toBeUndefined();
+    });
+    test('returns null when contract is expired (endsAt < now)', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-expired' });
+      makeContract({ id: 'c-expired', agentId: 'a-expired', startsAt: now - 200_000, endsAt: now - 100_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.getActiveContract('a-expired')).toBeUndefined();
+    });
+    test('returns null when contract has not started yet (startsAt > now)', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-future-start' });
+      makeContract({ id: 'c-future-start', agentId: 'a-future-start', startsAt: now + 100_000, endsAt: now + 200_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      expect(await store.getActiveContract('a-future-start')).toBeUndefined();
+    });
+    test('returns contract when startsAt <= now <= endsAt', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-active' });
+      makeContract({ id: 'c-active', agentId: 'a-active', startsAt: now - 100_000, endsAt: now + 100_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      const result = await store.getActiveContract('a-active');
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('c-active');
+    });
+    test('returns most recent contract when multiple contracts span the current time', async () => {
+      const now = Date.now();
+      makeAgent({ id: 'a-multi' });
+      makeContract({ id: 'c-old', agentId: 'a-multi', startsAt: now - 400_000, endsAt: now - 200_000 });
+      makeContract({ id: 'c-recent', agentId: 'a-multi', startsAt: now - 200_000, endsAt: now + 200_000 });
+      const { db } = createMockDb(collections);
+      const store = createAgentContractStore(db);
+      const result = await store.getActiveContract('a-multi');
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('c-recent');
+    });
+  });
+
   describe('getRunnableContract', () => {
     test('returns null when no contracts at all', async () => {
       makeAgent({ id: 'a-no-contracts' });

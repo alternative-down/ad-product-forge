@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
@@ -154,6 +154,19 @@ export function createAgentContractStore(
     });
 
     return newContract;
+  }
+
+
+  async function getActiveContract(agentId: string) {
+    const now = time.now();
+    return db.query.agentExecutionContracts.findFirst({
+      where: and(
+        eq(agentExecutionContracts.agentId, agentId),
+        lte(agentExecutionContracts.startsAt, now),
+        gte(agentExecutionContracts.endsAt, now),
+      ),
+      orderBy: [desc(agentExecutionContracts.endsAt)],
+    });
   }
 
   async function getLatestContract(agentId: string) {
@@ -394,6 +407,7 @@ export function createAgentContractStore(
   return {
     getExecutionState,
     setExecutionState,
+    getActiveContract,
     setExecutionAbsent,
     getRunnableContract,
     listRecentSteps,
