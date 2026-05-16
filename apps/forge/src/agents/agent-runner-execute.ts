@@ -32,14 +32,14 @@ import {
 } from './agent-runner-error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
-import type { _Database } from '../database/schema';
-import type { _InternalAgentRuntime } from './runtime/types';
-import type { _AgentContractStore } from './agent-contract-store';
-import type { _AgentNotificationStore } from '../notifications/store';
-import type { _AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
+import type { Database } from '../database/schema';
+import type { InternalAgentRuntime } from './runtime/types';
+import type { AgentContractStore } from './agent-contract-store';
+import type { AgentNotificationStore } from '../notifications/store';
+import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import type { _AgentRunnerUsage } from './agent-runner-usage';
 import type { _Scheduler } from './agent-runner-scheduler';
-import type { _MessageManager } from './agent-runner-messages';
+import type { MessageManagerState } from './agent-runner-messages';
 import type { _LoopDetector } from './agent-runner-loop-detector';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import type {

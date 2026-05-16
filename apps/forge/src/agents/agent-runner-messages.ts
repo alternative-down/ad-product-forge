@@ -12,6 +12,8 @@ export type MessageManagerState = {
 
 const MAX_FLUSHED_RUN_EVENT_KEYS = 2_000;
 
+export type MessageManager = ReturnType<typeof createMessageManager>;
+
 export function createMessageManager(
   state: MessageManagerState,
   formatPendingRunEvents: (events: AgentWakeEvent[]) => string,

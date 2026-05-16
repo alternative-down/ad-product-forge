@@ -21,6 +21,8 @@ export interface CreateAgentContractStoreOptions {
  * @param db - Database instance
  * @param timeProvider - Optional time source for testability. Defaults to Date.now.
  */
+export type AgentContractStore = ReturnType<typeof createAgentContractStore>;
+
 export function createAgentContractStore(
   db: Database,
   timeProvider?: TimeProvider,

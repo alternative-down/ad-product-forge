@@ -19,7 +19,7 @@ const packageManifestSchema = z.object({
   observationCount: z.number().int().nonnegative(),
 });
 
-const longTermMemoryStateSchema = z.object({
+export const longTermMemoryStateSchema = z.object({
   version: z.literal(1),
   packages: z.array(packageManifestSchema),
   lastWrittenPackageId: z.string().min(1).nullable(),
@@ -62,7 +62,7 @@ export type LongTermMemoryState = z.infer<typeof longTermMemoryStateSchema>;
 export type LongTermMemoryRecallSnapshot = z.infer<typeof longTermMemoryRecallSnapshotSchema>;
 export type LongTermMemoryRecallHistory = z.infer<typeof longTermMemoryRecallHistorySchema>;
 
-function createEmptyLongTermMemoryState(): LongTermMemoryState {
+export function createEmptyLongTermMemoryState(): LongTermMemoryState {
   const now = Date.now();
 
   return {
