@@ -5,10 +5,6 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../database/schema';
 import { agentCheckpointedOmStates } from '../database/schema';
 
-function extractText(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
 export async function migrateLegacyCheckpointedOmState(input: {
   db: Database;
   agentId: string;
@@ -30,10 +26,12 @@ export async function migrateLegacyCheckpointedOmState(input: {
   });
   const existingMessageIds = new Set(existingMessages.map((message: { id: string }) => message.id));
   const checkpointSummary = state.checkpointSummary;
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const checkpointSummaryId = checkpointSummary
     ? `checkpoint-summary:${input.agentId}:${checkpointSummary.upToGeneration}`
     : null;
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (checkpointSummary && checkpointSummaryId && !existingMessageIds.has(checkpointSummaryId)) {
     await input.conversationStore.appendMessage({
       id: checkpointSummaryId,
@@ -99,6 +97,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
 
     const reflection = state.activeReflectionBlocks.find((item: object) => item.generationCount === observation.reflectedGeneration);
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (reflection) {
       await input.conversationStore.updateMessageReplacement({
         threadId: input.threadId,
@@ -108,6 +107,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       continue;
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (checkpointSummary && checkpointSummaryId && observation.reflectedGeneration <= checkpointSummary.upToGeneration) {
       await input.conversationStore.updateMessageReplacement({
         threadId: input.threadId,
@@ -117,6 +117,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (checkpointSummaryId && checkpointSummary) {
     for (const reflection of state.activeReflectionBlocks) {
       if (reflection.generationCount > checkpointSummary.upToGeneration) {
