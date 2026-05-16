@@ -3,7 +3,7 @@
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
