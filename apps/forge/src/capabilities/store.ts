@@ -170,34 +170,21 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function deleteRole(roleId: string) {
-    let assignedAgent;
-    try {
-      assignedAgent = await db.query.agents.findFirst({
+    await db.transaction(async (tx) => {
+      const assigned = await tx.query.agents.findFirst({
         where: eq(agents.roleId, roleId),
-        columns: {
-          id: true,
-        },
+        columns: { id: true },
       });
-    } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'deleteRole DB read failed', context: { roleId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
 
-    if (assignedAgent) {
-      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
-      throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
-    }
+      if (assigned) {
+        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
+        throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
+      }
 
-    try {
-      await db.delete(roleToolPermissions).where(eq(roleToolPermissions.roleId, roleId));
-
-      await db.delete(roleWorkflowPermissions).where(eq(roleWorkflowPermissions.roleId, roleId));
-
-      await db.delete(agentRoles).where(eq(agentRoles.id, roleId));
-    } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'deleteRole DB writes failed', context: { roleId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
-    }
+      await tx.delete(roleToolPermissions).where(eq(roleToolPermissions.roleId, roleId));
+      await tx.delete(roleWorkflowPermissions).where(eq(roleWorkflowPermissions.roleId, roleId));
+      await tx.delete(agentRoles).where(eq(agentRoles.id, roleId));
+    });
 
     return { roleId, success: true };
   }
