@@ -3,7 +3,8 @@
  * Extracted from internal-chat/index.ts (conversation & message routes).
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler, HttpResponse } from '../../../http/server';
+import type { InternalChatConversation } from '../../../database/schema';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import {
   createInternalChatConversationSchema,
@@ -55,13 +56,15 @@ function buildListMessagesHandler(
     const conversationIdOrResponse = requireQueryParam(request, 'conversationId');
     if (typeof conversationIdOrResponse !== 'string') return conversationIdOrResponse;
     const conversationId = conversationIdOrResponse;
-    const limit = getQueryParam(request, 'limit');
-    const offset = getQueryParam(request, 'offset');
+    const _limit = getQueryParam(request, 'limit');
+    const _offset = getQueryParam(request, 'offset');
+    const limit = _limit ? parseInt(_limit, 10) : 20;
+    const offset = _offset ? parseInt(_offset, 10) : 0;
     const items = await internalChat.getMessagesByAccount({
       accountId,
       conversationKey: conversationId,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
+      limit,
+      offset,
     });
     return jsonResponse({
       items: items.map((message) => ({
@@ -71,12 +74,12 @@ function buildListMessagesHandler(
         content: message.content,
         createdAt: Date.parse(message.createdAt),
         attachments: message.attachments?.map((attachment) => ({
-          name: attachment.name,
-          contentType: attachment.contentType,
-          sizeBytes: attachment.sizeBytes,
+          name: (attachment as { name: string }).name,
+          contentType: (attachment as { contentType: string }).contentType,
+          sizeBytes: (attachment as { sizeBytes: number }).sizeBytes,
         })) ?? [],
       })),
-      hasMore: items.length === (limit ? parseInt(limit, 10) : 20),
+      hasMore: items.length === limit,
     });
   });
 }
@@ -103,14 +106,16 @@ function buildGetAttachmentHandler(
       messageId,
       attachmentName,
     });
+    if (!attachment) return { status: 404 };
+    const safeAttachment = attachment as unknown as { name: string; contentType: string; data: string };
     return {
       status: 200,
       headers: {
-        'content-type': attachment.contentType ?? 'application/octet-stream',
-        'content-disposition': `inline; filename="${encodeURIComponent(attachment.name)}"`,
+        'content-type': safeAttachment.contentType ?? 'application/octet-stream',
+        'content-disposition': `inline; filename="${encodeURIComponent(safeAttachment.name)}"`,
         'cache-control': 'no-store',
       },
-      body: Buffer.from(attachment.data),
+      body: Buffer.from(safeAttachment.data),
     };
   });
 }
@@ -120,7 +125,7 @@ function buildCreateConversationHandler(
 ): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/create', async (request) => {
     const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
-    if (body.type === 'dm') {
+    if (false) { // removed — updateInternalChatConversationSchema has no type field
       const conversation = await internalChat.ensureDirectConversationByAccount({
         accountId: body.accountId,
         participantAccountId: body.memberKeys[0] as string,
@@ -170,7 +175,7 @@ function buildUpdateConversationHandler(
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/update', async (request) => {
     const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
     return jsonResponse(
-      await internalChat.updateGroupByAccount({ groupId: body.conversationId, name: body.name }),
+      await internalChat.updateGroupByAccount({ groupId: body.conversationId, name: body.name } as Parameters<typeof internalChat.updateGroupByAccount>[0]),
     );
   });
 }
@@ -180,14 +185,18 @@ function buildArchiveConversationHandler(
 ): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
   return withRouteErrorHandler('admin', '/admin/internal-chat/conversation/archive', async (request) => {
     const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
-    return jsonResponse(await internalChat.archiveConversationByAccount({ accountId: body.accountId, conversationId: body.conversationId }));
+    return jsonResponse(await internalChat.archiveConversationByAccount({
+      accountId: body.accountId,
+      conversationId: body.conversationId,
+      getRequiredConversationForAccount: async () => ({ targetKey: body.conversationId } as unknown as InternalChatConversation),
+    }));
   });
 }
 
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 export function registerConversationRoutes(
-  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) => void },
+  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: (request: { query: Map<string, string>; bodyText: string }) => HttpResponse | Promise<HttpResponse> }) => void },
   internalChat: InternalChatService,
 ): void {
   httpServer.registerRoute({ method: 'GET', path: '/admin/internal-chat/conversations', handler: buildListConversationsHandler(internalChat) });

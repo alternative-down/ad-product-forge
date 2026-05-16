@@ -48,18 +48,26 @@ export const createInternalChatConversationSchema = z.object({
 });
 
 export const sendInternalChatConversationMessageSchema = z.object({
+  accountId: z.string().min(1),
   conversationId: z.string().min(1),
   content: z.string().min(1),
   parentMessageId: z.string().min(1).optional(),
+  attachments: z.array(z.object({
+    name: z.string(),
+    contentType: z.string(),
+    dataBase64: z.string(),
+  })).optional(),
 });
 
 export const updateInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
   conversationId: z.string().min(1),
   name: z.string().min(1).optional(),
   archive: z.boolean().optional(),
 });
 
 export const archiveInternalChatConversationSchema = z.object({
+  accountId: z.string().min(1),
   conversationId: z.string().min(1),
 });
 

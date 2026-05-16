@@ -27,11 +27,11 @@ export function registerInternalChatRoutes(
   });
 
   // Account routes: list accounts, get contacts
-  registerAccountRoutes(httpServer, internalChat);
+  registerAccountRoutes(httpServer as any, internalChat);
 
   // Conversation routes: list conversations, messages, attachments; create/send/update/archive
-  registerConversationRoutes(httpServer, internalChat);
+  registerConversationRoutes(httpServer as any, internalChat);
 
   // Group-member routes: list members, add, update role, remove
-  registerGroupMemberRoutes(httpServer, internalChat);
+  registerGroupMemberRoutes(httpServer as any, internalChat);
 }
