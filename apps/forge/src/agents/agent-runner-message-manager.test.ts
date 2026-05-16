@@ -38,7 +38,7 @@ function makeEvent(overrides?: Partial<AgentWakeEvent>): AgentWakeEvent {
 describe('createMessageManager — appendPendingRunMessages', () => {
   it('adds event to pending map', () => {
     const state = makeState();
-    const mgr = createMessageManager(state, (ev) => ev.map((e) => e.text).join('|'));
+    const mgr = createMessageManager(state, (ev) => ev.map((e: {text: string}) => e.text).join('|'));
     mgr.appendPendingRunMessages([makeEvent({ idempotencyKey: 'k1', text: 'msg1' })]);
     expect(state.pendingRunMessages.has('k1')).toBe(true);
     expect(state.pendingRunMessages.get('k1')!.text).toBe('msg1');
@@ -106,7 +106,7 @@ describe('createMessageManager — flushPendingRunMessages', () => {
 
   it('formats and returns pending events', () => {
     const state = makeState();
-    const format = vi.fn((ev) => ev.map((e) => e.text).join('|'));
+    const format = vi.fn((ev) => ev.map((e: {text: string}) => e.text).join('|'));
     const mgr = createMessageManager(state, format);
     state.pendingRunMessages.set('k1', makeEvent({ idempotencyKey: 'k1', text: 'msg1' }));
     state.pendingRunMessages.set('k2', makeEvent({ idempotencyKey: 'k2', text: 'msg2' }));
