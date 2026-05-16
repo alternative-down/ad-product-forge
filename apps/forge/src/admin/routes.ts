@@ -73,7 +73,8 @@ import {
   _publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { _mcpServerFieldsSchema, _discordProviderDeleteSignalSchema } from './schemas';
+import { _mcpServerFieldsSchema, _discordProviderDeleteSignalSchema, createRoleSchema, updateRoleSchema, deleteRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema } from './schemas';
+import { roleCapabilitySchema } from './routes/schemas/roles';
 import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
 import { _registerInternalChatRoutes } from './routes/internal-chat/index';
 import { registerAgentBaseRoutes, registerAgentStepsRoutes,

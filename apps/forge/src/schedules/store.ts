@@ -3,7 +3,7 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 
-import type {Database} from '../database/schema';
+import type {Database, AgentSchedule} from '../database/schema';
 import { agentSchedules } from '../database/schema';
 
 type ScheduleType = 'cron' | 'date';
