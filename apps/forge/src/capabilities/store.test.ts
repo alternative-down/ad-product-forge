@@ -8,6 +8,7 @@ import {
   roleWorkflowPermissions,
 } from '../database/schema';
 import { createCapabilityStore } from './store';
+import type { Database } from '../database/client';
 
 // ── Mock helpers ─────────────────────────────────────────────────────────────
 function createMockAgent(overrides = {}) {
@@ -86,7 +87,7 @@ function createMockDb() {
     update: makeUpdateChain(),
     delete: makeDeleteChain(),
     query,
-  };
+  } as unknown as Database;
   return { db, query };
 }
 
