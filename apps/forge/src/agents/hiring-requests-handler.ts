@@ -1,4 +1,4 @@
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
-import { _forgeCustomToolIds } from '../capabilities/catalog';
+import { forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 import {

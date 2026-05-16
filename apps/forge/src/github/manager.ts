@@ -1,4 +1,4 @@
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';
