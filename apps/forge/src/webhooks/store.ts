@@ -77,6 +77,8 @@ export function createWebhookStore(db: Database) {
       headers: input.headers,
       idempotencyKey: input.idempotencyKey ?? null,
       status: 'pending' as const,
+      createdAt: now,
+      updatedAt: now,
       receivedAt: now,
       processedAt: null,
     };
