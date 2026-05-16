@@ -14,6 +14,7 @@ type MockScheduler = {
   scheduleNextStep: any;
   getSnapshot: any;
   isStopped: any;
+  _state: any;
 };
 
 type MockLoopDetector = {
