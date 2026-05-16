@@ -181,36 +181,36 @@ function createChain(result: unknown) {
 // ---------------------------------------------------------------------------
 // Mock DB factory
 // ---------------------------------------------------------------------------
-// Mock DB factory
-// ---------------------------------------------------------------------------
 function createMockDb() {
-  const db = {
-    query: {
-      internalChatAccounts: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      internalChatConversations: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      internalChatConversationMembers: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      internalChatMessages: {
-        findFirst: vi.fn().mockResolvedValue(null),
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      internalChatMessageAttachments: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
-      internalChatMessageReads: {
-        findMany: vi.fn().mockResolvedValue([]),
-      },
+  // Declare _query with 'any' type so vi.fn() is typed as Mock<unknown> → mockResolvedValueOnce available
+  const _query: any = {
+    internalChatAccounts: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
     },
+    internalChatConversations: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    internalChatConversationMembers: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    internalChatMessages: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    internalChatMessageAttachments: {
+      findMany: vi.fn(),
+    },
+    internalChatMessageReads: {
+      findMany: vi.fn(),
+    },
+  };
+  const db: any = {
+    query: _query,
     select: vi.fn(() => createChain([])),
-    insert: vi.fn(),
+    insert: vi.fn() as unknown,
     update: vi.fn(() => ({
       set: vi.fn(() => ({
         where: vi.fn(() => Promise.resolve({})),
@@ -218,18 +218,18 @@ function createMockDb() {
       where: vi.fn(() => ({
         set: vi.fn(() => Promise.resolve({})),
       })),
-    })),
-    transaction: vi.fn((fn: (tx: typeof db) => Promise<unknown>) => fn(db)),
+    })) as unknown,
+    transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(db as unknown)),
     delete: vi.fn(() => ({
       where: vi.fn(() => {
         const r = { rowCount: 0 };
         Object.defineProperty(r, 'then', {
-          value: (onFulfilled: (v: unknown) => void) => Promise.resolve(r).then(onFulfilled),
+          value: (onFulfilled: (v: unknown) => void) => void onFulfilled(r),
           configurable: true, writable: true,
         });
         return r;
       }),
-    })),
+    })) as unknown,
   } as unknown as Database;
   return db;
 }
