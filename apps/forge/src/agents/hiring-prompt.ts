@@ -56,19 +56,19 @@ export function buildHiringPrompt(input: HiringPromptInput): string {
     );
   }
 
-  if ((input.companyName?.trim() ?? '') !== '' || (input.companyContext?.trim() ?? '') !== '') {
+  if (input.companyName?.trim() || input.companyContext?.trim()) {
     sections.push(
       [
         'Company context:',
-        (input.companyName?.trim() ?? '') !== '' ? `Company name: ${input.companyName!.trim()}` : null,
-        (input.companyContext?.trim() ?? '') !== '' ? `Company information: ${input.companyContext!.trim()}` : null,
+        input.companyName?.trim() ? `Company name: ${input.companyName.trim()}` : null,
+        input.companyContext?.trim() ? `Company information: ${input.companyContext.trim()}` : null,
       ]
         .filter(Boolean)
         .join('\n'),
     );
   }
 
-  if ((input.additionalContext?.trim() ?? '') !== '') {
+  if (input.additionalContext?.trim()) {
     sections.push(`Additional hiring context:\n${input.additionalContext.trim()}`);
   }
 

@@ -1,20 +1,20 @@
-import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
-import fs from 'node:fs';
-import fsPromises from 'node:fs/promises';
-import path from 'node:path';
-import v8 from 'node:v8';
-import { createClient } from '@libsql/client';
+import { _z } from 'zod';
+import { _eq, _and } from 'drizzle-orm';
+import _fs from 'node:fs';
+import _fsPromises from 'node:fs/promises';
+import _path from 'node:path';
+import _v8 from 'node:v8';
+import { _createClient } from '@libsql/client';
 import {
-  getAnthropicCliAuthFilePath,
-  getAnthropicSetupTokenFilePath,
-  getOpenAICodexCliAuthFilePath,
-  LibsqlConversationStore,
-  oauthStore,
-  syncAnthropicCredential,
-  syncOpenAICodexCredential,
+  _getAnthropicCliAuthFilePath,
+  _getAnthropicSetupTokenFilePath,
+  _getOpenAICodexCliAuthFilePath,
+  _LibsqlConversationStore,
+  _oauthStore,
+  _syncAnthropicCredential,
+  _syncOpenAICodexCredential,
   forgeDebug,
-  toMastraSafeIdentifier,
+  _toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
 import type {Database} from '../database/client'
@@ -24,9 +24,9 @@ import { getInternalAgentRegistry, createPerAgentEmailManager } from '../agents/
 import { createCapabilityStore } from '../capabilities/store';
 import {
   changeAgentRoleFromAdmin,
-  reloadAgentIfLoaded,
+  _reloadAgentIfLoaded,
   reloadAgentsForRole,
-  updateInternalChatProviderProfile,
+  _updateInternalChatProviderProfile,
 } from '../capabilities/runtime';
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
@@ -39,18 +39,18 @@ import type { AgentEmailManager } from '../email/migadu-manager';
 import type { CoolifyManager } from '../coolify/manager';
 import type { GitHubAppManager } from '../github/manager';
 import {
-  agentCheckpointedOmStates,
-  agentLongTermMemoryStates,
-  agentLongTermMemoryRecallStates,
-  agentMcpConfigs,
-  agents,
-  agentProviders,
-  agentRoles,
-  mcpServerConfigs,
+  _agentCheckpointedOmStates,
+  _agentLongTermMemoryStates,
+  _agentLongTermMemoryRecallStates,
+  _agentMcpConfigs,
+  _agents,
+  _agentProviders,
+  _agentRoles,
+  _mcpServerConfigs,
 } from '../database/schema';
-import { encryptSecret } from '../encryption/crypto';
-import { parseProviderCredentials } from '../communication/provider-loader';
-import { createId } from '../utils/id';
+import { _encryptSecret } from '../encryption/crypto';
+import { _parseProviderCredentials } from '../communication/provider-loader';
+import { _createId } from '../utils/id';
 import { createSystemIntegrationStore } from '../system-integrations/store';
 import type { InternalChatService } from '../communication/internal-chat-service';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
@@ -62,39 +62,39 @@ import { renewAgentContract } from '../agents/renew-agent-contract';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentContractStore } from '../agents/agent-contract-store';
 import {
-  deleteAgentWorkspaceSkill,
-  installAgentWorkspaceSkillsFromZip,
+  _deleteAgentWorkspaceSkill,
+  _installAgentWorkspaceSkillsFromZip,
 } from '../agents/workspace-skills';
 import {
-  deleteGlobalSkill,
-  installGlobalSkillToAgentWorkspace,
-  installGlobalSkillsFromZip,
-  listGlobalSkills,
-  publishAgentWorkspaceSkillToGlobalCatalog,
+  _deleteGlobalSkill,
+  _installGlobalSkillToAgentWorkspace,
+  _installGlobalSkillsFromZip,
+  _listGlobalSkills,
+  _publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema } from './schemas';
+import { _mcpServerFieldsSchema, _discordProviderDeleteSignalSchema } from './schemas';
 import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
-import { registerInternalChatRoutes } from './routes/internal-chat/index';
+import { _registerInternalChatRoutes } from './routes/internal-chat/index';
 import { registerAgentBaseRoutes, registerAgentStepsRoutes,
   registerAgentConversationsRoutes, registerAgentMemoryRoutes,
   registerAgentMetricsRoutes, registerAgentContractRoutes,
   registerAgentMcpRoutes, registerAgentSchedulesRoutes,
   registerAgentNotificationsRoutes } from './routes/agents/detail-read';
-import { registerAgentReadRoutes } from './routes/agents/read';
-import { registerAgentWriteRoutes } from './routes/agents/write';
+import { _registerAgentReadRoutes } from './routes/agents/read';
+import { _registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
 import { registerAgentWriteOpsRoutes } from './routes/agents/write-ops';
 import { registerAgentSkillsWriteRoutes } from './routes/agents/skills-write';
 import { registerAgentSchedulesWriteRoutes } from './routes/agents/schedule-write';
 import {
-  normalizeOptionalText,
-  normalizeJsonText,
+  _normalizeOptionalText,
+  _normalizeJsonText,
   parseJsonBody,
   jsonResponse,
-  summarizeHealthcheckThreadMessage,
-  extractLatestHealthcheckMessagePreview,
-  summarizeActiveItems,
+  _summarizeHealthcheckThreadMessage,
+  _extractLatestHealthcheckMessagePreview,
+  _summarizeActiveItems,
 } from './routes/helpers';
 
 import { registerFinanceReadRoutes } from './routes/finance/read';
@@ -106,7 +106,7 @@ import { createWebhookHandler } from '../webhooks/handler';
 import { registerSystemReadRoutes } from './routes/system/read';
 import { registerSystemWriteRoutes } from './routes/system/write';
 import { registerDashboardRoutes } from './routes/dashboard';
-import { reloadAgentMcp, reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
+import { _reloadAgentMcp, _reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
 
 
 export interface AdminRouteContext {
@@ -131,6 +131,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
 
   // Per-agent email manager for admin route operations (hire/terminate)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const emailMailboxes = createPerAgentEmailManager(input.db);
 
   // Stores created locally in route files (finance in finance/read.ts)
@@ -141,6 +142,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   const llmSettings = createLlmSettingsStore(input.db);
   const llmModelPrices = createLlmModelPriceStore(input.db);
   const systemSettings = createSystemSettingsStore(input.db);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const agentContracts = createAgentContractStore(input.db);
   const systemRM = createSystemReadModel({ db: input.db });
   const registry = getInternalAgentRegistry();

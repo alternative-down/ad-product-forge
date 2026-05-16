@@ -32,15 +32,15 @@ import {
 } from './agent-runner-error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
-import type { _Database } from '../database/schema';
-import type { _InternalAgentRuntime } from './runtime/types';
-import type { _AgentContractStore } from './agent-contract-store';
-import type { _AgentNotificationStore } from '../notifications/store';
-import type { _AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
-import type { _AgentRunnerUsage } from './agent-runner-usage';
-import type { _Scheduler } from './agent-runner-scheduler';
-import type { _MessageManager } from './agent-runner-messages';
-import type { _LoopDetector } from './agent-runner-loop-detector';
+import type { Database } from '../database/schema';
+import type { InternalAgentRuntime } from './runtime/types';
+import type { AgentContractStore } from './agent-contract-store';
+import type { AgentNotificationStore } from '../notifications/store';
+import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
+import type { AgentRunnerUsage } from './agent-runner-usage';
+import type { Scheduler } from './agent-runner-scheduler';
+import type { MessageManager } from './agent-runner-messages';
+import type { LoopDetector } from './agent-runner-loop-detector';
 import type {
   ExecuteStepDeps,
   ExecuteEpochState,
@@ -193,7 +193,6 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       // With pending messages, we stop generating but stay available.
       if (messageManager.getPendingCount() === 0) {
         backoffState.nextStepAt = null;
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (loopDetector?.reset) {
           loopDetector.reset();
         }

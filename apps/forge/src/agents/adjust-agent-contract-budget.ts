@@ -21,7 +21,8 @@ export async function adjustAgentContractBudget(
   const now = currentTimeMs();
 
   // Get the active contract
-  const activeContract = await db.query.agentExecutionContracts.findFirst({
+  let activeContract;
+    activeContract = await db.query.agentExecutionContracts.findFirst({
       where: and(
         eq(agentExecutionContracts.agentId, input.agentId),
         lte(agentExecutionContracts.startsAt, now),
@@ -51,7 +52,8 @@ export async function adjustAgentContractBudget(
 
   // Upward adjustment (increase budget) - requires company cash
   if (budgetDelta > 0) {
-    const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    let currentBalanceUsd;
+      currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
 
     if (currentBalanceUsd < budgetDelta) {
       forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: insufficient company cash' });
@@ -59,7 +61,7 @@ export async function adjustAgentContractBudget(
     }
 
     // Deduct from company cash and update budget atomically
-      await db.transaction(async (tx: import("better-sqlite3").Transaction<object>) => {
+      await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         await companyCashOperations.recordCashOut(
           {
             type: 'agent-contract-budget-increase',
@@ -97,7 +99,8 @@ export async function adjustAgentContractBudget(
 
   // Downward adjustment (decrease budget) - requires validation
   const contractStore = createAgentContractStore(db);
-  const contractSpend = await contractStore.getContractSpend(activeContract.id);
+  let contractSpend;
+    contractSpend = await contractStore.getContractSpend(activeContract.id);
 
   // New budget cannot be less than what's already spent
   if (input.newBudgetUsd < contractSpend) {
@@ -109,7 +112,7 @@ export async function adjustAgentContractBudget(
   const refundAmount = Math.abs(budgetDelta);
 
   // Refund unused funds and update budget atomically
-    await db.transaction(async (tx: import("better-sqlite3").Transaction<object>) => {
+    await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
       await companyCashOperations.recordCashIn(
         {
           type: 'agent-contract-budget-decrease',

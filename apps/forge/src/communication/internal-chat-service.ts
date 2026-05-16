@@ -41,43 +41,43 @@
  * @module
  */
 
-import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from "drizzle-orm";
-import path from "node:path";
-import { customAlphabet } from "nanoid";
+import { _and, _desc, _eq, _gte, _inArray, _isNotNull, _isNull, _like, _lte, _ne, _sql } from 'drizzle-orm';
+import _path from 'node:path';
+import { _customAlphabet } from 'nanoid';
 
 import type {
-  CommunicationFile,
-  CommunicationInboundMessage,
-  CommunicationProviderConversation,
-  CommunicationProviderMessage,
+  _CommunicationFile,
+  _CommunicationInboundMessage,
+  _CommunicationProviderConversation,
+  _CommunicationProviderMessage,
 } from "@forge-runtime/core";
-import { forgeDebug } from "@forge-runtime/core";
+import { _forgeDebug } from '@forge-runtime/core';
 
 import type {Database} from "../database/schema";
 import {
-  internalChatAccounts,
-  internalChatConversationMembers,
-  internalChatConversations,
-  internalChatMessageAttachments,
-  internalChatMessageReads,
-  internalChatMessages,
+  _internalChatAccounts,
+  _internalChatConversationMembers,
+  _internalChatConversations,
+  _internalChatMessageAttachments,
+  _internalChatMessageReads,
+  _internalChatMessages,
 } from "../database/schema";
-import { createId } from "../utils/id";
+import { _createId } from '../utils/id';
 import {
-  buildAgentAccountDescription,
-  buildGroupMemberViews,
-  buildGroupRow,
-  buildConversationParticipantNames,
-  createInternalChatSlug,
-  parseFilterDate,
-  resolveContentType,
-  sanitizeAttachmentName,
-  sortParticipantsBySelfFirst,
-  type InternalChatGroupMember,
-  type InternalChatGroupParticipant,
-  type InternalChatGroupRow,
+  _buildAgentAccountDescription,
+  _buildGroupMemberViews,
+  _buildGroupRow,
+  _buildConversationParticipantNames,
+  _createInternalChatSlug,
+  _parseFilterDate,
+  _resolveContentType,
+  _sanitizeAttachmentName,
+  _sortParticipantsBySelfFirst,
+  type _InternalChatGroupMember,
+  type _InternalChatGroupParticipant,
+  type _InternalChatGroupRow,
 } from "./internal-chat-helpers";
-import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
+import { createInternalChatConnection, type _InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
 import { createInternalChatAccountOps } from "./internal-chat-account-ops";
 import { createInternalChatListing } from "./internal-chat-listing";
@@ -85,19 +85,19 @@ import { createInternalChatParticipants } from "./internal-chat-participants";
 import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatGuards } from "./internal-chat-guards";
 import {
-  ConversationNotFoundError,
-  ChatGroupNotFoundError,
-  ChatGroupAlreadyExistsError,
-  GroupMemberAlreadyExistsError,
-  OnlyAdminsCanUpdateGroupError,
-  NameRequiredForNewGroupError,
-  InternalChatParticipantNotFoundError,
-  InternalChatAccountNotFoundError,
-  MessageNotFoundError,
-  ExternalAccountNotFoundError,
-  InternalChatAccountSlugAlreadyExistsError,
-  DirectConversationFailedError,
-  AttachmentNotFoundError,
+  _ConversationNotFoundError,
+  _ChatGroupNotFoundError,
+  _ChatGroupAlreadyExistsError,
+  _GroupMemberAlreadyExistsError,
+  _OnlyAdminsCanUpdateGroupError,
+  _NameRequiredForNewGroupError,
+  _InternalChatParticipantNotFoundError,
+  _InternalChatAccountNotFoundError,
+  _MessageNotFoundError,
+  _ExternalAccountNotFoundError,
+  _InternalChatAccountSlugAlreadyExistsError,
+  _DirectConversationFailedError,
+  _AttachmentNotFoundError,
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createInternalChatAdmin } from "./internal-chat-admin";
@@ -126,7 +126,7 @@ export function createInternalChatService(
   const attachments = createChatAttachments(db);
   const { storeMessageAttachments, readMessageAttachments, readMessageAttachment } = attachments;
   const getRequiredAccount = accounts.getRequiredAccount;
-  const getAccountsById = accounts.getAccountsById;
+  const _getAccountsById = accounts.getAccountsById;
   const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
   const getAccountByTargetKey = accounts.getAccountByTargetKey;
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
@@ -186,12 +186,12 @@ const registerAgentAccount = admin.registerAgentAccount;
   });
 
   const getRequiredExternalAccount = serviceHelpers.getRequiredExternalAccount;
-  const requireConversationMembership = serviceHelpers.requireConversationMembership;
-  const requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
-  const getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
+  const _requireConversationMembership = serviceHelpers.requireConversationMembership;
+  const _requireConversationMembershipByAccount = serviceHelpers.requireConversationMembershipByAccount;
+  const _getRequiredConversationForAgent = serviceHelpers.getRequiredConversationForAgent;
   const getRequiredConversationForAccount = serviceHelpers.getRequiredConversationForAccount;
-  const getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
-  const getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
+  const _getRequiredGroupForAgent = serviceHelpers.getRequiredGroupForAgent;
+  const _getRequiredGroupForAccount = serviceHelpers.getRequiredGroupForAccount;
 
   const listing = createInternalChatListing(db, {
     getRequiredAgentAccount,
@@ -250,7 +250,7 @@ const registerAgentAccount = admin.registerAgentAccount;
   const listRecentConversations = actualReads.listRecentConversations;
   // === Internal Helpers ────────────────────────────────────────────────────
 
-  const guards = createInternalChatGuards(db, {
+  const _guards = createInternalChatGuards(db, {
     getRequiredAgentAccount,
   });
 

@@ -72,7 +72,7 @@ function createInternalAgentRegistry() {
       minimax: config.minimax,
       schedules: config.schedules,
       internalChat: config.internalChat,
-      // intentionally omitted: _emailMailboxes, _coolify, githubApps
+      // intentionally omitted: emailMailboxes, coolify, githubApps
     };
     const runtimes = await loadAgents(db, cleanConfig);
 

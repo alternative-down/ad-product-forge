@@ -23,7 +23,7 @@ export function createMessageManager(
     } = {},
   ) {
     for (const event of events) {
-      if ((event.idleOnly ?? false) && !(options.allowIdleOnly ?? false)) {
+      if (event.idleOnly && !options.allowIdleOnly) {
         continue;
       }
 
@@ -33,8 +33,8 @@ export function createMessageManager(
 
       state.pendingRunMessages.set(event.idempotencyKey, {
         ...event,
-          originIdleOnly: (event.originIdleOnly ?? event.idleOnly ?? false) as boolean,
-        idleOnly: (options.allowIdleOnly ?? false) ? false : (event.idleOnly ?? false),
+        originIdleOnly: event.originIdleOnly ?? event.idleOnly ?? false,
+        idleOnly: options.allowIdleOnly ? false : event.idleOnly,
       });
     }
   }
@@ -69,7 +69,7 @@ export function createMessageManager(
     while (state.flushedRunEventKeyOrder.length > MAX_FLUSHED_RUN_EVENT_KEYS) {
       const oldestIdempotencyKey = state.flushedRunEventKeyOrder.shift();
 
-      if ((oldestIdempotencyKey ?? '') === '') {
+      if (!oldestIdempotencyKey) {
         return;
       }
 
@@ -94,7 +94,7 @@ export function createMessageManager(
         return false;
       }
 
-      if ((event.originIdleOnly ?? false) && !(options.allowOriginIdleOnly ?? false)) {
+      if (event.originIdleOnly && !options.allowOriginIdleOnly) {
         deferredEvents.push(event);
         return false;
       }

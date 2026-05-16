@@ -1,4 +1,4 @@
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -11,14 +11,14 @@ import {
   type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
-import { _z } from 'zod';
+import { z } from 'zod';
 
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryState,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
-import { _renderObservationFile } from './agent-ltm-checkpoint-render';
+import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 import {
   readLtmState,
   writeLtmState,
@@ -30,12 +30,12 @@ import {
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
-  
+  writeCheckpointFiles,
   buildCheckpointPackageManifest,
-  
-  
+  commitCheckpointPackage,
+  cleanupTempPackage,
   getTempPackagePath,
-  
+  prepareTempPackageDirectory,
 } from './agent-ltm-checkpoint-io-helpers';
 
 import { withTimeout } from '../utils/async';
@@ -148,7 +148,7 @@ export function createAgentLongTermMemory(input: {
   const timerRef = { current: null as NodeJS.Timeout | null };
   let currentAbortController: AbortController | null = null;
   let refreshRecallIndex: (() => Promise<void>) | null = null;
-  const snapshot: LtmSnapshot = {
+  let snapshot: LtmSnapshot = {
     running: false,
     queued: false,
     lastRunAt: null,
@@ -194,7 +194,7 @@ export function createAgentLongTermMemory(input: {
 
   async function readState() {
     await ensureInitialized();
-    return await readLtmState(input.persistenceStore);
+    return readLtmState(input.persistenceStore);
   }
 
   async function writeState(state: LongTermMemoryState) {
@@ -216,7 +216,6 @@ export function createAgentLongTermMemory(input: {
     const state = await readState();
     const existing = state.packages.find((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.checkpointGeneration === payload.toGeneration);
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (existing) {
       return existing;
     }
@@ -228,7 +227,7 @@ export function createAgentLongTermMemory(input: {
       .length + 1;
     const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
-    const _tempPackagePath = getTempPackagePath(packagePath);
+    const tempPackagePath = getTempPackagePath(packagePath);
 
     forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write start', context: {
       agentId: input.agentId,
@@ -263,14 +262,12 @@ export function createAgentLongTermMemory(input: {
 
   async function recordLtmStep(usage: LtmUsage) {
     const { contract, pricing } = await getBudgetContext();
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!contract) {
       return;
     }
 
     let costUsd = 0;
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pricing.modelPrice) {
       const uncachedInputTokens = Math.max(usage.inputTokens - usage.cachedInputTokens, 0);
       costUsd =
@@ -299,14 +296,12 @@ export function createAgentLongTermMemory(input: {
 
   async function estimateNextLtmDelayMs() {
     const { contract, pricing } = await getBudgetContext();
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!contract) {
       return 0;
     }
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (recentSteps.length === 0 || !pricing.modelPrice) {
       return 0;
     }
@@ -370,8 +365,7 @@ export function createAgentLongTermMemory(input: {
             onStepFinish: async (stepResult) => {
               await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
-             
-            /* eslint-disable @typescript-eslint/require-await */ onIterationComplete: async (iteration) => {
+            onIterationComplete: async (iteration) => {
               forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow step complete', context: {
                 agentId: input.agentId,
                 hasToolCalls: iteration.toolCalls.length > 0,
@@ -531,13 +525,10 @@ export function createAgentLongTermMemory(input: {
 
       return {
         ...snapshot,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         lastRunAt: state.lastRunAt ? Date.parse(state.lastRunAt) : snapshot.lastRunAt,
         lastRunError: state.lastRunError,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         lastRunErrorAt: state.lastRunErrorAt ? Date.parse(state.lastRunErrorAt) : null,
         lastWrittenPackageId: state.lastWrittenPackageId,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         lastWrittenAt: state.lastWrittenAt ? Date.parse(state.lastWrittenAt) : null,
         packageCount: state.packages.length,
       };
