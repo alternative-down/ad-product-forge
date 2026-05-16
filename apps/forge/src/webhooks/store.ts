@@ -2,7 +2,7 @@ import { eq, desc } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type {Database} from '../database/schema';
-import { webhookRoutes, webhookEvents } from '../database/schema';
+import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
 
 // WebhookRoute and WebhookEvent types are exported from the database schema

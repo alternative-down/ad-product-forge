@@ -1,5 +1,5 @@
 import { createId } from '../utils/id';
-import { createAgentWakeQueue } from '@forge-runtime/core';
+import { createAgentWakeQueue, forgeDebug } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
 import type { InternalAgentRuntime } from './runtime/types';
@@ -106,6 +106,7 @@ export function createAgentRunner(
   let executing = false;
   let backoffMs = ONE_MINUTE_MS;
   let _nextStepAt: number | null = null;
+  let activeStepEpoch = 0;
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
   let lastStepStage: string | null = null;
@@ -318,7 +319,7 @@ export function createAgentRunner(
     lastWakeStartedAt = null;
     lastStepStartedAt = null;
     lastStepStage = null;
-    nextStepAt = null;
+    _nextStepAt = null;
   }
 
   async function runHealthcheck() {
@@ -551,7 +552,7 @@ export function createAgentRunner(
             instant = v;
           },
           setNextStepAt: (v) => {
-            nextStepAt = v;
+            _nextStepAt = v;
           },
           setLoopSignature: (sig) => {
             loopManager.getState().lastLoopSignature = sig;
@@ -571,7 +572,7 @@ export function createAgentRunner(
       const stopRequested = controlDirective === 'stop';
 
       if (stopRequested && messageManager.getPendingCount() === 0) {
-        nextStepAt = null;
+        _nextStepAt = null;
         resetLoopDetector();
         await transitionToIdle(runEpoch, {
           deferWakeQueueDrain: true,
@@ -767,10 +768,6 @@ export function createAgentRunner(
    * after an iteration completes. Extracted from generateWithTimeoutRetries
    * to reduce function length and improve readability.
    */
-
-  async function loadAgentContextInstructions(currentRuntime: InternalAgentRuntime, db: Database) {
-    return loadContextInstructions(currentRuntime, db);
-  }
 
   function notifyExternalEvent(event: AgentWakeEvent) {
     if (stopped) {

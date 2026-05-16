@@ -4,7 +4,7 @@ import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import { _z } from 'zod';
+import { z } from 'zod';
 
 
 import type {Database} from '../database/schema';

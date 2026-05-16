@@ -41,6 +41,7 @@ import type { _AgentRunnerUsage } from './agent-runner-usage';
 import type { _Scheduler } from './agent-runner-scheduler';
 import type { _MessageManager } from './agent-runner-messages';
 import type { _LoopDetector } from './agent-runner-loop-detector';
+import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import type {
   ExecuteStepDeps,
   ExecuteEpochState,
