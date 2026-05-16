@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import type {Database} from '../database/schema';
 import { createAgentNotificationStore } from '../notifications/store';
-import { createAgentScheduleStore } from './store';
+import { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
 import { createScheduleLifecycle } from './schedule-lifecycle';
 import {
   parseScheduleDate,
@@ -88,6 +88,11 @@ export function createAgentScheduleManager(input: {
   }
 
 
+  function isActiveSchedule(s: StoredSchedule): boolean {
+    return s.isActive === true;
+  }
+
+
   async function createHeartbeatSchedule(agentId: string) {
     const record = await store.createSchedule({
       agentId,
@@ -109,12 +114,12 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules',
         level: 'error',
         message: 'createHeartbeatSchedule: registerSchedule failed',
-        context: { agentId, scheduleId: record.scheduleId, error: error instanceof Error ? error.message : String(error) },
+        context: { agentId, scheduleId: (record as StoredSchedule).scheduleId, error: error instanceof Error ? error.message : String(error) },
       });
       throw error;
     }
     return {
-      scheduleId: record.scheduleId,
+      scheduleId: (record as StoredSchedule).scheduleId,
     };
   }
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
@@ -147,7 +152,7 @@ export function createAgentScheduleManager(input: {
       throw error;
     }
 
-    return toToolOutput(record);
+    return toToolOutput(record as StoredSchedule);
   }
 
   async function listSchedules(agentId: string) {
@@ -163,7 +168,7 @@ export function createAgentScheduleManager(input: {
   async function listTasks(creatorAgentId: string, targetAgentId?: string) {
     try {
       const schedules = await store.listCreatedAgentSchedules(creatorAgentId, targetAgentId);
-      return schedules.map((schedule: object) => ({
+      return schedules.map((schedule) => ({
         ...toToolOutput(schedule),
         createdBy: creatorAgentId,
         targetAgentId: schedule.agentId,
@@ -186,16 +191,26 @@ export function createAgentScheduleManager(input: {
 
     const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
     const { scheduleType, cronExpression, scheduledDate } = normalized;
-    validateScheduleShape({ scheduleType, cronExpression, scheduledDate });
+    validateScheduleShape({
+      scheduleType: scheduleType as 'cron' | 'date',
+      cronExpression: cronExpression ?? undefined,
+      scheduledDate: scheduledDate ?? undefined,
+    });
     if (normalized.shouldRequireFutureDate) {
-      assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
+      assertFutureScheduledDate(scheduleType as 'cron' | 'date', normalized.parsedScheduledDate);
     }
-    const rollbackInput = buildScheduleRollbackInput(existing);
+    const rollbackInput = buildScheduleRollbackInput(existing) as UpdateAgentScheduleInput;
     const updated = await store.updateAgentSchedule(
       agentId,
       scheduleId,
-      buildScheduleUpdateInput(parsed, normalized),
+      buildScheduleUpdateInput(parsed, {
+        scheduleType: normalized.scheduleType as 'cron' | 'date',
+        cronExpression: normalized.cronExpression,
+        scheduledDate: normalized.scheduledDate,
+        wakeWhenRunning: normalized.wakeWhenRunning,
+      }) as UpdateAgentScheduleInput,
     );
+
 
     if (updated === null) {
       forgeDebug({ scope: 'schedules', level: 'error', message: 'updateSchedule schedule not found', context: { agentId, scheduleId } });
@@ -243,16 +258,26 @@ export function createAgentScheduleManager(input: {
 
     const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
     const { scheduleType, cronExpression, scheduledDate } = normalized;
-    validateScheduleShape({ scheduleType, cronExpression, scheduledDate });
+    validateScheduleShape({
+      scheduleType: scheduleType as 'cron' | 'date',
+      cronExpression: cronExpression ?? undefined,
+      scheduledDate: scheduledDate ?? undefined,
+    });
     if (normalized.shouldRequireFutureDate) {
-      assertFutureScheduledDate(scheduleType, normalized.parsedScheduledDate);
+      assertFutureScheduledDate(scheduleType as 'cron' | 'date', normalized.parsedScheduledDate);
     }
-    const rollbackInput = buildScheduleRollbackInput(existing);
+    const rollbackInput = buildScheduleRollbackInput(existing) as UpdateAgentScheduleInput;
     const updated = await store.updateOwnedSchedule(
       agentId,
       scheduleId,
-      buildScheduleUpdateInput(parsed, normalized),
+      buildScheduleUpdateInput(parsed, {
+        scheduleType: normalized.scheduleType as 'cron' | 'date',
+        cronExpression: normalized.cronExpression,
+        scheduledDate: normalized.scheduledDate,
+        wakeWhenRunning: normalized.wakeWhenRunning,
+      }) as UpdateAgentScheduleInput,
     );
+
 
     if (updated === null) {
       throw new Error(`Schedule not found: ${scheduleId}`);

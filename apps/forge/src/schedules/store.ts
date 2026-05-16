@@ -23,7 +23,7 @@ type CreateAgentScheduleInput = {
   creatorId?: string; // agent that created this schedule (for cross-agent auth)
 };
 
-type UpdateAgentScheduleInput = {
+export type UpdateAgentScheduleInput = {
   name?: string;
   description?: string | null;
   scheduleType?: ScheduleType;

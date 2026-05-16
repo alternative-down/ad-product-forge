@@ -116,7 +116,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
       try {
         const servers = await db.select().from(mcpServerConfigs).all();
         const formatted = servers
-          .map((server: { id: string; name: string; description?: string | null }) => ({
+          .map((server) => ({
             serverId: server.id,
             name: server.name,
             description: server.description ?? undefined,
@@ -130,7 +130,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
             createdAt: server.createdAt,
             updatedAt: server.updatedAt,
           }))
-          .sort((a: { id: string }, b: { id: string }) => a.name.localeCompare(b.name));
+          .sort((a, b) => a.name.localeCompare(b.name));
         return jsonResponse(formatted);
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp', context: { error: err instanceof Error ? err.message : String(err) } });
