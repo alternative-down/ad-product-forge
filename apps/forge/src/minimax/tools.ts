@@ -434,11 +434,11 @@ export function createMiniMaxTools(
             };
           }
 
-          const fileBuffer = await downloadFileBuffer(file.data.downloadUrl);
+          const fileBuffer = await downloadFileBuffer(file.data.downloadUrl ?? '');
           const savedPath = await writeBufferToWorkspace(
             context.workspace,
             'videos',
-            inferExtensionFromUrl(file.data.downloadUrl, 'mp4'),
+            inferExtensionFromUrl(file.data.downloadUrl ?? '', 'mp4'),
             fileBuffer,
           );
 
