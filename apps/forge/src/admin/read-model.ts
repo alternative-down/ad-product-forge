@@ -68,7 +68,7 @@ const _llmModelPrices = createLlmModelPriceStore(db);
       };
       const appliedRows = await db.all<{
         id: number;
-        hash: string;
+        hash: string | null;
         createdAt: number;
       }>(sql`
         select
@@ -78,7 +78,7 @@ const _llmModelPrices = createLlmModelPriceStore(db);
         from __drizzle_migrations
         order by created_at asc
       `);
-      const appliedByCreatedAt = new Map(appliedRows.map((row: { createdAt: unknown }) => [Number(row.createdAt), row]));
+      const appliedByCreatedAt = new Map(appliedRows.map((row) => [row.createdAt, row]));
 
       return {
         applied: appliedRows,

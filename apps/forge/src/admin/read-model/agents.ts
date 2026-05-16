@@ -61,6 +61,10 @@ interface AgentsReadModelDeps {
   internalChat: InternalChatService;
   workspaceBasePath: string;
   systemSettings: object;
+  capabilities: ReturnType<typeof import("../capabilities/store").createCapabilityStore>;
+  llmSettings: ReturnType<typeof import("../llm-settings/store").createLlmSettingsStore>;
+  notifications: ReturnType<typeof import("../agent-notifications/store").createAgentNotificationStore>;
+  githubApps: unknown;
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
@@ -70,6 +74,10 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     internalChat,
     workspaceBasePath,
     systemSettings,
+    capabilities,
+    llmSettings,
+    notifications,
+    githubApps,
   } = deps;
 
   const registry = getInternalAgentRegistry();

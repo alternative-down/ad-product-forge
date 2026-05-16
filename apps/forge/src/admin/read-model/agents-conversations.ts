@@ -36,9 +36,9 @@ export interface AgentThreadMessagesInput {
 }
 
 export interface AgentThreadMessagesResult {
-  items: Array<{ content: string; role: string; createdAt: number }>;
-  totalPages: number;
-  currentPage: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  items: Array<Record<string, any>>;
+  hasMore: boolean;
 }
 
 export interface AgentConversationMessagesInput {
@@ -47,6 +47,7 @@ export interface AgentConversationMessagesInput {
   targetKey: string;
   limit: number;
   offset: number;
+  agentName?: string;
 }
 
 export interface AgentConversationMessagesResult {
@@ -71,23 +72,21 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
     agentId: string,
     limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    return listRecentConversations(agentId, limit);
+    return listRecentConversations(workspaceBasePath, internalChat, agentId, agentId);
   }
 
   async function listAgentConversationMessages(
     params: AgentConversationMessagesInput,
   ): Promise<AgentConversationMessagesResult> {
-    const messages = await (internalChat as InternalChatService).listMessages({
-      provider: params.provider,
-      targetKey: params.targetKey,
+    const messages = await internalChat.getMessages({
+      agentId: params.agentId,
+      conversationKey: params.targetKey,
       limit: params.limit,
       offset: params.offset,
-    });
+    }).catch(() => []);
     return {
-      items: messages.map((message: CommunicationMessageView) => ({
-        ...message,
-        authorAgentId: null,
-      })),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      items: messages.map((message: any) => ({ ...message, authorAgentId: null })),
       hasMore: false,
     };
   }
