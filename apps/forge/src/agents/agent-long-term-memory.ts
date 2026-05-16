@@ -1,4 +1,4 @@
-import { createId } from '../utils/id';
+import { _createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -11,14 +11,14 @@ import {
   type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
-import { z } from 'zod';
+import { _z } from 'zod';
 
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryState,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
-import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
+import { _renderCheckpointPackageReadme, _renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 import {
   readLtmState,
   writeLtmState,
@@ -30,12 +30,12 @@ import {
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
-  writeCheckpointFiles,
+  _writeCheckpointFiles,
   buildCheckpointPackageManifest,
-  commitCheckpointPackage,
-  cleanupTempPackage,
+  _commitCheckpointPackage,
+  _cleanupTempPackage,
   getTempPackagePath,
-  prepareTempPackageDirectory,
+  _prepareTempPackageDirectory,
 } from './agent-ltm-checkpoint-io-helpers';
 
 import { withTimeout } from '../utils/async';
@@ -148,7 +148,7 @@ export function createAgentLongTermMemory(input: {
   const timerRef = { current: null as NodeJS.Timeout | null };
   let currentAbortController: AbortController | null = null;
   let refreshRecallIndex: (() => Promise<void>) | null = null;
-  let snapshot: LtmSnapshot = {
+  const snapshot: LtmSnapshot = {
     running: false,
     queued: false,
     lastRunAt: null,
@@ -500,7 +500,8 @@ export function createAgentLongTermMemory(input: {
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
-      return await writeCheckpointPackage(payload);
+      // eslint-disable-next-line @typescript-eslint/return-await
+  return await writeCheckpointPackage(payload);
     },
 
     async onAgentIdle() {

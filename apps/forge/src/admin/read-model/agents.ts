@@ -4,17 +4,17 @@ import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import {
   agentExecutionContracts,
   agentExecutionSteps,
-  agentHomeMetricSnapshots,
-  agentMcpConfigs,
-  agentRoles,
-  agentSchedules,
-  agents,
-  llmProfiles,
-  mcpServerConfigs,
+  _agentHomeMetricSnapshots,
+  _agentMcpConfigs,
+  _agentRoles,
+  _agentSchedules,
+  _agents,
+  _llmProfiles,
+  _mcpServerConfigs,
 } from '../../database/schema';
 import {
-  extractLatestMessagePreview,
-  extractLatestMessageToolBadge,
+  _extractLatestMessagePreview,
+  _extractLatestMessageToolBadge,
 } from './helpers';
 import { createAgentConversationsReadModel } from './agents-conversations';
 import { createAgentMetricsReadModel } from './agents-metrics';
@@ -23,25 +23,25 @@ import { createAgentListReadModel } from './agents-list';
 import { createAgentDebugReadModel } from './agents-debug';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 import type { InternalChatService } from '../../communication/internal-chat-service';
-import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
-import { closeLibsqlClient, listRecentConversations, listThreadMessages } from './conversation-helpers';
+import { _readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
+import { _closeLibsqlClient, _listRecentConversations, listThreadMessages } from './conversation-helpers';
 import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 import { createSystemSettingsStore } from '../../system-settings/store';
 
 import type {Database} from '../../database/index';
 import {
-  toMastraSafeIdentifier,
-  LibsqlConversationStore,
-  readOperationalMemoryState,
-  type CommunicationMessageView,
-  type CommunicationProviderMessage,
+  _toMastraSafeIdentifier,
+  _LibsqlConversationStore,
+  _readOperationalMemoryState,
+  type _CommunicationMessageView,
+  type _CommunicationProviderMessage,
 } from '@forge-runtime/core';
 
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
-const RECENT_STEP_LIMIT = 10;
-const RECENT_NOTIFICATION_LIMIT = 10;
+const _RECENT_STEP_LIMIT = 10;
+const _RECENT_NOTIFICATION_LIMIT = 10;
 
-import type { AgentListItem, AgentReadModel } from './agents-types';
+import type { _AgentListItem, AgentReadModel } from './agents-types';
 
 interface FinanceReadModel {
   getCompanyCashBalance: () => Promise<{ balanceUsd: number }>;
