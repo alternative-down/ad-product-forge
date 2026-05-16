@@ -55,6 +55,7 @@ const SENSITIVE_FIELDS: Record<SystemIntegrationProviderType, string[]> = {
   minimax: ['apiKey'],
 };
 
+export type SystemIntegrationStore = Awaited<ReturnType<typeof createSystemIntegrationStore>>;
 export function createSystemIntegrationStore(db: Database) {
   const parseEncryptedConfigMap: Record<
     SystemIntegrationProviderType,

@@ -3,15 +3,18 @@ import 'node:process';
 import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { createCapabilityStore } from '../../capabilities/store';
+import type { SystemIntegrationSummary } from '../../system-integrations/store';
 import { createSystemIntegrationStore } from '../../system-integrations/store';
 import { createLlmSettingsStore } from '../../llm/settings-store';
 import { createLlmModelPriceStore } from '../../llm/model-price-store';
 import { createSystemSettingsStore } from '../../system-settings/store';
+import type { SystemSettingsValue } from '../../system-settings/store';
 import { forgeCapabilityIds } from '../../capabilities/catalog';
 import { forgeDebug } from '@forge-runtime/core';
 import { agents } from '../../database/schema';
 
 import type {Database} from '../../database/schema';
+import type { AgentRole } from '../../database/schema';
 
 export interface SystemReadModel {
   listRoles: () => Promise<{
@@ -26,14 +29,14 @@ export interface SystemReadModel {
       updatedAt: Date;
     }>;
   }>;
-  listSystemIntegrations: () => Promise<ReturnType<ReturnType<typeof createSystemIntegrationStore>['listIntegrations']>>;
+  listSystemIntegrations: () => Promise<SystemIntegrationSummary[]>;
   getSystemLlm: () => Promise<{
     profiles: Awaited<ReturnType<ReturnType<typeof createLlmSettingsStore>['listProfiles']>>;
     defaults: Awaited<ReturnType<ReturnType<typeof createLlmSettingsStore>['getDefaults']>>;
     prices: Awaited<ReturnType<ReturnType<typeof createLlmModelPriceStore>['listPrices']>>;
   }>;
   // Fragmented LLM routes (#1588) — removed dead wrappers (no routes call these)
-  getSystemSettings: () => Promise<ReturnType<ReturnType<typeof createSystemSettingsStore>['getSettings']>>;
+  getSystemSettings: () => Promise<SystemSettingsValue>;
   getApplicationMigrations: () => Promise<{
     applied: { id: number; hash: string; createdAt: number }[];
     entries: {
@@ -79,16 +82,16 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
       ]);
       const assignedAgentCountByRoleId = new Map(
         agentCounts
-          .filter((row: object) => row.roleId)
-          .map((row: object) => [row.roleId as string, row.count]),
+          .filter((row) => row.roleId)
+          .map((row) => [row.roleId as string, row.count]),
       );
       const capabilityMap = await capabilities.listGrantedRoleCapabilitiesBatch(
-        roles.map((role: string) => role.roleId),
+        roles.map((role) => role.roleId),
       );
 
       return {
         availableCapabilityIds: forgeCapabilityIds,
-        items: roles.map((role: string) => ({
+        items: roles.map((role) => ({
           roleId: role.roleId,
           name: role.name,
           description: role.description,
@@ -143,7 +146,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
         from __drizzle_migrations
         order by created_at asc
       `);
-      const appliedByCreatedAt = new Map(appliedRows.map((row: { createdAt: unknown }) => [Number(row.createdAt), row]));
+      const appliedByCreatedAt = new Map(appliedRows.map((row) => [Number(row.createdAt), row]));
 
       return {
         applied: appliedRows,
