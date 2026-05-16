@@ -27,8 +27,13 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
     method: 'POST',
     path: '/admin/agent/contract/top-up',
     handler: async (request: { bodyText: string }) => {
-      const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
-      return jsonResponse(await ops.topUpActiveAgentContract(db, body));
+      try {
+        const body = parseJsonBody(request.bodyText, topUpAgentContractSchema);
+        return jsonResponse(await ops.topUpActiveAgentContract(db, body));
+      } catch (err) {
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/agent/contract/top-up", context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
     },
   });
 
@@ -37,8 +42,13 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
     method: 'POST',
     path: '/admin/agent/contract/adjust-budget',
     handler: async (request: { bodyText: string }) => {
-      const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
-      return jsonResponse(await ops.adjustAgentContractBudget(db, body));
+      try {
+        const body = parseJsonBody(request.bodyText, adjustAgentContractBudgetSchema);
+        return jsonResponse(await ops.adjustAgentContractBudget(db, body));
+      } catch (err) {
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/agent/contract/adjust-budget", context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
     },
   });
 
@@ -47,8 +57,13 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
     method: 'POST',
     path: '/admin/agent/contract/renew',
     handler: async (request: { bodyText: string }) => {
-      const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
-      return jsonResponse(await ops.renewAgentContract(db, body));
+      try {
+        const body = parseJsonBody(request.bodyText, renewAgentContractSchema);
+        return jsonResponse(await ops.renewAgentContract(db, body));
+      } catch (err) {
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/agent/contract/renew", context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
     },
   });
 }
