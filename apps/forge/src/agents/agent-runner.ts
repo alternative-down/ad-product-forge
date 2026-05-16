@@ -229,6 +229,7 @@ export function createAgentRunner(
     );
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const idleOnlyEvents = events.filter((event) => event.idleOnly);
     const runnableEvents = events.filter((event) => !event.idleOnly);
 
@@ -293,6 +294,7 @@ export function createAgentRunner(
     startingRunStartedAt = null;
     executing = false;
     clearTimer();
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!options.preserveQueuedWork) {
       wakeQueue.stop();
@@ -745,6 +747,7 @@ export function createAgentRunner(
       backoffMs: s.backoffMs,
       nextStepAt: s.nextStepAt,
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       estimatedDelayMs: s.nextStepAt ? Math.max(s.nextStepAt - Date.now(), 0) : null,
       lastStepStartedAt,
       lastStepStage,
@@ -776,6 +779,7 @@ export function createAgentRunner(
 
     wakeQueue.notifyExternalEvent(event);
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (event.idleOnly && isLocallyIdle()) {
       void wakeQueue.onRunnerIdle();
@@ -830,6 +834,7 @@ export function createAgentRunner(
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (options.deferWakeQueueDrain) {
       return;

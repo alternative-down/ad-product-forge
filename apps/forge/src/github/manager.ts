@@ -4,7 +4,7 @@ import { createAppAuth } from '@octokit/auth-app';
 import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import { z } from 'zod';
+import { _z } from 'zod';
 
 
 import type {Database} from '../database/schema';
@@ -220,6 +220,7 @@ export function createGitHubAppManager(config: {
     }
 
     // eslint-disable-next-line @typescript-eslint/return-await
+  // eslint-disable-next-line @typescript-eslint/return-await
   return await createAgentApp({
       agentId,
       agentName: agent.name,

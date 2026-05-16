@@ -4,7 +4,7 @@
  * Extracted from write-ops.ts (#2468)
  */
 
-import { z } from 'zod';
+import { _z } from 'zod';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
