@@ -20,7 +20,7 @@ export function normalizeJsonText(
     return null;
   }
 
-  const parsed = JSON.parse(normalized);
+  const parsed = JSON.parse(normalized ?? '');
   const valid =
     expectedShape === 'array'
       ? Array.isArray(parsed)

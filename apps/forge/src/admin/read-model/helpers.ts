@@ -145,7 +145,7 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
   }
 
   try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
+    const parsed = JSON.parse(value ?? '') as Record<string, unknown>;
 
     if (parsed === null || parsed === undefined || typeof parsed !== 'object') {
       return null;
@@ -183,7 +183,7 @@ export function renderWorkingMemoryMarkdown(value: unknown) {
 
     if ((formattedValue ?? '') !== '') {
       const existing = sections.get(sectionKey) ?? [];
-      existing.push(formattedValue);
+      existing.push(formattedValue ?? '');
       sections.set(sectionKey, existing);
     }
   }
@@ -428,7 +428,7 @@ function processToolInvocations(
       ? (toolInvocation as Record<string, unknown>).toolCallId as string
       : null;
     const matchingResultIndex = (toolCallId ?? '') !== ''
-      ? resultIndexesByToolCallId.get(toolCallId)
+      ? resultIndexesByToolCallId.get(toolCallId ?? '')
       : undefined;
     const matchingResult = matchingResultIndex !== undefined
       ? toolResults[matchingResultIndex] as Record<string, unknown> | null
@@ -524,7 +524,7 @@ export function collectConversationParticipants(input: {
 
   for (const message of input.messages) {
     if ((message.authorDisplayName ?? '') !== '' && message.authorDisplayName !== input.name) {
-      participants.add(message.authorDisplayName);
+      participants.add(message.authorDisplayName ?? '');
     }
   }
 

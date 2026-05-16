@@ -117,7 +117,7 @@ export function createDiscordProvider(config: {
       return null;
     }
 
-    const parsed = Date.parse(value);
+    const parsed = Date.parse(value ?? '');
 
     if (Number.isNaN(parsed)) {
       throw new Error(`Invalid ${fieldName}: ${value}`);
@@ -468,7 +468,7 @@ export function createDiscordProvider(config: {
     const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
     const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
     const matchesMessage = (message: Message) =>
-      ((input.query ?? '') !== '' || message.content.includes(input.query) || message.attachments.size > 0) &&
+      ((input.query ?? '') !== '' || message.content.includes(input.query ?? '') || message.attachments.size > 0) &&
       (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
       (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
     const targetCount = input.limit + input.offset;
