@@ -157,7 +157,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     selector: string,
     pageId?: string,
   ): Promise<BrowserToolResult> {
-    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId ?? "") : null;
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
@@ -188,7 +188,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     value: string,
     pageId?: string,
   ): Promise<BrowserToolResult> {
-    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId ?? "") : null;
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
@@ -218,7 +218,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     agentId: string,
     pageId?: string,
   ): Promise<BrowserToolResult> {
-    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId ?? "") : null;
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
@@ -248,7 +248,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     selector: string,
     pageId?: string,
   ): Promise<BrowserToolResult> {
-    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId) : null;
+    const session = (pageId ?? '') !== '' ? agentBrowsers.get(agentId)?.sessions.get(pageId ?? "") : null;
     if (!session) {
       return { pageId: pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
     }
@@ -296,7 +296,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     options: { timeoutMs?: number; pageId?: string } = {},
   ): Promise<BrowserToolResult> {
     const session = (options.pageId ?? '') !== ''
-      ? agentBrowsers.get(agentId)?.sessions.get(options.pageId)
+      ? agentBrowsers.get(agentId)?.sessions.get(options.pageId ?? '')
       : null;
     if (!session) {
       return { pageId: options.pageId ?? 'unknown', error: 'Page not found. Call navigate() first.' };
@@ -325,7 +325,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
 
   async function closePage(agentId: string, pageId: string): Promise<void> {
     const instance = agentBrowsers.get(agentId);
-    const session = instance?.sessions.get(pageId);
+    const session = instance?.sessions.get(pageId ?? "");
     if (!session) {
       return;
     }

@@ -160,7 +160,7 @@ export function createAgentsRuntimeMemoryReadModel(
         .join('\n') ?? null;
 
       const reflection = operationalMemoryState.reflectionMessages
-        .map((message: CommunicationMessageView) =>
+        .map((message) =>
           message.parts
             .filter(isTextPart)
             .map((part: import("@forge-runtime/core").TextPart) => part.text!.trim())
@@ -170,7 +170,7 @@ export function createAgentsRuntimeMemoryReadModel(
         .join('\n');
 
       const observations = operationalMemoryState.observationMessages
-        .map((message: CommunicationMessageView) =>
+        .map((message) =>
           message.parts
             .filter(isTextPart)
             .map((part: import("@forge-runtime/core").TextPart) => part.text!.trim())
@@ -181,10 +181,10 @@ export function createAgentsRuntimeMemoryReadModel(
 
       const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
       const updatedAt = (operationalMemoryState.metrics.latestThreadMessageAt ?? '') !== ''
-        ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt)
+        ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt!)
         : null;
       const lastObservedAt = operationalMemoryState.observationMessages.length
-        ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
+        ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt!)
         : null;
 
       const runtimeLtmSnapshot: { running?: boolean; queued?: boolean } | null = loadedAgent?.runtime.longTermMemory !== undefined
@@ -211,11 +211,11 @@ export function createAgentsRuntimeMemoryReadModel(
         ? {
             running: false,
             queued: false,
-            lastRunAt: (persistedLtmState.lastRunAt ?? '') !== '' ? Date.parse(persistedLtmState.lastRunAt) : null,
+            lastRunAt: (persistedLtmState.lastRunAt ?? '') !== '' ? Date.parse(persistedLtmState.lastRunAt!) : null,
             lastRunError: persistedLtmState.lastRunError,
-            lastRunErrorAt: (persistedLtmState.lastRunErrorAt ?? '') !== '' ? Date.parse(persistedLtmState.lastRunErrorAt) : null,
+            lastRunErrorAt: (persistedLtmState.lastRunErrorAt ?? '') !== '' ? Date.parse(persistedLtmState.lastRunErrorAt!) : null,
             lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
-            lastWrittenAt: (persistedLtmState.lastWrittenAt ?? '') !== '' ? Date.parse(persistedLtmState.lastWrittenAt) : null,
+            lastWrittenAt: (persistedLtmState.lastWrittenAt ?? '') !== '' ? Date.parse(persistedLtmState.lastWrittenAt!) : null,
             packageCount: persistedLtmState.packages.length,
           }
         : null);
@@ -273,7 +273,7 @@ export function createAgentsRuntimeMemoryReadModel(
           checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
           checkpointSummaryUpToGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
           latestThreadMessageAt: (operationalMemoryState.metrics.latestThreadMessageAt ?? '') !== ''
-            ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt)
+            ? Date.parse(operationalMemoryState.metrics.latestThreadMessageAt!)
             : null,
         },
       };
