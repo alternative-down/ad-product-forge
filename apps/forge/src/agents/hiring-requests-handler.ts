@@ -1,4 +1,4 @@
-import { createId } from '../utils/id';
+import { _createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
-import { forgeCustomToolIds } from '../capabilities/catalog';
+import { _forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
 
 import {
@@ -141,7 +141,7 @@ export async function generateHiredAgentInstructions(
   const companySettings = await systemSettings.getSettings();
   const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
   const companyCash = createCompanyCashLedger(db);
-  let existingRoles;
+  const existingRoles;
     existingRoles = await db.query.agentRoles.findMany();
   const existingRoleNamesById = new Map(existingRoles.map((role: string) => [role.id, role.name]));
   const existingAgents = await db.query.agents.findMany({
