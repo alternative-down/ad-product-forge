@@ -18,7 +18,7 @@ import {
   type LongTermMemoryState,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
-import { _renderCheckpointPackageReadme, _renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
+import { __renderCheckpointPackageReadme, __renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 import {
   readLtmState,
   writeLtmState,
@@ -30,12 +30,12 @@ import {
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
-  _writeCheckpointFiles,
+  __writeCheckpointFiles,
   buildCheckpointPackageManifest,
-  _commitCheckpointPackage,
-  _cleanupTempPackage,
+  __commitCheckpointPackage,
+  __cleanupTempPackage,
   getTempPackagePath,
-  _prepareTempPackageDirectory,
+  __prepareTempPackageDirectory,
 } from './agent-ltm-checkpoint-io-helpers';
 
 import { withTimeout } from '../utils/async';
@@ -501,6 +501,7 @@ export function createAgentLongTermMemory(input: {
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
       // eslint-disable-next-line @typescript-eslint/return-await
+  // eslint-disable-next-line @typescript-eslint/return-await
   return await writeCheckpointPackage(payload);
     },
 
