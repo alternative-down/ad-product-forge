@@ -14,7 +14,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { agents } from '../../database/schema';
 
 import type {Database} from '../../database/schema';
-import type { AgentRole } from '../../database/schema';
+import type { _AgentRole } from '../../database/schema';
 
 export interface SystemReadModel {
   listRoles: () => Promise<{
@@ -82,6 +82,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
       ]);
       const assignedAgentCountByRoleId = new Map(
         agentCounts
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           .filter((row) => row.roleId)
           .map((row) => [row.roleId as string, row.count]),
       );

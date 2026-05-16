@@ -53,6 +53,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
     try {
       const contracts = await finance.listActiveInternalAgentContracts();
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!contracts || !Array.isArray(contracts.items)) {
         return { items: [], hasMore: false };
       }

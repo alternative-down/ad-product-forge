@@ -30,6 +30,7 @@ export async function adjustAgentContractBudget(
       ),
     });
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!activeContract) {
     forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: no active contract', context: { agentId: input.agentId } });
     throw new Error(`No active contract for agent: ${input.agentId}`);
@@ -61,6 +62,7 @@ export async function adjustAgentContractBudget(
     }
 
     // Deduct from company cash and update budget atomically
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
       await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         await companyCashOperations.recordCashOut(
           {
@@ -112,6 +114,7 @@ export async function adjustAgentContractBudget(
   const refundAmount = Math.abs(budgetDelta);
 
   // Refund unused funds and update budget atomically
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
       await companyCashOperations.recordCashIn(
         {

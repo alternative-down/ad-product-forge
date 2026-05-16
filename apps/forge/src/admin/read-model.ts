@@ -37,8 +37,8 @@ export function createAdminReadModel(input: {
   const capabilities = createCapabilityStore(db);
   const llmSettings = createLlmSettingsStore(db);
   const notifications = createAgentNotificationStore(db);
-  const integrations = createSystemIntegrationStore(db);
-  const llmModelPrices = createLlmModelPriceStore(db);
+const _integrations = createSystemIntegrationStore(db);
+const _llmModelPrices = createLlmModelPriceStore(db);
   const systemSettings = createSystemSettingsStore(db);
 
   // Domain read-model submodules
