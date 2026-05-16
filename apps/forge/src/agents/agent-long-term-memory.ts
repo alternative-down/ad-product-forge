@@ -502,7 +502,6 @@ export function createAgentLongTermMemory(input: {
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
       // eslint-disable-next-line @typescript-eslint/return-await
   // eslint-disable-next-line @typescript-eslint/return-await
-  // eslint-disable-next-line @typescript-eslint/return-await
   return await writeCheckpointPackage(payload);
     },
 
