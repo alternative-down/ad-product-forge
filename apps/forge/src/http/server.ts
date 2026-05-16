@@ -78,7 +78,22 @@ export type CreateForgeHttpServerConfig = {
   maxBodyBytes?: number;
 };
 
-export function createForgeHttpServer(config: CreateForgeHttpServerConfig) {
+export interface ForgeHttpServer {
+  registerRoute: (input: {
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+    path: string;
+    handler: HttpHandler;
+  }) => () => void;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  readonly port: number;
+}
+
+/** Adapters that accept ForgeHttpServer as httpServer argument.
+ *  Used by admin route modules that don't need start/stop/port. */
+export type ForgeHttpServerAdapter = Pick<ForgeHttpServer, 'registerRoute'>;
+
+export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Promise<ForgeHttpServer> & ForgeHttpServer {
   const allowedOrigins = config.allowedOrigins?.length
     ? new Set(config.allowedOrigins)
     : null;

@@ -8,7 +8,7 @@
 
 import { eq, desc, inArray } from 'drizzle-orm';
 import { forgeDebug } from '../debug';
-import type { HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 
 import type {Database} from '../../../database/schema';
 import type { AgentReadModel } from '../../read-model/agents';
@@ -30,7 +30,7 @@ function extractAgentId(path: string): string {
 // ─── Agent Base (basic agent data) ─────────────────────────────────────────
 
 export function registerAgentBaseRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   getAgent: AgentReadModel['getAgent'],
 ) {
   httpServer.registerRoute({
@@ -54,7 +54,7 @@ export function registerAgentBaseRoutes(
 // ─── Agent Execution Steps ───────────────────────────────────────────────────
 
 export function registerAgentStepsRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   db: Database,
 ) {
   httpServer.registerRoute({
@@ -84,7 +84,7 @@ export function registerAgentStepsRoutes(
 // ─── Agent Conversations ─────────────────────────────────────────────────────
 
 export function registerAgentConversationsRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   listAgentRecentConversations: AgentReadModel['listAgentRecentConversations'],
 ) {
   httpServer.registerRoute({
@@ -106,7 +106,7 @@ export function registerAgentConversationsRoutes(
 // ─── Agent Runtime Memory ───────────────────────────────────────────────────
 
 export function registerAgentMemoryRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   getAgentRuntimeMemory: AgentReadModel['getAgentRuntimeMemory'],
 ) {
   httpServer.registerRoute({
@@ -128,7 +128,7 @@ export function registerAgentMemoryRoutes(
 // ─── Agent Metrics ───────────────────────────────────────────────────────────
 
 export function registerAgentMetricsRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   db: Database,
 ) {
   httpServer.registerRoute({
@@ -156,7 +156,7 @@ export function registerAgentMetricsRoutes(
 // ─── Agent Contracts ───────────────────────────────────────────────────────────
 
 export function registerAgentContractRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   db: Database,
 ) {
   httpServer.registerRoute({
@@ -181,7 +181,7 @@ export function registerAgentContractRoutes(
 // ─── Agent MCP Servers ───────────────────────────────────────────────────────
 
 export function registerAgentMcpRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   db: Database,
 ) {
   httpServer.registerRoute({
@@ -231,7 +231,7 @@ export function registerAgentMcpRoutes(
 // ─── Agent Schedules ─────────────────────────────────────────────────────────
 
 export function registerAgentSchedulesRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   db: Database,
 ) {
   httpServer.registerRoute({
@@ -256,7 +256,7 @@ export function registerAgentSchedulesRoutes(
 // ─── Agent Notifications ─────────────────────────────────────────────────────
 
 export function registerAgentNotificationsRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   db: Database,
 ) {
   httpServer.registerRoute({

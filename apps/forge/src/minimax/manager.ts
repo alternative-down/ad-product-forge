@@ -65,7 +65,7 @@ export class MiniMaxClient {
               return null;
             }
           })()
-        : {};
+        : null;
 
       if (!response.ok) {
         return this.buildError(

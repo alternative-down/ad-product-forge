@@ -6,6 +6,7 @@
 import type { HttpHandler, HttpResponse } from '../../../http/server';
 import type { InternalChatConversation } from '../../../database/schema';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
+import type { InternalChatHttpServer } from './index';
 import {
   createInternalChatConversationSchema,
   sendInternalChatConversationMessageSchema,
@@ -196,7 +197,7 @@ function buildArchiveConversationHandler(
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 export function registerConversationRoutes(
-  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: (request: { query: Map<string, string>; bodyText: string }) => HttpResponse | Promise<HttpResponse> }) => void },
+  httpServer: InternalChatHttpServer,
   internalChat: InternalChatService,
 ): void {
   httpServer.registerRoute({ method: 'GET', path: '/admin/internal-chat/conversations', handler: buildListConversationsHandler(internalChat) });

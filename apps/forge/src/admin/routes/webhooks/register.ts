@@ -20,7 +20,7 @@ const markProcessedSchema = z.object({
 });
 
 export function registerWebhookAdminRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: (request: HttpRequest) => Promise<unknown> }) => void },
+  httpServer: ForgeHttpServerAdapter,
   store: ReturnType<typeof createWebhookStore>,
 ) {
   httpServer.registerRoute({

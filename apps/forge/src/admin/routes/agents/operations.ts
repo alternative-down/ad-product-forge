@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
 import { forgeDebug } from '../debug';
-import type { HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';

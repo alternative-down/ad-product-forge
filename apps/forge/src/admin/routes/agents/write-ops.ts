@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 import { registerLifecycleOps } from './_split/lifecycle-ops';
 import { registerContractOps } from './_split/contract-ops';
 import { registerRoleOps } from './_split/role-ops';

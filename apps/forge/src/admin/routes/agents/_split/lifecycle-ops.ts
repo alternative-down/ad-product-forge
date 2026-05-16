@@ -8,7 +8,7 @@ import { parseJsonBody, jsonResponse } from '../../index';
 import { agentActionSchema } from '../../schemas/agents';
 
 export function registerLifecycleOps(
-  httpServer: { registerRoute: (route: object) => void },
+  httpServer: ForgeHttpServerAdapter,
   input: {
     db: unknown;
     loaderConfig: unknown;

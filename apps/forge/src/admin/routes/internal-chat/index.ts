@@ -15,8 +15,13 @@ import { registerGroupMemberRoutes } from './internal-chat-group-member-routes';
 /** Re-export helpers and schemas for consumers of this module. */
 export { jsonResponse, parseJsonBody } from '../index';
 
+import type { ForgeHttpServer } from '../../../http/server';
+
+/** Type alias so callers can pass ForgeHttpServer directly. */
+export type InternalChatHttpServer = Pick<ForgeHttpServer, 'registerRoute'>;
+
 export function registerInternalChatRoutes(
-  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) => void },
+  httpServer: InternalChatHttpServer,
   internalChat: InternalChatService,
 ): void {
   // SSE stream of incoming messages

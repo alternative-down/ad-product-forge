@@ -46,7 +46,7 @@ function createMockSchedules() {
 function createMockHttpServer() {
   const routes: any[] = [];
   return {
-    registerRoute: vi.fn((route: any) => routes.push(route)),
+    registerRoute: vi.fn((route: any) => { routes.push(route); return () => {}; }),
     _routes: routes,
   };
 }
