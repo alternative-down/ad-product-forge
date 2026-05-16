@@ -72,6 +72,13 @@ export function registerDashboardRoutes({
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/roles',
-    handler: async () => jsonResponse(await systemRM.listRoles()),
+    handler: async () => {
+      try {
+        return jsonResponse(await systemRM.listRoles());
+      } catch (err) {
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles', context: { error: err instanceof Error ? err.message : String(err) } });
+        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
+    },
   });
 }
