@@ -1,3 +1,8 @@
+export type LoopDetector = {
+  recordIteration(iteration: number): boolean;
+  reset(): void;
+};
+
 export type LoopDetectorState = {
   lastLoopSignature: string | null;
   repeatedLoopCount: number;

@@ -4,6 +4,12 @@ import { forgeDebug } from '@forge-runtime/core';
 
 const RECENT_STEP_LIMIT = 10;
 
+export type AgentRunnerUsage = {
+  recordAgentStep: (agentId: string, contractId: string, inputTokens: number, cachedInputTokens: number, outputTokens: number) => Promise<void>;
+  recordRefund: (input: { contractId: string; refundedUsd: number; }) => Promise<void>;
+  getPeriodUsage: (input: { agentId: string; periodStartMs: number; periodEndMs: number; }) => Promise<{ totalCostUsd: number; stepCount: number; }>;
+};
+
 type AgentUsage = {
   inputTokens?: number;
   outputTokens?: number;

@@ -38,6 +38,7 @@ import {
   buildRecallStepFromIteration,
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
+import { createId } from '../utils/id';
 import {
   isStaleRun,
   nextBackoff,
@@ -197,7 +198,11 @@ export async function generateWithTimeoutRetries(
       Boolean(value),
   );
 
-  const runDelayMs = calculateDelayMs(deps.backoffState);
+  const runDelayMs = calculateDelayMs(deps.backoffState, {
+    hasPendingMessages: false,
+    stopRequested: false,
+    hasNewEvents: false,
+  });
   let suppressNoToolCallReminderForRun = false;
 
   for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
@@ -205,7 +210,7 @@ export async function generateWithTimeoutRetries(
     const generateToken = startGenerateAttempt(deps, controller);
     const timeout = createGenerateTimeoutGuard(controller);
 
-    markGenerateProgress(timeout, controller, {
+    deps.markGenerateProgress(timeout, controller, {
       stage: 'generate-started',
       detail: {
         attempt,
@@ -264,6 +269,7 @@ export async function generateWithTimeoutRetries(
       // Record usage
       withTimeout(
         deps.usage.recordAgentStep(
+          deps.runtime.id,
           contractId,
           inputTokens,
           inputTokens, // cachedInputTokens — use inputTokens as approximation
@@ -275,10 +281,12 @@ export async function generateWithTimeoutRetries(
 
       // Record home metric snapshot
       withTimeout(
-        deps.homeMetricSnapshots.recordSnapshot(
-          deps.runtime.id,
-          deps.currentRuntime,
-        ),
+        deps.homeMetricSnapshots.recordSnapshot({
+          agentId: deps.runtime.id,
+          stepId: createId(),
+          stepCreatedAt: Date.now(),
+          snapshot: deps.currentRuntime,
+        }),
         RUNNER_AWAIT_TIMEOUT_MS,
         `Agent home metric snapshot timed out for ${deps.runtime.id}`,
       );

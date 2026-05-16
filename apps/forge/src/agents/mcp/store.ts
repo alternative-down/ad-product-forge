@@ -4,7 +4,7 @@
 
 import { eq, and, like, or } from 'drizzle-orm';
 import { getDatabase } from '../../database/client';
-import { mcpServerConfigs, agentMcpConfigs, type NewMcpServerConfig, type NewAgentMcpConfig } from '../../database/schema';
+import { mcpServerConfigs, agentMcpConfigs, type NewMcpServerConfig, type NewAgentMcpConfig, type McpServerConfig, type AgentMcpConfig } from '../../database/schema';
 export type { McpServerConfig, AgentMcpConfig } from '../../database/schema';
 import { createId } from '../../utils/id';
 
