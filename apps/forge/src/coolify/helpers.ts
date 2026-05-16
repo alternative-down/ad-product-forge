@@ -7,7 +7,8 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { _z } from 'zod';
+import z from 'zod';
+import { ApplicationSchema, ApplicationEnvSchema } from './schemas';
 
 export function normalizeDomainHost(value: string | null | undefined): string | null {
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
