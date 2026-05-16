@@ -201,5 +201,6 @@ export function getInternalAgentRegistry() {
 }
 
 export type Registry = ReturnType<typeof createInternalAgentRegistry>;
+export type InternalAgentRegistry = Registry;
 
 const internalAgentRegistry = createInternalAgentRegistry();
