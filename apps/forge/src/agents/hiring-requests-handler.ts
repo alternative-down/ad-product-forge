@@ -1,4 +1,4 @@
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -18,8 +18,9 @@ import { z } from 'zod';
 import { createCapabilityTools } from '../capabilities/tools';
 import type { AgentLoaderConfig } from './agent-loader';
 import { createCapabilityStore } from '../capabilities/store';
-import { _forgeCustomToolIds } from '../capabilities/catalog';
+import { forgeCustomToolIds } from '../capabilities/catalog';
 import { createSystemSettingsStore } from '../system-settings/store';
+import type { RuntimeProfile } from '../llm/runtime-model';
 
 import {
   normalizeAgentName,
@@ -37,7 +38,7 @@ const HIRING_RH_TOOL_IDS = new Set([
   'list_role_capabilities',
   'manage_role_capabilities',
 ] as const);
-const generatedAgentProfileSchema = z.object({
+export const generatedAgentProfileSchema = z.object({
   agentName: z.string().min(1),
   agentDescription: z.string().min(1),
   roleId: z.string().min(1),
@@ -45,7 +46,7 @@ const generatedAgentProfileSchema = z.object({
   secondaryGoals: z.array(z.string().min(1)).min(1),
   backstory: z.string().min(1),
 });
-const hiringRhResultSchema = generatedAgentProfileSchema.extend({
+export const hiringRhResultSchema = generatedAgentProfileSchema.extend({
   instructions: z.string().min(1),
 });
 const hireAgentSuccessSchema = hiringRhResultSchema.extend({
@@ -81,7 +82,7 @@ async function executeHireAgentTool(input: {
   db: Database;
   capabilities: ReturnType<typeof createCapabilityStore>;
 }) {
-  const { tool, toolInput, _db, _capabilities } = input;
+  const { tool, toolInput } = input;
   // execute is typed; call with the right input shape
    
   const result = await (tool.execute as (arg: unknown) => Promise<unknown>)(toolInput);
@@ -102,7 +103,7 @@ function buildStepDiagnostics(messages: NativeToolLoopMessage[]) {
   return messages.map((msg, i) => ({
     index: i,
     role: msg.role,
-    hasToolCalls: msg.role === 'assistant' && Array.isArray((msg as { tool_calls?: unknown[] }).tool_calls) && ((msg as { tool_calls: unknown[] }).tool_calls).length > 0,
+    hasToolCalls: msg.role === 'assistant' && Array.isArray((msg as unknown as { tool_calls?: unknown[] }).tool_calls) && ((msg as unknown as { tool_calls: unknown[] }).tool_calls).length > 0,
     textLength: typeof msg.content === 'string' ? msg.content.length : 0,
   }));
 }
@@ -137,19 +138,17 @@ export async function generateHiredAgentInstructions(
   const capabilities = createCapabilityStore(db);
   const systemSettings = createSystemSettingsStore(db);
   const defaults = await llmSettings.getResolvedDefaults();
-  const hiringRhRuntimeModel = await resolveProfileRuntimeModel(defaults.hiringRhProfile);
+  const hiringRhRuntimeModel = await resolveProfileRuntimeModel(defaults.hiringRhProfile as RuntimeProfile);
   const companySettings = await systemSettings.getSettings();
-  const hiringRhModelKey = defaults.hiringRhProfile.modelKey;
+  const hiringRhModelKey = (defaults.hiringRhProfile as RuntimeProfile).modelKey;
   const companyCash = createCompanyCashLedger(db);
-  const existingRoles;
-    existingRoles = await db.query.agentRoles.findMany();
-  const existingRoleNamesById = new Map(existingRoles.map((role: string) => [role.id, role.name]));
+  const existingRoles = await db.query.agentRoles.findMany();
+  const existingRoleNamesById = new Map(existingRoles.map((role) => [String((role as { id: unknown }).id), String((role as { name: unknown }).name)]));
   const existingAgents = await db.query.agents.findMany({
     columns: {
-      name: true,
-      roleId: true,
+      name: true as never,
+      roleId: true as never,
     },
-  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
     orderBy: (fields, { asc }) => [asc(fields.name)],
   });
   const modelPrice = await db.query.llmModelPrices.findFirst({
@@ -160,8 +159,8 @@ export async function generateHiredAgentInstructions(
     companyName: companySettings.companyName,
     companyContext: companySettings.companyContext,
     existingAgents: existingAgents.map((agent: object) => ({
-      name: agent.name,
-      roleName: agent.roleId ? (existingRoleNamesById.get(agent.roleId) ?? null) : null,
+      name: (agent as { name: unknown }).name as string,
+      roleName: (agent as { roleId: unknown }).roleId ? (existingRoleNamesById.get(String((agent as { roleId: unknown }).roleId)) ?? null) : null,
     })),
   });
 
@@ -303,7 +302,7 @@ export async function generateHiredAgentInstructions(
           });
           const normalizedAgentName = normalizeAgentName(agent.agentName);
 
-          if (currentAgents.some((currentAgent: object) => normalizeAgentName(currentAgent.name) === normalizedAgentName)) {
+          if (currentAgents.some((currentAgent: object) => normalizeAgentName((currentAgent as { name: unknown }).name as string) === normalizedAgentName)) {
             return {
               valid: false,
               error: `An internal collaborator named "${agent.agentName}" already exists.`,

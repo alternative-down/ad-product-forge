@@ -1,7 +1,8 @@
-import { _z } from 'zod';
+import z from 'zod';
 import { createCapabilityStore } from '../capabilities/store';
 import { forgeCustomToolIds } from '../capabilities/catalog';
-import { _forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
+import { generatedAgentProfileSchema } from './hiring-requests-handler';
 
 // ─── normalizeAgentName ───────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export function validateGeneratedAgentProfile(profile: z.infer<typeof generatedA
 } {
   const mentionedToolIds = forgeCustomToolIds.filter((toolId) =>
     profile.primaryGoal.includes(toolId)
-    || profile.secondaryGoals.some((goal: object) => goal.includes(toolId))
+    || profile.secondaryGoals.some((goal) => goal.includes(toolId))
     || profile.backstory.includes(toolId),
   );
 
@@ -64,7 +65,7 @@ export async function validateHireAgentInput(
       'manage_self_crons',
     ] as const);
 
-    const roleToolIds = new Set(role.toolIds ?? []);
+    const roleToolIds = new Set((role as { toolIds?: string[] }).toolIds ?? []);
     const missingTools = [...MINIMUM_BASE_TOOL_IDS].filter((id) => !roleToolIds.has(id));
 
     if (missingTools.length > 0) {
@@ -77,7 +78,7 @@ export async function validateHireAgentInput(
 
     return {
       valid: true,
-      roleId: role.id,
+      roleId: (role as unknown as { id: string }).id,
       roleName: role.name,
       roleDescription: role.description ?? undefined,
     };

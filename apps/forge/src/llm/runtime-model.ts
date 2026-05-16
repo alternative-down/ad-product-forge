@@ -7,7 +7,7 @@ import {
 } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 
-type RuntimeProfile = {
+export type RuntimeProfile = {
   modelKey: string;
   baseUrl: string | null;
   apiKey: string;
