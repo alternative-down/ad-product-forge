@@ -287,3 +287,10 @@ export function registerAgentNotificationsRoutes(
     }
   });
 }
+
+// Stub — registerAgentProviderMcpRoutes was extracted here but not yet wired.
+// TS2304 fix: add a no-op export to allow admin/routes.ts to compile.
+export function registerAgentProviderMcpRoutes(input: { httpServer: unknown; db: unknown; loaderConfig: unknown }): void {
+  // Stub — registerAgentProviderMcpRoutes called from admin/routes.ts but not yet wired.
+  // TODO(kaelen #2822): wire MCP provider routes once implementation is complete
+}

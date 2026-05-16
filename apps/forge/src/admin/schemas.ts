@@ -33,7 +33,7 @@ export const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
-export const createRoleSchema = z.object({
+export const mcpServerFieldsSchema, createRoleSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
 });

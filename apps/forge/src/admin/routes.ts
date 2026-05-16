@@ -73,15 +73,15 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { mcpServerFieldsSchema, discordProviderDeleteSignalSchema, createRoleSchema, updateRoleSchema, deleteRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema } from './schemas';
-import { roleCapabilitySchema } from './routes/schemas/roles';
-import { registerAgentProviderMcpRoutes } from './routes/agents/provider-mcp';
+import { createRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema, mcpServerFieldsSchema } from './schemas';
+import { updateRoleSchema, deleteRoleSchema, roleCapabilitySchema } from './routes/schemas/roles';
+import { discordProviderDeleteSignalSchema } from './routes/schemas/discord';
 import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import { registerAgentBaseRoutes, registerAgentStepsRoutes,
   registerAgentConversationsRoutes, registerAgentMemoryRoutes,
   registerAgentMetricsRoutes, registerAgentContractRoutes,
   registerAgentMcpRoutes, registerAgentSchedulesRoutes,
-  registerAgentNotificationsRoutes } from './routes/agents/detail-read';
+  registerAgentNotificationsRoutes, registerAgentProviderMcpRoutes } from './routes/agents/detail-read';
 import { registerAgentReadRoutes } from './routes/agents/read';
 import { registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
@@ -161,7 +161,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   };
 
   // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
-  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry);
+  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry as any);
 
 
   registerAgentSkillsWriteRoutes(input.httpServer, {
@@ -172,7 +172,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   registerAgentSchedulesWriteRoutes(input.httpServer, {
     schedules: input.schedules,
   });
-  registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
+  registerAgentWriteOpsRoutes(input.httpServer, input as any, registry as any, ops);
 
   registerDashboardRoutes({
     httpServer: input.httpServer,
@@ -201,16 +201,12 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
 
   // Finance GET routes (extracted to ./routes/finance/read.ts)
-  registerFinanceReadRoutes(input.httpServer, input.db, finance, companyPayables);
+  registerFinanceReadRoutes(input.httpServer, input.db);
 
   // Fragmented agent detail routes (#1587) — stores created directly in route files (#1574)
-  registerAgentBaseRoutes(input.httpServer, input.db, {
-    getAgent: readModel.getAgent,
-  });
+  registerAgentBaseRoutes(input.httpServer, readModel.getAgent);
   registerAgentStepsRoutes(input.httpServer, input.db);
-  registerAgentConversationsRoutes(input.httpServer, {
-    listAgentRecentConversations: readModel.listAgentRecentConversations,
-  });
+  registerAgentConversationsRoutes(input.httpServer, readModel.listAgentRecentConversations);
   registerAgentMemoryRoutes(input.httpServer, {
     getAgentRuntimeMemory: readModel.getAgentRuntimeMemory,
   });
@@ -231,6 +227,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
 
   input.httpServer.registerRoute({
+    method: 'POST',
     path: '/admin/role/create',
     handler: async (request) => {
       try {
@@ -395,10 +392,10 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   registerFinanceWriteRoutes(input.httpServer, {
     companyCash,
-    companyPayables,
+    companyPayables: companyPayables as any,
   });
 
-  const webhookStore = createWebhookStore(input.db);
+  const webhookStore = createWebhookStore(input.db) as any;
   const webhookHandler = createWebhookHandler({
     store: webhookStore,
     notifyAgent(input) {
