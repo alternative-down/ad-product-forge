@@ -105,32 +105,38 @@ const ROLE_INSPECTION_TOOL_IDS = [
   'list_role_capabilities',
   'manage_role_capabilities',
 ];
-function resolveLoadedToolIds(toolIds: object) {
-  const resolved = new Set(toolIds);
-  const hasCrossAgentCron = resolved.has('manage_crons') || resolved.has('list_crons');
-  const hasCrossAgentRole = resolved.has('change_agent_role');
-  const hasRoleInspection = ROLE_INSPECTION_TOOL_IDS.some((id) => resolved.has(id));
-  if (hasRoleInspection) resolved.add('list_agent_roles');
-  if (resolved.has('manage_role_capabilities')) resolved.add('list_role_capabilities');
-  if (!hasCrossAgentCron && !hasCrossAgentRole) {
-    return [...resolved].sort((a, b) => a.localeCompare(b));
+function resolveLoadedToolIds(toolIds: string[]) {
+  const resolvedToolIds = new Set(toolIds);
+  const hasCrossAgentCronTools = resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
+  const hasRoleInspection = ROLE_INSPECTION_TOOL_IDS.some((toolId) => resolvedToolIds.has(toolId));
+
+  if (hasRoleInspection) {
+    resolvedToolIds.add('list_agent_roles');
   }
-  return [...resolved]
-    .filter((id) => {
-      if (hasCrossAgentCron && (id === 'manage_self_crons' || id === 'list_self_crons'))
-        return false;
-      return true;
-    })
-    .sort((a, b) => a.localeCompare(b));
+  if (resolvedToolIds.has('manage_role_capabilities')) {
+    resolvedToolIds.add('list_role_capabilities');
+  }
+  // Add base self-cron tools if no cross-agent cron tools are granted.
+  // Cross-agent cron tools replace self-cron tools (handled below).
+  if (!hasCrossAgentCronTools) {
+    resolvedToolIds.add('manage_self_crons');
+    resolvedToolIds.add('list_self_crons');
+  }
+  // Cross-agent cron tools replace self-cron tools
+  if (hasCrossAgentCronTools) {
+    resolvedToolIds.delete('manage_self_crons');
+    resolvedToolIds.delete('list_self_crons');
+  }
+  return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 describe('resolveLoadedToolIds', () => {
   it('returns sorted toolIds when no cross-agent tools present', () => {
-    expect(resolveLoadedToolIds(['list_agents', 'send_message'])).toEqual(['list_agents', 'send_message']);
+    expect(resolveLoadedToolIds(['list_agents', 'send_message'])).toEqual(['list_agents', 'list_self_crons', 'manage_self_crons', 'send_message']);
   });
   it('returns sorted toolIds when no special tools at all', () => {
-    expect(resolveLoadedToolIds(['get_weather'])).toEqual(['get_weather']);
+    expect(resolveLoadedToolIds(['get_weather'])).toEqual(['get_weather', 'list_self_crons', 'manage_self_crons']);
   });
   it('adds list_agent_roles when has role inspection tool', () => {
     expect(resolveLoadedToolIds(['manage_agent_role'])).toContain('list_agent_roles');
@@ -163,10 +169,10 @@ describe('resolveLoadedToolIds', () => {
     expect(result).toEqual(['apple', 'manage_crons', 'zebra']);
   });
   it('handles empty array', () => {
-    expect(resolveLoadedToolIds([])).toEqual([]);
+    expect(resolveLoadedToolIds([])).toEqual(['list_self_crons', 'manage_self_crons']);
   });
   it('handles no cross-agent tools and no role inspection tools', () => {
-    expect(resolveLoadedToolIds(['get_weather', 'send_message', 'list_agents'])).toEqual(['get_weather', 'list_agents', 'send_message']);
+    expect(resolveLoadedToolIds(['get_weather', 'send_message', 'list_agents'])).toEqual(['get_weather', 'list_agents', 'list_self_crons', 'manage_self_crons', 'send_message']);
   });
 });
 
@@ -326,20 +332,20 @@ describe('capabilities/store', () => {
 
   // ── listRoleToolPermissions ────────────────────────────────────────────────
   describe('listRoleToolPermissions', () => {
-    it('returns empty array when no permissions', async () => {
+    it('returns base self-cron tools when no permissions', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
-      expect(await store.listRoleToolPermissions('role-test')).toEqual([]);
+      expect(await store.listRoleToolPermissions('role-test')).toEqual(['list_self_crons', 'manage_self_crons']);
     });
-    it('resolves and sorts tool IDs from permission rows', async () => {
+    it('resolves and sorts tool IDs from permission rows, adds base self-cron tools', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([
         { roleId: 'role-test', toolId: 'send_message', createdAt: 1000 },
         { roleId: 'role-test', toolId: 'list_agents', createdAt: 1000 }
       ]);
       const store = createCapabilityStore(db);
-      expect(await store.listRoleToolPermissions('role-test')).toEqual(['list_agents', 'send_message']);
+      expect(await store.listRoleToolPermissions('role-test')).toEqual(['list_agents', 'list_self_crons', 'manage_self_crons', 'send_message']);
     });
     it('queries with roleId filter', async () => {
       const { db, query } = createMockDb();
@@ -435,30 +441,38 @@ describe('capabilities/store', () => {
       const store = createCapabilityStore(db);
       expect(await store.listGrantedRoleCapabilities('role-1')).toEqual([
         'list_agents',
+        'list_self_crons',
+        'manage_self_crons',
         'send_message',
         'wf-alpha',
         'wf-beta'
       ]);
     });
-    it('returns empty array when no permissions at all', async () => {
+    it('returns base self-cron tools when no permissions at all', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
-      expect(await store.listGrantedRoleCapabilities('role-1')).toEqual([]);
+      expect(await store.listGrantedRoleCapabilities('role-1')).toEqual(['list_self_crons', 'manage_self_crons']);
     });
   });
 
   // ── listRoleCapabilities ──────────────────────────────────────────────────
   describe('listRoleCapabilities', () => {
-    it('returns all capability ids with granted=false when no permissions', async () => {
+    it('returns all capability ids; base self-cron tools granted=true, others granted=false when no explicit permissions', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
       const result = await store.listRoleCapabilities('role-1');
       expect(result.length).toBeGreaterThan(0);
-      expect(result.every((item) => item.granted === false)).toBe(true);
+      // Base self-cron tools are granted by default
+      const selfCronTools = result.filter((item) => item.capabilityId === 'list_self_crons' || item.capabilityId === 'manage_self_crons');
+      expect(selfCronTools.length).toBe(2);
+      expect(selfCronTools.every((item) => item.granted === true)).toBe(true);
+      // All other tools still granted=false
+      const otherTools = result.filter((item) => item.capabilityId !== 'list_self_crons' && item.capabilityId !== 'manage_self_crons');
+      expect(otherTools.every((item) => item.granted === false)).toBe(true);
     });
     it('marks granted=true for capabilities the role has', async () => {
       const { db, query } = createMockDb();

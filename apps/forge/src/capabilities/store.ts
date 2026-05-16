@@ -38,6 +38,14 @@ function resolveLoadedToolIds(toolIds: string[]) {
     resolvedToolIds.add('list_role_capabilities');
   }
 
+  // Add base self-cron tools if no cross-agent cron tools are granted.
+  // Cross-agent cron tools replace self-cron tools (handled below).
+  if (!hasCrossAgentCronTools) {
+    resolvedToolIds.add('manage_self_crons');
+    resolvedToolIds.add('list_self_crons');
+  }
+
+
   // Cross-agent cron tools replace self-cron tools
   if (hasCrossAgentCronTools) {
     resolvedToolIds.delete('manage_self_crons');
