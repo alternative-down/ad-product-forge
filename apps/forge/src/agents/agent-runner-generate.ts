@@ -23,11 +23,11 @@
 import type { Database } from '../database/schema';
 import type { InternalAgentRuntime } from './runtime/types';
 import type { AgentContractStore } from './agent-contract-store';
-import type { SystemSettingsStore } from '../system-settings/store';
+import type { _SystemSettingsStore } from '../system-settings/store';
 import type { AgentNotificationStore } from '../notifications/store';
 import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage } from './agent-runner-usage';
-import type { AgentWakeQueue } from '@forge-runtime/core';
+import type { _AgentWakeQueue } from '@forge-runtime/core';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
 import type { LoopDetector } from './agent-runner-loop-detector';
@@ -54,8 +54,8 @@ import {
   type BuildIterationFeedbackDeps,
   type BuildIterationFeedbackInput,
 } from './agent-runner-feedback';
-import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
-import { RUN_STOP_REMINDER } from './agent-runner-wake';
+import { _readAgentHomeMetricSnapshot } from './agent-home-metrics';
+import { _RUN_STOP_REMINDER } from './agent-runner-wake';
 import { forgeDebug } from '@forge-runtime/core';
 
 import {
