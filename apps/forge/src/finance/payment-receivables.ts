@@ -155,6 +155,24 @@ export function createPaymentReceivablesStore(db: Database) {
           })
           .where(eq(paymentSubscriptions.providerSubscriptionId, input.providerSubscriptionId));
         return existing[0].id;
+      const [inserted] = await db
+        .insert(paymentSubscriptions)
+        .values({
+          customerId: input.customerId,
+          productId: input.productId,
+          provider: input.provider,
+          providerSubscriptionId: input.providerSubscriptionId,
+          status: input.status,
+          amountUsd: input.amountUsd,
+          billingCycle: input.billingCycle,
+          currentPeriodStart: input.currentPeriodStart ?? null,
+          currentPeriodEnd: input.currentPeriodEnd ?? null,
+          canceledAt: input.canceledAt ?? null,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: paymentSubscriptions.id });
+      return inserted.id;
       }
     } catch (err) {
       forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'upsertSubscription DB read failed', context: { providerSubscriptionId: input.providerSubscriptionId, error: err instanceof Error ? err.message : String(err) } });
