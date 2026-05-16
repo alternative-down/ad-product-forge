@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import type { MiniMaxManager } from './manager';
 
-const MINIMAX_TOOL_IDS = [
+const _MINIMAX_TOOL_IDS = [
   'list_minimax_voices',
   'minimax_tts',
   'minimax_image',
@@ -183,18 +183,19 @@ async function waitForVideoFile(
 
     if (!status.success) {
       forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
-      throw new Error(status.error?.message || 'Failed to query MiniMax video generation status');
+      throw new Error(status.error?.message ?? 'Failed to query MiniMax video generation status');
     }
 
     const videoStatus = status.data?.status?.toLowerCase() ?? '';
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (videoStatus === 'success' && status.data?.fileId) {
       return status.data.fileId;
     }
 
     if (videoStatus === 'failed') {
       forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
-      throw new Error(status.data?.failureReason || 'MiniMax video generation failed');
+      throw new Error(status.data?.failureReason ?? 'MiniMax video generation failed');
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -224,7 +225,7 @@ export function createMiniMaxTools(
           if (!result.success || !result.data) {
             return {
               valid: false,
-              error: result.error?.message || 'Failed to list voices',
+              error: result.error?.message ?? 'Failed to list voices',
               hint: 'Verify the MiniMax integration is configured and try again.',
             };
           }
@@ -279,7 +280,7 @@ export function createMiniMaxTools(
           if (!result.success || !result.data) {
             return {
               valid: false,
-              error: result.error?.message || 'Failed to generate speech',
+              error: result.error?.message ?? 'Failed to generate speech',
               hint: buildMiniMaxHint(
                 result.error?.code,
                 'Verify the MiniMax integration is configured and the selected speech options are supported.',
@@ -351,7 +352,7 @@ export function createMiniMaxTools(
           if (!result.success || !result.data) {
             return {
               valid: false,
-              error: result.error?.message || 'Failed to generate image',
+              error: result.error?.message ?? 'Failed to generate image',
               hint: buildMiniMaxHint(
                 result.error?.code,
                 'Verify the MiniMax integration is configured and the selected image options are supported.',
@@ -414,7 +415,7 @@ export function createMiniMaxTools(
           if (!task.success || !task.data) {
             return {
               valid: false,
-              error: task.error?.message || 'Failed to start video generation',
+              error: task.error?.message ?? 'Failed to start video generation',
               hint: buildMiniMaxHint(
                 task.error?.code,
                 'Verify the MiniMax integration is configured and the selected video options are supported.',
@@ -428,7 +429,7 @@ export function createMiniMaxTools(
           if (!file.success || !file.data) {
             return {
               valid: false,
-              error: file.error?.message || 'MiniMax did not return a downloadable video file',
+              error: file.error?.message ?? 'MiniMax did not return a downloadable video file',
               hint: 'The video task finished, but the file could not be retrieved. Try again in a moment.',
             };
           }

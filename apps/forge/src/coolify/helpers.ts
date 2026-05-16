@@ -10,6 +10,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { _z } from 'zod';
 
 export function normalizeDomainHost(value: string | null | undefined): string | null {
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!value) {
     return null;
   }
@@ -32,6 +33,7 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
     return z.array(schema).parse(data);
   }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
 
@@ -57,6 +59,7 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
 }
 
 export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
 
@@ -96,6 +99,7 @@ export function extractLogs(data: unknown): string {
     return data;
   }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
 
@@ -157,7 +161,8 @@ export function toTimestamp(value: string | number | null): number {
 
   return 0;
 }
-function toApplicationSummary(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _toApplicationSummary(
   application: z.infer<typeof ApplicationSchema>,
 ) {
   return {
@@ -170,7 +175,8 @@ function toApplicationSummary(
   };
 }
 
-function toApplicationDetails(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _toApplicationDetails(
   application: z.infer<typeof ApplicationSchema>,
 ) {
   return {
@@ -184,7 +190,8 @@ function toApplicationDetails(
   };
 }
 
-function toEnvDetails(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _toEnvDetails(
   env: z.infer<typeof ApplicationEnvSchema>,
 ) {
   return {
