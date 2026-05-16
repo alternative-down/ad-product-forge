@@ -216,7 +216,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       const c = createClient({ url: `file:${agentDatabasePath}` });
       c.execute('PRAGMA foreign_keys = ON');
       client = { url: `file:${agentDatabasePath}` };
-    } catch { // @ts-expect-error non-fatal — caller handles null
+    } catch { 
       return null;
     }
 

@@ -12,7 +12,7 @@ export function createCompanyPayables(db: Database) {
   async function listRecurringPayables() {
     try {
       const rows = await db.query.companyRecurringPayables.findMany({
-  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
+  
         orderBy: (fields, { asc }) => [asc(fields.name)],
       });
 
