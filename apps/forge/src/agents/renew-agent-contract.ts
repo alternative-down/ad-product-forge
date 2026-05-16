@@ -7,7 +7,7 @@ import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 import { createAgentContractStore } from './agent-contract-store';
 import { currentTimeMs } from '../utils/time';
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 
 export async function renewAgentContract(
