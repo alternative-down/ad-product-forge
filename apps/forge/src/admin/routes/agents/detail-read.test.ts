@@ -51,6 +51,7 @@ function makeHttpServer() {
   return {
     registerRoute(route: { method: string; path: string; handler: any }) {
       routes.push(route);
+      return () => {};
     },
     getRoutes() { return routes; },
   };

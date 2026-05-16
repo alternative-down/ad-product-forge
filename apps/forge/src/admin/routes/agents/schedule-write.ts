@@ -3,14 +3,14 @@
  * POST routes for agent schedule management
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createScheduleSchema, updateScheduleSchema, deleteScheduleSchema } from '../schemas/schedules';
 
 export function registerAgentSchedulesWriteRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   input: {
     schedules: AdminRouteContext['schedules'];
   },

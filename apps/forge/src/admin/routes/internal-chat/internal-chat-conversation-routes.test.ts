@@ -21,7 +21,7 @@ function createMockHttpServer() {
   const routes: Route[] = [];
   return {
     routes,
-    registerRoute(route: Route) { routes.push(route); },
+    registerRoute(route: Route) { routes.push(route); return () => {}; },
   };
 }
 

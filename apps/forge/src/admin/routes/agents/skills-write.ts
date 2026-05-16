@@ -3,7 +3,7 @@
  * POST routes for agent skills management
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
@@ -23,7 +23,7 @@ import {
 } from '../schemas/skills';
 
 export function registerAgentSkillsWriteRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
+  httpServer: ForgeHttpServerAdapter,
   input: { db: AdminRouteContext['db']; loaderConfig: AdminRouteContext['loaderConfig']; workspaceBasePath: string },
 ) {
   // POST /admin/agent-skills/upload
