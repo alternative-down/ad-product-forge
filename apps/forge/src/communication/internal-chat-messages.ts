@@ -2,7 +2,7 @@ import {
   and, desc, eq, gte, inArray, like, lte, sql,
 } from 'drizzle-orm';
 
-import { forgeDebug } from '@forge-runtime/core';
+import { _forgeDebug } from '@forge-runtime/core';
 import type { CommunicationProviderMessage } from '@forge-runtime/core';
 
 import {
@@ -69,6 +69,7 @@ export function createInternalChatMessages(
     const dateTo = parseFilterDate(input.dateTo, 'dateTo');
     const filters = [
       eq(internalChatMessages.conversationId, input.conversationKey),
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
       ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
       ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
@@ -144,6 +145,7 @@ export function createInternalChatMessages(
     const dateTo = parseFilterDate(input.dateTo, 'dateTo');
     const filters = [
       eq(internalChatMessages.conversationId, input.conversationKey),
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
       ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
       ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
@@ -197,6 +199,7 @@ export function createInternalChatMessages(
         eq(internalChatConversationMembers.accountId, input.accountId),
       ));
 
+    // eslint-disable-next-line @typescript-eslint/prefer-const
     let remainingMembers;
       remainingMembers = await db.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, input.conversationId),
