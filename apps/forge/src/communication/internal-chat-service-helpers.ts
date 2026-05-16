@@ -52,7 +52,7 @@ export interface ServiceHelpers {
   requireConversationMembership: (agentId: string, conversationId: string) => Promise<void>;
   requireConversationMembershipByAccount: (accountId: string, conversationId: string) => Promise<void>;
   getRequiredConversationForAgent: (agentId: string, conversationId: string) => Promise<{ id: string; type: string; name: string | null }>;
-  getRequiredConversationForAccount: (accountId: string, conversationId: string) => Promise<{ id: string; type: string; name: string | null }>;
+  getRequiredConversationForAccount: (accountId: string, conversationId: string) => Promise<{ id: string; type: string; name: string | null; createdAt?: number; updatedAt?: number; createdByAccountId?: string | null }>;
   getRequiredGroupForAgent: (agentId: string, groupId: string) => Promise<{ id: string; type: string; name: string | null }>;
   getRequiredGroupForAccount: (accountId: string, groupId: string) => Promise<{ id: string; type: string; name: string | null }>;
   listGroupMembersOrDmPeers: (agentId: string, conversationId: string) => Promise<HelperParticipant[]>;
@@ -94,12 +94,14 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string): Promise<void> {
+    // accountId and conversationId can be any strings - membership check handles validation
+    void accountId; void conversationId;
       const membership = await db.query.internalChatConversationMembers.findFirst({
         where: and(
           eq(internalChatConversationMembers.accountId, accountId),
           eq(internalChatConversationMembers.conversationId, conversationId),
         ),
-      });
+      }) as { accountId: string; conversationId: string } | null;
       if (!membership) {
         forgeDebug({ scope: 'internal-chat-service-helpers', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
         throw new ConversationNotFoundError(conversationId);
@@ -117,7 +119,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
   async function getRequiredConversationForAccount(
     accountId: string,
     conversationId: string,
-  ): Promise<{ id: string; type: string; name: string | null }> {
+  ): Promise<{ id: string; type: string; name: string | null; createdAt?: number; updatedAt?: number; createdByAccountId?: string | null }> {
       await requireConversationMembershipByAccount(accountId, conversationId);
       const conversation = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, conversationId),
