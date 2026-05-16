@@ -16,20 +16,6 @@ import {
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
 } from './helpers';
-<<<<<<< Updated upstream
-import { createAgentConversationsReadModel } from './agents-conversations';
-import { createAgentMetricsReadModel } from './agents-metrics';
-import { createAgentDetailReadModel } from './agents-detail';
-import { createAgentListReadModel } from './agents-list';
-import { createAgentDebugReadModel } from './agents-debug';
-import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
-import type { InternalChatService } from '../../communication/internal-chat-service';
-import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
-import { closeLibsqlClient, listRecentConversations, listThreadMessages } from './conversation-helpers';
-import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
-import { createSystemSettingsStore } from '../../system-settings/store';
-=======
->>>>>>> Stashed changes
 
 import type {Database} from '../../database/index';
 import {
@@ -46,15 +32,6 @@ const RECENT_NOTIFICATION_LIMIT = 10;
 
 import type { AgentListItem, AgentReadModel } from './agents-types';
 
-<<<<<<< Updated upstream
-interface FinanceReadModel {
-  getCompanyCashBalance: () => Promise<{ balanceUsd: number }>;
-  getCompanyCashSummary: () => Promise<{ totalInUsd: number; totalOutUsd: number; netUsd: number }>;
-  listCompanyCashMovements: (opts: { limit: number }) => Promise<{ items: unknown[] }>;
-}
-
-=======
->>>>>>> Stashed changes
 interface AgentsReadModelDeps {
   db: Database;
   finance: FinanceReadModel;
@@ -171,11 +148,6 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     });
   }
 
-<<<<<<< Updated upstream
-  const armRM = createAgentsRuntimeMemoryReadModel({ db, registry: registryWithSize, workspaceBasePath });
-  const getAgentRuntimeMemory = armRM.getAgentRuntimeMemory;
-=======
->>>>>>> Stashed changes
   const debugRM = createAgentDebugReadModel({
     db,
     workspaceBasePath,
