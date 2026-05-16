@@ -1,6 +1,8 @@
 export type LoopDetector = {
   recordIteration(iteration: number): boolean;
   reset(): void;
+  isStuck(): boolean;
+  getSignatureCount(): number;
 };
 
 export type LoopDetectorState = {

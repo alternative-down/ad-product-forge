@@ -29,7 +29,7 @@ import type { GenerateTimeoutHandle } from './agent-runner-generate-timeout';
 export interface BuildIterationFeedbackDeps {
   suppressNoToolCallReminderForRun: boolean;
   setSuppressNoToolCallReminder: (val: boolean) => void;
-  setNextStepAt: (val: number | null) => void;
+  setNextStepAt: ((val: number | null) => void) | undefined;
   loopDetector: LoopDetector;
   loopSignature: string;
   runtime: { id: string };
@@ -61,6 +61,10 @@ export type BuildIterationFeedbackInput = {
   text: string;
   toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
   toolResults: Array<{ name: string; error?: Error }>;
+  messages?: unknown[];
+  // Legacy aliases for backward compat
+  innerIteration?: number;
+  innerFinishReason?: string;
 };
 
 /**
@@ -131,7 +135,10 @@ export async function buildIterationFeedback(
     return { continue: false, feedbackMessages: [] };
   }
 
-  const producedVisibleAssistantText = didIterationProduceVisibleAssistantText(iteration);
+  const producedVisibleAssistantText = didIterationProduceVisibleAssistantText({
+    text: iteration.text,
+    messages: iteration.messages ?? [],
+  });
   const feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> = [];
   const flushedPrompt = flushPendingRunMessages({ allowOriginIdleOnly: true });
   if (flushedPrompt) {
@@ -146,7 +153,11 @@ export async function buildIterationFeedback(
     feedbackMessages.push({ role: 'user', content: RUN_STOP_REMINDER });
   }
 
-  const recallStep = buildRecallStepFromIteration(iteration);
+  const recallStep = buildRecallStepFromIteration({
+    text: iteration.text,
+    toolCalls: iteration.toolCalls,
+    toolResults: iteration.toolResults.map((tr) => ({ toolName: tr.name, result: tr.error as unknown })),
+  });
   const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
     step: recallStep,
     steps: [recallStep],
