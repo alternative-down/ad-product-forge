@@ -3,16 +3,16 @@
  * POST routes for agent operations extracted from routes.ts
  */
 
-import { _z } from 'zod';
+import { z } from 'zod';
 import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
-import { registerLifecycleOps } from './_split/lifecycle-ops';
-import { _registerContractOps } from './_split/contract-ops';
-import { registerRoleOps } from './_split/role-ops';
-import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
-import { registerMcpOps } from './_split/mcp-ops';
-import { registerSkillOps } from './_split/skill-ops';
-import { _registerProviderOps } from './_split/provider-ops';
-import { _registerConfigOps } from './_split/config-ops';
+import { registerLifecycleOps } from './split/lifecycle-ops';
+import { registerContractOps } from './split/contract-ops';
+import { registerRoleOps } from './split/role-ops';
+import { registerLifecycleDelegateOps } from './split/lifecycle-delegate-ops';
+import { registerMcpOps } from './split/mcp-ops';
+import { registerSkillOps } from './split/skill-ops';
+import { registerProviderOps } from './split/provider-ops';
+import { registerConfigOps } from './split/config-ops';
 
 
 import type {Database} from '../../../../src/database/schema';
@@ -71,18 +71,18 @@ export function registerAgentWriteOpsRoutes(
   registry: Registry,
   ops: any
 ) {
-  // Lifecycle ops — extracted to _split/lifecycle-ops.ts
+  // Lifecycle ops — extracted to split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
-  // Contract ops — extracted to _split/contract-ops.ts
-  // Lifecycle delegate ops — extracted to _split/lifecycle-delegate-ops.ts
+  // Contract ops — extracted to split/contract-ops.ts
+  // Lifecycle delegate ops — extracted to split/lifecycle-delegate-ops.ts
   registerLifecycleDelegateOps(httpServer, input, ops);
-  // MCP ops — extracted to _split/mcp-ops.ts
+  // MCP ops — extracted to split/mcp-ops.ts
   registerMcpOps(httpServer, input.db, input.loaderConfig);
 
-  // Skill ops — extracted to _split/skill-ops.ts
+  // Skill ops — extracted to split/skill-ops.ts
   registerSkillOps(httpServer, input.db, input);
 
 
-  // Role ops — extracted to _split/role-ops.ts
+  // Role ops — extracted to split/role-ops.ts
   registerRoleOps(httpServer, input.db);
 }
