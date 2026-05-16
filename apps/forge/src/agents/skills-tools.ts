@@ -62,7 +62,7 @@ export function createAgentSkillTools(input: {
     inputSchema: loadSkillSchema,
     execute: async (inputData) => {
       const agent = await input.db.query.agents.findFirst({
-  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
+  
         where: (fields, operators) => operators.eq(fields.id, input.agentId),
         columns: {
           id: true,
@@ -126,7 +126,7 @@ export function createAgentSkillTools(input: {
       }),
       execute: async (inputData) => {
         const agent = await input.db.query.agents.findFirst({
-  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
+  
           where: (fields, operators) => operators.eq(fields.id, input.agentId),
           columns: {
             id: true,

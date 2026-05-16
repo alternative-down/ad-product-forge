@@ -487,7 +487,7 @@ export function createCapabilityStore(db: Database) {
     let rows;
     try {
       rows = await db.query.agents.findMany({
-  // @ts-expect-error — drizzle callback parameter (noImplicitAny limitation)
+  
         where: (agent, { and, eq }) => {
           const filters = [];
 

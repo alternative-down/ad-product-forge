@@ -262,7 +262,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
           for (const attr of ['id', 'class', 'name', 'type', 'placeholder']) {
             try {
               attributes[attr] = await el.getAttribute(attr) ?? '';
-            } catch { // @ts-expect-error non-fatal — attribute not readable
+            } catch {
               attributes[attr] = '';
             }
           }
