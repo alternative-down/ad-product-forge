@@ -18,7 +18,7 @@ import {
   type LongTermMemoryState,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
-import { ___renderCheckpointPackageReadme, ___renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
+import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 import {
   readLtmState,
   writeLtmState,
@@ -30,12 +30,12 @@ import {
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
-  ___writeCheckpointFiles,
+  writeCheckpointFiles,
   buildCheckpointPackageManifest,
-  ___commitCheckpointPackage,
-  ___cleanupTempPackage,
+  commitCheckpointPackage,
+  cleanupTempPackage,
   getTempPackagePath,
-  ___prepareTempPackageDirectory,
+  prepareTempPackageDirectory,
 } from './agent-ltm-checkpoint-io-helpers';
 
 import { withTimeout } from '../utils/async';
