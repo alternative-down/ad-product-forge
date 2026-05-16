@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { createCompanyPayables } from './company-payables';
+import type { Database } from '../database/client';
 
 // ─── Drizzle 0.26.x chunk helpers ─────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ interface MockPayablesDb {
 function createMockPayablesDb(
   initialPayables: RecurringPayableRow[] = [],
   initialLedger: CashLedgerRow[] = [],
-): MockPayablesDb {
+): Database {
   const payablesStore: RecurringPayableRow[] = [...initialPayables];
   const ledgerStore: CashLedgerRow[] = [...initialLedger];
 
@@ -224,7 +225,7 @@ function createMockPayablesDb(
         }),
       });
     },
-  };
+  } as unknown as Database;
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────

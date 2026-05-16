@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Database } from '../database/client';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -229,7 +230,7 @@ function createMockDb() {
         return r;
       }),
     })),
-  };
+  } as unknown as Database;
   return db;
 }
 
