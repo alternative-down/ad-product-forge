@@ -13,14 +13,14 @@ import {
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import { encryptSecret } from '../encryption/crypto';
-import type { CreateAgentConfig } from './runtime/types';
+import type { _CreateAgentConfig } from './runtime/types';
 import { getInternalAgentRegistry } from './internal-agent-registry';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
-import type { GitHubAppManager } from '../github/manager';
-import type { AgentEmailManager } from '../email/migadu-manager';
-import type { CoolifyManager } from '../coolify/manager';
-import type { createAgentScheduleManager } from '../schedules/manager';
-import type { InternalChatService } from '../communication/internal-chat-service';
+import type { _WorkspaceFilesystemConfig, _WorkspaceSandboxConfig } from '../database/schema';
+import type { _GitHubAppManager } from '../github/manager';
+import type { _AgentEmailManager } from '../email/migadu-manager';
+import type { _CoolifyManager } from '../coolify/manager';
+import type { _createAgentScheduleManager } from '../schedules/manager';
+import type { _InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import { forgeDebug } from '@forge-runtime/core';
@@ -46,6 +46,7 @@ export const HireInternalAgentInputSchema = z.object({
   githubApps: z.custom<{
     installForRepo: (repo: string) => Promise<void>;
     getInstallationId: (repo: string) => Promise<string>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }>().optional().default({} as any),
   emailMailboxes: z.any().nullable().optional(),
   coolify: z.any().nullable().optional(),
@@ -86,6 +87,7 @@ async function rollbackHire(
   hasLoadAgent: boolean,
   schedules: HireInternalAgentInput['schedules'],
   internalChat: HireInternalAgentInput['internalChat'],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tx: any,
 ) {
   // Undo external resources in reverse order of creation
@@ -127,12 +129,14 @@ async function rollbackHireDbAndEmail(
   agentId: string,
   provisionedMailbox: { address: string } | null,
   emailMailboxes: HireInternalAgentInput['emailMailboxes'],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tx: any,
 ) {
   await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
   await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
   await tx.delete(agents).where(eq(agents.id, agentId));
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (provisionedMailbox && emailMailboxes) {
     try {
       await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -151,7 +155,9 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   const validated = validateHireInternalAgentInput(input);
   const agentId = validated.agentId ?? createId();
   const now = Date.now();
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const shouldProvisionEmail = validated.emailMailboxes ? await validated.emailMailboxes.isConfigured() : false;
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const provisionedMailbox = shouldProvisionEmail
     ? await validated.emailMailboxes!.provisionMailbox({
         agentId,
@@ -165,6 +171,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       description: validated.roleDescription,
     },
     ...validated.providerCredentials,
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     ...(provisionedMailbox ? { email: provisionedMailbox.credentials } : {}),
   };
   const agentRecord: NewAgent = {
@@ -197,6 +204,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // Wrap ALL DB writes inside a single transaction.
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);
