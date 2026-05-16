@@ -47,6 +47,11 @@ export interface RunnerMessageManager {
     communicationDmFlushingEnabled: boolean;
     communicationGroupFlushingEnabled: boolean;
   };
+  getState: () => RunnerMessageManagerState;
+  // Flush manager delegation
+  shouldIncludePendingRunEventInFlush(event: AgentWakeEvent): boolean;
+  resetFlushedRunEventKeys(): void;
+  rememberFlushedRunEventKey(key: string): void;
 }
 
 export function createRunnerMessageManager(
@@ -91,5 +96,8 @@ export function createRunnerMessageManager(
     updateFlushSettings,
     getCurrentFlushSettings,
     getState,
+    shouldIncludePendingRunEventInFlush: (event: AgentWakeEvent) => manager.shouldIncludePendingRunEventInFlush(event),
+    resetFlushedRunEventKeys: manager.resetFlushedRunEventKeys.bind(manager),
+    rememberFlushedRunEventKey: manager.rememberFlushedRunEventKey.bind(manager),
   };
 }

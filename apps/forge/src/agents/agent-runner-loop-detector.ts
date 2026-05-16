@@ -39,11 +39,16 @@ export function createLoopDetector(
     return state.lastLoopSignature;
   }
 
+  function getState(): LoopDetectorState {
+    return state;
+  }
+
   return {
     reset,
     register,
     isStuck,
     getSignatureCount,
     getCurrentSignature,
+    getState,
   };
 }

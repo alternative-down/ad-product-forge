@@ -13,6 +13,8 @@ export type RunLifecycle = {
   startGenerateAttempt(controller: AbortController): number;
   finishGenerateAttempt(generateToken: number, controller: AbortController): void;
   getGenerateToken(): number;
+  advanceGenerateToken(): void;
+  getAbortController(): AbortController | null;
 };
 
 export type RunLifecycleDeps = {
@@ -60,6 +62,13 @@ export function createRunLifecycle(
     return state.activeGenerateToken;
   }
 
+  function advanceGenerateToken(): void {
+    // Invalidate any in-flight generate, then start a fresh attempt.
+    // The new token is discarded — this mirrors the original behavior.
+    invalidateInFlightGenerate();
+    startGenerateAttempt(new AbortController());
+  }
+
   return {
     startNewRunEpoch,
     isStaleRun,
@@ -68,5 +77,6 @@ export function createRunLifecycle(
     finishGenerateAttempt,
     getGenerateToken,
     getAbortController: () => currentGenerateAbortController,
+    advanceGenerateToken,
   };
 }

@@ -26,18 +26,20 @@ import {
   extractAbsentErrorDetails,
 } from './agent-runner-error-formatting';
 import {
-  delay,
-  buildIterationLoopSignature,
   buildStepSystemPrompt,
   extractRunnerControlDirective,
   extractRunnerControlDirectiveFromIteration,
 } from './agent-runner-control-directives';
+import { delay } from '../utils/async';
 import {
   buildRecallStepFromIteration,
+  buildIterationLoopSignature,
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
 import {
   collectStepTextParts,
+} from './agent-runner-control-directives';
+import {
   extractControlDirective,
 } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
@@ -50,12 +52,14 @@ import {
   createGenerateTimeoutGuard,
   touchGenerateTimeout,
   clearGenerateTimeout,
-  startGenerateAttempt,
-  finishGenerateAttempt,
   RUNNER_AWAIT_TIMEOUT_MS,
   STARTING_RUN_TIMEOUT_MS,
   type GenerateTimeoutHandle,
 } from './agent-runner-generate';
+import {
+  startGenerateAttempt,
+  finishGenerateAttempt,
+} from './agent-runner-attempt-lifecycle';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
@@ -89,6 +93,7 @@ export function createAgentRunner(
     activeRunEpoch: 0,
     activeStepEpoch: 0,
     activeGenerateToken: 0,
+    isStopped: false,
   };
   const scheduler = createScheduler(schedulerState, {
     getSystemSettings: () => systemSettings.getSettings(),
@@ -324,23 +329,24 @@ export function createAgentRunner(
 
   async function runHealthcheck() {
     if (stopped) return;
+    const _onStartingRunTimeout: () => void = () => {
+      forgeDebug({ scope: 'agent-runner', level: 'warn', runtimeId: runtime.id, message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state` });
+      void startNewRunEpoch();
+      startingRun = false;
+      startingRunStartedAt = null;
+      activeRunId = null;
+    };
     await healthcheckRunHealthcheck({
       runtimeId: runtime.id,
       getExecutionState: (id) =>
         withTimeout(store.getExecutionState(id), RUNNER_AWAIT_TIMEOUT_MS, `Agent execution state lookup timed out for ${id}`),
       isLocallyIdle,
       getPendingCount: () => messageManager.getPendingCount(),
-      getWakeSnapshot: () => wakeQueue.getSnapshot(),
+      getWakeSnapshot: () => ({ ...wakeQueue.getSnapshot(), pending: wakeQueue.getSnapshot().pending ? 1 : 0 }),
       onRunnerIdle: () => wakeQueue.onRunnerIdle(),
       beginRun: (opts) => beginRun(opts),
       queueNextStep,
-      onStartingRunTimeout: () => {
-        forgeDebug({ scope: 'agent-runner', level: 'warn', runtimeId: runtime.id, message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state` });
-        startNewRunEpoch();
-        startingRun = false;
-        startingRunStartedAt = null;
-        activeRunId = null;
-      },
+      onStartingRunTimeout: _onStartingRunTimeout,
       syncStarterState: (running, startedAt) => { startingRun = running; startingRunStartedAt = startedAt; },
       syncExecuting: (val) => { executing = val; },
       syncTimer: (val) => { timer = val; },
@@ -532,19 +538,20 @@ export function createAgentRunner(
           usage,
           notifications,
           homeMetricSnapshots,
-          messageManager,
+          messageManager: messageManager as any,
           runLastMessages,
           flushPendingRunMessages,
           scheduler,
-          backoffState,
-          progressState,
-          loopState,
-          loopManager,
+          epochState: { activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0 } as any,
+          backoffState: { backoffMs, instant, nextStepAt: _nextStepAt } as any,
+          progressState: { stepsThisRun: 0, tokensThisRun: 0, lastGenerateProgress: null } as any,
+          loopState: { lastLoopSignature: null, repeatedLoopCount: 0 } as any,
+          loopDetector: { register: () => 1, isStuck: () => false, reset: () => {}, getSignatureCount: () => 0, getCurrentSignature: () => null } as any,
           currentGenerateAbortController,
           setCurrentGenerateAbortController: (c) => {
             currentGenerateAbortController = c;
           },
-          markGenerateProgress,
+          markGenerateProgress: () => {},
           setBackoffMs: (ms) => {
             backoffMs = ms;
           },
@@ -559,7 +566,7 @@ export function createAgentRunner(
           },
           loopSignature: loopManager.getState().lastLoopSignature ?? '',
           activeRunId,
-          loadAgentContextInstructions,
+          loadAgentContextInstructions: loadAgentContextInstructions as (currentRuntime: InternalAgentRuntime, db: Database) => Promise<string | null>,
           isStopped: () => stopped,
         },
       );
@@ -568,6 +575,7 @@ export function createAgentRunner(
         return;
       }
       lastStepStage = 'finalizing-run';
+      if (!result) { throw new Error('Unexpected: generate result is undefined'); }
       const controlDirective = extractRunnerControlDirective(result);
       const stopRequested = controlDirective === 'stop';
 
@@ -785,7 +793,7 @@ export function createAgentRunner(
   function startNewRunEpoch() {
     // Advance both local activeRunId and scheduler's epoch state
     activeRunId = createId();
-    scheduler.advanceGenerateToken();
+    advanceGenerateToken(scheduler.getState() as any);
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
     return scheduler.startNewRunEpoch();
@@ -810,7 +818,7 @@ export function createAgentRunner(
     }
 
     clearTimer();
-    scheduler.advanceGenerateToken();
+    advanceGenerateToken(scheduler.getState() as any);
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
     scheduler.setInstant(false);

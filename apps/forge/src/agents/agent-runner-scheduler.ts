@@ -183,6 +183,10 @@ export function createScheduler(
     return runLifecycle.startGenerateAttempt(controller);
   }
 
+  function advanceGenerateToken(): void {
+    runLifecycle.advanceGenerateToken();
+  }
+
   function finishGenerateAttempt(generateToken: number, controller: AbortController) {
     runLifecycle.finishGenerateAttempt(generateToken, controller);
   }
@@ -418,6 +422,7 @@ export function createScheduler(
     invalidateInFlightGenerate,
     startGenerateAttempt,
     finishGenerateAttempt,
+    advanceGenerateToken,
     getGenerateToken,
     // Lifecycle
     start,
