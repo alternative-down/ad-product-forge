@@ -9,7 +9,7 @@
  */
 import { withTimeout } from '../utils/async';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
-import type { _AgentWakeEvent } from '@forge-runtime/core';
+import type { AgentWakeEvent } from '@forge-runtime/core';
 
 
 export type HealthcheckDeps = {

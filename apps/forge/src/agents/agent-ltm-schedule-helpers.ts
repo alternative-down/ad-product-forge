@@ -7,7 +7,6 @@ import type { LongTermMemoryState } from '../ltm/store';
 export async function readLtmState(persistenceStore: {
   readState(): Promise<LongTermMemoryState>;
 }) {
-    // eslint-disable-next-line @typescript-eslint/return-await
   return persistenceStore.readState();
 }
 
@@ -31,7 +30,6 @@ export async function writeLtmState(
   },
   state: LongTermMemoryState,
 ) {
-    // eslint-disable-next-line @typescript-eslint/return-await
   return persistenceStore.writeState(state);
 }
 
@@ -108,17 +106,14 @@ export function applyLtmStateToSnapshot(
     packages: unknown[];
   },
 ) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   snapshot.lastRunAt = persistedState.lastRunAt
     ? Date.parse(persistedState.lastRunAt)
     : snapshot.lastRunAt;
   snapshot.lastRunError = persistedState.lastRunError;
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   snapshot.lastRunErrorAt = persistedState.lastRunErrorAt
     ? Date.parse(persistedState.lastRunErrorAt)
     : null;
   snapshot.lastWrittenPackageId = persistedState.lastWrittenPackageId;
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   snapshot.lastWrittenAt = persistedState.lastWrittenAt
     ? Date.parse(persistedState.lastWrittenAt)
     : null;

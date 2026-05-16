@@ -1,4 +1,4 @@
-import { _and, eq, _gte, _lte } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type {Database} from '../database/schema';
@@ -25,14 +25,12 @@ export async function renewAgentContract(
   try {
     const activeContract = await contractStore.getActiveContract(input.agentId);
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!activeContract) {
       forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'no-active-contract', context: { agentId: input.agentId } });
       throw new Error(`No active contract for agent: ${input.agentId}`);
     }
 
     const spentUsd = await contractStore.getContractSpend(activeContract.id);
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const refundableUsd = activeContract.fundedAt
       ? Math.max(activeContract.budgetUsd - spentUsd, 0)
       : 0;
@@ -53,7 +51,7 @@ export async function renewAgentContract(
 
     // All cash operations (refund old + fund new) and all contract operations
     // are inside the same transaction. If anything fails, everything rolls back.
-    await db.transaction(async (tx: import("better-sqlite3").Transaction<object>) => {
+    await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
       // Refund old contract inside tx — cash only actually moves if tx commits
       if (refundableUsd > 0) {
         await companyCashOperations.recordCashIn(

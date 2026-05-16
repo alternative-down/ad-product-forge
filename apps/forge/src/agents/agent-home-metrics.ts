@@ -1,8 +1,8 @@
-import _path from 'node:path';
+import path from 'node:path';
 
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import { _LibsqlConversationStore, _readOperationalMemoryState, _toMastraSafeIdentifier, forgeDebug } from '@forge-runtime/core';
+import { LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier, forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import {
@@ -13,9 +13,9 @@ import {
   agentRoles,
   llmProfiles,
 } from '../database/schema';
-import { _createSystemSettingsStore } from '../system-settings/store';
+import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentLongTermMemoryStore } from './ltm/store';
-import { _migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
+import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import type { InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
 
@@ -23,14 +23,18 @@ import type { InternalAgentRuntime } from './runtime/types';
 import { readLatestThreadDetails, readAgentRuntimeMemory } from './agent-home-metrics-thread-helpers';
 
 // Re-exports from helpers for backward compatibility
+export { buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
+export { formatStepIntervalLabel, computeIntervalConsistencyScore } from './agent-home-metrics-interval-helpers';
+export { truncatePreview, extractLatestMessagePreview, extractLatestMessageToolBadge } from './agent-home-metrics-preview-helpers';
+export { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helpers';
 
 const OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
-type _ClosableLibsqlClient = ReturnType<typeof createClient> & {
+type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
 };
 
-type _RuntimeStoredMessagePart = {
+type RuntimeStoredMessagePart = {
   type: string;
   text?: string;
   [key: string]: unknown;
@@ -118,7 +122,7 @@ export async function readAgentHomeMetricSnapshot(input: {
   }
 
   const [role, modelProfile, omModelProfile, providerRows, unreadNotificationRows, recentSteps, runtimeMemory, latestThreadDetails, longTermMemoryState, runtimeLtmSnapshot] = await Promise.all([
-    (agent.roleId ?? '') !== ''
+    agent.roleId
       ? input.db.query.agentRoles.findFirst({
         where: eq(agentRoles.id, agent.roleId),
       })
@@ -224,8 +228,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       lastStepContextTokens: lastStep?.inputTokens ?? null,
       lastStepPreview: latestThreadDetails.preview,
       lastToolBadge: latestThreadDetails.toolBadge,
-      lastStepTokens: // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      lastStep
+      lastStepTokens: lastStep
         ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
         : null,
       lastStepCostUsd: lastStep?.costUsd ?? null,

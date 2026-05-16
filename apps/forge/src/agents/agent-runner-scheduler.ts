@@ -1,7 +1,7 @@
-import { __ONE_MINUTE_MS, __TEN_MINUTES_MS, __FIFTEEN_MINUTES_MS } from './time-constants';
+import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import { forgeDebug } from '@forge-runtime/core';
-import { _createId } from '../utils/id';
+import { createId } from '../utils/id';
 import { withTimeout } from '../utils/async';
 import {
   nextBackoff as backoffNextBackoff,
@@ -14,7 +14,7 @@ import {
 } from './agent-runner-scheduler-epoch';
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 import { createSchedulerSteps } from './agent-runner-scheduler-steps';
-const _RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
+const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
 import { createRunLifecycle } from './agent-runner-run-lifecycle';
@@ -88,7 +88,6 @@ export function createScheduler(
   });
 
   // Step callback — set by the runner orchestrator
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
 
   function clearTimer() {
@@ -392,7 +391,6 @@ export function createScheduler(
   }
 
   function setStepCallback(fn: (runEpoch: number) => Promise<void>) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     stepCallback = fn;
   }
 
