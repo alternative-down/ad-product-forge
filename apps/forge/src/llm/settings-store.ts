@@ -25,6 +25,7 @@ const llmDefaultsSchema = z.object({
 
 const DEFAULTS_ROW_ID = 'default';
 
+export type LlmSettingsStore = Awaited<ReturnType<typeof createLlmSettingsStore>>;
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
     try {

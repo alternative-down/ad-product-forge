@@ -53,6 +53,7 @@ function resolveLoadedToolIds(toolIds: string[]) {
     .sort((left, right) => left.localeCompare(right));
 }
 
+export type CapabilityStore = Awaited<ReturnType<typeof createCapabilityStore>>;
 export function createCapabilityStore(db: Database) {
   async function listRoles() {
     let rows;

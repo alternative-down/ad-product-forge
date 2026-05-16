@@ -5,6 +5,7 @@ import type {Database} from '../database/schema';
 import { llmModelPrices } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
+export type LlmModelPriceStore = Awaited<ReturnType<typeof createLlmModelPriceStore>>;
 export function createLlmModelPriceStore(db: Database) {
   async function listPrices() {
     try {

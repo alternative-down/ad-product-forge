@@ -95,6 +95,7 @@ function mapRow(row: SystemSettings | null): SystemSettingsValue {
 
 // ── Store ───────────────────────────────────────────────────────────────────
 
+export type SystemSettingsStore = Awaited<ReturnType<typeof createSystemSettingsStore>>;
 export function createSystemSettingsStore(db: Database) {
   async function getSettings(): Promise<SystemSettingsValue> {
     try {
