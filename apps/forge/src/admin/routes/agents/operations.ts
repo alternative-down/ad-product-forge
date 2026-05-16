@@ -25,7 +25,8 @@ const adminInternalChatSendFromAdminSchema = z.object({
   targetKey: z.string().optional(),
 }).strict();
 
-interface InternalChat {
+// Widen to accept any object with the required methods (including the full InternalChat from routes.ts)
+type InternalChat = {
   registerExternalAccount: (input: { slug: string; displayName: string }) => Promise<{ accountId: string }>;
   sendMessage: (input: { accountId: string; targetKey: string; content: string; attachments: CommunicationFile[] }) => Promise<{ success: boolean;
     conversationKey: string;
@@ -33,16 +34,29 @@ interface InternalChat {
   }>;
 }
 
-interface RegistryEntry {
+// Widen to accept both the minimal Registry and the full InternalAgentRegistry
+type RegistryEntry = {
   runner: {
     notifyExternalEvent: (event: unknown) => void;
     forceIdle: () => Promise<void>;
   };
-}
+} | {
+  loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
+  add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
+  remove: (agentId: string) => void;
+  get: (agentId: string) => unknown;
+  list: () => unknown[];
+} | null;
 
-interface Registry {
-  get(agentId: string): RegistryEntry | null;
-}
+type Registry = {
+  get(agentId: string): RegistryEntry;
+} | {
+  loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
+  add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
+  remove: (agentId: string) => void;
+  get: (agentId: string) => unknown;
+  list: () => unknown[];
+};
 
 /**
  * Register routes for agent operations (wake, internal chat)

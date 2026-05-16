@@ -22,7 +22,8 @@ type FinanceReadInput = {
  */
 export function registerFinanceReadRoutes(
   httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) => void },
-  input: FinanceReadInput
+  db: Database,
+  finance?: FinanceReadInput,
 ) {
   // GET /admin/finance
   httpServer.registerRoute({
