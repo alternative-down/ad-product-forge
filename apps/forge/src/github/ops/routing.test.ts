@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials } from '../types';
 
-const makeCtx = (): OpsContext => ({
+const makeCtx = (): any => ({
   config: { db: vi.fn() as unknown as OpsContext['config']['db'], httpServer: vi.fn() as unknown as OpsContext['config']['httpServer'], publicBaseUrl: 'https://forge.example.com', integrations: vi.fn() as unknown as OpsContext['config']['integrations'] },
   notifications: vi.fn() as unknown as OpsContext['notifications'],
   routeCleanups: new Map(),
@@ -32,7 +32,7 @@ const makeCtx = (): OpsContext => ({
   normalizeAssignees: (a: string[]) => a,
   toIssueSummary: vi.fn() as unknown as OpsContext['toIssueSummary'],
   toIssueDetails: vi.fn() as unknown as OpsContext['toIssueDetails'],
-  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' },
+  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '', permissions: {}, events: [] },
   buildManifestEvents: () => ['issues', 'pull_request'],
   buildManifestPermissions: () => ({ contents: 'read' }),
   createAppName: (n: string, id: string) => `${n}-${id}`,
@@ -45,13 +45,13 @@ const makeCtx = (): OpsContext => ({
   normalizeManifestConfig: vi.fn() as unknown as OpsContext['normalizeManifestConfig'],
 });
 
-const manifestConfig = { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' };
+const manifestConfig = { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '', permissions: {}, events: [] };
 
 describe('createRoutingOps', () => {
   it('buildProvisioning returns correct structure for active credentials with installUrl', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const routing = createRoutingOps(makeCtx());
-    const result = routing.buildProvisioning('agent-123', { status: 'active', appSlug: 'my-app', manifestConfig, encryptedCredentials: 'x' });
+    const result = routing.buildProvisioning('agent-123', { status: 'active', appSlug: 'my-app', manifestConfig: manifestConfig as any, encryptedCredentials: 'x' } as any);
     expect(result.agentId).toBe('agent-123');
     expect(result.status).toBe('active');
     expect(result.registrationUrl).toBe('https://forge.example.com/webhook/github/agent-123/register');
@@ -62,7 +62,7 @@ describe('createRoutingOps', () => {
   it('buildProvisioning omits installUrl for pending credentials', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const routing = createRoutingOps(makeCtx());
-    const result = routing.buildProvisioning('agent-456', { status: 'pending', manifestConfig, encryptedCredentials: 'x' });
+    const result = routing.buildProvisioning('agent-456', { status: 'pending', manifestConfig: manifestConfig as any, encryptedCredentials: 'x' } as any);
     expect(result.status).toBe('pending');
     expect(result.installUrl).toBeUndefined();
     expect(result.registrationUrl).toContain('agent-456');
@@ -71,7 +71,7 @@ describe('createRoutingOps', () => {
   it('buildProvisioning includes installUrl for created status', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const routing = createRoutingOps(makeCtx());
-    const result = routing.buildProvisioning('agent-789', { status: 'created', appSlug: 'new-app', manifestConfig, encryptedCredentials: 'x' });
+    const result = routing.buildProvisioning('agent-789', { status: 'created', appSlug: 'new-app', manifestConfig: manifestConfig as any, encryptedCredentials: 'x' } as any);
     expect(result.status).toBe('created');
     expect(result.installUrl).toBe('https://github.com/apps/new-app/installations/new');
   });
