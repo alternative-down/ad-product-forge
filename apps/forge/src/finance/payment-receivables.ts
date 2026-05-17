@@ -31,7 +31,7 @@ export function createPaymentReceivablesStore(db: Database) {
   async function getProvider(provider: PaymentProviderType) {
     try {
       const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, provider)).limit(1);
-      return (rows as any)[0] ?? null;
+      return rows[0] ?? null;
     } catch (err) {
       forgeDebug({ scope: 'payment-receivables', level: 'error', message: 'getProvider DB read failed', context: { provider, error: err instanceof Error ? err.message : String(err) } });
       throw err;
@@ -93,14 +93,14 @@ export function createPaymentReceivablesStore(db: Database) {
         )
         .limit(1);
 
-      if ((existing as any).length > 0) {
+      if (existing.length > 0) {
         await db
           .update(paymentCustomers)
           .set({ email: input.email ?? null, name: input.name ?? null, updatedAt: now })
-          .where(eq(paymentCustomers.id, (existing as any)[0].id));
-        return (existing as any)[0].id;
+          .where(eq(paymentCustomers.id, existing[0].id));
+        return existing[0].id;
       }
-      const [inserted] = await (db
+      const [inserted] = await db
         .insert(paymentCustomers)
         .values({
           provider: input.provider,
@@ -109,7 +109,7 @@ export function createPaymentReceivablesStore(db: Database) {
           name: input.name ?? null,
           createdAt: now,
           updatedAt: now,
-        }) as any)
+        })
         .returning({ id: paymentCustomers.id });
       return inserted.id;
     } catch (err) {

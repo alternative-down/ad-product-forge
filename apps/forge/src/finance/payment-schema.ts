@@ -17,7 +17,7 @@ export const paymentProviders = sqliteTable('payment_providers', {
   /** Encrypted webhook secret */
   webhookSecretEncrypted: text('webhook_secret_encrypted'),
   /** Whether the provider is enabled */
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  isActive: integer('is_active').notNull().default(0),
   /** Arbitrary provider-specific config as JSON string */
   configJson: text('config_json'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
@@ -78,7 +78,7 @@ export const paymentTransactions = sqliteTable('payment_transactions', {
   status: text('status', { enum: ['pending', 'completed', 'failed', 'refunded'] }).notNull(),
   failureReason: text('failure_reason'),
   /** Whether this transaction has already been posted to the ledger */
-  ledgerPosted: integer('ledger_posted', { mode: 'boolean' }).notNull().default(false),
+  ledgerPosted: integer('ledger_posted').notNull().default(0),
   rawEventJson: text('raw_event_json'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
