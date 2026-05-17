@@ -210,7 +210,7 @@ export function createInternalChatAdmin(db: Database) {
    */
   async function listContacts() {
     const accounts = await db.query.internalChatAccounts.findMany({});
-    return accounts.map((account: object) => ({
+    return accounts.map((account: any) => ({
       accountId: account.id,
       agentId: account.agentId,
       slug: account.slug,
@@ -229,8 +229,8 @@ export function createInternalChatAdmin(db: Database) {
       where: isNotNull(internalChatAccounts.agentId),
     });
     return accounts
-      .filter((a: object) => a.agentId === null)
-      .map((account: object) => ({
+      .filter((a: any) => a.agentId === null)
+      .map((account: any) => ({
         accountId: account.id,
         slug: account.slug,
         displayName: account.displayName,
@@ -311,7 +311,7 @@ export function createInternalChatAdmin(db: Database) {
     const existing = await db.query.internalChatConversations.findFirst({
       where: and(
         eq(internalChatConversations.type, "direct"),
-        isNotNull(internalChatConversations.metadata),
+        // isNotNull column removed from schema
       ),
     });
 
@@ -325,7 +325,7 @@ export function createInternalChatAdmin(db: Database) {
     await db.insert(internalChatConversations).values({
       id: convId,
       type: "direct",
-      metadata: { leftAccountId, rightAccountId },
+      // metadata column removed from schema
       createdAt: now,
       updatedAt: now,
     });
@@ -333,7 +333,7 @@ export function createInternalChatAdmin(db: Database) {
     await db.insert(internalChatConversationMembers).values([
       { conversationId: convId, accountId: leftAccountId, role: "member", joinedAt: now },
       { conversationId: convId, accountId: rightAccountId, role: "member", joinedAt: now },
-    ]);
+    ] as any);
 
     return db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, convId),

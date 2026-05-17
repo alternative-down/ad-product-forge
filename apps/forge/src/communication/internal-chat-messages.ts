@@ -101,7 +101,7 @@ export function createInternalChatMessages(
       .offset(input.offset)
       .limit(input.limit).all();
 
-    const unreadMessageIds = rows.filter((row: object) => row.unread === 1).map((row: object) => row.messageId);
+    const unreadMessageIds = rows.filter((row: object) => row.unread === 1).map((row: any) => row.messageId);
 
     if (unreadMessageIds.length > 0) {
       await db

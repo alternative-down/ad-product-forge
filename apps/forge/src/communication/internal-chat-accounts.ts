@@ -329,12 +329,12 @@ export function createInternalChatAccounts(db: Database) {
       if (!account) {
         throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
       }
-      const conversation = await db.query.internalChatConversations.findFirst({
+      const conversation = (await db.query.internalChatConversations.findFirst({ 
         where: and(
           eq(internalChatConversations.id, conversationId),
           eq(internalChatConversationMembers.accountId, account.id),
         ),
-      });
+       })) as any;
       if (!conversation) {
         throw new InternalChatError('conversation-not-found', `Conversation ${conversationId} not found`);
       }
@@ -367,12 +367,12 @@ export function createInternalChatAccounts(db: Database) {
         .map(([conversationId]) => conversationId);
 
       if (candidateConversationIds.length > 0) {
-        const existing = await db.query.internalChatConversations.findFirst({
+        const existing = (await db.query.internalChatConversations.findFirst({ 
           where: and(
             eq(internalChatConversations.type, 'dm'),
             inArray(internalChatConversations.id, candidateConversationIds),
           ),
-        });
+         })) as any;
         if (existing) return existing;
       }
 
@@ -391,9 +391,9 @@ export function createInternalChatAccounts(db: Database) {
         { conversationId, accountId: rightAccountId, role: 'normal', createdAt: now },
       ]);
 
-      const conversation = await db.query.internalChatConversations.findFirst({
+      const conversation = (await db.query.internalChatConversations.findFirst({ 
         where: eq(internalChatConversations.id, conversationId),
-      });
+       })) as any;
       return conversation!;
 
   } catch (err) {

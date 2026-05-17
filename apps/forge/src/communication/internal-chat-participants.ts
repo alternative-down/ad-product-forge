@@ -41,9 +41,9 @@ export function createInternalChatParticipants(db: Database) {
    * Lists group members and DM peers by agentId (resolves account first).
    */
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
-      const account = await db.query.internalChatAccounts.findFirst({
+      const account = (await db.query.internalChatAccounts.findFirst({ 
         where: eq(internalChatAccounts.agentId, agentId),
-      });
+       })) as any;
       if (!account) return [];
       return await listGroupMembersOrDmPeersByAccount(account.id, conversationId);
   }

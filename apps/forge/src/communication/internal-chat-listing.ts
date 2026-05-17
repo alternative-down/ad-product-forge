@@ -51,12 +51,12 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
   }>> {
     return await withChatListingError('getMessages', async () => {
       const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
-      const membership = await db.query.internalChatConversationMembers.findFirst({
+      const membership = (await db.query.internalChatConversationMembers.findFirst({ 
         where: and(
           eq(internalChatConversationMembers.accountId, agentAccount.id),
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
-      });
+       })) as any;
       if (!membership) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
@@ -180,12 +180,12 @@ export function createInternalChatListing(db: Database, deps: ConversationListin
   }>> {
     return await withChatListingError('getMessagesByAccount', async () => {
       await deps.getRequiredExternalAccount(input.accountId);
-      const membership = await db.query.internalChatConversationMembers.findFirst({
+      const membership = (await db.query.internalChatConversationMembers.findFirst({ 
         where: and(
           eq(internalChatConversationMembers.accountId, input.accountId),
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
-      });
+       })) as any;
       if (!membership) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }

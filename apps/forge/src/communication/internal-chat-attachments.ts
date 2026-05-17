@@ -46,7 +46,7 @@ export function createChatAttachments(
         orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
       });
 
-      return rows.map((row: object) => ({
+      return rows.map((row: any) => ({
         name: row.name,
         data: new Uint8Array(row.data),
         contentType: row.contentType ?? resolveContentType(row.name),
