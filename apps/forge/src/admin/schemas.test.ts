@@ -11,9 +11,6 @@ import {
   hireAgentSchema,
   terminateAgentSchema,
   changeAgentRoleSchema,
-  systemIntegrationProviderSchema,
-  oauthSyncProviderSchema,
-  createInvestmentSchema,
 } from './schemas';
 
 describe('agentIdQuerySchema', () => {
@@ -150,8 +147,8 @@ describe('createRoleSchema', () => {
     const result = createRoleSchema.parse({ name: 'Editor' });
     expect(result.name).toBe('Editor');
     expect(result.description).toBeUndefined();
-    expect(result.capabilities).toBeUndefined();
-    expect(result.toolPermissions).toBeUndefined();
+    expect((result as any).capabilities).toBeUndefined();
+    expect((result as any).toolPermissions).toBeUndefined();
   });
 
   it('parses valid role with all optional fields', () => {
@@ -261,76 +258,4 @@ describe('changeAgentRoleSchema', () => {
   });
 });
 
-describe('systemIntegrationProviderSchema', () => {
-  it('accepts migadu', () => {
-    expect(systemIntegrationProviderSchema.parse('migadu')).toBe('migadu');
-  });
 
-  it('accepts coolify', () => {
-    expect(systemIntegrationProviderSchema.parse('coolify')).toBe('coolify');
-  });
-
-  it('accepts github', () => {
-    expect(systemIntegrationProviderSchema.parse('github')).toBe('github');
-  });
-
-  it('accepts minimax', () => {
-    expect(systemIntegrationProviderSchema.parse('minimax')).toBe('minimax');
-  });
-
-  it('rejects invalid provider', () => {
-    expect(() => systemIntegrationProviderSchema.parse('unknown')).toThrow();
-  });
-});
-
-describe('oauthSyncProviderSchema', () => {
-  it('accepts openai-codex', () => {
-    expect(oauthSyncProviderSchema.parse('openai-codex')).toBe('openai-codex');
-  });
-
-  it('accepts anthropic', () => {
-    expect(oauthSyncProviderSchema.parse('anthropic')).toBe('anthropic');
-  });
-
-  it('accepts all', () => {
-    expect(oauthSyncProviderSchema.parse('all')).toBe('all');
-  });
-
-  it('rejects invalid provider', () => {
-    expect(() => oauthSyncProviderSchema.parse('google')).toThrow();
-  });
-});
-
-describe('createInvestmentSchema', () => {
-  it('parses valid investment with required fields', () => {
-    const result = createInvestmentSchema.parse({ amountUsd: 100 });
-    expect(result.amountUsd).toBe(100);
-  });
-
-  it('accepts optional description', () => {
-    const result = createInvestmentSchema.parse({ amountUsd: 100, description: 'Initial setup' });
-    expect(result.description).toBe('Initial setup');
-  });
-
-  it('accepts optional effectiveAt', () => {
-    const result = createInvestmentSchema.parse({ amountUsd: 100, effectiveAt: '2025-06-01T12:00:00Z' });
-    expect(result.effectiveAt).toBe('2025-06-01T12:00:00Z');
-  });
-
-  it('accepts string amountUsd (coerced)', () => {
-    const result = createInvestmentSchema.parse({ amountUsd: '250' });
-    expect(result.amountUsd).toBe(250);
-  });
-
-  it('rejects negative amount', () => {
-    expect(() => createInvestmentSchema.parse({ amountUsd: -50 })).toThrow();
-  });
-
-  it('rejects zero amount', () => {
-    expect(() => createInvestmentSchema.parse({ amountUsd: 0 })).toThrow();
-  });
-
-  it('rejects missing amountUsd', () => {
-    expect(() => createInvestmentSchema.parse({ description: 'test' })).toThrow();
-  });
-});

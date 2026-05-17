@@ -123,7 +123,7 @@ function makeMockDb() {
             }
           }
           // If no where, return last inserted profile
-          return Promise.resolve(lastInsertedData.current?.profileId ? profiles.get(lastInsertedData.current.profileId) || lastInsertedData.current : null);
+          return Promise.resolve((lastInsertedData.current as any)?.profileId ? profiles.get((lastInsertedData.current as any).profileId) || (lastInsertedData.current as any) : null);
         }),
       },
       agentMcpConfigs: {
@@ -419,7 +419,7 @@ describe('registerSystemWriteRoutes', () => {
       })));
 
       expect(mockDb.delete).toHaveBeenCalled();
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, serverId: 'server-to-delete' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, serverId: 'server-to-delete' });
     });
 
     it('deletes linked agent configs and reloads agents', async () => {
@@ -497,7 +497,7 @@ describe('registerSystemWriteRoutes', () => {
         skillName: 'to-delete',
       })));
 
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, skillName: 'to-delete' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, skillName: 'to-delete' });
     });
   });
 
@@ -569,7 +569,7 @@ describe('registerSystemWriteRoutes', () => {
         integrationId: 'int-abc',
       })));
 
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, integrationId: 'int-abc' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, integrationId: 'int-abc' });
     });
   });
 
@@ -635,7 +635,7 @@ describe('registerSystemWriteRoutes', () => {
         profileId: 'profile-xyz',
       })));
 
-      const parsed = JSON.parse(result.body); expect(parsed).toEqual({ success: true, profileId: 'profile-xyz' });
+      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, profileId: 'profile-xyz' });
     });
   });
 
