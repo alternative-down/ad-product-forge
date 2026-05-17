@@ -122,7 +122,7 @@ describe('crypto', () => {
       const ct = Buffer.from(enc('test'));
       // Flip last byte to corrupt the auth tag
       ct[ct.length - 1] ^= 0xff;
-      expect(() => fn(Buffer.from(ct).toString('base64'))).toThrow();
+      expect(() => decryptSecret(Buffer.from(ct).toString('base64'))).toThrow();
     });
   });
 });

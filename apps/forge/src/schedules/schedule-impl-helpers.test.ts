@@ -7,9 +7,9 @@ import {
   requireScheduleEditor,
   requireScheduleDeleter,
 } from './schedule-impl-helpers';
-import type { StoredSchedule } from './store';
 
-const makeSchedule = (overrides: Partial<StoredSchedule> = {}): StoredSchedule =>
+
+const makeSchedule = (overrides: any = {}): any =>
   ({
     scheduleId: 'sched-001',
     agentId: 'agent-001',
@@ -28,8 +28,8 @@ const makeSchedule = (overrides: Partial<StoredSchedule> = {}): StoredSchedule =
     creatorId: 'creator-001',
     createdAt: 1717200000000,
     updatedAt: 1717200000000,
-    ...overrides,
-  }) as StoredSchedule;
+    ...(overrides as any),
+  }) as any;
 
 // ── createScheduleSchema ────────────────────────────────────────────────────
 

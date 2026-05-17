@@ -309,7 +309,7 @@ describe('capabilities/store', () => {
     it('throws when agents are assigned to the role', async () => {
       const { db } = createMockDb();
       const assignedAgent = createMockAgent({ roleId: 'role-test' });
-      db.transaction.mockImplementationOnce(async (fn) => {
+      db.transaction.mockImplementationOnce(async (fn: any) => {
         const tx = { query: db.query, delete: db.delete };
         tx.query.agents.findFirst.mockResolvedValue(assignedAgent);
         return fn(tx);
@@ -319,7 +319,7 @@ describe('capabilities/store', () => {
     });
     it('deletes role when no agents assigned', async () => {
       const { db } = createMockDb();
-      db.transaction.mockImplementationOnce(async (fn) => {
+      db.transaction.mockImplementationOnce(async (fn: any) => {
         const tx = { query: db.query, delete: db.delete };
         tx.query.agents.findFirst.mockResolvedValue(null);
         return fn(tx);
@@ -626,7 +626,7 @@ describe('capabilities/store', () => {
         createMockAgent({ id: 'ag-2', executionState: 'idle' })
       ]);
       const store = createCapabilityStore(db);
-      const result = await store.listAgentStatuses();
+      const result = await store.listAgentStatuses({});
       expect(result.length).toBe(2);
     });
     it('filters by agentId when provided', async () => {

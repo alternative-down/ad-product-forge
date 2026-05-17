@@ -6,7 +6,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createSystemIntegrationStore } from './store';
 
 import type {Database} from '../database/client';
-import type { SystemIntegration } from '../database/client';
+
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -35,17 +35,17 @@ function createMockDb(overrides?: Partial<Database>): Database {
 
 function createMockRow(
   providerType: string,
-  overrides?: Partial<SystemIntegration>,
-): SystemIntegration {
+  overrides?: any,
+): any {
   return {
     id: 'int-1',
-    providerType: providerType as SystemIntegration['providerType'],
+    providerType: providerType as any,
     encryptedConfig: 'encrypted-test',
     isEnabled: 1,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...overrides,
-  } as SystemIntegration;
+  } as any;
 }
 
 // ─── module-level mocks ──────────────────────────────────────────────────────
