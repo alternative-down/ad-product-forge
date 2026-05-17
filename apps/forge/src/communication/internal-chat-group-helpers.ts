@@ -37,7 +37,7 @@ export async function resolveChatGroupMembers(
   for (const member of members) {
     const participant = (await db.query.internalChatAccounts.findFirst({
       where: eq(
-        sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
+        (sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})` as any),
         member.participantKey,
       ),
     })) as any;
@@ -126,7 +126,7 @@ export async function syncChatGroupMembers(
     where: eq(internalChatConversationMembers.conversationId, groupId),
   })) as any;
 
-  const existingByAccountId = new Map(existingMembers.map((m) => [m.accountId, m]));
+  const existingByAccountId = new Map(existingMembers.map((m: any) => [m.accountId, m]));
 
   // Remove members not in desired set
   for (const existingMember of existingMembers) {
@@ -156,7 +156,7 @@ export async function syncChatGroupMembers(
           createdAt: now,
           updatedAt: now,
         } as any));
-    } else if (existingMember.role !== desiredMember.role) {
+  if ((existingMember as any).role !== desiredMember.role)
       await tx
         .update(internalChatConversationMembers)
         .set({ role: desiredMember.role })

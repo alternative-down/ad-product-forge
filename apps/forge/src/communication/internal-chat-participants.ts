@@ -34,7 +34,7 @@ export function createInternalChatParticipants(db: Database) {
         )
         .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-      return sortParticipantsBySelfFirst(rows, accountId);
+      return sortParticipantsBySelfFirst(rows as any, accountId);
   }
 
   /**
