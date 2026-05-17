@@ -28,6 +28,6 @@ async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { agentId, error } });
+  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: error instanceof Error ? error.message : String(error) } });
   process.exit(1);
 });
