@@ -99,7 +99,7 @@ describe('resolveAgentSkillRoot', () => {
   it('skillRoot ends with the skill name', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-x' },
+      agent: { id: 'agent-x', workspaceFilesystem: null },
       skillName: 'test-tool',
     });
     expect(result.skillRoot).toMatch(/test-tool$/);
@@ -108,7 +108,7 @@ describe('resolveAgentSkillRoot', () => {
   it('skillRoot is skillsRoot + skillName', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-1', workspaceFilesystem: undefined },
+      agent: { id: 'agent-1', workspaceFilesystem: null },
       skillName: 'deploy',
     });
     expect(result.skillRoot).toBe(result.skillsRoot + '/deploy');
@@ -117,7 +117,7 @@ describe('resolveAgentSkillRoot', () => {
   it('works with nested basePath workspaceFilesystem', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-42', workspaceFilesystem: { basePath: 'data/ws' } },
+      agent: { id: 'agent-42', workspaceFilesystem: '/data/ws' },
       skillName: 'skill',
     });
     expect(result.skillsRoot).toMatch(/\/skills$/);
@@ -127,7 +127,7 @@ describe('resolveAgentSkillRoot', () => {
   it('skillName with spaces/special chars produces valid path', () => {
     const result = resolveAgentSkillRoot({
       workspaceBasePath: '/base',
-      agent: { id: 'agent-42' },
+      agent: { id: 'agent-42', workspaceFilesystem: null },
       skillName: 'my cool skill',
     });
     expect(result.skillRoot).toContain('my cool skill');

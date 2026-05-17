@@ -182,7 +182,7 @@ describe('createGitHubAppManager', () => {
     });
     describe('getIssueComment', () => {
         it('returns comment with all fields', async () => {
-            mockRequest.mockResolvedValue({ data: { id: 55, body: 'text', user: { login: 'u1' }, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).getIssueComment('a1', { repositoryName: 'repo', commentId: 55 });expect(r).toMatchObject({ id: 55, author: 'u1', body: 'text' });
+            mockRequest.mockResolvedValue({ data: { id: 55, body: 'text', user: { login: 'u1' }, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-02T00:00:00Z' } });const r=await createGitHubAppManager(buildConfig({ organization: 'o' }, df(true))).getIssueComment('a1', { owner: 'o', repositoryName: 'repo', issueNumber: 1, commentId: 55 });expect(r).toMatchObject({ id: 55, author: 'u1', body: 'text' });
         });
     });
     describe('createIssueComment', () => {

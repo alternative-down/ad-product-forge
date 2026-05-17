@@ -149,7 +149,7 @@ describe('createGitHubAppManager — GitHub API surface', () => {
       const newManifest = { ...DEFAULT_MANIFEST_CONFIG, description: 'Updated' };
       const result = await manager.updateAgentManifestConfig({ agentId: 'agent-1', manifestConfig: newManifest });
       expect(result).toMatchObject({ agentId: 'agent-1', status: 'active' });
-      expect(result.manifestConfig).toMatchObject({ permissions: newManifest.permissions, events: newManifest.events });
+      expect((result as any).manifestConfig).toMatchObject({ permissions: newManifest.permissions, events: newManifest.events });
     });
 
     it('throws when credentials not found', async () => {
