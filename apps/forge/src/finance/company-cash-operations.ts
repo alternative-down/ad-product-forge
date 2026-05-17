@@ -32,6 +32,7 @@ export function createCompanyCashOperations(db: Database) {
     const now = Date.now();
     const entryId = createId();
 
+    try {
       await session.insert(companyCashLedger).values({
         id: entryId,
         type: input.type,
@@ -45,6 +46,10 @@ export function createCompanyCashOperations(db: Database) {
         effectiveAt: input.effectiveAt ?? (input.status === 'posted' ? now : null),
         createdAt: now,
       });
+    } catch (err) {
+      forgeDebug({ scope: 'company-cash-operations', level: 'error', message: 'createEntry DB insert failed', context: { error: err instanceof Error ? err.message : String(err), entryId, type: input.type, direction: input.direction, amountUsd: input.amountUsd } });
+      throw err;
+    }
 
     return { entryId };
   }
