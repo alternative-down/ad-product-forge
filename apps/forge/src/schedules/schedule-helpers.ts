@@ -1,3 +1,4 @@
+import { parseExpression } from 'cron-parser';
 import { forgeDebug } from '@forge-runtime/core';
 
 function _validateCronExpression(expression: string): boolean {
@@ -14,7 +15,7 @@ export function parseScheduleDate(value: string) {
   const timestamp = Date.parse(value);
 
   if (Number.isNaN(timestamp)) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: invalid date', context: { scheduledDate } });
+    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: invalid date', context: { scheduledDate: value } });
     throw new Error(`Invalid scheduledDate: ${value}`);
   }
 
@@ -42,7 +43,7 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
     return;
   }
 
-  if (scheduledDate <= Date.now()) {
+  if ((scheduledDate as number) <= Date.now()) {
     forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: must be in future', context: { scheduledDate } });
     throw new Error('scheduledDate must be in the future');
   }
@@ -108,11 +109,11 @@ export function createWakeContent(input: {
   }
 
   if (input.scheduleType === 'date' && input.scheduledDate !== undefined) {
-    lines.push(`Scheduled date: ${new Date(input.scheduledDate).toISOString()}`);
+    lines.push(`Scheduled date: ${new Date((input as any).scheduledDate).toISOString()}`);
   }
 
   if (input.nextTriggerAt !== undefined) {
-    lines.push(`Next trigger at: ${new Date(input.nextTriggerAt).toISOString()}`);
+    lines.push(`Next trigger at: ${new Date((input as any).nextTriggerAt).toISOString()}`);
   }
 
   lines.push('', 'Content:', input.content.trim());

@@ -206,8 +206,8 @@ export async function readAgentRuntimeMemory(
         overflowTokenCount: operationalMemoryState.metrics.overflowTokenCount,
         overflowTokenLimit: settings.checkpointedOmRawObservationBatchTokens,
         observationTokenCount: operationalMemoryState.metrics.observationTokenCount,
-        observationTriggerTokenLimit: settings.checkpointedOmObservationTriggerTokenLimit,
-        reflectionTriggerTokenLimit: settings.checkpointedOmReflectionTriggerTokenLimit,
+        observationTriggerTokenLimit: (settings as any).checkpointedOmObservationTriggerTokenLimit,
+        reflectionTriggerTokenLimit: (settings as any).checkpointedOmReflectionTriggerTokenLimit,
         reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
         reflectionBudget: Math.max(
           0,

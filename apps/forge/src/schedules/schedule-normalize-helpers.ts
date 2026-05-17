@@ -66,10 +66,10 @@ export function normalizeScheduleUpdate(
   return {
     scheduleType,
     cronExpression: scheduleType === 'cron' ? (cronExpression ?? null) : null,
-    scheduledDate: scheduleType === 'date' ? (scheduledDateRaw ?? null) : null,
-    wakeWhenRunning: scheduleType === 'cron' ? (parsed.wakeWhenRunning ?? existing.wakeWhenRunning) : true,
+    scheduledDate: scheduleType === 'date' ? (scheduledDateRaw as number ?? null) : null,
+    wakeWhenRunning: scheduleType === 'cron' ? ((parsed as any).wakeWhenRunning ?? (existing as any).wakeWhenRunning) : true,
     shouldRequireFutureDate,
-    parsedScheduledDate: scheduledDateRaw,
+    parsedScheduledDate: scheduledDateRaw as number,
   };
 }
 

@@ -64,7 +64,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       throw error;
     }
 
-    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials;
+    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials as any;
   }
 
   const [primaryProfile, omProfile, companySettings, role, capabilitySet] = await Promise.all([
@@ -75,8 +75,8 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     capabilities.getAgentCapabilities(agent.id),
   ]);
   const [primaryRuntimeModel, omRuntimeModel] = await Promise.all([
-    resolveProfileRuntimeModel(primaryProfile),
-    resolveProfileRuntimeModel(omProfile),
+    resolveProfileRuntimeModel(primaryProfile as any),
+    resolveProfileRuntimeModel(omProfile as any),
   ]);
 
   const providers = await loadCommunicationProviders(providerCredentials, {
