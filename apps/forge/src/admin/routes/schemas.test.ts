@@ -530,7 +530,7 @@ describe('System Integration Schemas', () => {
         },
       });
       expect(result.providerType).toBe('migadu');
-      expect(result.config.apiUser).toBe('admin@example.com');
+      expect((result.config as any).apiUser).toBe('admin@example.com');
     });
 
     it('rejects migadu with invalid email', () => {
@@ -557,7 +557,7 @@ describe('System Integration Schemas', () => {
         },
       });
       expect(result.providerType).toBe('coolify');
-      expect(result.config.baseUrl).toBe('https://coolify.example.com');
+      expect((result.config as any).baseUrl).toBe('https://coolify.example.com');
     });
 
     it('rejects coolify with invalid baseUrl', () => {
