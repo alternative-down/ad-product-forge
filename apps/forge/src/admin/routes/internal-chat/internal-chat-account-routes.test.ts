@@ -64,7 +64,7 @@ describe('registerAccountRoutes', () => {
   it('GET /admin/internal-chat/accounts returns only non-agent accounts', async () => {
     registerAccountRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/accounts');
-    const result = await route!.handler() as { body: string };
+    const result = await route!.handler(undefined as any) as { body: string };
     const body = JSON.parse(result.body);
     expect(body).toHaveLength(1);
     expect(body[0].accountId).toBe('acc-001');
@@ -81,7 +81,7 @@ describe('registerAccountRoutes', () => {
   it('GET /admin/internal-chat/contacts returns all accounts with isAgent flag', async () => {
     registerAccountRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/contacts');
-    const result = await route!.handler() as { body: string };
+    const result = await route!.handler(undefined as any) as { body: string };
     const body = JSON.parse(result.body);
     expect(body).toHaveLength(2);
     expect(body[1].isAgent).toBe(true);
@@ -98,7 +98,7 @@ describe('registerAccountRoutes', () => {
   it('POST /admin/internal-chat/account/create delegates to registerExternalAccount with correct args', async () => {
     registerAccountRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/account/create');
-    const result = await route!.handler({ bodyText: JSON.stringify({ provider: 'internal-chat', targetKey: 'charlie', name: 'Charlie' }) }) as { body: string };
+    const result = await route!.handler({ bodyText: JSON.stringify({ provider: 'internal-chat', targetKey: 'charlie', name: 'Charlie' }) } as any) as { body: string };
     expect(mockInternalChat.registerExternalAccount).toHaveBeenCalledWith({
       slug: 'charlie',
       displayName: 'Charlie',
@@ -116,7 +116,7 @@ describe('registerAccountRoutes', () => {
   it('POST /admin/internal-chat/account/update delegates with correct fields', async () => {
     registerAccountRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/account/update');
-    await route!.handler({ bodyText: JSON.stringify({ accountId: 'acc-upd', name: 'Updated', webhookUrl: 'https://example.com' }) });
+    await route!.handler({ bodyText: JSON.stringify({ accountId: 'acc-upd', name: 'Updated', webhookUrl: 'https://example.com' }) } as any);
     expect(mockInternalChat.updateExternalAccount).toHaveBeenCalledWith({
       accountId: 'acc-upd',
       displayName: 'Updated',
@@ -134,7 +134,7 @@ describe('registerAccountRoutes', () => {
   it('POST /admin/internal-chat/account/delete delegates to deleteExternalAccount', async () => {
     registerAccountRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/account/delete');
-    await route!.handler({ bodyText: JSON.stringify({ accountId: 'acc-001' }) });
+    await route!.handler({ bodyText: JSON.stringify({ accountId: 'acc-001' }) } as any);
     expect(mockInternalChat.deleteExternalAccount).toHaveBeenCalledWith({ accountId: 'acc-001' });
   });
 });

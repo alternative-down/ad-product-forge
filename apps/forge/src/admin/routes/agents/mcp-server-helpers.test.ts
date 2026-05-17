@@ -94,8 +94,8 @@ describe('createAgentMcpServer', () => {
 
 describe('updateAgentMcpServer', () => {
   it('updates mcpServerConfigs and agentMcpConfigs', async () => {
-    const updateMock = vi.fn().mockReturnThis();
-    updateMock.where = vi.fn().mockResolvedValue(undefined);
+    const updateMock = vi.fn().mockReturnThis() as any;
+    (updateMock as any).where = vi.fn().mockResolvedValue(undefined);
     const db = { update: updateMock } as any;
 
     await updateAgentMcpServer(db, {
@@ -111,8 +111,8 @@ describe('updateAgentMcpServer', () => {
 
 describe('deleteAgentMcpServer', () => {
   it('deletes agentMcpConfigs first', async () => {
-    const deleteMock = vi.fn().mockReturnThis();
-    deleteMock.where = vi.fn().mockResolvedValue(undefined);
+    const deleteMock = vi.fn().mockReturnThis() as any;
+    (deleteMock as any).where = vi.fn().mockResolvedValue(undefined);
     const queryMock = vi.fn().mockResolvedValue([]);
     const db = {
       delete: deleteMock,
@@ -126,8 +126,8 @@ describe('deleteAgentMcpServer', () => {
   });
 
   it('deletes mcpServerConfigs only when no remaining links', async () => {
-    const deleteMock = vi.fn().mockReturnThis();
-    deleteMock.where = vi.fn().mockResolvedValue(undefined);
+    const deleteMock = vi.fn().mockReturnThis() as any;
+    (deleteMock as any).where = vi.fn().mockResolvedValue(undefined);
     const queryMock = vi.fn().mockResolvedValue([{ id: 'other-config' }]);
     const db = {
       delete: deleteMock,
@@ -141,8 +141,8 @@ describe('deleteAgentMcpServer', () => {
   });
 
   it('deletes mcpServerConfigs when orphan check returns empty', async () => {
-    const deleteMock = vi.fn().mockReturnThis();
-    deleteMock.where = vi.fn().mockResolvedValue(undefined);
+    const deleteMock = vi.fn().mockReturnThis() as any;
+    (deleteMock as any).where = vi.fn().mockResolvedValue(undefined);
     const queryMock = vi.fn().mockResolvedValue([]);
     const db = {
       delete: deleteMock,

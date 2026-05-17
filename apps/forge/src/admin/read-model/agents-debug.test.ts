@@ -39,7 +39,7 @@ function makeMockDeps(overrides = {}) {
     getAgentRuntimeMemory: vi.fn().mockResolvedValue(null),
     listRecentAgentHomeMetricSnapshots: vi.fn().mockResolvedValue([]),
     ...overrides,
-  } as Parameters<typeof createAgentDebugReadModel>[0];
+  } as any;
 }
 
 describe('createAgentDebugReadModel', () => {
@@ -110,7 +110,7 @@ describe('createAgentDebugReadModel', () => {
     it('handles LTM state timeout gracefully', async () => {
       const agent = { id: 'agent-1' };
       mockReadLongTermMemoryState.mockRejectedValue(new Error('DB timeout'));
-      mockWithTimeout.mockImplementation(async (promise: Promise<unknown>, _ms: number, _msg: string) => {
+      ((mockWithTimeout.mockImplementation as any) as any)(async (promise: Promise<unknown>, _ms: number, _msg: string) => {
         try {
           return await promise;
         } catch {
@@ -204,7 +204,7 @@ describe('createAgentDebugReadModel', () => {
       const result = await model.debugAgentLongTermMemoryRecallSearch('agent-1', {
         query: 'search term',
         limit: 10,
-      });
+      } as any);
 
       expect(mockReadLongTermMemoryRecallSnapshot).toHaveBeenCalledWith(
         deps.db,
@@ -232,7 +232,7 @@ describe('createAgentDebugReadModel', () => {
         query: 'find this',
         threshold: 0.7,
         maxResults: 20,
-      });
+      } as any);
 
       expect(mockReadLongTermMemoryRecallSnapshot).toHaveBeenCalledWith(
         deps.db,
