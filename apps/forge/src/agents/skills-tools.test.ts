@@ -43,7 +43,7 @@ const mockDb = {
       findFirst: vi.fn(),
     },
   },
-} as unknown as LibSQLDatabase<any>;
+} as any;
 
 const { createAgentSkillTools } = await import('./skills-tools');
 

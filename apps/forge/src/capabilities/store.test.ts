@@ -90,11 +90,11 @@ function createMockDb() {
     insert: makeInsertChain(),
     update: makeUpdateChain(),
     delete: makeDeleteChain(),
-    transaction: vi.fn().mockImplementation(async (fn: (tx: typeof tx) => Promise<unknown>) => {
-      return fn(tx);
+    transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<unknown>) => {
+      return fn(tx as any);
     }),
     query,
-  } as unknown as Database;
+  } as any;
   return { db, query };
 }
 
@@ -259,7 +259,7 @@ describe('capabilities/store', () => {
       const store = createCapabilityStore(db);
       await store.createRole({ name: 'Base Role' });
       const insertCalls = db.insert.mock.calls;
-      const toolPermCalls = insertCalls.filter(([table]) => table === roleToolPermissions);
+      const toolPermCalls = insertCalls.filter(([table]: any) => table === roleToolPermissions);
       expect(toolPermCalls.length).toBeGreaterThanOrEqual(2);
     });
   });
