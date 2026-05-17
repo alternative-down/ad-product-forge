@@ -1,7 +1,6 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 
 import { createAgentScheduleManager } from './manager';
-import type { Database } from '../db/database';
 // ─── extractWhere helpers ───────────────────────────────────────────────────────
 //
 // Drizzle 0.26.x chunk structure:
@@ -110,8 +109,7 @@ interface ScheduleRow {
 function toScheduleRecord(row: Record<string, unknown>): ScheduleRow {
   return {
     id: row.id as string,
-    scheduleId: (row.scheduleId as string | undefined) ?? (row.id as string),
-    agentId: row.agentId as string,
+        agentId: row.agentId as string,
     name: row.name as string,
     description: row.description as string | undefined,
     scheduleType: row.scheduleType as 'cron' | 'date',
@@ -145,7 +143,7 @@ function toScheduleSummary(row: Record<string, unknown>) {
 
 // ─── Mock DB factory ──────────────────────────────────────────────────────────
 
-function createMockDb(rows: Record<string, unknown>[] = []) {
+function createMockDb(rows: Record<string, unknown>[] = []): any {
   const rowStore: Record<string, unknown>[] = [...rows];
   // Flag: next findFirst call returns null (for simulating reload failures)
   let reloadNext = false;
@@ -240,7 +238,7 @@ function createMockDb(rows: Record<string, unknown>[] = []) {
     update,
     delete: del,
     setReloadFails,
-  } as unknown as Database & { setReloadFails: () => void };
+  } as any;
 
   return db as ReturnType<typeof createMockDb>;
 }
@@ -286,9 +284,8 @@ describe('createAgentScheduleManager', () => {
   function makeManager(rows: Record<string, unknown>[] = []) {
     const mockDb = createMockDb(rows);
     const manager = createAgentScheduleManager({
-      db: mockDb,
-      notifyAgent,
-      getCallback,
+      db: mockDb as any,
+      notifyAgent: notifyAgent as any,
     });
     // Expose setReloadFails for tests that need to simulate reload failures
     (manager as unknown as Record<string, unknown>).setReloadFails = mockDb.setReloadFails;
@@ -299,7 +296,7 @@ describe('createAgentScheduleManager', () => {
 
   test('rejects invalid schema input', () => {
     const manager = makeManager();
-    expect(() => manager.validateScheduleInput('agent-1', {})).toThrow();
+    expect(() => (manager as any).validateScheduleInput('agent-1', {})).toThrow();
   });
 
   // ── listSchedules ─────────────────────────────────────────────────────────
@@ -384,7 +381,7 @@ describe('createAgentScheduleManager', () => {
 
   test('throws when created schedule cannot be loaded', async () => {
     const manager = makeManager([]);
-    manager.setReloadFails(); // Make the reload after insert return null
+    (manager as any).setReloadFails(); // Make the reload after insert return null
     const future = new Date(Date.now() + 86400000).toISOString();
     await expect(
       manager.createScheduleForAgent('agent-1', {
