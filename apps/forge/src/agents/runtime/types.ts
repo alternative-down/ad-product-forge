@@ -11,7 +11,7 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../../database/schema';
-import type { createAgentContractStore } from './agent-contract-store';
+import type { createAgentContractStore } from '../agent-contract-store';
 import type {
   AgentLongTermMemoryRecallDebugSearchInput,
   AgentLongTermMemoryRecallDebugSearchResult,

@@ -26,11 +26,7 @@ export async function createMcpServerConfig(data: Omit<NewMcpServerConfig, 'id' 
 
 export async function getMcpServerConfig(id: string): Promise<McpServerConfig | undefined> {
   const db = getDatabase();
-  let results;
-  results = await db
-    .select()
-    .from(mcpServerConfigs)
-    .where(eq(mcpServerConfigs.id, id));
+  const results = await db.select().from(mcpServerConfigs).where(eq(mcpServerConfigs.id, id)).all();
   return results[0];
 }
 
@@ -38,13 +34,10 @@ export async function listMcpServerConfigs(options?: { isActive?: boolean }): Pr
   const db = getDatabase();
   
   if (options?.isActive !== undefined) {
-    return await db
-      .select()
-      .from(mcpServerConfigs)
-      .where(eq(mcpServerConfigs.isActive, options.isActive ? 1 : 0));
+    return await db.select().from(mcpServerConfigs).where(eq(mcpServerConfigs.isActive, options.isActive ? 1 : 0)).all();
   }
   
-  return await db.select().from(mcpServerConfigs);
+  return await db.select().from(mcpServerConfigs).all();
 }
 
 export async function updateMcpServerConfig(id: string, data: Partial<Omit<NewMcpServerConfig, 'id' | 'createdAt'>>): Promise<McpServerConfig | undefined> {
@@ -67,15 +60,7 @@ export async function searchMcpServerConfigs(query: string): Promise<McpServerCo
   const db = getDatabase();
   const searchPattern = `%${query}%`;
   
-  return await db
-    .select()
-    .from(mcpServerConfigs)
-    .where(
-      or(
-        like(mcpServerConfigs.name, searchPattern),
-        like(mcpServerConfigs.description, searchPattern)
-      )
-    );
+  return await db.select().from(mcpServerConfigs).where(or(like(mcpServerConfigs.name, searchPattern), like(mcpServerConfigs.description, searchPattern))).all();
 }
 
 // Agent MCP Config operations
@@ -98,9 +83,7 @@ export async function getAgentMcpConfig(id: string): Promise<AgentMcpConfig | un
   const db = getDatabase();
   let results;
   results = await db
-    .select()
-    .from(agentMcpConfigs)
-    .where(eq(agentMcpConfigs.id, id));
+    .select().from(agentMcpConfigs).where(eq(agentMcpConfigs.id, id)).all();
   return results[0];
 }
 
@@ -112,10 +95,7 @@ export async function listAgentMcpConfigs(agentId: string, options?: { isActive?
     conditions.push(eq(agentMcpConfigs.isActive, options.isActive ? 1 : 0));
   }
   
-  return await db
-    .select()
-    .from(agentMcpConfigs)
-    .where(and(...conditions));
+  return await db.select().from(agentMcpConfigs).where(and(...conditions)).all();
 }
 
 export async function updateAgentMcpConfig(id: string, data: Partial<Omit<NewAgentMcpConfig, 'id' | 'createdAt'>>): Promise<AgentMcpConfig | undefined> {
@@ -150,5 +130,5 @@ export async function getAgentMcpServers(agentId: string): Promise<{ config: Age
       eq(mcpServerConfigs.isActive, 1)
     ));
 
-  return results;
+  return results.all();
 }
