@@ -18,7 +18,7 @@ export function createCompanyPayables(db: Database) {
         orderBy: (fields, { asc }) => [asc(fields.name)],
       });
 
-      return rows.map((row: object) => {
+      return rows.map((row: any) => {
         const { id, recurrencePeriod, isActive, ...rest } = row;
 
         return {

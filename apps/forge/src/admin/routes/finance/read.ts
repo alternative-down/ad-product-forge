@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
+import type { Database } from '../../../database/index';
 import { jsonResponse } from '../index';
 
 type CompanyCash = {
@@ -31,7 +32,7 @@ export function registerFinanceReadRoutes(
     path: '/admin/finance',
     handler: async () => {
       try {
-        return jsonResponse(await input.companyCash.getOverview());
+        return jsonResponse(await finance?.companyCash.getOverview());
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
@@ -45,7 +46,7 @@ export function registerFinanceReadRoutes(
     path: '/admin/finance/contracts',
     handler: async () => {
       try {
-        return jsonResponse(await input.companyCash.listContractSummaries());
+        return jsonResponse(await finance?.companyCash.listContractSummaries());
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);

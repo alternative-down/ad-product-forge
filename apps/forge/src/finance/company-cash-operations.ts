@@ -1,4 +1,4 @@
-import { eq, type SQLiteTransaction } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -17,7 +17,7 @@ type CompanyCashEntryInput = {
   referenceId?: string;
 };
 
-type DbSession = Database | SQLiteTransaction<'async', Record<string, never>, Record<string, never>>;
+type DbSession = Database | any;
 
 export function createCompanyCashOperations(db: Database) {
   async function createEntry(

@@ -24,7 +24,8 @@ export function createCompanyCashLedger(db: Database) {
           ),
         );
 
-      return rows[0]?.total ?? 0;
+      const r = rows as any;
+      return r?.[0]?.total ?? 0;
     } catch (error) {
       forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'getCurrentBalanceUsd failed', context: { error: error instanceof Error ? error.message : String(error) } });
       throw error;
@@ -45,7 +46,7 @@ export function createCompanyCashLedger(db: Database) {
     try {
       const now = Date.now();
 
-      await db.insert(companyCashLedger).values({
+      await (db.insert(companyCashLedger) as any).values({
         id: createId(),
         type: input.type,
         direction: input.direction,
