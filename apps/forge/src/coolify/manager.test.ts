@@ -73,7 +73,7 @@ describe('CoolifyManager', () => {
 
     vi.stubGlobal('fetch', mockFetch);
     integrations = createMockIntegrations(MOCK_PROVIDER_CONFIG);
-    manager = createCoolifyManager({ integrations });
+    manager = createCoolifyManager({ integrations } as any);
     mockForgeDebug = vi.fn();
     vi.stubGlobal('forgeDebug', mockForgeDebug);
   });
@@ -95,7 +95,7 @@ describe('CoolifyManager', () => {
 
     it('throws when integration not configured', async () => {
       const badIntegrations = createMockIntegrations(undefined, new Error('no integration'));
-      const badManager = createCoolifyManager({ integrations: badIntegrations });
+      const badManager = createCoolifyManager({ integrations: badIntegrations } as any);
       await expect(badManager.getCredentials()).rejects.toThrow('no integration');
     });
   });

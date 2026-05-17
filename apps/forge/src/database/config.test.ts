@@ -5,9 +5,9 @@ const mkdirCalls: [string, { recursive: boolean }][] = [];
 vi.mock('node:fs', () => ({
   default: Object.assign(
     () => {},
-    { mkdirSync: vi.fn((p: string, o: { recursive?: boolean }) => mkdirCalls.push([p, o])) }
+    { mkdirSync: vi.fn((p: string, o: { recursive: false }) => mkdirCalls.push([p, o])) }
   ),
-  mkdirSync: vi.fn((p: string, o: { recursive?: boolean }) => mkdirCalls.push([p, o])),
+  mkdirSync: vi.fn((p: string, o: { recursive: false }) => mkdirCalls.push([p, o])),
 }));
 
 vi.mock('node:path', () => ({
