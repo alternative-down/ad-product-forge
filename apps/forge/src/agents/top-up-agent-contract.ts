@@ -16,7 +16,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
   const companyCashOperations = createCompanyCashOperations(db);
   const now = currentTimeMs();
 
-  let activeContract: { id: string; budgetUsd: number } | null = null;
+  let activeContract: any = null;
 
   try {
     activeContract = await db.query.agentExecutionContracts.findFirst({
@@ -25,7 +25,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
         lte(agentExecutionContracts.startsAt, now),
         gte(agentExecutionContracts.endsAt, now),
       ),
-    });
+    }) as any;
   } catch (err) {
     forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to find active contract: ' + (err instanceof Error ? err.message : String(err)) });
     throw err;
@@ -51,7 +51,8 @@ export async function topUpActiveAgentContract(db: Database, input: {
   }
 
   try {
-    await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+    await db.transaction(async (tx: // @ts-ignore
+import("better-sqlite3").Transaction<{}>) => {
       await companyCashOperations.recordCashOut(
         {
           type: 'agent-contract-topup',

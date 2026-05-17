@@ -45,7 +45,7 @@ export async function normalizeOperationalMemoryMessages(input: {
         threadId: input.threadId,
         messageId: message.id,
         role: 'assistant',
-        parts: normalizedParts,
+        parts: normalizedParts as any,
       });
     }
   } catch (err) {

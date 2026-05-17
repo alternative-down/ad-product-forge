@@ -160,7 +160,7 @@ export function createLabelsOps(ctx: OpsContext) {
         issue_number: input.issueNumber,
         labels: input.labels,
       });
-      return response.data.map((label: object) => ({
+      return (response.data as any[]).map((label: any) => ({
         name: label.name,
         description: label.description ?? null,
         color: label.color,

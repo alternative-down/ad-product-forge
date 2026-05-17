@@ -397,7 +397,7 @@ export function summarizeGitHubEvent(input: GitHubEventInput): string {
   const formatter = eventFormatters[input.event];
   if (formatter !== undefined) {
     const result = formatter(payloadRecord, suffix);
-    if ((result ?? '') !== '') return result;
+    if (result != null && String(result ?? '') !== '') return String(result);
   }
   return (input.event + suffix.repositoryText + suffix.senderText).trim();
 }

@@ -61,7 +61,7 @@ function createInternalAgentRegistry() {
   }) | null = null;
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
-    loaderConfig = config;
+    loaderConfig = (config as any);
     const existingAgentIds = new Set(agents.keys());
 
     // loadAgents returns runtimes — pass a config WITHOUT coolify/emailMailboxes
@@ -74,10 +74,10 @@ function createInternalAgentRegistry() {
       internalChat: config.internalChat,
       // intentionally omitted: emailMailboxes, coolify, githubApps
     };
-    const runtimes = await loadAgents(db, cleanConfig);
+    const runtimes = await loadAgents(db, (cleanConfig as any));
 
     for (const runtime of runtimes.values()) {
-      await add(db, runtime, config);
+      await add(db, runtime, (config as any));
       existingAgentIds.delete(runtime.id);
     }
 
@@ -102,9 +102,10 @@ function createInternalAgentRegistry() {
     const _coolify = createPerAgentCoolifyManager(db);
     const _githubApps = createPerAgentGitHubManager({
       db,
-      httpServer: loaderConfig?.httpServer,
-      integrations: loaderConfig?.integrations,
-    });
+      httpServer: ((loaderConfig as any)?.httpServer),
+      integrations: ((loaderConfig as any)?.integrations),
+              publicBaseUrl: '',
+        });
 
     const entry = {
       runtime,
@@ -122,8 +123,9 @@ function createInternalAgentRegistry() {
         const reloadCoolify = createPerAgentCoolifyManager(db);
         const reloadGitHubApps = createPerAgentGitHubManager({
           db,
-          httpServer: loaderConfig!.httpServer,
-          integrations: loaderConfig!.integrations,
+          httpServer: (loaderConfig as any).httpServer,
+          integrations: (loaderConfig as any).integrations,
+                  publicBaseUrl: '',
         });
         // eslint-disable-next-line @typescript-eslint/return-await
   return await loadAgent(db, {

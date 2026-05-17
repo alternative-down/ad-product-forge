@@ -72,7 +72,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return rows.map((row: object) => ({
+    return rows.map((row: any) => ({
       roleId: row.id,
       name: row.name,
       description: row.description ?? undefined,
@@ -213,7 +213,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row: object) => row.toolId)));
+    return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row: any) => row.toolId)));
   }
 
   async function addRoleToolPermission(input: { roleId: string; toolId: string }) {
@@ -271,7 +271,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return rows.map((row: object) => row.workflowId);
+    return rows.map((row: any) => row.workflowId);
   }
 
   async function addRoleWorkflowPermission(input: { roleId: string; workflowId: string }) {
@@ -524,7 +524,7 @@ export function createCapabilityStore(db: Database) {
       return [];
     }
 
-    return rows.map((row: object) => ({
+    return rows.map((row: any) => ({
       agentId: row.id,
       name: row.name,
       description: row.description ?? undefined,

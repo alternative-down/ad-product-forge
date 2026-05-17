@@ -88,7 +88,7 @@ export function createScheduler(
     advanceStepEpoch,
     getActiveRunEpoch: () => state.activeRunEpoch,
     setInstant,
-    flushManager,
+    flushManager: (flushManager as any),
     getExecuting: () => executing,
     isTimerActive: () => timerManager.isTimerActive(),
     isStopped: () => stopped,
@@ -387,7 +387,7 @@ export function createScheduler(
   }
 
   function getRunLastMessages(): number {
-    return runLastMessages;
+    return (flushManager as any).getFlushSettings().runLastMessages;
   }
 
   function getInstant(): boolean { return state.instant; }

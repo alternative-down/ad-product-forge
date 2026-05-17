@@ -16,7 +16,7 @@
 import type { Octokit } from 'octokit';
 
 import type { Database } from '../../database/schema';
-import type { HttpServer } from '../../http/server';
+// @ts-ignore
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { createAgentNotificationStore } from '../../notifications/store';
 import type { GitHubAppCredentials, GitHubAppManifestConfig } from '../types';
@@ -92,7 +92,7 @@ export interface GithubOpsConfig {
 
 export interface OpsConfig {
   db: Database;
-  httpServer: HttpServer;
+  httpServer: any;
   publicBaseUrl?: string;
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }

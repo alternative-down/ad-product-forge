@@ -31,8 +31,8 @@ export function createInternalChatUnread(db: Database) {
         ));
 
       return {
-        unreadMessageCount: rows[0]?.unreadMessageCount ?? 0,
-        unreadConversationCount: rows[0]?.unreadConversationCount ?? 0,
+        unreadMessageCount: (rows as any)[0]?.unreadMessageCount ?? 0,
+        unreadConversationCount: (rows as any)[0]?.unreadConversationCount ?? 0,
       };
     } catch (err) {
       forgeDebug({ scope: 'internal-chat-unread', level: 'error', message: '[internal-chat-unread] getUnreadSummary failed', context: { error: err instanceof Error ? err.message : String(err) }});

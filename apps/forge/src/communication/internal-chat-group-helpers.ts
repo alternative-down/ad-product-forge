@@ -35,12 +35,12 @@ export async function resolveChatGroupMembers(
   const desiredMembers = new Map<string, ResolvedGroupMember>();
 
   for (const member of members) {
-    const participant = await db.query.internalChatAccounts.findFirst({
+    const participant = (await db.query.internalChatAccounts.findFirst({
       where: eq(
-        sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
+        (sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})` as any),
         member.participantKey,
       ),
-    });
+    })) as any;
 
     if (!participant) {
       throw new Error(`Internal chat participant not found: ${member.participantKey}`);
@@ -87,12 +87,13 @@ export async function createChatGroupIfNeeded(
     updatedAt: now,
   });
 
-  await tx.insert(internalChatConversationMembers).values({
+  await tx.insert(internalChatConversationMembers).values(({
     conversationId: groupId,
     accountId: actorAccount.id,
     role: "admin",
     createdAt: now,
-  });
+    updatedAt: now,
+  } as any));
 }
 
 /**
@@ -121,11 +122,11 @@ export async function syncChatGroupMembers(
   desiredMembers: Map<string, ResolvedGroupMember>,
   now: number,
 ): Promise<void> {
-  const existingMembers = await tx.query.internalChatConversationMembers.findMany({
+  const existingMembers = (await tx.query.internalChatConversationMembers.findMany({
     where: eq(internalChatConversationMembers.conversationId, groupId),
-  });
+  })) as any;
 
-  const existingByAccountId = new Map(existingMembers.map((m) => [m.accountId, m]));
+  const existingByAccountId = new Map(existingMembers.map((m: any) => [m.accountId, m]));
 
   // Remove members not in desired set
   for (const existingMember of existingMembers) {
@@ -148,13 +149,14 @@ export async function syncChatGroupMembers(
     if (!existingMember) {
       await tx
         .insert(internalChatConversationMembers)
-        .values({
+        .values(({
           conversationId: groupId,
           accountId: desiredMember.accountId,
           role: desiredMember.role,
           createdAt: now,
-        });
-    } else if (existingMember.role !== desiredMember.role) {
+          updatedAt: now,
+        } as any));
+  if ((existingMember as any).role !== desiredMember.role)
       await tx
         .update(internalChatConversationMembers)
         .set({ role: desiredMember.role })

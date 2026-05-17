@@ -208,9 +208,9 @@ export function createInternalChatGroups(
     
       async function createChatGroup(input: CreateChatGroupInput) {
         try {
-        const existing = await db.query.internalChatConversations.findFirst({
+        const existing = (await db.query.internalChatConversations.findFirst({ 
           where: eq(internalChatConversations.id, input.conversationKey),
-        });
+         })) as any;
     
         if (existing) {
           forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'createGroup: already exists', context: { conversationKey: input.conversationKey } });
@@ -229,12 +229,13 @@ export function createInternalChatGroups(
           updatedAt: now,
         });
     
-        await db.insert(internalChatConversationMembers).values({
+        await db.insert(internalChatConversationMembers).values(({
           conversationId: input.conversationKey,
           accountId: creatorAccount.id,
           role: "admin",
           createdAt: now,
-        });
+          updatedAt: now,
+        } as any));
     
     return {
       groupId: input.conversationKey,
@@ -260,12 +261,12 @@ export function createInternalChatGroups(
       const participant = await deps.getRequiredAccountBySlug(input.participantSlug);
       const now = Date.now();
 
-      const existing = await db.query.internalChatConversationMembers.findFirst({
+      const existing = (await db.query.internalChatConversationMembers.findFirst({ 
       where: and(
         eq(internalChatConversationMembers.conversationId, group.id),
         eq(internalChatConversationMembers.accountId, participant.id),
       ),
-    });
+     })) as any;
 
     if (existing) {
       throw new Error(`Group member already exists: ${input.participantSlug}`);
@@ -332,12 +333,12 @@ export function createInternalChatGroups(
     // ── Access control ──────────────────────────────────────────────────────────
     if (input.groupId) {
       await getRequiredGroupForAgent(input.agentId, groupId);
-      const membership = await db.query.internalChatConversationMembers.findFirst({
+      const membership = (await db.query.internalChatConversationMembers.findFirst({ 
         where: and(
           eq(internalChatConversationMembers.conversationId, groupId),
           eq(internalChatConversationMembers.accountId, actorAccount.id),
         ),
-      });
+       })) as any;
       if (!membership || membership.role !== "admin") {
         throw new Error("Only admins can update the group.");
       }
@@ -430,9 +431,9 @@ export function createInternalChatGroups(
       )
       .where(
         eq(internalChatConversationMembers.conversationId, input.groupId),
-      );
+      ).all();
 
-    return rows.map((row: object) => ({
+    return rows.map((row: any) => ({
       ...row,
       createdAt: new Date(row.createdAt).toISOString(),
     }));
@@ -466,9 +467,9 @@ export function createInternalChatGroups(
       )
       .where(
         eq(internalChatConversationMembers.conversationId, input.groupId),
-      );
+      ).all();
 
-    return rows.map((row: object) => ({
+    return rows.map((row: any) => ({
       ...row,
       createdAt: new Date(row.createdAt).toISOString(),
     }));
@@ -500,7 +501,7 @@ export function createInternalChatGroups(
         eq(internalChatConversationMembers.conversationId, conversationId),
       );
 
-    return sortParticipantsBySelfFirst(rows, accountId);
+    return sortParticipantsBySelfFirst(rows as any, accountId);
     } catch (err) {
       logInternalChatError('listGroupMembersOrDmPeersByAccount', err, { accountId, conversationId });
       throw err;

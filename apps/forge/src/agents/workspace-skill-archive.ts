@@ -14,7 +14,7 @@ export async function installAgentWorkspaceSkillsArchive(input: {
 }) {
   const skillsRoot = resolveAgentSkillsRoot(
     input.workspaceBasePath,
-    input.agent.workspaceFilesystem ?? undefined,
+    (input.agent.workspaceFilesystem as any) ?? undefined,
     input.agent.id,
   );
 

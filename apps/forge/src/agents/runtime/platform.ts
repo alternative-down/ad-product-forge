@@ -21,7 +21,7 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../../database/schema';
-import type { RuntimeWorkspace } from './runtime/types';
+import type { RuntimeWorkspace } from './types';
 
 type CommunicationWorkspaceFilesystem = {
   readFile(path: string): Promise<string | Uint8Array | Buffer>;

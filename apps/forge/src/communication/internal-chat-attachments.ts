@@ -35,8 +35,7 @@ export function createChatAttachments(
           sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
           data: Buffer.from(attachment.data),
           createdAt: Date.now(),
-        })),
-      );
+        })) as any);
   }
 
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {
@@ -46,7 +45,7 @@ export function createChatAttachments(
         orderBy: (table, { asc }) => [asc(table.attachmentIndex)],
       });
 
-      return rows.map((row: object) => ({
+      return rows.map((row: any) => ({
         name: row.name,
         data: new Uint8Array(row.data),
         contentType: row.contentType ?? resolveContentType(row.name),

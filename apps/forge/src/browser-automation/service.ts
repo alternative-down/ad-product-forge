@@ -114,14 +114,14 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     }
     const page = await context.newPage();
     const pageId = generatePageId();
-    const timeout = options.timeoutMs ?? config.navigationTimeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const timeout = (options.timeoutMs ?? config.navigationTimeoutMs ?? DEFAULT_TIMEOUT_MS) as number;
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
       if ((options.waitForSelector ?? '') !== '') {
-        await page.waitForSelector(options.waitForSelector, { timeout });
+        await page.waitForSelector(options.waitForSelector, { timeout: timeout as any });
       }
 
-      const accessibilityTree = await page.accessibility.snapshot();
+      const accessibilityTree = await (page as any).accessibility.snapshot();
 
       const result: BrowserToolResult = {
         pageId,
@@ -164,7 +164,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await session.page.click(selector, { timeout: DEFAULT_TIMEOUT_MS });
       session.lastUsedAt = Date.now();
-      const tree = await session.page.accessibility.snapshot();
+      const tree = await (session.page as any).accessibility.snapshot();
       return {
         pageId: session.pageId,
         accessibilityTree: serializeA11yTree(tree),
@@ -196,7 +196,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await session.page.fill(selector, value, { timeout: DEFAULT_TIMEOUT_MS });
       session.lastUsedAt = Date.now();
-      const tree = await session.page.accessibility.snapshot();
+      const tree = await (session.page as any).accessibility.snapshot();
       return {
         pageId: session.pageId,
         accessibilityTree: serializeA11yTree(tree),
@@ -305,7 +305,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await session.page.waitForSelector(selector, { timeout });
       session.lastUsedAt = Date.now();
-      const tree = await session.page.accessibility.snapshot();
+      const tree = await (session.page as any).accessibility.snapshot();
       return {
         pageId: session.pageId,
         accessibilityTree: serializeA11yTree(tree),

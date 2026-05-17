@@ -1,7 +1,7 @@
 import {
   forgeDebug,
   type CommunicationModule,
-  type RuntimePlanMode,
+  RuntimePlanMode,
   createRuntimeAgentSession,
   createExternalAccountTools,
   type ToolsInput,
@@ -194,14 +194,14 @@ export async function createInternalAgentRuntime<
     checkpointedOmLimits,
     checkpointedOmModel: (config.omModel ?? config.model) as never,
     checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
-    onCheckpointAdvanced: longTermMemory?.onCheckpointAdvanced,
+    onCheckpointAdvanced: (longTermMemory as any)?.onCheckpointAdvanced,
     runtimeActions: [
       ...platform.workspaceActions,
       ...toolsToRuntimeActions(allAgentTools),
     ],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     todoStore: { client: platform.client },
-    planMode: new RuntimePlanMode({ agentMemoryPath: platform.agentMemoryPath }),
+    planMode: new (RuntimePlanMode as any)({ agentMemoryPath: platform.agentMemoryPath }),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   });
 
@@ -217,8 +217,8 @@ export async function createInternalAgentRuntime<
     agent,
     workspace: platform.workspace,
     communication: platform.communication as CommunicationModule,
-    longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
-    longTermMemory,
+    longTermMemoryRecall: (runtimeMemory.longTermMemoryRecall as any),
+    longTermMemory: (longTermMemory as any),
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
       const cleanupResults = await Promise.allSettled([

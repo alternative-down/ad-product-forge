@@ -19,13 +19,13 @@ export async function migrateLegacyCheckpointedOmState(input: {
     return;
   }
 
-  const state = legacyRow.state;
+  const state = JSON.parse(legacyRow.state as string) as any;
   const existingMessages = await input.conversationStore.listMessages({
     threadId: input.threadId,
     order: 'asc',
   });
   const existingMessageIds = new Set(existingMessages.map((message: { id: string }) => message.id));
-  const checkpointSummary = state.checkpointSummary;
+  const checkpointSummary = state["checkpointSummary"];
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const checkpointSummaryId = checkpointSummary
     ? `checkpoint-summary:${input.agentId}:${checkpointSummary.upToGeneration}`
@@ -47,7 +47,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
     });
   }
 
-  for (const reflection of state.activeReflectionBlocks) {
+  for (const reflection of state["activeReflectionBlocks"]) {
     if (existingMessageIds.has(reflection.recordId)) {
       continue;
     }
@@ -61,12 +61,12 @@ export async function migrateLegacyCheckpointedOmState(input: {
         text: reflection.text.trim(),
       }],
       operationalMemoryType: 'reflection',
-      operationalMemoryGeneration: reflection.generationCount,
+      operationalMemoryGeneration: reflection["generationCount"],
       createdAt: reflection.createdAt,
     });
   }
 
-  for (const observation of state.observationBlocks) {
+  for (const observation of state["observationBlocks"]) {
     if (!existingMessageIds.has(observation.id)) {
       await input.conversationStore.appendMessage({
         id: observation.id,
@@ -90,12 +90,12 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
   }
 
-  for (const observation of state.observationBlocks) {
+  for (const observation of state["observationBlocks"]) {
     if (observation.reflectedGeneration === null) {
       continue;
     }
 
-    const reflection = state.activeReflectionBlocks.find((item: object) => item.generationCount === observation.reflectedGeneration);
+    const reflection = state["activeReflectionBlocks"].find((item: any) => item["generationCount"] === observation.reflectedGeneration);
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (reflection) {
@@ -119,8 +119,8 @@ export async function migrateLegacyCheckpointedOmState(input: {
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (checkpointSummaryId && checkpointSummary) {
-    for (const reflection of state.activeReflectionBlocks) {
-      if (reflection.generationCount > checkpointSummary.upToGeneration) {
+    for (const reflection of state["activeReflectionBlocks"]) {
+      if (reflection["generationCount"] > checkpointSummary.upToGeneration) {
         continue;
       }
 

@@ -72,7 +72,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     );
     await companyCashOperations.recordCashOut({
       type: 'agent-hiring-process',
-      amountUsd: hiringRh.costUsd,
+      amountUsd: hiringRh.costUsd ?? 0,
       description: `Hiring workflow cost for ${hiringRh.roleDescription}`,
       referenceType: 'hiring-workflow',
       referenceId: hired.agentId,
@@ -81,7 +81,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     return {
       agentId: hired.agentId,
       emailAddress: hired.emailAddress,
-      githubAppRegistrationUrl: githubApp?.registrationUrl ?? null,
+      githubAppRegistrationUrl: (githubApp as any)?.registrationUrl ?? null,
     };
   } catch (error) {
     forgeDebug({ scope: 'internal-agent-lifecycle', level: 'error', message: 'Internal agent lifecycle failed', context: { error: error instanceof Error ? error.message : String(error) } });

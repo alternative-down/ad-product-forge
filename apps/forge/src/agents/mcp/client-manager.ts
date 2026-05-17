@@ -153,7 +153,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         try {
           return await action.execute(input, context);
         } catch (error) {
-          void this.handleServerDisconnect(serverId, error);
+          void (this as any).handleServerDisconnect(serverId, error);
           forgeDebug({ scope: 'mcp-client-manager', level: 'error', message: 'mcp-client-manager operation failed', error: error instanceof Error ? error.message : String(error) });
           throw error;
         }

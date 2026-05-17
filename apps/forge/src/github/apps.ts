@@ -42,7 +42,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const pendingCredentials: GitHubAppCredentials = {
         status: 'pending',
         state: ctx.nanoid(16),
-        appName: ctx.createAppName(input.agentId, input.agentName),
+        appName: (ctx.createAppName as any)(input.agentId, input.agentName),
         manifestConfig: ctx.normalizeManifestConfig(ctx.DEFAULT_GITHUB_APP_MANIFEST_CONFIG),
         createdAt: Date.now(),
       };

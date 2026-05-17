@@ -209,7 +209,7 @@ export async function installGlobalSkillToAgentWorkspace(input: {
   });
   const targetSkillsRoot = resolveAgentSkillsRoot(
     input.workspaceBasePath,
-    input.agent.workspaceFilesystem ?? undefined,
+    (input.agent.workspaceFilesystem as any) ?? undefined,
     input.agent.id,
   );
 

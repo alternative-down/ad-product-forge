@@ -85,7 +85,8 @@ export function createInternalChatAccountOps(
         accountId: creatorAccount.id,
         role: 'admin',
         createdAt: now,
-      });
+        updatedAt: now,
+      } as any);
 
       return {
         groupId: input.conversationKey,
@@ -147,7 +148,8 @@ export function createInternalChatAccountOps(
           accountId: creatorAccount.id,
           role: 'admin',
           createdAt: now,
-        });
+          updatedAt: now,
+        } as any);
 
         // Filter out accounts already in the group (idempotent)
         const creatorId = creatorAccount.id;
@@ -156,14 +158,13 @@ export function createInternalChatAccountOps(
           .filter((id) => id !== creatorId);
 
         if (membersToAdd.length > 0) {
-          await tx.insert(internalChatConversationMembers).values(
-            membersToAdd.map((accountId) => ({
+          await tx.insert(internalChatConversationMembers).values((membersToAdd.map((accountId) => ({
               conversationId: input.conversationKey,
               accountId,
               role: 'normal',
               createdAt: now,
-            })),
-          );
+              updatedAt: now,
+            })) as any));
         }
 
         // Read back all members
@@ -225,12 +226,13 @@ export function createInternalChatAccountOps(
         return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
       }
 
-      await db.insert(internalChatConversationMembers).values({
+      await db.insert(internalChatConversationMembers).values(({
         conversationId: group.id,
         accountId: participant.id,
         role: input.role ?? 'normal',
         createdAt: Date.now(),
-      });
+        updatedAt: Date.now(),
+      } as any));
 
       return await deps.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
   }

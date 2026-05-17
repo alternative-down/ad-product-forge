@@ -38,7 +38,7 @@ export function createInternalChatProvider(input: {
     async listContacts() {
       const accounts = await input.internalChat.listAccounts({ excludeAgentId: input.agentId });
 
-      return accounts.map((account: object) => ({
+      return accounts.map((account: any) => ({
         targetKey: account.agentId ?? account.slug,
         slug: account.slug,
         displayName: account.displayName,
@@ -49,14 +49,14 @@ export function createInternalChatProvider(input: {
       }));
     },
     async listConversations({ limit, unread }) {
-      return await input.internalChat.listConversations({
+      return (await input.internalChat.listConversations({
         agentId: input.agentId,
         limit,
         unread,
-      });
+      })) as any;
     },
     async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
-      return await input.internalChat.getMessages({
+      return (await input.internalChat.getMessages({
         agentId: input.agentId,
         conversationKey: targetKey,
         limit,
@@ -64,7 +64,7 @@ export function createInternalChatProvider(input: {
         query,
         dateFrom,
         dateTo,
-      });
+      })) as any;
     },
     async sendMessage(message) {
       const account = await input.internalChat.getAccountByAgentId(input.agentId);

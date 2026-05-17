@@ -34,16 +34,16 @@ export function createInternalChatParticipants(db: Database) {
         )
         .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-      return sortParticipantsBySelfFirst(rows, accountId);
+      return sortParticipantsBySelfFirst(rows as any, accountId);
   }
 
   /**
    * Lists group members and DM peers by agentId (resolves account first).
    */
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
-      const account = await db.query.internalChatAccounts.findFirst({
+      const account = (await db.query.internalChatAccounts.findFirst({ 
         where: eq(internalChatAccounts.agentId, agentId),
-      });
+       })) as any;
       if (!account) return [];
       return await listGroupMembersOrDmPeersByAccount(account.id, conversationId);
   }

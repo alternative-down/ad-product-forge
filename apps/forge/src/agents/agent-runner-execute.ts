@@ -156,7 +156,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         usage,
         notifications,
         homeMetricSnapshots,
-        messageManager,
+        messageManager: (messageManager as any),
         runLastMessages,
         flushPendingRunMessages,
         scheduler,

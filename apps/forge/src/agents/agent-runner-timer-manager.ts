@@ -43,7 +43,7 @@ export function createTimerManager(state: SchedulerState): TimerManager {
     timer = setTimeout(() => {
       timer = null;
       state.nextStepAt = null;
-      stepFn?.();
+      stepFn?.(0);
     }, Math.max(delayMs, 0));
   }
 

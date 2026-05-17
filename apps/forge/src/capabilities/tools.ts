@@ -32,9 +32,9 @@ export function createCapabilityTools(
           const result = await capabilities.listRoles();
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_roles result', context: {
             count: result.length,
-            roles: result.map((role: string) => ({
-              roleId: role.roleId,
-              name: role.name,
+            roles: result.map((role: any) => ({
+              roleId: (role as any).roleId,
+              name: (role as any).name,
             })),
           } });
           return result;

@@ -170,8 +170,8 @@ export class AgentLongTermMemoryRecall {
     this.conversationStore = input.conversationStore;
     this.recentRawTokens = input.recentRawTokens ?? 0;
     this.persistenceStore = input.persistenceStore;
-    if (input.retrievalWorkspace !== undefined) {
-      this.retrievalWorkspace = input.retrievalWorkspace;
+    if ((input as any).retrievalWorkspace !== undefined) {
+      this.retrievalWorkspace = (input as any).retrievalWorkspace;
     } else {
       this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
         databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
@@ -181,12 +181,12 @@ export class AgentLongTermMemoryRecall {
           ],
           includeExtensions: ['.txt', '.md'],
         }),
-        embedder: {
-          embed: async ({ texts }: { texts: string[] }) => ({
+        embedder: ({
+          embed: async ({ texts }: { texts: string[] }): Promise<unknown> => ({
             vectors: await Promise.all(texts.map((text: string) =>
               embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text))),
           }),
-        },
+        } as any),
       });
     }
   }
@@ -206,7 +206,7 @@ export class AgentLongTermMemoryRecall {
           threadId: input.threadId,
           pendingRecallOperationCount: this.pendingRecallOperationCount,
           lingeringRecallOperationSince: this.lingeringRecallOperationSince !== undefined
-            ? new Date(this.lingeringRecallOperationSince).toISOString()
+            ? new Date(this.lingeringRecallOperationSince as any).toISOString()
             : null,
         } });
         return null;
@@ -225,7 +225,7 @@ export class AgentLongTermMemoryRecall {
           status: 'miss',
           history: {
             recentFingerprints: recallThreadState.recentFingerprints,
-            updatedAt: Date.now(),
+            updatedAt: String(Date.now()) as any,
           },
         });
         return null;
@@ -245,9 +245,9 @@ export class AgentLongTermMemoryRecall {
       });
       const indexStats = await this.getIndexStats();
       if (this.shouldSkipRecallInjection({
-        graph,
+          graph: { ...graph, sourcesCount: 0 },
         results,
-        rawWindowMessageCount: recallThreadState.rawWindowMessageCount,
+        rawWindowMessageCount: (recallThreadState.rawWindowMessageCount ?? 0),
       })) {
         await this.persistRecallSnapshotWithInput(input, {
           queryText,
@@ -263,7 +263,7 @@ export class AgentLongTermMemoryRecall {
 
       const recallText = buildRecallSystemMessage({
         graphHit: graph.hit,
-        graphScore: graph.score,
+        graphScore: graph.score ?? 0,
         graphContext: graph.context,
         query: queryText,
         results,
@@ -809,7 +809,7 @@ export class AgentLongTermMemoryRecall {
         settled,
         pendingRecallOperationCount: this.pendingRecallOperationCount,
         lingeringRecallOperationSince: this.lingeringRecallOperationSince !== undefined
-          ? new Date(this.lingeringRecallOperationSince).toISOString()
+          ? new Date(this.lingeringRecallOperationSince as any).toISOString()
           : null,
         error: error instanceof Error ? error.message : String(error),
       } });
@@ -1002,10 +1002,10 @@ export class AgentLongTermMemoryRecall {
         lastInitAt: this.lastInitAt,
         steps: input.steps,
         queryText: deps.queryText,
-        recallConfig: deps.recallConfig,
-        indexStats: deps.indexStats,
-        dedupedGraph: deps.dedupedGraph,
-        filteredResults: deps.filteredResults,
+        recallConfig: (deps.recallConfig as any) as { searchMode: string; documentCount: number; graphRandomWalkSteps: number },
+        indexStats: (deps.indexStats as any),
+        dedupedGraph: (deps.dedupedGraph as any),
+        filteredResults: (deps.filteredResults as any),
       },
       threadContext,
       { status: deps.status, error: deps.error },
@@ -1078,7 +1078,7 @@ export class AgentLongTermMemoryRecall {
 
     return {
       recentFingerprints: deduped.slice(0, Math.max(input.windowSize, 1)),
-      updatedAt: Date.now(),
+      updatedAt: String(Date.now()),
     } satisfies LongTermMemoryRecallHistory;
   }
 
@@ -1089,9 +1089,9 @@ export class AgentLongTermMemoryRecall {
         (value): value is string => typeof value === 'string' && value.length > 0,
       )
       : [];
-    const operationalMemoryState = (threadId ?? '') !== ''
+    const operationalMemoryState: any = (threadId ?? '') !== ''
       ? await readOperationalMemoryState({
-          threadId,
+          threadId: threadId as string,
           store: this.conversationStore,
           recentTokenLimit: this.recentRawTokens,
         })

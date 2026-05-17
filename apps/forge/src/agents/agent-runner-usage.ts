@@ -5,7 +5,7 @@ import { forgeDebug } from '@forge-runtime/core';
 const RECENT_STEP_LIMIT = 10;
 
 export type AgentRunnerUsage = {
-  recordAgentStep: (agentId: string, contractId: string, inputTokens: number, cachedInputTokens: number, outputTokens: number) => Promise<void>;
+  recordAgentStep: (contractId: string, inputTokens: number, cachedInputTokens: number, outputTokens: number) => Promise<void>;
   recordRefund: (input: { contractId: string; refundedUsd: number; }) => Promise<void>;
   getPeriodUsage: (input: { agentId: string; periodStartMs: number; periodEndMs: number; }) => Promise<{ totalCostUsd: number; stepCount: number; }>;
 };
@@ -138,5 +138,12 @@ export function createAgentRunnerUsage(input: {
     recordAgentStep,
     recordObservationalMemorySteps,
     getUsageFromResult,
+    recordRefund: async (_input: { contractId: string; refundedUsd: number }) => {
+      // stub
+    },
+    getPeriodUsage: async (_input: { agentId: string; periodStartMs: number; periodEndMs: number }) => {
+      // stub
+      return { totalCostUsd: 0, stepCount: 0 };
+    },
   };
 }

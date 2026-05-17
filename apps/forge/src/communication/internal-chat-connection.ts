@@ -161,7 +161,7 @@ function createConnectionImpl(
           isNull(internalChatMessageReads.readAt),
         ),
       )
-      .orderBy(internalChatMessages.createdAt);
+      .orderBy(internalChatMessages.createdAt).all();
 
     if (unreadRows.length === 0) {
       return;
@@ -190,17 +190,16 @@ function createConnectionImpl(
         attachments: await deps.readMessageAttachments(row.messageId),
         createdAt: new Date(row.createdAt).toISOString(),
         metadata: {
-          conversationType: row.conversationType,
-          groupMembers:
-            row.conversationType === "group"
-              ? participants.map((participant) => ({
-                  participantId: participant.accountId,
-                  agentId: participant.agentId,
-                  slug: participant.slug,
-                  displayName: participant.displayName,
-                }))
-              : undefined,
-        },
+          conversationType: row.conversationType as any,
+          groupMembers: (row.conversationType as string) === "group"
+            ? participants.map((participant) => ({
+                participantId: participant.accountId,
+                agentId: (participant.agentId ?? null) as string,
+                slug: participant.slug,
+                displayName: participant.displayName,
+              }))
+            : undefined,
+        } as any,
       });
     }
   }
@@ -234,7 +233,7 @@ function createConnectionImpl(
       ) {
         continue;
       }
-      if (!handlers.has(participant.agentId)) {
+      if (!participant.agentId || !handlers.has(participant.agentId)) {
         continue;
       }
 
@@ -254,10 +253,10 @@ function createConnectionImpl(
             params.conversation.type === "group"
               ? buildGroupMetadata(params.participants)
               : undefined,
-        },
+        } as any,
       });
 
-      liveAgentIds.push(participant.agentId);
+      liveAgentIds.push(participant.agentId as string);
     }
 
     return liveAgentIds;

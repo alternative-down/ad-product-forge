@@ -78,7 +78,7 @@ export function createAgentScheduleStore(db: Database) {
         orderBy: [asc(agentSchedules.createdAt)],
       });
 
-      return rows.filter((row: object) => row.kind === 'agent').map(toScheduleSummary);
+      return rows.filter((row: any) => row.kind === 'agent').map(toScheduleSummary);
     } catch (err) {
       forgeDebug({
         scope: 'schedules-store',
@@ -89,7 +89,7 @@ export function createAgentScheduleStore(db: Database) {
     }
   }
 
-  async function listActiveSchedules() {
+  async function listActiveSchedules(): Promise<any[]> {
     try {
       const rows = await db.query.agentSchedules.findMany({
         where: eq(agentSchedules.isActive, 1),
@@ -115,7 +115,7 @@ export function createAgentScheduleStore(db: Database) {
         orderBy: [desc(agentSchedules.createdAt)],
       });
 
-      return rows.filter((row: object) => row.kind === 'agent').map(toScheduleSummary);
+      return rows.filter((row: any) => row.kind === 'agent').map(toScheduleSummary);
     } catch (err) {
       forgeDebug({
         scope: 'schedules-store',
@@ -276,7 +276,7 @@ export function createAgentScheduleStore(db: Database) {
   }
 
   async function deleteAgentSchedule(agentId: string, scheduleId: string) {
-    const existing: AgentSchedule | null | undefined;
+    let existing: AgentSchedule | null | undefined;
     try {
       existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
@@ -350,10 +350,10 @@ export function createAgentScheduleStore(db: Database) {
         .where(eq(agentSchedules.id, input.scheduleId));
   }
 
-  type StoredSchedule = Awaited<ReturnType<typeof listActiveSchedules>>[number];
+  // StoredSchedule type removed to break circular reference
 
   // --- helpers ---
-  function toScheduleRecord(row: AgentSchedule): StoredSchedule {
+  function toScheduleRecord(row: AgentSchedule) {
     return {
       scheduleId: row.id,
       agentId: row.agentId,

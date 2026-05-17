@@ -48,13 +48,23 @@ import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
+  RUNNER_AWAIT_TIMEOUT_MS,
+  STARTING_RUN_TIMEOUT_MS,
+} from './agent-runner-generate';
+import {
   createGenerateTimeoutGuard,
   touchGenerateTimeout,
   clearGenerateTimeout,
-  RUNNER_AWAIT_TIMEOUT_MS,
-  STARTING_RUN_TIMEOUT_MS,
   type GenerateTimeoutHandle,
-} from './agent-runner-generate';
+} from './agent-runner-generate-timeout';
+
+
+
+
+
+
+
+
 import {
   startGenerateAttempt,
   finishGenerateAttempt,
@@ -534,13 +544,13 @@ export function createAgentRunner(
           runtime,
           currentRuntime,
           store,
-          usage,
+          usage: (usage as unknown as any),
           notifications,
           homeMetricSnapshots,
           messageManager: messageManager as any,
           runLastMessages,
           flushPendingRunMessages,
-          scheduler,
+          scheduler: (scheduler as any),
           epochState: { activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0 } as any,
           backoffState: { backoffMs, instant, nextStepAt: _nextStepAt } as any,
           progressState: { stepsThisRun: 0, tokensThisRun: 0, lastGenerateProgress: null } as any,
