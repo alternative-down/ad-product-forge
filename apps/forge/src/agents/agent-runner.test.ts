@@ -11,6 +11,10 @@ type MockScheduler = {
   clearTimer: any;
   setInstant: any;
   resetBackoff: any;
+  getActiveStepEpoch: any;
+  getActiveRunEpoch: any;
+  advanceStepEpoch: any;
+  advanceGenerateToken: any;
   scheduleNextStep: any;
   getSnapshot: any;
   isStopped: any;

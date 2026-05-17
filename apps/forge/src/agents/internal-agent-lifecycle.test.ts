@@ -213,7 +213,7 @@ describe('runInternalHiring', () => {
 
 describe('runInternalTermination', () => {
   it('delegates to terminateInternalAgent', async () => {
-    await runInternalTermination(mockDb, {
+    await (runInternalTermination as any)(mockDb, {
       agentId: 'agent-1',
       workspaceBasePath: '/ws',
       githubApps: createMockGitHubApps() as any,
