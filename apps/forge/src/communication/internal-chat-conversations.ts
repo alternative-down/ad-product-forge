@@ -17,7 +17,7 @@ import {
   internalChatConversations,
   internalChatConversationMembers,
 } from '../database/schema';
-import type { InternalChatConversation } from './internal-chat-helpers';
+import type { InternalChatConversation } from '../database/schema';
 
 
 const logInternalChatConvError = (
@@ -43,7 +43,7 @@ export function createInternalChatConversations(db: Database) {
         conversationId: internalChatConversationMembers.conversationId,
       })
       .from(internalChatConversationMembers)
-      .where(inArray(internalChatConversationMembers.accountId, [leftAccountId, rightAccountId]));
+      .where(inArray(internalChatConversationMembers.accountId, [leftAccountId, rightAccountId])).all();
 
     const counts = new Map<string, number>();
 
@@ -98,14 +98,16 @@ export function createInternalChatConversations(db: Database) {
           accountId: leftAccountId,
           role: 'normal',
           createdAt: now,
+          updatedAt: now,
         },
         {
           conversationId,
           accountId: rightAccountId,
           role: 'normal',
           createdAt: now,
+          updatedAt: now,
         },
-      ]);
+      ] as any);
     } catch (error) {
       logInternalChatConvError('ensureDirectConversation insert members', error, { conversationId });
       throw error;
