@@ -21,7 +21,7 @@ import { createCapabilityStore } from '../../capabilities/store';
 import { reloadAgentsForRole } from '../../capabilities/runtime';
 import type { ForgeHttpServerAdapter } from '../../http/server';
 import { jsonResponse, parseJsonBody } from './helpers';
-import { createRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema } from './schemas';
+import { createRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema } from './schemas/roles';
 import { updateRoleSchema, deleteRoleSchema, roleCapabilitySchema } from './schemas/roles';
 
 export interface RoleRoutesDeps {
@@ -165,7 +165,7 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
-        const result = await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId: body.toolName });
+        const result = await capabilities.removeRoleToolPermission({ roleId: (body as any).roleId, toolId: (body as any).toolId });
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {

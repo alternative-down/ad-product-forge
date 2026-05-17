@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 
 export function normalizeOptionalText(value?: string): string | null {
-  const normalized = value?.trim();
+  const normalized: string | null = value?.trim() ?? null;
   return (normalized ?? '') !== '' ? normalized : null;
 }
 
