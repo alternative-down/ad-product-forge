@@ -17,7 +17,7 @@ describe('readLtmState', () => {
       lastWrittenPackageId: null,
       lastWrittenAt: null,
       packages: [],
-      updatedAt: Date.now(),
+      updatedAt: new Date().toISOString(),
     };
     const mockStore = { readState: vi.fn().mockResolvedValue(mockState) };
 
@@ -39,7 +39,7 @@ describe('writeLtmState', () => {
       packages: [],
     };
     const mockStore = { writeState: vi.fn().mockResolvedValue(persistedResult) };
-    const state = { lastRunAt: null, lastRunError: null, lastRunErrorAt: null, lastWrittenPackageId: null, lastWrittenAt: null, packages: [], updatedAt: Date.now() };
+    const state = { lastRunAt: null, lastRunError: null, lastRunErrorAt: null, lastWrittenPackageId: null, lastWrittenAt: null, packages: [], updatedAt: new Date().toISOString() };
 
     const result = await writeLtmState(mockStore, state);
 

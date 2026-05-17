@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
-  type CheckpointedOmCheckpointPackageInput,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
   forgeDebug,
@@ -16,6 +15,9 @@ import { z } from 'zod';
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryState,
+  type CheckpointPackageManifest,
+  type CheckpointedOmCheckpointPackageInput,
+  type CheckpointedOmPackageEntry,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
 import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
@@ -200,7 +202,14 @@ export function createAgentLongTermMemory(input: {
   async function writeState(state: LongTermMemoryState) {
     await ensureInitialized();
     const persistedState = await writeLtmState(input.persistenceStore, state);
-    applyLtmStateToSnapshot(snapshot, persistedState);
+    applyLtmStateToSnapshot(snapshot as Parameters<typeof applyLtmStateToSnapshot>[0], {
+    lastRunAt: persistedState.lastRunAt,
+    lastRunError: persistedState.lastRunError,
+    lastRunErrorAt: persistedState.lastRunErrorAt,
+    lastWrittenPackageId: persistedState.lastWrittenPackageId,
+    lastWrittenAt: persistedState.lastWrittenAt,
+    packages: persistedState.packages,
+  });
   }
 
   async function markRecallIndexDirty(reason: string) {
@@ -214,7 +223,7 @@ export function createAgentLongTermMemory(input: {
 
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
     const state = await readState();
-    const existing = state.packages.find((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.checkpointGeneration === payload.toGeneration);
+    const existing = state.packages.find((entry: CheckpointedOmPackageEntry) => entry.checkpointGeneration === payload.toGeneration);
 
     if (existing) {
       return existing;
@@ -223,7 +232,7 @@ export function createAgentLongTermMemory(input: {
     const checkpointTimestamp = computeCheckpointTimestamp(payload);
     const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
     const sequence = state.packages
-      .filter((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId.startsWith(`${dayKey}_`))
+      .filter((entry: CheckpointedOmPackageEntry) => entry.packageId.startsWith(`${dayKey}_`))
       .length + 1;
     const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
@@ -239,16 +248,16 @@ export function createAgentLongTermMemory(input: {
     } });
 
 
-      const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
+    const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
 
-      state.packages.push(manifest);
-      state.lastWrittenPackageId = packageId;
-      state.lastWrittenAt = checkpointTimestamp;
-      state.lastRunError = null;
-      state.lastRunErrorAt = null;
-      await writeState(state);
-      await markRecallIndexDirty('checkpoint-write');
-      await refreshRecallIndex?.();
+    state.packages.push(manifest);
+    state.lastWrittenPackageId = packageId;
+    state.lastWrittenAt = new Date(checkpointTimestamp).toISOString();
+    state.lastRunError = null;
+    state.lastRunErrorAt = null;
+    await writeState(state);
+    await markRecallIndexDirty('checkpoint-write');
+    await refreshRecallIndex?.();
 
     forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write complete', context: {
       agentId: input.agentId,
@@ -261,10 +270,14 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function recordLtmStep(usage: LtmUsage) {
-    const { contract, pricing } = await getBudgetContext();
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
     if (!contract) {
       return;
     }
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId ?? '',
+    });
 
     let costUsd = 0;
 
@@ -280,7 +293,7 @@ export function createAgentLongTermMemory(input: {
     await input.contractStore.recordAgentStep({
       agentId: input.agentId,
       contractId: contract.id,
-      llmProfileId: input.modelProfileId,
+      llmProfileId: input.modelProfileId ?? '',
       modelKey: input.pricingModelKey,
       kind: 'ltm',
       inputTokens: usage.inputTokens,
@@ -295,10 +308,14 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function estimateNextLtmDelayMs() {
-    const { contract, pricing } = await getBudgetContext();
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
     if (!contract) {
       return 0;
     }
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId ?? '',
+    });
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
@@ -438,7 +455,7 @@ export function createAgentLongTermMemory(input: {
     try {
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow start', context: {
         agentId: input.agentId,
-        packageIds: availablePackages.map((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId),
+        packageIds: availablePackages.map((entry: CheckpointedOmPackageEntry) => entry.packageId),
         packageCount: state.packages.length,
       } });
 
@@ -462,7 +479,7 @@ export function createAgentLongTermMemory(input: {
 
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow complete', context: {
         agentId: input.agentId,
-        packageIds: state.packages.map((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId),
+        packageIds: state.packages.map((entry: CheckpointedOmPackageEntry) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
       } });
 
