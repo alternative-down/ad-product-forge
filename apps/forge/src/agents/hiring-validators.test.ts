@@ -44,7 +44,7 @@ describe('validateGeneratedAgentProfile', () => {
       primaryGoal: 'Develop web applications',
       secondaryGoals: ['Write clean code', 'Test thoroughly'],
       backstory: 'Experienced fullstack developer',
-    });
+    } as any);
     expect(result.valid).toBe(true);
   });
 
@@ -53,7 +53,7 @@ describe('validateGeneratedAgentProfile', () => {
       primaryGoal: 'Use send_message to communicate',
       secondaryGoals: ['Other task'],
       backstory: 'Agent developer',
-    });
+    } as any);
     expect(result.valid).toBe(false);
     if (!result.valid) expect(result.error).toContain('must not mention tool ids directly');
   });
@@ -63,7 +63,7 @@ describe('validateGeneratedAgentProfile', () => {
       primaryGoal: 'Develop applications',
       secondaryGoals: ['Use list_contacts', 'Other task'],
       backstory: 'Agent developer',
-    });
+    } as any);
     expect(result.valid).toBe(false);
   });
 
@@ -72,7 +72,7 @@ describe('validateGeneratedAgentProfile', () => {
       primaryGoal: 'Develop applications',
       secondaryGoals: ['Other task'],
       backstory: 'Expert in send_message and list_conversations',
-    });
+    } as any);
     expect(result.valid).toBe(false);
   });
 
@@ -81,7 +81,7 @@ describe('validateGeneratedAgentProfile', () => {
       primaryGoal: 'Use send_message tool',
       secondaryGoals: ['Use list_contacts'],
       backstory: 'Expert',
-    });
+    } as any);
     expect(result.valid).toBe(false);
     if (!result.valid) { expect(result.hint).toContain('send_message'); expect(result.hint).toContain('list_contacts'); }
   });
@@ -91,7 +91,7 @@ describe('validateGeneratedAgentProfile', () => {
       primaryGoal: 'Develop applications',
       secondaryGoals: [],
       backstory: 'Developer',
-    });
+    } as any);
     expect(result.valid).toBe(true);
   });
 });
