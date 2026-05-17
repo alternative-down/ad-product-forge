@@ -33,7 +33,7 @@ export const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
-export const mcpServerFieldsSchema, createRoleSchema = z.object({
+export const createRoleSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
 });
@@ -69,7 +69,7 @@ export const deleteAgentProviderSchema = z.object({
   providerType: z.enum(['discord', 'email']),
 });
 
-const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
+export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   z.object({
     transport: z.literal('stdio'),
     command: z.string().trim().min(1),

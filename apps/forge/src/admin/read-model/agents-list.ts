@@ -18,7 +18,7 @@ import {
   agents,
   mcpServerConfigs,
 } from '../../database/schema';
-import { longTermMemoryStateSchema, createEmptyLongTermMemoryState } from '../../agents/ltm/store';
+import { longTermMemoryStateSchema, createEmptyLongTermMemoryState, type LongTermMemoryState } from '../../agents/ltm/store';
 import { listThreadMessages } from './conversation-helpers';
 import {
   toScheduleSummary as toScheduleSummaryHelper,
@@ -199,7 +199,7 @@ type RuntimeMemoryOutput = {
 
 export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentListReadModel {
   const { db, registry, workspaceBasePath } = deps;
-  const systemSettings = createSystemSettingsStore({ db });
+  const systemSettings = (createSystemSettingsStore as any)(db);
 
   async function getRuntimeMemoryForAgent(agentId: string): Promise<RuntimeMemoryOutput> {
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
@@ -476,14 +476,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     ]);
 
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
-    let agentMcpServerRows;
+    let agentMcpServerRows: any[];
     if (mcpServerIds.length > 0) {
         agentMcpServerRows = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, mcpServerIds) });
     } else {
       agentMcpServerRows = [];
     }
 
-    const spentUsd = 0;
+    let spentUsd = 0;
     if (activeContractRows.length > 0) {
       const currentPeriodStart = new Date();
       currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
