@@ -68,6 +68,8 @@ function makeServer(overrides: Partial<McpServerConfig> = {}): McpServerConfig {
     headers: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    version: 1,
+    isActive: 1,
     ...overrides,
   };
 }
@@ -77,7 +79,7 @@ function makeConfig(overrides: Partial<AgentMcpConfig> = {}): AgentMcpConfig {
     id: 'config-1',
     agentId: 'agent-1',
     serverId: 'server-1',
-    enabled: true,
+    isActive: 1,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...overrides,
@@ -283,7 +285,7 @@ describe('wrapAction error handling', () => {
         inputSchema: {},
         execute: vi.fn().mockRejectedValue(innerError) as any,
       },
-    ]);
+    ] as any);
     mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
     const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
     const source = createAgentMcpRuntimeActionSource('agent-1');
