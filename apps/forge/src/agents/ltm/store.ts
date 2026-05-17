@@ -279,3 +279,22 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
     writeRecallState,
   };
 }
+// Types consumed by agent-long-term-memory.ts that were expected from @forge-runtime/core
+export interface CheckpointedOmCheckpointPackageInput {
+  threadId: string;
+  toGeneration: number;
+  fromGeneration: number | null;
+  reflections: Array<{ content: string; generatedAt: number }>;
+  observations: Array<{ content: string; generatedAt: number }>;
+}
+
+export interface CheckpointedOmPackageEntry {
+  packageId: string;
+  checkpointGeneration: number;
+  fromGeneration: number | null;
+  toGeneration: number;
+  createdAt: string;
+  checkpointSummaryUpdatedAt: string;
+  reflectionCount: number;
+  observationCount: number;
+}

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { CheckpointedOmCheckpointPackageInput } from '@forge-runtime/core';
+import type { CheckpointedOmCheckpointPackageInput } from '../ltm/store';
 import type { CheckpointPackageManifest } from '../ltm/store';
 import {
   renderCheckpointPackageReadme,

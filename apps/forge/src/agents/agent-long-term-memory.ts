@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
-  type CheckpointedOmCheckpointPackageInput,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
   forgeDebug,
@@ -16,6 +15,9 @@ import { z } from 'zod';
 import {
   createAgentLongTermMemoryStore,
   type LongTermMemoryState,
+  type CheckpointPackageManifest,
+  type CheckpointedOmCheckpointPackageInput,
+  type CheckpointedOmPackageEntry,
 } from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
 import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
@@ -214,7 +216,7 @@ export function createAgentLongTermMemory(input: {
 
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
     const state = await readState();
-    const existing = state.packages.find((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.checkpointGeneration === payload.toGeneration);
+    const existing = state.packages.find((entry: CheckpointedOmPackageEntry) => entry.checkpointGeneration === payload.toGeneration);
 
     if (existing) {
       return existing;
@@ -223,7 +225,7 @@ export function createAgentLongTermMemory(input: {
     const checkpointTimestamp = computeCheckpointTimestamp(payload);
     const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
     const sequence = state.packages
-      .filter((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId.startsWith(`${dayKey}_`))
+      .filter((entry: CheckpointedOmPackageEntry) => entry.packageId.startsWith(`${dayKey}_`))
       .length + 1;
     const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
@@ -261,10 +263,14 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function recordLtmStep(usage: LtmUsage) {
-    const { contract, pricing } = await getBudgetContext();
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
     if (!contract) {
       return;
     }
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId,
+    });
 
     let costUsd = 0;
 
@@ -295,10 +301,14 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function estimateNextLtmDelayMs() {
-    const { contract, pricing } = await getBudgetContext();
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
     if (!contract) {
       return 0;
     }
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId,
+    });
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
@@ -438,7 +448,7 @@ export function createAgentLongTermMemory(input: {
     try {
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow start', context: {
         agentId: input.agentId,
-        packageIds: availablePackages.map((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId),
+        packageIds: availablePackages.map((entry: CheckpointedOmPackageEntry) => entry.packageId),
         packageCount: state.packages.length,
       } });
 
@@ -462,7 +472,7 @@ export function createAgentLongTermMemory(input: {
 
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow complete', context: {
         agentId: input.agentId,
-        packageIds: state.packages.map((entry: import("@forge-runtime/core").CheckpointedOmPackageEntry) => entry.packageId),
+        packageIds: state.packages.map((entry: CheckpointedOmPackageEntry) => entry.packageId),
         changedFiles: Array.from(changedFiles).sort(),
       } });
 
