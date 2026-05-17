@@ -19,7 +19,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // Zod mock: identity parse so route handlers can run without real schema validation.
 // Methods return chainables so z.object() calls like z.string().min(1).optional() work.
 const chainable = () => {
-  const fn = vi.fn().mockReturnThis();
+  const fn = vi.fn().mockReturnThis() as any;
   fn.min = vi.fn().mockReturnThis();
   fn.max = vi.fn().mockReturnThis();
   fn.email = vi.fn().mockReturnThis();
