@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { Database } from '../../../database/client';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
-import type { createAgentMcpServerSchema, updateAgentMcpServerSchema } from './provider-mcp-schemas';
+// schemas imported inline below
 
 export function normalizeMcpServerRecord(body: {
   name?: string;

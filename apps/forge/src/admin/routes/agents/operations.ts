@@ -82,7 +82,7 @@ export function registerAgentOperationRoutes(
           return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
         }
 
-        entry.runner.notifyExternalEvent({
+        (entry as any).runner.notifyExternalEvent({
           type: 'manual-wake',
           groupKey: `manual-wake:${agentId}`,
           groupMetadata: {

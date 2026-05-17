@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const createScheduleSchema = z.object({
+export const createScheduleSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional(),
@@ -12,7 +12,7 @@ const createScheduleSchema = z.object({
   wakeWhenRunning: z.boolean().optional(),
 });
 
-const updateScheduleSchema = z.object({
+export const updateScheduleSchema = z.object({
   agentId: z.string().min(1),
   scheduleId: z.string().min(1),
   name: z.string().min(1).optional(),
@@ -26,7 +26,7 @@ const updateScheduleSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-const deleteScheduleSchema = z.object({
+export const deleteScheduleSchema = z.object({
   agentId: z.string().min(1),
   scheduleId: z.string().min(1),
 });
