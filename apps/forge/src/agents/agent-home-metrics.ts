@@ -20,7 +20,7 @@ import type { InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
 
 // Imports: extracted async helpers (extracted in phases 2-4)
-import { readLatestThreadDetails, readAgentRuntimeMemory } from './agent-home-metrics-thread-helpers';
+import { readLatestThreadDetails, readAgentRuntimeMemory, buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
 
 // Re-exports from helpers for backward compatibility
 export { buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';

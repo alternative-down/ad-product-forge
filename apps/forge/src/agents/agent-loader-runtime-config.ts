@@ -48,9 +48,9 @@ export function buildAgentRuntimeConfig(
     tools: toolset.tools,
     providers: runtimeData.providers,
     workspaceBasePath: loaderConfig.workspaceBasePath,
-    workspaceFilesystem: runtimeData.agent.workspaceFilesystem ?? undefined,
-    workspaceSandbox: runtimeData.agent.workspaceSandbox ?? undefined,
-    workspaceSkills: runtimeData.agent.workspaceSkills ?? undefined,
-    workspaceEmbedder: runtimeData.agent.workspaceEmbedder,
+    workspaceFilesystem: (runtimeData.agent as any).workspaceFilesystem ?? undefined as any,
+    workspaceSandbox: (runtimeData.agent as any).workspaceSandbox ?? undefined as any,
+    workspaceSkills: (runtimeData.agent as any).workspaceSkills ?? undefined as any,
+    workspaceEmbedder: (runtimeData.agent as any).workspaceEmbedder as any,
   };
 }
