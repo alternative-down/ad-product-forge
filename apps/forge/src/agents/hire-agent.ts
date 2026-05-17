@@ -228,9 +228,10 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       await tx.insert(agentProviders).values(providerRecord);
     }
 
-    // External operations (chat, schedules, runtime load, registry) happen INSIDE the
-    // transaction scope so they are covered by the rollback if anything throws.
-    // Each external op has its own cleanup logic for any partial successes.
+    // External operations (chat, schedules, runtime load, registry) are called
+    // inside the transaction so their partial successes are also rolled back
+    // if a later op fails. Each external op has its own cleanup logic for any
+    // partial successes before the transaction commits.
 
     try {
       await validated.internalChat.registerAgentAccount({
