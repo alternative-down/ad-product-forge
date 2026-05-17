@@ -47,7 +47,7 @@ export async function createAgentMcpServer(
   const now = Date.now();
   const record = normalizeMcpServerRecord({ ...body, isActive: body.isActive ?? false });
 
-  await db.insert(mcpServerConfigs).values({
+  await (db.insert(mcpServerConfigs) as any).values({
     id: serverId,
     ...record,
     version: 1,
