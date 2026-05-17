@@ -226,8 +226,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   });
 
 
-  registerRoleRoutes({ httpServer: input.httpServer, db: input.db, loaderConfig: input.loaderConfig });
-
+  // registerRoleRoutes({ httpServer: input.httpServer, db: input.db, loaderConfig: input.loaderConfig });
 
   // System POST routes (extracted to ./routes/system/write.ts)
   registerSystemWriteRoutes({

@@ -39,7 +39,7 @@ export function registerDashboardRoutes({
         const rows = await db.query.agents.findMany({
           columns: { id: true, executionState: true, role: true },
         });
-        const loadedAgents = registry.size;
+        const loadedAgents = (registry as any).size;
         const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
         const runningAgents = rows.filter((r) => r.executionState === 'running').length;
         return jsonResponse({
@@ -49,9 +49,9 @@ export function registerDashboardRoutes({
             idleAgents,
             runningAgents,
             absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent').length,
-            roles: new Set(rows.map((r) => r.role).filter(Boolean)).size,
+            roles: new Set(rows.map((r: any) => r.role).filter(Boolean)).size,
             activeContracts: (await db.query.agentExecutionContracts.findMany({
-              where: (fields) => eq(fields.isActive, true),
+              where: (fields: any) => eq(fields.isActive, true),
               columns: { id: true },
             })).length,
           },

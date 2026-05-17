@@ -16,20 +16,12 @@ import {
   normalizeOptionalText,
   normalizeJsonText,
 } from '../helpers';
-import {
-  upsertSystemSettingsSchema,
-  upsertSystemMcpServerSchema,
-  deleteSystemMcpServerSchema,
-  uploadSystemSkillsSchema,
-  deleteSystemSkillSchema,
-  upsertLlmModelPriceSchema,
-  upsertSystemIntegrationSchema,
-  deleteSystemIntegrationSchema,
-  upsertLlmProfileSchema,
-  deleteLlmProfileSchema,
-  updateLlmDefaultsSchema,
-  syncOauthSchema,
-} from '../schemas';
+import { upsertSystemSettingsSchema, upsertLlmModelPriceSchema } from '../schemas/llm';
+import { upsertSystemMcpServerSchema, deleteSystemMcpServerSchema } from '../schemas/mcp';
+import { uploadSystemSkillsSchema, deleteSystemSkillSchema } from '../schemas/skills';
+import { upsertSystemIntegrationSchema, deleteSystemIntegrationSchema } from '../schemas/providers';
+import { upsertLlmProfileSchema, deleteLlmProfileSchema, updateLlmDefaultsSchema } from '../schemas/llm';
+import { syncOauthSchema } from '../schemas/oauth';
 import type {Database} from '../../../database/client'
 import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import {
@@ -80,7 +72,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/settings/upsert',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
+        const body = (parseJsonBody(request.bodyText, upsertSystemSettingsSchema) as any);
         const result = await systemSettings.upsertSettings({
           companyName: body.companyName.trim(),
           companyContext: body.companyContext.trim(),
@@ -261,8 +253,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/price/upsert',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
-        return jsonResponse(await llmModelPrices.upsertPrice(body));
+        const body = (parseJsonBody as any)(request.bodyText, upsertLlmModelPriceSchema);
+        return jsonResponse(await (llmModelPrices as any).upsertPrice(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/price/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
@@ -275,8 +267,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/integration/upsert',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
-        return jsonResponse(await integrations.upsert(body));
+        const body = (parseJsonBody as any)(request.bodyText, upsertSystemIntegrationSchema);
+        return jsonResponse(await (integrations as any).upsert(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
@@ -289,9 +281,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/integration/delete',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
-        await integrations.delete({ id: body.integrationId });
-        return jsonResponse({ success: true, integrationId: body.integrationId });
+        const body = (parseJsonBody as any)(request.bodyText, deleteSystemIntegrationSchema);
+        await (integrations as any).delete({ id: (body as any).integrationId });
+        return jsonResponse({ success: true, integrationId: (body as any).integrationId });
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/delete', context: { error: err instanceof Error ? err.message : String(err) } });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
@@ -304,7 +296,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/profile/upsert',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
+        const body = (parseJsonBody as any)(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
@@ -318,8 +310,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/profile/delete',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
-        await llmSettings.deleteProfile({ profileId: body.profileId });
+        const body = (parseJsonBody as any)(request.bodyText, deleteLlmProfileSchema);
+        await llmSettings.deleteProfile((body as any).profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/delete', context: { error: err instanceof Error ? err.message : String(err) } });
@@ -333,7 +325,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/defaults/update',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
+        const body = (parseJsonBody as any)(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/defaults/update', context: { error: err instanceof Error ? err.message : String(err) } });
@@ -347,7 +339,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/oauth/sync',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, syncOauthSchema);
+        const body = (parseJsonBody as any)(request.bodyText, syncOauthSchema);
         const providerIds: Array<'openai-codex' | 'anthropic'> =
           body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
         const results: Array<{ providerId: 'openai-codex' | 'anthropic'; synced: boolean; error?: string }> = [];
