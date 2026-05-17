@@ -66,8 +66,8 @@ async function initAgentRegistry() {
         id: AGENTS_CONFIG.forge.id,
         name: AGENTS_CONFIG.forge.name,
         description: AGENTS_CONFIG.forge.description,
-        modelProfileId: defaults.primaryProfile.profileId,
-        omModelProfileId: defaults.omProfile.profileId,
+        modelProfileId: (defaults as any).primaryProfile.profileId,
+        omModelProfileId: (defaults as any).omProfile.profileId,
         instructions: systemPrompt,
         workspaceAutoSync: 1,
         workspaceBm25: 1,
@@ -79,8 +79,8 @@ async function initAgentRegistry() {
         id: AGENTS_CONFIG.helper.id,
         name: AGENTS_CONFIG.helper.name,
         description: AGENTS_CONFIG.helper.description,
-        modelProfileId: defaults.primaryProfile.profileId,
-        omModelProfileId: defaults.omProfile.profileId,
+        modelProfileId: (defaults as any).primaryProfile.profileId,
+        omModelProfileId: (defaults as any).omProfile.profileId,
         instructions: [
           systemPrompt,
           'You are the helper agent for the main Forge agent.',
@@ -190,7 +190,7 @@ async function initAgentRegistry() {
         forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Updated provider', context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType } });
       } else {
         // Insert new provider
-        await db.insert(schema.agentProviders).values({
+        await (db.insert(schema.agentProviders) as any).values({
           id: createId(),
           agentId: providerConfig.agentId,
           providerType: providerConfig.providerType,

@@ -37,10 +37,10 @@ import type { InternalAgentRuntime } from './runtime/types';
 import type { AgentContractStore } from './agent-contract-store';
 import type { AgentNotificationStore } from '../notifications/store';
 import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
-import type { _AgentRunnerUsage } from './agent-runner-usage';
-import type { _Scheduler } from './agent-runner-scheduler';
+import type { AgentRunnerUsage as _AgentRunnerUsage } from './agent-runner-usage';
+import type { Scheduler as _Scheduler } from './agent-runner-scheduler';
 import type { MessageManagerState } from './agent-runner-messages';
-import type { _LoopDetector } from './agent-runner-loop-detector';
+import type { LoopDetector as _LoopDetector } from './agent-runner-loop-detector';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import type {
   ExecuteStepDeps,
@@ -185,14 +185,14 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
 
     // ── Phase 4: interpret result ────────────────────────────────────────────
     progressState.lastStepStage = 'finalizing-run';
-    const controlDirective = extractRunnerControlDirective(result);
+    const controlDirective = extractRunnerControlDirective(result as any);
     const stopRequested = controlDirective === 'stop';
 
     if (stopRequested) {
       // Signal the finally block to drain the wake queue.
       // Only call transitionToIdle when there are no pending messages.
       // With pending messages, we stop generating but stay available.
-      if (messageManager.getPendingCount() === 0) {
+      if ((messageManager as any).getPendingCount() === 0) {
         backoffState.nextStepAt = null;
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (loopDetector?.reset) {
@@ -204,8 +204,8 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       return;
     }
 
-    scheduler.resetBackoff();
-    continueRunning = messageManager.getPendingCount() > 0;
+    (scheduler as any).resetBackoff();
+    continueRunning = (messageManager as any).getPendingCount() > 0;
   } catch (error) {
     if (isStaleRun(runEpoch)) {
       return;
@@ -238,7 +238,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     ).catch((stateError) => {
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: deps.runtimeId, message: 'failed to set absent state', context: { stateError } });
     });
-    scheduler.scheduleNextStep(
+    (scheduler as any).scheduleNext(
       nextExponentialBackoffMs(backoffState.backoffMs).current,
       () => executeStep({ ...deps, stopped: false, executingRef: { value: false } }),
     );

@@ -34,6 +34,6 @@ async function fundCompanyCash() {
 }
 
 fundCompanyCash().catch((error) => {
-  forgeDebug({ scope: 'fund-cash', level: 'error', message: 'Failed to fund company cash', context: { amountUsd: input.amountUsd, error } });
+  forgeDebug({ scope: 'fund-cash', level: 'error', message: 'Failed to fund company cash', context: { error: error instanceof Error ? error.message : String(error) } });
   process.exit(1);
 });

@@ -72,16 +72,16 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
             eq(agentSchedules.isActive, 1),
           ),
         )
-        .limit(20),
+        .limit(20).all(),
       5_000,
       'Active schedule summary lookup timed out',
     );
 
-    if (rows.length === 0) {
+    if ((rows as any[]).length === 0) {
       return null;
     }
 
-    const lines = rows.map((s: { id: string; name?: string; cronExpression?: string; timezone?: string }) => {
+    const lines = (rows as any[]).map((s: { id: string; name?: string; cronExpression?: string; timezone?: string }) => {
       const cron = s.cronExpression ?? '';
       const tz = s.timezone ?? 'UTC';
       const name = s.name ?? '(unnamed)';
