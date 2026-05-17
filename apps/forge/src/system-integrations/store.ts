@@ -86,7 +86,7 @@ export function createSystemIntegrationStore(db: Database) {
       const rows = await db.query.systemIntegrations.findMany();
 
       const typedRows = rows.filter(
-        (row: object) =>
+        (row: any) =>
           row.providerType === 'migadu' ||
           row.providerType === 'coolify' ||
           row.providerType === 'github' ||
@@ -95,14 +95,14 @@ export function createSystemIntegrationStore(db: Database) {
 
       return typedRows.map((row) => {
         const { encryptedConfig, ...rest } = row;
-        const rawConfig = parseIntegrationConfigForList(row.providerType, encryptedConfig);
+        const rawConfig = parseIntegrationConfigForList(row.providerType as any, encryptedConfig);
 
         return {
           ...rest,
           isEnabled: row.isEnabled === 1,
-          config: sanitizeForList(row.providerType, rawConfig),
+          config: sanitizeForList(row.providerType as any, rawConfig),
         };
-      });
+      }) as any;
     } catch (err) {
       forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] listIntegrations failed', context: { error: err instanceof Error ? err.message : String(err) }});
       throw err;
