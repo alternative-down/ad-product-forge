@@ -267,7 +267,6 @@ export async function generateWithTimeoutRetries(
       // Record usage
       withTimeout(
         deps.usage.recordAgentStep(
-          deps.runtime.id,
           contractId,
           inputTokens,
           inputTokens, // cachedInputTokens — use inputTokens as approximation

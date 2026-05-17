@@ -12,7 +12,7 @@ export async function buildHiredAgentProfile(db: Database, input: {
     return {
       name: input.agentName.trim(),
       description: input.agentDescription?.trim(),
-      modelProfileId: defaults.primaryProfile.profileId,
-      omModelProfileId: defaults.omProfile.profileId,
+      modelProfileId: (defaults.primaryProfile as any).profileId,
+      omModelProfileId: (defaults.omProfile as any).profileId,
     };
 }

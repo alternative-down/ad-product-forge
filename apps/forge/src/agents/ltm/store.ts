@@ -73,7 +73,7 @@ export function createEmptyLongTermMemoryState(): LongTermMemoryState {
     lastRunAt: null,
     lastRunError: null,
     lastRunErrorAt: null,
-    updatedAt: now,
+    updatedAt: String(now),
   };
 }
 
@@ -101,12 +101,13 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
   }
 
   async function writeState(state: LongTermMemoryState) {
+    const now = Date.now();
     const nextState = {
       ...state,
-      updatedAt: Date.now(),
+      updatedAt: String(now),
     } satisfies LongTermMemoryState;
-    const now = Date.now();
-    let existing: AgentLongTermMemoryState | null = null;
+
+    let existing: any | null = null;
 
     try {
       existing = await db.query.agentLongTermMemoryStates.findFirst({
@@ -122,7 +123,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         .insert(agentLongTermMemoryStates)
         .values({
           agentId: input.agentId,
-          state: nextState,
+          state: (nextState as any),
           recallIndexStamp: existing?.recallIndexStamp ?? null,
           createdAt: existing?.createdAt ?? now,
           updatedAt: now,
@@ -130,7 +131,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         .onConflictDoUpdate({
           target: agentLongTermMemoryStates.agentId,
           set: {
-            state: nextState,
+            state: (nextState as any),
             updatedAt: now,
           },
         });
@@ -160,7 +161,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
 
   async function writeRecallIndexStamp(reason: string) {
     const now = Date.now();
-    let existing: AgentLongTermMemoryState | null = null;
+    let existing: any | null = null;
     let state: LongTermMemoryState;
 
     try {
@@ -180,7 +181,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         .insert(agentLongTermMemoryStates)
         .values({
           agentId: input.agentId,
-          state,
+          state: (state as any),
           recallIndexStamp: JSON.stringify({
             updatedAt: now,
             reason,
@@ -231,7 +232,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
     history?: LongTermMemoryRecallHistory;
   }) {
     const now = Date.now();
-    let existing: AgentLongTermMemoryRecallState | null = null;
+    let existing: any | null = null;
 
     try {
       existing = await db.query.agentLongTermMemoryRecallStates.findFirst({
@@ -249,8 +250,8 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           agentId: input.agentId,
           threadId: inputState.threadId ?? existing?.threadId ?? null,
           resourceId: inputState.resourceId ?? existing?.resourceId ?? null,
-          snapshot: inputState.snapshot,
-          history: inputState.history,
+          snapshot: (inputState.snapshot as any),
+          history: (inputState.history as any),
           createdAt: existing?.createdAt ?? now,
           updatedAt: now,
         })
@@ -259,8 +260,8 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           set: {
             threadId: inputState.threadId ?? existing?.threadId ?? null,
             resourceId: inputState.resourceId ?? existing?.resourceId ?? null,
-            snapshot: inputState.snapshot,
-            history: inputState.history,
+            snapshot: (inputState.snapshot as any),
+            history: (inputState.history as any),
             updatedAt: now,
           },
         });

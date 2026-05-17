@@ -206,7 +206,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+  await db.transaction(async (tx) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);
 
@@ -278,7 +278,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       runtime = await loadAgent(db, {
         agentId,
         workspaceBasePath: validated.workspaceBasePath,
-        githubApps: validated.githubApps,
+        githubApps: (validated.githubApps as any),
         emailMailboxes: validated.emailMailboxes,
         coolify: validated.coolify,
         schedules: validated.schedules,
