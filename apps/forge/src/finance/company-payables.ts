@@ -8,6 +8,8 @@ import { companyCashLedger, companyRecurringPayables } from '../database/schema'
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
+export type CompanyPayablesStore = ReturnType<typeof createCompanyPayables>;
+
 export function createCompanyPayables(db: Database) {
   async function listRecurringPayables() {
     try {

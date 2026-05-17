@@ -22,6 +22,8 @@ export type ListCompanyCashMovementsInput = {
   offset?: number;
 };
 
+export type MicroErpReadModel = ReturnType<typeof createMicroErpReadModel>;
+
 export function createMicroErpReadModel(db: Database) {
   const companyCash = createCompanyCashLedger(db);
 
