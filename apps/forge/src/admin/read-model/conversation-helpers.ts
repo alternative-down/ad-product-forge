@@ -113,25 +113,25 @@ async function listRecentInternalChatConversations(
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
     return Promise.all(rows.map(async (conversation) => {
-      const internalConversation = await internalChat.getConversationForAgent(agentId, conversation.targetKey);
-      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, conversation.targetKey);
+      const internalConversation = await internalChat.getConversationForAgent(agentId, (conversation as any).targetKey);
+      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, (conversation as any).targetKey);
       const participants = collectConversationParticipants({
-        name: conversation.name,
-        participants: groupParticipants.length > 0 ? groupParticipants : conversation.participants,
-        messages: conversation.messages.map((message: { authorDisplayName?: string }) => ({
+        name: (conversation as any).name,
+        participants: groupParticipants.length > 0 ? groupParticipants : (conversation as any).participants,
+        messages: (conversation as any).messages.map((message: any) => ({
           authorDisplayName: message.authorDisplayName ?? agentName,
         })),
       });
 
       return {
-        conversationId: conversation.targetKey,
-        conversationKey: conversation.targetKey,
-        provider: conversation.provider,
+        conversationId: (conversation as any).targetKey,
+        conversationKey: (conversation as any).targetKey,
+        provider: (conversation as any).provider,
         type: internalConversation?.type === 'group' ? 'group' : 'dm',
-        name: conversation.name ?? undefined,
+        name: (conversation as any).name ?? undefined,
         participants,
-        updatedAt: Date.parse(conversation.latestMessageAt) || 0,
-        messages: conversation.messages.map((message: { authorDisplayName?: string }) => ({
+        updatedAt: Date.parse((conversation as any).latestMessageAt) || 0,
+        messages: (conversation as any).messages.map((message: any) => ({
           messageId: message.messageId,
           content: message.content,
           unread: message.unread,
@@ -158,7 +158,7 @@ async function listInternalChatGroupParticipants(
       return [];
     }
 
-    return conversation.participants.map((participant: { displayName?: string }) => participant.displayName ?? 'Unknown participant');
+    return (conversation as any).participants.map((participant: any) => (participant as any).displayName ?? 'Unknown participant');
   } catch (err) {
     forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, err: err instanceof Error ? err.message : String(err) } });
     return [];

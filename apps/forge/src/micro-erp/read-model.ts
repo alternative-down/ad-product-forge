@@ -318,6 +318,8 @@ export function createMicroErpReadModel(db: Database) {
  * Returns the timestamp column to use for period filtering.
  * Uses effectiveAt when available, otherwise falls back to createdAt.
  */
+export type MicroErpReadModel = ReturnType<typeof createMicroErpReadModel>;
+
 function movementTimestamp() {
   return sql`coalesce(${companyCashLedger.effectiveAt}, ${companyCashLedger.createdAt})`;
 }

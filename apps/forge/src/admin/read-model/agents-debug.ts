@@ -31,7 +31,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
   // Resolve getAgentRuntimeMemory — use provided or lazy-init from agents-runtime-memory
   let getAgentRuntimeMemoryFn = getAgentRuntimeMemory_;
   if (!getAgentRuntimeMemoryFn && registry) {
-    const armRM = createAgentsRuntimeMemoryReadModel({ db, registry, workspaceBasePath });
+    const armRM = (createAgentsRuntimeMemoryReadModel as any)({ db, registry, workspaceBasePath });
     getAgentRuntimeMemoryFn = armRM.getAgentRuntimeMemory;
   }
 
