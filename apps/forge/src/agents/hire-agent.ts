@@ -199,6 +199,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
     startsAt: now,
     endsAt: now + WEEK_MS,
     createdAt: now,
+    updatedAt: now,
   };
 
   // Wrap ALL DB writes inside a single transaction.
@@ -221,6 +222,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         providerType,
         encryptedCredentials: encryptSecret(JSON.stringify(credentials)),
         createdAt: now,
+        updatedAt: now,
       };
 
       await tx.insert(agentProviders).values(providerRecord);
