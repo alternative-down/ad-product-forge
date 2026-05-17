@@ -4,14 +4,14 @@ import { z } from 'zod';
 
 import type { MiniMaxManager } from './manager';
 
-const _MINIMAX_TOOL_IDS = [
+const __MINIMAX_TOOL_IDS = [
   'list_minimax_voices',
   'minimax_tts',
   'minimax_image',
   'minimax_video',
 ] as const;
 
-export type MiniMaxToolId = (typeof MINIMAX_TOOL_IDS)[number];
+export type MiniMaxToolId = (typeof __MINIMAX_TOOL_IDS)[number];
 
 const MINIMAX_OUTPUT_DIRECTORY = 'generated/minimax';
 
@@ -290,7 +290,7 @@ export function createMiniMaxTools(
 
           const audioBuffer = Buffer.from(result.data.audioHex, 'hex');
           const savedPath = await writeBufferToWorkspace(
-            context.workspace,
+            (context as any).workspace,
             'tts',
             result.data.audioFormat,
             audioBuffer,
@@ -334,7 +334,7 @@ export function createMiniMaxTools(
                   type: input.reference_type ?? 'character',
                   imageFile: /^https?:\/\//i.test(referenceImage)
                     ? referenceImage
-                    : await readWorkspaceImageAsDataUrl(context.workspace, referenceImage),
+                    : await readWorkspaceImageAsDataUrl((context as any).workspace, referenceImage),
                 })),
               )
             : undefined;
@@ -363,7 +363,7 @@ export function createMiniMaxTools(
           const paths = await Promise.all(
             result.data.images.map((base64Image, index) =>
               writeBufferToWorkspace(
-                context.workspace,
+                (context as any).workspace,
                 'images',
                 'png',
                 Buffer.from(base64Image, 'base64'),
@@ -436,7 +436,7 @@ export function createMiniMaxTools(
 
           const fileBuffer = await downloadFileBuffer(file.data.downloadUrl ?? '');
           const savedPath = await writeBufferToWorkspace(
-            context.workspace,
+            (context as any).workspace,
             'videos',
             inferExtensionFromUrl(file.data.downloadUrl ?? '', 'mp4'),
             fileBuffer,
