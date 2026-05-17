@@ -15,7 +15,7 @@ import {
   createHeartbeatWakeInstruction,
   toToolOutput,
 } from './schedule-helpers';
-import { normalizeScheduleUpdate, buildScheduleUpdateInput, buildScheduleRollbackInput } from './schedule-normalize-helpers';
+import { normalizeScheduleUpdate, buildScheduleUpdateInput, buildScheduleRollbackInput, type ExistingScheduleFields } from './schedule-normalize-helpers';
 import {
   requireScheduleEditor,
   requireScheduleDeleter,
@@ -88,7 +88,8 @@ export function createAgentScheduleManager(input: {
   }
 
 
-  function isActiveSchedule(s: StoredSchedule): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function isActiveSchedule(s: StoredSchedule | { isActive: boolean }): boolean {
     return s.isActive === true;
   }
 
@@ -114,12 +115,12 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules',
         level: 'error',
         message: 'createHeartbeatSchedule: registerSchedule failed',
-        context: { agentId, scheduleId: (record as StoredSchedule).scheduleId, error: error instanceof Error ? error.message : String(error) },
+        context: { agentId, scheduleId: (record as unknown as StoredSchedule).scheduleId, error: error instanceof Error ? error.message : String(error) },
       });
       throw error;
     }
     return {
-      scheduleId: (record as StoredSchedule).scheduleId,
+      scheduleId: (record as unknown as StoredSchedule).scheduleId,
     };
   }
   async function createSchedule(agentId: string, rawInput: z.input<typeof createScheduleSchema>) {
@@ -152,7 +153,7 @@ export function createAgentScheduleManager(input: {
       throw error;
     }
 
-    return toToolOutput(record as StoredSchedule);
+    return toToolOutput(record as unknown as StoredSchedule);
   }
 
   async function listSchedules(agentId: string) {
@@ -189,7 +190,7 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
+    const normalized = normalizeScheduleUpdate(parsed, existing as ExistingScheduleFields, parseScheduleDate);
     const { scheduleType, cronExpression, scheduledDate } = normalized;
     validateScheduleShape({
       scheduleType: scheduleType as 'cron' | 'date',
@@ -199,7 +200,7 @@ export function createAgentScheduleManager(input: {
     if (normalized.shouldRequireFutureDate) {
       assertFutureScheduledDate(scheduleType as 'cron' | 'date', normalized.parsedScheduledDate);
     }
-    const rollbackInput = buildScheduleRollbackInput(existing) as UpdateAgentScheduleInput;
+    const rollbackInput = buildScheduleRollbackInput(existing as unknown as ExistingScheduleFields) as UpdateAgentScheduleInput;
     const updated = await store.updateAgentSchedule(
       agentId,
       scheduleId,
@@ -220,7 +221,7 @@ export function createAgentScheduleManager(input: {
     getLifecycle().cancel(scheduleId);
 
     try {
-      if (isActiveSchedule(updated) === true) {
+      if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(updated as any);
       } else {
@@ -230,7 +231,7 @@ export function createAgentScheduleManager(input: {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
 
-      if (isActiveSchedule(existing) === true && isActiveSchedule(restored) === true) {
+      if (isActiveSchedule(existing as unknown as StoredSchedule) === true && isActiveSchedule(restored as unknown as StoredSchedule) === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(restored as any);
       }
@@ -256,7 +257,7 @@ export function createAgentScheduleManager(input: {
       throw new Error(`Schedule not found: ${scheduleId}`);
     }
 
-    const normalized = normalizeScheduleUpdate(parsed, existing, parseScheduleDate);
+    const normalized = normalizeScheduleUpdate(parsed, existing as unknown as ExistingScheduleFields, parseScheduleDate);
     const { scheduleType, cronExpression, scheduledDate } = normalized;
     validateScheduleShape({
       scheduleType: scheduleType as 'cron' | 'date',
@@ -266,7 +267,7 @@ export function createAgentScheduleManager(input: {
     if (normalized.shouldRequireFutureDate) {
       assertFutureScheduledDate(scheduleType as 'cron' | 'date', normalized.parsedScheduledDate);
     }
-    const rollbackInput = buildScheduleRollbackInput(existing) as UpdateAgentScheduleInput;
+    const rollbackInput = buildScheduleRollbackInput(existing as unknown as ExistingScheduleFields) as UpdateAgentScheduleInput;
     const updated = await store.updateOwnedSchedule(
       agentId,
       scheduleId,
@@ -286,7 +287,7 @@ export function createAgentScheduleManager(input: {
     getLifecycle().cancel(scheduleId);
 
     try {
-      if (isActiveSchedule(updated) === true) {
+      if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(updated as any);
       } else {
@@ -300,7 +301,7 @@ export function createAgentScheduleManager(input: {
       // Cancel any residual registered entry so the old schedule cannot fire against stale DB state
       getLifecycle().cancel(scheduleId);
 
-      if (isActiveSchedule(existing) === true && isActiveSchedule(restored) === true) {
+      if (isActiveSchedule(existing as unknown as StoredSchedule) === true && isActiveSchedule(restored as unknown as StoredSchedule) === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await getLifecycle().register(restored as any);
       }
@@ -475,7 +476,7 @@ export function createAgentScheduleManager(input: {
 
 
   async function __registerSchedule(record: StoredSchedule | null) {
-    if (isActiveSchedule(record) !== true) return;
+    if (isActiveSchedule(record as unknown as StoredSchedule) !== true) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await getLifecycle().register(record as any);
   }
@@ -511,7 +512,7 @@ export function createAgentScheduleManager(input: {
           agentId: scheduleRecord.agentId,
           scheduleId: scheduleRecord.scheduleId,
           kind: scheduleRecord.kind,
-          description: scheduleRecord.description,
+          description: scheduleRecord.description ?? undefined,
           scheduleType: scheduleRecord.scheduleType,
           cronExpression: scheduleRecord.cronExpression,
           scheduledDate: scheduleRecord.scheduledDate,
