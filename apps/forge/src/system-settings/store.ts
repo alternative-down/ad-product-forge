@@ -50,7 +50,7 @@ function toBool(value: number | null | undefined): boolean {
 
 /** Normalises the LTM recall search mode. */
 function resolveRecallSearchMode(value: string | null | undefined): typeof DEFAULTS.ltmRecallSearchMode {
-  if (value === 'vector' || value === 'bm25') return value;
+  if (value === 'vector' || value === 'bm25') return value as typeof DEFAULTS.ltmRecallSearchMode;
   return 'hybrid';
 }
 
@@ -59,7 +59,7 @@ function resolveRecallSearchMode(value: string | null | undefined): typeof DEFAU
  * every field. Boolean columns (stored as 0/1 integers) are normalised to
  * booleans.
  */
-function mapRow(row: SystemSettings | null): SystemSettingsValue {
+function mapRow(row: any | null): SystemSettingsValue {
   if (row === null) {
     return { ...DEFAULTS, updatedAt: null };
   }
@@ -143,7 +143,7 @@ export function createSystemSettingsStore(db: Database) {
         ltmRecallScoreThreshold: input.ltmRecallScoreThreshold,
         ltmRecallDocumentCount: input.ltmRecallDocumentCount,
         updatedAt: now,
-        createdAt: existing?.createdAt ?? now,
+        createdAt: (existing as any)?.createdAt ?? now,
       };
 
       if (existing) {
