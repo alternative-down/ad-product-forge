@@ -160,7 +160,7 @@ const wh = extractWhere(opts?.where);
         };
       }),
     })),
-    transaction: vi.fn(async (fn: (tx: any) => Promise<void>) => {
+    transaction: vi.fn(async (fn: (tx: typeof db) => Promise<void>) => {
       await fn({
         insert: db.insert,
         update: db.update,
@@ -171,7 +171,7 @@ const wh = extractWhere(opts?.where);
   return { db, collections };
 }
 
-let createAgentContractStore: (db: unknown) => ReturnType<typeof import('./agent-contract-store').createAgentContractStore>;
+let createAgentContractStore: any;
 let collections: MockCollections;
 
 beforeEach(async () => {
@@ -546,7 +546,7 @@ describe('agent-contract-store', () => {
       const contract = makeContract({ id: 'c-funded', agentId: 'a-funded', fundedAt: now, budgetUsd: 10 });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
-      const result = await store.fundContractIfNeeded(contract);
+      const result = await store.fundContractIfNeeded(contract as any);
       expect(result).not.toBeNull();
       expect(result!.fundedAt).toBe(now);
     });
