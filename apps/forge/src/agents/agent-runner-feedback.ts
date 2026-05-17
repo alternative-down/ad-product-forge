@@ -122,7 +122,7 @@ export async function buildIterationFeedback(
       30_000,
       'Agent notification creation timed out for ' + runtime.id,
     );
-    setNextStepAt(null);
+    setNextStepAt?.(null);
     return { continue: false, feedbackMessages: [] };
   }
 
@@ -131,7 +131,7 @@ export async function buildIterationFeedback(
   }
 
   if (stopRequested) {
-    setNextStepAt(null);
+    setNextStepAt?.(null);
     return { continue: false, feedbackMessages: [] };
   }
 
@@ -156,7 +156,7 @@ export async function buildIterationFeedback(
   const recallStep = buildRecallStepFromIteration({
     text: iteration.text,
     toolCalls: iteration.toolCalls,
-    toolResults: iteration.toolResults.map((tr) => ({ toolName: tr.name, result: tr.error as unknown })),
+    toolResults: iteration.toolResults.map((tr) => ({ name: tr.name, result: tr.error as unknown })),
   });
   const recallFeedback = await currentRuntime.longTermMemoryRecall?.recallFromStep({
     step: recallStep,
