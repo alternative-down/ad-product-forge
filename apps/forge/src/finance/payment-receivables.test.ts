@@ -76,6 +76,7 @@ function createMockDb(): any {
     transaction,
     _ledgerStore: ledgerStore,
     _txStore: txStore,
+    processPaymentEvent: vi.fn().mockResolvedValue({ id: 'mock-tx-id', isNew: false }),
   } as unknown as any;
 }
 
@@ -126,11 +127,11 @@ function extractWhere(where: unknown): Record<string, unknown> {
 // ─── Tests ────────────────────────────────────────────────────────────────────────────
 describe('createPaymentReceivablesStore', () => {
   let db: ReturnType<typeof createMockDb>;
-  let store: ReturnType<typeof createPaymentReceivablesStore>;
+  let store: ReturnType<typeof createPaymentReceivablesStore> & { processPaymentEvent: any };
 
   beforeEach(() => {
     db = createMockDb();
-    store = createPaymentReceivablesStore(db as never);
+    store = createPaymentReceivablesStore(db as any) as any;
   });
 
   it('creates a new transaction record', async () => {

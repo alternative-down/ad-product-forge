@@ -41,9 +41,9 @@ describe('createAgentConversationsReadModel', () => {
     it('calls listRecentConversations with agentId and default limit 10', async () => {
       mockListRecentConversations.mockResolvedValue([]);
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       await model.listAgentRecentConversations('agent-42');
       expect(mockListRecentConversations).toHaveBeenCalledWith('agent-42', 10);
@@ -52,9 +52,9 @@ describe('createAgentConversationsReadModel', () => {
     it('passes custom limit to listRecentConversations', async () => {
       mockListRecentConversations.mockResolvedValue([]);
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       await model.listAgentRecentConversations('agent-1', 25);
       expect(mockListRecentConversations).toHaveBeenCalledWith('agent-1', 25);
@@ -67,9 +67,9 @@ describe('createAgentConversationsReadModel', () => {
       ];
       mockListRecentConversations.mockResolvedValue(conversations);
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       const result = await model.listAgentRecentConversations('agent-1');
       expect(result).toEqual(conversations);
@@ -80,9 +80,9 @@ describe('createAgentConversationsReadModel', () => {
     it('calls internalChat.listMessages with correct params', async () => {
       const mockChat = makeMockInternalChat();
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: mockChat as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: mockChat as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       await model.listAgentConversationMessages({
         agentId: 'agent-1',
@@ -108,9 +108,9 @@ describe('createAgentConversationsReadModel', () => {
         listMessages: vi.fn().mockResolvedValue(messages),
       });
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: mockChat as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: mockChat as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       const result = await model.listAgentConversationMessages({
         agentId: 'agent-1',
@@ -133,9 +133,9 @@ describe('createAgentConversationsReadModel', () => {
         listMessages: vi.fn().mockResolvedValue(messages),
       });
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: mockChat as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: mockChat as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       const result = await model.listAgentConversationMessages({
         agentId: 'agent-1',
@@ -152,9 +152,9 @@ describe('createAgentConversationsReadModel', () => {
     it('calls listThreadMessages with workspaceBasePath, agentId, and pagination params', async () => {
       mockListThreadMessages.mockResolvedValue({ items: [], totalPages: 0, currentPage: 1 });
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/workspace/agent-1',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       await model.listAgentThreadMessages({ agentId: 'agent-1', page: 2, perPage: 25 });
       expect(mockListThreadMessages).toHaveBeenCalledWith(
@@ -175,9 +175,9 @@ describe('createAgentConversationsReadModel', () => {
       };
       mockListThreadMessages.mockResolvedValue(threadResult);
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       const result = await model.listAgentThreadMessages({ agentId: 'agent-1', page: 1, perPage: 50 });
       expect(result).toEqual(threadResult);
@@ -189,9 +189,9 @@ describe('createAgentConversationsReadModel', () => {
       mockListThreadMessages.mockResolvedValue({ items: [], totalPages: 0, currentPage: 1 });
       mockToMastraSafeIdentifier.mockImplementation((v: string) => `safe_${v}`);
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/base',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       await model.listAgentLongTermMemoryThreadMessages({ agentId: 'my-agent', page: 1, perPage: 50 });
       expect(mockListThreadMessages).toHaveBeenCalledWith('/base', 'my-agent', {
@@ -210,9 +210,9 @@ describe('createAgentConversationsReadModel', () => {
       };
       mockListThreadMessages.mockResolvedValue(ltmResult);
       const model = createAgentConversationsReadModel({
-        db: makeMockDb() as Parameters<typeof createAgentConversationsReadModel>[0]['db'],
+        db: makeMockDb() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["db"],
         workspaceBasePath: '/tmp',
-        internalChat: makeMockInternalChat() as Parameters<typeof createAgentConversationsReadModel>[0]['internalChat'],
+        internalChat: makeMockInternalChat() as unknown as Parameters<typeof createAgentConversationsReadModel>[0]["internalChat"],
       });
       const result = await model.listAgentLongTermMemoryThreadMessages({ agentId: 'agent-1', page: 1, perPage: 50 });
       expect(result).toEqual(ltmResult);
