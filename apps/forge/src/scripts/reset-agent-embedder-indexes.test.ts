@@ -45,7 +45,7 @@ describe('reset-agent-embedder-indexes script', () => {
     });
 
     it('is called once per agent', async () => {
-      resetAgentEmbedderIndexes.mockClear();
+      (resetAgentEmbedderIndexes as any).mockReset();
 
       const agents = ['agent-1', 'agent-2', 'agent-3'];
       await Promise.all(agents.map((id) => resetAgentEmbedderIndexes('/base', id)));
