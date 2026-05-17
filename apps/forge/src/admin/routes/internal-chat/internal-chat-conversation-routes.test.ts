@@ -77,7 +77,7 @@ describe('registerConversationRoutes', () => {
   it('GET /admin/internal-chat/conversations returns properly shaped response', async () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversations');
-    const result = await route!.handler({ query: new Map([['accountId', 'acc-001']]), bodyText: '' }) as { body: string };
+    const result = await route!.handler({ query: new URLSearchParams([['accountId', 'acc-001']]), bodyText: '' } as any) as { body: string };
     const body = JSON.parse(result.body);
     expect(body[0].conversationId).toBe('conv-001');
     expect(body[0].provider).toBe('internal-chat');
@@ -88,7 +88,7 @@ describe('registerConversationRoutes', () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversations');
     await expect(
-      route!.handler({ query: new Map(), bodyText: '' })
+      route!.handler({ query: new URLSearchParams(), bodyText: '' } as any)
     ).rejects.toThrow('accountId required');
   });
 
@@ -102,7 +102,7 @@ describe('registerConversationRoutes', () => {
   it('GET /admin/internal-chat/messages returns messages array', async () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/messages');
-    const result = await route!.handler({ query: new Map([['accountId', 'acc-001'], ['conversationId', 'conv-001']]), bodyText: '' }) as { body: string };
+    const result = await route!.handler({ query: new URLSearchParams([['accountId', 'acc-001'], ['conversationId', 'conv-001']]), bodyText: '' } as any) as { body: string };
     const body = JSON.parse(result.body);
     expect(body.items).toHaveLength(1);
     expect(body.items[0].messageId).toBe('msg-002');
@@ -119,9 +119,9 @@ describe('registerConversationRoutes', () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/message-attachment');
     const result = await route!.handler({
-      query: new Map([['accountId', 'acc-001'], ['conversationId', 'conv-001'], ['messageId', 'msg-001'], ['attachmentName', 'file.txt']]),
+      query: new URLSearchParams([['accountId', 'acc-001'], ['conversationId', 'conv-001'], ['messageId', 'msg-001'], ['attachmentName', 'file.txt']]),
       bodyText: '',
-    }) as { status: number; headers: Record<string, string>; body: Buffer };
+    } as any) as { status: number; headers: Record<string, string>; body: Buffer };
     expect(result.status).toBe(200);
     expect(result.headers['content-type']).toBe('text/plain');
   });
@@ -139,7 +139,7 @@ describe('registerConversationRoutes', () => {
     // So it goes to group creation path
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/create');
-    const result = await route!.handler({ query: new Map(), bodyText: JSON.stringify({ accountId: 'acc-001', memberKeys: ['acc-002'] }) }) as { body: string };
+    const result = await route!.handler({ query: new URLSearchParams(), bodyText: JSON.stringify({ accountId: 'acc-001', memberKeys: ['acc-002'] }) } as any) as { body: string };
     expect(mockInternalChat.createExternalChatGroupWithMembers).toHaveBeenCalled();
     expect(JSON.parse(result.body).conversationId).toBeTruthy();
   });
@@ -147,7 +147,7 @@ describe('registerConversationRoutes', () => {
   it('POST /admin/internal-chat/conversation/create creates group when type=group', async () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/create');
-    await route!.handler({ query: new Map(), bodyText: JSON.stringify({ accountId: 'acc-001', type: 'group', name: 'Team', memberKeys: ['acc-002', 'acc-003'] }) });
+    await route!.handler({ query: new URLSearchParams(), bodyText: JSON.stringify({ accountId: 'acc-001', type: 'group', name: 'Team', memberKeys: ['acc-002', 'acc-003'] }) } as any);
     expect(mockInternalChat.createExternalChatGroupWithMembers).toHaveBeenCalled();
     expect(mockInternalChat.ensureDirectConversationByAccount).not.toHaveBeenCalled();
   });
@@ -162,7 +162,7 @@ describe('registerConversationRoutes', () => {
   it('POST /admin/internal-chat/conversation/send delegates to sendMessage', async () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/send');
-    await route!.handler({ query: new Map(), bodyText: JSON.stringify({ accountId: 'acc-001', conversationId: 'conv-001', content: 'Hello world' }) });
+    await route!.handler({ query: new URLSearchParams(), bodyText: JSON.stringify({ accountId: 'acc-001', conversationId: 'conv-001', content: 'Hello world' }) } as any);
     expect(mockInternalChat.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ content: 'Hello world' }));
   });
 
@@ -176,7 +176,7 @@ describe('registerConversationRoutes', () => {
   it('POST /admin/internal-chat/conversation/update delegates to updateGroupByAccount', async () => {
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/update');
-    await route!.handler({ query: new Map(), bodyText: JSON.stringify({ conversationId: 'conv-001', name: 'New Name' }) });
+    await route!.handler({ query: new URLSearchParams(), bodyText: JSON.stringify({ conversationId: 'conv-001', name: 'New Name' }) } as any);
     expect(mockInternalChat.updateGroupByAccount).toHaveBeenCalledWith({ groupId: 'conv-001', name: 'New Name' });
   });
 
@@ -191,7 +191,7 @@ describe('registerConversationRoutes', () => {
     // Schema only has conversationId (body.accountId is not in schema, comes as undefined)
     registerConversationRoutes(httpServer, mockInternalChat as never);
     const route = httpServer.routes.find(r => r.path === '/admin/internal-chat/conversation/archive');
-    await route!.handler({ query: new Map(), bodyText: JSON.stringify({ conversationId: 'conv-001' }) });
+    await route!.handler({ query: new URLSearchParams(), bodyText: JSON.stringify({ conversationId: 'conv-001' }) } as any);
     // accountId is undefined because schema doesn't include it
     expect(mockInternalChat.archiveConversationByAccount).toHaveBeenCalledWith(
       expect.objectContaining({ conversationId: 'conv-001' })
