@@ -6,7 +6,7 @@ import { InternalChatAccountNotFoundError, InternalChatError } from './internal-
 // Chain builder for db.select().from().where().all() chains
 // ---------------------------------------------------------------------------
 function createChain(result: unknown) {
-  const chain: Record<string, unknown> = {
+  const chain: any = {
     from: vi.fn(() => chain),
     innerJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),

@@ -39,7 +39,8 @@ vi.mock('./agent-ltm-checkpoint-render', () => ({
 import { writeCheckpointFiles } from './agent-ltm-checkpoint-io-helpers';
 
 // Re-import fs to access mocked writeFile
-import * as fsModule from 'node:fs/promises';
+import * as _fsModule from 'node:fs/promises';
+const fsModule = _fsModule as any;
 
 describe('computeCheckpointTimestamp', () => {
   it('returns earliest reflection createdAt when reflections exist', () => {

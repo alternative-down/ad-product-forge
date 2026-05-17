@@ -595,7 +595,7 @@ describe('normalizeProviderCode', () => {
         idempotencyKey: 'idem',
         timestamp: 1700000000000,
         text: 'msg',
-        groupMetadata: { TargetKey: undefined },
+        groupMetadata: { TargetKey: '' },
         itemMetadata: {},
       },
     ]);

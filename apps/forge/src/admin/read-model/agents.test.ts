@@ -178,7 +178,7 @@ function makeReadModel(deps = {}) {
     workspaceBasePath: '/workspaces/forge',
     systemSettings: makeMockSystemSettings(),
     ...deps,
-  });
+  } as any);
 }
 
 // ---------------------------------------------------------------------

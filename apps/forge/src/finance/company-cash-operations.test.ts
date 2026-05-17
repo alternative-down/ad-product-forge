@@ -148,26 +148,14 @@ function createMockDb(initialRows: CashLedgerRow[] = []) {
     query: {
       companyCashLedger: { findFirst },
     },
-  } as unknown as {
-    insert: (table: unknown) => { values: (v: unknown) => Promise<{ rowCount: number }> };
-    update: (table: unknown) => ReturnType<ReturnType<NonNullable<ReturnType<ReturnType<{
-      insert: (table: unknown) => { values: (v: unknown) => Promise<{ rowCount: number }> };
-      update: (table: unknown) => {
-        set: (values: Record<string, unknown>) => {
-          where: (where: unknown) => Promise<{ rowCount: number }>;
-        };
-      };
-      query: { companyCashLedger: { findFirst: typeof findFirst } };
-    }>['update']>>['set']>>;
-    query: { companyCashLedger: { findFirst: typeof findFirst } };
-  };
+  } as unknown as any;
 
   return { db, rowStore };
 }
 
 // ─── Factories ─────────────────────────────────────────────────────────────
 
-function makeEntry(overrides: Partial<CashLedgerRow> = {}): CashLedgerRow {
+function makeEntry(overrides: Partial<CashLedgerRow> = {}): any {
   return {
     id: 'entry-1',
     type: 'test',

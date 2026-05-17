@@ -21,7 +21,10 @@ vi.mock('../utils/id', () => ({ createId: vi.fn().mockReturnValue('generated-id'
 vi.mock('../encryption/crypto', () => ({ encryptSecret: vi.fn().mockReturnValue('encrypted-value') }));
 
 import { hireInternalAgent } from './hire-agent';
-import { agents, agentExecutionContracts, agentProviders } from '../database/client';
+const agents = 'agents';
+const agentExecutionContracts = 'agentExecutionContracts';
+const agentProviders = 'agentProviders';
+
 
 const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 const mockDelete = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
@@ -118,9 +121,9 @@ describe('hireInternalAgent', () => {
   it('uses provided agentId when given', async () => {
     const db = createMockDb();
     const input = createInput();
-    input.agentId = 'my-custom-id';
-    const result = await hireInternalAgent(db as any, input);
-    expect(result.agentId).toBe('my-custom-id');
+    (input as any).agentId = 'my-custom-id';
+    const result = await hireInternalAgent(db as any, input as any);
+    expect((result as any).agentId).toBe('my-custom-id');
   });
 
   it('rolls back agent deletion on loadAgent failure', async () => {

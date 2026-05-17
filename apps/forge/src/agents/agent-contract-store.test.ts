@@ -165,13 +165,13 @@ const wh = extractWhere(opts?.where);
         insert: db.insert,
         update: db.update,
         select: db.select,
-      });
+      } as any);
     }),
   };
   return { db, collections };
 }
 
-let createAgentContractStore: (db: unknown) => ReturnType<typeof import('./agent-contract-store').createAgentContractStore>;
+let createAgentContractStore: any;
 let collections: MockCollections;
 
 beforeEach(async () => {
@@ -526,7 +526,7 @@ describe('agent-contract-store', () => {
           insert: db.insert,
           update: db.update,
           select: db.select,
-        });
+        } as any);
       });
       const store = createAgentContractStore(db);
       const result = await store.renewContract('a-renew');
@@ -546,7 +546,7 @@ describe('agent-contract-store', () => {
       const contract = makeContract({ id: 'c-funded', agentId: 'a-funded', fundedAt: now, budgetUsd: 10 });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
-      const result = await store.fundContractIfNeeded(contract);
+      const result = await store.fundContractIfNeeded(contract as any);
       expect(result).not.toBeNull();
       expect(result!.fundedAt).toBe(now);
     });

@@ -32,7 +32,7 @@ function makeDefaultState(): SchedulerState {
 function makeMinimalDeps(overrides: Partial<SchedulerDependencies> = {}): SchedulerDependencies {
   return {
     runtimeId: 'agent-1',
-    getSystemSettings: async () => ({ stepDelayEnabled: true, memoryLastMessagesFullEnabled: false }),
+    getSystemSettings: async () => ({ stepDelayEnabled: true, memoryLastMessagesFullEnabled: false, communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: false }),
     getRunnableContract: vi.fn<() => Promise<{ id: string; budgetUsd: number; endsAt: number } | null>>(),
     getContractSpend: vi.fn<() => Promise<number>>(),
     estimateStepCostUsd: vi.fn<() => Promise<number | null>>(),
@@ -364,7 +364,7 @@ describe('flush settings', () => {
 
   it('resetFlushedRunEventKeys clears all flushed keys', () => {
     const { scheduler } = setupScheduler();
-    scheduler.rememberFlushedRunEventKey('a', 'b', 'c');
+    scheduler.rememberFlushedRunEventKey('a');
     expect(scheduler.isFlushed('a')).toBe(true);
     scheduler.resetFlushedRunEventKeys();
     expect(scheduler.isFlushed('a')).toBe(false);

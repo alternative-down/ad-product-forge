@@ -29,7 +29,7 @@ function makeMockDb(overrides = {}) {
       llmProfiles: { findMany: vi.fn().mockResolvedValue([]) },
     },
     ...overrides,
-  } as unknown as LibSQLDatabase<any>;
+  } as any;
 }
 
 describe('createAgentDetailReadModel', () => {

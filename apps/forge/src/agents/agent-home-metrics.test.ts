@@ -181,8 +181,8 @@ describe('agent-home-metrics', () => {
 
   describe('buildThreadToolInvocationParts', () => {
     it('returns empty array for null/undefined', () => {
-      expect(buildThreadToolInvocationParts(null)).toEqual([]);
-      expect(buildThreadToolInvocationParts(undefined)).toEqual([]);
+      expect(buildThreadToolInvocationParts(null as any)).toEqual([]);
+      expect(buildThreadToolInvocationParts(undefined as any)).toEqual([]);
     });
 
     it('returns empty array for empty object', () => {

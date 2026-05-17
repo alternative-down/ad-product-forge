@@ -153,7 +153,7 @@ it('returns immediately when stopped', async () => {
 });
 
 it('returns immediately when executing', async () => {
-  const deps = makeDeps({ executing: true });
+  const deps = makeDeps({ executingRef: { value: true } });
   await executeStep(deps as any);
   expect(deps.generateWithTimeoutRetries).not.toHaveBeenCalled();
 });

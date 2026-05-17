@@ -236,7 +236,7 @@ describe('createAgentLongTermMemoryStore', () => {
     });
 
     it('returns null when row has no recallIndexStamp', async () => {
-      mockDb.statesFindFirst.mockResolvedValue(mockRow({ recallIndexStamp: null }));
+      mockDb.statesFindFirst.mockResolvedValue(mockRow({ recallIndexStamp: undefined }));
 
       const result = await store.readRecallIndexStamp();
       expect(result).toBeNull();

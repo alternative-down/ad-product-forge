@@ -59,7 +59,7 @@ const APP = {
 };
 
 function buildManager() {
-  return createCoolifyManager(defaultConfig as Parameters<typeof createCoolifyManager>[0]);
+  return createCoolifyManager(defaultConfig as any);
 }
 
 describe('createCoolifyManager', () => {

@@ -2,7 +2,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createLlmSettingsStore } from './settings-store';
 
 import type {Database} from '../database/client';
-import type { LlmProfile, SystemLlmDefaults } from '../database/client';
+type LlmProfile=any;
+type SystemLlmDefaults=any;
 
 // ─── mock db factory ─────────────────────────────────────────────────────────
 

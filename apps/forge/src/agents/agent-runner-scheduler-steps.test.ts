@@ -92,7 +92,7 @@ describe('createSchedulerSteps', () => {
 
     it('returns early when stale', async () => {
       const deps = makeDeps();
-      deps.isStaleRun = () => true;
+      (deps.isStaleRun as any) = () => true;
       const steps = createSchedulerSteps(deps);
       await steps.queueNextStep();
       expect(deps.scheduleNextStep).not.toHaveBeenCalled();

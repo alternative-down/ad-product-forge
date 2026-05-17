@@ -278,7 +278,7 @@ describe('createChatSending — getMessageAttachmentByAccount', () => {
     const db = makeMockDb();
 
     const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    const result = await sending.getMessageAttachmentByAccount({ messageId: 'msg-1', attachmentName: 'file.txt' });
+    const result = await sending.getMessageAttachmentByAccount({ accountId: 'acc-1', conversationId: 'conv-1', messageId: 'msg-1', attachmentName: 'file.txt' });
 
     expect(attachments.readMessageAttachment).toHaveBeenCalledWith('msg-1', 'file.txt');
     expect(result).toEqual({ stream: null, contentType: 'text/plain' });

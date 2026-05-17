@@ -176,7 +176,7 @@ describe('createGitHubAppManager', () => {
       const result = await manager.getAgentProvisioning('agent-new');
 
       expect(result).toMatchObject({ agentId: 'agent-new', status: 'pending' });
-      expect(result.registrationUrl).toContain('agent-new');
+      expect((result as any).registrationUrl).toContain('agent-new');
     });
 
     it('returns null when not configured and agent has no credentials', async () => {
@@ -199,7 +199,7 @@ describe('createGitHubAppManager', () => {
       const result = await manager.createAgentApp({ agentId: 'agent-fresh', agentName: 'Fresh Agent' });
 
       expect(result).toMatchObject({ agentId: 'agent-fresh', status: 'pending' });
-      expect(result.registrationUrl).toContain('agent-fresh');
+      expect((result as any).registrationUrl).toContain('agent-fresh');
     });
 
     it('throws when credentials already exist for the agent', async () => {
