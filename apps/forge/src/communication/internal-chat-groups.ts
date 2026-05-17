@@ -181,26 +181,26 @@ export function createInternalChatGroups(
         accountId: string,
         conversationId: string,
       ) {
-try {
+        try {
 
-        const membership =
-          await db.query.internalChatConversationMembers.findFirst({
-            where: and(
-              eq(internalChatConversationMembers.accountId, accountId),
-              eq(internalChatConversationMembers.conversationId, conversationId),
-            ),
-          });
-    
-        if (!membership) {
-          forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'requireConversationMembershipByAccount membership not found', context: { conversationId } });
-          throw new Error(`Conversation not found: ${conversationId}`);
-        }
-      
-  } catch (err) {
-    forgeDebug({ scope: 'internal-chat-groups', level: 'info', message: 'Failed to execute requireConversationMembershipByAccount', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw err;
-  }
-  }
+          const membership =
+            await db.query.internalChatConversationMembers.findFirst({
+              where: and(
+                eq(internalChatConversationMembers.accountId, accountId),
+                eq(internalChatConversationMembers.conversationId, conversationId),
+              ),
+            });
+
+          if (!membership) {
+            forgeDebug({ scope: 'internal-chat-groups', level: 'warn', message: 'requireConversationMembershipByAccount membership not found', context: { conversationId } });
+            throw new Error(`Conversation not found: ${conversationId}`);
+          }
+
+        } catch (err) {
+            forgeDebug({ scope: 'internal-chat-groups', level: 'info', message: 'Failed to execute requireConversationMembershipByAccount', context: { error: err instanceof Error ? err.message : String(err) } });
+            throw err;
+          }
+      }
     
       // -----------------------------------------------------------------------
       // Public API — group CRUD
@@ -526,3 +526,4 @@ try {
 }
 
 export type InternalChatGroups = ReturnType<typeof createInternalChatGroups>;
+
