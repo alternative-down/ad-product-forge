@@ -11,7 +11,6 @@ import { forgeDebug } from '../debug';
 import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
 
 import type {Database} from '../../../database/schema';
-import type { AgentReadModel } from '../../read-model/agents';
 import {
   agentExecutionSteps,
   agentSchedules,
@@ -31,7 +30,7 @@ function extractAgentId(path: string): string {
 
 export function registerAgentBaseRoutes(
   httpServer: ForgeHttpServerAdapter,
-  getAgent: AgentReadModel['getAgent'],
+  getAgent: any,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -85,7 +84,7 @@ export function registerAgentStepsRoutes(
 
 export function registerAgentConversationsRoutes(
   httpServer: ForgeHttpServerAdapter,
-  listAgentRecentConversations: AgentReadModel['listAgentRecentConversations'],
+  listAgentRecentConversations: any,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -107,7 +106,7 @@ export function registerAgentConversationsRoutes(
 
 export function registerAgentMemoryRoutes(
   httpServer: ForgeHttpServerAdapter,
-  getAgentRuntimeMemory: AgentReadModel['getAgentRuntimeMemory'],
+  getAgentRuntimeMemory: any,
 ) {
   httpServer.registerRoute({
     method: 'GET',
@@ -201,21 +200,21 @@ export function registerAgentMcpRoutes(
         where: inArray(mcpServerConfigs.id, serverIds),
       });
 
-      const serverIdToLink = new Map(agentMcpRows.map((link: string) => [link.serverId, link]));
+      const serverIdToLink = new Map(agentMcpRows.map((link: any) => [link.serverId, link]));
       return jsonResponse({
-        servers: agentMcpServerRows.map((server: { id: string; name: string; description?: string | null }) => {
+        servers: agentMcpServerRows.map((server: any) => {
           const link = serverIdToLink.get(server.id);
           return {
             configId: link?.id ?? null,
             serverId: server.id,
             name: server.name,
             description: server.description ?? undefined,
-            transport: server.transport as 'stdio' | 'http_streamable',
-            command: server.command ?? '',
-            argsText: server.args ?? '',
-            envVarsText: server.envVars ?? '',
-            url: server.url ?? '',
-            headersText: server.headers ?? '',
+            transport: (server as any).transport ?? null,
+            command: (server as any).command ?? '',
+            argsText: (server as any).args ?? '',
+            envVarsText: (server as any).envVars ?? '',
+            url: (server as any).url ?? '',
+            headersText: (server as any).headers ?? '',
             
           };
         }),
@@ -273,7 +272,7 @@ export function registerAgentNotificationsRoutes(
         limit,
       });
       return jsonResponse({
-        items: rows.map((n: number) => ({
+        items: rows.map((n: any) => ({
           notificationId: n.id,
           content: n.content,
           timestamp: n.createdAt,

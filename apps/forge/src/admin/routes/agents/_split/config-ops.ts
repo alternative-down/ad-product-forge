@@ -2,7 +2,7 @@
  * Agent Config Operations — extracted from write-ops.ts
  */
 
-import { _z } from 'zod';
+import { z } from 'zod';
 import { sql } from 'drizzle-orm';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';

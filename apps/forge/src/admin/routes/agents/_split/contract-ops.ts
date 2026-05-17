@@ -5,6 +5,7 @@
  */
 
 import { parseJsonBody, jsonResponse } from '../../index';
+import { forgeDebug } from '../../debug';
 import {
   topUpAgentContractSchema,
   adjustAgentContractBudgetSchema,
