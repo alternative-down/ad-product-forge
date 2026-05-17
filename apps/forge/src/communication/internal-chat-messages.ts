@@ -101,7 +101,7 @@ export function createInternalChatMessages(
       .offset(input.offset)
       .limit(input.limit).all();
 
-    const unreadMessageIds = rows.filter((row: object) => row.unread === 1).map((row: any) => row.messageId);
+    const unreadMessageIds = rows.filter((row: any) => row.unread === 1).map((row: any) => row.messageId);
 
     if (unreadMessageIds.length > 0) {
       await db
@@ -113,8 +113,8 @@ export function createInternalChatMessages(
         ));
     }
 
-    return await Promise.all(
-      rows.reverse().map(async (row: object) => ({
+    return (await Promise.all(
+      rows.reverse().map(async (row: any) => ({
         messageId: row.messageId,
         provider: 'internal-chat',
         authorId: row.authorAccountId,
@@ -124,8 +124,8 @@ export function createInternalChatMessages(
         unread: row.unread === 1,
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
-      })),
-    );
+      }))
+    )) as any as CommunicationProviderMessage[];
   }
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
@@ -169,8 +169,8 @@ export function createInternalChatMessages(
       .offset(input.offset)
       .limit(input.limit).all();
 
-    return await Promise.all(
-      rows.reverse().map(async (row: object) => ({
+    return (await Promise.all(
+      rows.reverse().map(async (row: any) => ({
         messageId: row.messageId,
         provider: 'internal-chat',
         authorId: row.authorAccountId,
@@ -180,8 +180,8 @@ export function createInternalChatMessages(
         unread: false,
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
-      })),
-    );
+      }))
+    )) as any;
   }
 
   // ── Account-scoped Message Retrieval ─────────────────────────────────────
