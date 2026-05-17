@@ -63,7 +63,7 @@ export async function adjustAgentContractBudget(
 
     // Deduct from company cash and update budget atomically
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-      await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+      await db.transaction(async (tx) => {
         await companyCashOperations.recordCashOut(
           {
             type: 'agent-contract-budget-increase',
@@ -115,7 +115,7 @@ export async function adjustAgentContractBudget(
 
   // Refund unused funds and update budget atomically
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+    await db.transaction(async (tx) => {
       await companyCashOperations.recordCashIn(
         {
           type: 'agent-contract-budget-decrease',
