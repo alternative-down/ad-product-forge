@@ -12,7 +12,7 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import type { CommunicationFile } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database, InternalChatConversation } from '../database/schema';
 import {
   internalChatConversations,
   internalChatConversationMembers,
@@ -22,7 +22,6 @@ import {
 import type {
   InternalChatGroupMember,
   InternalChatGroupParticipant,
-  InternalChatConversation,
 } from './internal-chat-helpers';
 
 export interface SendingDeps {
@@ -119,17 +118,17 @@ try {
         where: eq(internalChatConversationMembers.conversationId, conversation.id),
       });
 
-      await db.insert(internalChatMessages).values({
+      await db.insert(internalChatMessages).values(({
         id: messageId,
         conversationId: conversation.id,
         authorAccountId: input.accountId,
         content: input.content,
-        replyToMessageId: resolvedReplyTo,
+        replyToMessageId: (resolvedReplyTo ?? null) as string,
         createdAt: now,
-      });
+      } as any));
     await attachments.storeMessageAttachments(messageId, input.attachments);
 
-    const accountIds = members.map((m: object) => m.accountId);
+    const accountIds = members.map((m: any) => m.accountId);
     const accountMap = await accounts.getAccountsById(accountIds);
     const readRows = Array.from(accountMap.values())
       .filter((memberAccount) => memberAccount.agentId)
@@ -140,11 +139,10 @@ try {
       }));
 
     if (readRows.length > 0) {
-        await db.insert(internalChatMessageReads).values(readRows);
+        await db.insert(internalChatMessageReads).values((readRows as any));
     }
 
     await db
-      await db
         .update(internalChatConversations)
         .set({
           updatedAt: now,
@@ -157,10 +155,10 @@ try {
 
     const liveDeliveredAgentIds = connection.deliverToParticipants({
       excludeAccountId: input.accountId,
-      participants,
+      participants: participants as any,
       conversation: {
         id: conversation.id,
-        name: conversation.name,
+        name: (conversation.name ?? '') as string,
         type: conversation.type,
       },
       messageId,
