@@ -184,7 +184,7 @@ export async function generateWithTimeoutRetries(
     (longTermMemoryRecallSystemText?.trim() ?? '') !== ''
       ? {
           role: 'assistant' as const,
-          content: longTermMemoryRecallSystemText.trim(),
+          content: (longTermMemoryRecallSystemText ?? "").trim(),
         }
       : null,
     promptText.trim()
@@ -246,8 +246,8 @@ export async function generateWithTimeoutRetries(
         message: `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
       });
 
-      const result = await Promise.race([
-        deps.currentRuntime.generate(
+      const result = await (Promise.race([
+        (deps.currentRuntime as any).generate(
           systemPrompt,
           effectivePromptText,
           {
@@ -257,9 +257,7 @@ export async function generateWithTimeoutRetries(
           },
         ),
         timeout.promise,
-      ] as Parameters<typeof deps.currentRuntime.generate> extends [unknown, unknown, { abortSignal: infer _S }]
-        ? [ReturnType<typeof deps.currentRuntime.generate>, Promise<never>]
-        : never[] as never[]);
+      ]) as any);
 
       clearGenerateTimeout(timeout);
       finishGenerateAttempt(generateToken, controller, deps);
@@ -301,12 +299,12 @@ export async function generateWithTimeoutRetries(
           iteration: { iteration: steps.length, finishReason: result?.finishReason ?? 'unknown' },
           finishReason: result?.finishReason ?? 'unknown',
           text: result?.text ?? '',
-          toolCalls: steps.flatMap((s) => s.toolCalls ?? []) as Array<{
+          toolCalls: steps.flatMap((s: any) => s.toolCalls ?? []) as Array<{
             name: string;
             args: Record<string, unknown>;
           }>,
-          toolResults: steps.flatMap((s) =>
-            (s.toolResults ?? []).map((tr) => ({ name: tr.name, error: tr.error as Error })),
+          toolResults: steps.flatMap((s: any) =>
+            (s.toolResults ?? []).map((tr: any) => ({ name: tr.name, error: tr.error as Error })),
           ) as Array<{ name: string; error?: Error }>,
         },
         {
@@ -321,7 +319,7 @@ export async function generateWithTimeoutRetries(
           loopSignature: deps.loopSignature,
           runtime: deps.runtime,
           notifications: deps.notifications,
-          currentRuntime: deps.currentRuntime,
+          currentRuntime: deps.currentRuntime as any,
           flushPendingRunMessages: deps.flushPendingRunMessages,
           markGenerateProgress: deps.markGenerateProgress,
           controller,
@@ -342,12 +340,12 @@ export async function generateWithTimeoutRetries(
 
       return {
         text: result?.text ?? '',
-        toolCalls: steps.flatMap((s) => s.toolCalls ?? []) as Array<{
+        toolCalls: steps.flatMap((s: any) => s.toolCalls ?? []) as Array<{
           name: string;
           args: Record<string, unknown>;
         }>,
-        toolResults: steps.flatMap((s) =>
-          (s.toolResults ?? []).map((tr) => ({ name: tr.name, error: tr.error as Error })),
+        toolResults: steps.flatMap((s: any) =>
+          (s.toolResults ?? []).map((tr: any) => ({ name: tr.name, error: tr.error as Error })),
         ) as Array<{ name: string; error?: Error }>,
         finishReason: result?.finishReason ?? 'unknown',
         inputTokens,
