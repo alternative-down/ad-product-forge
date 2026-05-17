@@ -18,8 +18,8 @@ import { withRouteErrorHandler } from './internal-chat-route-helpers';
 
 function buildListGroupMembersHandler(
   internalChat: InternalChatService,
-): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/group-members', async (request) => {
+): HttpHandler {
+  return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-members', async (request: any) => {
     const accountId = request.query.get('accountId');
     const conversationId = request.query.get('conversationId');
 
@@ -38,8 +38,8 @@ function buildListGroupMembersHandler(
 
 function buildAddMemberHandler(
   internalChat: InternalChatService,
-): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/group-member/add', async (request) => {
+): HttpHandler {
+  return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-member/add', async (request: any) => {
     const accountId = request.query.get('accountId');
     if (!accountId) {
       return jsonResponse({ error: 'accountId required' }, 400);
@@ -58,8 +58,8 @@ function buildAddMemberHandler(
 
 function buildUpdateRoleHandler(
   internalChat: InternalChatService,
-): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/group-member/update-role', async (request) => {
+): HttpHandler {
+  return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-member/update-role', async (request: any) => {
     const accountId = request.query.get('accountId');
     if (!accountId) {
       return jsonResponse({ error: 'accountId required' }, 400);
@@ -78,8 +78,8 @@ function buildUpdateRoleHandler(
 
 function buildRemoveMemberHandler(
   internalChat: InternalChatService,
-): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/group-member/remove', async (request) => {
+): HttpHandler {
+  return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-member/remove', async (request: any) => {
     const accountId = request.query.get('accountId');
     if (!accountId) {
       return jsonResponse({ error: 'accountId required' }, 400);

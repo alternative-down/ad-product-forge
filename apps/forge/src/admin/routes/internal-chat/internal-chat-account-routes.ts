@@ -48,7 +48,7 @@ function buildListContactsHandler(internalChat: InternalChatService): () => Retu
   });
 }
 
-function buildCreateAccountHandler(internalChat: InternalChatService): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
+function buildCreateAccountHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/account/create', async (request) => {
     const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
     return jsonResponse(
@@ -60,7 +60,7 @@ function buildCreateAccountHandler(internalChat: InternalChatService): (request:
   });
 }
 
-function buildUpdateAccountHandler(internalChat: InternalChatService): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
+function buildUpdateAccountHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/account/update', async (request) => {
     const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
     return jsonResponse(
@@ -72,7 +72,7 @@ function buildUpdateAccountHandler(internalChat: InternalChatService): (request:
   });
 }
 
-function buildDeleteAccountHandler(internalChat: InternalChatService): (request: { query: Map<string, string>; bodyText: string }) => ReturnType<HttpHandler> {
+function buildDeleteAccountHandler(internalChat: InternalChatService): HttpHandler {
   return withRouteErrorHandler('admin', '/admin/internal-chat/account/delete', async (request) => {
     const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
     return jsonResponse(await internalChat.deleteExternalAccount(body));
