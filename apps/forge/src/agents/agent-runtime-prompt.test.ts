@@ -72,7 +72,7 @@ describe('buildAgentSystemPrompt', () => {
     });
     const ccMatch = result.match(/<company_context>([\s\S]*?)<\/company_context>/);
     expect(ccMatch).toBeTruthy();
-    expect(ccMatch[1].trim()).toBe('## Company Context');
+    expect(ccMatch![1].trim()).toBe('## Company Context');
   });
 
   it('trims whitespace from agentDescription', () => {
@@ -266,7 +266,7 @@ describe('buildAgentSystemPrompt', () => {
     });
     const odMatch = result.match(/<operating_directives>([\s\S]*?)<\/operating_directives>/);
     expect(odMatch).toBeTruthy();
-    const inner = odMatch[1];
+    const inner = odMatch![1];
     expect(inner).toContain('This is a real operating environment');
     expect(inner).toContain('Strictly follow the instructions');
     expect(inner).toContain('real company');

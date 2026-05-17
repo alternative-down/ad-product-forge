@@ -78,7 +78,7 @@ describe('appendPendingRunMessages', () => {
   it('includes idleOnly events when allowIdleOnly is true', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
-    const idleEvent = makeEvent({ idleOnly: true, idleOnly: true, originIdleOnly: false, idempotencyKey: 'k1' });
+    const idleEvent = makeEvent({ idleOnly: true, originIdleOnly: false, idempotencyKey: 'k1' });
 
     manager.appendPendingRunMessages([idleEvent], { allowIdleOnly: true });
 

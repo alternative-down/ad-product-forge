@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import type {Database} from '../../database/index.js';
+import type {Database} from '../../database';
 import { createAdminReadModel } from './read-model';
 
 const { mockReadFile } = vi.hoisted(() => ({

@@ -64,7 +64,7 @@ describe('createAgentRuntimeMemory', () => {
       agentModel: {},
       agentMemoryPath: '/tmp/memory',
       longTermMemory: true,
-      persistenceStore: {},
+      persistenceStore: {} as any,
       conversationStore: {} as any,
       checkpointedOmLimits: { recentRawTokens: 2048 },
     });
@@ -74,7 +74,7 @@ describe('createAgentRuntimeMemory', () => {
       expect.objectContaining({
         agentId: 'agent-123',
         agentWorkspacePath: '/tmp/workspace',
-        persistenceStore: {},
+        persistenceStore: {} as any,
         conversationStore: expect.anything(),
         recentRawTokens: 2048,
       }),
@@ -91,7 +91,7 @@ describe('createAgentRuntimeMemory', () => {
       agentModel: {},
       agentMemoryPath: '/tmp/memory',
       longTermMemory: false,
-      persistenceStore: {},
+      persistenceStore: {} as any,
       conversationStore: {} as any,
       checkpointedOmLimits: { recentRawTokens: 2048 },
     });
@@ -109,7 +109,7 @@ describe('createAgentRuntimeMemory', () => {
       agentModel: {},
       agentMemoryPath: '/tmp/memory',
       longTermMemory: undefined,
-      persistenceStore: {},
+      persistenceStore: {} as any,
       conversationStore: {} as any,
       checkpointedOmLimits: { recentRawTokens: 2048 },
     });
@@ -126,7 +126,7 @@ describe('createAgentRuntimeMemory', () => {
       agentWorkspacePath: '/tmp/workspace',
       agentModel: {},
       agentMemoryPath: '/tmp/memory',
-      persistenceStore: {},
+      persistenceStore: {} as any,
       conversationStore: {} as any,
       checkpointedOmLimits: { recentRawTokens: 2048 },
     });
