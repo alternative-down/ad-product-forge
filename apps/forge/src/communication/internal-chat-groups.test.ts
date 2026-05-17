@@ -8,7 +8,7 @@ import {
 // Chain builder — makes awaitable + iterable query chains from mock results
 // --------------------------------------------------------------------------
 function createChain(result: unknown) {
-  const chain: Record<string, unknown> = {
+  const chain: any = {
     from: vi.fn(() => chain),
     innerJoin: vi.fn(() => chain),
     where: vi.fn(() => chain),
@@ -99,7 +99,7 @@ function createMockDb(overrides?: {
     },
     transaction: (() => {
       let _db: unknown = null;
-      const txFn = vi.fn((fn: (tx: unknown) => Promise<unknown>) => {
+      const txFn: any = vi.fn((fn: (tx: unknown) => Promise<unknown>) => {
         const txDb = {
           ...(_db as Record<string, unknown>),
           insert: vi.fn(() => ({ values: vi.fn().mockReturnThis(), returning: vi.fn().mockResolvedValue([{}]) })),
@@ -215,7 +215,7 @@ describe("createInternalChatGroups", () => {
       role: "admin",
       createdAt: 1710000000000,
     });
-    groups = createInternalChatGroups(db, deps);
+    groups = createInternalChatGroups(db as any, deps);
   });
 
   afterEach(() => {

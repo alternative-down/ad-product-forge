@@ -88,7 +88,7 @@ describe('createInternalChatConversations', () => {
 
   beforeEach(() => {
     mockDb = createMockDb();
-    conversations = createInternalChatConversations(mockDb as Parameters<typeof createInternalChatConversations>[0]);
+    conversations = createInternalChatConversations(mockDb as any);
   });
 
   it('has ensureDirectConversation method', () => {

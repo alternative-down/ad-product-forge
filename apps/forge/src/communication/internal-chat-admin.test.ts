@@ -42,7 +42,7 @@ describe('createInternalChatAdmin', () => {
         description: 'Primary partner',
       });
 
-      expect(result.slug).toBe('acme');
+      expect(result?.slug).toBe('acme');
       expect(result.displayName).toBe('ACME Corp');
       expect(result.description).toBe('Primary partner');
       expect(result.accountId).toMatch(/^acct_/);
@@ -136,7 +136,7 @@ describe('createInternalChatAdmin', () => {
       const admin = createInternalChatAdmin(db as any);
       const result = await admin.getAccountBySlug('test');
 
-      expect(result.id).toBe('a1');
+      expect(result?.id).toBe('a1');
     });
 
     it('throws when slug not found', async () => {

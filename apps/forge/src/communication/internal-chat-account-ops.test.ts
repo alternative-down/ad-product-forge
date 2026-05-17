@@ -193,7 +193,7 @@ describe('createInternalChatAccountOps — updateMemberRoleByAccount', () => {
     await ops.updateMemberRoleByAccount({
       accountId: 'acc-1',
       groupId: 'group-1',
-      memberAccountId: 'acc-2',
+      participantAccountId: 'member-1',
       role: 'admin',
     });
 
@@ -207,7 +207,7 @@ describe('createInternalChatAccountOps — updateMemberRoleByAccount', () => {
     const ops = createInternalChatAccountOps(db as never, deps);
 
     await expect(
-      ops.updateMemberRoleByAccount({ accountId: 'acc-1', groupId: 'group-1', memberAccountId: 'acc-2', role: 'admin' }),
+      ops.updateMemberRoleByAccount({ accountId: 'acc-1', groupId: 'group-1', participantAccountId: 'member-1', role: 'admin' }),
     ).rejects.toThrow('not found');
   });
 });
@@ -223,7 +223,7 @@ describe('createInternalChatAccountOps — removeMemberFromGroupByAccount', () =
     await ops.removeMemberFromGroupByAccount({
       accountId: 'acc-1',
       groupId: 'group-1',
-      memberAccountId: 'acc-2',
+      participantAccountId: 'member-1',
     });
 
     expect(deps.getRequiredGroupForAccount).toHaveBeenCalledWith('acc-1', 'group-1');
