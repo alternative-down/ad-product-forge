@@ -18,6 +18,8 @@ import {
 } from './helpers';
 
 import type {Database} from '../../database/index';
+import { createMicroErpReadModel } from '../../micro-erp/read-model';
+import type { InternalChatService } from '../../communication/internal-chat-service';
 import {
   toMastraSafeIdentifier,
   LibsqlConversationStore,
@@ -31,16 +33,22 @@ const RECENT_STEP_LIMIT = 10;
 const RECENT_NOTIFICATION_LIMIT = 10;
 
 import type { AgentListItem, AgentReadModel } from './agents-types';
+import { createAgentConversationsReadModel } from './agents-conversations';
+import { createAgentMetricsReadModel } from './agents-metrics';
+import { createAgentDetailReadModel } from './agents-detail';
+import { createAgentListReadModel } from './agents-list';
+import { createAgentDebugReadModel } from './agents-debug';
+import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 
 interface AgentsReadModelDeps {
   db: Database;
-  finance: FinanceReadModel;
+  finance: ReturnType<typeof createMicroErpReadModel>;
   internalChat: InternalChatService;
   workspaceBasePath: string;
   systemSettings: object;
-  capabilities: ReturnType<typeof import("../capabilities/store").createCapabilityStore>;
-  llmSettings: ReturnType<typeof import("../llm-settings/store").createLlmSettingsStore>;
-  notifications: ReturnType<typeof import("../agent-notifications/store").createAgentNotificationStore>;
+  capabilities: any;
+  llmSettings: any;
+  notifications: any;
   githubApps: unknown;
 }
 
@@ -124,6 +132,11 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   const agentListRM = createAgentListReadModel({
     db,
     registry: registryWithSize,
+    workspaceBasePath,
+  });
+  const { getAgentRuntimeMemory } = createAgentsRuntimeMemoryReadModel({
+    db,
+    registry: getInternalAgentRegistry(),
     workspaceBasePath,
   });
   const listAgents = agentListRM.listAgents;
