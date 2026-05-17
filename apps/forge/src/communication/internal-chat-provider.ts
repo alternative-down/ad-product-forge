@@ -38,7 +38,7 @@ export function createInternalChatProvider(input: {
     async listContacts() {
       const accounts = await input.internalChat.listAccounts({ excludeAgentId: input.agentId });
 
-      return accounts.map((account: object) => ({
+      return accounts.map((account: any) => ({
         targetKey: account.agentId ?? account.slug,
         slug: account.slug,
         displayName: account.displayName,

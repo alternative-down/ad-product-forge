@@ -35,8 +35,7 @@ export function createChatAttachments(
           sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
           data: Buffer.from(attachment.data),
           createdAt: Date.now(),
-        })),
-      );
+        })) as any);
   }
 
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {

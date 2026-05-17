@@ -387,9 +387,9 @@ export function createInternalChatAccounts(db: Database) {
         updatedAt: now,
       });
       await db.insert(internalChatConversationMembers).values([
-        { conversationId, accountId: leftAccountId, role: 'normal', createdAt: now },
-        { conversationId, accountId: rightAccountId, role: 'normal', createdAt: now },
-      ]);
+        { conversationId, accountId: leftAccountId, role: 'normal', createdAt: now, updatedAt: now },
+        { conversationId, accountId: rightAccountId, role: 'normal', createdAt: now, updatedAt: now },
+      ] as any);
 
       const conversation = (await db.query.internalChatConversations.findFirst({ 
         where: eq(internalChatConversations.id, conversationId),
@@ -419,7 +419,7 @@ export function createInternalChatAccounts(db: Database) {
             )
             .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-          return sortParticipantsBySelfFirst(rows, accountId);
+          return sortParticipantsBySelfFirst(rows as any, accountId);
 
   } catch (err) {
         forgeDebug({ scope: 'internal-chat-accounts', level: 'info', message: 'Failed to execute listGroupMembersOrDmPeersByAccount', context: { error: err instanceof Error ? err.message : String(err) } });

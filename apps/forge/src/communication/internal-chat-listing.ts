@@ -34,7 +34,7 @@ interface MessageListItemWithConversation extends MessageListItem {
   conversationId: string;
 }
 
-export function createInternalChatListing(db: Database, deps: ConversationListingDeps) {
+export function createInternalChatListing(db: Database, deps: any) {
 
   async function getMessages(input: {
     agentId: string;

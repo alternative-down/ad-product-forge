@@ -229,12 +229,13 @@ export function createInternalChatGroups(
           updatedAt: now,
         });
     
-        await db.insert(internalChatConversationMembers).values({
+        await db.insert(internalChatConversationMembers).values(({
           conversationId: input.conversationKey,
           accountId: creatorAccount.id,
           role: "admin",
           createdAt: now,
-        });
+          updatedAt: now,
+        } as any));
     
     return {
       groupId: input.conversationKey,
@@ -430,7 +431,7 @@ export function createInternalChatGroups(
       )
       .where(
         eq(internalChatConversationMembers.conversationId, input.groupId),
-      );
+      ).all();
 
     return rows.map((row: any) => ({
       ...row,
@@ -466,7 +467,7 @@ export function createInternalChatGroups(
       )
       .where(
         eq(internalChatConversationMembers.conversationId, input.groupId),
-      );
+      ).all();
 
     return rows.map((row: any) => ({
       ...row,
@@ -500,7 +501,7 @@ export function createInternalChatGroups(
         eq(internalChatConversationMembers.conversationId, conversationId),
       );
 
-    return sortParticipantsBySelfFirst(rows, accountId);
+    return sortParticipantsBySelfFirst(rows as any, accountId);
     } catch (err) {
       logInternalChatError('listGroupMembersOrDmPeersByAccount', err, { accountId, conversationId });
       throw err;
