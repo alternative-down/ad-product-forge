@@ -33,7 +33,7 @@ const {
 vi.mock('@forge-runtime/core', async () => {
   const actual = await vi.importActual<typeof import('@forge-runtime/core')>('@forge-runtime/core');
   return {
-    ...actual,
+    ...(actual as any),
     ForgeMcpToolset: MockForgeMcpToolset,
     forgeDebug: vi.fn(),
   };
@@ -42,7 +42,7 @@ vi.mock('@forge-runtime/core', async () => {
 vi.mock('agent-runtime-core/integrations', async (original) => {
   const actual = await original();
   return {
-    ...actual,
+    ...(actual as any),
     McpSessionRegistry: vi.fn(),
     SdkMcpGateway: vi.fn().mockImplementation(() => ({})),
   };
@@ -66,8 +66,10 @@ function makeServer(overrides: Partial<McpServerConfig> = {}): McpServerConfig {
     envVars: null,
     url: null,
     headers: null,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    version: 1,
+    isActive: 1,
     ...overrides,
   };
 }
@@ -77,9 +79,9 @@ function makeConfig(overrides: Partial<AgentMcpConfig> = {}): AgentMcpConfig {
     id: 'config-1',
     agentId: 'agent-1',
     serverId: 'server-1',
-    enabled: true,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z',
+    isActive: 1,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
     ...overrides,
   };
 }
@@ -281,9 +283,9 @@ describe('wrapAction error handling', () => {
         name: 'failing-tool',
         description: '',
         inputSchema: {},
-        execute: vi.fn().mockRejectedValue(innerError),
+        execute: vi.fn().mockRejectedValue(innerError) as any,
       },
-    ]);
+    ] as any);
     mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
     const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
     const source = createAgentMcpRuntimeActionSource('agent-1');
