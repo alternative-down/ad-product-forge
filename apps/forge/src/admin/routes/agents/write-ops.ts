@@ -5,14 +5,14 @@
 
 import { z } from 'zod';
 import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
-import { registerLifecycleOps } from './split/lifecycle-ops';
-import { registerContractOps } from './split/contract-ops';
-import { registerRoleOps } from './split/role-ops';
-import { registerLifecycleDelegateOps } from './split/lifecycle-delegate-ops';
-import { registerMcpOps } from './split/mcp-ops';
-import { registerSkillOps } from './split/skill-ops';
-import { registerProviderOps } from './split/provider-ops';
-import { registerConfigOps } from './split/config-ops';
+import { registerLifecycleOps } from './_split/lifecycle-ops';
+import { registerContractOps } from './_split/contract-ops';
+import { registerRoleOps } from './_split/role-ops';
+import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
+import { registerMcpOps } from './_split/mcp-ops';
+import { registerSkillOps } from './_split/skill-ops';
+import { registerProviderOps } from './_split/provider-ops';
+import { registerConfigOps } from './_split/config-ops';
 
 
 import type {Database} from '../../../../src/database/schema';
