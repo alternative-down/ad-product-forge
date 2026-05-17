@@ -18,7 +18,7 @@ import { discordProviderDeleteSignalSchema } from '../schemas/discord';
 const upsertAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.string().min(1),
-  credentials: z.record(z.unknown()),
+  credentials: z.record(z.string(), z.unknown()),
 });
 const deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),

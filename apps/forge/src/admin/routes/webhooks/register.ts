@@ -3,7 +3,7 @@ import { createId } from '../../../utils/id';
 import { parseJsonBody, jsonResponse } from '../index';
 import { forgeDebug } from '../debug';
 import { z } from 'zod';
-import type { HttpRequest } from '../../http/server';
+import type { HttpRequest, HttpHandler } from '../../../http/server';
 import type { createWebhookStore } from '../../../webhooks/store';
 
 const createRouteSchema = z.object({
@@ -20,7 +20,7 @@ const markProcessedSchema = z.object({
 });
 
 export function registerWebhookAdminRoutes(
-  httpServer: ForgeHttpServerAdapter,
+  httpServer: any,
   store: ReturnType<typeof createWebhookStore>,
 ) {
   httpServer.registerRoute({

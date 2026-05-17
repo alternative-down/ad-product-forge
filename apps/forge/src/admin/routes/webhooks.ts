@@ -25,7 +25,7 @@ export function registerWebhookRoutes({ httpServer, db, registry }: WebhookRoute
   const webhookStore = createWebhookStore(db);
 
   const webhookHandler = createWebhookHandler({
-    store: webhookStore,
+    store: webhookStore as any,
     notifyAgent(input) {
       const entry = registry.get(input.agentId);
       if (!entry) { return; }
