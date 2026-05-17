@@ -73,7 +73,7 @@ const mockToolset = {
   tools: [],
 };
 
-function makeConfig(overrides?: Partial<SingleAgentLoaderConfig>): SingleAgentLoaderConfig {
+function makeConfig(overrides?: Partial<SingleAgentLoaderConfig>): any {
   return {
     agentId: 'agent-1',
     workspaceBasePath: '/workspace',

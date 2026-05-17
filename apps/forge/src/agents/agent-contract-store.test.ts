@@ -160,12 +160,12 @@ const wh = extractWhere(opts?.where);
         };
       }),
     })),
-    transaction: vi.fn(async (fn: (tx: typeof db) => Promise<void>) => {
+    transaction: vi.fn(async (fn: (tx: any) => Promise<void>) => {
       await fn({
         insert: db.insert,
         update: db.update,
         select: db.select,
-      });
+      } as any);
     }),
   };
   return { db, collections };
@@ -526,7 +526,7 @@ describe('agent-contract-store', () => {
           insert: db.insert,
           update: db.update,
           select: db.select,
-        });
+        } as any);
       });
       const store = createAgentContractStore(db);
       const result = await store.renewContract('a-renew');
