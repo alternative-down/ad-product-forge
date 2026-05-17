@@ -51,7 +51,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         title: input.title,
         description: input.description,
         state: input.state,
-        due_on: input.dueOn,
+        due_on: input.dueOn ?? undefined,
       });
       return {
         number: response.data.number,
