@@ -75,7 +75,6 @@ import {
 
 import { createRoleSchema, roleToolPermissionSchema, roleWorkflowPermissionSchema, mcpServerFieldsSchema } from './schemas';
 import { updateRoleSchema, deleteRoleSchema, roleCapabilitySchema } from './routes/schemas/roles';
-import { discordProviderDeleteSignalSchema } from './routes/schemas/discord';
 import { registerInternalChatRoutes } from './routes/internal-chat/index';
 import { registerAgentBaseRoutes, registerAgentStepsRoutes,
   registerAgentConversationsRoutes, registerAgentMemoryRoutes,
