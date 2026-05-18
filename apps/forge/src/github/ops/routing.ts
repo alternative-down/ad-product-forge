@@ -98,12 +98,12 @@ export function createRoutingOps(
     if (!code || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
-    const anonymousOctokit = new App({} as any);
+    const anonymousOctokit = new App({} as any) as unknown as { request: (url: string, opts?: unknown) => Promise<{ data: unknown }> };
     try {
       const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', { code });
       const { pem, id: appId, webhook_secret } = response.data as { pem: string; id: number; webhook_secret: string };
       const app = new App({ appId, privateKey: pem });
-      const appResponse = await app.octokit.request('GET /app');
+      const appResponse = await (app.octokit as any).request('GET /app');
       const slug = (appResponse.data as { slug?: string }).slug ?? 'unknown';
       const created = {
         status: 'created' as const,
