@@ -30,10 +30,10 @@ export interface InternalChatAccountOpsDeps {
     id: string;
     type: string;
     name: string | null;
-    createdByAccountId: string;
+    createdByAccountId: string | null;
     createdAt: number;
     updatedAt: number;
-  } | null>;
+  }>;
   listGroupMembersByAccount(input: {
     accountId: string;
     groupId: string;

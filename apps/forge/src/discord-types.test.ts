@@ -17,7 +17,7 @@ describe('DiscordSendableChannel', () => {
         return {} as ReturnType<typeof mockChannel.send> extends Promise<infer R> ? R : never;
       },
       messages: {
-        fetch: async (id: string) => ({ id } as ReturnType<typeof mockChannel.messages.fetch> extends Promise<infer R> ? R : never),
+        fetch: async (x: string | { limit: number; before?: string }) => ({ id: typeof x === 'string' ? x : 'msg-123' } as unknown as any),
       },
     };
     expect(mockChannel.id).toBe('123');
