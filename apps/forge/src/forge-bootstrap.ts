@@ -54,7 +54,7 @@ const envSchema = z.object({
  *   Base64 env: bXkkZWNyZXQha2V5IzEyMw==
  */
 function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
-  if (!rawValue) return undefined;
+  if (rawValue === undefined || rawValue === null) return undefined;
 
   try {
     const trimmed = rawValue.trim();
@@ -88,7 +88,7 @@ export async function createForgeBootstrap() {
     ? env.FORGE_ADMIN_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
     : undefined;
 
-  if (!adminApiKey && !allowInsecureLocal) {
+  if (adminApiKey === undefined && !allowInsecureLocal) {
     forgeDebug({ scope: 'main', level: 'error', message: 'main: configuration check failed' });
     throw new Error(
       'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set'
