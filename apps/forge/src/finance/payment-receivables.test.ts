@@ -19,11 +19,20 @@ function createMockDb(): any {
   function insert(table: unknown) {
     const name = (table as any)[DRIZZLE_NAME] ?? String(table);
     return {
-      values: (values: Record<string, unknown>) => {
-        if (name === 'payment_transactions') txStore.push({ ...values });
-        else if (name === 'company_cash_ledger') ledgerStore.push({ ...values });
-        return Promise.resolve({ rowCount: 1 });
-      },
+      values: (values: Record<string, unknown>) => ({
+        returning: (cols: unknown) => {
+          if (name === 'payment_transactions') txStore.push({ ...values });
+          else if (name === 'company_cash_ledger') ledgerStore.push({ ...values });
+          const result = { ...values, id: values['id'] ?? 'mock-id-' + txStore.length };
+          return Promise.resolve([result]);
+        },
+        then: (resolve: any, reject: any) => {
+          if (name === 'payment_transactions') txStore.push({ ...values });
+          else if (name === 'company_cash_ledger') ledgerStore.push({ ...values });
+          resolve({ rowCount: 1 });
+          return {} as any;
+        },
+      }),
     };
   }
 

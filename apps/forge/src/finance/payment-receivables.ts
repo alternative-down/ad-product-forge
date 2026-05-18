@@ -227,6 +227,66 @@ export function createPaymentReceivablesStore(db: Database) {
     }
   }
 
+  async function processPaymentEvent(input: {
+    provider: PaymentProviderType;
+    providerPaymentId: string;
+    customerId?: string;
+    amountUsd: number;
+    status: 'completed' | 'failed' | 'pending' | 'refunded';
+    failureReason?: string;
+  }) {
+    const now = Date.now();
+    const txId = createId();
+    try {
+      const existing = await db
+        .select()
+        .from(paymentTransactions)
+        .where(and(
+          eq(paymentTransactions.provider, input.provider),
+          eq(paymentTransactions.providerPaymentId, input.providerPaymentId),
+        ))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return { id: existing[0].id ?? txId, isNew: false };
+      }
+      await (db.insert(paymentTransactions) as any).values({
+          id: txId,
+          provider: input.provider,
+          providerPaymentId: input.providerPaymentId,
+          customerId: input.customerId ?? null,
+          amountUsd: input.amountUsd,
+          status: input.status,
+          failureReason: input.failureReason ?? null,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+      if (input.status === 'completed') {
+        await db
+          .insert(companyCashLedger)
+          .values({
+            id: createId(),
+            type: 'payment_received',
+            direction: 'in',
+            amountUsd: input.amountUsd,
+            description: 'Payment ' + input.providerPaymentId,
+            referenceType: 'payment_transaction',
+            referenceId: txId,
+            status: 'cleared',
+            effectiveAt: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+      }
+
+      return { id: txId, isNew: true };
+    } catch (err) {
+      forgeDebug('payment-receivables', 'processPaymentEvent failed', { providerPaymentId: input.providerPaymentId, error: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
+  }
+
   return {
     getProvider,
     upsertProvider,
@@ -235,5 +295,6 @@ export function createPaymentReceivablesStore(db: Database) {
     getSubscriptionByProviderId,
     listRecentTransactions,
     getTransactionsBySubscription,
+    processPaymentEvent,
   };
 }
