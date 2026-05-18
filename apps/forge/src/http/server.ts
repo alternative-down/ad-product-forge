@@ -314,7 +314,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
       }
       return config.port;
     },
-  };
+  } as unknown as Promise<ForgeHttpServer> & ForgeHttpServer;
 }
 
 function getHeaderValue(value: string | string[] | undefined): string | undefined {
