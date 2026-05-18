@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
-  // type CheckpointedOmCheckpointPackageInput,
   WorkspaceEmbedderId,
   createRuntimeAgentSession,
   forgeDebug,
@@ -13,28 +12,13 @@ import {
 } from '@forge-runtime/core';
 import { z } from 'zod';
 
-// import from '../ltm/store'; // TODO: fix module
-interface LongTermMemoryState {
-  lastRunAt?: number | string;
-  lastRunError?: string | null;
-  lastRunErrorAt?: number | string | null;
-  lastWrittenPackageId?: string | null;
-  lastWrittenAt?: number | string | null;
-  packageCount?: number;
-  packages?: Array<{
-    checkpointGeneration?: number;
-    packageId?: string;
-    [key: string]: unknown;
-  }>;
-}
-type CheckpointedOmCheckpointPackageInput = {
-  toGeneration: number;
-  [key: string]: unknown;
-};
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare function getBudgetContext(): Promise<{ contract: any; pricing: any }>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare function createAgentLongTermMemoryStore(db: any): any;
+import {
+  createAgentLongTermMemoryStore,
+  type LongTermMemoryState,
+  type CheckpointPackageManifest,
+  type CheckpointedOmCheckpointPackageInput,
+  type CheckpointedOmPackageEntry,
+} from '../ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
 import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 import {
@@ -218,7 +202,14 @@ export function createAgentLongTermMemory(input: {
   async function writeState(state: LongTermMemoryState) {
     await ensureInitialized();
     const persistedState = await writeLtmState(input.persistenceStore, state);
-    applyLtmStateToSnapshot(snapshot as any, persistedState);
+    applyLtmStateToSnapshot(snapshot as Parameters<typeof applyLtmStateToSnapshot>[0], {
+      lastRunAt: persistedState.lastRunAt,
+      lastRunError: persistedState.lastRunError,
+      lastRunErrorAt: persistedState.lastRunErrorAt,
+      lastWrittenPackageId: persistedState.lastWrittenPackageId,
+      lastWrittenAt: persistedState.lastWrittenAt,
+      packages: persistedState.packages,
+    });
   }
 
   async function markRecallIndexDirty(reason: string) {
@@ -261,7 +252,7 @@ export function createAgentLongTermMemory(input: {
 
       (state.packages ?? []).push(manifest);
       state.lastWrittenPackageId = packageId;
-      state.lastWrittenAt = checkpointTimestamp;
+      state.lastWrittenAt = new Date(checkpointTimestamp).toISOString();
       state.lastRunError = null;
       state.lastRunErrorAt = null;
       await writeState(state);
@@ -279,10 +270,14 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function recordLtmStep(usage: LtmUsage) {
-    const { contract, pricing } = await (getBudgetContext as any)();
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
     if (!contract) {
       return;
     }
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId ?? '',
+    });
 
     let costUsd = 0;
 
@@ -298,7 +293,7 @@ export function createAgentLongTermMemory(input: {
     await input.contractStore.recordAgentStep({
       agentId: input.agentId,
       contractId: contract.id,
-      llmProfileId: (input.modelProfileId as string),
+      llmProfileId: input.modelProfileId ?? '',
       modelKey: (input.pricingModelKey as string),
       kind: 'ltm',
       inputTokens: usage.inputTokens,
@@ -313,10 +308,14 @@ export function createAgentLongTermMemory(input: {
   }
 
   async function estimateNextLtmDelayMs() {
-    const { contract, pricing } = await (getBudgetContext as any)();
+    const contract = await input.contractStore.getRunnableContract(input.agentId);
     if (!contract) {
       return 0;
     }
+    const pricing = await input.contractStore.getUsagePricing({
+      pricingModelKey: input.pricingModelKey,
+      profileId: input.modelProfileId ?? '',
+    });
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
