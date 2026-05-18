@@ -150,7 +150,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
     // Authenticate /admin/* routes
     if (url.pathname.startsWith('/admin/')) {
       if (config.adminApiKey === undefined) {
-        if (config.allowInsecureLocal) {
+        if (config.allowInsecureLocal === true) {
           console.warn(
             '[forge-http] WARNING: /admin/* served without authentication.'
             + ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
