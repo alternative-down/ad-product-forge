@@ -11,19 +11,20 @@ import type { OpsContext } from './context';
 import type { AppProvisioningOps } from '../apps';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
 
+// Subset of AppProvisioningOps fields actually used by routing.
+// createAppName/nanoid/normalizeManifestConfig/DEFAULT_GITHUB_APP_MANIFEST_CONFIG
+// are on ctx, not AppProvisioningOps. routeCleanups does not exist on AppProvisioningOps.
+type RoutingOpsDeps = {
+  getGlobalConfig: OpsContext['getGlobalConfig'];
+  createAppName: (payload: unknown) => string;
+  getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
+  saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
+  buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
+};
+
 export function createRoutingOps(
   ctx: OpsContext,
-  routingDeps?: Pick<AppProvisioningOps,
-    | 'getCredentials'
-    | 'saveCredentials'
-    | 'getGlobalConfig'
-    | 'createAppName'
-    | 'nanoid'
-    | 'normalizeManifestConfig'
-    | 'DEFAULT_GITHUB_APP_MANIFEST_CONFIG'
-    | 'routeCleanups'
-    | 'buildProvisioning'
-  >
+  routingDeps?: Partial<RoutingOpsDeps>
 ) {
   function html(status: number, body: string) {
     return { status, headers: { 'content-type': 'text/html; charset=utf-8' }, body };
