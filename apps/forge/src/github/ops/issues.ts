@@ -4,15 +4,11 @@
  * createIssueComment, updateIssueComment, deleteIssueComment
  */
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from './serialize-error';
 
 import type { OpsContext } from './context';
 
 const SCOPE = 'github-ops-issues';
-
-function serializeError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 export function createIssuesOps(ctx: OpsContext) {
   async function listIssues(agentId: string, input: {
