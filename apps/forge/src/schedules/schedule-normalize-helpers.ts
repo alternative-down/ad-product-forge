@@ -1,7 +1,7 @@
 
 export type NormalizedScheduleUpdate = {
   scheduleType: string;
-  cronExpression: string | null;
+  cronExpression: string | null | undefined;
   scheduledDate: number | null;
   wakeWhenRunning: boolean;
   shouldRequireFutureDate: boolean;
@@ -10,6 +10,7 @@ export type NormalizedScheduleUpdate = {
 
 /** Shape of the parsed update input that contributes non-normalized fields. */
 export type ScheduleUpdateInputParts = {
+  scheduleType?: string | null;
   name?: string | null;
   description?: string | null;
   timezone?: string | null;
@@ -22,12 +23,21 @@ export type ExistingScheduleFields = {
   name: string;
   description: string | null;
   scheduleType: string;
-  cronExpression: string | null;
-  scheduledDate: string | null;
+  cronExpression: string | null | undefined;
+  scheduledDate: string | null | undefined;
   timezone: string | null;
   content: string | null;
   wakeWhenRunning: boolean;
   isActive: boolean;
+  scheduleId?: string;
+  agentId?: string;
+  creatorId?: string | null;
+  kind?: string;
+  createdAt?: number;
+  updatedAt?: number;
+  lastTriggeredAt?: number | null;
+  nextTriggerAt?: number | null;
+  nextTriggerAt$set?: number | null;
 };
 
 export function normalizeScheduleUpdate(
@@ -39,8 +49,8 @@ export function normalizeScheduleUpdate(
   },
   existing: {
     scheduleType: string;
-    cronExpression: string | null;
-    scheduledDate: string | null;
+    cronExpression: string | null | undefined;
+    scheduledDate: string | null | undefined;
     wakeWhenRunning: boolean;
   },
   parseScheduleDate: (input: string) => number,
@@ -90,7 +100,7 @@ export function buildScheduleUpdateInput(
   name: string | null;
   description: string | null;
   scheduleType: string;
-  cronExpression: string | null;
+  cronExpression: string | null | undefined;
   scheduledDate: number | null;
   timezone: string | null;
   content: string | null;

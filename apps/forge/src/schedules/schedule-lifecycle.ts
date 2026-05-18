@@ -118,7 +118,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
       if ((record.scheduledDate ?? '') === '') {
         throw new Error(`Date schedule ${record.scheduleId} is missing scheduledDate`);
       }
-      const scheduledDate = new Date(record.scheduledDate);
+      const scheduledDate = new Date(record.scheduledDate!);
       if (scheduledDate.getTime() <= Date.now()) {
         await store.deactivateSchedule(record.scheduleId);
         return;
