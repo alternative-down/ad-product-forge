@@ -146,7 +146,7 @@ export function createRoutingOps(
     const githubConfig = await ctx.getGlobalConfig();
     await ctx.notifications.createNotification({
       agentId,
-      content: ctx.createGitHubInstallWakeContent({ agentId, installationId, organization: githubConfig.organization, appName: activeCredentials.appName, appSlug: activeCredentials.appSlug, timestamp: Date.now() }),
+      content: String(ctx.createGitHubInstallWakeContent({ agentId, installationId, organization: githubConfig.organization, appName: activeCredentials.appName, appSlug: activeCredentials.appSlug, timestamp: Date.now() })),
     });
     return html(200, '<h1>GitHub App installed</h1>');
   }
@@ -161,7 +161,7 @@ export function createRoutingOps(
     ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: `Webhook ${event}`, context: { agentId, delivery } });
     await ctx.notifications.createNotification({
       agentId,
-      content: ctx.createGitHubWebhookWakeContent({ event, delivery, payload }),
+      content: String(ctx.createGitHubWebhookWakeContent({ event, delivery, payload })),
     });
     return html(202, 'Accepted');
   }
