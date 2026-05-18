@@ -10,7 +10,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 export function createCredentialsOps(ctx: OpsContext) {
   async function getCredentials(agentId: string) {
-    const db = ctx.config.db as {
+    const db = ctx.config.db as unknown as {
       query: {
         agentProviders: {
           findFirst: (opts: { where: unknown }) => Promise<{ encryptedCredentials: string } | null>;
@@ -19,11 +19,11 @@ export function createCredentialsOps(ctx: OpsContext) {
     };
     let provider;
     try {
-      provider = await db.query.agentProviders.findFirst({
+      provider = await db.query.agentProviders.findFirst({ /* eslint-disable-line @typescript-eslint/no-explicit-any */
         where: ctx.and(
-          ctx.eq((ctx.agentProviders as { agentId: unknown }).agentId, agentId),
-          ctx.eq((ctx.agentProviders as { providerType: unknown }).providerType, ctx.GITHUB_PROVIDER_TYPE)
-        ) as Parameters<typeof ctx.and>[0],
+          ctx.eq((ctx.agentProviders as any).agentId, agentId),
+          ctx.eq((ctx.agentProviders as any).providerType, ctx.GITHUB_PROVIDER_TYPE)
+        ) as any,
       });
     } catch (err) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getCredentials DB read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
@@ -65,11 +65,11 @@ export function createCredentialsOps(ctx: OpsContext) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
-    return await ctx.createInstallationOctokit(credentials.installationId);
+    return await ctx.createInstallationOctokit(credentials as any);
   }
 
   async function createInstallationOctokit(installationId: number) {
-    return await ctx.createInstallationOctokit(installationId);
+    return await ctx.createInstallationOctokit({ status: "active", installationId } as any);
   }
 
   async function getInstallationToken(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
