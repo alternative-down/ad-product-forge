@@ -1,14 +1,4 @@
-// import type { LongTermMemoryState } from '../ltm/store'; // TODO: fix module
-
-interface LongTermMemoryState {
-  lastRunAt?: number | string;
-  lastRunError?: string | null;
-  lastRunErrorAt?: number | string | null;
-  lastWrittenPackageId?: string | null;
-  lastWrittenAt?: number | string | null;
-  packageCount?: number;
-  packages?: Array<{ [key: string]: unknown }>;
-}
+import type { LongTermMemoryState } from './ltm/store';
 
 /**
  * Reads the current LTM state from the persistence store.
