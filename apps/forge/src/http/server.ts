@@ -46,7 +46,7 @@ function buildCorsHeaders(
   allowedOrigins: Set<string> | null,
 ): Record<string, string> {
   // When allowed-origins is configured, restrict CORS to those origins only.
-  if (allowedOrigins && origin && allowedOrigins.has(origin)) {
+  if (allowedOrigins != null && origin != null && allowedOrigins.has(origin)) {
     return {
       'access-control-allow-origin': origin,
       'access-control-allow-methods': CORS_METHODS,
@@ -122,7 +122,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
     };
   }
   const server = http.createServer(async (req, res) => {
-    if (!req.url || !req.method) {
+    if (req.url === undefined || req.method === undefined) {
       const origin = getHeaderValue(req.headers['origin'])
         ?? getHeaderValue(req.headers['host']);
       res.writeHead(400, buildCorsHeaders(origin ?? null, allowedOrigins)).end('Missing request data');
@@ -149,7 +149,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
 
     // Authenticate /admin/* routes
     if (url.pathname.startsWith('/admin/')) {
-      if (!config.adminApiKey) {
+      if (config.adminApiKey === undefined) {
         if (config.allowInsecureLocal) {
           console.warn(
             '[forge-http] WARNING: /admin/* served without authentication.'
