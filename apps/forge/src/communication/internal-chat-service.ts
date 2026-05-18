@@ -131,7 +131,7 @@ export function createInternalChatService(
     getRequiredAccount,
     getRequiredAgentAccount,
     getRequiredAccountBySlug,
-    getAccountByTargetKey,
+    getAccountByTargetKey: accounts.getAccountByTargetKey as any,
   });
 
 const registerAgentAccount = admin.registerAgentAccount;
@@ -172,9 +172,9 @@ const registerAgentAccount = admin.registerAgentAccount;
   const serviceHelpers = createServiceHelpers({
     db,
     accounts: {
-      getRequiredAccount: accounts.getRequiredAccount,
-      getRequiredAgentAccount: accounts.getRequiredAgentAccount,
-      getAccountBySlug: accounts.getAccountBySlug,
+      getRequiredAccount: accounts.getRequiredAccount as any,
+      getRequiredAgentAccount: accounts.getRequiredAgentAccount as any,
+      getAccountBySlug: accounts.getAccountBySlug as any,
     },
     participants,
   });
@@ -219,8 +219,8 @@ const registerAgentAccount = admin.registerAgentAccount;
   const accountOps = createInternalChatAccountOps(db, {
     getRequiredAccount,
     getRequiredExternalAccount,
-    ensureDirectConversation: groups.ensureDirectConversation,
-    listGroupMembersByAccount: groups.listGroupMembersByAccount,
+    ensureDirectConversation: conversations.ensureDirectConversation,
+    listGroupMembersByAccount: groups.listGroupMembersByAccount as any,
     getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
 
@@ -234,8 +234,8 @@ const registerAgentAccount = admin.registerAgentAccount;
   // === Unread / Recent ────────────────────────────────────────────────────
 
   // ── DI: Initialize reads with actual deps ───────────────────────────────
-  // @ts-expect-error -- createInternalChatReads overload mismatch on participants/listConversations shape
   const unread = createInternalChatUnread(db);
+  // @ts-expect-error -- createInternalChatReads overload mismatch on participants/listConversations
   const actualReads = createInternalChatReads(db, {
     unread,
     participants,
@@ -246,7 +246,7 @@ const registerAgentAccount = admin.registerAgentAccount;
   // === Internal Helpers ────────────────────────────────────────────────────
 
   const _guards = createInternalChatGuards(db, {
-    getRequiredAgentAccount,
+    getRequiredAgentAccount: getRequiredAgentAccount as any,
   });
 
   // reads.init() removed — deps now passed at construction
@@ -254,26 +254,26 @@ const registerAgentAccount = admin.registerAgentAccount;
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
     getRequiredAgentAccount,
-    listGroupMembersOrDmPeers,
-  });
+    listGroupMembersOrDmPeers: listGroupMembersOrDmPeers as any,
+  }) as any;
 
   // ── Message Sending (delegated to internal-chat-sending.ts) ─────────────
   const { sendMessage, getMessageAttachmentByAccount } = createChatSending({
     db,
-    accounts,
+    accounts: accounts as any,
     serviceHelpers: {
-      getRequiredConversationForAccount,
+      getRequiredConversationForAccount: getRequiredConversationForAccount as any,
     },
     groups: {
       ensureDirectConversation,
     },
     connection,
     reads: {
-      listGroupMembersOrDmPeersByAccount,
+      listGroupMembersOrDmPeersByAccount: listGroupMembersOrDmPeersByAccount as any,
     },
     attachments: {
       storeMessageAttachments,
-      readMessageAttachment,
+      readMessageAttachment: readMessageAttachment as any,
     },
   });
 
