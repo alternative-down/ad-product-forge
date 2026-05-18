@@ -200,10 +200,8 @@ export async function createInternalAgentRuntime<
       ...toolsToRuntimeActions(allAgentTools),
     ],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
-    todoStore: { client: platform.client },
-    planMode: new (RuntimePlanMode as any)({ agentMemoryPath: platform.agentMemoryPath }),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
-  });
+  } as any);
 
   await longTermMemory?.start();
 

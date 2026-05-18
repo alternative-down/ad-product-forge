@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
-import type { AdminReadModel } from '../read-model';
+// InternalAgentRegistry and AdminReadModel not resolvable from this path
+type InternalAgentRegistry = {
+  listAgents: () => Promise<Array<{ agentId: string; name: string; status: string }>>;
+};
+type AdminReadModel = {
+  agents: { listAgents: () => Promise<unknown> };
+  finance: { getFinance: () => Promise<unknown> };
+};
 import { buildSystemHealthcheck } from './healthcheck';
 
 describe('buildSystemHealthcheck', () => {

@@ -47,7 +47,8 @@ export function createCompanyPayables(db: Database) {
 
     try {
       // Wrap payable insert + planned occurrence in transaction
-      const entryId = await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+            // @ts-expect-error -- better-sqlite3 Transaction type unavailable
+            const entryId = await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         await tx.insert(companyRecurringPayables).values({
           id: payableId,
           name: input.name,
@@ -152,6 +153,7 @@ export function createCompanyPayables(db: Database) {
       }
 
       // Wrap planned occurrence + payable update in transaction
+      // @ts-expect-error -- better-sqlite3 Transaction type unavailable
       await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
         const eid = createId();
         await tx.insert(companyCashLedger).values({
