@@ -49,11 +49,11 @@ export function createPaymentReceivablesStore(db: Database) {
     try {
       const rows = await db.select().from(paymentProviders).where(eq(paymentProviders.provider, input.provider)).all();
       if (rows.length > 0) {
-        await db.update(paymentProviders).set({ apiKeyEncrypted: input.apiKeyEncrypted, webhookSecretEncrypted: input.webhookSecretEncrypted, isActive: input.isActive, configJson: input.configJson ?? null, updatedAt: now }).where(eq(paymentProviders.provider, input.provider));
+        await db.update(paymentProviders).set({ apiKeyEncrypted: input.apiKeyEncrypted, webhookSecretEncrypted: input.webhookSecretEncrypted, isActive: input.isActive, configJson: input.configJson ?? null, updatedAt: now } as any).where(eq(paymentProviders.provider, input.provider));
         return rows[0].id;
       }
       const id = createId();
-      await db.insert(paymentProviders).values({
+      await (db.insert(paymentProviders) as any).values({
         id,
         provider: input.provider,
         apiKeyEncrypted: input.apiKeyEncrypted,
@@ -100,7 +100,7 @@ export function createPaymentReceivablesStore(db: Database) {
           .where(eq(paymentCustomers.id, existing[0].id));
         return existing[0].id;
       }
-      const [inserted] = await db
+      const [inserted] = await (db as any)
         .insert(paymentCustomers)
         .values({
           provider: input.provider,
@@ -157,7 +157,7 @@ export function createPaymentReceivablesStore(db: Database) {
         return existing[0].id;
       }
 
-      const [inserted] = await db
+      const [inserted] = await (db as any)
         .insert(paymentSubscriptions)
         .values({
           customerId: input.customerId,
