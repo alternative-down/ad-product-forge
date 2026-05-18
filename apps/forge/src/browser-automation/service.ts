@@ -118,7 +118,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
       if ((options.waitForSelector ?? '') !== '') {
-        await page.waitForSelector(options.waitForSelector, { timeout: timeout as any });
+        await page.waitForSelector(String(options.waitForSelector), { timeout: (timeout as number) });
       }
 
       const accessibilityTree = await (page as any).accessibility.snapshot();

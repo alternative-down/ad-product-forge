@@ -7,18 +7,19 @@ import type { Octokit } from 'octokit';
 import { forgeDebug } from '@forge-runtime/core';
 import { App } from 'octokit';
 import type { OpsContext } from './ops/context';
-import type { GitHubAppCredentials } from './types';
+import type { GitHubAppCredentials, GitHubAppProvisioning } from './types';
 
 export interface AppProvisioningOps {
   getGlobalConfig: OpsContext['getGlobalConfig'];
   isConfigured: () => Promise<boolean>;
   getDefaultOwner: OpsContext['getDefaultOwner'];
   createAgentApp: (input: { agentId: string; agentName: string }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
-  getAgentProvisioning: (agentId: string) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']> | null>;
+  getAgentProvisioning: (agentId: string) => Promise<GitHubAppProvisioning | null>;
   updateAgentManifestConfig: (input: { agentId: string; manifestConfig: GitHubAppCredentials['manifestConfig'] }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
   loadAllAgents: () => Promise<Array<{ agentId: string; credentials: GitHubAppCredentials }>>;
   unloadAgent: (agentId: string) => void;
   deleteAgentApp: (agentId: string) => Promise<void>;
+  buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
   getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
   getActiveCredentials: (agentId: string) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
@@ -42,7 +43,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const pendingCredentials: GitHubAppCredentials = {
         status: 'pending',
         state: ctx.nanoid(16),
-        appName: (ctx.createAppName as any)(input.agentId, input.agentName),
+        appName: (ctx.createAppName as unknown as (a: string, b: string) => string)(input.agentId, input.agentName),
         manifestConfig: ctx.normalizeManifestConfig(ctx.DEFAULT_GITHUB_APP_MANIFEST_CONFIG),
         createdAt: Date.now(),
       };
@@ -156,6 +157,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     loadAllAgents,
     unloadAgent,
     deleteAgentApp,
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => ctx.opsRouting.buildProvisioning(agentId, credentials),
     getCredentials: ctx.getCredentials,
     getActiveCredentials: ctx.getActiveCredentials,
     saveCredentials: ctx.saveCredentials,

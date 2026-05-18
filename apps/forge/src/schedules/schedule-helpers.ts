@@ -53,7 +53,7 @@ export function createNotificationContent(input: {
   agentId: string;
   scheduleId: string;
   kind: 'agent' | 'heartbeat';
-  description?: string;
+  description?: string | null;
   scheduleType: 'cron' | 'date';
   cronExpression?: string | null;
   scheduledDate?: number | null;
@@ -81,7 +81,7 @@ export function createNotificationContent(input: {
 
 export function createWakeContent(input: {
   name: string;
-  description?: string;
+  description?: string | null;
   scheduleKind: 'agent' | 'heartbeat';
   scheduleType: 'cron' | 'date';
   cronExpression?: string | null;
@@ -100,7 +100,7 @@ export function createWakeContent(input: {
     `Wake while running: ${input.wakeWhenRunning ? 'enabled' : 'only when idle'}`,
   ];
 
-  if (input.description !== undefined && input.description.trim() !== '') {
+  if (input.description != null && input.description.trim() !== '') {
     lines.push(`Description: ${input.description.trim()}`);
   }
 
@@ -163,7 +163,7 @@ export function createHeartbeatWakeInstruction(content?: string) {
 export function toToolOutput(scheduleRecord: {
   scheduleId: string;
   name: string;
-  description?: string;
+  description?: string | null;
   scheduleType: 'cron' | 'date';
   cronExpression?: string;
   scheduledDate?: number;
@@ -177,7 +177,7 @@ export function toToolOutput(scheduleRecord: {
   return {
     scheduleId: scheduleRecord.scheduleId,
     name: scheduleRecord.name,
-    description: scheduleRecord.description,
+    description: scheduleRecord.description ?? undefined,
     scheduleType: scheduleRecord.scheduleType,
     cronExpression: scheduleRecord.cronExpression,
     scheduledDate: scheduleRecord.scheduledDate !== undefined ? new Date(scheduleRecord.scheduledDate).toISOString() : undefined,

@@ -3,6 +3,7 @@ import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
 import { hasToolPermission } from '../capabilities/catalog';
+import type { GitHubAppProvisioning } from './types';
 import type { GitHubAppManager } from './manager';
 
 export function createGitHubTools(agentId: string, githubApps: GitHubAppManager, allowedToolIds?: Set<string> | null) {
@@ -59,14 +60,15 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             };
           }
 
+          const prov = provisioning as GitHubAppProvisioning;
           return {
             valid: true,
-            status: provisioning.status,
+            status: prov.status,
             registrationUrl: provisioning.registrationUrl,
-            installUrl: provisioning.installUrl ?? null,
-            message: provisioning.status === 'active'
+            installUrl: prov.installUrl ?? null,
+            message: prov.status === 'active'
               ? 'GitHub App is fully provisioned and installed.'
-              : provisioning.status === 'created'
+              : prov.status === 'created'
               ? 'GitHub App created but not yet installed. Use installUrl to complete installation.'
               : 'GitHub App provisioning is pending. Use registrationUrl to initiate creation.',
           };
@@ -88,7 +90,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         try {
           const provisioning = await githubApps.getAgentProvisioning(agentId);
 
-          if (provisioning && provisioning.status === 'active') {
+          if (provisioning && (provisioning as GitHubAppProvisioning).status === 'active') {
             return {
               valid: true,
               status: 'active',

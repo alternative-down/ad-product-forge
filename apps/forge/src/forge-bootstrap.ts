@@ -115,9 +115,9 @@ export async function createForgeBootstrap() {
   const internalChat = createInternalChatService(db);
   const agentContracts = createAgentContractStore(db);
 
-  const coolifyManager = createCoolifyManager({ db, integrations });
+  const coolifyManager = createCoolifyManager({ integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
-  const githubApps = createGitHubAppManager({ integrations });
+  const githubApps = createGitHubAppManager({ db, httpServer, integrations });
 
   // Scheduler for admin operations (route handlers, tool delegation).
   // Per-agent schedulers are created inside internal-agent-registry via
@@ -131,16 +131,15 @@ export async function createForgeBootstrap() {
       // runner has no public execution state query, default to 'idle' when runner exists
       return Promise.resolve('idle');
     },
-    notifyAgent: ({ agentId, scheduleId, scheduleKind, scheduleName, content: msg, timestamp, idleOnly }) => {
+    notifyAgent: ({ agentId, scheduleId, scheduleKind: _sKind, scheduleName: _sName, content: msg, timestamp, idleOnly }) => {
       const entry = registry.get(agentId);
       if (entry) {
         entry.runner.notifyExternalEvent({
           type: 'schedule:trigger',
-          scheduleId,
-          scheduleKind,
-          scheduleName,
-          content: msg,
+          groupKey: agentId,
+          idempotencyKey: scheduleId,
           timestamp,
+          text: msg,
           idleOnly,
         });
       }
@@ -156,10 +155,9 @@ export async function createForgeBootstrap() {
 
   registerAdminRoutes({
     httpServer,
-    readModel,
     integrations,
     githubApps,
-    coolifyManager,
+    coolify: coolifyManager,
     minimaxManager,
     agentContracts,
     schedules,

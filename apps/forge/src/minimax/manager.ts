@@ -146,8 +146,8 @@ export class MiniMaxClient {
     return value as Record<string, unknown>;
   }
 
-  private getString(value: unknown) {
-    return typeof value === 'string' ? value : undefined;
+  private getString(value: unknown): string {
+    return typeof value === 'string' ? value : '';
   }
 
   private getNumber(value: unknown) {

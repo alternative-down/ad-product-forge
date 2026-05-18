@@ -19,7 +19,7 @@ import type { Database } from '../../database/schema';
 // @ts-ignore
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { createAgentNotificationStore } from '../../notifications/store';
-import type { GitHubAppCredentials, GitHubAppManifestConfig } from '../types';
+import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from '../types';
 // Deferred: imports from ../helpers.ts — use unknown to avoid namespace resolution errors
 // import type { IssuePayload, IssueSummary, IssueDetails } from '../helpers.js';
 
@@ -148,7 +148,7 @@ export interface OpsContext {
   normalizeManifestConfig: (raw: unknown) => GitHubAppManifestConfig;
 
   opsRouting: {
-    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => unknown;
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
     registerAgentRoutes: (agentId: string) => void;
     handleRegisterPage: (agentId: string) => Promise<import('../../http/server.js').HttpResponse>;
     handleManifestCallback: (agentId: string, code: string | null, state: string | null) => Promise<import('../../http/server.js').HttpResponse>;
