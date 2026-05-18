@@ -7,14 +7,14 @@ import type { Octokit } from 'octokit';
 import { forgeDebug } from '@forge-runtime/core';
 import { App } from 'octokit';
 import type { OpsContext } from './ops/context';
-import type { GitHubAppCredentials } from './types';
+import type { GitHubAppCredentials, GitHubAppProvisioning } from './types';
 
 export interface AppProvisioningOps {
   getGlobalConfig: OpsContext['getGlobalConfig'];
   isConfigured: () => Promise<boolean>;
   getDefaultOwner: OpsContext['getDefaultOwner'];
   createAgentApp: (input: { agentId: string; agentName: string }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
-  getAgentProvisioning: (agentId: string) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']> | null>;
+  getAgentProvisioning: (agentId: string) => Promise<GitHubAppProvisioning | null>;
   updateAgentManifestConfig: (input: { agentId: string; manifestConfig: GitHubAppCredentials['manifestConfig'] }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
   loadAllAgents: () => Promise<Array<{ agentId: string; credentials: GitHubAppCredentials }>>;
   unloadAgent: (agentId: string) => void;

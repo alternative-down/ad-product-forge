@@ -148,7 +148,7 @@ export interface OpsContext {
   normalizeManifestConfig: (raw: unknown) => GitHubAppManifestConfig;
 
   opsRouting: {
-    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => unknown;
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
     registerAgentRoutes: (agentId: string) => void;
     handleRegisterPage: (agentId: string) => Promise<import('../../http/server.js').HttpResponse>;
     handleManifestCallback: (agentId: string, code: string | null, state: string | null) => Promise<import('../../http/server.js').HttpResponse>;
