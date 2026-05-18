@@ -3,7 +3,7 @@ import { installAgentWorkspaceSkillsArchive } from './workspace-skill-archive';
 import { zipSync } from 'fflate';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     stat: vi.fn(),
