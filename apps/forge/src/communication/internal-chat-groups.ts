@@ -277,6 +277,7 @@ export function createInternalChatGroups(
       accountId: participant.id,
       role: input.role ?? "normal",
       createdAt: now,
+      updatedAt: now,
     });
 
     return {

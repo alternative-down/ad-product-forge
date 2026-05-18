@@ -18,7 +18,6 @@ export interface InternalChatReadsDeps {
 export interface InternalChatReadsStore {
   getUnreadSummary: (agentId: string) => Promise<unknown>;
   listRecentConversations: (agentId: string, limit: number) => Promise<unknown[]>;
-  listGroupMembersOrDmPeers: (agentId: string, conversationId: string) => Promise<unknown[]>;
   listGroupMembersOrDmPeersByAccount: (accountId: string, conversationId: string) => Promise<unknown[]>;
   listGroupMembersOrDmPeers: (agentId: string, conversationId: string) => Promise<unknown[]>;
 }
