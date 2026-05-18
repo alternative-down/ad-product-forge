@@ -8,7 +8,6 @@ interface ObservationItem {
   createdAt?: string | number;
   [key: string]: unknown;
 }
-
 export function renderCheckpointPackageReadme(input: {
   payload: CheckpointedOmCheckpointPackageInput;
 }) {
