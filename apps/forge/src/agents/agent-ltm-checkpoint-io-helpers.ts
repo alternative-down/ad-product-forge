@@ -84,7 +84,7 @@ export function buildCheckpointPackageManifest(
   return {
     packageId,
     checkpointGeneration: payload.toGeneration,
-    fromGeneration: (payload as any).fromGeneration as number | undefined,
+    fromGeneration: payload.fromGeneration as number | null,
     toGeneration: payload.toGeneration,
     createdAt: String(checkpointTimestamp),
     checkpointSummaryUpdatedAt: String(checkpointTimestamp),
