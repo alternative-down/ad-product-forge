@@ -22,7 +22,7 @@ export function renderReflectionFile(
     `createdAt: ${reflection.createdAt}`,
     '---',
     '',
-    (reflection as any).text.trim(),
+    (reflection as unknown as { text?: string }).text.trim(),
     '',
   ].join('\n');
 }
@@ -35,7 +35,7 @@ export function renderObservationFile(
     `createdAt: ${observation.createdAt}`,
     '---',
     '',
-    (observation as any).text.trim(),
+    (observation as unknown as { text?: string }).text.trim(),
     '',
   ].join('\n');
 }
