@@ -103,7 +103,7 @@ export function createGitHubAppManager(config: {
     agents,
     createId,
     nanoid,
-    forgeDebug,
+    forgeDebug: (opts: { scope: string; level: string; message: string; context?: unknown }) => forgeDebug(opts as Parameters<typeof forgeDebug>[0]),
     getGlobalConfig,
     getDefaultOwner,
     getInstallationOctokit: async (agentId: string) => {
