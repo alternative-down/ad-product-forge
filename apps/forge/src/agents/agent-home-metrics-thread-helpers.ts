@@ -81,7 +81,7 @@ export async function readLatestThreadDetails(
         preview ??= extractLatestMessagePreview(content);
         toolBadge ??= extractLatestMessageToolBadge(content);
 
-        if (preview) {
+        if (preview !== undefined && preview !== null) {
           break;
         }
       }

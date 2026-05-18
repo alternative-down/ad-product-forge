@@ -31,7 +31,7 @@ export async function renewAgentContract(
     }
 
     const spentUsd = await contractStore.getContractSpend(activeContract.id);
-    const refundableUsd = activeContract.fundedAt
+    const refundableUsd = activeContract.fundedAt !== null && activeContract.fundedAt !== undefined
       ? Math.max(activeContract.budgetUsd - spentUsd, 0)
       : 0;
     const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();

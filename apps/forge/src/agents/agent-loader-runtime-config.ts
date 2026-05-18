@@ -14,7 +14,7 @@ export function buildAgentRuntimeConfig(
   return {
     id: runtimeData.agent.id,
     name: runtimeData.agent.name,
-    description: runtimeData.agent.description || undefined,
+    description: runtimeData.agent.description ?? undefined,
     instructions: runtimeData.agent.instructions,
     model: runtimeData.primaryRuntimeModel,
     pricingModelKey: runtimeData.primaryProfile.modelKey,

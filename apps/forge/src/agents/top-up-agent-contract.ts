@@ -31,7 +31,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
     throw err;
   }
 
-  if (!activeContract) {
+  if (activeContract === null || activeContract === undefined) {
     forgeDebug({ scope: 'top-up-agent-contract', level: 'warn', message: 'topUpAgentContract: no active contract', context: { agentId: input.agentId } });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }

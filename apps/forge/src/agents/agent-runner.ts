@@ -242,9 +242,8 @@ export function createAgentRunner(
       `Agent execution state lookup timed out for ${runtime.id}`,
     );
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    const idleOnlyEvents = events.filter((event) => event.idleOnly);
-    const runnableEvents = events.filter((event) => !event.idleOnly);
+    const idleOnlyEvents = events.filter((event) => event.idleOnly === true);
+    const runnableEvents = events.filter((event) => event.idleOnly !== true);
 
     if (executionState !== 'idle' || startingRun) {
       appendPendingRunMessages(runnableEvents);

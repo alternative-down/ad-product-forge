@@ -340,7 +340,7 @@ export function createScheduler(
       return;
     }
 
-    if (options.deferWakeQueueDrain) {
+    if (options.deferWakeQueueDrain === true) {
       return;
     }
 

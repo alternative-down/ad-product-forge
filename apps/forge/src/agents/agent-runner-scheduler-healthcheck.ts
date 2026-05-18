@@ -54,7 +54,7 @@ export function createSchedulerHealthcheck(
    * getHealthcheckIntervalMs: returns the interval in ms.
    */
   function shouldRunHealthcheckAt(now: number): boolean {
-    if (!healthcheckNextAt) return false;
+    if (healthcheckNextAt === null || healthcheckNextAt === undefined) return false;
     return now >= healthcheckNextAt;
   }
 
