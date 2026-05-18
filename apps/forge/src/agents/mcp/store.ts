@@ -128,7 +128,8 @@ export async function getAgentMcpServers(agentId: string): Promise<{ config: Age
       eq(agentMcpConfigs.agentId, agentId),
       eq(agentMcpConfigs.isActive, 1),
       eq(mcpServerConfigs.isActive, 1)
-    ));
+    ))
+    .all();
 
   return results;
 }
