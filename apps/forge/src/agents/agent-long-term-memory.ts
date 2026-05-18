@@ -172,7 +172,6 @@ export function createAgentLongTermMemory(input: {
 
     await fs.mkdir(checkpointsPath, { recursive: true });
     await fs.mkdir(memoryPath, { recursive: true });
-    // @ts-expect-error -- createRuntimeAgentSession options shape mismatch; runtimeActions model types differ
     memoryAgent = await createRuntimeAgentSession({
       agentId: ltmMastraId,
       agentName: `${input.agentName} Long-Term Memory`,
