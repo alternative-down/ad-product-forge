@@ -9,7 +9,7 @@ export function resolveAgentWorkspaceRoot(
 ) {
   const agentWorkspacePath = path.resolve(workspaceBasePath, agentId);
 
-  return workspaceFilesystem?.basePath
+  return workspaceFilesystem && workspaceFilesystem.basePath
     ? path.resolve(agentWorkspacePath, workspaceFilesystem.basePath)
     : path.resolve(agentWorkspacePath, 'workspace');
 }

@@ -29,7 +29,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
-  if (!agent.roleId) {
+  if (agent.roleId === null || agent.roleId === undefined) {
     forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent missing roleId', context: { agentId: config.agentId } });
     throw new Error(`Agent is missing roleId: ${config.agentId}`);
   }

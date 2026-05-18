@@ -121,7 +121,7 @@ export function buildThreadToolInvocationParts(
       typeof toolInvocation.toolCallId === 'string'
         ? toolInvocation.toolCallId
         : null;
-    const toolResultIndex = toolCallId
+    const toolResultIndex = toolCallId !== null && toolCallId !== undefined
       ? resultIndexesByToolCallId.get(toolCallId)
       : undefined;
     const toolResult =

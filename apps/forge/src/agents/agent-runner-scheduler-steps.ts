@@ -114,7 +114,7 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
 
     const executionState = await withTimeout(
       getRunnableContract(runtimeId)
-        .then(c => c ? 'running' : 'idle')
+        .then(c => c !== null && c !== undefined ? 'running' : 'idle')
         .catch(() => 'idle'),
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state lookup timed out for ${runtimeId}`,

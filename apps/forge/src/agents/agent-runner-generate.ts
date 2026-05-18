@@ -326,7 +326,7 @@ export async function generateWithTimeoutRetries(
         },
       );
 
-      if (!iterationFeedback?.continue) {
+      if (iterationFeedback?.continue !== true) {
         return undefined;
       }
 
