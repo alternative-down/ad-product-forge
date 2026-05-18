@@ -19,6 +19,7 @@ export interface AppProvisioningOps {
   loadAllAgents: () => Promise<Array<{ agentId: string; credentials: GitHubAppCredentials }>>;
   unloadAgent: (agentId: string) => void;
   deleteAgentApp: (agentId: string) => Promise<void>;
+  buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
   getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
   getActiveCredentials: (agentId: string) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;

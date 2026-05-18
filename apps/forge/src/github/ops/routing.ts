@@ -5,6 +5,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Octokit } from 'octokit';
+import type { HttpRequest } from '../../http/server';
 import { App } from 'octokit';
 import type { OpsContext } from './context';
 import type { AppProvisioningOps } from '../apps';
@@ -21,6 +22,7 @@ export function createRoutingOps(
     | 'normalizeManifestConfig'
     | 'DEFAULT_GITHUB_APP_MANIFEST_CONFIG'
     | 'routeCleanups'
+    | 'buildProvisioning'
   >
 ) {
   function html(status: number, body: string) {
@@ -51,15 +53,15 @@ export function createRoutingOps(
       }),
       ctx.config.httpServer.registerRoute({
         method: 'GET', path: ctx.getManifestCallbackPath(agentId),
-        handler: async (request: object) => await handleManifestCallback(agentId, request.query.get('code'), request.query.get('state')),
+        handler: async (request: HttpRequest) => await handleManifestCallback(agentId, request.query.get('code'), request.query.get('state')),
       }),
       ctx.config.httpServer.registerRoute({
         method: 'GET', path: ctx.getSetupPath(agentId),
-        handler: async (request: object) => await handleSetupCallback(agentId, request.query.get('installation_id')),
+        handler: async (request: HttpRequest) => await handleSetupCallback(agentId, request.query.get('installation_id')),
       }),
       ctx.config.httpServer.registerRoute({
         method: 'POST', path: ctx.getWebhookPath(agentId),
-        handler: async (request: object) => await handleWebhook(agentId, request.headers, request.bodyText),
+        handler: async (request: HttpRequest) => { const headers = request.headers; const bodyText = request.bodyText; return handleWebhook(agentId, headers as Record<string, string | undefined>, bodyText ?? ""); },
       }),
     ];
     ctx.routeCleanups.set(agentId, cleanups);
@@ -82,7 +84,7 @@ export function createRoutingOps(
       hook_attributes: { url: `${ctx.config.publicBaseUrl}${ctx.getWebhookPath(agentId)}`, active: true },
       public: false,
       default_permissions: ctx.buildManifestPermissions(credentials.manifestConfig as never),
-      default_events: ctx.buildManifestEvents(),
+      default_events: ctx.buildManifestEvents(credentials.manifestConfig as never),
     });
     const action = `https://github.com/organizations/${encodeURIComponent(githubConfig.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
     return html(200, `<!doctype html><html><body><form id="f" action="${ctx.escapeHtml(action)}" method="post"><input type="hidden" name="manifest" value="${ctx.escapeHtml(manifest)}" /></form><p>Redirecting…</p><script>document.getElementById('f').submit();</script></body></html>`);
@@ -96,12 +98,12 @@ export function createRoutingOps(
     if (!code || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
-    const anonymousOctokit = new App({ userAgent: 'forge-app' });
+    const anonymousOctokit = new App({} as any);
     try {
       const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', { code });
       const { pem, id: appId, webhook_secret } = response.data as { pem: string; id: number; webhook_secret: string };
       const app = new App({ appId, privateKey: pem });
-      const appResponse = await app.request('GET /app');
+      const appResponse = await app.octokit.request('GET /app');
       const slug = (appResponse.data as { slug?: string }).slug ?? 'unknown';
       const created = {
         status: 'created' as const,
@@ -149,7 +151,7 @@ export function createRoutingOps(
     return html(200, '<h1>GitHub App installed</h1>');
   }
 
-  async function handleWebhook(agentId: string, headers: Record<string, string>, bodyText: string) {
+  async function handleWebhook(agentId: string, headers: Record<string, string | undefined>, bodyText: string) {
     const event = ctx.getHeader(headers, 'x-github-event');
     const delivery = ctx.getHeader(headers, 'x-github-delivery');
     if (!event || !delivery) return html(400, '<h1>Missing webhook headers</h1>');

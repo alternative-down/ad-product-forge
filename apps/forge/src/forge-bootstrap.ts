@@ -115,7 +115,7 @@ export async function createForgeBootstrap() {
   const internalChat = createInternalChatService(db);
   const agentContracts = createAgentContractStore(db);
 
-  const coolifyManager = createCoolifyManager({ db, integrations });
+  const coolifyManager = createCoolifyManager({ integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
   const githubApps = createGitHubAppManager({ integrations });
 
@@ -136,11 +136,10 @@ export async function createForgeBootstrap() {
       if (entry) {
         entry.runner.notifyExternalEvent({
           type: 'schedule:trigger',
-          scheduleId,
-          scheduleKind,
-          scheduleName,
-          content: msg,
+          groupKey: agentId,
+          idempotencyKey: scheduleId,
           timestamp,
+          text: msg,
           idleOnly,
         });
       }
@@ -156,10 +155,9 @@ export async function createForgeBootstrap() {
 
   registerAdminRoutes({
     httpServer,
-    readModel,
     integrations,
     githubApps,
-    coolifyManager,
+    coolify: coolifyManager,
     minimaxManager,
     agentContracts,
     schedules,
