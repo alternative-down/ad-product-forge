@@ -117,7 +117,7 @@ export async function createForgeBootstrap() {
 
   const coolifyManager = createCoolifyManager({ integrations });
   const minimaxManager = createMiniMaxManager({ integrations });
-  const githubApps = createGitHubAppManager({ integrations });
+  const githubApps = createGitHubAppManager({ db, httpServer, integrations });
 
   // Scheduler for admin operations (route handlers, tool delegation).
   // Per-agent schedulers are created inside internal-agent-registry via
