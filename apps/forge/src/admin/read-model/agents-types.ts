@@ -98,4 +98,3 @@ export interface AgentReadModel {
 
 
 
-export { createAgentReadModel } from './agents';
