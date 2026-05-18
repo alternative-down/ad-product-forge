@@ -1,25 +1,6 @@
 import fs from 'node:fs/promises';
-
-type CheckpointedOmCheckpointPackageInput = {
-  toGeneration: number;
-  [key: string]: unknown;
-};
-type CheckpointPackageManifest = {
-  checkpointSummary?: { text?: string };
-  reflections?: Array<{ text?: string; [key: string]: unknown }>;
-  observations?: Array<{ text?: string; [key: string]: unknown }>;
-  checkpointGeneration?: number;
-  fromGeneration?: number;
-  toGeneration?: number;
-  createdAt?: string;
-  checkpointSummaryUpdatedAt?: string;
-  reflectionCount?: number;
-  observationCount?: number;
-  packageId?: string;
-};
 import path from 'node:path';
-// import type { CheckpointedOmCheckpointPackageInput } from '@forge-runtime/core'; // TODO: fix
-// import type { CheckpointPackageManifest } from '../ltm/store'; // TODO: fix
+import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } from '../ltm/store';
 import {
   renderCheckpointPackageReadme,
   renderReflectionFile,
@@ -36,7 +17,7 @@ export function computeCheckpointTimestamp(
   payload: CheckpointedOmCheckpointPackageInput,
 ): number {
   const allCreatedAts = [
-    ...(payload as any).reflections.map((r: { serverId?: string; createdAt?: string | number }) => r.createdAt),
+    ...(payload as any).reflections.map((r: { content: string; generatedAt: number; createdAt?: number }) => r.createdAt ?? r.generatedAt),
     ...(payload as any).observations.map((o: { createdAt?: string | number }) => o.createdAt),
   ];
   if (allCreatedAts.length > 0) {
