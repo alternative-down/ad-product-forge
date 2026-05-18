@@ -157,6 +157,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     loadAllAgents,
     unloadAgent,
     deleteAgentApp,
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => ctx.opsRouting.buildProvisioning(agentId, credentials) as any,
     getCredentials: ctx.getCredentials,
     getActiveCredentials: ctx.getActiveCredentials,
     saveCredentials: ctx.saveCredentials,

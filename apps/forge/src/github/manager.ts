@@ -62,14 +62,6 @@ const manifestConversionSchema = z.object({
   pem: z.string(),
   webhook_secret: z.string(),
 });
-export type GitHubAppProvisioning = {
-  agentId: string;
-  status: GitHubAppCredentials['status'];
-  registrationUrl: string;
-  installUrl?: string;
-  manifestConfig: GitHubAppManifestConfig;
-};
-
 export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
 
 /**
