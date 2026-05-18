@@ -4,7 +4,7 @@
  */
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { PaymentProviderType } from './payment-schema';
+import type { PaymentProviderType } from '../payment-schema';
 
 export type StripeWebhookPayload = {
   id: string;

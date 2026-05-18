@@ -353,13 +353,13 @@ export function createInternalChatGroups(
     try {
       await db.transaction(async (tx) => {
         if (!input.groupId) {
-          await createChatGroupIfNeeded(tx, groupId, input.name, actorAccount, now);
+          await createChatGroupIfNeeded(tx as unknown as Database, groupId, input.name, actorAccount, now);
         }
         if (input.name !== undefined) {
-          await updateChatGroupName(tx, groupId, input.name, now);
+          await updateChatGroupName(tx as unknown as Database, groupId, input.name, now);
         }
         if (desiredMembers) {
-          await syncChatGroupMembers(tx, groupId, desiredMembers, now);
+          await syncChatGroupMembers(tx as unknown as Database, groupId, desiredMembers, now);
         }
       });
 

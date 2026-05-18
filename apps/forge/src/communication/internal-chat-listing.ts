@@ -1,3 +1,10 @@
+/**
+ * Test dependency shape for internal chat listing modules.
+ * Aliased from InternalChatConversationListingDeps for backward compatibility.
+ */
+import type { InternalChatConversationListingDeps } from './internal-chat-conversation-listing';
+export type ConversationListingDeps = InternalChatConversationListingDeps;
+
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   internalChatAccounts,

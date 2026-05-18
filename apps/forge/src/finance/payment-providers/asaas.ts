@@ -3,7 +3,7 @@
  * Handles event parsing for Asaas webhook notifications.
  */
 
-import type { PaymentProviderType } from './payment-schema';
+import type { PaymentProviderType } from '../payment-schema';
 import { forgeDebug } from '@forge-runtime/core';
 
 /** Asaas webhook notification payload. */
