@@ -100,7 +100,7 @@ describe('createInternalChatConversations', () => {
   });
 
   it('archiveConversationByAccount calls getRequiredConversationForAccount before deleting', async () => {
-    const getRequiredConversationForAccount = vi.fn(async () => ({ id: 'conv_1', type: 'dm' as const, name: null }));
+    const getRequiredConversationForAccount = vi.fn(async () => ({ id: 'conv_1', type: 'dm' as const, name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any));
     mockDb.query.internalChatConversationMembers.findMany = vi.fn(async () => []);
     mockDb.query.internalChatConversations.findFirst = vi.fn(async () => null);
 
@@ -188,7 +188,7 @@ describe('createInternalChatConversations', () => {
     await convs.archiveConversationByAccount({
       accountId: LEFT,
       conversationId: 'conv-1',
-      getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null }),
+      getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
     });
 
     expect(db.delete).toHaveBeenCalledTimes(1);
@@ -213,7 +213,7 @@ describe('createInternalChatConversations', () => {
     await convs.archiveConversationByAccount({
       accountId: LEFT,
       conversationId: 'conv-1',
-      getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null }),
+      getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
     });
 
     expect(deleteCount).toBe(2);
@@ -278,7 +278,7 @@ describe('createInternalChatConversations', () => {
         convs.archiveConversationByAccount({
           accountId: 'alice',
           conversationId: 'conv-1',
-          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null }),
+          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
         }),
       ).rejects.toThrow('delete failed');
     });
@@ -294,7 +294,7 @@ describe('createInternalChatConversations', () => {
         convs.archiveConversationByAccount({
           accountId: 'alice',
           conversationId: 'conv-1',
-          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null }),
+          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
         }),
       ).rejects.toThrow('findMany failed');
     });

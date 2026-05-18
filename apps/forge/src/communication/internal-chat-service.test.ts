@@ -1506,7 +1506,7 @@ describe('archiveConversationByAccount', () => {
     const result = await service.archiveConversationByAccount({
       accountId: 'acc_kaelen',
       conversationId: 'conv_1',
-      getRequiredConversationForAccount: async () => ({ id: 'conv_1', type: 'dm', name: null, createdByAccountId: 'acc_kaelen', updatedAt: 0 }),
+      getRequiredConversationForAccount: async () => ({ id: 'conv_1', type: 'dm', name: null, createdByAccountId: 'acc_kaelen', createdAt: 0, updatedAt: 0 }),
     });
     expect(mockConversations.archiveConversationByAccount).toHaveBeenCalledWith({
       accountId: 'acc_kaelen',

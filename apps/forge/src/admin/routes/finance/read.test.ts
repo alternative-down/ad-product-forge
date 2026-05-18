@@ -21,9 +21,11 @@ function makeMockHttpServer() {
 
 function makeMockReadModel() {
   return {
-    getFinance: vi.fn<() => Promise<unknown>>(),
-    getFinanceContracts: vi.fn<() => Promise<unknown>>(),
-  };
+    companyCash: {
+      getOverview: vi.fn<() => Promise<unknown>>(),
+      listContractSummaries: vi.fn<() => Promise<unknown>>(),
+    },
+  } as any;
 }
 
 describe('registerFinanceReadRoutes', () => {

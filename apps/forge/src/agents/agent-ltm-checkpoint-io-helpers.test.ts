@@ -51,7 +51,7 @@ describe('computeCheckpointTimestamp', () => {
       fromGeneration: 0,
       toGeneration: 1,
       threadId: 't1',
-    };
+    } as any;
     expect(computeCheckpointTimestamp(payload)).toBe(1700000000000);
   });
 
@@ -63,7 +63,7 @@ describe('computeCheckpointTimestamp', () => {
       fromGeneration: 0,
       toGeneration: 1,
       threadId: 't1',
-    };
+    } as any;
     expect(computeCheckpointTimestamp(payload)).toBe(1690000000000);
   });
 
@@ -75,7 +75,7 @@ describe('computeCheckpointTimestamp', () => {
       fromGeneration: 0,
       toGeneration: 1,
       threadId: 't1',
-    };
+    } as any;
     expect(computeCheckpointTimestamp(payload)).toBe(1680000000000);
   });
 
@@ -87,7 +87,7 @@ describe('computeCheckpointTimestamp', () => {
       fromGeneration: 0,
       toGeneration: 1,
       threadId: 't1',
-    };
+    } as any;
     expect(computeCheckpointTimestamp(payload)).toBe(1750000000000);
   });
 });

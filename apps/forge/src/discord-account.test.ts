@@ -196,8 +196,7 @@ describe('discord-account — new coverage', () => {
       };
       await handler(msg);
       expect(inboundHandler).not.toHaveBeenCalled();
-      // @ts-expect-error -- strictProvider possibly undefined (module-scoped let)
-      strictProvider.dispose();
+      (strictProvider as any).dispose();
     });
   });
 

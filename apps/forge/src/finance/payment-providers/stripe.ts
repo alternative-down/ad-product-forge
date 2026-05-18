@@ -24,6 +24,7 @@ function verifyStripeWebhookSignature(
 ): StripeWebhookPayload {
   // Import stripe dynamically to avoid issues when stripe package is not installed
   try {
+    // @ts-expect-error -- stripe package not in forge workspace
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const stripe = require('stripe') as typeof import('stripe');
     const event = stripe.webhooks.constructEvent(payload, signatureHeader, webhookSecret);

@@ -39,7 +39,7 @@ describe('writeLtmState', () => {
       packages: [],
     };
     const mockStore = { writeState: vi.fn().mockResolvedValue(persistedResult) };
-    const state = { lastRunAt: null, lastRunError: null, lastRunErrorAt: null, lastWrittenPackageId: null, lastWrittenAt: null, packages: [], updatedAt: Date.now() };
+    const state = { lastRunAt: null, lastRunError: null, lastRunErrorAt: null, lastWrittenPackageId: null, lastWrittenAt: null, packages: [], updatedAt: Date.now() } as any;
 
     const result = await writeLtmState(mockStore, state);
 
