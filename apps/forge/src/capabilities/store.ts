@@ -173,7 +173,7 @@ export function createCapabilityStore(db: Database) {
     return {
       roleId: existing.id,
       name: input.name ?? existing.name,
-      description: input.description === undefined ? existing.description ?? undefined : input.description ?? undefined,
+      description: input.description ?? existing.description,
     };
   }
 
