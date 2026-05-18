@@ -131,7 +131,7 @@ export async function createForgeBootstrap() {
       // runner has no public execution state query, default to 'idle' when runner exists
       return Promise.resolve('idle');
     },
-    notifyAgent: ({ agentId, scheduleId, scheduleKind, scheduleName, content: msg, timestamp, idleOnly }) => {
+    notifyAgent: ({ agentId, scheduleId, scheduleKind: _sKind, scheduleName: _sName, content: msg, timestamp, idleOnly }) => {
       const entry = registry.get(agentId);
       if (entry) {
         entry.runner.notifyExternalEvent({

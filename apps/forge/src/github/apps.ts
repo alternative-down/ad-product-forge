@@ -43,7 +43,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const pendingCredentials: GitHubAppCredentials = {
         status: 'pending',
         state: ctx.nanoid(16),
-        appName: (ctx.createAppName as any)(input.agentId, input.agentName),
+        appName: (ctx.createAppName as unknown as (a: string, b: string) => string)(input.agentId, input.agentName),
         manifestConfig: ctx.normalizeManifestConfig(ctx.DEFAULT_GITHUB_APP_MANIFEST_CONFIG),
         createdAt: Date.now(),
       };
@@ -157,7 +157,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     loadAllAgents,
     unloadAgent,
     deleteAgentApp,
-    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => ctx.opsRouting.buildProvisioning(agentId, credentials) as any,
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => ctx.opsRouting.buildProvisioning(agentId, credentials),
     getCredentials: ctx.getCredentials,
     getActiveCredentials: ctx.getActiveCredentials,
     saveCredentials: ctx.saveCredentials,
