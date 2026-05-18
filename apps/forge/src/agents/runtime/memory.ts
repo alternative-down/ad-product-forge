@@ -3,7 +3,7 @@ import {
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 
-import type { createAgentLongTermMemoryStore } from '../ltm/store';
+import type { createAgentLongTermMemoryStore } from '../../ltm/store';
 import { createAgentLongTermMemoryRecall } from '../ltm/recall';
 import { forgeDebug } from '@forge-runtime/core';
 

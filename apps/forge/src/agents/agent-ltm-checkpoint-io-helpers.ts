@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } from '../ltm/store';
+import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } from './ltm/store';
 import {
   renderCheckpointPackageReadme,
   renderReflectionFile,

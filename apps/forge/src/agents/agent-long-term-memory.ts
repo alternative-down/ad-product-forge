@@ -18,7 +18,7 @@ import {
   type CheckpointPackageManifest,
   type CheckpointedOmCheckpointPackageInput,
   type CheckpointedOmPackageEntry,
-} from '../ltm/store';
+} from './ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
 import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
 import {
