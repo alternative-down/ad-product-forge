@@ -4,6 +4,8 @@
  */
 import { ImapFlow } from 'imapflow';
 import nodemailer from 'nodemailer';
+import PostalMime from 'postal-mime';
+const { parse: parseEmail } = PostalMime;
 import { forgeDebug } from '@forge-runtime/core';
 import type {
   CommunicationFile,
@@ -160,7 +162,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           typeof message.source === 'string'
             ? message.source
             : new TextDecoder().decode(message.source);
-        const parsed = await PostalMime.default.parse(source);
+        const parsed = await parseEmail(source);
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
         if (!participant) continue;
 
@@ -183,7 +185,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   }
 
   async function processUnseenMessages(currentClient: ImapFlow): Promise<void> {
-    const unseenUids = await currentClient.search({ seen: false }, { uid: true });
+    const unseenUids = (await currentClient.search({ seen: false }, { uid: true })) as Iterable<number>;
     for (const uid of [...unseenUids].sort((left, right) => right - left)) {
       await processMessage(uid, currentClient);
     }
@@ -217,7 +219,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           typeof message.source === 'string'
             ? message.source
             : new TextDecoder().decode(message.source);
-        const parsed = await PostalMime.default.parse(source);
+        const parsed = await parseEmail(source);
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
         if (!participant) continue;
 
@@ -353,7 +355,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       query?: string;
       dateFrom?: string;
       dateTo?: string;
-    }): Promise<CommunicationProviderMessage[]> {
+    }): Promise<CommunicationProviderMessage[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
       const { targetKey, limit, offset, dateFrom, dateTo } = input;
       const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
       const parsedDateTo = parseFilterDate(dateTo, 'dateTo');
@@ -366,7 +368,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
           if (parsedDateTo !== null && Date.parse(email.createdAt) > parsedDateTo) return false;
           return true;
         })
-        .slice(offset, offset + limit);
+        .slice(offset, offset + limit) as unknown as CommunicationProviderMessage[];
     },
 
     async sendMessage(input: {
