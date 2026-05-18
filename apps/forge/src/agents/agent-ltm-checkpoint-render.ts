@@ -1,4 +1,4 @@
-// import type { CheckpointedOmCheckpointPackageInput } from '../ltm/store'; // TODO: fix module
+import type { CheckpointedOmCheckpointPackageInput } from './ltm/store';
 
 interface ReflectionItem {
   createdAt?: string | number;
@@ -8,13 +8,6 @@ interface ObservationItem {
   createdAt?: string | number;
   [key: string]: unknown;
 }
-type CheckpointedOmCheckpointPackageInput = {
-  toGeneration: number;
-  [key: string]: unknown;
-  checkpointSummary?: { text?: string };
-  reflections?: ReflectionItem[];
-  observations?: ObservationItem[];
-};
 
 export function renderCheckpointPackageReadme(input: {
   payload: CheckpointedOmCheckpointPackageInput;

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } from '../ltm/store';
+import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } from './ltm/store';
 import {
   renderCheckpointPackageReadme,
   renderReflectionFile,
@@ -84,7 +84,7 @@ export function buildCheckpointPackageManifest(
   return {
     packageId,
     checkpointGeneration: payload.toGeneration,
-    fromGeneration: (payload as any).fromGeneration as number | undefined,
+    fromGeneration: payload.fromGeneration as number | null,
     toGeneration: payload.toGeneration,
     createdAt: String(checkpointTimestamp),
     checkpointSummaryUpdatedAt: String(checkpointTimestamp),
