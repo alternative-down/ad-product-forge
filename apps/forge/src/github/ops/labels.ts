@@ -4,13 +4,9 @@
  */
 import type { OpsContext } from './context';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from './serialize-error';
 
 const SCOPE = 'github-ops-labels';
-
-function serializeError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 export function createLabelsOps(ctx: OpsContext) {
   async function listLabels(agentId: string, input: {
