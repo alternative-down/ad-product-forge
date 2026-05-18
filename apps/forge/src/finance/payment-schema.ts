@@ -20,8 +20,8 @@ export const paymentProviders = sqliteTable('payment_providers', {
   isActive: integer('is_active').notNull().default(0),
   /** Arbitrary provider-specific config as JSON string */
   configJson: text('config_json'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });
 
 export type PaymentProviderType = 'stripe' | 'asaas';
@@ -36,8 +36,8 @@ export const paymentCustomers = sqliteTable('payment_customers', {
   providerCustomerId: text('provider_customer_id').notNull(),
   email: text('email'),
   name: text('name'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });
 
 // =============================================================================
@@ -53,11 +53,11 @@ export const paymentSubscriptions = sqliteTable('payment_subscriptions', {
   status: text('status', { enum: ['active', 'cancelled', 'past_due', 'trialing', 'incomplete'] }).notNull(),
   amountUsd: real('amount_usd').notNull(),
   billingCycle: text('billing_cycle', { enum: ['monthly', 'annual'] }).notNull(),
-  currentPeriodStart: integer('current_period_start', { mode: 'timestamp_ms' }),
-  currentPeriodEnd: integer('current_period_end', { mode: 'timestamp_ms' }),
-  canceledAt: integer('canceled_at', { mode: 'timestamp_ms' }),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  currentPeriodStart: integer('current_period_start'),
+  currentPeriodEnd: integer('current_period_end'),
+  canceledAt: integer('canceled_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });
 
 // =============================================================================
@@ -80,6 +80,6 @@ export const paymentTransactions = sqliteTable('payment_transactions', {
   /** Whether this transaction has already been posted to the ledger */
   ledgerPosted: integer('ledger_posted').notNull().default(0),
   rawEventJson: text('raw_event_json'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });

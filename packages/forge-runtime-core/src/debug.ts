@@ -9,7 +9,7 @@ interface ForgeDebugOptions {
   scope?: string;
   message: string;
   level?: string;
-  data?: LogContext;
+  context?: LogContext;
   agentId?: string;
   runtimeId?: string;
   [key: string]: unknown;
@@ -37,11 +37,11 @@ export function forgeDebug(
     scope = (opts.scope as string) ?? 'unknown';
     message = (opts.message as string) ?? '';
 
-    const { scope: _scope, message: _message, level: _level, data: _data, ...rest } = opts;
+    const { scope: _scope, message: _message, level: _level, context: _context, ...rest } = opts;
     const extra = rest as LogContext;
 
-    if (_data && typeof _data === 'object') {
-      context = { ...(_data as LogContext), ...extra };
+    if (_context && typeof _context === 'object') {
+      context = { ...(_context as LogContext), ...extra };
     } else if (Object.keys(extra).length > 0) {
       context = extra;
     }
