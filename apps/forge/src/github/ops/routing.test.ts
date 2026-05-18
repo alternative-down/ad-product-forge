@@ -56,7 +56,7 @@ describe('createRoutingOps', () => {
     expect(result.status).toBe('active');
     expect(result.registrationUrl).toBe('https://forge.example.com/webhook/github/agent-123/register');
     expect(result.installUrl).toBe('https://github.com/apps/my-app/installations/new');
-    expect(result.manifestConfig.name).toBe('TestApp');
+    expect((result.manifestConfig as any).name).toBe('TestApp');
   });
 
   it('buildProvisioning omits installUrl for pending credentials', async () => {
