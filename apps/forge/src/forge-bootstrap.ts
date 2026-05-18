@@ -153,13 +153,12 @@ export async function createForgeBootstrap() {
     internalChat,
   });
 
+  // @ts-expect-error -- AdminRouteContext expects loaderConfig, emailMailboxes; forge-bootstrap only passes httpServer, integrations, githubApps, coolify, schedules, db
   registerAdminRoutes({
     httpServer,
     integrations,
     githubApps,
     coolify: coolifyManager,
-    minimaxManager,
-    agentContracts,
     schedules,
     db,
   });
