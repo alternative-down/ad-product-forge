@@ -4,7 +4,6 @@
  */
 
 // Re-export for convenience (single source of truth)
-export { buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
 
 /**
  * Formats a step interval in milliseconds to a human-readable label.
