@@ -20,6 +20,7 @@ export interface InternalChatReadsStore {
   listRecentConversations: (agentId: string, limit: number) => Promise<unknown[]>;
   listGroupMembersOrDmPeers: (agentId: string, conversationId: string) => Promise<unknown[]>;
   listGroupMembersOrDmPeersByAccount: (accountId: string, conversationId: string) => Promise<unknown[]>;
+  listGroupMembersOrDmPeers: (agentId: string, conversationId: string) => Promise<unknown[]>;
 }
 
 /**
