@@ -21,7 +21,7 @@ export async function resolveProfileRuntimeModel(
     const modelId = modelIdParts.join('/');
 
     if (!providerId || !modelId) {
-        forgeDebug({ scope: 'llm-runtime-model', level: 'warn', message: 'resolveRuntimeModel: invalid OAuth model key', context: { modelKey: profile.modelKey } });
+        forgeDebug({ scope: 'llm-runtime-model', level: 'error', message: 'resolveRuntimeModel: invalid OAuth model key', context: { modelKey: profile.modelKey } });
       throw new Error(`Invalid account OAuth model key: ${profile.modelKey}`);
     }
 
@@ -40,7 +40,7 @@ export async function resolveProfileRuntimeModel(
     const modelId = modelIdParts.join('/');
 
     if (!modelId) {
-        forgeDebug({ scope: 'llm-runtime-model', level: 'warn', message: 'resolveRuntimeModel: invalid MiniMax model key', context: { modelKey: profile.modelKey } });
+        forgeDebug({ scope: 'llm-runtime-model', level: 'error', message: 'resolveRuntimeModel: invalid MiniMax model key', context: { modelKey: profile.modelKey } });
       throw new Error(`Invalid MiniMax coding model key: ${profile.modelKey}`);
     }
 
