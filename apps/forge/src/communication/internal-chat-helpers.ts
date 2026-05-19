@@ -42,7 +42,7 @@ export interface InternalChatGroupRow {
  * Throws if the value is provided but not a valid date string.
  */
 export function parseFilterDate(value: string | undefined, fieldName: string): number | null {
-  if (!value) {
+  if (value === null || value === undefined) {
     return null;
   }
 
@@ -122,9 +122,9 @@ export function buildAgentAccountDescription(input: {
   return [
     `Agent id: ${input.agentId}`,
     `Agent name: ${input.agentName}`,
-    input.agentDescription?.trim() ? `Agent description: ${input.agentDescription.trim()}` : null,
-    input.roleName?.trim() ? `Role name: ${input.roleName.trim()}` : null,
-    input.roleDescription?.trim() ? `Role description: ${input.roleDescription.trim()}` : null,
+    input.agentDescription !== null && input.agentDescription !== undefined && input.agentDescription.trim() ? `Agent description: ${input.agentDescription.trim()}` : null,
+    input.roleName !== null && input.roleName !== undefined && input.roleName.trim() ? `Role name: ${input.roleName.trim()}` : null,
+    input.roleDescription !== null && input.roleDescription !== undefined && input.roleDescription.trim() ? `Role description: ${input.roleDescription.trim()}` : null,
   ].filter(Boolean).join('\n');
 }
 
