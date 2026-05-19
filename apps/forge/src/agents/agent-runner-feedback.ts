@@ -141,7 +141,7 @@ export async function buildIterationFeedback(
   });
   const feedbackMessages: Array<{ role: 'assistant' | 'user'; content: string }> = [];
   const flushedPrompt = flushPendingRunMessages({ allowOriginIdleOnly: true });
-  if (flushedPrompt) {
+  if (flushedPrompt !== null && flushedPrompt !== undefined) {
     feedbackMessages.push({ role: 'user', content: flushedPrompt });
   }
   if (
@@ -164,7 +164,7 @@ export async function buildIterationFeedback(
     threadId: currentRuntime.mastraId,
     resourceId: currentRuntime.mastraId,
   }) ?? null;
-  if (recallFeedback?.trim()) {
+  if (recallFeedback !== null && recallFeedback !== undefined && recallFeedback.trim()) {
     feedbackMessages.push({ role: 'assistant', content: recallFeedback.trim() });
   }
 

@@ -17,7 +17,7 @@ export function truncatePreview(value: string): string {
  * Returns null if no text parts are found.
  */
 export function extractLatestMessagePreview(content: unknown): string | null {
-  if (!content || typeof content !== 'object') {
+  if (content === null || content === undefined || typeof content !== 'object') {
     return null;
   }
 
@@ -44,7 +44,7 @@ export function extractLatestMessagePreview(content: unknown): string | null {
  * Categories: send_message, workspace_*, github_*, search_*
  */
 export function extractLatestMessageToolBadge(content: unknown): ToolBadge {
-  if (!content || typeof content !== 'object') {
+  if (content === null || content === undefined || typeof content !== 'object') {
     return null;
   }
 

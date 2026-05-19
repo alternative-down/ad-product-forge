@@ -122,7 +122,7 @@ export async function readAgentHomeMetricSnapshot(input: {
   }
 
   const [role, modelProfile, omModelProfile, providerRows, unreadNotificationRows, recentSteps, runtimeMemory, latestThreadDetails, longTermMemoryState, runtimeLtmSnapshot] = await Promise.all([
-    agent.roleId
+    agent.roleId !== null && agent.roleId !== undefined
       ? input.db.query.agentRoles.findFirst({
         where: eq(agentRoles.id, agent.roleId),
       })
@@ -228,7 +228,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       lastStepContextTokens: lastStep?.inputTokens ?? null,
       lastStepPreview: latestThreadDetails.preview,
       lastToolBadge: latestThreadDetails.toolBadge,
-      lastStepTokens: lastStep
+      lastStepTokens: lastStep !== null && lastStep !== undefined
         ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
         : null,
       lastStepCostUsd: lastStep?.costUsd ?? null,

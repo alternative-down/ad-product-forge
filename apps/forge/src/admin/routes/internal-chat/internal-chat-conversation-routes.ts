@@ -59,8 +59,8 @@ function buildListMessagesHandler(
     const conversationId = conversationIdOrResponse;
     const _limit = getQueryParam(request, 'limit');
     const _offset = getQueryParam(request, 'offset');
-    const limit = _limit ? parseInt(_limit, 10) : 20;
-    const offset = _offset ? parseInt(_offset, 10) : 0;
+    const limit = _limit !== null && _limit !== undefined ? parseInt(_limit, 10) : 20;
+    const offset = _offset !== null && _offset !== undefined ? parseInt(_offset, 10) : 0;
     const items = await internalChat.getMessagesByAccount({
       accountId,
       conversationKey: conversationId,
@@ -107,7 +107,7 @@ function buildGetAttachmentHandler(
       messageId,
       attachmentName,
     });
-    if (!attachment) return { status: 404 };
+    if (attachment === null || attachment === undefined) return { status: 404 };
     const safeAttachment = attachment as unknown as { name: string; contentType: string; data: string };
     return {
       status: 200,
@@ -140,7 +140,7 @@ function buildCreateConversationHandler(
     const result = await internalChat.createExternalChatGroupWithMembers({
       accountId: body.accountId,
       conversationKey,
-      name: body.name?.trim() || 'Novo grupo',
+      name: body.name !== null && body.name !== undefined ? (body.name.trim() || 'Novo grupo') : 'Novo grupo',
       memberAccountIds: body.memberKeys as string[],
     });
     return jsonResponse({

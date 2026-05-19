@@ -84,7 +84,7 @@ try {
       ? await groups.ensureDirectConversation(input.accountId, directAccount.id)
       : await serviceHelpers.getRequiredConversationForAccount(input.accountId, input.targetKey);
 
-    if (!conversation) {
+    if (conversation === null || conversation === undefined) {
       forgeDebug({ scope: 'internal-chat-sending', level: 'error', message: 'internal-chat-sending: validation/requirement failed' });
       throw new Error('Conversation not found: ' + input.targetKey);
     }
@@ -96,7 +96,7 @@ try {
 
     // Guard: validate replyToMessageId belongs to the same conversation
     let resolvedReplyTo: string | null = null;
-    if (input.replyToMessageId) {
+    if (input.replyToMessageId !== null && input.replyToMessageId !== undefined) {
       let parentMessage;
         parentMessage = await db.query.internalChatMessages.findFirst({
           where: eq(internalChatMessages.id, input.replyToMessageId),
@@ -131,7 +131,7 @@ try {
     const accountIds = members.map((m: any) => m.accountId);
     const accountMap = await accounts.getAccountsById(accountIds);
     const readRows = Array.from(accountMap.values())
-      .filter((memberAccount) => memberAccount.agentId)
+      .filter((memberAccount): boolean => memberAccount.agentId !== null && memberAccount.agentId !== undefined)
       .map((memberAccount) => ({
         messageId,
         agentId: memberAccount.agentId as string,
