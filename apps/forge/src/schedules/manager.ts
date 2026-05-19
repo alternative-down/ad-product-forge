@@ -33,6 +33,8 @@ const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
 const HEARTBEAT_TIMEZONE = 'UTC';
 
 
+export type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
+
 export function createAgentScheduleManager(input: {
   db: Database;
   /** Injected lifecycle for testability. */
