@@ -24,14 +24,20 @@ function verifyStripeWebhookSignature(
 ): StripeWebhookPayload {
   // Import stripe dynamically to avoid issues when stripe package is not installed
   try {
-    // @ts-expect-error -- stripe package not in forge workspace
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const stripe = require('stripe') as typeof import('stripe');
-    const event = stripe.webhooks.constructEvent(payload, signatureHeader, webhookSecret);
+    const event = (stripe as any).webhooks.constructEvent(payload, signatureHeader, webhookSecret);
     return event as unknown as StripeWebhookPayload;
   } catch (err) {
-    forgeDebug({ scope: 'stripe', level: 'error', message: 'Stripe webhook verification failed', context: { error: err instanceof Error ? err.message : String(err) } });
-    throw new Error(`Stripe webhook signature verification failed: ${err instanceof Error ? err.message : err}`);
+    forgeDebug({
+      scope: 'stripe',
+      level: 'error',
+      message: 'Stripe webhook verification failed',
+      context: { error: err instanceof Error ? err.message : String(err) },
+    });
+    throw new Error(
+      `Stripe webhook signature verification failed: ${err instanceof Error ? err.message : err}`,
+    );
   }
 }
 
