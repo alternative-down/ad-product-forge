@@ -53,7 +53,7 @@ export function getQueryParam(
   key: string,
 ): string | null {
   const value = request.query.get(key);
-  return value && value.length > 0 ? value : null;
+  return value !== null && value !== undefined && value.length > 0 ? value : null;
 }
 
 /**
@@ -61,7 +61,7 @@ export function getQueryParam(
  */
 export function requireQueryParam(request: InternalChatRequest, key: string): string {
   const value = getQueryParam(request, key);
-  if (!value) {
+  if (value === null || value === undefined) {
     throw new Error(`${key} required`);
   }
   return value;

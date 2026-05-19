@@ -44,7 +44,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
     ]);
-    if (!agent) return null;
+    if (agent === null || agent === undefined) return null;
     const ltm = await readLongTermMemoryState(db, agentId).catch((err) => {
       forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: LTM recall not available', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       return null;
@@ -58,7 +58,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
   ) {
     let agent;
       agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (!agent) return null;
+    if (agent === null || agent === undefined) return null;
     const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
     return { ltmRecall };
   }

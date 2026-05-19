@@ -47,7 +47,7 @@ export async function resolveProfileRuntimeModel(
     const baseUrl =
       profile.baseUrl === 'https://api.minimax.io'
         ? 'https://api.minimax.io/anthropic/v1'
-        : profile.baseUrl || 'https://api.minimax.io/anthropic/v1';
+        : profile.baseUrl !== null && profile.baseUrl !== undefined ? profile.baseUrl : 'https://api.minimax.io/anthropic/v1';
 
       const model = createAnthropic({
         authToken: profile.apiKey,
@@ -60,6 +60,6 @@ export async function resolveProfileRuntimeModel(
   return {
     id: profile.modelKey as `${string}/${string}`,
     apiKey: profile.apiKey,
-    ...(profile.baseUrl ? { url: profile.baseUrl } : {}),
+    ...(profile.baseUrl !== null && profile.baseUrl !== undefined ? { url: profile.baseUrl } : {}),
   };
 }

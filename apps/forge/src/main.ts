@@ -15,7 +15,7 @@ export async function main() {
 
   await bootstrap.httpServer.start();
   forgeDebug({ scope: 'forge', level: 'info', message: `Forge HTTP server started on port ${process.env.FORGE_HTTP_PORT}` });
-  forgeDebug({ scope: 'forge', level: 'info', message: `Admin API key: ${bootstrap.adminApiKey ? 'configured' : 'NOT configured'}` });
+  forgeDebug({ scope: 'forge', level: 'info', message: `Admin API key: ${bootstrap.adminApiKey !== null && bootstrap.adminApiKey !== undefined ? 'configured' : 'NOT configured'}` });
   if (bootstrap.allowInsecureLocal) {
      
     console.warn(
@@ -37,7 +37,7 @@ export async function main() {
 main().catch((error) => {
    
   console.error('[forge-main] Fatal error during startup:', error instanceof Error ? error.message : String(error));
-  if (error instanceof Error && error.stack) {
+  if (error instanceof Error && error.stack !== null && error.stack !== undefined) {
      
     console.error(error.stack);
   }

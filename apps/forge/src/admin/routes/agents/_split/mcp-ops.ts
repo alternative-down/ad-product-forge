@@ -35,7 +35,7 @@ export function registerMcpOps(
           url: body.transport === 'http_streamable' ? body.url : null,
           headers: body.transport === 'http_streamable' ? body.headersText ?? '{}' : null,
           version: 1,
-          isActive: body.isActive ? 1 : 0,
+          isActive: body.isActive === true ? 1 : 0,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -44,7 +44,7 @@ export function registerMcpOps(
           id: configId,
           agentId: body.agentId,
           serverId,
-          isActive: body.isActive ? 1 : 0,
+          isActive: body.isActive === true ? 1 : 0,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });

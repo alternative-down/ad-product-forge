@@ -94,7 +94,7 @@ export interface ForgeHttpServer {
 export type ForgeHttpServerAdapter = Pick<ForgeHttpServer, 'registerRoute'>;
 
 export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Promise<ForgeHttpServer> & ForgeHttpServer {
-  const allowedOrigins = config.allowedOrigins?.length
+  const allowedOrigins = config.allowedOrigins !== null && config.allowedOrigins !== undefined && config.allowedOrigins.length
     ? new Set(config.allowedOrigins)
     : null;
   const limit = config.maxBodyBytes ?? MAX_BODY_BYTES;
@@ -309,7 +309,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
     stop,
     get port() {
       const addr = server.address();
-      if (addr && typeof addr === 'object') {
+      if (addr !== null && addr !== undefined && typeof addr === 'object') {
         return addr.port;
       }
       return config.port;
