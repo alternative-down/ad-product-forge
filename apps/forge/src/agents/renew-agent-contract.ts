@@ -151,12 +151,6 @@ export async function renewAgentContract(
         agentId: input.agentId,
       },
     });
-    forgeDebug({
-      scope: 'renew-agent-contract',
-      level: 'error',
-      message: 'renew-agent-contract: operation failed',
-      error: err instanceof Error ? err.message : String(err),
-    });
     throw err;
   }
 }

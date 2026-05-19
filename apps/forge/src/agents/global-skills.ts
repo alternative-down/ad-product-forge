@@ -2,7 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { forgeDebug } from '@forge-runtime/core';
-import { ensureDirectory, ensureParentDirectories, normalizeArchiveEntryPath } from './workspace-skill-helpers';
+import {
+  ensureDirectory,
+  ensureParentDirectories,
+  normalizeArchiveEntryPath,
+} from './workspace-skill-helpers';
 
 import type { Agent } from '../database/schema';
 export {
@@ -16,7 +20,10 @@ import {
   resolveBundledSkillRoot,
 } from './bundled-workspace-skills';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
-import { parseSkillMetadata as _parseSkillMetadata, countSkillFiles as _countSkillFiles } from './skills-shared/index';
+import {
+  parseSkillMetadata as _parseSkillMetadata,
+  countSkillFiles as _countSkillFiles,
+} from './skills-shared/index';
 const parseSkillMetadata = _parseSkillMetadata;
 const countSkillFiles = _countSkillFiles;
 
@@ -28,9 +35,6 @@ type GlobalSkillSummary = {
   source: 'bundled' | 'custom';
   editable: boolean;
 };
-
-
-
 
 function resolveGlobalSkillsRoot(workspaceBasePath: string) {
   return path.resolve(workspaceBasePath, '_system', 'skills');
@@ -67,12 +71,16 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
 
     return skills.sort((left, right) => left.skillName.localeCompare(right.skillName));
   } catch (error) {
-    forgeDebug({ scope: 'global-skills', level: 'error', message: 'loadCustomSkills failed', context: { error: error instanceof Error ? error.message : String(error) }});
+    forgeDebug({
+      scope: 'global-skills',
+      level: 'error',
+      message: 'loadCustomSkills failed',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
     }
 
-    forgeDebug({ scope: 'global-skills', level: 'error', message: 'Global skill operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
     throw error;
   }
 }
@@ -118,7 +126,9 @@ export async function listGlobalSkills(workspaceBasePath: string): Promise<Globa
     bySkillName.set(customSkill.skillName, customSkill);
   }
 
-  return Array.from(bySkillName.values()).sort((left, right) => left.skillName.localeCompare(right.skillName));
+  return Array.from(bySkillName.values()).sort((left, right) =>
+    left.skillName.localeCompare(right.skillName),
+  );
 }
 
 export async function installGlobalSkillsFromZip(input: {
@@ -126,7 +136,9 @@ export async function installGlobalSkillsFromZip(input: {
   zipBase64: string;
 }) {
   const skillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
-  const bundledSkillNames = new Set((await listBundledGlobalSkills()).map((skill) => skill.skillName));
+  const bundledSkillNames = new Set(
+    (await listBundledGlobalSkills()).map((skill) => skill.skillName),
+  );
   const archive = unzipSync(Buffer.from(input.zipBase64, 'base64'));
   const writtenSkills = new Set<string>();
 
@@ -141,7 +153,12 @@ export async function installGlobalSkillsFromZip(input: {
     }
 
     if (bundledSkillNames.has(skillName)) {
-      forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: name reserved by bundled skill', context: { skillName } });
+      forgeDebug({
+        scope: 'global-skills',
+        level: 'warn',
+        message: 'loadGlobalSkill: name reserved by bundled skill',
+        context: { skillName },
+      });
       throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
     }
 
@@ -149,8 +166,13 @@ export async function installGlobalSkillsFromZip(input: {
     const relativePath = path.relative(skillsRoot, targetPath);
 
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: invalid archive entry', context: { entryPath } });
-    throw new Error(`Invalid skill archive entry: ${entryPath}`);
+      forgeDebug({
+        scope: 'global-skills',
+        level: 'warn',
+        message: 'loadGlobalSkill: invalid archive entry',
+        context: { entryPath },
+      });
+      throw new Error(`Invalid skill archive entry: ${entryPath}`);
     }
 
     if (isDirectory) {
@@ -164,17 +186,18 @@ export async function installGlobalSkillsFromZip(input: {
   }
 
   if (writtenSkills.size === 0) {
-    forgeDebug({ scope: 'global-skills', level: 'warn', message: 'loadGlobalSkill: archive empty' });
+    forgeDebug({
+      scope: 'global-skills',
+      level: 'warn',
+      message: 'loadGlobalSkill: archive empty',
+    });
     throw new Error('Skill archive did not contain any files');
   }
 
   return Array.from(writtenSkills).sort((left, right) => left.localeCompare(right));
 }
 
-export async function deleteGlobalSkill(input: {
-  workspaceBasePath: string;
-  skillName: string;
-}) {
+export async function deleteGlobalSkill(input: { workspaceBasePath: string; skillName: string }) {
   const skillName = input.skillName.trim();
   const skillsRoot = resolveGlobalSkillsRoot(input.workspaceBasePath);
   const skillRoot = path.resolve(skillsRoot, skillName);
@@ -199,9 +222,10 @@ export async function installGlobalSkillToAgentWorkspace(input: {
     throw new Error(`Global skill not found: ${input.skillName}`);
   }
 
-  const sourceRoot = skill.source === 'bundled'
-    ? await resolveBundledSkillRoot(input.skillName)
-    : path.resolve(resolveGlobalSkillsRoot(input.workspaceBasePath), input.skillName);
+  const sourceRoot =
+    skill.source === 'bundled'
+      ? await resolveBundledSkillRoot(input.skillName)
+      : path.resolve(resolveGlobalSkillsRoot(input.workspaceBasePath), input.skillName);
   const { skillRoot } = resolveAgentSkillRoot({
     workspaceBasePath: input.workspaceBasePath,
     agent: input.agent,
@@ -229,7 +253,9 @@ export async function publishAgentWorkspaceSkillToGlobalCatalog(input: {
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
-  const bundledSkillNames = new Set((await listBundledGlobalSkills()).map((skill) => skill.skillName));
+  const bundledSkillNames = new Set(
+    (await listBundledGlobalSkills()).map((skill) => skill.skillName),
+  );
 
   if (bundledSkillNames.has(skillName)) {
     throw new Error(`Skill name is reserved by a bundled skill: ${skillName}`);
