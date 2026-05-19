@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-// InternalAgentRegistry and AdminReadModel not resolvable from this path
 type InternalAgentRegistry = {
   listAgents: () => Promise<Array<{ agentId: string; name: string; status: string }>>;
 };
