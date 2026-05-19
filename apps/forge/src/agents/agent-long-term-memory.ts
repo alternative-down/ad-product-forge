@@ -232,7 +232,7 @@ export function createAgentLongTermMemory(input: {
     const checkpointTimestamp = computeCheckpointTimestamp(payload);
     const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
     const sequence = (state.packages ?? [])
-      .filter((entry: any) => entry.packageId.startsWith(`${dayKey}_`))
+      .filter((entry: any): boolean => entry.packageId !== null && entry.packageId !== undefined && entry.packageId.startsWith(`${dayKey}_`))
       .length + 1;
     const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
@@ -544,11 +544,11 @@ export function createAgentLongTermMemory(input: {
 
       return {
         ...snapshot,
-        lastRunAt: state.lastRunAt ? Date.parse(String(state.lastRunAt)) : snapshot.lastRunAt,
+        lastRunAt: state.lastRunAt !== null && state.lastRunAt !== undefined ? Date.parse(String(state.lastRunAt)) : snapshot.lastRunAt,
         lastRunError: state.lastRunError,
-        lastRunErrorAt: state.lastRunErrorAt ? Date.parse(String(state.lastRunErrorAt)) : null,
+        lastRunErrorAt: state.lastRunErrorAt !== null && state.lastRunErrorAt !== undefined ? Date.parse(String(state.lastRunErrorAt)) : null,
         lastWrittenPackageId: state.lastWrittenPackageId,
-        lastWrittenAt: state.lastWrittenAt ? Date.parse(String(state.lastWrittenAt)) : null,
+        lastWrittenAt: state.lastWrittenAt !== null && state.lastWrittenAt !== undefined ? Date.parse(String(state.lastWrittenAt)) : null,
         packageCount: (state.packages ?? []).length,
       };
     },

@@ -106,15 +106,15 @@ export function applyLtmStateToSnapshot(
     packages: unknown[];
   },
 ) {
-  snapshot.lastRunAt = persistedState.lastRunAt
+  snapshot.lastRunAt = persistedState.lastRunAt !== null && persistedState.lastRunAt !== undefined
     ? Date.parse(persistedState.lastRunAt)
     : snapshot.lastRunAt;
   snapshot.lastRunError = persistedState.lastRunError;
-  snapshot.lastRunErrorAt = persistedState.lastRunErrorAt
+  snapshot.lastRunErrorAt = persistedState.lastRunErrorAt !== null && persistedState.lastRunErrorAt !== undefined
     ? Date.parse(persistedState.lastRunErrorAt)
     : null;
   snapshot.lastWrittenPackageId = persistedState.lastWrittenPackageId;
-  snapshot.lastWrittenAt = persistedState.lastWrittenAt
+  snapshot.lastWrittenAt = persistedState.lastWrittenAt !== null && persistedState.lastWrittenAt !== undefined
     ? Date.parse(persistedState.lastWrittenAt)
     : null;
   snapshot.packageCount = persistedState.packages.length;

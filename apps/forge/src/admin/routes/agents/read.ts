@@ -56,7 +56,7 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const agent = await readModel.getAgent(agentId);
-        if (!agent) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (agent === null || agent === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(agent);
       } catch (err) {
         if (err instanceof ZodError) throw err;
@@ -74,7 +74,7 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const conversations = await readModel.listAgentRecentConversations(agentId);
-        if (!conversations) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (conversations === null || conversations === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(conversations);
       } catch (err) {
         if (err instanceof ZodError) throw err;
@@ -158,7 +158,7 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const snapshot = await readModel.getAgentRuntimeMemory(agentId);
-        if (!snapshot) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (snapshot === null || snapshot === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(snapshot);
       } catch (err) {
         if (err instanceof ZodError) throw err;
@@ -176,7 +176,7 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const snapshot = await readModel.getAgentOmDebugExport(agentId);
-        if (!snapshot) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (snapshot === null || snapshot === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(snapshot);
       } catch (err) {
         if (err instanceof ZodError) throw err;

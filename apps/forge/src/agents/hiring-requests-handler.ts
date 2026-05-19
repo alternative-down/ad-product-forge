@@ -92,7 +92,7 @@ async function executeHireAgentTool(input: {
 function _getLastAssistantText(messages: NativeToolLoopMessage[]): string | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string') {
+    if (msg.role === 'assistant' && msg.content !== null && msg.content !== undefined && typeof msg.content === 'string') {
       return msg.content;
     }
   }
@@ -160,7 +160,7 @@ export async function generateHiredAgentInstructions(
     companyContext: companySettings.companyContext,
     existingAgents: existingAgents.map((agent: object) => ({
       name: (agent as { name: unknown }).name as string,
-      roleName: (agent as { roleId: unknown }).roleId ? (existingRoleNamesById.get(String((agent as { roleId: unknown }).roleId)) ?? null) : null,
+      roleName: (agent as { roleId: unknown }).roleId !== null && (agent as { roleId: unknown }).roleId !== undefined ? (existingRoleNamesById.get(String((agent as { roleId: unknown }).roleId)) ?? null) : null,
     })),
   });
 
@@ -383,11 +383,11 @@ export async function generateHiredAgentInstructions(
   forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'generateText completed' });
   forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'response messages', context: { messages: buildStepDiagnostics(messages) } });
 
-  if (hireAgentActionResult) {
+  if (hireAgentActionResult !== null && hireAgentActionResult !== undefined) {
     const toolOutput = isToolResultWithOutput(hireAgentActionResult)
       ? hireAgentActionResult.output
       : hireAgentActionResult;
-    forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'hireAgent action result', context: { hasOutput: !!toolOutput } });
+    forgeDebug({ scope: 'hiring-requests-handler', level: 'debug', message: 'hireAgent action result', context: { hasOutput: toolOutput !== null && toolOutput !== undefined } });
     const parsedToolResult = hireAgentToolResultSchema.safeParse(toolOutput);
 
     if (!parsedToolResult.success) {

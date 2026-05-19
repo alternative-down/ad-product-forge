@@ -25,7 +25,7 @@ export function registerConfigOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, updateAgentGitHubManifestConfigSchema);
-        if (!input.githubApps) {
+        if (input.githubApps === null || input.githubApps === undefined) {
           return jsonResponse({ error: 'GitHub Apps not configured' }, 503);
         }
         const provisioning = await input.githubApps.updateAgentManifestConfig({
@@ -50,7 +50,7 @@ export function registerConfigOps(
         const agent = await db.query.agents.findFirst({
           where: sql`id = ${body.agentId}`,
         });
-        if (!agent) {
+        if (agent === null || agent === undefined) {
           return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
         }
         await db
@@ -59,8 +59,8 @@ export function registerConfigOps(
             name: body.name,
             description: body.description ?? null,
             instructions: body.instructions,
-            workspaceAutoSync: body.workspaceAutoSync ? 1 : 0,
-            workspaceBm25: body.workspaceBm25 ? 1 : 0,
+            workspaceAutoSync: body.workspaceAutoSync === true ? 1 : 0,
+            workspaceBm25: body.workspaceBm25 === true ? 1 : 0,
             modelProfileId: body.modelProfileId,
             omModelProfileId: body.omModelProfileId,
             updatedAt: Date.now(),
