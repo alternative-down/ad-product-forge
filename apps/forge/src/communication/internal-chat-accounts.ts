@@ -111,8 +111,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute registerAgentAccount',
+        level: 'error',
+        message: 'registerAgentAccount DB insert failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -139,8 +139,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute registerExternalAccount',
+        level: 'error',
+        message: 'registerExternalAccount DB insert failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -165,8 +165,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute updateExternalAccount',
+        level: 'error',
+        message: 'updateExternalAccount DB update failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -179,8 +179,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute deleteExternalAccount',
+        level: 'error',
+        message: 'deleteExternalAccount DB delete failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -201,8 +201,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute listAccounts',
+        level: 'error',
+        message: 'listAccounts DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -217,8 +217,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getAccountBySlug',
+        level: 'error',
+        message: 'getAccountBySlug DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -233,8 +233,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getAccountByAgentId',
+        level: 'error',
+        message: 'getAccountByAgentId DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -256,8 +256,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getAccountByTargetKey',
+        level: 'error',
+        message: 'getAccountByTargetKey DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -283,8 +283,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getRequiredAccount',
+        level: 'error',
+        message: 'getRequiredAccount DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -307,8 +307,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getAccountsById',
+        level: 'error',
+        message: 'getAccountsById DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -337,8 +337,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getRequiredAgentAccount',
+        level: 'error',
+        message: 'getRequiredAgentAccount DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -358,8 +358,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getRequiredAccountBySlug',
+        level: 'error',
+        message: 'getRequiredAccountBySlug DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -391,8 +391,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute getConversationForAgent',
+        level: 'error',
+        message: 'getConversationForAgent DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -462,8 +462,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute ensureDirectConversation',
+        level: 'error',
+        message: 'ensureDirectConversation DB operation failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;
@@ -490,8 +490,8 @@ export function createInternalChatAccounts(db: Database) {
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
-        level: 'info',
-        message: 'Failed to execute listGroupMembersOrDmPeersByAccount',
+        level: 'error',
+        message: 'listGroupMembersOrDmPeersByAccount DB query failed',
         context: { error: err instanceof Error ? err.message : String(err) },
       });
       throw err;

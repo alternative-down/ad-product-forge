@@ -197,7 +197,7 @@ export function createInternalChatGroups(
           }
 
         } catch (err) {
-            forgeDebug({ scope: 'internal-chat-groups', level: 'info', message: 'Failed to execute requireConversationMembershipByAccount', context: { error: err instanceof Error ? err.message : String(err) } });
+            forgeDebug({ scope: 'internal-chat-groups', level: 'error', message: 'requireConversationMembershipByAccount DB operation failed', context: { error: err instanceof Error ? err.message : String(err) } });
             throw err;
           }
       }
