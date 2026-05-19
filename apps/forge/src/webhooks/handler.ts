@@ -32,9 +32,9 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       return { status: 404, body: 'Route inactive' };
     }
 
-    if (route.secret) {
+    if (route.secret !== null && route.secret !== undefined) {
       const signatureHeader = request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
-      if (!signatureHeader) {
+      if (signatureHeader === null || signatureHeader === undefined) {
         forgeDebug({ scope: 'webhooks', level: 'warn', message: 'Missing signature header', context: { routeId } });
         return { status: 401, body: 'Missing signature' };
       }

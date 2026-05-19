@@ -269,7 +269,7 @@ export function createSystemIntegrationStore(db: Database) {
     providerType: SystemIntegrationProviderType,
     rawConfig: unknown,
   ): Record<string, unknown> | null {
-    if (!rawConfig || typeof rawConfig !== 'object') {
+    if (rawConfig === null || rawConfig === undefined || typeof rawConfig !== 'object') {
       return null;
     }
 
@@ -294,7 +294,7 @@ export function createSystemIntegrationStore(db: Database) {
       | MinimaxSystemIntegrationConfig,
   ) {
     const schema = parseConfigSchemaMap[providerType];
-    if (!schema) {
+    if (schema === null || schema === undefined) {
       forgeDebug({ scope: 'system-integrations-store', level: 'error', message: 'system-integrations-store: validation/requirement failed' });
       throw new Error('Unknown integration provider type');
     }

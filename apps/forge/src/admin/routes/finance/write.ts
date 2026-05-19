@@ -67,7 +67,7 @@ export function registerFinanceWriteRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, createInvestmentSchema);
-        const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : Date.now();
+        const effectiveAt = body.effectiveAt !== null && body.effectiveAt !== undefined ? new Date(body.effectiveAt).getTime() : Date.now();
 
         await input.companyCash.recordCashIn({
           type: 'owner-investment',
@@ -144,7 +144,7 @@ export function registerFinanceWriteRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-        const effectiveAt = body.effectiveAt ? new Date(body.effectiveAt).getTime() : undefined;
+        const effectiveAt = body.effectiveAt !== null && body.effectiveAt !== undefined ? new Date(body.effectiveAt).getTime() : undefined;
         const result = await input.companyCash.postPlannedEntry(body.entryId, { effectiveAt });
 
         await input.companyPayables.syncRecurringPayableOccurrence({

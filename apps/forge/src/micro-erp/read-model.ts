@@ -41,11 +41,11 @@ export function createMicroErpReadModel(db: Database) {
       conditions.push(eq(companyCashLedger.direction, input.direction));
     }
 
-    if (input.status) {
+    if (input.status !== null && input.status !== undefined) {
       conditions.push(eq(companyCashLedger.status, input.status));
     }
 
-    if (input.type) {
+    if (input.type !== null && input.type !== undefined) {
       conditions.push(eq(companyCashLedger.type, input.type));
     }
 
@@ -218,7 +218,7 @@ export function createMicroErpReadModel(db: Database) {
         .limit(1);
 
     const contract = (row as any)[0];
-    if (!contract) {
+    if (contract === null || contract === undefined) {
       return null;
     }
     let metricsByContractId;

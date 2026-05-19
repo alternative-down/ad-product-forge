@@ -45,7 +45,7 @@ export function registerWebhookAdminRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const agentId = new URL(`http://localhost${request.path}${request.query.toString() ? '?' + request.query.toString() : ''}`, 'http://localhost').searchParams.get('agentId');
-        if (!agentId) {
+        if (agentId === null || agentId === undefined) {
           return jsonResponse({ error: 'agentId required' }, 400);
         }
         const routes = await store.listRoutesByAgent(agentId);
@@ -78,7 +78,7 @@ export function registerWebhookAdminRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const agentId = new URL(`http://localhost${request.path}${request.query.toString() ? '?' + request.query.toString() : ''}`, 'http://localhost').searchParams.get('agentId');
-        if (!agentId) {
+        if (agentId === null || agentId === undefined) {
           return jsonResponse({ error: 'agentId required' }, 400);
         }
         const events = await store.listEventsByAgent(agentId);

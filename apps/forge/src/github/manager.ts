@@ -181,7 +181,7 @@ export function createGitHubAppManager(config: {
   }
 
   async function getDefaultOwner(owner?: string) {
-    if (owner) {
+    if (owner !== null && owner !== undefined) {
       return owner;
     }
 
@@ -317,7 +317,7 @@ export function createGitHubAppManager(config: {
       username: 'x-access-token',
       token: token.token,
       expiresAt: token.expiresAt,
-      repositoryUrl: input.repositoryName
+      repositoryUrl: input.repositoryName !== null && input.repositoryName !== undefined
         ? `https://github.com/${githubConfig.organization}/${input.repositoryName}.git`
         : undefined,
       gitUserName: credentials.appName,

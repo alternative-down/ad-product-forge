@@ -37,7 +37,7 @@ export function createInternalChatTools(
       execute: async (input) => {
         try {
           if (input.action === 'create') {
-            if (!input.create) {
+            if (input.create === null || input.create === undefined) {
               return {
                 valid: false,
                 error: 'create is required when action is create',
@@ -45,7 +45,7 @@ export function createInternalChatTools(
               };
             }
 
-            if (!input.create.name) {
+            if (input.create === null || input.create === undefined || input.create.name === null || input.create.name === undefined) {
               return {
                 valid: false,
                 error: 'create.name is required when action is create',
@@ -68,7 +68,7 @@ export function createInternalChatTools(
             };
           }
 
-          if (!input.update) {
+          if (input.update === null || input.update === undefined) {
             return {
               valid: false,
               error: 'update is required when action is update',
@@ -76,7 +76,7 @@ export function createInternalChatTools(
             };
           }
 
-          if (!input.update.groupId) {
+          if (input.update === null || input.update === undefined || input.update.groupId === null || input.update.groupId === undefined) {
             return {
               valid: false,
               error: 'update.groupId is required when action is update',

@@ -82,7 +82,7 @@ export function createCapabilityTools(
               };
             }
 
-            if (!input.create.name) {
+            if (input.create.name === null || input.create.name === undefined) {
               return {
                 valid: false,
                 error: 'create.name is required when action is create',
@@ -113,7 +113,7 @@ export function createCapabilityTools(
               };
             }
 
-            if (!input.update.roleId) {
+            if (input.update.roleId === null || input.update.roleId === undefined) {
               return {
                 valid: false,
                 error: 'update.roleId is required when action is update',
@@ -144,7 +144,7 @@ export function createCapabilityTools(
             };
           }
 
-          if (!input.delete.roleId) {
+          if (input.delete.roleId === null || input.delete.roleId === undefined) {
             return {
               valid: false,
               error: 'delete.roleId is required when action is delete',

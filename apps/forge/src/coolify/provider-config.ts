@@ -49,12 +49,12 @@ export async function getApplicationsBaseDomain(
   serverUuid?: string,
 ): Promise<string> {
   try {
-    const server = serverUuid
+    const server = serverUuid !== null && serverUuid !== undefined
       ? extractServer(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`))
       : await getDefaultServer();
     const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
-    if (!wildcardDomain) {
+    if (wildcardDomain === null || wildcardDomain === undefined) {
       throw new Error(
         'Coolify integration could not determine a wildcard domain from the server configuration',
       );
@@ -72,7 +72,7 @@ export async function getApplicationsBaseDomain(
 }
 
 function extractServer(data: unknown): z.infer<typeof ServerSchema> {
-  if (data && typeof data === 'object') {
+  if (data !== null && data !== undefined && typeof data === 'object') {
     const record = data as Record<string, unknown>;
     const server = (record.data ?? record.server ?? record) as Record<string, unknown>;
     return ServerSchema.parse(server);
