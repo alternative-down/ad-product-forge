@@ -27,13 +27,13 @@ export function toCommunicationAttachments(
 }
 
 export function parseAddressValue(address?: Email['from']): string | null {
-  if (!address || !('address' in address) || !address.address) return null;
+  if (!address || !('address' in address) || address.address === null || address.address === undefined) return null;
   return address.address.toLowerCase();
 }
 
 export function parseAddressDisplayName(address?: Email['from']): string | null {
   if (!address || !('address' in address)) return null;
-  return address.name || address.address || null;
+  return (address.name !== null && address.name !== undefined ? address.name : address.address) ?? null;
 }
 
 export interface ParsedRecipient {
@@ -44,7 +44,7 @@ export interface ParsedRecipient {
 export function parseFirstRecipient(addresses?: Email['to']): ParsedRecipient | null {
   if (!addresses) return null;
   for (const address of addresses) {
-    if (!('address' in address) || !address.address) continue;
+    if (!('address' in address) || address.address === null || address.address === undefined) continue;
     return {
       address: address.address.toLowerCase(),
       displayName: address.name || address.address,
@@ -81,7 +81,7 @@ export function pruneRecentOutboundMessages(
 }
 
 export function parseFilterDate(value: string | undefined, fieldName: string): number | null {
-  if (!value) return null;
+  if (value === null || value === undefined) return null;
   const parsed = Date.parse(value);
   if (Number.isNaN(parsed)) {
     forgeDebug({ scope: 'email-account-helpers', level: 'warn', message: 'parseNumericField: invalid value', context: { fieldName, value } });
@@ -95,7 +95,7 @@ export function resolveConversationParticipant(
   selfEmail: string,
 ): { targetKey: string; authorId: string; authorDisplayName: string } | null {
   const fromAddress = parseAddressValue(email.from);
-  if (fromAddress && fromAddress !== selfEmail) {
+  if (fromAddress !== null && fromAddress !== undefined && fromAddress !== selfEmail) {
     return {
       targetKey: fromAddress,
       authorId: fromAddress,
@@ -111,15 +111,15 @@ export function resolveConversationParticipant(
 
 export function resolveEmailThreadKey(parsed: Email): string {
   const inReplyTo = parsed.inReplyTo;
-  if (inReplyTo && inReplyTo.length > 0 && inReplyTo[0]) return inReplyTo[0];
+  if (inReplyTo !== null && inReplyTo !== undefined && inReplyTo.length > 0 && inReplyTo[0] !== null && inReplyTo[0] !== undefined) return inReplyTo[0];
   const references = parsed.references;
-  if (references && references.length > 0 && references[0]) return references[0];
+  if (references !== null && references !== undefined && references.length > 0 && references[0] !== null && references[0] !== undefined) return references[0];
   return parsed.messageId ?? `orphan-${Date.now()}`;
 }
 
 export function resolveCreatedAt(email: Email): string {
   if (typeof email.date === 'string') return email.date;
-  if (email.date) {
+  if (email.date !== null && email.date !== undefined) {
     return new Date(email.date).toISOString();
   }
   return new Date().toISOString();

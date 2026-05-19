@@ -396,7 +396,7 @@ export function createCapabilityStore(db: Database) {
     description?: string | null;
   }) {
     if (input.action === 'create') {
-      if (!input.name?.trim()) {
+      if (input.name === null || input.name === undefined || !input.name.trim()) {
         forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole create: name required' });
         throw new Error('Role name is required.');
       }
@@ -404,12 +404,12 @@ export function createCapabilityStore(db: Database) {
       // eslint-disable-next-line @typescript-eslint/return-await
   return await createRole({
         name: input.name.trim(),
-        description: input.description?.trim() || undefined,
+        description: input.description !== null && input.description !== undefined && input.description.trim() ? input.description.trim() : undefined,
       });
     }
 
     if (input.action === 'delete') {
-      if (!input.roleId) {
+      if (input.roleId === null || input.roleId === undefined) {
         forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole delete: roleId required' });
         throw new Error('roleId is required.');
       }
@@ -417,12 +417,12 @@ export function createCapabilityStore(db: Database) {
       return await deleteRole(input.roleId);
     }
 
-    if (!input.roleId) {
+    if (input.roleId === null || input.roleId === undefined) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: roleId required' });
       throw new Error('roleId is required.');
     }
 
-    if (!input.name && input.description === undefined) {
+    if ((input.name === null || input.name === undefined) && input.description === undefined) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: no fields provided' });
       throw new Error('At least one field besides roleId must be provided.');
     }
@@ -430,7 +430,7 @@ export function createCapabilityStore(db: Database) {
     return await updateRole({
       roleId: input.roleId,
       name: input.name?.trim(),
-      description: input.description === undefined ? undefined : (input.description?.trim() || null),
+      description: input.description !== null && input.description !== undefined ? (input.description.trim() || null) : undefined,
     });
   }
 
@@ -467,7 +467,7 @@ export function createCapabilityStore(db: Database) {
       throw new Error(`Agent not found: ${agentId}`);
     }
 
-    if (!agent.roleId) {
+    if (agent.roleId === null || agent.roleId === undefined) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent missing roleId', context: { agentId } });
       throw new Error(`Agent is missing roleId: ${agentId}`);
     }
@@ -491,7 +491,7 @@ export function createCapabilityStore(db: Database) {
         where: (agent, { and, eq }) => {
           const filters = [];
 
-          if (input.agentId) {
+          if (input.agentId !== null && input.agentId !== undefined) {
             filters.push(eq(agent.id, input.agentId));
           }
 

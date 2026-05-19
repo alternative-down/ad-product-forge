@@ -64,19 +64,19 @@ export function createInternalChatListing(db: Database, deps: any) {
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
        })) as any;
-      if (!membership) {
+      if (membership === null || membership === undefined) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
       const conditions = [eq(internalChatMessageReads.messageId, internalChatMessages.id)];
-      if (input.dateFrom) {
+      if (input.dateFrom !== null && input.dateFrom !== undefined) {
         const ts = new Date(input.dateFrom).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} >= ${ts}`);
       }
-      if (input.dateTo) {
+      if (input.dateTo !== null && input.dateTo !== undefined) {
         const ts = new Date(input.dateTo).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} <= ${ts}`);
       }
-      if (input.query) {
+      if (input.query !== null && input.query !== undefined) {
         conditions.push(sql`${internalChatMessages.content} LIKE ${'%' + input.query + '%'}`);
       }
 
@@ -193,19 +193,19 @@ export function createInternalChatListing(db: Database, deps: any) {
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
        })) as any;
-      if (!membership) {
+      if (membership === null || membership === undefined) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
       const conditions = [];
-      if (input.dateFrom) {
+      if (input.dateFrom !== null && input.dateFrom !== undefined) {
         const ts = new Date(input.dateFrom).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} >= ${ts}`);
       }
-      if (input.dateTo) {
+      if (input.dateTo !== null && input.dateTo !== undefined) {
         const ts = new Date(input.dateTo).getTime();
         if (!isNaN(ts)) conditions.push(sql`${internalChatMessages.createdAt} <= ${ts}`);
       }
-      if (input.query) {
+      if (input.query !== null && input.query !== undefined) {
         conditions.push(sql`${internalChatMessages.content} LIKE ${'%' + input.query + '%'}`);
       }
 
