@@ -26,7 +26,12 @@ export function createWebhookStore(db: Database) {
       createdAt: now,
       updatedAt: now,
     };
+    try {
       await (db.insert(webhookRoutes) as any).values(route as any);
+    } catch (err) {
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'createRoute: db.insert failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return route as unknown as WebhookRoute;
   }
 
@@ -58,7 +63,12 @@ export function createWebhookStore(db: Database) {
   }
 
   async function deactivateRoute(routeId: string): Promise<void> {
+    try {
       await (db.update(webhookRoutes) as any).set({ isActive: false, updatedAt: Date.now() }).where(eq(webhookRoutes.routeId, routeId));
+    } catch (err) {
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'deactivateRoute: db.update failed', context: { routeId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function createEvent(input: {
@@ -82,7 +92,12 @@ export function createWebhookStore(db: Database) {
       receivedAt: now,
       processedAt: null,
     };
+    try {
       await (db.insert(webhookEvents) as any).values(event as any);
+    } catch (err) {
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'createEvent: db.insert failed', context: { routeId: input.routeId, agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
     return event as unknown as WebhookEvent;
   }
 
@@ -100,11 +115,21 @@ export function createWebhookStore(db: Database) {
   }
 
   async function markProcessed(eventId: string): Promise<void> {
+    try {
       await db.update(webhookEvents).set({ status: 'processed', processedAt: Date.now() }).where(eq(webhookEvents.eventId, eventId));
+    } catch (err) {
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'markProcessed: db.update failed', context: { eventId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   async function markFailed(eventId: string): Promise<void> {
+    try {
       await db.update(webhookEvents).set({ status: 'failed', processedAt: Date.now() }).where(eq(webhookEvents.eventId, eventId));
+    } catch (err) {
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'markFailed: db.update failed', context: { eventId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   return { createRoute, getRoute, listRoutesByAgent, deactivateRoute, createEvent, listEventsByAgent, markProcessed, markFailed };
