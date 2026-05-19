@@ -183,7 +183,7 @@ export function registerAgentProviderMcpRoutes({
           url: body.transport === 'http_streamable' ? body.url : null,
           headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
           version: 1,
-          isActive: body.isActive ? 1 : 0,
+          isActive: body.isActive === true ? 1 : 0,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -192,7 +192,7 @@ export function registerAgentProviderMcpRoutes({
           id: configId,
           agentId: body.agentId,
           serverId,
-          isActive: body.isActive ? 1 : 0,
+          isActive: body.isActive === true ? 1 : 0,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -223,7 +223,7 @@ export function registerAgentProviderMcpRoutes({
             envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
             url: body.transport === 'http_streamable' ? body.url : null,
             headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
-            isActive: body.isActive ? 1 : 0,
+            isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
           .where(eq(mcpServerConfigs.id, body.serverId));
@@ -231,7 +231,7 @@ export function registerAgentProviderMcpRoutes({
         await db
           .update(agentMcpConfigs)
           .set({
-            isActive: body.isActive ? 1 : 0,
+            isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
           .where(and(eq(agentMcpConfigs.id, (body as any).configId), eq(agentMcpConfigs.agentId, (body as any).agentId)));
@@ -293,7 +293,7 @@ export function registerAgentProviderMcpRoutes({
           await db
             .update(agentMcpConfigs)
             .set({
-              isActive: body.isActive ? 1 : 0,
+              isActive: body.isActive === true ? 1 : 0,
               updatedAt: Date.now(),
             })
             .where(eq(agentMcpConfigs.id, existing.id));
@@ -314,7 +314,7 @@ export function registerAgentProviderMcpRoutes({
           id: configId,
           agentId: body.agentId,
           serverId: body.serverId,
-          isActive: body.isActive ? 1 : 0,
+          isActive: body.isActive === true ? 1 : 0,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -338,7 +338,7 @@ export function registerAgentProviderMcpRoutes({
         await db
           .update(agentMcpConfigs)
           .set({
-            isActive: body.isActive ? 1 : 0,
+            isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
           .where(and(eq(agentMcpConfigs.id, (body as any).configId), eq(agentMcpConfigs.agentId, (body as any).agentId)));

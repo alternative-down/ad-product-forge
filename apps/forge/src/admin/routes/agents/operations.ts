@@ -78,7 +78,7 @@ export function registerAgentOperationRoutes(
         const entry = registry.get(agentId);
         const timestamp = Date.now();
 
-        if (!entry) {
+        if (entry === null || entry === undefined) {
           return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
         }
 

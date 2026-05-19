@@ -328,7 +328,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       for (const [, messages] of recentOutboundMessages.entries()) {
         const threadKey = messages[0]?.threadKey;
-        if (threadKey && !grouped.has(threadKey)) {
+        if (threadKey !== null && threadKey !== undefined && !grouped.has(threadKey)) {
           grouped.set(threadKey, []);
         }
       }
@@ -391,7 +391,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         .filter((email) => email.targetKey === recipientAddress)
         .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
 
-      const subject = latestConversationEmail?.conversationName
+      const subject = latestConversationEmail !== null && latestConversationEmail !== undefined && latestConversationEmail.conversationName !== null && latestConversationEmail.conversationName !== undefined
         ? toReplySubject(latestConversationEmail.conversationName)
         : `Message from ${config.smtp.user}`;
 

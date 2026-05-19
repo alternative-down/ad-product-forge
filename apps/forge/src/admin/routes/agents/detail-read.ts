@@ -40,7 +40,7 @@ export function registerAgentBaseRoutes(
       const agentId = extractAgentId(request.path);
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       const agent = await getAgent(agentId);
-      if (!agent) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+      if (agent === null || agent === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(agent);
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId", context: { error: err instanceof Error ? err.message : String(err) } });

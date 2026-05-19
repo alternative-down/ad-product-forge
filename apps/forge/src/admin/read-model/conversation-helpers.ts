@@ -154,7 +154,7 @@ async function listInternalChatGroupParticipants(
   try {
     const conversation = await internalChat.getConversationForAgent(_agentId, conversationKey);
 
-    if (!conversation || conversation.type !== 'group') {
+    if (conversation === null || conversation === undefined || conversation.type !== 'group') {
       return [];
     }
 

@@ -51,7 +51,7 @@ export async function createAgentMcpServer(
     id: serverId,
     ...record,
     version: 1,
-    isActive: body.isActive ? 1 : 0,
+    isActive: body.isActive === true ? 1 : 0,
     createdAt: now,
     updatedAt: now,
   });
@@ -60,7 +60,7 @@ export async function createAgentMcpServer(
     id: configId,
     agentId,
     serverId,
-    isActive: body.isActive ? 1 : 0,
+    isActive: body.isActive === true ? 1 : 0,
     createdAt: now,
     updatedAt: now,
   });
