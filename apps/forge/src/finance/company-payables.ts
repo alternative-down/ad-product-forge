@@ -125,7 +125,7 @@ export function createCompanyPayables(db: Database) {
         where: eq(companyCashLedger.id, input.entryId),
       });
 
-      if (!entry || entry.referenceType !== 'recurring-payable' || !entry.referenceId) {
+      if (entry === null || entry === undefined || entry.referenceType !== 'recurring-payable' || entry.referenceId === null || entry.referenceId === undefined) {
         return null;
       }
 

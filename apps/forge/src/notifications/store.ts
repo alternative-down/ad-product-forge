@@ -49,7 +49,7 @@ export function createAgentNotificationStore(db: Database) {
       rows = await db.query.agentNotifications.findMany({
       where: and(
         eq(agentNotifications.agentId, input.agentId),
-        input.unreadOnly ? isNull(agentNotifications.readAt) : undefined,
+        input.unreadOnly !== null && input.unreadOnly !== undefined ? isNull(agentNotifications.readAt) : undefined,
       ),
       orderBy: desc(agentNotifications.createdAt),
       limit: input.limit,

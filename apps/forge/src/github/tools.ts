@@ -28,7 +28,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             agentId,
             repositoryName: input.repositoryName,
           });
-          forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials result', context: { hasCredentials: !!result } });
+          forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials result', context: { hasCredentials: result !== null && result !== undefined && result !== false } });
           return result;
         } catch (error) {
           forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials error', context: { error: String(error) } });

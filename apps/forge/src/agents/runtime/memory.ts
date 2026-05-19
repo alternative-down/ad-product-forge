@@ -41,7 +41,7 @@ export async function createAgentRuntimeMemory(input: {
   }>;
 }) {
   try {
-    const longTermMemoryRecall = input.longTermMemory
+    const longTermMemoryRecall = input.longTermMemory !== null && input.longTermMemory !== undefined
       ? createAgentLongTermMemoryRecall({
           agentId: input.agentId,
           agentWorkspacePath: input.agentWorkspacePath,

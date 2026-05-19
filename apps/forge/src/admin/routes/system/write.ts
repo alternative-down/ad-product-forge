@@ -140,7 +140,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           updatedAt: Date.now(),
         };
 
-        if (body.serverId) {
+        if (body.serverId !== null && body.serverId !== undefined) {
           await db.update(mcpServerConfigs).set(values).where(eq(mcpServerConfigs.id, body.serverId));
         } else {
           await db.insert(mcpServerConfigs).values({

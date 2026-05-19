@@ -199,7 +199,7 @@ export function createInternalChatAccountOps(
       await deps.getRequiredExternalAccount(input.accountId);
       await deps.getRequiredAccount(input.participantAccountId);
       const conversation = await deps.ensureDirectConversation(input.accountId, input.participantAccountId);
-      if (!conversation) {
+      if (conversation === null || conversation === undefined) {
         forgeDebug({ scope: 'internal-chat-account-ops', level: 'error', message: 'internal-chat-account-ops: validation/requirement failed' });
         throw new Error('Direct conversation creation failed');
       }

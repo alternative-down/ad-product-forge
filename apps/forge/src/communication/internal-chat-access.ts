@@ -34,7 +34,7 @@ export function createInternalChatAccess(db: Database, deps: InternalChatAccessD
   async function getRequiredExternalAccount(accountId: string) {
       const account = await deps.getRequiredAccount(accountId);
 
-      if (account.agentId) {
+      if (account.agentId !== null && account.agentId !== undefined) {
         forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireExternalAccount: not found', context: { accountId } });
         throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
       }

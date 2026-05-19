@@ -72,7 +72,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
 
   async function getRequiredExternalAccount(accountId: string): Promise<HelperAccount> {
       const account = await accounts.getRequiredAccount(accountId);
-      if (account.agentId) {
+      if (account.agentId !== null && account.agentId !== undefined) {
         forgeDebug({ scope: 'internal-chat-service-helpers', level: 'warn', message: 'getRequiredExternalAccount: not found', context: { accountId } });
         throw new ExternalAccountNotFoundError(accountId, 'External internal chat account not found');
       }

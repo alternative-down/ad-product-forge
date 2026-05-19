@@ -27,7 +27,7 @@ export function createInternalChatSseHandler(
 ): HttpHandler {
   return async function handleSseEvents(request): Promise<HttpResponse> {
     const accountId = request.query.get('accountId');
-    if (!accountId) {
+    if (accountId === null || accountId === undefined) {
       return {
         status: 400,
         headers: { 'content-type': 'application/json' },

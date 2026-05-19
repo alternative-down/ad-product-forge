@@ -31,7 +31,7 @@ export function verifyAsaasWebhookRequest(
   apiKey: string,
   authHeader: string | null,
 ): AsaasWebhookPayload {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader === null || authHeader === undefined || !authHeader.startsWith('Bearer ')) {
     forgeDebug({ scope: 'asaas', level: 'warn', message: 'verifyAsaasWebhookAuth: missing or invalid Bearer header' });
     throw new Error('Asaas webhook: missing or invalid Bearer authorization header');
   }
