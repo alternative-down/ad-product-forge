@@ -216,14 +216,21 @@ export function createAgentScheduleStore(db: Database) {
     scheduleId: string,
     input: UpdateAgentScheduleInput,
   ): Promise<AgentSchedule | null> {
-    const existing = await db.query.agentSchedules.findFirst({
+    let existing: AgentSchedule | null | undefined;
+    try {
+      existing = await db.query.agentSchedules.findFirst({
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
+    } catch (err) {
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB read failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
 
     if (!existing || existing.kind !== 'agent') {
       return null;
     }
 
+    try {
       await db
         .update(agentSchedules)
         .set({
@@ -242,6 +249,11 @@ export function createAgentScheduleStore(db: Database) {
           updatedAt: Date.now(),
         })
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+    } catch (err) {
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB write failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
+
     return { ...existing,
       name: input.name ?? existing.name,
       description: input.description === undefined ? existing.description : input.description,
@@ -340,6 +352,7 @@ export function createAgentScheduleStore(db: Database) {
   }
 
   async function markTriggered(input: { scheduleId: string; lastTriggeredAt: number; nextTriggerAt: number | null; isActive: boolean }) {
+    try {
       await db
         .update(agentSchedules)
         .set({
@@ -348,6 +361,10 @@ export function createAgentScheduleStore(db: Database) {
           isActive: input.isActive ? 1 : 0,
         })
         .where(eq(agentSchedules.id, input.scheduleId));
+    } catch (err) {
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'markTriggered DB update failed', context: { scheduleId: input.scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      throw err;
+    }
   }
 
   // StoredSchedule type removed to break circular reference
