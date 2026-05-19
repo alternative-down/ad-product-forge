@@ -1,7 +1,7 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { agentExecutionContracts } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
@@ -26,24 +26,35 @@ export async function renewAgentContract(
     const activeContract = await contractStore.getActiveContract(input.agentId);
 
     if (!activeContract) {
-      forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'no-active-contract', context: { agentId: input.agentId } });
+      forgeDebug({
+        scope: 'renew-agent-contract',
+        level: 'info',
+        message: 'no-active-contract',
+        context: { agentId: input.agentId },
+      });
       throw new Error(`No active contract for agent: ${input.agentId}`);
     }
 
     const spentUsd = await contractStore.getContractSpend(activeContract.id);
-    const refundableUsd = activeContract.fundedAt !== null && activeContract.fundedAt !== undefined
-      ? Math.max(activeContract.budgetUsd - spentUsd, 0)
-      : 0;
+    const refundableUsd =
+      activeContract.fundedAt !== null && activeContract.fundedAt !== undefined
+        ? Math.max(activeContract.budgetUsd - spentUsd, 0)
+        : 0;
     const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
     // Refund is not yet committed — use raw balance without adding it
     const availableBalanceUsd = currentBalanceUsd + refundableUsd;
 
     if (availableBalanceUsd < input.newBudgetUsd) {
-      forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'insufficient-balance', context: {
-        agentId: input.agentId,
-        availableBalanceUsd,
-        requiredBudgetUsd: input.newBudgetUsd,
-      } });
+      forgeDebug({
+        scope: 'renew-agent-contract',
+        level: 'info',
+        message: 'insufficient-balance',
+        context: {
+          agentId: input.agentId,
+          availableBalanceUsd,
+          requiredBudgetUsd: input.newBudgetUsd,
+        },
+      });
       throw new Error('Insufficient company cash to renew this contract');
     }
 
@@ -51,8 +62,7 @@ export async function renewAgentContract(
 
     // All cash operations (refund old + fund new) and all contract operations
     // are inside the same transaction. If anything fails, everything rolls back.
-    await db.transaction(async (tx: // @ts-ignore
-import("better-sqlite3").Transaction<{}>) => {
+    await db.transaction(async (tx: any) => {
       // Refund old contract inside tx — cash only actually moves if tx commits
       if (refundableUsd > 0) {
         await companyCashOperations.recordCashIn(
@@ -106,14 +116,19 @@ import("better-sqlite3").Transaction<{}>) => {
         .where(eq(agentExecutionContracts.id, newContractId));
     });
 
-    forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'success', context: {
-      agentId: input.agentId,
-      previousContractId: activeContract.id,
-      newContractId,
-      previousBudgetUsd: activeContract.budgetUsd,
-      newBudgetUsd: input.newBudgetUsd,
-      refundableUsd,
-    } });
+    forgeDebug({
+      scope: 'renew-agent-contract',
+      level: 'info',
+      message: 'success',
+      context: {
+        agentId: input.agentId,
+        previousContractId: activeContract.id,
+        newContractId,
+        previousBudgetUsd: activeContract.budgetUsd,
+        newBudgetUsd: input.newBudgetUsd,
+        refundableUsd,
+      },
+    });
 
     return {
       agentId: input.agentId,
@@ -127,11 +142,21 @@ import("better-sqlite3").Transaction<{}>) => {
       endsAt: now + WEEK_MS,
     };
   } catch (err) {
-    forgeDebug({ scope: 'renew-agent-contract', level: 'info', message: 'error', context: {
+    forgeDebug({
+      scope: 'renew-agent-contract',
+      level: 'info',
+      message: 'error',
+      context: {
+        error: err instanceof Error ? err.message : String(err),
+        agentId: input.agentId,
+      },
+    });
+    forgeDebug({
+      scope: 'renew-agent-contract',
+      level: 'error',
+      message: 'renew-agent-contract: operation failed',
       error: err instanceof Error ? err.message : String(err),
-      agentId: input.agentId,
-    } });
-    forgeDebug({ scope: 'renew-agent-contract', level: 'error', message: 'renew-agent-contract: operation failed', error: err instanceof Error ? err.message : String(err) });
+    });
     throw err;
   }
 }
