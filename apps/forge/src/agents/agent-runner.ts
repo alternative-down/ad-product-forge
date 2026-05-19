@@ -305,26 +305,7 @@ export function createAgentRunner(
     startingRun = false;
     startingRunStartedAt = null;
     executing = false;
-    clearTimer();
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!options.preserveQueuedWork) {
-      wakeQueue.stop();
-      messageManager.getState().pendingRunMessages.clear();
-    }
-    messageManager.reset();
-    scheduler.setInstant(false);
-    resetLoopDetector();
-    await withTimeout(
-      store.setExecutionState(runtime.id, 'idle'),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state update timed out for ${runtime.id}`,
-    );
-    await withTimeout(
-      currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent long-term memory idle transition timed out for ${runtime.id}`,
-    );
-
+    applyIdleState(runEpoch);
     if (isStaleRun(runEpoch)) {
       return;
     }
@@ -652,6 +633,23 @@ export function createAgentRunner(
     }
   }
 
+
+  function applyIdleState(runEpoch: number) {
+    clearTimer();
+    scheduler.setInstant(false);
+    resetLoopDetector();
+    void withTimeout(
+      store.setExecutionState(runtime.id, 'idle'),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent execution state update timed out for ${runtime.id}`,
+    );
+    void withTimeout(
+      currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
+      RUNNER_AWAIT_TIMEOUT_MS,
+      `Agent long-term memory idle transition timed out for ${runtime.id}`,
+    );
+  }
+
   function resetLoopDetector() {
     loopManager.reset();
   }
@@ -829,18 +827,7 @@ export function createAgentRunner(
     advanceGenerateToken(scheduler.getState() as any);
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
-    scheduler.setInstant(false);
-    resetLoopDetector();
-    await withTimeout(
-      store.setExecutionState(runtime.id, 'idle'),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent execution state update timed out for ${runtime.id}`,
-    );
-    await withTimeout(
-      currentRuntime.longTermMemory?.onAgentIdle() ?? Promise.resolve(),
-      RUNNER_AWAIT_TIMEOUT_MS,
-      `Agent long-term memory idle transition timed out for ${runtime.id}`,
-    );
+    applyIdleState(runEpoch);
 
     if (isStaleRun(runEpoch)) {
       return;
