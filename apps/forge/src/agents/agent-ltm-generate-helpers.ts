@@ -33,9 +33,9 @@ export function createMemoryAgentInstructions(input: {
       '<owner_agent_profile>',
       `- Agent id: ${input.agentId}`,
       `- Agent name: ${input.agentName}`,
-      input.agentDescription?.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
-      input.roleName?.trim() ? `- Role name: ${input.roleName.trim()}` : null,
-      input.roleDescription?.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
+      input.agentDescription !== null && input.agentDescription !== undefined && input.agentDescription.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
+      input.roleName !== null && input.roleName !== undefined && input.roleName.trim() ? `- Role name: ${input.roleName.trim()}` : null,
+      input.roleDescription !== null && input.roleDescription !== undefined && input.roleDescription.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
       '- Assigned instructions:',
       input.instructions.trim(),
       '</owner_agent_profile>',
@@ -58,7 +58,7 @@ export function createMemoryAgentInstructions(input: {
 }
 
 export function getUsageFromGenerateResult(result: { usage?: unknown }): LtmUsage {
-  if (!result.usage) return { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 };
+  if (result.usage === null || result.usage === undefined) return { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 };
   if (typeof result.usage === 'object' && result.usage !== null) {
     const u = result.usage as Record<string, unknown>;
     return {

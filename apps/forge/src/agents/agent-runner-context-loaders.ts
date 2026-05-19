@@ -38,8 +38,8 @@ export async function loadAgentContextInstructions(
   }
 
   const lines: Array<string | null> = [
-    ...(scheduleSummary ? ['Automatically loaded active schedule context.', ''] : []),
-    ...(agentContextContent
+    ...(scheduleSummary !== null && scheduleSummary !== undefined ? ['Automatically loaded active schedule context.', ''] : []),
+    ...(agentContextContent !== null && agentContextContent !== undefined
       ? [
           'Automatically loaded workspace context file.',
           `File: ${AGENT_CONTEXT_FILE_PATH}`,
@@ -129,7 +129,7 @@ export async function loadAgentContextContent(
     `Agent context read timed out for filesystem`,
   ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: err instanceof Error ? err.message : String(err) } }); return null; });
 
-  if (!data) {
+  if (data === null || data === undefined) {
     return null;
   }
 
