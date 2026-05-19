@@ -2,9 +2,13 @@ import { createId } from '../utils/id';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-
-import type {Database} from '../database/schema';
-import { llmProfiles, systemLlmDefaults, type LlmProfile, type SystemLlmDefaults } from '../database/schema';
+import type { Database } from '../database/schema';
+import {
+  llmProfiles,
+  systemLlmDefaults,
+  type LlmProfile,
+  type SystemLlmDefaults,
+} from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -30,13 +34,17 @@ export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
     try {
       const rows = await db.query.llmProfiles.findMany({
-  
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
 
       return rows.map(toProfileRecord);
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to list LLM profiles', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to list LLM profiles',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
@@ -61,7 +69,11 @@ export function createLlmSettingsStore(db: Database) {
     const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
 
     if (!defaults) {
-      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'System LLM defaults not configured' });
+      forgeDebug({
+        scope: 'llm-settings',
+        level: 'warn',
+        message: 'System LLM defaults not configured',
+      });
       throw new Error('System LLM defaults are not configured');
     }
 
@@ -70,18 +82,38 @@ export function createLlmSettingsStore(db: Database) {
     const omProfile = profileMap.get(defaults.omProfileId);
     const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
 
-    if (primaryProfile === null || primaryProfile === undefined || primaryProfile.isEnabled !== true) {
-      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default primary LLM profile missing or disabled' });
+    if (
+      primaryProfile === null ||
+      primaryProfile === undefined ||
+      primaryProfile.isEnabled !== true
+    ) {
+      forgeDebug({
+        scope: 'llm-settings',
+        level: 'warn',
+        message: 'Default primary LLM profile missing or disabled',
+      });
       throw new Error('Default primary LLM profile is missing or disabled');
     }
 
     if (omProfile === null || omProfile === undefined || omProfile.isEnabled !== true) {
-      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default OM LLM profile missing or disabled' });
+      forgeDebug({
+        scope: 'llm-settings',
+        level: 'warn',
+        message: 'Default OM LLM profile missing or disabled',
+      });
       throw new Error('Default OM LLM profile is missing or disabled');
     }
 
-    if (hiringRhProfile === null || hiringRhProfile === undefined || hiringRhProfile.isEnabled !== true) {
-      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default hiring RH LLM profile missing or disabled' });
+    if (
+      hiringRhProfile === null ||
+      hiringRhProfile === undefined ||
+      hiringRhProfile.isEnabled !== true
+    ) {
+      forgeDebug({
+        scope: 'llm-settings',
+        level: 'warn',
+        message: 'Default hiring RH LLM profile missing or disabled',
+      });
       throw new Error('Default hiring RH LLM profile is missing or disabled');
     }
 
@@ -98,7 +130,12 @@ export function createLlmSettingsStore(db: Database) {
     });
 
     if (!row) {
-      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
+      forgeDebug({
+        scope: 'llm-settings',
+        level: 'warn',
+        message: 'LLM profile not found',
+        context: { profileId },
+      });
       throw new Error(`LLM profile not found: ${profileId}`);
     }
 
@@ -118,30 +155,38 @@ export function createLlmSettingsStore(db: Database) {
     const now = Date.now();
     const profileId = input.profileId ?? createId();
     try {
-      await db.insert(llmProfiles).values({
-        id: profileId,
-        name: parsed.name.trim(),
-        modelKey: parsed.modelKey,
-        baseUrl: parsed.baseUrl?.trim() ?? null,
-        encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
-        contractCostMultiplier: parsed.contractCostMultiplier,
-        isEnabled: parsed.isEnabled ? 1 : 0,
-        createdAt: now,
-        updatedAt: now,
-      }).onConflictDoUpdate({
-        target: llmProfiles.id,
-        set: {
+      await db
+        .insert(llmProfiles)
+        .values({
+          id: profileId,
           name: parsed.name.trim(),
           modelKey: parsed.modelKey,
           baseUrl: parsed.baseUrl?.trim() ?? null,
           encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
           contractCostMultiplier: parsed.contractCostMultiplier,
           isEnabled: parsed.isEnabled ? 1 : 0,
+          createdAt: now,
           updatedAt: now,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: llmProfiles.id,
+          set: {
+            name: parsed.name.trim(),
+            modelKey: parsed.modelKey,
+            baseUrl: parsed.baseUrl?.trim() ?? null,
+            encryptedApiKey: encryptSecret(parsed.apiKey.trim()),
+            contractCostMultiplier: parsed.contractCostMultiplier,
+            isEnabled: parsed.isEnabled ? 1 : 0,
+            updatedAt: now,
+          },
+        });
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to upsert LLM profile', context: { profileId, error: err } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to upsert LLM profile',
+        context: { profileId, error: err },
+      });
       throw err;
     }
 
@@ -159,19 +204,32 @@ export function createLlmSettingsStore(db: Database) {
   async function deleteProfile(profileId: string) {
     const defaults = await getDefaults();
 
-    if (defaults && (
-      defaults.primaryProfileId === profileId ||
-      defaults.omProfileId === profileId ||
-      defaults.hiringRhProfileId === profileId
-    )) {
-      forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'deleteModelProfile: cannot delete selected system default', context: { profileId } });
-      throw new Error('Cannot delete an LLM profile that is currently selected as a system default');
+    if (
+      defaults &&
+      (defaults.primaryProfileId === profileId ||
+        defaults.omProfileId === profileId ||
+        defaults.hiringRhProfileId === profileId)
+    ) {
+      forgeDebug({
+        scope: 'llm-settings',
+        level: 'warn',
+        message: 'deleteModelProfile: cannot delete selected system default',
+        context: { profileId },
+      });
+      throw new Error(
+        'Cannot delete an LLM profile that is currently selected as a system default',
+      );
     }
 
     try {
       await db.delete(llmProfiles).where(eq(llmProfiles.id, profileId));
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to delete LLM profile', context: { profileId, error: err } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to delete LLM profile',
+        context: { profileId, error: err },
+      });
       throw err;
     }
   }
@@ -185,11 +243,20 @@ export function createLlmSettingsStore(db: Database) {
     const profiles = await listProfiles();
     const profileMap = new Map(profiles.map((profile: any) => [profile.profileId, profile]));
 
-    for (const profileId of [parsed.primaryProfileId, parsed.omProfileId, parsed.hiringRhProfileId]) {
+    for (const profileId of [
+      parsed.primaryProfileId,
+      parsed.omProfileId,
+      parsed.hiringRhProfileId,
+    ]) {
       const profile = profileMap.get(profileId);
 
       if (profile === null || profile === undefined) {
-        forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
+        forgeDebug({
+          scope: 'llm-settings',
+          level: 'warn',
+          message: 'LLM profile not found',
+          context: { profileId },
+        });
         throw new Error(`LLM profile not found: ${profileId}`);
       }
 
@@ -203,7 +270,12 @@ export function createLlmSettingsStore(db: Database) {
     try {
       existing = (await getDefaultsRow()) ?? null;
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to query LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to query LLM defaults',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
 
@@ -219,7 +291,12 @@ export function createLlmSettingsStore(db: Database) {
           })
           .where(eq(systemLlmDefaults.id, DEFAULTS_ROW_ID));
       } catch (err) {
-        forgeDebug({ scope: 'llm', level: 'info', message: 'Failed to update LLM defaults', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'llm',
+          level: 'error',
+          message: 'Failed to update LLM defaults',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         throw err;
       }
     } else {
@@ -233,7 +310,12 @@ export function createLlmSettingsStore(db: Database) {
           updatedAt: now,
         });
       } catch (err) {
-        forgeDebug({ scope: "llm", level: "error", message: "Failed to insert LLM defaults", context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'llm',
+          level: 'error',
+          message: 'Failed to insert LLM defaults',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         throw err;
       }
     }
@@ -247,7 +329,12 @@ export function createLlmSettingsStore(db: Database) {
         where: eq(systemLlmDefaults.id, DEFAULTS_ROW_ID),
       });
     } catch (err) {
-      forgeDebug({ scope: "llm", level: "error", message: "Failed to get LLM defaults row", context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to get LLM defaults row',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
@@ -264,12 +351,7 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileRecord(row: LlmProfile) {
-  const {
-    id,
-    encryptedApiKey,
-    isEnabled,
-    ...rest
-  } = row;
+  const { id, encryptedApiKey, isEnabled, ...rest } = row;
 
   return {
     ...rest,
