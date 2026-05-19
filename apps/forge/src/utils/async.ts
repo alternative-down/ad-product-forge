@@ -26,7 +26,7 @@ export async function withTimeout<T>(
       }),
     ]);
   } finally {
-    if (timer) clearTimeout(timer);
+    if (timer !== null && timer !== undefined) clearTimeout(timer);
   }
 }
 

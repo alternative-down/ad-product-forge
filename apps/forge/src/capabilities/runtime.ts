@@ -280,7 +280,7 @@ function createRoleChangeContent(input: {
     `Timestamp: ${new Date(input.timestamp).toISOString()}`,
   ];
 
-  if (input.changedByAgentId) {
+  if (input.changedByAgentId !== null && input.changedByAgentId !== undefined) {
     lines.push(`Changed by agent id: ${input.changedByAgentId}`);
   }
 

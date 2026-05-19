@@ -38,7 +38,7 @@ export function createReposOps(ctx: OpsContext) {
         description: input.description,
         private: input.private ?? true,
         auto_init: input.autoInit ?? false,
-        ...(input.defaultBranch && { default_branch: input.defaultBranch }),
+        ...(input.defaultBranch !== null && input.defaultBranch !== undefined && { default_branch: input.defaultBranch }),
       });
       return {
         id: response.data.id,

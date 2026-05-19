@@ -114,7 +114,8 @@ export function extractLatestHealthcheckMessagePreview(content: unknown): string
       && 'text' in part
       && (part.type === 'text' || part.type === 'reasoning')
       && typeof part.text === 'string'
-      && part.text !== undefined && part.text !== null && part.text.trim()
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      && (part.text?.trim() ?? false)
     ) {
       return part.text.trim().slice(0, 280);
     }

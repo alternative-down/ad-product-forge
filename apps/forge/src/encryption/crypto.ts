@@ -13,7 +13,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
  * guaranteed to be identical from both paths.
  */
 function requireEncryptionKey(): Buffer {
-  if (!ENCRYPTION_KEY) {
+  if (ENCRYPTION_KEY === null || ENCRYPTION_KEY === undefined) {
     forgeDebug({ scope: 'encryption-crypto', level: 'error', message: 'encryption-crypto: validation/requirement failed' });
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }

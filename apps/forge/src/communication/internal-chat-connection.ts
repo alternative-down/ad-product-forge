@@ -233,7 +233,7 @@ function createConnectionImpl(
       ) {
         continue;
       }
-      if (!participant.agentId || !handlers.has(participant.agentId)) {
+      if (participant.agentId === null || participant.agentId === undefined || !handlers.has(participant.agentId)) {
         continue;
       }
 

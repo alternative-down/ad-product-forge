@@ -1096,7 +1096,7 @@ export class AgentLongTermMemoryRecall {
           recentTokenLimit: this.recentRawTokens,
         })
       : null;
-    const rawWindowMessageCount = operationalMemoryState
+    const rawWindowMessageCount = operationalMemoryState !== null && operationalMemoryState !== undefined
       ? operationalMemoryState.metrics.rawMessageCount
       : 0;
 

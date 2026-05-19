@@ -44,7 +44,7 @@ export function createInternalChatParticipants(db: Database) {
       const account = (await db.query.internalChatAccounts.findFirst({ 
         where: eq(internalChatAccounts.agentId, agentId),
        })) as any;
-      if (!account) return [];
+      if (account === null || account === undefined) return [];
       return await listGroupMembersOrDmPeersByAccount(account.id, conversationId);
   }
 

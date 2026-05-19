@@ -76,7 +76,7 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
     ]) {
       const value = record[key];
 
-      if (value && typeof value === 'object') {
+      if (value !== null && value !== undefined && typeof value === 'object') {
         return schema.parse(value);
       }
     }

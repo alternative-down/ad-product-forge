@@ -84,7 +84,7 @@ export async function createForgeBootstrap() {
   const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
   const allowInsecureLocal = env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === 'true'
     || env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === '1';
-  const allowedOrigins = env.FORGE_ADMIN_ALLOWED_ORIGINS
+  const allowedOrigins = env.FORGE_ADMIN_ALLOWED_ORIGINS !== null && env.FORGE_ADMIN_ALLOWED_ORIGINS !== undefined
     ? env.FORGE_ADMIN_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
     : undefined;
 
