@@ -196,6 +196,10 @@ function createInternalAgentRegistry() {
     remove,
     get,
     list,
+
+    get size(): number {
+      return agents.size;
+    },
   };
 }
 
