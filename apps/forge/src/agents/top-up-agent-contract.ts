@@ -51,8 +51,7 @@ export async function topUpActiveAgentContract(db: Database, input: {
   }
 
   try {
-    await db.transaction(async (tx: // @ts-ignore
-import("better-sqlite3").Transaction<{}>) => {
+    await db.transaction(async (tx: any) => {
       await companyCashOperations.recordCashOut(
         {
           type: 'agent-contract-topup',
