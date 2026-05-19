@@ -151,7 +151,7 @@ export function createAgentScheduleManager(input: {
       await getLifecycle().register(record as any);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
       throw error;
     }
 
@@ -231,7 +231,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error } });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) } });
 
       if (isActiveSchedule(existing as unknown as StoredSchedule) === true && isActiveSchedule(restored as unknown as StoredSchedule) === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -298,7 +298,7 @@ export function createAgentScheduleManager(input: {
     } catch (error) {
       // DB update succeeded but scheduler registration failed — rollback DB state
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back', context: { agentId, scheduleId, error } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) } });
 
       // Cancel any residual registered entry so the old schedule cannot fire against stale DB state
       getLifecycle().cancel(scheduleId);
@@ -382,7 +382,7 @@ export function createAgentScheduleManager(input: {
       await getLifecycle().register(scheduleRecord as any);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error: error instanceof Error ? error.message : String(error) } });
       throw error;
     }
 
