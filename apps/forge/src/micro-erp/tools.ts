@@ -144,7 +144,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.recordIn.type) {
+            if (input.recordIn.type === null || input.recordIn.type === undefined) {
               return {
                 valid: false,
                 error: 'recordIn.type is required when action is record_in',
@@ -181,7 +181,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.recordOut.type) {
+            if (input.recordOut.type === null || input.recordOut.type === undefined) {
               return {
                 valid: false,
                 error: 'recordOut.type is required when action is record_out',
@@ -218,7 +218,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.scheduleIn.type) {
+            if (input.scheduleIn.type === null || input.scheduleIn.type === undefined) {
               return {
                 valid: false,
                 error: 'scheduleIn.type is required when action is schedule_in',
@@ -234,7 +234,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.scheduleIn.dueAt) {
+            if (input.scheduleIn.dueAt === null || input.scheduleIn.dueAt === undefined) {
               return {
                 valid: false,
                 error: 'scheduleIn.dueAt is required when action is schedule_in',
@@ -263,7 +263,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.scheduleOut.type) {
+            if (input.scheduleOut.type === null || input.scheduleOut.type === undefined) {
               return {
                 valid: false,
                 error: 'scheduleOut.type is required when action is schedule_out',
@@ -279,7 +279,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.scheduleOut.dueAt) {
+            if (input.scheduleOut.dueAt === null || input.scheduleOut.dueAt === undefined) {
               return {
                 valid: false,
                 error: 'scheduleOut.dueAt is required when action is schedule_out',
@@ -308,7 +308,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
               };
             }
 
-            if (!input.postPlanned.entryId) {
+            if (input.postPlanned.entryId === null || input.postPlanned.entryId === undefined) {
               return {
                 valid: false,
                 error: 'postPlanned.entryId is required when action is post_planned',
@@ -330,7 +330,7 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             };
           }
 
-          if (!input.cancelPlanned.entryId) {
+          if (input.cancelPlanned.entryId === null || input.cancelPlanned.entryId === undefined) {
             return {
               valid: false,
               error: 'cancelPlanned.entryId is required when action is cancel_planned',

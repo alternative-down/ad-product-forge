@@ -70,17 +70,17 @@ export function createLlmSettingsStore(db: Database) {
     const omProfile = profileMap.get(defaults.omProfileId);
     const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
 
-    if (!primaryProfile || !primaryProfile.isEnabled) {
+    if (primaryProfile === null || primaryProfile === undefined || primaryProfile.isEnabled !== true) {
       forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default primary LLM profile missing or disabled' });
       throw new Error('Default primary LLM profile is missing or disabled');
     }
 
-    if (!omProfile || !omProfile.isEnabled) {
+    if (omProfile === null || omProfile === undefined || omProfile.isEnabled !== true) {
       forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default OM LLM profile missing or disabled' });
       throw new Error('Default OM LLM profile is missing or disabled');
     }
 
-    if (!hiringRhProfile || !hiringRhProfile.isEnabled) {
+    if (hiringRhProfile === null || hiringRhProfile === undefined || hiringRhProfile.isEnabled !== true) {
       forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'Default hiring RH LLM profile missing or disabled' });
       throw new Error('Default hiring RH LLM profile is missing or disabled');
     }
@@ -188,12 +188,12 @@ export function createLlmSettingsStore(db: Database) {
     for (const profileId of [parsed.primaryProfileId, parsed.omProfileId, parsed.hiringRhProfileId]) {
       const profile = profileMap.get(profileId);
 
-      if (!profile) {
+      if (profile === null || profile === undefined) {
         forgeDebug({ scope: 'llm-settings', level: 'warn', message: 'LLM profile not found', context: { profileId } });
         throw new Error(`LLM profile not found: ${profileId}`);
       }
 
-      if (!profile.isEnabled) {
+      if (profile.isEnabled !== true) {
         throw new Error(`Default LLM profile must be enabled: ${profile.profileId}`);
       }
     }

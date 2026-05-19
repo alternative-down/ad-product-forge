@@ -189,19 +189,19 @@ export function createCoolifyManager(config: {
       name: input.name,
     };
 
-    if (input.githubAppUuid) {
+    if (input.githubAppUuid !== null && input.githubAppUuid !== undefined) {
       payload.github_app_uuid = input.githubAppUuid;
     }
 
-    if (input.buildCommand) {
+    if (input.buildCommand !== null && input.buildCommand !== undefined) {
       payload.build_command = input.buildCommand;
     }
 
-    if (input.publishDirectory) {
+    if (input.publishDirectory !== null && input.publishDirectory !== undefined) {
       payload.publish_directory = input.publishDirectory;
     }
 
-    if (input.branch) {
+    if (input.branch !== null && input.branch !== undefined) {
       payload.branch = input.branch;
     }
 
@@ -209,7 +209,7 @@ export function createCoolifyManager(config: {
       payload.port = input.port;
     }
 
-    if (input.domain) {
+    if (input.domain !== null && input.domain !== undefined) {
       payload.domain = input.domain;
     }
 
@@ -293,8 +293,8 @@ export function createCoolifyManager(config: {
 
     const query = new URLSearchParams();
 
-    if (input.lines) query.set('lines', String(input.lines));
-    if (input.since) query.set('since', String(input.since));
+    if (input.lines !== null && input.lines !== undefined) query.set('lines', String(input.lines));
+    if (input.since !== null && input.since !== undefined) query.set('since', String(input.since));
 
     const data = await requestJson(
       'GET',
@@ -316,7 +316,7 @@ export function createCoolifyManager(config: {
 
     const query = new URLSearchParams();
 
-    if (input.limit) query.set('per_page', String(input.limit));
+    if (input.limit !== null && input.limit !== undefined) query.set('per_page', String(input.limit));
 
     const data = await requestJson(
       'GET',
