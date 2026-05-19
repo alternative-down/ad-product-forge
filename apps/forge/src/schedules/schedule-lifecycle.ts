@@ -104,7 +104,16 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
       job.cancel();
       jobs.delete(scheduleId);
     }
-    await gracefulShutdown();
+    try {
+      await gracefulShutdown();
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'warn',
+        message: 'stop: gracefulShutdown failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
+    }
   }
 
   async function register(record: ScheduleLifecycleRecord): Promise<void> {
@@ -123,12 +132,22 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
         await store.deactivateSchedule(record.scheduleId);
         return;
       }
-      const job = scheduleJob(record.scheduleId, scheduledDate, async (fireDate) => {
-        cancelIfNotActive(record.scheduleId, false);
-        await deps.onFire(record, fireDate);
-      });
-      jobs.set(record.scheduleId, job);
-      await store.setNextTriggerAt(record.scheduleId, scheduledDate.getTime());
+      try {
+        const job = scheduleJob(record.scheduleId, scheduledDate, async (fireDate) => {
+          cancelIfNotActive(record.scheduleId, false);
+          await deps.onFire(record, fireDate);
+        });
+        jobs.set(record.scheduleId, job);
+        await store.setNextTriggerAt(record.scheduleId, scheduledDate.getTime());
+      } catch (err) {
+        forgeDebug({
+          scope: 'schedules',
+          level: 'warn',
+          message: 'register: failed to schedule date job',
+          context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+        });
+        throw err;
+      }
       return;
     }
 
@@ -137,15 +156,25 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
     }
 
     const spec: RecurrenceSpecDateRange = buildCronSpec(record);
-    const job = scheduleJob(record.scheduleId, spec, async (fireDate) => {
-      const nextInvocation = jobs.get(record.scheduleId)?.nextInvocation();
-      cancelIfNotActive(record.scheduleId, true);
-      await deps.onFire(record, fireDate);
-      await store.setNextTriggerAt(record.scheduleId, nextInvocation?.getTime() ?? null);
-    });
-
-    jobs.set(record.scheduleId, job);
-    await store.setNextTriggerAt(record.scheduleId, job.nextInvocation()?.getTime() ?? null);
+    let job;
+    try {
+      job = scheduleJob(record.scheduleId, spec, async (fireDate) => {
+        const nextInvocation = jobs.get(record.scheduleId)?.nextInvocation();
+        cancelIfNotActive(record.scheduleId, true);
+        await deps.onFire(record, fireDate);
+        await store.setNextTriggerAt(record.scheduleId, nextInvocation?.getTime() ?? null);
+      });
+      jobs.set(record.scheduleId, job);
+      await store.setNextTriggerAt(record.scheduleId, job.nextInvocation()?.getTime() ?? null);
+    } catch (err) {
+      forgeDebug({
+        scope: 'schedules',
+        level: 'warn',
+        message: 'register: failed to schedule cron job',
+        context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
+      throw err;
+    }
   }
 
   return { loadAll, cancel: cancelJob, stop, register };

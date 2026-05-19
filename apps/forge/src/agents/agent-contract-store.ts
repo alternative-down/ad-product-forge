@@ -292,7 +292,13 @@ export function createAgentContractStore(
   }
 
   async function renewContract(agentId: string) {
-    const latestContract = await getLatestContract(agentId);
+    let latestContract;
+    try {
+      latestContract = await getLatestContract(agentId);
+    } catch (err) {
+      logContractError('renewContract', agentId, err);
+      throw err;
+    }
 
     if (!latestContract || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
       return null;
