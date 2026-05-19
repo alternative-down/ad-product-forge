@@ -19,6 +19,12 @@ import {
 
 import type {Database} from '../../database/index';
 import { createMicroErpReadModel } from '../../micro-erp/read-model';
+import type { MicroErpReadModel } from '../../micro-erp/read-model';
+import type { SystemSettingsStore } from '../../system-settings/store';
+import type { CapabilityStore } from '../../capabilities/store';
+import type { LlmSettingsStore } from '../../llm/settings-store';
+import type { AgentNotificationStore } from '../../notifications/store';
+import type { GitHubAppManager } from '../../github/manager';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 import {
   toMastraSafeIdentifier,
@@ -42,14 +48,14 @@ import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 
 interface AgentsReadModelDeps {
   db: Database;
-  finance: ReturnType<typeof createMicroErpReadModel>;
+  finance: MicroErpReadModel;
   internalChat: InternalChatService;
   workspaceBasePath: string;
-  systemSettings: object;
-  capabilities: any;
-  llmSettings: any;
-  notifications: any;
-  githubApps: unknown;
+  systemSettings: SystemSettingsStore;
+  capabilities: CapabilityStore;
+  llmSettings: LlmSettingsStore;
+  notifications: AgentNotificationStore;
+  githubApps: GitHubAppManager;
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
