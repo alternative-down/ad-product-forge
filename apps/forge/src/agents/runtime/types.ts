@@ -11,7 +11,7 @@ import type {
   WorkspaceSandboxConfig,
   WorkspaceSkillsConfig,
 } from '../../database/schema';
-import type { createAgentContractStore } from '../agent-contract-store';
+import type { AgentContractStore } from '../agent-contract-store';
 import type {
   AgentLongTermMemoryRecallDebugSearchInput,
   AgentLongTermMemoryRecallDebugSearchResult,
@@ -63,7 +63,7 @@ export type CreateForgeAgentConfigSchema = CreateForgeAgentConfig;
 
 export type CreateAgentOptions = {
   longTermMemory?: boolean;
-  contractStore?: ReturnType<typeof createAgentContractStore>;
+  contractStore?: AgentContractStore;
   readRuntimeMemorySettings?: () => Promise<{
     checkpointedOmTotalContextTokens: number;
     checkpointedOmRecentRawTokens: number;
