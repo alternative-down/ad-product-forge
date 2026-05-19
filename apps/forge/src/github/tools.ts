@@ -73,7 +73,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
               : 'GitHub App provisioning is pending. Use registrationUrl to initiate creation.',
           };
         } catch (error) {
-          forgeDebug({ scope: 'tools:github', level: 'error', message: 'tools:github: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:github', level: 'error', message: 'get_github_provisioning_status: failed to check provisioning status', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
           return { valid: false, error: String(error) };
         }
       },
@@ -112,7 +112,7 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
               : 'Provisioning initiated. Follow registrationUrl to complete GitHub App creation.',
           };
         } catch (error) {
-          forgeDebug({ scope: 'tools:github', level: 'error', message: 'tools:github: operation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:github', level: 'error', message: 'start_github_app_provisioning: failed to start provisioning', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
           return { valid: false, error: String(error) };
         }
       },
