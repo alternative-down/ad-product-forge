@@ -102,7 +102,7 @@ export async function createAgentRuntimePlatform(input: {
   const mastraId = toMastraSafeIdentifier(input.agentId);
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
-  const agentWorkspaceDir = input.workspaceFilesystem?.basePath
+  const agentWorkspaceDir = input.workspaceFilesystem !== null && input.workspaceFilesystem !== undefined && input.workspaceFilesystem.basePath
     ? path.resolve(agentWorkspacePath, input.workspaceFilesystem.basePath)
     : path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspaceDir, 'memory');
@@ -111,7 +111,7 @@ export async function createAgentRuntimePlatform(input: {
     agentWorkspacePath,
     workspaceFilesystem: input.workspaceFilesystem,
   });
-  const sandboxWorkingDirectory = input.workspaceSandbox?.workingDirectory
+  const sandboxWorkingDirectory = input.workspaceSandbox !== null && input.workspaceSandbox !== undefined && input.workspaceSandbox.workingDirectory
     ? path.resolve(agentWorkspacePath, input.workspaceSandbox.workingDirectory)
     : agentWorkspaceDir;
 

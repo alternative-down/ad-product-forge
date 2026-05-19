@@ -42,7 +42,7 @@ export async function resolveChatGroupMembers(
       ),
     })) as any;
 
-    if (!participant) {
+    if (participant === null || participant === undefined) {
       throw new Error(`Internal chat participant not found: ${member.participantKey}`);
     }
 
@@ -146,7 +146,7 @@ export async function syncChatGroupMembers(
   for (const desiredMember of desiredMembers.values()) {
     const existingMember = existingByAccountId.get(desiredMember.accountId);
 
-    if (!existingMember) {
+    if (existingMember === null || existingMember === undefined) {
       await tx
         .insert(internalChatConversationMembers)
         .values(({
