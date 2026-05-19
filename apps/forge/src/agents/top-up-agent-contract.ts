@@ -1,17 +1,19 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { currentTimeMs } from '../utils/time';
 import { agentExecutionContracts } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
-export async function topUpActiveAgentContract(db: Database, input: {
-  agentId: string;
-  amountUsd: number;
-}) {
+export async function topUpActiveAgentContract(
+  db: Database,
+  input: {
+    agentId: string;
+    amountUsd: number;
+  },
+) {
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
   const now = currentTimeMs();
@@ -19,20 +21,31 @@ export async function topUpActiveAgentContract(db: Database, input: {
   let activeContract: any = null;
 
   try {
-    activeContract = await db.query.agentExecutionContracts.findFirst({
+    activeContract = (await db.query.agentExecutionContracts.findFirst({
       where: and(
         eq(agentExecutionContracts.agentId, input.agentId),
         lte(agentExecutionContracts.startsAt, now),
         gte(agentExecutionContracts.endsAt, now),
       ),
-    }) as any;
+    })) as any;
   } catch (err) {
-    forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to find active contract: ' + (err instanceof Error ? err.message : String(err)) });
+    forgeDebug({
+      scope: 'top-up-agent-contract',
+      level: 'error',
+      runtimeId: input.agentId,
+      message:
+        'Failed to find active contract: ' + (err instanceof Error ? err.message : String(err)),
+    });
     throw err;
   }
 
   if (activeContract === null || activeContract === undefined) {
-    forgeDebug({ scope: 'top-up-agent-contract', level: 'warn', message: 'topUpAgentContract: no active contract', context: { agentId: input.agentId } });
+    forgeDebug({
+      scope: 'top-up-agent-contract',
+      level: 'warn',
+      message: 'topUpAgentContract: no active contract',
+      context: { agentId: input.agentId },
+    });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
 
@@ -41,18 +54,27 @@ export async function topUpActiveAgentContract(db: Database, input: {
   try {
     currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
   } catch (err) {
-    forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to get company cash balance: ' + (err instanceof Error ? err.message : String(err)) });
+    forgeDebug({
+      scope: 'top-up-agent-contract',
+      level: 'error',
+      runtimeId: input.agentId,
+      message:
+        'Failed to get company cash balance: ' + (err instanceof Error ? err.message : String(err)),
+    });
     throw err;
   }
 
   if (currentBalanceUsd < input.amountUsd) {
-    forgeDebug({ scope: 'top-up-agent-contract', level: 'warn', message: 'topUpAgentContract: insufficient company cash' });
+    forgeDebug({
+      scope: 'top-up-agent-contract',
+      level: 'warn',
+      message: 'topUpAgentContract: insufficient company cash',
+    });
     throw new Error('Insufficient company cash for contract top-up');
   }
 
   try {
-    await db.transaction(async (tx: // @ts-ignore
-import("better-sqlite3").Transaction<{}>) => {
+    await db.transaction(async (tx: any) => {
       await companyCashOperations.recordCashOut(
         {
           type: 'agent-contract-topup',
@@ -70,7 +92,14 @@ import("better-sqlite3").Transaction<{}>) => {
         .where(eq(agentExecutionContracts.id, activeContract!.id));
     });
   } catch (err) {
-    forgeDebug({ scope: 'top-up-agent-contract', level: 'error', runtimeId: input.agentId, message: 'Failed to record cash out or update contract: ' + (err instanceof Error ? err.message : String(err)) });
+    forgeDebug({
+      scope: 'top-up-agent-contract',
+      level: 'error',
+      runtimeId: input.agentId,
+      message:
+        'Failed to record cash out or update contract: ' +
+        (err instanceof Error ? err.message : String(err)),
+    });
     throw err;
   }
 
