@@ -355,7 +355,10 @@ export function createPaymentReceivablesStore(db: Database) {
 
       return { id: txId, isNew: true };
     } catch (err) {
-      forgeDebug('payment-receivables', 'processPaymentEvent failed', {
+      forgeDebug({
+        scope: 'payment-receivables',
+        level: 'error',
+        message: 'processPaymentEvent failed',
         providerPaymentId: input.providerPaymentId,
         error: err instanceof Error ? err.message : String(err),
       });
