@@ -25,18 +25,18 @@ export function createMessageManager(
     } = {},
   ) {
     for (const event of events) {
-      if (event.idleOnly && !options.allowIdleOnly) {
+      if (event.idleOnly === true && options.allowIdleOnly !== true) {
         continue;
       }
 
-      if (!event.text.trim()) {
+      if (event.text !== null && event.text !== undefined && !event.text.trim()) {
         continue;
       }
 
       state.pendingRunMessages.set(event.idempotencyKey, {
         ...event,
         originIdleOnly: event.originIdleOnly ?? event.idleOnly ?? false,
-        idleOnly: options.allowIdleOnly ? false : event.idleOnly,
+        idleOnly: options.allowIdleOnly === true ? false : event.idleOnly,
       });
     }
   }
@@ -71,7 +71,7 @@ export function createMessageManager(
     while (state.flushedRunEventKeyOrder.length > MAX_FLUSHED_RUN_EVENT_KEYS) {
       const oldestIdempotencyKey = state.flushedRunEventKeyOrder.shift();
 
-      if (!oldestIdempotencyKey) {
+      if (oldestIdempotencyKey === null || oldestIdempotencyKey === undefined) {
         return;
       }
 
@@ -96,7 +96,7 @@ export function createMessageManager(
         return false;
       }
 
-      if (event.originIdleOnly && !options.allowOriginIdleOnly) {
+      if (event.originIdleOnly === true && options.allowOriginIdleOnly !== true) {
         deferredEvents.push(event);
         return false;
       }

@@ -65,9 +65,9 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
 
   const label = [
     `[${timeLabel}]`,
-    messageId ? `[messageId: ${messageId}]` : '',
-    actor
-      ? actorKey
+    messageId !== null && messageId !== undefined ? `[messageId: ${messageId}]` : '',
+    actor !== null && actor !== undefined
+      ? actorKey !== null && actorKey !== undefined
         ? `${actor} (${actorKey})`
         : actor
       : '',
@@ -75,7 +75,7 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     .filter(Boolean)
     .join('');
 
-  const suffix = attachments ? ` (attachments: ${attachments})` : '';
+  const suffix = attachments !== null && attachments !== undefined ? ` (attachments: ${attachments})` : '';
 
   if (text.includes('\n')) {
     return actor
@@ -92,7 +92,7 @@ function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
     const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
     const lines = [
-      ...(event.groupMetadata?.Provider ? [`provider: ${event.groupMetadata.Provider}`] : []),
+      ...(event.groupMetadata?.Provider !== null && event.groupMetadata?.Provider !== undefined ? [`provider: ${event.groupMetadata.Provider}`] : []),
       `targetKey: ${targetKey}`,
     ];
 
@@ -100,11 +100,11 @@ function describeWakeGroup(event: AgentWakeEvent) {
       lines.push('conversationType: group');
     }
 
-    if (event.groupMetadata?.ConversationName) {
+    if (event.groupMetadata?.ConversationName !== null && event.groupMetadata?.ConversationName !== undefined) {
       lines.push(`conversationName: ${event.groupMetadata.ConversationName}`);
     }
 
-    if (event.groupMetadata?.Participants) {
+    if (event.groupMetadata?.Participants !== null && event.groupMetadata?.Participants !== undefined) {
       lines.push(`participants: ${event.groupMetadata.Participants}`);
     }
 
@@ -116,7 +116,7 @@ function describeWakeGroup(event: AgentWakeEvent) {
       return 'scheduler';
     }
 
-    return event.groupMetadata?.ScheduleId
+    return event.groupMetadata?.ScheduleId !== null && event.groupMetadata?.ScheduleId !== undefined
       ? `scheduler: ${event.groupMetadata.ScheduleId}`
       : 'scheduler';
   }
@@ -144,7 +144,7 @@ function formatWakeLabel(value: string) {
 }
 
 function normalizeProviderCode(value?: string) {
-  if (!value) {
+  if (value === null || value === undefined) {
     return value;
   }
 
