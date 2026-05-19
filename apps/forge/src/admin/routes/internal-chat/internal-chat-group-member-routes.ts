@@ -23,7 +23,7 @@ function buildListGroupMembersHandler(
     const accountId = request.query.get('accountId');
     const conversationId = request.query.get('conversationId');
 
-    if (!accountId || !conversationId) {
+    if (accountId === null || accountId === undefined || conversationId === null || conversationId === undefined) {
       return jsonResponse({ error: 'accountId and conversationId required' }, 400);
     }
 
@@ -41,7 +41,7 @@ function buildAddMemberHandler(
 ): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-member/add', async (request: any) => {
     const accountId = request.query.get('accountId');
-    if (!accountId) {
+    if (accountId === null || accountId === undefined) {
       return jsonResponse({ error: 'accountId required' }, 400);
     }
     const body = parseJsonBody(request.bodyText, addInternalChatGroupMemberSchema);
@@ -61,7 +61,7 @@ function buildUpdateRoleHandler(
 ): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-member/update-role', async (request: any) => {
     const accountId = request.query.get('accountId');
-    if (!accountId) {
+    if (accountId === null || accountId === undefined) {
       return jsonResponse({ error: 'accountId required' }, 400);
     }
     const body = parseJsonBody(request.bodyText, updateInternalChatGroupMemberRoleSchema);
@@ -81,7 +81,7 @@ function buildRemoveMemberHandler(
 ): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/group-member/remove', async (request: any) => {
     const accountId = request.query.get('accountId');
-    if (!accountId) {
+    if (accountId === null || accountId === undefined) {
       return jsonResponse({ error: 'accountId required' }, 400);
     }
     const body = parseJsonBody(request.bodyText, removeInternalChatGroupMemberSchema);

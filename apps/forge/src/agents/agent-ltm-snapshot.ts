@@ -113,13 +113,13 @@ export function partitionRecallResults(input: PartitionRecallResultsInput): Part
   const workspaceFingerprints = workspaceEntries.map((e) => e.fingerprint);
 
   const graphFingerprint =
-    input.graph.hit && input.graph.context
+    input.graph.hit === true && input.graph.context !== null && input.graph.context !== undefined
       ? `graph:${createHash('sha1').update(input.graph.context).digest('hex')}`
       : null;
 
   const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
   const historyFingerprints = [
-    ...(graphFingerprint ? [graphFingerprint] : []),
+    ...(graphFingerprint !== null && graphFingerprint !== undefined ? [graphFingerprint] : []),
     ...workspaceFingerprints,
   ];
 

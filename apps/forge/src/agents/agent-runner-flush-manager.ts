@@ -66,7 +66,7 @@ export function createFlushManager(deps: FlushManagerDependencies): FlushManager
         return;
       }
 
-      runLastMessages = settings.memoryLastMessagesCount || DEFAULT_RUN_LAST_MESSAGES;
+      runLastMessages = settings.memoryLastMessagesCount !== null && settings.memoryLastMessagesCount !== undefined ? settings.memoryLastMessagesCount : DEFAULT_RUN_LAST_MESSAGES;
     } catch {
       // non-fatal — swallow errors so flush manager never breaks the scheduler
     }
@@ -87,7 +87,7 @@ export function createFlushManager(deps: FlushManagerDependencies): FlushManager
 
     while (flushedRunEventKeyOrder.length > MAX_FLUSHED_RUN_EVENT_KEYS) {
       const oldestIdempotencyKey = flushedRunEventKeyOrder.shift();
-      if (!oldestIdempotencyKey) {
+      if (oldestIdempotencyKey === null || oldestIdempotencyKey === undefined) {
         return;
       }
       flushedRunEventKeys.delete(oldestIdempotencyKey);

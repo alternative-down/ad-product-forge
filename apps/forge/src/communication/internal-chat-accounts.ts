@@ -192,7 +192,7 @@ export function createInternalChatAccounts(db: Database) {
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
     try {
-      if (input.excludeAgentId) {
+      if (input.excludeAgentId !== null && input.excludeAgentId !== undefined) {
         return await db.query.internalChatAccounts.findMany({
           where: ne(internalChatAccounts.agentId, input.excludeAgentId),
         });
@@ -381,7 +381,7 @@ export function createInternalChatAccounts(db: Database) {
           eq(internalChatConversationMembers.accountId, account.id),
         ),
       })) as any;
-      if (!conversation) {
+      if (conversation === null || conversation === undefined) {
         throw new InternalChatError(
           'conversation-not-found',
           `Conversation ${conversationId} not found`,
@@ -425,7 +425,7 @@ export function createInternalChatAccounts(db: Database) {
             inArray(internalChatConversations.id, candidateConversationIds),
           ),
         })) as any;
-        if (existing) return existing;
+        if (existing !== null && existing !== undefined) return existing;
       }
 
       const now = Date.now();

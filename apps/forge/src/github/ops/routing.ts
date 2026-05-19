@@ -96,7 +96,7 @@ export function createRoutingOps(
     if (!credentials || credentials.status !== 'pending') {
       return html(404, '<h1>GitHub App registration not pending</h1>');
     }
-    if (!code || state !== credentials.state) {
+    if (code === null || code === undefined || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
     const anonymousOctokit = new App({} as unknown as any) as unknown as { request: (url: string, opts?: unknown) => Promise<{ data: unknown }> };
@@ -129,7 +129,7 @@ export function createRoutingOps(
     if (!credentials || credentials.status !== 'created') {
       return html(404, '<h1>GitHub App not ready</h1>');
     }
-    if (!installationIdValue) return html(400, '<h1>Missing installation_id</h1>');
+    if (installationIdValue === null || installationIdValue === undefined) return html(400, '<h1>Missing installation_id</h1>');
     const installationId = Number.parseInt(installationIdValue, 10);
     if (!Number.isInteger(installationId)) return html(400, '<h1>Invalid installation_id</h1>');
     const activeCredentials: Extract<GitHubAppCredentials, { status: 'active' }> = {
@@ -155,7 +155,7 @@ export function createRoutingOps(
   async function handleWebhook(agentId: string, headers: Record<string, string | undefined>, bodyText: string) {
     const event = ctx.getHeader(headers, 'x-github-event');
     const delivery = ctx.getHeader(headers, 'x-github-delivery');
-    if (!event || !delivery) return html(400, '<h1>Missing webhook headers</h1>');
+    if (event === null || event === undefined || delivery === null || delivery === undefined) return html(400, '<h1>Missing webhook headers</h1>');
     let payload: Record<string, unknown>;
     try { payload = JSON.parse(bodyText); } catch { return html(400, '<h1>Invalid JSON</h1>'); }
     if (ctx.isGitHubSelfEvent(payload)) { ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: 'Ignoring self event', context: { agentId, event } }); return html(200, 'ok'); }
