@@ -233,9 +233,9 @@ function mapServerConfig(
       id: server.id,
       name: server.name,
       transport: 'stdio',
-      command: server.command || '',
-      args: server.args ? JSON.parse(server.args) : [],
-      env: server.envVars ? JSON.parse(server.envVars) : {},
+      command: server.command !== null && server.command !== undefined ? server.command : '',
+      args: server.args !== null && server.args !== undefined ? JSON.parse(server.args) : [],
+      env: server.envVars !== null && server.envVars !== undefined ? JSON.parse(server.envVars) : {},
     };
   }
 
@@ -243,8 +243,8 @@ function mapServerConfig(
     id: server.id,
     name: server.name,
     transport: 'http-stream',
-    url: server.url || 'http://localhost:3000/mcp',
-    headers: server.headers ? JSON.parse(server.headers) : undefined,
+    url: server.url !== null && server.url !== undefined ? server.url : 'http://localhost:3000/mcp',
+    headers: server.headers !== null && server.headers !== undefined ? JSON.parse(server.headers) : undefined,
   };
 }
 

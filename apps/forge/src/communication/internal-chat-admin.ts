@@ -193,7 +193,7 @@ export function createInternalChatAdmin(db: Database) {
   // ── Account listing ────────────────────────────────────────────────────
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
-      if (input.excludeAgentId) {
+      if (input.excludeAgentId !== null && input.excludeAgentId !== undefined) {
         // eslint-disable-next-line @typescript-eslint/return-await
   return await db.query.internalChatAccounts.findMany({
           where: ne(internalChatAccounts.agentId, input.excludeAgentId),
@@ -292,9 +292,9 @@ export function createInternalChatAdmin(db: Database) {
     roleDescription?: string;
   }) {
     let desc = input.agentName;
-    if (input.agentDescription) desc += ` — ${input.agentDescription}`;
-    if (input.roleName) desc += ` | ${input.roleName}`;
-    if (input.roleDescription) desc += ` — ${input.roleDescription}`;
+    if (input.agentDescription !== null && input.agentDescription !== undefined) desc += ` — ${input.agentDescription}`;
+    if (input.roleName !== null && input.roleName !== undefined) desc += ` | ${input.roleName}`;
+    if (input.roleDescription !== null && input.roleDescription !== undefined) desc += ` — ${input.roleDescription}`;
     return desc;
   }
 
