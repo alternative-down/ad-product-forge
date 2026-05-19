@@ -196,29 +196,26 @@ export function createAgentContractStore(
 
 
   async function getUsagePricing(input: { pricingModelKey: string; profileId: string }) {
-    let modelPrice;
+    let priceRow;
+    let profile;
+
     try {
-      const priceRow = await db.query.llmModelPrices.findFirst({
-        where: eq(llmModelPrices.modelKey, input.pricingModelKey),
-      });
-      if (!priceRow) {
-        forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: model price not found', context: { pricingModelKey: input.pricingModelKey } });
-        return { modelPrice: null, contractCostMultiplier: 1 };
-      }
-      modelPrice = priceRow;
+      [priceRow, profile] = await Promise.all([
+        db.query.llmModelPrices.findFirst({
+          where: eq(llmModelPrices.modelKey, input.pricingModelKey),
+        }),
+        db.query.llmProfiles.findFirst({
+          where: eq(llmProfiles.id, input.profileId),
+        }),
+      ]);
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: read llmModelPrices failed', context: { pricingModelKey: input.pricingModelKey, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: parallel db read failed', context: { pricingModelKey: input.pricingModelKey, profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
 
-    let profile;
-    try {
-      profile = await db.query.llmProfiles.findFirst({
-        where: eq(llmProfiles.id, input.profileId),
-      });
-    } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: read llmProfiles failed', context: { profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
-      throw err;
+    if (!priceRow) {
+      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: model price not found', context: { pricingModelKey: input.pricingModelKey } });
+      return { modelPrice: null, contractCostMultiplier: 1 };
     }
 
     if (!profile) {
@@ -227,10 +224,11 @@ export function createAgentContractStore(
     }
 
     return {
-      modelPrice,
+      modelPrice: priceRow,
       contractCostMultiplier: profile.contractCostMultiplier,
     };
   }
+
   async function getContractSpend(contractId: string) {
     const rows = await db
       .select({
