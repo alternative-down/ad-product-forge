@@ -205,7 +205,7 @@ describe('discord-account — new coverage', () => {
     it('removes listeners and destroys client', async () => {
       await wait();
       // @ts-expect-error -- strictProvider possibly undefined (module-scoped let)
-      await strictProvider.dispose();
+      await (strictProvider as any).dispose();
       expect(getMockClient().removeAllListeners).toHaveBeenCalled();
       expect(getMockClient().destroy).toHaveBeenCalled();
     });
