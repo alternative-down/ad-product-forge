@@ -2,8 +2,7 @@ import { eq } from 'drizzle-orm';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { companyCashLedger } from '../database/schema';
 
 type CompanyCashDirection = 'in' | 'out';
@@ -47,7 +46,18 @@ export function createCompanyCashOperations(db: Database) {
         createdAt: now,
       });
     } catch (err) {
-      forgeDebug({ scope: 'company-cash-operations', level: 'error', message: 'createEntry DB insert failed', context: { error: err instanceof Error ? err.message : String(err), entryId, type: input.type, direction: input.direction, amountUsd: input.amountUsd } });
+      forgeDebug({
+        scope: 'company-cash-operations',
+        level: 'error',
+        message: 'createEntry DB insert failed',
+        context: {
+          error: err instanceof Error ? err.message : String(err),
+          entryId,
+          type: input.type,
+          direction: input.direction,
+          amountUsd: input.amountUsd,
+        },
+      });
       throw err;
     }
 
@@ -59,7 +69,13 @@ export function createCompanyCashOperations(db: Database) {
     session?: DbSession,
   ) {
     return await createEntry(
-      { ...input, direction: 'in', status: 'posted', dueAt: input.effectiveAt, effectiveAt: input.effectiveAt },
+      {
+        ...input,
+        direction: 'in',
+        status: 'posted',
+        dueAt: input.effectiveAt,
+        effectiveAt: input.effectiveAt,
+      },
       session,
     );
   }
@@ -69,7 +85,13 @@ export function createCompanyCashOperations(db: Database) {
     session?: DbSession,
   ) {
     return await createEntry(
-      { ...input, direction: 'out', status: 'posted', dueAt: input.effectiveAt, effectiveAt: input.effectiveAt },
+      {
+        ...input,
+        direction: 'out',
+        status: 'posted',
+        dueAt: input.effectiveAt,
+        effectiveAt: input.effectiveAt,
+      },
       session,
     );
   }
@@ -97,11 +119,21 @@ export function createCompanyCashOperations(db: Database) {
   async function cancelPlannedEntry(entryId: string) {
     const entry = await getEntry(entryId);
     if (!entry) {
-      forgeDebug({ scope: 'company-cash-operations', level: 'warn', message: 'cancelPlannedEntry: entry not found', context: { entryId } });
+      forgeDebug({
+        scope: 'company-cash-operations',
+        level: 'warn',
+        message: 'cancelPlannedEntry: entry not found',
+        context: { entryId },
+      });
       throw new Error(`Company cash entry not found: ${entryId}`);
     }
     if (entry.status !== 'planned') {
-      forgeDebug({ scope: 'company-cash-operations', level: 'warn', message: 'cancelPlannedEntry: entry not planned', context: { entryId, status: entry.status } });
+      forgeDebug({
+        scope: 'company-cash-operations',
+        level: 'warn',
+        message: 'cancelPlannedEntry: entry not planned',
+        context: { entryId, status: entry.status },
+      });
       throw new Error(`Only planned company cash entries can be canceled: ${entryId}`);
     }
 
@@ -111,7 +143,12 @@ export function createCompanyCashOperations(db: Database) {
         .set({ status: 'canceled' })
         .where(eq(companyCashLedger.id, entryId));
     } catch (err) {
-      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'cancelPlannedEntry', context: { error: err instanceof Error ? err.message : String(err), entryId } });
+      forgeDebug({
+        scope: 'company-cash-operations',
+        level: 'error',
+        message: 'cancelPlannedEntry',
+        context: { error: err instanceof Error ? err.message : String(err), entryId },
+      });
       throw err;
     }
 
@@ -121,10 +158,16 @@ export function createCompanyCashOperations(db: Database) {
   async function postPlannedEntry(entryId: string, input: { effectiveAt?: number } = {}) {
     const entry = await getEntry(entryId);
     if (!entry) {
-      forgeDebug({ scope: 'company-cash-operations', level: 'warn', message: 'cancelPlannedEntry: entry not found', context: { entryId } });
+      forgeDebug({
+        scope: 'company-cash-operations',
+        level: 'warn',
+        message: 'cancelPlannedEntry: entry not found',
+        context: { entryId },
+      });
       throw new Error(`Company cash entry not found: ${entryId}`);
     }
-    if (entry.status !== 'planned') throw new Error(`Only planned company cash entries can be posted: ${entryId}`);
+    if (entry.status !== 'planned')
+      throw new Error(`Only planned company cash entries can be posted: ${entryId}`);
 
     const effectiveAt = input.effectiveAt ?? Date.now();
     try {
@@ -133,7 +176,12 @@ export function createCompanyCashOperations(db: Database) {
         .set({ status: 'posted', effectiveAt })
         .where(eq(companyCashLedger.id, entryId));
     } catch (err) {
-      forgeDebug({ scope: 'company-cash-operations', level: 'info', message: 'postPlannedEntry', context: { error: err instanceof Error ? err.message : String(err), entryId, effectiveAt } });
+      forgeDebug({
+        scope: 'company-cash-operations',
+        level: 'error',
+        message: 'postPlannedEntry',
+        context: { error: err instanceof Error ? err.message : String(err), entryId, effectiveAt },
+      });
       throw err;
     }
 
@@ -141,9 +189,9 @@ export function createCompanyCashOperations(db: Database) {
   }
 
   async function getEntry(entryId: string) {
-      return await db.query.companyCashLedger.findFirst({
-        where: eq(companyCashLedger.id, entryId),
-      });
+    return await db.query.companyCashLedger.findFirst({
+      where: eq(companyCashLedger.id, entryId),
+    });
   }
 
   return {
@@ -154,6 +202,6 @@ export function createCompanyCashOperations(db: Database) {
     scheduleCashOut,
     cancelPlannedEntry,
     postPlannedEntry,
-    getEntry,  };
+    getEntry,
+  };
 }
-

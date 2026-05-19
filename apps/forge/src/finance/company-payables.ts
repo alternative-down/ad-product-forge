@@ -2,8 +2,7 @@ import { and, eq, gte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
@@ -14,7 +13,6 @@ export function createCompanyPayables(db: Database) {
   async function listRecurringPayables() {
     try {
       const rows = await db.query.companyRecurringPayables.findMany({
-  
         orderBy: (fields, { asc }) => [asc(fields.name)],
       });
 
@@ -30,7 +28,12 @@ export function createCompanyPayables(db: Database) {
         };
       });
     } catch (err) {
-      forgeDebug({ scope: 'company-payables', level: 'info', message: 'Failed to list recurring payables', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'company-payables',
+        level: 'error',
+        message: 'Failed to list recurring payables',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
@@ -47,8 +50,8 @@ export function createCompanyPayables(db: Database) {
 
     try {
       // Wrap payable insert + planned occurrence in transaction
-            // @ts-expect-error -- better-sqlite3 Transaction type unavailable
-            const entryId = await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+      // @ts-expect-error -- better-sqlite3 Transaction type unavailable
+      const entryId = await db.transaction(async (tx: import('better-sqlite3').Transaction<{}>) => {
         await tx.insert(companyRecurringPayables).values({
           id: payableId,
           name: input.name,
@@ -83,7 +86,16 @@ export function createCompanyPayables(db: Database) {
         entryId,
       };
     } catch (err) {
-      forgeDebug({ scope: 'company-payables', level: 'info', message: 'Failed to create recurring payable', context: { payableId, name: input.name, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'company-payables',
+        level: 'error',
+        message: 'Failed to create recurring payable',
+        context: {
+          payableId,
+          name: input.name,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       throw err;
     }
   }
@@ -95,7 +107,12 @@ export function createCompanyPayables(db: Database) {
       });
 
       if (!payable) {
-        forgeDebug({ scope: 'company-payables', level: 'warn', message: 'cancelRecurringPayable: payable not found', context: { payableId } });
+        forgeDebug({
+          scope: 'company-payables',
+          level: 'warn',
+          message: 'cancelRecurringPayable: payable not found',
+          context: { payableId },
+        });
         throw new Error(`Recurring payable not found: ${payableId}`);
       }
 
@@ -112,20 +129,29 @@ export function createCompanyPayables(db: Database) {
         isActive,
       };
     } catch (err) {
-      forgeDebug({ scope: 'company-payables', level: 'info', message: 'Failed to set recurring payable active', context: { payableId, isActive, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'company-payables',
+        level: 'error',
+        message: 'Failed to set recurring payable active',
+        context: { payableId, isActive, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
 
-  async function syncRecurringPayableOccurrence(input: {
-    entryId: string;
-  }) {
+  async function syncRecurringPayableOccurrence(input: { entryId: string }) {
     try {
       const entry = await db.query.companyCashLedger.findFirst({
         where: eq(companyCashLedger.id, input.entryId),
       });
 
-      if (entry === null || entry === undefined || entry.referenceType !== 'recurring-payable' || entry.referenceId === null || entry.referenceId === undefined) {
+      if (
+        entry === null ||
+        entry === undefined ||
+        entry.referenceType !== 'recurring-payable' ||
+        entry.referenceId === null ||
+        entry.referenceId === undefined
+      ) {
         return null;
       }
 
@@ -154,7 +180,7 @@ export function createCompanyPayables(db: Database) {
 
       // Wrap planned occurrence + payable update in transaction
       // @ts-expect-error -- better-sqlite3 Transaction type unavailable
-      await db.transaction(async (tx: import("better-sqlite3").Transaction<{}>) => {
+      await db.transaction(async (tx: import('better-sqlite3').Transaction<{}>) => {
         const eid = createId();
         await tx.insert(companyCashLedger).values({
           id: eid,
@@ -184,7 +210,15 @@ export function createCompanyPayables(db: Database) {
         nextDueAt,
       };
     } catch (err) {
-      forgeDebug({ scope: 'company-payables', level: 'info', message: 'Failed to sync recurring payable occurrence', context: { entryId: input.entryId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'company-payables',
+        level: 'error',
+        message: 'Failed to sync recurring payable occurrence',
+        context: {
+          entryId: input.entryId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       throw err;
     }
   }
