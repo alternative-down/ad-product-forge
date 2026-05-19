@@ -19,9 +19,12 @@ import type {
 } from './store';
 import { withTimeout } from '../../utils/async';
 
-
 import { buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
-import { buildLtmRecallSnapshot, partitionRecallResults, buildNextRecallHistory } from '../agent-ltm-snapshot';
+import {
+  buildLtmRecallSnapshot,
+  partitionRecallResults,
+  buildNextRecallHistory,
+} from '../agent-ltm-snapshot';
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
   query: string;
@@ -74,9 +77,7 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   injectedSystemMessage: string | null;
 };
 
-const _RECALL_AUTO_INDEX_PATHS = [
-  '.',
-] as const;
+const _RECALL_AUTO_INDEX_PATHS = ['.'] as const;
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
 type RecallConfig = {
@@ -89,7 +90,18 @@ type RecallConfig = {
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
   const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
-  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => { forgeDebug({ scope: 'ltm-recall', level: 'error', message: '[safe-catch] readdir', context: { error: err instanceof Error ? { message: err.message, name: err.name, stack: err.stack } : err } }); return null; });
+  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => {
+    forgeDebug({
+      scope: 'ltm-recall',
+      level: 'error',
+      message: '[safe-catch] readdir',
+      context: {
+        error:
+          err instanceof Error ? { message: err.message, name: err.name, stack: err.stack } : err,
+      },
+    });
+    return null;
+  });
 
   if (!entries) {
     return 0;
@@ -176,17 +188,18 @@ export class AgentLongTermMemoryRecall {
       this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
         databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
         source: new FilesystemDocumentSource({
-          roots: [
-            input.agentMemoryPath,
-          ],
+          roots: [input.agentMemoryPath],
           includeExtensions: ['.txt', '.md'],
         }),
-        embedder: ({
+        embedder: {
           embed: async ({ texts }: { texts: string[] }): Promise<unknown> => ({
-            vectors: await Promise.all(texts.map((text: string) =>
-              embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text))),
+            vectors: await Promise.all(
+              texts.map((text: string) =>
+                embedTextWithWorkspaceEmbedder(this.workspaceEmbedder, text),
+              ),
+            ),
           }),
-        } as any),
+        } as any,
       });
     }
   }
@@ -201,22 +214,33 @@ export class AgentLongTermMemoryRecall {
 
     try {
       if (this.pendingRecallOperationCount > 0) {
-        forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall skipped because a prior recall operation is still in flight', context: {
-          agentId: this.agentId,
-          threadId: input.threadId,
-          pendingRecallOperationCount: this.pendingRecallOperationCount,
-          lingeringRecallOperationSince: this.lingeringRecallOperationSince !== undefined
-            ? new Date(this.lingeringRecallOperationSince as any).toISOString()
-            : null,
-        } });
+        forgeDebug({
+          scope: 'ltm',
+          level: 'info',
+          message: 'ltm recall skipped because a prior recall operation is still in flight',
+          context: {
+            agentId: this.agentId,
+            threadId: input.threadId,
+            pendingRecallOperationCount: this.pendingRecallOperationCount,
+            lingeringRecallOperationSince:
+              this.lingeringRecallOperationSince !== undefined
+                ? new Date(this.lingeringRecallOperationSince as any).toISOString()
+                : null,
+          },
+        });
         return null;
       }
 
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step start', context: {
-        agentId: this.agentId,
-        threadId: input.threadId,
-        resourceId: input.resourceId ?? null,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall step start',
+        context: {
+          agentId: this.agentId,
+          threadId: input.threadId,
+          resourceId: input.resourceId ?? null,
+        },
+      });
       const queryText = this.buildRecallQueryFromStep(input.step);
       const recallThreadState = await this.readRecallThreadState(input.threadId);
 
@@ -244,11 +268,13 @@ export class AgentLongTermMemoryRecall {
         windowSize: recallThreadState.windowSize,
       });
       const indexStats = await this.getIndexStats();
-      if (this.shouldSkipRecallInjection({
+      if (
+        this.shouldSkipRecallInjection({
           graph: { ...graph, sourcesCount: 0 },
-        results,
-        rawWindowMessageCount: (recallThreadState.rawWindowMessageCount ?? 0),
-      })) {
+          results,
+          rawWindowMessageCount: recallThreadState.rawWindowMessageCount ?? 0,
+        })
+      ) {
         await this.persistRecallSnapshotWithInput(input, {
           queryText,
           recallConfig,
@@ -292,29 +318,56 @@ export class AgentLongTermMemoryRecall {
         history: nextHistory,
       });
 
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step complete', context: {
-        agentId: this.agentId,
-        threadId: input.threadId,
-        durationMs: Date.now() - recallStartedAt,
-        graphHit: graph.hit,
-        resultCount: graph.hit ? 0 : results.length,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall step complete',
+        context: {
+          agentId: this.agentId,
+          threadId: input.threadId,
+          durationMs: Date.now() - recallStartedAt,
+          graphHit: graph.hit,
+          resultCount: graph.hit ? 0 : results.length,
+        },
+      });
 
       return recallText;
     } catch (error) {
-      forgeDebug({ scope: 'ltm-recall', level: 'error', message: 'recall failed', context: { error: error instanceof Error ? { message: error.message, name: error.name, stack: error.stack } : error } });
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall step failed', context: {
-        agentId: this.agentId,
-        threadId: input.threadId,
-        durationMs: Date.now() - recallStartedAt,
-        error: error instanceof Error ? error.message : String(error),
-      } });
+      forgeDebug({
+        scope: 'ltm-recall',
+        level: 'error',
+        message: 'recall failed',
+        context: {
+          error:
+            error instanceof Error
+              ? { message: error.message, name: error.name, stack: error.stack }
+              : error,
+        },
+      });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall step failed',
+        context: {
+          agentId: this.agentId,
+          threadId: input.threadId,
+          durationMs: Date.now() - recallStartedAt,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       const persistedState = await this.persistenceStore.readRecallState();
       let snapshotError: string | null = null;
       try {
         snapshotError = error instanceof Error ? error.message : String(error);
       } catch (e) {
-        forgeDebug({ scope: 'ltm-recall', level: 'warn', message: 'snapshotError from error failed', context: { error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e } });
+        forgeDebug({
+          scope: 'ltm-recall',
+          level: 'warn',
+          message: 'snapshotError from error failed',
+          context: {
+            error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e,
+          },
+        });
         snapshotError = String(error);
       }
       try {
@@ -324,7 +377,16 @@ export class AgentLongTermMemoryRecall {
           history: persistedState?.history ?? undefined,
         });
       } catch (e) {
-        forgeDebug({ scope: 'ltm-recall', level: 'warn', message: 'persistRecallSnapshot failed', context: { threadId: input.threadId, resourceId: input.resourceId, error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e } });
+        forgeDebug({
+          scope: 'ltm-recall',
+          level: 'warn',
+          message: 'persistRecallSnapshot failed',
+          context: {
+            threadId: input.threadId,
+            resourceId: input.resourceId,
+            error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e,
+          },
+        });
       }
       return null;
     }
@@ -342,10 +404,15 @@ export class AgentLongTermMemoryRecall {
     const stageStartedAt = Date.now();
     const currentStamp = await this.readCurrentIndexStamp();
 
-    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace init start', context: {
-      agentId: this.agentId,
-      stamp: currentStamp,
-    } });
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'ltm recall workspace init start',
+      context: {
+        agentId: this.agentId,
+        stamp: currentStamp,
+      },
+    });
     await this.runTrackedRecallOperation(
       'retrieval.refresh',
       this.retrievalWorkspace.refresh(),
@@ -355,11 +422,16 @@ export class AgentLongTermMemoryRecall {
     this.workspaceInitialized = true;
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
-    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace init complete', context: {
-      agentId: this.agentId,
-      durationMs: Date.now() - stageStartedAt,
-      stamp: currentStamp,
-    } });
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'ltm recall workspace init complete',
+      context: {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        stamp: currentStamp,
+      },
+    });
   }
 
   async refreshIndex() {
@@ -368,19 +440,29 @@ export class AgentLongTermMemoryRecall {
     const currentStamp = await this.readCurrentIndexStamp();
 
     if (currentStamp === this.lastIndexedStamp) {
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace index unchanged', context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        stamp: currentStamp,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall workspace index unchanged',
+        context: {
+          agentId: this.agentId,
+          durationMs: Date.now() - stageStartedAt,
+          stamp: currentStamp,
+        },
+      });
       return;
     }
 
-    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace reindex start', context: {
-      agentId: this.agentId,
-      previousStamp: this.lastIndexedStamp,
-      nextStamp: currentStamp,
-    } });
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'ltm recall workspace reindex start',
+      context: {
+        agentId: this.agentId,
+        previousStamp: this.lastIndexedStamp,
+        nextStamp: currentStamp,
+      },
+    });
     await this.runTrackedRecallOperation(
       'retrieval.refresh',
       this.retrievalWorkspace.refresh(),
@@ -389,11 +471,16 @@ export class AgentLongTermMemoryRecall {
     );
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
-    forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace reindex complete', context: {
-      agentId: this.agentId,
-      durationMs: Date.now() - stageStartedAt,
-      stamp: currentStamp,
-    } });
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'ltm recall workspace reindex complete',
+      context: {
+        agentId: this.agentId,
+        durationMs: Date.now() - stageStartedAt,
+        stamp: currentStamp,
+      },
+    });
   }
 
   async debugSearch(input: AgentLongTermMemoryRecallDebugSearchInput) {
@@ -446,10 +533,7 @@ export class AgentLongTermMemoryRecall {
       effectiveGraphTopK: _effectiveGraphTopK,
       effectiveGraphThreshold: _effectiveGraphThreshold,
     } = recallSearch;
-    const vectorResults = await this.queryVectorIndex(
-      queryEmbedding,
-      recallConfig.documentCount,
-    );
+    const vectorResults = await this.queryVectorIndex(queryEmbedding, recallConfig.documentCount);
     const highestScore = rawWorkspaceResults.reduce((currentMax, result) => {
       const score = typeof result.score === 'number' ? result.score : 0;
       return Math.max(currentMax, score);
@@ -477,24 +561,24 @@ export class AgentLongTermMemoryRecall {
         id: result.id,
         content: result.content,
         score: typeof result.score === 'number' ? result.score : null,
-        relativePercent: (
-          typeof result.score === 'number'
-          && highestScore > 0
-        )
-          ? (result.score / highestScore) * 100
-          : null,
+        relativePercent:
+          typeof result.score === 'number' && highestScore > 0
+            ? (result.score / highestScore) * 100
+            : null,
       })),
-      vectorResults: vectorResults.map((result: {
-        id: string;
-        score: number;
-        metadata?: Record<string, unknown>;
-        text: string;
-      }) => ({
-        id: result.id,
-        score: result.score,
-        metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
-        document: result.text,
-      })),
+      vectorResults: vectorResults.map(
+        (result: {
+          id: string;
+          score: number;
+          metadata?: Record<string, unknown>;
+          text: string;
+        }) => ({
+          id: result.id,
+          score: result.score,
+          metadataJson: result.metadata ? JSON.stringify(result.metadata, null, 2) : null,
+          document: result.text,
+        }),
+      ),
       graphHit: graphSearch.hit,
       graphQuery: graphSearch.queryText,
       graphDimension: graphSearch.dimension,
@@ -547,7 +631,11 @@ export class AgentLongTermMemoryRecall {
     const runtimeSettings = await this.readRuntimeMemorySettings?.();
 
     if (!runtimeSettings) {
-      forgeDebug({ scope: 'ltm-recall', level: 'warn', message: 'recallFromLongTermMemory: runtime memory settings required' });
+      forgeDebug({
+        scope: 'ltm-recall',
+        level: 'warn',
+        message: 'recallFromLongTermMemory: runtime memory settings required',
+      });
       throw new Error('LTM recall requires runtime memory settings');
     }
 
@@ -581,18 +669,25 @@ export class AgentLongTermMemoryRecall {
     const stageStartedAt = Date.now();
 
     try {
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace search start', context: {
-        agentId: this.agentId,
-        queryLength: queryText.length,
-        topK: options.topK,
-        mode: options.mode,
-      } });
-      const results = await this.runTrackedRecallOperation<Array<{
-        id: string;
-        text: string;
-        score: number;
-        metadata?: Record<string, unknown>;
-      }>>(
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall workspace search start',
+        context: {
+          agentId: this.agentId,
+          queryLength: queryText.length,
+          topK: options.topK,
+          mode: options.mode,
+        },
+      });
+      const results = await this.runTrackedRecallOperation<
+        Array<{
+          id: string;
+          text: string;
+          score: number;
+          metadata?: Record<string, unknown>;
+        }>
+      >(
         'retrieval.search',
         this.retrievalWorkspace.search(queryText, {
           topK: options.topK,
@@ -613,11 +708,16 @@ export class AgentLongTermMemoryRecall {
         content: result.text.trim(),
         score: result.score,
       }));
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace search complete', context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        resultCount: searchResults.length,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall workspace search complete',
+        context: {
+          agentId: this.agentId,
+          durationMs: Date.now() - stageStartedAt,
+          resultCount: searchResults.length,
+        },
+      });
       return { formatted: '', results: searchResults };
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error);
@@ -625,11 +725,16 @@ export class AgentLongTermMemoryRecall {
         return { formatted: '', results: [] };
       }
 
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall workspace search failed', context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        error: error instanceof Error ? error.message : String(error),
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall workspace search failed',
+        context: {
+          agentId: this.agentId,
+          durationMs: Date.now() - stageStartedAt,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       throw error;
     }
   }
@@ -664,14 +769,15 @@ export class AgentLongTermMemoryRecall {
     error: string | null;
   }> {
     const stageStartedAt = Date.now();
-    const workspaceContextBase = options.contextResults.length > 0
-      ? options.contextResults
-      : workspaceResults;
+    const workspaceContextBase =
+      options.contextResults.length > 0 ? options.contextResults : workspaceResults;
     const workspaceContext = workspaceContextBase
       .map((result) => result.content)
       .filter(Boolean)
       .join('\n');
-    const graphQueryText = workspaceContext ? `${queryText}\nContext: ${workspaceContext}` : queryText;
+    const graphQueryText = workspaceContext
+      ? `${queryText}\nContext: ${workspaceContext}`
+      : queryText;
     const graphDimension = await this.getGraphDimension();
 
     try {
@@ -688,12 +794,17 @@ export class AgentLongTermMemoryRecall {
         'ltm recall graph search timed out',
       );
 
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall graph search complete', context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        hit: result.hit,
-        sourcesCount: result.sourcesCount,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall graph search complete',
+        context: {
+          agentId: this.agentId,
+          durationMs: Date.now() - stageStartedAt,
+          hit: result.hit,
+          sourcesCount: result.sourcesCount,
+        },
+      });
 
       return {
         queryText: graphQueryText,
@@ -709,11 +820,16 @@ export class AgentLongTermMemoryRecall {
         error: null,
       };
     } catch (error) {
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall graph search failed', context: {
-        agentId: this.agentId,
-        durationMs: Date.now() - stageStartedAt,
-        error: error instanceof Error ? error.message : String(error),
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall graph search failed',
+        context: {
+          agentId: this.agentId,
+          durationMs: Date.now() - stageStartedAt,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
 
       return {
         queryText: graphQueryText,
@@ -759,18 +875,25 @@ export class AgentLongTermMemoryRecall {
     };
   }
 
-  private async queryVectorIndex(queryVector: number[], topK: number): Promise<Array<{
-    id: string;
-    text: string;
-    score: number;
-    metadata?: Record<string, unknown>;
-  }>> {
-    return await this.runTrackedRecallOperation<Array<{
+  private async queryVectorIndex(
+    queryVector: number[],
+    topK: number,
+  ): Promise<
+    Array<{
       id: string;
       text: string;
       score: number;
       metadata?: Record<string, unknown>;
-    }>>(
+    }>
+  > {
+    return await this.runTrackedRecallOperation<
+      Array<{
+        id: string;
+        text: string;
+        score: number;
+        metadata?: Record<string, unknown>;
+      }>
+    >(
       'vector.query',
       this.retrievalWorkspace.queryVector(queryVector, topK),
       this.recallTimeoutMs,
@@ -802,18 +925,23 @@ export class AgentLongTermMemoryRecall {
         this.lingeringRecallOperationSince = Date.now();
       }
 
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'ltm recall operation failed or timed out', context: {
-        agentId: this.agentId,
-        label,
-        timeoutMs,
-        settled,
-        pendingRecallOperationCount: this.pendingRecallOperationCount,
-        lingeringRecallOperationSince: this.lingeringRecallOperationSince !== undefined
-          ? new Date(this.lingeringRecallOperationSince as any).toISOString()
-          : null,
-        error: error instanceof Error ? error.message : String(error),
-      } });
-      forgeDebug({ scope: 'ltm-recall', level: 'error', message: 'ltm-recall operation failed', error: error instanceof Error ? error.message : String(error) });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'ltm recall operation failed or timed out',
+        context: {
+          agentId: this.agentId,
+          label,
+          timeoutMs,
+          settled,
+          pendingRecallOperationCount: this.pendingRecallOperationCount,
+          lingeringRecallOperationSince:
+            this.lingeringRecallOperationSince !== undefined
+              ? new Date(this.lingeringRecallOperationSince as any).toISOString()
+              : null,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       throw error;
     }
   }
@@ -876,7 +1004,7 @@ export class AgentLongTermMemoryRecall {
 
     if (Array.isArray(relevantContext)) {
       return relevantContext
-        .map((value) => typeof value === 'string' ? value : '')
+        .map((value) => (typeof value === 'string' ? value : ''))
         .filter(Boolean)
         .join('\n\n');
     }
@@ -921,7 +1049,8 @@ export class AgentLongTermMemoryRecall {
           }
 
           const recordToolCall = toolCall as Record<string, unknown>;
-          const toolName = typeof recordToolCall.toolName === 'string' ? recordToolCall.toolName : 'unknown';
+          const toolName =
+            typeof recordToolCall.toolName === 'string' ? recordToolCall.toolName : 'unknown';
           const formatted = this.formatStructuredValue(
             recordToolCall.args ?? recordToolCall.input ?? null,
           );
@@ -941,7 +1070,8 @@ export class AgentLongTermMemoryRecall {
           }
 
           const recordToolResult = toolResult as Record<string, unknown>;
-          const toolName = typeof recordToolResult.toolName === 'string' ? recordToolResult.toolName : 'unknown';
+          const toolName =
+            typeof recordToolResult.toolName === 'string' ? recordToolResult.toolName : 'unknown';
           const formatted = this.formatStructuredValue(
             recordToolResult.result ?? recordToolResult.output ?? null,
           );
@@ -973,7 +1103,6 @@ export class AgentLongTermMemoryRecall {
     });
   }
 
-
   /**
    * Persist an LTM recall snapshot with consistent threadContext from input.
    * Replaces 5 call sites in recallFromStep that all share:
@@ -1002,10 +1131,14 @@ export class AgentLongTermMemoryRecall {
         lastInitAt: this.lastInitAt,
         steps: input.steps,
         queryText: deps.queryText,
-        recallConfig: (deps.recallConfig as any) as { searchMode: string; documentCount: number; graphRandomWalkSteps: number },
-        indexStats: (deps.indexStats as any),
-        dedupedGraph: (deps.dedupedGraph as any),
-        filteredResults: (deps.filteredResults as any),
+        recallConfig: deps.recallConfig as any as {
+          searchMode: string;
+          documentCount: number;
+          graphRandomWalkSteps: number;
+        },
+        indexStats: deps.indexStats as any,
+        dedupedGraph: deps.dedupedGraph as any,
+        filteredResults: deps.filteredResults as any,
       },
       threadContext,
       { status: deps.status, error: deps.error },
@@ -1038,9 +1171,10 @@ export class AgentLongTermMemoryRecall {
     const workspaceResults = workspaceFingerprints
       .filter((entry) => !seenFingerprints.has(entry.fingerprint))
       .map((entry) => entry.result);
-    const graphFingerprint = input.graph.hit && input.graph.context.trim()
-      ? this.buildGraphFingerprint(input.graph.context)
-      : null;
+    const graphFingerprint =
+      input.graph.hit && input.graph.context.trim()
+        ? this.buildGraphFingerprint(input.graph.context)
+        : null;
     const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
     const historyFingerprints = [
       ...((graphFingerprint ?? '') !== '' ? [graphFingerprint] : []),
@@ -1051,10 +1185,10 @@ export class AgentLongTermMemoryRecall {
       graph: graphAllowed
         ? input.graph
         : {
-          ...input.graph,
-          hit: false,
-          context: '',
-        },
+            ...input.graph,
+            hit: false,
+            context: '',
+          },
       results: graphAllowed ? input.results : workspaceResults,
       historyFingerprints,
     };
@@ -1086,26 +1220,26 @@ export class AgentLongTermMemoryRecall {
     const persistedState = await this.persistenceStore.readRecallState();
     const recentFingerprints = Array.isArray(persistedState.history?.recentFingerprints)
       ? persistedState.history.recentFingerprints.filter(
-        (value): value is string => typeof value === 'string' && value.length > 0,
-      )
+          (value): value is string => typeof value === 'string' && value.length > 0,
+        )
       : [];
-    const operationalMemoryState: any = (threadId ?? '') !== ''
-      ? await readOperationalMemoryState({
-          threadId: threadId as string,
-          store: this.conversationStore,
-          recentTokenLimit: this.recentRawTokens,
-        })
-      : null;
-    const rawWindowMessageCount = operationalMemoryState !== null && operationalMemoryState !== undefined
-      ? operationalMemoryState.metrics.rawMessageCount
-      : 0;
+    const operationalMemoryState: any =
+      (threadId ?? '') !== ''
+        ? await readOperationalMemoryState({
+            threadId: threadId as string,
+            store: this.conversationStore,
+            recentTokenLimit: this.recentRawTokens,
+          })
+        : null;
+    const rawWindowMessageCount =
+      operationalMemoryState !== null && operationalMemoryState !== undefined
+        ? operationalMemoryState.metrics.rawMessageCount
+        : 0;
 
     return {
       recentFingerprints,
       windowSize:
-        rawWindowMessageCount > 0
-          ? Math.max(1, Math.floor(rawWindowMessageCount * 0.25))
-          : 20,
+        rawWindowMessageCount > 0 ? Math.max(1, Math.floor(rawWindowMessageCount * 0.25)) : 20,
       rawWindowMessageCount,
     };
   }
@@ -1122,19 +1256,19 @@ export class AgentLongTermMemoryRecall {
       return false;
     }
 
-    const recallItemCount = input.graph.hit
-      ? input.graph.sourcesCount
-      : input.results.length;
+    const recallItemCount = input.graph.hit ? input.graph.sourcesCount : input.results.length;
 
     if (recallItemCount <= 0) {
       return false;
     }
 
-    const limit = Math.max(1, Math.floor(input.rawWindowMessageCount * RECALL_INJECTION_RAW_WINDOW_RATIO));
+    const limit = Math.max(
+      1,
+      Math.floor(input.rawWindowMessageCount * RECALL_INJECTION_RAW_WINDOW_RATIO),
+    );
     return recallItemCount >= limit;
   }
 }
-
 
 export function createAgentLongTermMemoryRecall(input: {
   agentId: string;

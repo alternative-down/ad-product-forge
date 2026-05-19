@@ -2,7 +2,7 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import {
   agents,
   agentExecutionContracts,
@@ -43,11 +43,14 @@ export const HireInternalAgentInputSchema = z.object({
   workspaceSandbox: z.any().optional(),
   weeklyBudgetUsd: z.number().nonnegative('weeklyBudgetUsd must be non-negative'),
   providerCredentials: z.record(z.string(), z.any()).optional(),
-  githubApps: z.custom<{
-    installForRepo: (repo: string) => Promise<void>;
-    getInstallationId: (repo: string) => Promise<string>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }>().optional().default({} as any),
+  githubApps: z
+    .custom<{
+      installForRepo: (repo: string) => Promise<void>;
+      getInstallationId: (repo: string) => Promise<string>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }>()
+    .optional()
+    .default({} as any),
   emailMailboxes: z.any().nullable().optional(),
   coolify: z.any().nullable().optional(),
   schedules: z.any(),
@@ -59,9 +62,7 @@ export type HireInternalAgentInput = z.infer<typeof HireInternalAgentInputSchema
  * Parses and validates input. Throws ZodError with full field paths on failure.
  * Call this at the top of hireInternalAgent before any I/O.
  */
-export function validateHireInternalAgentInput(
-  input: unknown,
-): HireInternalAgentInput {
+export function validateHireInternalAgentInput(input: unknown): HireInternalAgentInput {
   return HireInternalAgentInputSchema.parse(input);
 }
 
@@ -136,7 +137,7 @@ async function rollbackHireDbAndEmail(
   await tx.delete(agentProviders).where(eq(agentProviders.agentId, agentId));
   await tx.delete(agents).where(eq(agents.id, agentId));
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (provisionedMailbox && emailMailboxes) {
     try {
       await emailMailboxes.deleteMailboxByAddress(provisionedMailbox.address);
@@ -145,7 +146,10 @@ async function rollbackHireDbAndEmail(
         scope: 'hire-agent',
         level: 'warn',
         message: 'Rollback: deleteMailboxByAddress failed',
-        context: { address: provisionedMailbox.address, error: e instanceof Error ? e.message : String(e) },
+        context: {
+          address: provisionedMailbox.address,
+          error: e instanceof Error ? e.message : String(e),
+        },
       });
     }
   }
@@ -155,9 +159,11 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   const validated = validateHireInternalAgentInput(input);
   const agentId = validated.agentId ?? createId();
   const now = Date.now();
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  const shouldProvisionEmail = validated.emailMailboxes ? await validated.emailMailboxes.isConfigured() : false;
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  const shouldProvisionEmail = validated.emailMailboxes
+    ? await validated.emailMailboxes.isConfigured()
+    : false;
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const provisionedMailbox = shouldProvisionEmail
     ? await validated.emailMailboxes!.provisionMailbox({
         agentId,
@@ -205,7 +211,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // Wrap ALL DB writes inside a single transaction.
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   await db.transaction(async (tx) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);
@@ -243,22 +249,27 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         roleDescription: validated.roleDescription,
       });
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registerAgentAccount failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'hire-agent',
+        level: 'error',
+        message: 'registerAgentAccount failed during hire',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       // No external ops succeeded yet — undo DB records and email only
-      await rollbackHireDbAndEmail(
-        agentId,
-        provisionedMailbox,
-        validated.emailMailboxes,
-        tx,
-      );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
+      await rollbackHireDbAndEmail(agentId, provisionedMailbox, validated.emailMailboxes, tx);
+
       throw err;
     }
 
     try {
       await validated.schedules.createHeartbeatSchedule(agentId);
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'createHeartbeatSchedule failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'hire-agent',
+        level: 'error',
+        message: 'createHeartbeatSchedule failed during hire',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       await rollbackHire(
         agentId,
         provisionedMailbox,
@@ -269,7 +280,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         validated.internalChat,
         tx,
       );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
 
@@ -278,14 +289,19 @@ export async function hireInternalAgent(db: Database, input: unknown) {
       runtime = await loadAgent(db, {
         agentId,
         workspaceBasePath: validated.workspaceBasePath,
-        githubApps: (validated.githubApps as any),
+        githubApps: validated.githubApps as any,
         emailMailboxes: validated.emailMailboxes,
         coolify: validated.coolify,
         schedules: validated.schedules,
         internalChat: validated.internalChat,
       });
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'loadAgent failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'hire-agent',
+        level: 'error',
+        message: 'loadAgent failed during hire',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       await rollbackHire(
         agentId,
         provisionedMailbox,
@@ -296,14 +312,19 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         validated.internalChat,
         tx,
       );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
 
     try {
       await getInternalAgentRegistry().add(db, runtime);
     } catch (err) {
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'registry.add failed during hire', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'hire-agent',
+        level: 'error',
+        message: 'registry.add failed during hire',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       await rollbackHire(
         agentId,
         provisionedMailbox,
@@ -314,7 +335,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         validated.internalChat,
         tx,
       );
-      forgeDebug({ scope: 'hire-agent', level: 'error', message: 'hire-agent: operation failed', error: err instanceof Error ? err.message : String(err) });
+
       throw err;
     }
   });

@@ -133,12 +133,6 @@ export async function terminateInternalAgent(
       });
     }
     getInternalAgentRegistry().remove(input.agentId);
-    forgeDebug({
-      scope: 'terminate-agent',
-      level: 'error',
-      message: 'terminate-agent: operation failed',
-      context: { error: err instanceof Error ? err.message : String(err) },
-    });
     throw err;
   }
 

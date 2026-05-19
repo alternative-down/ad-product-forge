@@ -60,9 +60,11 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     this.servers.clear();
     this.actions = [];
 
-    await Promise.all(entries.map(async (entry) => {
-      await entry.toolset?.dispose();
-    }));
+    await Promise.all(
+      entries.map(async (entry) => {
+        await entry.toolset?.dispose();
+      }),
+    );
   }
 
   private async refresh() {
@@ -74,10 +76,9 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       return await this.refreshPromise;
     }
 
-    this.refreshPromise = this.refreshNow()
-      .finally(() => {
-        this.refreshPromise = null;
-      });
+    this.refreshPromise = this.refreshNow().finally(() => {
+      this.refreshPromise = null;
+    });
 
     return await this.refreshPromise;
   }
@@ -91,7 +92,9 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     const rawLinkedServers = await getAgentMcpServers(this.agentId);
     const linkedServers = Array.isArray(rawLinkedServers) ? rawLinkedServers : [];
     const nextServerIds = new Set(linkedServers.map(({ server }) => server.id));
-    const staleServerIds = Array.from(this.servers.keys()).filter((serverId) => !nextServerIds.has(serverId));
+    const staleServerIds = Array.from(this.servers.keys()).filter(
+      (serverId) => !nextServerIds.has(serverId),
+    );
 
     for (const serverId of staleServerIds) {
       await this.disposeServer(serverId);
@@ -116,7 +119,12 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
         await previous?.toolset?.dispose();
       } catch (error) {
         hasConnectionFailure = true;
-        forgeDebug({ scope: 'mcp-client-manager', level: 'warn', message: 'Failed to refresh server', context: { serverName: serverConfig.name, agentId: this.agentId, error } });
+        forgeDebug({
+          scope: 'mcp-client-manager',
+          level: 'warn',
+          message: 'Failed to refresh server',
+          context: { serverName: serverConfig.name, agentId: this.agentId, error },
+        });
       }
     }
 
@@ -149,12 +157,14 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
   ): RuntimeActionDefinition<Record<string, unknown>, unknown> {
     return {
       ...action,
-      async execute(input: Record<string, unknown>, context: { runtimeId: string; stepId: string; stepNumber: number }) {
+      async execute(
+        input: Record<string, unknown>,
+        context: { runtimeId: string; stepId: string; stepNumber: number },
+      ) {
         try {
           return await action.execute(input, context);
         } catch (error) {
           void (this as any).handleServerDisconnect(serverId, error);
-          forgeDebug({ scope: 'mcp-client-manager', level: 'error', message: 'mcp-client-manager operation failed', error: error instanceof Error ? error.message : String(error) });
           throw error;
         }
       },
@@ -168,7 +178,12 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
       return;
     }
 
-    forgeDebug({ scope: 'mcp-client-manager', level: 'warn', message: 'Server disconnected', context: { agentId: this.agentId, error } });
+    forgeDebug({
+      scope: 'mcp-client-manager',
+      level: 'warn',
+      message: 'Server disconnected',
+      context: { agentId: this.agentId, error },
+    });
     this.servers.set(serverId, {
       ...server,
       toolset: null,
@@ -185,7 +200,7 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
 
   private scheduleRetry() {
     const delayMs = Math.min(
-      MCP_RETRY_BASE_DELAY_MS * (2 ** Math.min(this.retryAttempt, 4)),
+      MCP_RETRY_BASE_DELAY_MS * 2 ** Math.min(this.retryAttempt, 4),
       MCP_RETRY_MAX_DELAY_MS,
     );
 
@@ -235,7 +250,8 @@ function mapServerConfig(
       transport: 'stdio',
       command: server.command !== null && server.command !== undefined ? server.command : '',
       args: server.args !== null && server.args !== undefined ? JSON.parse(server.args) : [],
-      env: server.envVars !== null && server.envVars !== undefined ? JSON.parse(server.envVars) : {},
+      env:
+        server.envVars !== null && server.envVars !== undefined ? JSON.parse(server.envVars) : {},
     };
   }
 
@@ -244,7 +260,10 @@ function mapServerConfig(
     name: server.name,
     transport: 'http-stream',
     url: server.url !== null && server.url !== undefined ? server.url : 'http://localhost:3000/mcp',
-    headers: server.headers !== null && server.headers !== undefined ? JSON.parse(server.headers) : undefined,
+    headers:
+      server.headers !== null && server.headers !== undefined
+        ? JSON.parse(server.headers)
+        : undefined,
   };
 }
 

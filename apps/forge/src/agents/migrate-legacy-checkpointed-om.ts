@@ -25,7 +25,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
     order: 'asc',
   });
   const existingMessageIds = new Set(existingMessages.map((message: { id: string }) => message.id));
-  const checkpointSummary = state["checkpointSummary"];
+  const checkpointSummary = state['checkpointSummary'];
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const checkpointSummaryId = checkpointSummary
     ? `checkpoint-summary:${input.agentId}:${checkpointSummary.upToGeneration}`
@@ -37,17 +37,19 @@ export async function migrateLegacyCheckpointedOmState(input: {
       id: checkpointSummaryId,
       threadId: input.threadId,
       role: 'assistant',
-      parts: [{
-        type: 'text',
-        text: checkpointSummary.text.trim(),
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: checkpointSummary.text.trim(),
+        },
+      ],
       operationalMemoryType: 'checkpoint-summary',
       operationalMemoryGeneration: checkpointSummary.upToGeneration,
       createdAt: checkpointSummary.updatedAt,
     });
   }
 
-  for (const reflection of state["activeReflectionBlocks"]) {
+  for (const reflection of state['activeReflectionBlocks']) {
     if (existingMessageIds.has(reflection.recordId)) {
       continue;
     }
@@ -56,26 +58,30 @@ export async function migrateLegacyCheckpointedOmState(input: {
       id: reflection.recordId,
       threadId: input.threadId,
       role: 'assistant',
-      parts: [{
-        type: 'text',
-        text: reflection.text.trim(),
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: reflection.text.trim(),
+        },
+      ],
       operationalMemoryType: 'reflection',
-      operationalMemoryGeneration: reflection["generationCount"],
+      operationalMemoryGeneration: reflection['generationCount'],
       createdAt: reflection.createdAt,
     });
   }
 
-  for (const observation of state["observationBlocks"]) {
+  for (const observation of state['observationBlocks']) {
     if (!existingMessageIds.has(observation.id)) {
       await input.conversationStore.appendMessage({
         id: observation.id,
         threadId: input.threadId,
         role: 'assistant',
-        parts: [{
-          type: 'text',
-          text: observation.text.trim(),
-        }],
+        parts: [
+          {
+            type: 'text',
+            text: observation.text.trim(),
+          },
+        ],
         operationalMemoryType: 'observation',
         createdAt: observation.createdAt,
       });
@@ -90,12 +96,14 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
   }
 
-  for (const observation of state["observationBlocks"]) {
+  for (const observation of state['observationBlocks']) {
     if (observation.reflectedGeneration === null) {
       continue;
     }
 
-    const reflection = state["activeReflectionBlocks"].find((item: any) => item["generationCount"] === observation.reflectedGeneration);
+    const reflection = state['activeReflectionBlocks'].find(
+      (item: any) => item['generationCount'] === observation.reflectedGeneration,
+    );
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (reflection) {
@@ -108,7 +116,11 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (checkpointSummary && checkpointSummaryId && observation.reflectedGeneration <= checkpointSummary.upToGeneration) {
+    if (
+      checkpointSummary &&
+      checkpointSummaryId &&
+      observation.reflectedGeneration <= checkpointSummary.upToGeneration
+    ) {
       await input.conversationStore.updateMessageReplacement({
         threadId: input.threadId,
         messageId: observation.id,
@@ -119,8 +131,8 @@ export async function migrateLegacyCheckpointedOmState(input: {
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (checkpointSummaryId && checkpointSummary) {
-    for (const reflection of state["activeReflectionBlocks"]) {
-      if (reflection["generationCount"] > checkpointSummary.upToGeneration) {
+    for (const reflection of state['activeReflectionBlocks']) {
+      if (reflection['generationCount'] > checkpointSummary.upToGeneration) {
         continue;
       }
 
@@ -132,13 +144,19 @@ export async function migrateLegacyCheckpointedOmState(input: {
     }
   }
   try {
-    await input.db.delete(agentCheckpointedOmStates).where(eq(agentCheckpointedOmStates.agentId, input.agentId));
+    await input.db
+      .delete(agentCheckpointedOmStates)
+      .where(eq(agentCheckpointedOmStates.agentId, input.agentId));
   } catch (err) {
-    forgeDebug({ scope: 'migrate-legacy-checkpointed-om', level: 'info', message: 'delete-error', context: {
-      error: err instanceof Error ? err.message : String(err),
-      agentId: input.agentId,
-    } });
-    forgeDebug({ scope: 'migrate-legacy-checkpointed-om', level: 'error', message: 'migrate-legacy-checkpointed-om: operation failed', error: err instanceof Error ? err.message : String(err) });
+    forgeDebug({
+      scope: 'migrate-legacy-checkpointed-om',
+      level: 'info',
+      message: 'delete-error',
+      context: {
+        error: err instanceof Error ? err.message : String(err),
+        agentId: input.agentId,
+      },
+    });
     throw err;
   }
 }

@@ -62,14 +62,12 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
     internalChat: input.internalChat,
   });
   try {
-    const githubApp = await (
-      await input.githubApps.isConfigured()
-        ? input.githubApps.createAgentApp({
-            agentId: hired.agentId,
-            agentName: profile.name,
-          })
-        : null
-    );
+    const githubApp = await ((await input.githubApps.isConfigured())
+      ? input.githubApps.createAgentApp({
+          agentId: hired.agentId,
+          agentName: profile.name,
+        })
+      : null);
     await companyCashOperations.recordCashOut({
       type: 'agent-hiring-process',
       amountUsd: hiringRh.costUsd ?? 0,
@@ -84,7 +82,12 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       githubAppRegistrationUrl: (githubApp as any)?.registrationUrl ?? null,
     };
   } catch (error) {
-    forgeDebug({ scope: 'internal-agent-lifecycle', level: 'error', message: 'Internal agent lifecycle failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({
+      scope: 'internal-agent-lifecycle',
+      level: 'error',
+      message: 'Internal agent lifecycle failed',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
     await terminateInternalAgent(db, {
       agentId: hired.agentId,
       workspaceBasePath: input.workspaceBasePath,
@@ -94,19 +97,21 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       schedules: input.schedules,
       internalChat: input.internalChat,
     });
-    forgeDebug({ scope: 'internal-agent-lifecycle', level: 'error', message: 'internal-agent-lifecycle: operation failed', error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
 
-export async function runInternalTermination(db: Database, input: {
-  agentId: string;
-  workspaceBasePath: string;
-  githubApps: RunInternalHiringInput['githubApps'];
-  emailMailboxes: RunInternalHiringInput['emailMailboxes'];
-  coolify: RunInternalHiringInput['coolify'];
-  schedules: RunInternalHiringInput['schedules'];
-  internalChat: RunInternalHiringInput['internalChat'];
-}) {
+export async function runInternalTermination(
+  db: Database,
+  input: {
+    agentId: string;
+    workspaceBasePath: string;
+    githubApps: RunInternalHiringInput['githubApps'];
+    emailMailboxes: RunInternalHiringInput['emailMailboxes'];
+    coolify: RunInternalHiringInput['coolify'];
+    schedules: RunInternalHiringInput['schedules'];
+    internalChat: RunInternalHiringInput['internalChat'];
+  },
+) {
   return await terminateInternalAgent(db, input);
 }
