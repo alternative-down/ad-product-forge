@@ -1,8 +1,8 @@
-import path from 'node:path';
+import path from 'node:path'; /* eslint-disable-line @typescript-eslint/no-unused-vars */
 
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import { LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier, forgeDebug } from '@forge-runtime/core';
+import {  forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import {
@@ -13,9 +13,7 @@ import {
   agentRoles,
   llmProfiles,
 } from '../database/schema';
-import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentLongTermMemoryStore } from './ltm/store';
-import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import type { InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
 
@@ -23,17 +21,15 @@ import type { InternalAgentRuntime } from './runtime/types';
 import { readLatestThreadDetails, readAgentRuntimeMemory, buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
 
 // Re-exports from helpers for backward compatibility
-export { buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
-export { formatStepIntervalLabel, computeIntervalConsistencyScore } from './agent-home-metrics-interval-helpers';
-export { truncatePreview, extractLatestMessagePreview, extractLatestMessageToolBadge } from './agent-home-metrics-preview-helpers';
-export { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helpers';
 
 const OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type RuntimeStoredMessagePart = {
   type: string;
   text?: string;

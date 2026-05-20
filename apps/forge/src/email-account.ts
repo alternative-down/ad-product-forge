@@ -355,7 +355,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       query?: string;
       dateFrom?: string;
       dateTo?: string;
-    }): Promise<CommunicationProviderMessage[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
+    }): Promise<CommunicationProviderMessage[]> {  
       const { targetKey, limit, offset, dateFrom, dateTo } = input;
       const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
       const parsedDateTo = parseFilterDate(dateTo, 'dateTo');

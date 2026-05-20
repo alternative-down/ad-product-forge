@@ -1,4 +1,5 @@
-import { and, eq, gte, lte } from 'drizzle-orm';
+
+import { eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';

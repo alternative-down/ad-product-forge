@@ -72,7 +72,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   } = deps;
 
   const registry = getInternalAgentRegistry();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const registryWithSize = registry as unknown as { get(agentId: string): unknown; size: number };
 
   async function getDashboard() {

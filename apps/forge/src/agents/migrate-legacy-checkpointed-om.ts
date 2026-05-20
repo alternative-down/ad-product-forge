@@ -115,10 +115,11 @@ export async function migrateLegacyCheckpointedOmState(input: {
       continue;
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+     
+     
     if (
-      checkpointSummary &&
-      checkpointSummaryId &&
+      checkpointSummary !== undefined && checkpointSummary !== null &&
+      checkpointSummaryId !== undefined && checkpointSummaryId !== null &&
       observation.reflectedGeneration <= checkpointSummary.upToGeneration
     ) {
       await input.conversationStore.updateMessageReplacement({

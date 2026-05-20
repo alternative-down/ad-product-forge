@@ -220,7 +220,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       return null;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const conversationStore = new LibsqlConversationStore({ client: client as any, tablePrefix: mastraAgentId });
     const settings = await systemSettings.getSettings();
 
@@ -356,7 +356,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       for (const row of ltmStateRows) {
         try {
           const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+           
           longTermMemoryStateByAgentId.set(row.agentId, parsed.success ? parsed.data : createEmptyLongTermMemoryState());
         } catch {
           longTermMemoryStateByAgentId.set(row.agentId, createEmptyLongTermMemoryState());

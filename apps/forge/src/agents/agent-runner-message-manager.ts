@@ -4,10 +4,9 @@
 // =============================================================================
 
 import type { AgentWakeEvent } from '@forge-runtime/core';
-import { createMessageManager, type MessageManagerState } from './agent-runner-messages';
+import { createMessageManager } from './agent-runner-messages';
 
 
-export { type MessageManagerState } from './agent-runner-messages';
 
 export interface RunnerMessageManagerState {
   flushedRunEventKeys: Set<string>;

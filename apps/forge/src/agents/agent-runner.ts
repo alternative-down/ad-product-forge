@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
 import { createId } from '../utils/id';
 import { createAgentWakeQueue, forgeDebug } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -189,7 +190,7 @@ export function createAgentRunner(
 
   function clearTimer() { scheduler.clearTimer(); }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   function _startHealthcheck() { scheduler.startHealthcheck(); }
 
   function clearHealthcheck() { scheduler.clearHealthcheck(); }

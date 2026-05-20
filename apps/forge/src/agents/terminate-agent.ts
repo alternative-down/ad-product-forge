@@ -41,7 +41,7 @@ export async function terminateInternalAgent(
     throw err;
   }
 
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+   
   if (!agent) {
     forgeDebug({
       scope: 'terminate-agent',

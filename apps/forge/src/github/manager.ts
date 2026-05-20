@@ -230,7 +230,7 @@ export function createGitHubAppManager(config: {
       return null;
     }
 
-    // eslint-disable-next-line @typescript-eslint/return-await
+     
   return await createAgentApp({
       agentId,
       agentName: agent.name,

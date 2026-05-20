@@ -6,11 +6,11 @@ import type { InternalAgentRuntime } from './runtime/types';
 import { loadAgentRuntimeData } from './agent-loader-data';
 import { loadAgentToolset } from './agent-loader-tools';
 import type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
+export type { AgentLoaderConfig, SingleAgentLoaderConfig };
 import { buildAgentRuntimeConfig } from './agent-loader-runtime-config';
 import { createAgentContractStore } from './agent-contract-store';
 import { createSystemSettingsStore } from '../system-settings/store';
 
-export type { AgentLoaderConfig, SingleAgentLoaderConfig } from './agent-loader-types';
 
 /**
  * Load agent configuration from database and create agent instance

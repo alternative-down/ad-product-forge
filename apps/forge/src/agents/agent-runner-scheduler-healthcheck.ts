@@ -30,7 +30,7 @@ export function createSchedulerHealthcheck(
   _deps: SchedulerHealthcheckDeps,
 ): SchedulerHealthcheck {
   let healthcheckTimer: ReturnType<typeof setInterval> | null = null;
-  let healthcheckNextAt: number | null = null;
+  const healthcheckNextAt: number | null = null;
 
   /**
    * startHealthcheck is a no-op when using external timer management.

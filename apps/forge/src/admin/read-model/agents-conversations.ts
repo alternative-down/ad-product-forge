@@ -33,7 +33,7 @@ export interface AgentThreadMessagesInput {
 }
 
 export interface AgentThreadMessagesResult {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   items: Array<Record<string, any>>;
   hasMore: boolean;
 }
@@ -82,7 +82,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
       offset: params.offset,
     }).catch(() => []);
     return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       items: messages.map((message: any) => ({ ...message, authorAgentId: null })),
       hasMore: false,
     };

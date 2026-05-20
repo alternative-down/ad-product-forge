@@ -1,7 +1,8 @@
-import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import {   FIFTEEN_MINUTES_MS } from './time-constants';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import { forgeDebug } from '@forge-runtime/core';
-import { createId } from '../utils/id';
+
 import { withTimeout } from '../utils/async';
 import {
   nextBackoff as backoffNextBackoff,
@@ -14,7 +15,7 @@ import {
 } from './agent-runner-scheduler-epoch';
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 import { createSchedulerSteps } from './agent-runner-scheduler-steps';
-const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
+const _RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 import { createFlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
 import { createRunLifecycle } from './agent-runner-run-lifecycle';
@@ -97,7 +98,7 @@ export function createScheduler(
   });
 
   // Step callback — set by the runner orchestrator
-  let stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
+  let _stepCallback: ((runEpoch: number) => Promise<void>) | null = null;
 
   function clearTimer() {
     timerManager.clearTimer();
@@ -265,7 +266,7 @@ export function createScheduler(
   async function forceIdle(
     setExecutionState: (runtimeId: string, state: 'idle' | 'running' | 'absent') => Promise<void>,
     onAgentIdle?: () => Promise<void>,
-    options: {
+    _options: {
       preserveQueuedWork?: boolean;
     } = {},
   ) {
@@ -386,7 +387,7 @@ export function createScheduler(
     activeRunId = id;
   }
 
-  function getRunLastMessages(): number {
+  function _getRunLastMessages(): number {
     return (flushManager as any).getFlushSettings().runLastMessages;
   }
 
@@ -404,7 +405,7 @@ export function createScheduler(
   }
 
   function setStepCallback(fn: (runEpoch: number) => Promise<void>) {
-    stepCallback = fn;
+    _stepCallback = fn;
   }
 
   function getAbortController(): AbortController | null {

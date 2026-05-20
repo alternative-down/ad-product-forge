@@ -127,7 +127,7 @@ function createInternalAgentRegistry() {
           integrations: (loaderConfig as any).integrations,
                   publicBaseUrl: '',
         });
-        // eslint-disable-next-line @typescript-eslint/return-await
+         
   return await loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
