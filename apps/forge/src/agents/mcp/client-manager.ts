@@ -44,8 +44,8 @@ class AgentMcpRuntimeActionSourceManager implements AgentMcpRuntimeActionSource 
     void this.refresh();
   }
 
-  async getActions() {
-    return this.actions;
+  getActions() {
+    return Promise.resolve(this.actions);
   }
 
   async dispose() {

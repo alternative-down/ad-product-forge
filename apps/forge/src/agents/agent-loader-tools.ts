@@ -15,7 +15,7 @@ import { createMiniMaxTools } from '../minimax/tools';
 import { createAgentSkillTools } from './skills-tools';
 import { createInternalAgentTools } from './internal-agent-tools';
 
-export async function loadAgentToolset(input: {
+export function loadAgentToolset(input: {
   db: Database;
   loaderConfig: AgentLoaderConfig;
   agentId: string;
