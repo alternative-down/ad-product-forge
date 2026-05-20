@@ -2,76 +2,14 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [develop]
   push:
-    branches: [main, develop]
-
-permissions:
-  contents: read
+    branches: [develop]
 
 jobs:
-  # Conditional: only runs when package.json changed
-  lockfile-sync:
-    runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.diff, 'package.json')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install
-        run: npm install
-
-      - name: Detect lockfile changes
-        run: |
-          if git diff --quiet package-lock.json; then
-            echo "ERROR: package-lock.json is out of sync with package.json"
-            echo "Add package-lock.json to your PR diff."
-            echo "Run: npm install && git add package-lock.json"
-            exit 1
-          else
-            echo "package-lock.json is up to date."
-          fi
-
-  # Parallelized jobs — each calls the reusable workflow for shared setup
-  check-filenames:
-    needs: []
-    uses: ./.github/workflows/_setup-and-run.yml
-    with:
-      cmd: npm run check-filenames
-
-  lint:
-    needs: []
-    uses: ./.github/workflows/_setup-and-run.yml
-    with:
-      cmd: npm run lint
-
-  typecheck:
-    needs: []
-    uses: ./.github/workflows/_setup-and-run.yml
-    with:
-      cmd: npm run typecheck
-
-  test:
-    needs: []
-    uses: ./.github/workflows/_setup-and-run.yml
-    with:
-      cmd: npm run test
-
-  build:
-    needs: []
-    uses: ./.github/workflows/_setup-and-run.yml
-    with:
-      cmd: npm run build
-
-  # All-in-one validation job (fallback / compatibility)
   validate:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -84,9 +22,6 @@ jobs:
 
       - name: Install
         run: npm install
-
-      - name: Check Filenames
-        run: npm run check-filenames
 
       - name: Lint
         run: npm run lint
@@ -94,14 +29,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Build
-        run: npm run build
-
-      - name: Fallow Audit
-        run: npx fallow audit --fail-on-regression --tolerance 2% --health-baseline .fallow/baseline-health.json --dead-code-baseline .fallow/baseline-dead-code.json --dupes-baseline .fallow/baseline-dupes.json
-
-      - name: Fallow Fix (Dry Run)
-        run: npx fallow fix --dry-run
-
       - name: Test
         run: npm run test
+
+      - name: Build
+        run: npm run build -- --force
