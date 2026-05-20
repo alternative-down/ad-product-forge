@@ -446,28 +446,28 @@ export function createAgentScheduleManager(input: {
       getLifecycle().cancel(scheduleRecord.scheduleId);
       try {
         await store.deleteAgentSchedule(agentId, scheduleRecord.scheduleId);
-      } catch (err) {
+      } catch (error) {
         forgeDebug({
           scope: 'schedules',
           level: 'error',
-          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${err instanceof Error ? err.message : String(err)}`,
+          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${error instanceof Error ? error.message : String(error)}`,
           context: { agentId, scheduleId: scheduleRecord.scheduleId },
         });
-        throw err;
+        throw error;
       }
     }
 
     // Also delete heartbeat schedules for this agent
     try {
       await store.deleteHeartbeatSchedule(agentId);
-    } catch (err) {
+    } catch (error) {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
-        message: `removeAgent: failed to delete heartbeat schedule: ${err instanceof Error ? err.message : String(err)}`,
+        message: `removeAgent: failed to delete heartbeat schedule: ${error instanceof Error ? error.message : String(error)}`,
         context: { agentId },
       });
-      throw err;
+      throw error;
     }
   }
 
