@@ -123,32 +123,32 @@ export function createInternalChatGroups(
   async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
     await requireConversationMembershipByAccount(accountId, conversationId);
 
-    let conversation;
     try {
-      conversation = await db.query.internalChatConversations.findFirst({
+      const conversation = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, conversationId),
       });
+
+      if (!conversation) {
+        forgeDebug({
+          scope: 'internal-chat-groups',
+          level: 'warn',
+          message: 'getRequiredConversationForAccount conversation not found',
+          context: { conversationId },
+        });
+        throw new Error(`Conversation not found: ${conversationId}`);
+      }
+
+      return conversation;
     } catch (err) {
+      if (!(err instanceof Error)) throw err;
       forgeDebug({
         scope: 'internal-chat-groups',
         level: 'error',
-        message: '[internal-chat-groups] getRequiredConversationForAccount lookup failed',
-        context: { error: err instanceof Error ? err.message : String(err), conversationId },
+        message: 'getRequiredConversationForAccount lookup failed',
+        context: { conversationId, error: err.message },
       });
       throw err;
     }
-
-    if (!conversation) {
-      forgeDebug({
-        scope: 'internal-chat-groups',
-        level: 'warn',
-        message: 'getRequiredConversationForAccount conversation not found',
-        context: { conversationId },
-      });
-      throw new Error(`Conversation not found: ${conversationId}`);
-    }
-
-    return conversation;
   }
 
   async function getRequiredGroupForAgent(agentId: string, groupId: string) {
