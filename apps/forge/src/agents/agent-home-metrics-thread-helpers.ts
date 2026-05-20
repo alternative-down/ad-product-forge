@@ -1,6 +1,6 @@
+import { forgeDebug, LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier } from '@forge-runtime/core';
 import path from 'node:path';
 import { createClient } from '@libsql/client';
-import { LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier, forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
@@ -9,12 +9,21 @@ import { extractLatestMessagePreview, extractLatestMessageToolBadge } from './ag
 import { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helpers';
 import type { Database } from '../database/schema';
 import { agents } from '../database/schema';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { InternalAgentRuntime } from './runtime/types';
 
 const OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
-type ClosableLibsqlClient = ReturnType<typeof createClient> & {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type ClosableLibsqlClient = Awaited<ReturnType<typeof createClient>> & {
   close?: () => void | Promise<void>;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type RuntimeStoredMessagePart = {
+  type: string;
+  text?: string;
+  [key: string]: unknown;
 };
 
 export type ThreadDetails = {
