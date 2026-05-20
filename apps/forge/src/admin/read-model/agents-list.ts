@@ -544,16 +544,16 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const activeContractRow = activeContractRows[0] ?? null;
 
     return {
-      id: agent.id,
-      name: agent.name ?? null,
-      description: agent.description ?? null,
+      id: agent!.id,
+      name: agent!.name ?? null,
+      description: agent!.description ?? null,
       role: agentRoleId ?? null,
       roleName: (agentRoleId ?? '') !== '' ? (roleMap.get(agentRoleId ?? '')?.name ?? null) : null,
       modelProfile: (agentModelProfileId ?? '') !== '' ? (profileMap.get(agentModelProfileId ?? '')?.name ?? null) : null,
       omModelProfile: (agentOmModelProfileId ?? '') !== '' ? (profileMap.get(agentOmModelProfileId ?? '')?.name ?? null) : null,
       workspaceFilesystem: (agent as { workspaceFilesystem?: { basePath: string } | null }).workspaceFilesystem ?? null,
-      lastExecutionError: agent.lastExecutionError ?? null,
-      lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
+      lastExecutionError: agent!.lastExecutionError ?? null,
+      lastExecutionErrorAt: agent!.lastExecutionErrorAt ?? null,
       loaded: Boolean(loadedAgent),
       runner: runnerSnapshot,
       mcpConfigIds: agentMcpRows.map((r) => r.id),
@@ -561,11 +561,11 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       recentExecutionSteps: recentSteps_,
       recentNotifications: recentNotifications_,
       githubProvisioning,
-      skills: await listAgentWorkspaceSkills(workspaceBasePath, agent),
+      skills: await listAgentWorkspaceSkills(workspaceBasePath, agent!),
       activeContract: activeContractRow !== null && activeContractRow !== undefined ? {
         contractId: activeContractRow.id,
         agentId: activeContractRow.agentId,
-        agentName: agent.name ?? '',
+        agentName: agent!.name ?? '',
         startsAt: activeContractRow.startsAt,
         endsAt: activeContractRow.endsAt,
         weeklyValueUsd: activeContractRow.budgetUsd,
@@ -576,7 +576,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummaryHelper),
-      heartbeat: heartbeat !== null ? toScheduleSummaryHelper(heartbeat) as unknown : null,
+      heartbeat: heartbeat != null ? toScheduleSummaryHelper(heartbeat!) as unknown : null,
     } as unknown as AgentDetail;
   }
 

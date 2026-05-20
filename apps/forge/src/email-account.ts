@@ -224,7 +224,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         if (!participant) continue;
 
         const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
-        const _threadKey = resolveEmailThreadKey(parsed);
+        const threadKey = resolveEmailThreadKey(parsed);
         items.push({
           messageId: providerMessageId,
           targetKey: threadKey,

@@ -4,6 +4,7 @@
  */
 
 import { ZodError } from 'zod';
+import type { HttpHandler, HttpRequest } from '../../../http/server';
 import { forgeDebug } from '../debug';
 import { jsonResponse } from '../index';
 import {
@@ -48,7 +49,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const agent = await readModel.getAgent(agentId);
@@ -66,7 +67,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/recent-conversations',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const conversations = await readModel.listAgentRecentConversations(agentId);
@@ -84,7 +85,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/execution-steps',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const query = agentExecutionStepsQuerySchema.parse({
           agentId: request.query.get('agentId'),
@@ -104,7 +105,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/thread-messages',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const query = agentThreadMessagesQuerySchema.parse({
           agentId: request.query.get('agentId'),
@@ -124,7 +125,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/ltm-thread-messages',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const query = agentThreadMessagesQuerySchema.parse({
           agentId: request.query.get('agentId'),
@@ -150,7 +151,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/runtime-memory',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const snapshot = await readModel.getAgentRuntimeMemory(agentId);
@@ -168,7 +169,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/om-debug-export',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const snapshot = await readModel.getAgentOmDebugExport(agentId);
@@ -186,7 +187,7 @@ export function registerAgentReadRoutes(
   httpServer.registerRoute({
     method: 'GET',
     path: '/admin/agent/conversation-messages',
-    handler: async (request) => {
+    handler: async (request: HttpRequest) => {
       try {
         const query = agentConversationMessagesQuerySchema.parse({
           agentId: request.query.get('agentId'),

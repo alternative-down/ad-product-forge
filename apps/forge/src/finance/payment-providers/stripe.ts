@@ -26,7 +26,6 @@ function _verifyStripeWebhookSignature(
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const stripe = require('stripe') as typeof import('stripe');
-    // @ts-expect-error -- stripe.webhooks not on module type in stripe 22.x
     const event = stripe.webhooks.constructEvent(payload, signatureHeader, webhookSecret);
     return event as unknown as StripeWebhookPayload;
   } catch (err) {

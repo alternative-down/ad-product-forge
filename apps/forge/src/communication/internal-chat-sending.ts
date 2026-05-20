@@ -114,8 +114,7 @@ export function createChatSending(deps: SendingDeps) {
       // Guard: validate replyToMessageId belongs to the same conversation
       let resolvedReplyTo: string | null = null;
       if (input.replyToMessageId !== null && input.replyToMessageId !== undefined) {
-        const parentMessage;
-        parentMessage = await db.query.internalChatMessages.findFirst({
+        const parentMessage = await db.query.internalChatMessages.findFirst({
           where: eq(internalChatMessages.id, input.replyToMessageId),
         });
         if (parentMessage === null || parentMessage === undefined) {
@@ -146,8 +145,7 @@ export function createChatSending(deps: SendingDeps) {
       }
 
       const messageId = createId();
-      const members;
-      members = await db.query.internalChatConversationMembers.findMany({
+      const members = await db.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, conversation.id),
       });
 

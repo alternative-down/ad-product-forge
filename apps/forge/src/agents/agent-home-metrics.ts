@@ -202,14 +202,14 @@ export async function readAgentHomeMetricSnapshot(input: {
     lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
     roleId: agent.roleId,
     roleName: role?.name ?? null,
-    modelProfile: modelProfile !== null
+    modelProfile: modelProfile != null
       ? {
           profileId: modelProfile.id,
           name: modelProfile.name,
           modelKey: modelProfile.modelKey,
         }
       : null,
-    omModelProfile: omModelProfile !== null
+    omModelProfile: omModelProfile != null
       ? {
           profileId: omModelProfile.id,
           name: omModelProfile.name,

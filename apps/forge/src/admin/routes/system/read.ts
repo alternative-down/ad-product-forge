@@ -15,6 +15,7 @@ import { buildOauthState } from './oauth-state';
 import { buildSystemHealthcheck } from './healthcheck';
 import { listGlobalSkills } from '../../../agents/global-skills';
 import { jsonResponse } from '../index';
+import { forgeDebug } from '../debug';
 import type { CapabilityStore } from '../../../capabilities/store';
 import type { SystemIntegrationStore } from '../../../system-integrations/store';
 import type { LlmSettingsStore } from '../../../llm/settings-store';

@@ -13,6 +13,7 @@ import type { HttpHandler, HttpResponse } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatDeliveryMessage } from '../../../communication/internal-chat-connection';
 import { forgeDebug } from '../debug';
+import { Readable } from 'node:stream';
 
 const SCOPE = 'admin-sse-events';
 

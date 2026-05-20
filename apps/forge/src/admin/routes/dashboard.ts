@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../../database/client';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { forgeDebug } from '@forge-runtime/core';
-import type { createAdminReadModel } from '../read-model';
 import type { createMicroErpReadModel } from '../../micro-erp/read-model';
 import { jsonResponse } from './helpers';
 
@@ -15,14 +14,12 @@ export function registerDashboardRoutes({
   db,
   registry,
   finance,
-  _readModel,
   systemRM,
 }: {
   httpServer: { registerRoute(opts: object): void };
   db: Database;
   registry: InternalAgentRegistry;
   finance: ReturnType<typeof createMicroErpReadModel>;
-  readModel: ReturnType<typeof createAdminReadModel>;
   systemRM: { listRoles(): Promise<unknown> };
 }) {
   // GET /admin/overview — analytics aggregation (finance + agents)

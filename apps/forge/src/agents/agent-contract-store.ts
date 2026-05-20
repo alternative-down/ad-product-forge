@@ -110,7 +110,7 @@ export function createAgentContractStore(
 
     const latestContract = await getLatestContract(agentId);
 
-    if (latestContract === null || latestContract === undefined || latestContract.autoRenew !== true || latestContract.endsAt > time.now()) {
+    if (latestContract === null || latestContract === undefined || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
       return null;
     }
 
@@ -300,7 +300,7 @@ export function createAgentContractStore(
       throw err;
     }
 
-    if (latestContract === null || latestContract === undefined || latestContract.autoRenew !== true || latestContract.endsAt > time.now()) {
+    if (latestContract === null || latestContract === undefined || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
       return null;
     }
 

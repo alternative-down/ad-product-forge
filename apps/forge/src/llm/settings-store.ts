@@ -9,7 +9,7 @@ import {
   type LlmProfile,
   type SystemLlmDefaults,
 } from '../database/schema';
-import { _decryptSecret, encryptSecret } from '../encryption/crypto';
+import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
 
 const llmProfileSchema = z.object({
@@ -351,7 +351,7 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileRecord(row: LlmProfile) {
-  const { id, _encryptedApiKey, isEnabled, ...rest } = row;
+  const { id, encryptedApiKey: _encryptedApiKey, isEnabled, ...rest } = row;
 
   return {
     ...rest,

@@ -31,7 +31,7 @@ const _roleCapabilitySchema = z.object({
   capabilityValue: z.boolean(),
 }).strict();
 
-const _roleToolPermissionSchema = z.object({
+const roleToolPermissionSchema = z.object({
   roleId: z.string(),
   toolName: z.string(),
   allowed: z.boolean(),
