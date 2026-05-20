@@ -19,10 +19,10 @@ import type {
 
 export type CreateForgeAgentConfig<
   TAgentId extends string = string,
-  TTools extends Record<string, unknown> = Record<string, unknown>,
-  TOutput = undefined,
-  TRequestContext extends Record<string, unknown> | unknown = unknown,
-> = AgentConfig<TAgentId, TTools, TOutput, TRequestContext> & {
+  _TTools extends Record<string, unknown> = Record<string, unknown>,
+  _TOutput = undefined,
+  _TRequestContext extends Record<string, unknown> | unknown = unknown,
+> = AgentConfig<TAgentId, _TTools, _TOutput, _TRequestContext> & {
   omModel?: unknown;
   pricingModelKey: string;
   omPricingModelKey?: string;
@@ -196,9 +196,9 @@ export type RuntimeWorkspace = {
 
 export type InternalAgentRuntime<
   TAgentId extends string = string,
-  TTools extends Record<string, unknown> = Record<string, unknown>,
-  TOutput = undefined,
-  TRequestContext extends Record<string, unknown> | unknown = unknown,
+  _TTools extends Record<string, unknown> = Record<string, unknown>,
+  _TOutput = undefined,
+  _TRequestContext extends Record<string, unknown> | unknown = unknown,
 > = {
   id: TAgentId;
   mastraId: string;
@@ -255,11 +255,11 @@ export type InternalAgentRuntime<
 
 export interface CreateAgentConfig<
   TAgentId extends string = string,
-  TTools extends Record<string, unknown> = Record<string, unknown>,
-  TOutput = undefined,
-  TRequestContext extends Record<string, unknown> | unknown = unknown,
+  _TTools extends Record<string, unknown> = Record<string, unknown>,
+  _TOutput = undefined,
+  _TRequestContext extends Record<string, unknown> | unknown = unknown,
 > extends Pick<
-  CreateForgeAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
+  CreateForgeAgentConfig<TAgentId, _TTools, _TOutput, _TRequestContext>,
   | 'id'
   | 'name'
   | 'description'

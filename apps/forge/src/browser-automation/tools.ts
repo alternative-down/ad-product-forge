@@ -5,7 +5,6 @@
  * Each tool wraps the BrowserAutomationService with agent context.
  */
 
-import { forgeDebug } from '@forge-runtime/core';
 import type { BrowserAutomationService, BrowserToolResult } from './service';
 
 /**
