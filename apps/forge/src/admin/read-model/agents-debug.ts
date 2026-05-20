@@ -10,10 +10,8 @@ import { agents } from '../../database/schema';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import type { Database } from '../../database/index';
-import { withTimeout } from '../../utils/async';
 import { forgeDebug } from '@forge-runtime/core';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
-import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
 export interface AgentDebugReadModelDeps {
   db: Database;
@@ -54,10 +52,10 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
 
   async function debugAgentLongTermMemoryRecallSearch(
     agentId: string,
-    input: AgentLongTermMemoryRecallDebugSearchInput,
+    _input: AgentLongTermMemoryRecallDebugSearchInput,
   ) {
-    let agent;
-      agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
+    const agent =
+      await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (agent === null || agent === undefined) return null;
     const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
     return { ltmRecall };

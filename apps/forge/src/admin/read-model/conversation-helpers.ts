@@ -13,23 +13,6 @@ import {
 } from '@forge-runtime/core';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import type { InternalChatService } from '../../communication/internal-chat-service';
-
-type RuntimeStoredMessage = {
-  id: string;
-  role?: string;
-  type?: string;
-  content?: unknown;
-  threadId?: string | null;
-  resourceId?: string | null;
-  createdAt?: string | Date;
-};
-
-type RuntimeStoredMessagePart = {
-  type: string;
-  text?: string;
-  [key: string]: unknown;
-};
-
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
 };

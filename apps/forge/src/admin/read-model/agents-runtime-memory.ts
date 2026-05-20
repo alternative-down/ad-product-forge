@@ -22,7 +22,6 @@ import {
   LibsqlConversationStore,
   readOperationalMemoryState,
   toMastraSafeIdentifier,
-  type CommunicationMessageView,
 } from '@forge-runtime/core';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';

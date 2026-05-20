@@ -1,9 +1,5 @@
-import type { Database } from '../../database/index';
-import type { InternalChatService } from '../../communication/internal-chat-service';
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import {
-  type CommunicationMessageView,
-  type CommunicationProviderMessage,
 } from '@forge-runtime/core';
 
 

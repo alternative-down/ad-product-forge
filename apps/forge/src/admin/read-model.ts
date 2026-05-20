@@ -19,7 +19,6 @@ import { createSystemReadModel } from './read-model/system';
 import { createFinanceReadModel } from './read-model/finance';
 import { getFinanceOverview } from './read-model/finance-overview';
 import { getRecurringPayables } from './read-model/payables-overview';
-import { forgeDebug } from '@forge-runtime/core';
 import type { GitHubAppManager } from '../github/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
