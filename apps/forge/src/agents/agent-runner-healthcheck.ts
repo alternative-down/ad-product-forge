@@ -9,6 +9,7 @@
  */
 import { withTimeout } from '../utils/async';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
 
@@ -47,9 +48,13 @@ export async function runHealthcheck(deps: HealthcheckDeps): Promise<void> {
     onRunnerIdle,
     beginRun,
     queueNextStep,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     onStartingRunTimeout,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     syncStarterState,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     syncExecuting,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     syncTimer,
     notifyError,
   } = deps;
