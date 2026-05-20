@@ -31,8 +31,8 @@ describe('LocalWorkspaceFilesystem', () => {
 
       expect(entries.length).toBeGreaterThan(0);
       for (const entry of entries) {
-        // Never expose absolute host paths
-        expect(entry.path).not.toMatch(/^[^/\\]/);
+        // Never expose absolute host paths - relative paths should start with non-slash
+        expect(entry.path).toMatch(/^[^/\\]/);
         // Never include the tmpDir in the path
         expect(entry.path).not.toContain(tmpDir);
         expect(entry.path).not.toContain(os.tmpdir());
@@ -47,7 +47,7 @@ describe('LocalWorkspaceFilesystem', () => {
       expect(entries.length).toBe(2);
       for (const entry of entries) {
         // Path should be relative to workspace root, not absolute
-        expect(entry.path).not.toMatch(/^[^/\\]/);
+        expect(entry.path).toMatch(/^[^/\\]/);
         expect(entry.path).not.toContain(tmpDir);
         // Path should be relative (no leading /)
         expect(entry.path).toMatch(/^[^/\\]/);
