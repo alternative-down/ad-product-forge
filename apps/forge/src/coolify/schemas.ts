@@ -83,7 +83,7 @@ export const ServerSchema = z.object({
   }).partial().optional(),
 }).passthrough();
 
-function toTimestamp(value: string | number | null): number {
+function _toTimestamp(value: string | number | null): number {
   if (typeof value === 'number') {
     return value;
   }

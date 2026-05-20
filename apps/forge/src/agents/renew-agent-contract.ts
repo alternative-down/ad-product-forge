@@ -26,7 +26,7 @@ export async function renewAgentContract(
   try {
     const activeContract = await contractStore.getActiveContract(input.agentId);
 
-    if (!activeContract) {
+    if (activeContract === null || activeContract === undefined) {
       forgeDebug({
         scope: 'renew-agent-contract',
         level: 'info',

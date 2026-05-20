@@ -2,7 +2,7 @@ import {
   and, desc, eq, gte, inArray, like, lte, sql,
 } from 'drizzle-orm';
 
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 import type { CommunicationProviderMessage } from '@forge-runtime/core';
 
 import {
@@ -199,9 +199,7 @@ export function createInternalChatMessages(
         eq(internalChatConversationMembers.accountId, input.accountId),
       ));
 
-    // eslint-disable-next-line @typescript-eslint/prefer-const
-    let remainingMembers;
-      remainingMembers = await db.query.internalChatConversationMembers.findMany({
+    const remainingMembers = await db.query.internalChatConversationMembers.findMany({
         where: eq(internalChatConversationMembers.conversationId, input.conversationId),
         limit: 1,
       });

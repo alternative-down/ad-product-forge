@@ -132,7 +132,7 @@ export function createAgentScheduleStore(db: Database) {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
 
-      if (!row) {
+      if (row === null || row === undefined) {
         return null;
       }
 
@@ -157,7 +157,7 @@ export function createAgentScheduleStore(db: Database) {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
 
-      if (!row || row.kind !== 'agent') {
+if (row === null || row === undefined || row.kind !== 'agent') {
         return null;
       }
 
@@ -178,7 +178,7 @@ export function createAgentScheduleStore(db: Database) {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, kind)),
       });
 
-      if (!row) return null;
+      if (row === null || row === undefined) return null;
       return toScheduleRecord(row);
     } catch (err) {
       forgeDebug({
@@ -202,7 +202,7 @@ export function createAgentScheduleStore(db: Database) {
       throw err;
     }
 
-    if (!row || row.kind !== 'agent') {
+    if (row === null || row === undefined || row.kind !== 'agent') {
       return null;
     }
 

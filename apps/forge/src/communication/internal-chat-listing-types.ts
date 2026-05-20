@@ -1,14 +1,14 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { eq as _eq, inArray as _inArray, sql as _sql } from 'drizzle-orm';
 import {
-  internalChatConversationMembers,
-  internalChatConversations,
-  internalChatMessageAttachments,
-  internalChatMessageReads,
-  internalChatMessages,
+  internalChatConversationMembers as _internalChatConversationMembers,
+  internalChatConversations as _internalChatConversations,
+  internalChatMessageAttachments as _internalChatMessageAttachments,
+  internalChatMessageReads as _internalChatMessageReads,
+  internalChatMessages as _internalChatMessages,
 } from '../database/schema';
-import type { Database } from '../database/client';
-import { buildConversationParticipantNames } from './internal-chat-helpers';
-import { forgeDebug } from '@forge-runtime/core';
+import type { Database as _Database } from '../database/client';
+import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
+import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 // Named types to avoid complex inline generics exceeding TS parser limits
 export type MessageRowBase = {

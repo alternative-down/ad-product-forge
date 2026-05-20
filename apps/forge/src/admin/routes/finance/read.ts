@@ -3,7 +3,7 @@
  * GET routes for finance overview and contracts
  */
 
-import { z } from 'zod';
+import { z as _z } from 'zod';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 import type { Database } from '../../../database/index';

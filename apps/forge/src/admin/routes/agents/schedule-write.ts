@@ -3,7 +3,7 @@
  * POST routes for agent schedule management
  */
 
-import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
+import type { ForgeHttpServerAdapter } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';

@@ -132,7 +132,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
       forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles failed (query agent)', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
-    if (!agent) return { profiles: [] };
+    if (agent === null || agent === undefined) return { profiles: [] };
     const profileIds = [agent.modelProfileId, agent.omModelProfileId].filter(Boolean);
     if (profileIds.length === 0) return { profiles: [] };
     let profiles;

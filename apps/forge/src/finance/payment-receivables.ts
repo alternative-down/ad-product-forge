@@ -282,22 +282,12 @@ export function createPaymentReceivablesStore(db: Database) {
     }
   }
 
-  async function getTransactionsBySubscription(subscriptionId: string) {
-    try {
-      return await db
-        .select()
-        .from(paymentTransactions)
-        .where(eq(paymentTransactions.subscriptionId, subscriptionId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'payment-receivables',
-        level: 'error',
-        message: 'getTransactionsBySubscription DB read failed',
-        context: { subscriptionId, error: err instanceof Error ? err.message : String(err) },
-      });
-      throw err;
-    }
-  }
+function getTransactionsBySubscription(subscriptionId: string) {
+  return db
+    .select()
+    .from(paymentTransactions)
+    .where(eq(paymentTransactions.subscriptionId, subscriptionId));
+}
 
   async function processPaymentEvent(input: {
     provider: PaymentProviderType;

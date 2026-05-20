@@ -105,7 +105,7 @@ export function createCompanyPayables(db: Database) {
         where: eq(companyRecurringPayables.id, payableId),
       });
 
-      if (!payable) {
+      if (payable === null || payable === undefined) {
         forgeDebug({
           scope: 'company-payables',
           level: 'warn',
@@ -158,7 +158,7 @@ export function createCompanyPayables(db: Database) {
         where: eq(companyRecurringPayables.id, entry.referenceId),
       });
 
-      if (!payable || payable.isActive !== 1) {
+      if (payable === null || payable === undefined || payable.isActive !== 1) {
         return null;
       }
 
@@ -173,7 +173,7 @@ export function createCompanyPayables(db: Database) {
         ),
       });
 
-      if (existingNextEntry) {
+      if (existingNextEntry != null) {
         return null;
       }
 

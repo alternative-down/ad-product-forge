@@ -25,7 +25,7 @@ export function registerProviderOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/providers/upsert',
-    handler: async (request) => {
+    handler: (request) => {
       try {
         const body = parseJsonBody(request.bodyText, upsertAgentProviderSchema);
         return jsonResponse({ success: true, agentId: body.agentId });
@@ -40,7 +40,7 @@ export function registerProviderOps(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/providers/delete',
-    handler: async (request) => {
+    handler: (request) => {
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentProviderSchema);
         return jsonResponse({ success: true, agentId: body.agentId });

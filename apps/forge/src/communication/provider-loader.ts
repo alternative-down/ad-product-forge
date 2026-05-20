@@ -124,11 +124,7 @@ export async function loadCommunicationProviders(
         channels: discord.channels ?? undefined,
       });
 
-      try {
-        await provider.getSelfContact?.();
-      } catch (error) {
-        throw error;
-      }
+      await provider.getSelfContact?.();
 
       providers.push(provider);
     } catch (error) {

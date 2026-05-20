@@ -16,7 +16,7 @@
 import type { Octokit } from 'octokit';
 
 import type { Database } from '../../database/schema';
-// @ts-ignore
+// @ts-expect-error: deferred import from ../helpers.ts
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { createAgentNotificationStore } from '../../notifications/store';
 import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from '../types';

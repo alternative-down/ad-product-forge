@@ -124,7 +124,7 @@ export function createServiceHelpers(deps: ServiceHelpersDeps): ServiceHelpers {
       const conversation = await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, conversationId),
       });
-      if (!conversation) {
+      if (conversation === null || conversation === undefined) {
         forgeDebug({ scope: 'internal-chat-service-helpers', level: 'warn', message: 'getRequiredConversation: not found', context: { conversationId } });
         throw new ConversationNotFoundError(conversationId);
       }

@@ -146,7 +146,7 @@ export function createSystemSettingsStore(db: Database) {
         createdAt: (existing as any)?.createdAt ?? now,
       };
 
-      if (existing) {
+      if (existing === null || existing === undefined) {
         await db.update(systemSettings).set(row).where(eq(systemSettings.id, SYSTEM_SETTINGS_ID));
       } else {
         await db.insert(systemSettings).values(row);

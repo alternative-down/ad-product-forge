@@ -95,7 +95,7 @@ async function listRecentInternalChatConversations(
   try {
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
-    return Promise.all(rows.map(async (conversation) => {
+    return await Promise.all(rows.map(async (conversation) => {
       const internalConversation = await internalChat.getConversationForAgent(agentId, (conversation as any).targetKey);
       const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, (conversation as any).targetKey);
       const participants = collectConversationParticipants({

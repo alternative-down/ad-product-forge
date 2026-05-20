@@ -4,11 +4,11 @@
  */
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Octokit } from 'octokit';
+import type { _Octokit } from 'octokit';
 import type { HttpRequest } from '../../http/server';
 import { App } from 'octokit';
 import type { OpsContext } from './context';
-import type { AppProvisioningOps } from '../apps';
+import type { _AppProvisioningOps } from '../apps';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
 
 // Subset of AppProvisioningOps fields actually used by routing.

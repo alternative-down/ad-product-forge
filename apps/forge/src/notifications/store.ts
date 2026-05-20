@@ -106,7 +106,7 @@ export function createAgentNotificationStore(db: Database) {
       return null;
     }
 
-    if (!row) {
+    if (row === null || row === undefined) {
       return null;
     }
 

@@ -104,13 +104,13 @@ export function createAgentContractStore(
     const activeContract = await getActiveContract(agentId);
 
      
-    if (activeContract) {
+    if (activeContract !== null && activeContract !== undefined) {
       return await fundContractIfNeeded(activeContract);
     }
 
     const latestContract = await getLatestContract(agentId);
 
-    if (!latestContract || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
+    if (latestContract === null || latestContract === undefined || latestContract.autoRenew !== true || latestContract.endsAt > time.now()) {
       return null;
     }
 
@@ -213,12 +213,12 @@ export function createAgentContractStore(
       throw err;
     }
 
-    if (!priceRow) {
+    if (priceRow === null || priceRow === undefined) {
       forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: model price not found', context: { pricingModelKey: input.pricingModelKey } });
       return { modelPrice: null, contractCostMultiplier: 1 };
     }
 
-    if (!profile) {
+    if (profile === null || profile === undefined) {
       forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: LLM profile not found', context: { profileId: input.profileId } });
       throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
     }
@@ -300,7 +300,7 @@ export function createAgentContractStore(
       throw err;
     }
 
-    if (!latestContract || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
+    if (latestContract === null || latestContract === undefined || latestContract.autoRenew !== true || latestContract.endsAt > time.now()) {
       return null;
     }
 

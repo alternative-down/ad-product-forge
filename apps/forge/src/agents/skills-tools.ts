@@ -70,7 +70,7 @@ export function createAgentSkillTools(input: {
         },
       });
 
-      if (!agent) {
+      if (agent === null || agent === undefined) {
         forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill agent not found', context: { agentId: input.agentId } });
         throw new Error(`Agent not found: ${input.agentId}`);
       }
@@ -134,7 +134,7 @@ export function createAgentSkillTools(input: {
           },
         });
 
-        if (!agent) {
+if (agent === null || agent === undefined) {
           forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill agent not found', context: { agentId: input.agentId } });
           throw new Error(`Agent not found: ${input.agentId}`);
         }

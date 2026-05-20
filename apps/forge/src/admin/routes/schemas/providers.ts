@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-const upsertAgentProviderSchema = z.object({
+const _upsertAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
   credentials: z.record(z.string(), z.string()).optional(),
 });
 
-const deleteAgentProviderSchema = z.object({
+const _deleteAgentProviderSchema = z.object({
   agentId: z.string().min(1),
   providerType: z.enum(['discord', 'email']),
 });

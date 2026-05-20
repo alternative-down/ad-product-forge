@@ -9,7 +9,7 @@ import {
   type LlmProfile,
   type SystemLlmDefaults,
 } from '../database/schema';
-import { decryptSecret, encryptSecret } from '../encryption/crypto';
+import { _decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
 
 const llmProfileSchema = z.object({
@@ -52,7 +52,7 @@ export function createLlmSettingsStore(db: Database) {
   async function getDefaults() {
     const row = await getDefaultsRow();
 
-    if (!row) {
+    if (row === null || row === undefined) {
       return null;
     }
 
@@ -68,7 +68,7 @@ export function createLlmSettingsStore(db: Database) {
   async function getResolvedDefaults() {
     const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
 
-    if (!defaults) {
+    if (defaults === null || defaults === undefined) {
       forgeDebug({
         scope: 'llm-settings',
         level: 'warn',
@@ -129,7 +129,7 @@ export function createLlmSettingsStore(db: Database) {
       where: eq(llmProfiles.id, profileId),
     });
 
-    if (!row) {
+    if (row === null || row === undefined) {
       forgeDebug({
         scope: 'llm-settings',
         level: 'warn',
@@ -351,7 +351,7 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileRecord(row: LlmProfile) {
-  const { id, encryptedApiKey, isEnabled, ...rest } = row;
+  const { id, _encryptedApiKey, isEnabled, ...rest } = row;
 
   return {
     ...rest,

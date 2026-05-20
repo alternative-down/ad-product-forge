@@ -15,7 +15,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
     where: eq(agentCheckpointedOmStates.agentId, input.agentId),
   });
 
-  if (!legacyRow) {
+  if (legacyRow === null || legacyRow === undefined) {
     return;
   }
 

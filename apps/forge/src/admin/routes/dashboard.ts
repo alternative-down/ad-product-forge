@@ -1,4 +1,3 @@
-import type { HttpHandler } from '../../http/server';
 import { eq } from 'drizzle-orm';
 import type { Database } from '../../database/client';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
@@ -16,7 +15,7 @@ export function registerDashboardRoutes({
   db,
   registry,
   finance,
-  readModel,
+  _readModel,
   systemRM,
 }: {
   httpServer: { registerRoute(opts: object): void };

@@ -5,7 +5,6 @@
 
 import { oauthStore, type OAuthCredential, type ProviderId } from '@forge-runtime/core';
 import { fsPathExists } from '../helpers';
-import { forgeDebug } from '../debug';
 
 export type SystemOauthProvider = {
   providerId: ProviderId;

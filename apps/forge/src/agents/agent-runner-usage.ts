@@ -43,7 +43,7 @@ export function createAgentRunnerUsage(input: {
         profileId: input.runtime.modelProfileId,
       });
 
-      if (!pricing.modelPrice) {
+      if (pricing.modelPrice === null || pricing.modelPrice === undefined) {
         return recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number; costUsd: number }) => total + step.costUsd, 0) / recentSteps.length;
       }
 
@@ -80,7 +80,7 @@ export function createAgentRunnerUsage(input: {
       });
       let costUsd = 0;
 
-      if (pricing.modelPrice) {
+      if (pricing.modelPrice !== null && pricing.modelPrice !== undefined) {
         const uncachedInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
         costUsd =
           ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +

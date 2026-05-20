@@ -69,7 +69,7 @@ export function createInternalChatConversations(db: Database) {
         throw error;
       }
 
-      if (existing) {
+      if (existing != null) {
         return existing;
       }
     }

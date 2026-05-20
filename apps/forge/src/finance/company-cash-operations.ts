@@ -118,46 +118,7 @@ export function createCompanyCashOperations(db: Database) {
 
   async function cancelPlannedEntry(entryId: string) {
     const entry = await getEntry(entryId);
-    if (!entry) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'warn',
-        message: 'cancelPlannedEntry: entry not found',
-        context: { entryId },
-      });
-      throw new Error(`Company cash entry not found: ${entryId}`);
-    }
-    if (entry.status !== 'planned') {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'warn',
-        message: 'cancelPlannedEntry: entry not planned',
-        context: { entryId, status: entry.status },
-      });
-      throw new Error(`Only planned company cash entries can be canceled: ${entryId}`);
-    }
-
-    try {
-      await db
-        .update(companyCashLedger)
-        .set({ status: 'canceled' })
-        .where(eq(companyCashLedger.id, entryId));
-    } catch (err) {
-      forgeDebug({
-        scope: 'company-cash-operations',
-        level: 'error',
-        message: 'cancelPlannedEntry',
-        context: { error: err instanceof Error ? err.message : String(err), entryId },
-      });
-      throw err;
-    }
-
-    return { entryId, status: 'canceled' as const };
-  }
-
-  async function postPlannedEntry(entryId: string, input: { effectiveAt?: number } = {}) {
-    const entry = await getEntry(entryId);
-    if (!entry) {
+    if (entry === null || entry === undefined) {
       forgeDebug({
         scope: 'company-cash-operations',
         level: 'warn',

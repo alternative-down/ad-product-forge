@@ -162,7 +162,7 @@ export async function generateHiredAgentInstructions(
     })),
   });
 
-  if (!modelPrice) {
+  if (modelPrice === null || modelPrice === undefined) {
     forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hiring-requests-handler: validation/requirement failed' });
     throw new Error(`Missing LLM model price for hiring workflow: ${hiringRhModelKey}`);
   }
@@ -300,7 +300,7 @@ export async function generateHiredAgentInstructions(
           });
           const normalizedAgentName = normalizeAgentName(agent.agentName);
 
-          if (currentAgents.some((currentAgent: object) => normalizeAgentName((currentAgent as { name: unknown }).name as string) === normalizedAgentName)) {
+          if (currentAgents.some((currentAgent: object) => normalizeAgentName((currentAgent as { name: unknown }).name as string) === normalizedAgentName) === true) {
             return {
               valid: false,
               error: `An internal collaborator named "${agent.agentName}" already exists.`,

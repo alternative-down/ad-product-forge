@@ -674,8 +674,8 @@ export function createCoolifyManager(config: {
   };
 }
 
-// ── Re-export all helpers for external consumers ────────────────────────────
-
+// Re-exported for external consumers via coolify package boundary
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
 export type {
   GitHubAppSchema,
   GitHubRepositorySchema,

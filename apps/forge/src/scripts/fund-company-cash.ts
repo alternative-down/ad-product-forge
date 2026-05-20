@@ -20,7 +20,7 @@ async function fundCompanyCash() {
     description: process.argv[3],
   });
   const db = getDatabase();
-  const companyCash = createCompanyCashLedger(db);
+  const _companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
 
   await runMigrations(db);

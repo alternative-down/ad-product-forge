@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { CommunicationFile } from '@forge-runtime/core';
 import { forgeDebug } from '../debug';
-import type { ForgeHttpServerAdapter, HttpHandler } from '../../../http/server';
+import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
 import { parseJsonBody } from '../index';
 import { agentActionSchema } from '../schemas/agents';
@@ -72,7 +72,7 @@ export function registerAgentOperationRoutes(
   httpServer.registerRoute({
     method: 'POST',
     path: '/admin/agent/wake',
-    handler: async (request) => {
+    handler: (request) => {
       try {
         const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
         const entry = registry.get(agentId);

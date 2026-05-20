@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { createId } from '../../../utils/id';
 import type { Database } from '../../../database/client';
-import { agentMcpConfigs, mcpServerConfigs } from '../../../database/schema';
+import { agentMcpConfigs } from '../../../database/schema';
 
 export interface AssignAgentMcpServerResult {
   configId: string;

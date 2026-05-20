@@ -14,11 +14,11 @@
 import { blob, integer, real, sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { z } from 'zod';
-import type { WorkspaceEmbedderId } from '@forge-runtime/core';
+import type { _WorkspaceEmbedderId } from '@forge-runtime/core';
 import { InferModel } from 'drizzle-orm';
 
 // CheckpointedOmState removed from @forge-runtime/core - defined inline for schema compatibility
-interface CheckpointedOmState { threadId: string; checkpoint: unknown; timestamp: number; }
+interface _CheckpointedOmState { threadId: string; checkpoint: unknown; timestamp: number; }
 
 const _WorkspaceFilesystemConfigSchema = z.object({
   basePath: z.string(),
@@ -965,7 +965,7 @@ export type NewTicketMessage = InferModel<typeof ticketMessages, 'insert'>;
 
 // ── Ticketing Relations ────────────────────────────────────────────────────────
 
-export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+export const ticketsRelations = relations(tickets, ({ _one, many }) => ({
   messages: many(ticketMessages),
 }));
 
@@ -975,7 +975,3 @@ export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
     references: [tickets.id],
   }),
 }));
-
-// Re-export Database type for backwards compatibility
-// Consumers import Database from this module
-export type { Database } from './client.js';

@@ -122,7 +122,7 @@ export function createAgentEmailManager(config: {
         where: and(eq(agentProviders.agentId, agentId), eq(agentProviders.providerType, EMAIL_PROVIDER_TYPE)),
       });
 
-      if (!provider) {
+      if (provider === null || provider === undefined) {
         return null;
       }
 
