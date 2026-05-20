@@ -1,4 +1,6 @@
+import { createId } from '../utils/id';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 import type { Database } from '../database/schema';
 import {
@@ -7,7 +9,7 @@ import {
   type LlmProfile,
   type SystemLlmDefaults,
 } from '../database/schema';
-import { _decryptSecret, encryptSecret } from '../encryption/crypto';
+import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
 
 const llmProfileSchema = z.object({
@@ -349,7 +351,7 @@ export function createLlmSettingsStore(db: Database) {
 }
 
 function toProfileRecord(row: LlmProfile) {
-  const { id, isEnabled, ...rest } = row;
+  const { id, encryptedApiKey, isEnabled, ...rest } = row;
 
   return {
     ...rest,
