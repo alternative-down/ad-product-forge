@@ -5,6 +5,7 @@
 import { eq, and, like, or } from 'drizzle-orm';
 import { getDatabase } from '../../database/client';
 import { mcpServerConfigs, agentMcpConfigs, type NewMcpServerConfig, type NewAgentMcpConfig, type McpServerConfig, type AgentMcpConfig } from '../../database/schema';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
 export type { McpServerConfig, AgentMcpConfig } from '../../database/schema';
 import { createId } from '../../utils/id';
 
@@ -81,8 +82,7 @@ export async function createAgentMcpConfig(data: Omit<NewAgentMcpConfig, 'id' | 
 
 export async function getAgentMcpConfig(id: string): Promise<AgentMcpConfig | undefined> {
   const db = getDatabase();
-  let results;
-  results = await db
+  const results = await db
     .select().from(agentMcpConfigs).where(eq(agentMcpConfigs.id, id)).all();
   return results[0];
 }

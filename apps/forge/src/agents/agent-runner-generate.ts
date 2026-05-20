@@ -46,7 +46,7 @@ import {
 import { createId } from '../utils/id';
 import {
   isStaleRun,
-  nextBackoff,
+  
   resetBackoff,
   calculateDelayMs,
 } from './agent-runner-state';
@@ -70,7 +70,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import {
   FIFTEEN_MINUTES_MS,
-  ONE_MINUTE_MS,
+  
 } from './time-constants';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -277,7 +277,7 @@ export async function generateWithTimeoutRetries(
       const { inputTokens = 0, outputTokens = 0, steps = [] } = result ?? {};
 
       // Record usage
-      withTimeout(
+      void withTimeout(
         deps.usage.recordAgentStep(
           contractId,
           inputTokens,
@@ -289,7 +289,7 @@ export async function generateWithTimeoutRetries(
       );
 
       // Record home metric snapshot
-      withTimeout(
+      void withTimeout(
         deps.homeMetricSnapshots.recordSnapshot({
           agentId: deps.runtime.id,
           stepId: createId(),

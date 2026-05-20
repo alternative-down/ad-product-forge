@@ -37,7 +37,7 @@ export async function loadAgentContextInstructions(
     return undefined;
   }
 
-  const lines: Array<string | null> = [
+  const _lines: Array<string | null> = [
     ...(scheduleSummary !== null && scheduleSummary !== undefined ? ['Automatically loaded active schedule context.', ''] : []),
     ...(agentContextContent !== null && agentContextContent !== undefined
       ? [

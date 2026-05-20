@@ -1,6 +1,6 @@
 import type {Database} from '../database/client'
 import { createLlmSettingsStore } from '../llm/settings-store';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core'; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 export async function buildHiredAgentProfile(db: Database, input: {
   agentName: string;

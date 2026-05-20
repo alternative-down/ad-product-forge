@@ -3,9 +3,9 @@ import {
   truncatePreview,
   extractLatestMessagePreview,
   extractLatestMessageToolBadge,
-  buildThreadToolInvocationParts,
-  buildAverageStepIntervalMs,
-} from './agent-home-metrics';
+} from './agent-home-metrics-preview-helpers';
+import { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helpers';
+import { buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
 
 describe('agent-home-metrics', () => {
   describe('truncatePreview', () => {

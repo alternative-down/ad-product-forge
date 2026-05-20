@@ -3,7 +3,7 @@
  * parseCredentials, getInstallationOctokit, getInstallationToken,
  * createGitHubApp, createInstallationOctokit
  */
-import type { Octokit } from 'octokit';
+import type { Octokit as _Octokit } from 'octokit';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials } from '../types';
 import { forgeDebug } from '@forge-runtime/core';

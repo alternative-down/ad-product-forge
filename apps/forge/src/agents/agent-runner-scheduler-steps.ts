@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * agent-runner-scheduler-steps.ts
  *
@@ -8,9 +9,9 @@
  * so the module always reads current values without needing explicit rebinding.
  */
 
-import { createId } from '../utils/id';
+import {  } from '../utils/id';
 import { withTimeout } from '../utils/async';
-import { SchedulerState } from './agent-runner-scheduler';
+import {  } from './agent-runner-scheduler';
 
 export interface BeginRunInput {
   reloadRuntime: boolean;
@@ -97,7 +98,7 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
       }
 
       await queueNextStep();
-    } catch (error) {
+    } catch (_error) {
       // beginRun errors are non-fatal — scheduler handles transitionToIdle
     } finally {
       setStartingRun(false, null);

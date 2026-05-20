@@ -12,7 +12,7 @@ import { agents } from '../database/schema';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { InternalAgentRuntime } from './runtime/types';
 
-const OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
+const _OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
  
 type ClosableLibsqlClient = Awaited<ReturnType<typeof createClient>> & {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
 import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';

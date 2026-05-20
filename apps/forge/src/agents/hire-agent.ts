@@ -13,14 +13,7 @@ import {
 } from '../database/schema';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import { encryptSecret } from '../encryption/crypto';
-import type { CreateAgentConfig } from './runtime/types';
 import { getInternalAgentRegistry } from './internal-agent-registry';
-import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig } from '../database/schema';
-import type { GitHubAppManager } from '../github/manager';
-import type { AgentEmailManager } from '../email/migadu-manager';
-import type { CoolifyManager } from '../coolify/manager';
-import type { AgentScheduleManager } from '../schedules/manager';
-import type { InternalChatService } from '../communication/internal-chat-service';
 import { DEFAULT_WORKSPACE_EMBEDDER } from './agent-embedder-maintenance';
 import { loadAgent } from './agent-loader';
 import { forgeDebug } from '@forge-runtime/core';

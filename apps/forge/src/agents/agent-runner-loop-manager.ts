@@ -3,7 +3,7 @@
 // Wraps createLoopDetector with manager functions for agent-runner.ts
 // =============================================================================
 
-import { createLoopDetector, type LoopDetectorState } from './agent-runner-loop-detector';
+import { createLoopDetector } from './agent-runner-loop-detector';
 
 export interface LoopManagerState {
   lastLoopSignature: string | null;

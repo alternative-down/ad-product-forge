@@ -3,7 +3,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import { buildHiredAgentProfile } from './hiring-profile';
 import { generateHiredAgentInstructions } from './hiring-requests-handler';
-import { hireInternalAgent, type HireInternalAgentInput } from './hire-agent';
+import { hireInternalAgent } from './hire-agent';
 import { terminateInternalAgent } from './terminate-agent';
 import type { GitHubAppManager } from '../github/manager';
 import type { AgentEmailManager } from '../email/migadu-manager';

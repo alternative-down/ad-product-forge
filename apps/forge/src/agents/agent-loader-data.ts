@@ -27,7 +27,8 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       where: eq(agents.id, config.agentId),
     });
 
-  if (!agent) {
+   
+    if (!agent) {
     forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent not in registry', context: { agentId: config.agentId } });
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
