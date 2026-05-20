@@ -106,7 +106,7 @@ export function createAgentRunnerUsage(input: {
       });
   }
 
-  async function recordObservationalMemorySteps(
+  function recordObservationalMemorySteps(
     _contractId: string,
     steps: Array<{
       response?: {
@@ -141,7 +141,7 @@ export function createAgentRunnerUsage(input: {
     recordRefund: async (_input: { contractId: string; refundedUsd: number }) => {
       // stub
     },
-    getPeriodUsage: async (_input: { agentId: string; periodStartMs: number; periodEndMs: number }) => {
+    getPeriodUsage: (_input: { agentId: string; periodStartMs: number; periodEndMs: number }) => {
       // stub
       return { totalCostUsd: 0, stepCount: 0 };
     },
