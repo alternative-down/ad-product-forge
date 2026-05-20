@@ -1,4 +1,5 @@
 import { createTool, type Tool } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -207,10 +208,10 @@ export function createAgentScheduleTools(
         forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_self_crons result', context: { count: result.length } });
         return result.map(toCronOutput);
       } catch (error) {
-        forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'list_self_crons failed: ' + (error instanceof Error ? error.message : String(error)) });
+        forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'list_self_crons failed: ' + (serializeError(error)) });
         return {
           valid: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: serializeError(error),
           hint: 'Try again in a moment. If the problem persists, verify the cron store is available.',
         };
       }
@@ -267,10 +268,10 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_self_crons action=create failed: ' + (error instanceof Error ? error.message : String(error)) });
+            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_self_crons action=create failed: ' + (serializeError(error)) });
             return {
               valid: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: serializeError(error),
               hint: 'Review the cron fields and try again. Use cron for recurring execution or date for one-time execution.',
             };
           }
@@ -315,10 +316,10 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)) });
+            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_self_crons action=update failed: ' + (serializeError(error)) });
             return {
               valid: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: serializeError(error),
               hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
             };
           }
@@ -352,10 +353,10 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_self_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)) });
+          forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_self_crons action=update failed: ' + (serializeError(error)) });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Use list_self_crons to confirm the cronId is correct and belongs to this agent.',
           };
         }
@@ -377,10 +378,10 @@ export function createAgentScheduleTools(
           forgeDebug({ scope: 'tools:schedules', level: 'info', message: 'list_crons result', context: { count: result.length } });
           return result.map(toCronOutput);
         } catch (error) {
-          forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'list_crons failed: ' + (error instanceof Error ? error.message : String(error)) });
+          forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'list_crons failed: ' + (serializeError(error)) });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Try again in a moment. If the problem persists, verify the delegated cron store is available.',
           };
         }
@@ -446,10 +447,10 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_crons action=create failed: ' + (error instanceof Error ? error.message : String(error)) });
+            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_crons action=create failed: ' + (serializeError(error)) });
             return {
               valid: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: serializeError(error),
               hint: 'Verify the targetAgentId exists and that you have permission to create delegated crons.',
             };
           }
@@ -494,10 +495,10 @@ export function createAgentScheduleTools(
               ...toCronOutput(result),
             };
           } catch (error) {
-            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)) });
+            forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_crons action=update failed: ' + (serializeError(error)) });
             return {
               valid: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: serializeError(error),
               hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
             };
           }
@@ -531,10 +532,10 @@ export function createAgentScheduleTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_crons action=update failed: ' + (error instanceof Error ? error.message : String(error)) });
+          forgeDebug({ scope: 'tools:schedules', level: 'error', message: 'manage_crons action=update failed: ' + (serializeError(error)) });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Use list_crons to confirm the cronId is correct and that you created this delegated cron.',
           };
         }

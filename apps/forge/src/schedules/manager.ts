@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 
@@ -79,7 +80,7 @@ export function createAgentScheduleManager(input: {
     try {
       return await store.getOwnedSchedule(agentId, scheduleId);
     } catch (error) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'getOwnedSchedule failed', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) }});
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'getOwnedSchedule failed', context: { agentId, scheduleId, error: serializeError(error) }});
       throw error;
     }
   }
@@ -117,7 +118,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules',
         level: 'error',
         message: 'createHeartbeatSchedule: registerSchedule failed',
-        context: { agentId, scheduleId: (record as unknown as StoredSchedule).scheduleId, error: error instanceof Error ? error.message : String(error) },
+        context: { agentId, scheduleId: (record as unknown as StoredSchedule).scheduleId, error: serializeError(error) },
       });
       throw error;
     }
@@ -151,7 +152,7 @@ export function createAgentScheduleManager(input: {
       await getLifecycle().register(record as any);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createSchedule: registerSchedule failed, cleaned up record', context: { agentId, error: serializeError(error) } });
       throw error;
     }
 
@@ -163,7 +164,7 @@ export function createAgentScheduleManager(input: {
       const schedules = await store.listAgentSchedules(agentId);
       return schedules.map(toToolOutput);
     } catch (error) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listSchedules failed', context: { error: error instanceof Error ? error.message : String(error) }});
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listSchedules failed', context: { error: serializeError(error) }});
       throw error;
     }
   }
@@ -178,7 +179,7 @@ export function createAgentScheduleManager(input: {
         taskId: schedule.scheduleId,
       }));
     } catch (error) {
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listTasks failed', context: { error: error instanceof Error ? error.message : String(error) }});
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'listTasks failed', context: { error: serializeError(error) }});
       throw error;
     }
   }
@@ -231,7 +232,7 @@ export function createAgentScheduleManager(input: {
       }
     } catch (error) {
       const restored = await store.updateAgentSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error: serializeError(error) } });
 
       if (isActiveSchedule(existing as unknown as StoredSchedule) === true && isActiveSchedule(restored as unknown as StoredSchedule) === true) {
          
@@ -298,7 +299,7 @@ export function createAgentScheduleManager(input: {
     } catch (error) {
       // DB update succeeded but scheduler registration failed — rollback DB state
       const restored = await store.updateOwnedSchedule(agentId, scheduleId, rollbackInput);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back', context: { agentId, scheduleId, error: serializeError(error) } });
 
       // Cancel any residual registered entry so the old schedule cannot fire against stale DB state
       getLifecycle().cancel(scheduleId);
@@ -333,7 +334,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
-        message: `deleteSchedule failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `deleteSchedule failed: ${serializeError(error)}`,
         context: { agentId, scheduleId },
       });
       throw error;
@@ -382,7 +383,7 @@ export function createAgentScheduleManager(input: {
       await getLifecycle().register(scheduleRecord as any);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
-      forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'schedules', level: 'error', message: 'createScheduleForAgent: registerSchedule failed, cleaned up record', context: { agentId: parsed.targetAgentId, error: serializeError(error) } });
       throw error;
     }
 
@@ -432,7 +433,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',
-        message: `deleteCron failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `deleteCron failed: ${serializeError(error)}`,
         context: { editorAgentId, scheduleId },
       });
       throw error;
@@ -450,7 +451,7 @@ export function createAgentScheduleManager(input: {
         forgeDebug({
           scope: 'schedules',
           level: 'error',
-          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${error instanceof Error ? error.message : String(error)}`,
+          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${serializeError(error)}`,
           context: { agentId, scheduleId: scheduleRecord.scheduleId },
         });
         throw error;
@@ -464,7 +465,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
-        message: `removeAgent: failed to delete heartbeat schedule: ${error instanceof Error ? error.message : String(error)}`,
+        message: `removeAgent: failed to delete heartbeat schedule: ${serializeError(error)}`,
         context: { agentId },
       });
       throw error;
@@ -564,7 +565,7 @@ export function createAgentScheduleManager(input: {
           scheduleId: scheduleRecord.scheduleId,
           kind: scheduleRecord.kind,
           fireDate: fireDate.getTime(),
-          error: error instanceof Error ? error.message : String(error),
+          error: serializeError(error),
         },
       });
       throw error;
