@@ -133,8 +133,9 @@ export function createDiscordProvider(config: {
           const response = await fetch(attachment.url);
 
           if (!response.ok) {
-            forgeDebug({ scope: 'discord-account', level: 'error', message: 'downloadAttachment: failed', context: { url: attachment.url, status: response.status } });
-            throw new Error(`Failed to download Discord attachment: ${attachment.url}`);
+            const error = new Error(`Failed to download Discord attachment: ${attachment.url} (HTTP ${response.status})`);
+            forgeDebug({ scope: 'discord-account', level: 'error', message: 'downloadAttachment: failed', context: { url: attachment.url, status: response.status, error: error.message } });
+            throw error;
           }
 
           const arrayBuffer = await response.arrayBuffer();
