@@ -14,7 +14,6 @@ import { forgeDebug } from '@forge-runtime/core';
 import { agents } from '../../database/schema';
 
 import type {Database} from '../../database/schema';
-import type { AgentRole } from '../../database/schema';
 
 export interface SystemReadModel {
   listRoles: () => Promise<{

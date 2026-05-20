@@ -6,10 +6,7 @@
  * Issue: #2467 — extract submodules from admin/read-model/agents.ts
  */
 
-import { resolve } from 'node:path';
-import { createClient } from '@libsql/client';
 import {
-  closeLibsqlClient,
   listRecentConversations,
   listThreadMessages,
 } from './conversation-helpers';
@@ -66,13 +63,13 @@ export interface AgentConversationsReadModelDeps {
 // ─── Factory ────────────────────────────────────────────────────────────────
 
 export function createAgentConversationsReadModel(deps: AgentConversationsReadModelDeps) {
-  const { db, workspaceBasePath, internalChat } = deps;
+  const { workspaceBasePath, internalChat } = deps;
 
   async function listAgentRecentConversations(
     agentId: string,
-    limit = 10,
+    _limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    return listRecentConversations(workspaceBasePath, internalChat, agentId, agentId);
+    return await listRecentConversations(workspaceBasePath, internalChat, agentId, agentId);
   }
 
   async function listAgentConversationMessages(
@@ -94,7 +91,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentThreadMessages(
     params: AgentThreadMessagesInput,
   ): Promise<AgentThreadMessagesResult> {
-    return listThreadMessages(workspaceBasePath, params.agentId, {
+    return await listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
     });
@@ -103,7 +100,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentLongTermMemoryThreadMessages(
     params: AgentThreadMessagesInput,
   ): Promise<AgentThreadMessagesResult> {
-    return listThreadMessages(workspaceBasePath, params.agentId, {
+    return await listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
       threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),

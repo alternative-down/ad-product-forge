@@ -2,7 +2,6 @@ import type { HttpRequest, HttpHandler } from '../../../http/server';
 import { z } from 'zod';
 import type { Database } from '../../../database/client';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
-import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../../../utils/id';
 import { eq, and } from 'drizzle-orm';
 import { parseJsonBody, jsonResponse, normalizeJsonText, normalizeOptionalText } from '../helpers';
