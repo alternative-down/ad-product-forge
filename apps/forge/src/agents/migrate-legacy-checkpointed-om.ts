@@ -115,7 +115,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       continue;
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+     
     if (
       checkpointSummary &&
       checkpointSummaryId &&

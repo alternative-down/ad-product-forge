@@ -103,7 +103,7 @@ export function createAgentContractStore(
   async function getRunnableContract(agentId: string) {
     const activeContract = await getActiveContract(agentId);
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+     
     if (activeContract) {
       return await fundContractIfNeeded(activeContract);
     }
@@ -159,7 +159,7 @@ export function createAgentContractStore(
 
   async function getActiveContract(agentId: string) {
     const now = time.now();
-    return db.query.agentExecutionContracts.findFirst({
+    return await db.query.agentExecutionContracts.findFirst({
       where: and(
         eq(agentExecutionContracts.agentId, agentId),
         lte(agentExecutionContracts.startsAt, now),

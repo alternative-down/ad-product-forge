@@ -108,7 +108,7 @@ export function extractLatestHealthcheckMessagePreview(content: unknown): string
     if (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       part
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+       
       && typeof part === 'object'
       && 'type' in part
       && 'text' in part

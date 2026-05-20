@@ -298,7 +298,7 @@ export function createAgentScheduleStore(db: Database) {
       throw err;
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+     
     if (!existing) {
       return false;
     }

@@ -21,11 +21,11 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       provider = await db.query.agentProviders.findFirst({
         where: ctx.and(
-          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+           
           ctx.eq((ctx.agentProviders as any).agentId, agentId),
-          ctx.eq((ctx.agentProviders as any).providerType, ctx.GITHUB_PROVIDER_TYPE) /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        ) as any, /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          ctx.eq((ctx.agentProviders as any).providerType, ctx.GITHUB_PROVIDER_TYPE)  
+         
+        ) as any,  
       });
     } catch (err) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getCredentials DB read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
@@ -67,11 +67,11 @@ export function createCredentialsOps(ctx: OpsContext) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
       throw err;
     }
-    return await ctx.createInstallationOctokit(credentials as any); /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    return await ctx.createInstallationOctokit(credentials as any);  
   }
 
   async function createInstallationOctokit(installationId: number) {
-    return await ctx.createInstallationOctokit({ status: "active", installationId } as any); /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    return await ctx.createInstallationOctokit({ status: "active", installationId } as any);  
   }
 
   async function getInstallationToken(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {

@@ -47,7 +47,7 @@ export const HireInternalAgentInputSchema = z.object({
     .custom<{
       installForRepo: (repo: string) => Promise<void>;
       getInstallationId: (repo: string) => Promise<string>;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
     }>()
     .optional()
     .default({} as any),
@@ -88,7 +88,7 @@ async function rollbackHire(
   hasLoadAgent: boolean,
   schedules: HireInternalAgentInput['schedules'],
   internalChat: HireInternalAgentInput['internalChat'],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tx: any,
 ) {
   // Undo external resources in reverse order of creation
@@ -130,7 +130,7 @@ async function rollbackHireDbAndEmail(
   agentId: string,
   provisionedMailbox: { address: string } | null,
   emailMailboxes: HireInternalAgentInput['emailMailboxes'],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tx: any,
 ) {
   await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
@@ -211,7 +211,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // Wrap ALL DB writes inside a single transaction.
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+   
   await db.transaction(async (tx) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);

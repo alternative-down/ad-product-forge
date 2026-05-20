@@ -401,7 +401,7 @@ export function createCapabilityStore(db: Database) {
         throw new Error('Role name is required.');
       }
 
-      // eslint-disable-next-line @typescript-eslint/return-await
+       
   return await createRole({
         name: input.name.trim(),
         description: input.description !== null && input.description !== undefined && input.description.trim() ? input.description.trim() : undefined,

@@ -196,7 +196,7 @@ export function createAgentLongTermMemory(input: {
 
   async function readState() {
     await ensureInitialized();
-    return readLtmState(input.persistenceStore);
+    return await readLtmState(input.persistenceStore);
   }
 
   async function writeState(state: LongTermMemoryState) {
@@ -517,8 +517,8 @@ export function createAgentLongTermMemory(input: {
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
-      // eslint-disable-next-line @typescript-eslint/return-await
-  // eslint-disable-next-line @typescript-eslint/return-await
+       
+   
   return await writeCheckpointPackage(payload);
     },
 

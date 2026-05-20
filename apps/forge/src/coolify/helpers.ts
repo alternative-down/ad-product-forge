@@ -162,7 +162,7 @@ export function toTimestamp(value: string | number | null): number {
 
   return 0;
 }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 function _toApplicationSummary(
   application: z.infer<typeof ApplicationSchema>,
 ) {
@@ -176,7 +176,7 @@ function _toApplicationSummary(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 function _toApplicationDetails(
   application: z.infer<typeof ApplicationSchema>,
 ) {
@@ -191,7 +191,7 @@ function _toApplicationDetails(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 function _toEnvDetails(
   env: z.infer<typeof ApplicationEnvSchema>,
 ) {

@@ -40,7 +40,7 @@ export function createInternalChatSseHandler(
     const controller = new ReadableStreamDefaultController();
     // Convert the Web ReadableStream into a Node.js Readable so http.ServerResponse.pipe()
     // can consume it. ReadableStreamDefaultController is available in lib: ES2022 + WebStreams.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const nodeStream = Readable.fromWeb(controller as any);
 
     // Send a welcome comment so the client can confirm the connection before the first event.

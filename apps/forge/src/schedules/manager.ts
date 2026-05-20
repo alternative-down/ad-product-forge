@@ -90,7 +90,7 @@ export function createAgentScheduleManager(input: {
   }
 
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   function isActiveSchedule(s: StoredSchedule | { isActive: boolean }): boolean {
     return s.isActive === true;
   }
@@ -110,7 +110,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: false,
     });
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await getLifecycle().register(record as any);
     } catch (error) {
       forgeDebug({
@@ -147,7 +147,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await getLifecycle().register(record as any);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
@@ -224,7 +224,7 @@ export function createAgentScheduleManager(input: {
 
     try {
       if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
@@ -234,7 +234,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({ scope: 'schedules-manager', level: 'error', message: 'updateSchedule: update failed, rolled back', context: { agentId, scheduleId, error: error instanceof Error ? error.message : String(error) } });
 
       if (isActiveSchedule(existing as unknown as StoredSchedule) === true && isActiveSchedule(restored as unknown as StoredSchedule) === true) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         await getLifecycle().register(restored as any);
       }
 
@@ -290,7 +290,7 @@ export function createAgentScheduleManager(input: {
 
     try {
       if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         await getLifecycle().register(updated as any);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
@@ -304,7 +304,7 @@ export function createAgentScheduleManager(input: {
       getLifecycle().cancel(scheduleId);
 
       if (isActiveSchedule(existing as unknown as StoredSchedule) === true && isActiveSchedule(restored as unknown as StoredSchedule) === true) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         await getLifecycle().register(restored as any);
       }
 
@@ -378,7 +378,7 @@ export function createAgentScheduleManager(input: {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await getLifecycle().register(scheduleRecord as any);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
@@ -479,7 +479,7 @@ export function createAgentScheduleManager(input: {
 
   async function __registerSchedule(record: StoredSchedule | null) {
     if (isActiveSchedule(record as unknown as StoredSchedule) !== true) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
       await getLifecycle().register(record as any);
   }
 

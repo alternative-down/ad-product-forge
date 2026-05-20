@@ -189,7 +189,7 @@ export function createAgentRunner(
 
   function clearTimer() { scheduler.clearTimer(); }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   function _startHealthcheck() { scheduler.startHealthcheck(); }
 
   function clearHealthcheck() { scheduler.clearHealthcheck(); }

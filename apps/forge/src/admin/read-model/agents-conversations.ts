@@ -36,7 +36,7 @@ export interface AgentThreadMessagesInput {
 }
 
 export interface AgentThreadMessagesResult {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   items: Array<Record<string, any>>;
   hasMore: boolean;
 }
@@ -72,7 +72,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
     agentId: string,
     limit = 10,
   ): Promise<AgentConversationListItem[]> {
-    return listRecentConversations(workspaceBasePath, internalChat, agentId, agentId);
+    return await listRecentConversations(workspaceBasePath, internalChat, agentId, agentId);
   }
 
   async function listAgentConversationMessages(
@@ -85,7 +85,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
       offset: params.offset,
     }).catch(() => []);
     return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       items: messages.map((message: any) => ({ ...message, authorAgentId: null })),
       hasMore: false,
     };
@@ -94,7 +94,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentThreadMessages(
     params: AgentThreadMessagesInput,
   ): Promise<AgentThreadMessagesResult> {
-    return listThreadMessages(workspaceBasePath, params.agentId, {
+    return await listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
     });
@@ -103,7 +103,7 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentLongTermMemoryThreadMessages(
     params: AgentThreadMessagesInput,
   ): Promise<AgentThreadMessagesResult> {
-    return listThreadMessages(workspaceBasePath, params.agentId, {
+    return await listThreadMessages(workspaceBasePath, params.agentId, {
       page: params.page,
       perPage: params.perPage,
       threadId: toMastraSafeIdentifier(`${params.agentId}_long_term_memory`),
