@@ -39,7 +39,7 @@ export function createCapabilityTools(
           } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_roles error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_agent_roles error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -164,7 +164,7 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'manage_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -197,7 +197,7 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'change_agent_role success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'change_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'change_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -227,7 +227,7 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_statuses result', context: { count: result.length } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_statuses error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_agent_statuses error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -251,7 +251,7 @@ export function createCapabilityTools(
         try {
           return await capabilities.listRoleCapabilities(input.roleId);
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -280,7 +280,7 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_role_capabilities success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'manage_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
