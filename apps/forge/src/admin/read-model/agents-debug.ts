@@ -37,8 +37,8 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
   async function getAgentOmDebugExport(agentId: string) {
     const [agent, runtimeMemory, snapshots] = await Promise.all([
       getAgent(agentId),
-      (getAgentRuntimeMemoryFn ?? (async () => null))(agentId).catch((err) => {
-        forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: String(serializeError(err)) } });
+(getAgentRuntimeMemoryFn ?? (async () => { await Promise.resolve(); return null; }))(agentId).catch((err) => {
+        forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),

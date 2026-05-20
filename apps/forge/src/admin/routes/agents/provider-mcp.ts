@@ -1,4 +1,4 @@
-import type { HttpRequest, HttpHandler } from '../../../http/server';
+import type { HttpRequest } from '../../../http/server';
 import { z } from 'zod';
 import type { Database } from '../../../database/client';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';

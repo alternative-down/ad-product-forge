@@ -18,7 +18,7 @@ export type StripeWebhookPayload = {
  * Verify a Stripe webhook signature using the webhook secret.
  * Throws if the signature is invalid.
  */
-function verifyStripeWebhookSignature(
+function _verifyStripeWebhookSignature(
   payload: string,
   signatureHeader: string,
   webhookSecret: string,

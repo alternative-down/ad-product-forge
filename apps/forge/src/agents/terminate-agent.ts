@@ -43,7 +43,7 @@ export async function terminateInternalAgent(
   }
 
    
-  if (!agent) {
+  if (agent === null || agent === undefined) {
     forgeDebug({
       scope: 'terminate-agent',
       level: 'warn',

@@ -31,7 +31,7 @@ export function currentTimeMs(): number {
  * Override the time source used by `currentTimeMs()`.
  * Intended for tests only — reset after each test.
  */
-function setCurrentTimeMs(fn: () => number): void {
+function _setCurrentTimeMs(fn: () => number): void {
   _currentTimeMs = fn;
 }
 
@@ -39,6 +39,6 @@ function setCurrentTimeMs(fn: () => number): void {
  * Reset to the real system clock.
  * Call in `afterEach` or `after` hooks in tests.
  */
-function resetCurrentTimeMs(): void {
+function _resetCurrentTimeMs(): void {
   _currentTimeMs = Date.now;
 }

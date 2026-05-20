@@ -1,13 +1,6 @@
-import { and, eq } from 'drizzle-orm';
-import {
-  internalChatConversations,
-  internalChatMessages,
-} from '../database/schema';
 import type { Database } from '../database/index';
 import { forgeDebug } from '@forge-runtime/core';
 import {
-  MessageNotFoundError,
-  AttachmentNotFoundError,
   ExternalAccountNotFoundError,
   InternalChatAccountNotFoundError,
 } from './internal-chat-errors';

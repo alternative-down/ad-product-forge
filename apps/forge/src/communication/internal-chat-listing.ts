@@ -9,15 +9,15 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
   internalChatAccounts,
   internalChatConversationMembers,
-  internalChatConversations,
+  internalChatConversations as _internalChatConversations,
   internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
 import type {Database} from '../database/client'
-import { buildConversationParticipantNames } from './internal-chat-helpers';
+import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
 import { createInternalChatConversationListing } from './internal-chat-conversation-listing';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 async function withChatListingError<T>(operation: string, fn: () => Promise<T>): Promise<T> {
     return await fn();
@@ -30,14 +30,14 @@ type MessageRowBase = {
   messageId: string; unread: number; replyToMessageId: string | null;
   authorAccountId: string; authorDisplayName: string; content: string; createdAt: number;
 };
-type MessageRowFull = MessageRowBase & { conversationId: string };
+type _MessageRowFull = MessageRowBase & { conversationId: string };
 
 interface MessageListItem {
   messageId: string; provider: string; authorId: string; targetKey: string;
   content: string; attachments: unknown[]; unread: boolean; createdAt: string;
   authorDisplayName: string; replyToMessageId: string | null;
 }
-interface MessageListItemWithConversation extends MessageListItem {
+interface _MessageListItemWithConversation extends MessageListItem {
   conversationId: string;
 }
 

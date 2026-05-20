@@ -23,13 +23,12 @@ const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
 export type AgentRuntimeData = Awaited<ReturnType<typeof loadAgentRuntimeData>>;
 
 export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoaderConfig) {
-  let agent;
-    agent = await db.query.agents.findFirst({
+  const agent = await db.query.agents.findFirst({
       where: eq(agents.id, config.agentId),
     });
 
    
-    if (!agent) {
+    if (agent === undefined) {
     forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent not in registry', context: { agentId: config.agentId } });
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
@@ -42,8 +41,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
   const llmSettings = createLlmSettingsStore(db);
   const systemSettings = createSystemSettingsStore(db);
   const capabilities = createCapabilityStore(db);
-  let providerConfigs;
-    providerConfigs = await db.query.agentProviders.findMany({
+  const providerConfigs = await db.query.agentProviders.findMany({
       where: eq(agentProviders.agentId, config.agentId),
     });
   const providerCredentials: ProviderCredentialsMap = {};

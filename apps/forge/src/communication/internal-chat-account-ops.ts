@@ -1,5 +1,4 @@
 import { and, eq } from 'drizzle-orm';
-import { createId } from '../utils/id';
 import {
   internalChatConversationMembers,
   internalChatConversations,

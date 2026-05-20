@@ -28,7 +28,7 @@ export const createAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
-const updateAgentMcpServerSchema = z
+const _updateAgentMcpServerSchema = z
   .object({
     agentId: z.string().min(1),
     configId: z.string().min(1),
@@ -39,7 +39,7 @@ const updateAgentMcpServerSchema = z
   })
   .and(mcpServerFieldsSchema);
 
-const deleteAgentMcpServerSchema = z.object({
+const _deleteAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   serverId: z.string().min(1),
@@ -58,19 +58,19 @@ export const deleteSystemMcpServerSchema = z.object({
   serverId: z.string().min(1),
 });
 
-const assignAgentMcpServerSchema = z.object({
+const _assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
   isActive: z.boolean().default(true),
 });
 
-const setAgentMcpServerActiveSchema = z.object({
+const _setAgentMcpServerActiveSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
   isActive: z.boolean(),
 });
 
-const detachAgentMcpServerSchema = z.object({
+const _detachAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   configId: z.string().min(1),
 });

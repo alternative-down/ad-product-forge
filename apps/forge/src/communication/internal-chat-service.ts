@@ -41,38 +41,43 @@
  * @module
  */
 
-import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, sql } from 'drizzle-orm';
-import path from 'node:path';
-import { customAlphabet } from 'nanoid';
+import { and as _and, desc as _desc, eq as _eq, gte as _gte, inArray as _inArray, isNotNull as _isNotNull, isNull as _isNull, like as _like, lte as _lte, ne as _ne, sql as _sql } from 'drizzle-orm';
+import * as _path from 'node:path';
+import { customAlphabet as _customAlphabet } from 'nanoid';
 
-import type { CommunicationFile, CommunicationInboundMessage, CommunicationProviderConversation, CommunicationProviderMessage } from "@forge-runtime/core";
-import { forgeDebug } from '@forge-runtime/core';
+import type {
+  CommunicationFile as _CommunicationFile,
+  CommunicationInboundMessage as _CommunicationInboundMessage,
+  CommunicationProviderConversation as _CommunicationProviderConversation,
+  CommunicationProviderMessage as _CommunicationProviderMessage,
+} from "@forge-runtime/core";
+import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from "../database/schema";
 import {
-  internalChatAccounts,
-  internalChatConversationMembers,
-  internalChatConversations,
-  internalChatMessageAttachments,
-  internalChatMessageReads,
-  internalChatMessages,
+  internalChatAccounts as _internalChatAccounts,
+  internalChatConversationMembers as _internalChatConversationMembers,
+  internalChatConversations as _internalChatConversations,
+  internalChatMessageAttachments as _internalChatMessageAttachments,
+  internalChatMessageReads as _internalChatMessageReads,
+  internalChatMessages as _internalChatMessages,
 } from "../database/schema";
-import { createId } from '../utils/id';
+import { createId as _createId } from '../utils/id';
 import {
-  buildAgentAccountDescription,
-  buildGroupMemberViews,
-  buildGroupRow,
-  buildConversationParticipantNames,
-  createInternalChatSlug,
-  parseFilterDate,
-  resolveContentType,
-  sanitizeAttachmentName,
-  sortParticipantsBySelfFirst,
-  type InternalChatGroupMember,
-  type InternalChatGroupParticipant,
-  type InternalChatGroupRow,
+  buildAgentAccountDescription as _buildAgentAccountDescription,
+  buildGroupMemberViews as _buildGroupMemberViews,
+  buildGroupRow as _buildGroupRow,
+  buildConversationParticipantNames as _buildConversationParticipantNames,
+  createInternalChatSlug as _createInternalChatSlug,
+  parseFilterDate as _parseFilterDate,
+  resolveContentType as _resolveContentType,
+  sanitizeAttachmentName as _sanitizeAttachmentName,
+  sortParticipantsBySelfFirst as _sortParticipantsBySelfFirst,
+  type InternalChatGroupMember as _InternalChatGroupMember,
+  type InternalChatGroupParticipant as _InternalChatGroupParticipant,
+  type InternalChatGroupRow as _InternalChatGroupRow,
 } from "./internal-chat-helpers";
-import { createInternalChatConnection, type InternalChatDeliveryMessage } from "./internal-chat-connection";
+import { createInternalChatConnection, type InternalChatDeliveryMessage as _InternalChatDeliveryMessage } from "./internal-chat-connection";
 import { createInternalChatGroups } from "./internal-chat-groups";
 import { createInternalChatAccountOps } from "./internal-chat-account-ops";
 import { createInternalChatListing } from "./internal-chat-listing";
@@ -80,17 +85,17 @@ import { createInternalChatParticipants } from "./internal-chat-participants";
 import { createInternalChatUnread } from "./internal-chat-unread";
 import { createInternalChatGuards } from "./internal-chat-guards";
 import {
-  ConversationNotFoundError,
-  ChatGroupNotFoundError,
-  ChatGroupAlreadyExistsError,
-  OnlyAdminsCanUpdateGroupError,
-  NameRequiredForNewGroupError,
-  InternalChatAccountNotFoundError,
-  MessageNotFoundError,
-  ExternalAccountNotFoundError,
-  InternalChatAccountSlugAlreadyExistsError,
-  DirectConversationFailedError,
-  AttachmentNotFoundError,
+  ConversationNotFoundError as _ConversationNotFoundError,
+  ChatGroupNotFoundError as _ChatGroupNotFoundError,
+  ChatGroupAlreadyExistsError as _ChatGroupAlreadyExistsError,
+  OnlyAdminsCanUpdateGroupError as _OnlyAdminsCanUpdateGroupError,
+  NameRequiredForNewGroupError as _NameRequiredForNewGroupError,
+  InternalChatAccountNotFoundError as _InternalChatAccountNotFoundError,
+  MessageNotFoundError as _MessageNotFoundError,
+  ExternalAccountNotFoundError as _ExternalAccountNotFoundError,
+  InternalChatAccountSlugAlreadyExistsError as _InternalChatAccountSlugAlreadyExistsError,
+  DirectConversationFailedError as _DirectConversationFailedError,
+  AttachmentNotFoundError as _AttachmentNotFoundError,
 } from "./internal-chat-errors";
 import { createInternalChatAccounts } from "./internal-chat-accounts";
 import { createInternalChatAdmin } from "./internal-chat-admin";
@@ -122,7 +127,7 @@ export function createInternalChatService(
   const getRequiredAccount = accounts.getRequiredAccount;
   const _getAccountsById = accounts.getAccountsById;
   const getRequiredAgentAccount = accounts.getRequiredAgentAccount;
-  const getAccountByTargetKey = accounts.getAccountByTargetKey;
+  const _getAccountByTargetKey = accounts.getAccountByTargetKey;
   const getRequiredAccountBySlug = accounts.getRequiredAccountBySlug;
 
   const conversations = createInternalChatConversations(db);
@@ -131,7 +136,7 @@ export function createInternalChatService(
     getRequiredAccount,
     getRequiredAgentAccount,
     getRequiredAccountBySlug,
-    getAccountByTargetKey: accounts.getAccountByTargetKey as any,
+    getAccountByTargetKey: _getAccountByTargetKey as any,
   });
 
 const registerAgentAccount = admin.registerAgentAccount;

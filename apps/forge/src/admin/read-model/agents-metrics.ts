@@ -25,8 +25,7 @@ export function createAgentMetricsReadModel(deps: AgentMetricsReadModelDeps) {
   const { db } = deps;
 
   async function listRecentAgentHomeMetricSnapshots(input: { agentId: string; limit: number }) {
-    let rows;
-      rows = await db.query.agentHomeMetricSnapshots.findMany({
+    const rows = await db.query.agentHomeMetricSnapshots.findMany({
         where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
         orderBy: desc(agentHomeMetricSnapshots.createdAt),
         limit: input.limit,

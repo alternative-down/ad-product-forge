@@ -5,15 +5,13 @@
  *   events.ts, account-routes.ts, conversation-routes.ts, group-member-routes.ts
  */
 
-import type { HttpHandler } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import { createInternalChatSseHandler } from './events';
 import { registerAccountRoutes } from './internal-chat-account-routes';
 import { registerConversationRoutes } from './internal-chat-conversation-routes';
 import { registerGroupMemberRoutes } from './internal-chat-group-member-routes';
 
-/** Re-export helpers and schemas for consumers of this module. */
-export { jsonResponse, parseJsonBody } from '../index';
+
 
 import type { ForgeHttpServer } from '../../../http/server';
 

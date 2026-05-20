@@ -23,15 +23,14 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
   }
 
   async function requireConversationMembershipByAccount(accountId: string, conversationId: string) {
-    let membership;
-      membership = await db.query.internalChatConversationMembers.findFirst({
-        where: and(
-          eq(internalChatConversationMembers.accountId, accountId),
-          eq(internalChatConversationMembers.conversationId, conversationId),
-        ),
-      });
+    const membership = await db.query.internalChatConversationMembers.findFirst({
+      where: and(
+        eq(internalChatConversationMembers.accountId, accountId),
+        eq(internalChatConversationMembers.conversationId, conversationId),
+      ),
+    });
 
-    if (!membership) {
+    if (membership === null || membership === undefined) {
       forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
       throw new ConversationNotFoundError(conversationId);
     }
@@ -45,12 +44,11 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
   async function getRequiredConversationForAccount(accountId: string, conversationId: string) {
     await requireConversationMembershipByAccount(accountId, conversationId);
 
-    let conversation;
-      conversation = await db.query.internalChatConversations.findFirst({
-        where: eq(internalChatConversations.id, conversationId),
-      });
+    const conversation = await db.query.internalChatConversations.findFirst({
+      where: eq(internalChatConversations.id, conversationId),
+    });
 
-    if (!conversation) {
+    if (conversation === null || conversation === undefined) {
       forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
       throw new ConversationNotFoundError(conversationId);
     }

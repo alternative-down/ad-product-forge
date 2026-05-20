@@ -82,7 +82,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
       ]);
       const assignedAgentCountByRoleId = new Map(
         agentCounts
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+     
           .filter((row) => row.roleId)
           .map((row) => [row.roleId as string, row.count]),
       );

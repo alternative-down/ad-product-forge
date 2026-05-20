@@ -8,18 +8,10 @@ import {
 
 import type {Database} from '../../database/index';
 import type { MicroErpReadModel } from '../../micro-erp/read-model';
-import type { SystemSettingsStore } from '../../system-settings/store';
-import type { CapabilityStore } from '../../capabilities/store';
-import type { LlmSettingsStore } from '../../llm/settings-store';
-import type { AgentNotificationStore } from '../../notifications/store';
-import type { GitHubAppManager } from '../../github/manager';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
-const RECENT_STEP_LIMIT = 10;
-const RECENT_NOTIFICATION_LIMIT = 10;
 
-import type { AgentListItem, AgentReadModel } from './agents-types';
 import { createAgentConversationsReadModel } from './agents-conversations';
 import { createAgentMetricsReadModel } from './agents-metrics';
 import { createAgentDetailReadModel } from './agents-detail';
@@ -32,11 +24,6 @@ interface AgentsReadModelDeps {
   finance: MicroErpReadModel;
   internalChat: InternalChatService;
   workspaceBasePath: string;
-  systemSettings: SystemSettingsStore;
-  capabilities: CapabilityStore;
-  llmSettings: LlmSettingsStore;
-  notifications: AgentNotificationStore;
-  githubApps: GitHubAppManager;
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
@@ -45,11 +32,6 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     finance,
     internalChat,
     workspaceBasePath,
-    systemSettings,
-    capabilities,
-    llmSettings,
-    notifications,
-    githubApps,
   } = deps;
 
   const registry = getInternalAgentRegistry();
@@ -67,7 +49,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     const loadedAgents = registry.list().length;
     const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
     const runningAgents = rows.filter((r) => r.executionState === 'running').length;
-    const absentAgents = rows.filter((r) => !r.executionState || r.executionState === 'absent').length;
+    const absentAgents = rows.filter((r) => r.executionState === null || r.executionState === undefined || r.executionState === 'absent').length;
 
     const activeContracts = await db.query.agentExecutionContracts.findMany({
         where: eq(agentExecutionContracts.isActive, 1),

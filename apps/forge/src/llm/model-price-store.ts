@@ -32,7 +32,7 @@ export function createLlmModelPriceStore(db: Database) {
         where: eq(llmModelPrices.modelKey, input.modelKey),
       });
 
-      if (existing) {
+      if (existing != null) {
           await db
             .update(llmModelPrices)
             .set({

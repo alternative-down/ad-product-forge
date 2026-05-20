@@ -28,7 +28,7 @@ const roleInspectionToolIds = [
 function resolveLoadedToolIds(toolIds: string[]) {
   const resolvedToolIds = new Set(toolIds);
   const hasCrossAgentCronTools = resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
-  const hasCrossAgentRoleTool = resolvedToolIds.has('change_agent_role');
+  const _hasCrossAgentRoleTool = resolvedToolIds.has('change_agent_role');
   const hasRoleInspectionTool = roleInspectionToolIds.some((toolId) => resolvedToolIds.has(toolId));
 
   if (hasRoleInspectionTool) {
@@ -97,7 +97,7 @@ export function createCapabilityStore(db: Database) {
       return null;
     }
 
-    if (!row) {
+    if (row === null || row === undefined) {
       return null;
     }
 
@@ -152,7 +152,7 @@ export function createCapabilityStore(db: Database) {
       throw err;
     }
 
-    if (!existing) {
+    if (existing === null || existing === undefined) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'requireRole: not found', context: { roleId: input.roleId } });
       throw new Error(`Role not found: ${input.roleId}`);
     }
@@ -185,7 +185,7 @@ export function createCapabilityStore(db: Database) {
         columns: { id: true },
       });
 
-      if (assigned) {
+      if (assigned !== null && assigned !== undefined) {
         forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
         throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
       }
@@ -463,7 +463,7 @@ export function createCapabilityStore(db: Database) {
       throw err;
     }
 
-    if (!agent) {
+    if (agent === null || agent === undefined) {
       forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent not found', context: { agentId } });
       throw new Error(`Agent not found: ${agentId}`);
     }
