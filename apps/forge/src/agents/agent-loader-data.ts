@@ -18,6 +18,9 @@ const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
   email: true,
 };
 
+// Re-exported type alias so consumers don't need Awaited<ReturnType<...>>
+export type AgentRuntimeData = Awaited<ReturnType<typeof loadAgentRuntimeData>>;
+
 export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoaderConfig) {
   let agent;
     agent = await db.query.agents.findFirst({

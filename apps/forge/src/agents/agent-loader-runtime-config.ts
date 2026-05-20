@@ -1,10 +1,8 @@
+import type { AgentRuntimeData } from './agent-loader-data';
+import type { AgentToolset } from './agent-loader-tools';
 import type { CreateAgentConfig } from './runtime/types';
 import type { AgentLoaderConfig } from './agent-loader-types';
-import type { loadAgentRuntimeData } from './agent-loader-data';
-import type { loadAgentToolset } from './agent-loader-tools';
 
-type AgentRuntimeData = Awaited<ReturnType<typeof loadAgentRuntimeData>>;
-type AgentToolset = Awaited<ReturnType<typeof loadAgentToolset>>;
 
 export function buildAgentRuntimeConfig(
   loaderConfig: AgentLoaderConfig,
