@@ -5,7 +5,10 @@ import type { StepContextEntry } from '../../core/types.js';
 import { createConversationMessageContextEntry } from '../conversations/context-entries.js';
 import type { ConversationMessage, ConversationStore } from '../conversations/contracts.js';
 
-import type { OperationalMemoryConversationObservation, OperationalMemoryConversationState } from './operational-memory-conversation-state-store.js';
+import type {
+  OperationalMemoryConversationObservation,
+  OperationalMemoryConversationState,
+} from './operational-memory-conversation-state-store.js';
 
 export type OperationalMemoryConversationObserverRequest = {
   threadId: string;
@@ -99,10 +102,12 @@ export class OperationalMemoryConversationMemory {
       return state;
     }
 
-    while (shouldObserveOverflow({
-      state,
-      overflowObservationTokenLimit: this.overflowObservationTokenLimit,
-    })) {
+    while (
+      shouldObserveOverflow({
+        state,
+        overflowObservationTokenLimit: this.overflowObservationTokenLimit,
+      })
+    ) {
       const loopSignature = JSON.stringify({
         checkpointMessageId: state.checkpointMessageId,
         overflowMessageIds: state.overflowMessageIds,
@@ -186,15 +191,13 @@ export class OperationalMemoryConversationMemory {
     // After the seed-boundary fix, the SQL correctly returns checkpoint-summary
     // messages as the terminals of replacement chains. Prepend the latest one
     // to the visible output so the agent retains its consolidated context.
-    const checkpointSummary = visibleMessages
-      .slice()
-      .reverse()
-      .find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
+    const checkpointSummary =
+      visibleMessages
+        .slice()
+        .reverse()
+        .find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
 
-    const terminalMessages = [
-      ...state.overflowMessageIds,
-      ...state.recentMessageIds,
-    ]
+    const terminalMessages = [...state.overflowMessageIds, ...state.recentMessageIds]
       .map((messageId) => visibleMessageMap.get(messageId))
       .filter((message): message is ConversationMessage => Boolean(message));
 
@@ -232,8 +235,9 @@ export class OperationalMemoryConversationMemory {
     });
     const overflowMessageIdSet = new Set(state.overflowMessageIds);
     const overflowMessages = buildRawConversationMessages(
-      visibleMessages.filter((message) =>
-        !message.operationalMemoryType && overflowMessageIdSet.has(message.id)),
+      visibleMessages.filter(
+        (message) => !message.operationalMemoryType && overflowMessageIdSet.has(message.id),
+      ),
     );
     const observationBatch = takeRawMessageBatch({
       messages: overflowMessages,
@@ -273,19 +277,24 @@ export class OperationalMemoryConversationMemory {
       id: observationId,
       threadId: this.threadId,
       role: 'assistant',
-      parts: [{
-        type: 'text',
-        text: observationText,
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: observationText,
+        },
+      ],
       operationalMemoryType: 'observation',
       createdAt: observation.createdAt,
     });
-    await Promise.all(observation.sourceMessageIds.map((messageId) =>
-      this.store.updateMessageReplacement({
-        threadId: this.threadId,
-        messageId,
-        replacedByMessageId: observationId,
-      })));
+    await Promise.all(
+      observation.sourceMessageIds.map((messageId) =>
+        this.store.updateMessageReplacement({
+          threadId: this.threadId,
+          messageId,
+          replacedByMessageId: observationId,
+        }),
+      ),
+    );
 
     diagnostics?.record({
       at: Date.now(),
@@ -305,8 +314,10 @@ export class OperationalMemoryConversationMemory {
     const messages = await this.store.listOperationalMemoryMessages({
       threadId: this.threadId,
     });
-    const checkpointMessage = [...messages].reverse().find((message) =>
-      message.operationalMemoryType === 'checkpoint-summary') ?? null;
+    const checkpointMessage =
+      [...messages]
+        .reverse()
+        .find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
     const rawMessages = buildRawConversationMessages(
       messages.filter((message) => !message.operationalMemoryType),
     );
@@ -314,7 +325,9 @@ export class OperationalMemoryConversationMemory {
       messages: rawMessages,
       recentTokenLimit: this.recentTokenLimit,
     });
-    const observationMessages = messages.filter((message) => message.operationalMemoryType === 'observation');
+    const observationMessages = messages.filter(
+      (message) => message.operationalMemoryType === 'observation',
+    );
 
     return {
       threadId: this.threadId,
@@ -341,7 +354,6 @@ export class OperationalMemoryConversationMemory {
   }
 }
 
-
 function estimateMessageUnits(message: ConversationMessage) {
   const text = getMessageBudgetText(message);
 
@@ -353,8 +365,10 @@ function estimateMessageUnits(message: ConversationMessage) {
 
 function getMessageText(message: ConversationMessage) {
   return message.parts
-    .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
-      part.type === 'text' || part.type === 'reasoning')
+    .filter(
+      (part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+        part.type === 'text' || part.type === 'reasoning',
+    )
     .map((part) => part.text.trim())
     .filter(Boolean)
     .join('\n');
@@ -380,15 +394,11 @@ function getToolInvocationBudgetTexts(message: ConversationMessage) {
       return [];
     }
 
-    const toolName = typeof toolInvocation.toolName === 'string'
-      ? toolInvocation.toolName
-      : 'unknown';
+    const toolName =
+      typeof toolInvocation.toolName === 'string' ? toolInvocation.toolName : 'unknown';
     const args = serializeBudgetValue(toolInvocation.args);
 
-    return [[
-      `Tool call: ${toolName}`,
-      args,
-    ].filter(Boolean).join('\n')];
+    return [[`Tool call: ${toolName}`, args].filter(Boolean).join('\n')];
   });
 }
 
@@ -402,15 +412,10 @@ function getToolResultBudgetTexts(message: ConversationMessage) {
       return [];
     }
 
-    const toolName = typeof toolResult.toolName === 'string'
-      ? toolResult.toolName
-      : 'unknown';
+    const toolName = typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown';
     const result = serializeBudgetValue(toolResult.result);
 
-    return [[
-      `Tool result: ${toolName}`,
-      result,
-    ].filter(Boolean).join('\n')];
+    return [[`Tool result: ${toolName}`, result].filter(Boolean).join('\n')];
   });
 }
 
@@ -446,11 +451,11 @@ function getMessageToolCallIds(message: ConversationMessage) {
 
   for (const item of [...toolInvocations, ...toolResults]) {
     if (
-      typeof item === 'object'
-      && item !== null
-      && 'toolCallId' in item
-      && typeof item.toolCallId === 'string'
-      && item.toolCallId.trim()
+      typeof item === 'object' &&
+      item !== null &&
+      'toolCallId' in item &&
+      typeof item.toolCallId === 'string' &&
+      item.toolCallId.trim()
     ) {
       toolCallIds.add(item.toolCallId);
     }
@@ -509,9 +514,9 @@ function groupRawConversationMessages(messages: RawConversationMessage[]) {
     const previousGroup = orderedGroups.at(-1);
 
     if (
-      previousGroup
-      && toolCallIds.size > 0
-      && hasToolCallIdOverlap(previousGroup.toolCallIds, toolCallIds)
+      previousGroup &&
+      toolCallIds.size > 0 &&
+      hasToolCallIdOverlap(previousGroup.toolCallIds, toolCallIds)
     ) {
       previousGroup.messages.push(message);
       previousGroup.tokenCount += message.tokenCount;
@@ -582,7 +587,9 @@ function shouldObserveOverflow(input: {
   return input.state.metrics.overflowTokenCount >= input.overflowObservationTokenLimit;
 }
 
-function summarizeOperationalMemoryConversationMetrics(state: NormalizedOperationalMemoryConversationState) {
+function summarizeOperationalMemoryConversationMetrics(
+  state: NormalizedOperationalMemoryConversationState,
+) {
   return {
     checkpointMessageId: state.checkpointMessageId,
     recentMessageCount: state.metrics.recentMessageCount,

@@ -13,7 +13,7 @@ import { forgeCapabilityIds } from '../../capabilities/catalog';
 import { forgeDebug } from '@forge-runtime/core';
 import { agents } from '../../database/schema';
 
-import type {Database} from '../../database/schema';
+import type { Database } from '../../database/schema';
 
 export interface SystemReadModel {
   listRoles: () => Promise<{
@@ -60,12 +60,15 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
     try {
       return await fn();
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: `${label} failed`, context: { err: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({
+        scope: 'admin-read-model-system',
+        level: 'error',
+        message: `${label} failed`,
+        context: { err: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
-
-
 
   async function listRoles() {
     return await withErrorScope('listRoles', async () => {
@@ -77,13 +80,11 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
             count: sql<number>`count(*)`,
           })
           .from(agents)
-          .groupBy(agents.roleId).all(),
+          .groupBy(agents.roleId)
+          .all(),
       ]);
       const assignedAgentCountByRoleId = new Map(
-        agentCounts
-     
-          .filter((row) => row.roleId)
-          .map((row) => [row.roleId as string, row.count]),
+        agentCounts.filter((row) => row.roleId).map((row) => [row.roleId as string, row.count]),
       );
       const capabilityMap = await capabilities.listGrantedRoleCapabilitiesBatch(
         roles.map((role) => role.roleId),

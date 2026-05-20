@@ -43,10 +43,12 @@ export class RealtimeSpeechRuntimeBridge {
     });
   }
 
-  async startSession(options: {
-    language?: string;
-    headers?: Record<string, string>;
-  } = {}) {
+  async startSession(
+    options: {
+      language?: string;
+      headers?: Record<string, string>;
+    } = {},
+  ) {
     const transcripts: RealtimeTranscriptionEvent[] = [];
     const session = await this.stt.createSession({
       language: options.language,
@@ -79,12 +81,12 @@ function createRealtimeSpeechInputMapper(input: {
     const mappedInput = input.eventToInput
       ? input.eventToInput(event)
       : {
-        payload: {
-          text: event.text,
-          language: event.language,
-          isFinal: event.isFinal,
-        },
-      };
+          payload: {
+            text: event.text,
+            language: event.language,
+            isFinal: event.isFinal,
+          },
+        };
 
     return {
       id: mappedInput.id ?? event.id ?? randomUUID(),

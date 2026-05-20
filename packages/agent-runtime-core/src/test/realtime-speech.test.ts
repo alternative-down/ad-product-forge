@@ -33,9 +33,11 @@ describe('buffered realtime speech gateway', () => {
     });
     await session.close();
 
-    expect(events).toEqual([{
-      text: 'hello world',
-      isFinal: true,
-    }]);
+    expect(events).toEqual([
+      {
+        text: 'hello world',
+        isFinal: true,
+      },
+    ]);
   });
 });

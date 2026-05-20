@@ -1,5 +1,4 @@
 export type AgentThreadMessage = {
-
   id: string;
 
   role: string;
@@ -13,7 +12,6 @@ export type AgentThreadMessage = {
   type: string | null;
 
   content: {
-
     content?: string;
 
     reasoning?: string;
@@ -21,25 +19,16 @@ export type AgentThreadMessage = {
     parts?: Array<Record<string, unknown>>;
 
     toolInvocations?: Array<Record<string, unknown>>;
-
   };
-
 };
 
-
-
 export type AgentThreadMessagesResponse = {
-
   items: AgentThreadMessage[];
 
   hasMore: boolean;
-
 };
 
-
-
 export type AgentConversationMessage = {
-
   messageId: string;
 
   provider: string;
@@ -59,17 +48,10 @@ export type AgentConversationMessage = {
   createdAt: string;
 
   authorDisplayName: string;
-
 };
 
-
-
 export type AgentConversationMessagesResponse = {
-
   items: AgentConversationMessage[];
 
   hasMore: boolean;
-
 };
-
-

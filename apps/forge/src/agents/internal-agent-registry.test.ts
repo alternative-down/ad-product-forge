@@ -30,7 +30,7 @@ vi.mock('./agent-loader', () => ({
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import type { InternalAgentRuntime } from './runtime/types';
 
-import type {Database} from '../database/client';
+import type { Database } from '../database/client';
 
 function makeRuntime(id = 'agent-test-1', name = 'Test Agent'): InternalAgentRuntime {
   return {

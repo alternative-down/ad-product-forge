@@ -105,7 +105,7 @@ describe('buildGroupRow', () => {
   it('uses id as name fallback when name is undefined (empty string)', () => {
     const row = { id: 'grp_456', name: '', createdAt: 0, updatedAt: 0 };
 
-    expect(buildGroupRow(row).name).toBe('');  // empty string is a valid non-null value, no fallback
+    expect(buildGroupRow(row).name).toBe(''); // empty string is a valid non-null value, no fallback
   });
 });
 
@@ -184,10 +184,7 @@ describe('resolveConversationDisplayName', () => {
 
   it('falls back to first non-self participant name for DM', () => {
     const conv = { name: null, type: 'dm' };
-    const participants = [
-      makeParticipant('self', 'Me'),
-      makeParticipant('other', 'Alice'),
-    ];
+    const participants = [makeParticipant('self', 'Me'), makeParticipant('other', 'Alice')];
 
     expect(resolveConversationDisplayName(conv, participants, 'self')).toBe('Alice');
   });
@@ -293,7 +290,11 @@ describe('createInternalChatSlug', () => {
   });
 
   it('generates unique slugs on repeated calls', () => {
-    const slugs = new Set([createInternalChatSlug('Alice'), createInternalChatSlug('Alice'), createInternalChatSlug('Alice')]);
+    const slugs = new Set([
+      createInternalChatSlug('Alice'),
+      createInternalChatSlug('Alice'),
+      createInternalChatSlug('Alice'),
+    ]);
 
     expect(slugs.size).toBe(3);
   });

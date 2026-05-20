@@ -1,8 +1,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { agents, agentProviders } from '../database/schema';
 import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
@@ -10,7 +9,10 @@ import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createCapabilityStore } from '../capabilities/store';
 import { decryptSecret } from '../encryption/crypto';
-import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader';
+import {
+  loadCommunicationProviders,
+  type ProviderCredentialsMap,
+} from '../communication/provider-loader';
 
 const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
   'internal-chat': true,
@@ -23,17 +25,26 @@ export type AgentRuntimeData = Awaited<ReturnType<typeof loadAgentRuntimeData>>;
 
 export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoaderConfig) {
   const agent = await db.query.agents.findFirst({
-      where: eq(agents.id, config.agentId),
-    });
+    where: eq(agents.id, config.agentId),
+  });
 
-   
-    if (agent === undefined) {
-    forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent not in registry', context: { agentId: config.agentId } });
+  if (agent === undefined) {
+    forgeDebug({
+      scope: 'agent-loader-data',
+      level: 'warn',
+      message: 'loadAgentData: agent not in registry',
+      context: { agentId: config.agentId },
+    });
     throw new Error(`Agent not found in registry: ${config.agentId}`);
   }
 
   if (agent.roleId === null || agent.roleId === undefined) {
-    forgeDebug({ scope: 'agent-loader-data', level: 'warn', message: 'loadAgentData: agent missing roleId', context: { agentId: config.agentId } });
+    forgeDebug({
+      scope: 'agent-loader-data',
+      level: 'warn',
+      message: 'loadAgentData: agent missing roleId',
+      context: { agentId: config.agentId },
+    });
     throw new Error(`Agent is missing roleId: ${config.agentId}`);
   }
 
@@ -41,8 +52,8 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
   const systemSettings = createSystemSettingsStore(db);
   const capabilities = createCapabilityStore(db);
   const providerConfigs = await db.query.agentProviders.findMany({
-      where: eq(agentProviders.agentId, config.agentId),
-    });
+    where: eq(agentProviders.agentId, config.agentId),
+  });
   const providerCredentials: ProviderCredentialsMap = {};
 
   for (const providerConfig of providerConfigs) {
@@ -54,7 +65,15 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     try {
       decrypted = decryptSecret(providerConfig.encryptedCredentials);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to decrypt credentials for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'agent-loader-data',
+        level: 'error',
+        message: 'Failed to decrypt credentials for agent ' + config.agentId,
+        context: {
+          provider: providerConfig.providerType,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       throw error;
     }
 
@@ -62,11 +81,20 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     try {
       credentials = JSON.parse(decrypted);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to parse decrypted credentials JSON for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'agent-loader-data',
+        level: 'error',
+        message: 'Failed to parse decrypted credentials JSON for agent ' + config.agentId,
+        context: {
+          provider: providerConfig.providerType,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       throw error;
     }
 
-    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials as any;
+    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] =
+      credentials as any;
   }
 
   const [primaryProfile, omProfile, companySettings, role, capabilitySet] = await Promise.all([

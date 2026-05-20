@@ -2,7 +2,6 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
-
 import { countTokens, getEncoder } from '../../token-counter.js';
 
 import type { RuntimeActionDefinition } from '../../core/actions.js';
@@ -29,12 +28,14 @@ export type WorkspaceActionPackOptions = {
      * Root workspace path — used to normalize paths returned by listDirectory
      * so they are relative to the workspace root (not absolute host paths).
      */
-    listDirectory(path?: string): Promise<Array<{
-      name: string;
-      path: string;
-      isDirectory: boolean;
-      size: number;
-    }>>;
+    listDirectory(path?: string): Promise<
+      Array<{
+        name: string;
+        path: string;
+        isDirectory: boolean;
+        size: number;
+      }>
+    >;
   };
 };
 
@@ -45,7 +46,6 @@ export type WorkspaceActionPackOptions = {
 const DEFAULT_MAX_OUTPUT_TOKENS = 8000;
 const DEFAULT_TAIL_LINES = 100;
 const MAX_PATTERN_LENGTH = 1000;
-
 
 function normalizeOutputPaths(output: string, workspaceRoot?: string): string {
   if (!workspaceRoot) return output;
@@ -87,7 +87,7 @@ function toString(content: Uint8Array | Buffer | string, encoding?: string): str
 function truncateOutput(
   output: string,
   tail: number | undefined,
-  tokenLimit: number | undefined
+  tokenLimit: number | undefined,
 ): string {
   let result = output;
 
@@ -166,17 +166,28 @@ export function createWorkspaceActionDefinitions(
   // =============================================================================
 
   const executeCommandSchema = z.object({
-    command: z.string().describe(
-      'The shell command to execute (e.g., "npm install", "ls -la src/", "cat file.txt | grep error")',
-    ),
-    timeout: z.number().optional().describe('Maximum execution time in seconds. Example: 60 for 1 minute.'),
+    command: z
+      .string()
+      .describe(
+        'The shell command to execute (e.g., "npm install", "ls -la src/", "cat file.txt | grep error")',
+      ),
+    timeout: z
+      .number()
+      .optional()
+      .describe('Maximum execution time in seconds. Example: 60 for 1 minute.'),
     cwd: z.string().optional().describe('Working directory for the command'),
-    tail: z.number().optional().describe(
-      `Limit output to the last N lines. Defaults to ${DEFAULT_TAIL_LINES}. Use 0 for no limit.`,
-    ),
-    background: z.boolean().optional().describe(
-      'Run the command in the background. Returns a PID immediately instead of waiting for completion.',
-    ),
+    tail: z
+      .number()
+      .optional()
+      .describe(
+        `Limit output to the last N lines. Defaults to ${DEFAULT_TAIL_LINES}. Use 0 for no limit.`,
+      ),
+    background: z
+      .boolean()
+      .optional()
+      .describe(
+        'Run the command in the background. Returns a PID immediately instead of waiting for completion.',
+      ),
   });
 
   actions.push({
@@ -216,7 +227,9 @@ Use cwd instead of "cd ... &&". Examples:
 
       const combinedOutput = result.stdout + (result.stderr ? `\n${result.stderr}` : '');
       const normalizedOutput = normalizeOutputPaths(combinedOutput, options.workspaceRoot);
-      return truncateOutput(normalizedOutput, tailLines, undefined) + `\n\nExit code: ${result.exitCode}`;
+      return (
+        truncateOutput(normalizedOutput, tailLines, undefined) + `\n\nExit code: ${result.exitCode}`
+      );
     },
   });
 
@@ -227,8 +240,14 @@ Use cwd instead of "cd ... &&". Examples:
   if (gateway.getProcessOutput) {
     const processOutputSchema = z.object({
       pid: z.string().describe('The process ID returned when the background command was started'),
-      tail: z.number().optional().describe(`Number of lines to return. Defaults to ${DEFAULT_TAIL_LINES}.`),
-      wait: z.boolean().optional().describe('If true, block until the process exits and return the final output.'),
+      tail: z
+        .number()
+        .optional()
+        .describe(`Number of lines to return. Defaults to ${DEFAULT_TAIL_LINES}.`),
+      wait: z
+        .boolean()
+        .optional()
+        .describe('If true, block until the process exits and return the final output.'),
     });
 
     actions.push({
@@ -240,7 +259,9 @@ Use this after starting a background command with execute_command (background: t
       async execute(input) {
         const request = processOutputSchema.parse(input);
         const tailLines = request.tail ?? DEFAULT_TAIL_LINES;
-        const result = await gateway.getProcessOutput!(request satisfies WorkspaceProcessOutputRequest);
+        const result = await gateway.getProcessOutput!(
+          request satisfies WorkspaceProcessOutputRequest,
+        );
 
         const stdout = truncateOutput(result.stdout ?? '', tailLines, undefined);
         const stderr = truncateOutput(result.stderr ?? '', tailLines, undefined);
@@ -299,18 +320,27 @@ Use this to stop a long-running background process that was started with execute
     // workspace_read_file
     const readFileSchema = z.object({
       path: z.string().describe('The path to the file to read (e.g., "/data/config.json")'),
-      encoding: z.enum(['utf-8', 'utf8', 'base64', 'hex']).optional().default('utf-8').describe(
-        'File encoding (default: utf-8)',
-      ),
-      offset: z.number().optional().default(0).describe(
-        'Starting line number (0-based index, default: 0)',
-      ),
-      limit: z.number().optional().describe(
-        'Maximum number of lines to read. If not provided, reads all lines from offset to end.',
-      ),
-      showLineNumbers: z.boolean().optional().default(true).describe(
-        'Whether to prefix each line with its line number (default: true)',
-      ),
+      encoding: z
+        .enum(['utf-8', 'utf8', 'base64', 'hex'])
+        .optional()
+        .default('utf-8')
+        .describe('File encoding (default: utf-8)'),
+      offset: z
+        .number()
+        .optional()
+        .default(0)
+        .describe('Starting line number (0-based index, default: 0)'),
+      limit: z
+        .number()
+        .optional()
+        .describe(
+          'Maximum number of lines to read. If not provided, reads all lines from offset to end.',
+        ),
+      showLineNumbers: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Whether to prefix each line with its line number (default: true)'),
     });
 
     actions.push({
@@ -334,11 +364,16 @@ Examples:
 
           // Apply offset/limit for text encodings
           let finalContent = strContent;
-          if ((request.encoding === 'utf-8' || request.encoding === 'utf8' || !request.encoding) && (request.offset || request.limit)) {
+          if (
+            (request.encoding === 'utf-8' || request.encoding === 'utf8' || !request.encoding) &&
+            (request.offset || request.limit)
+          ) {
             finalContent = sliceContent(strContent, request.offset ?? 0, request.limit);
           }
 
-          const formatted = request.showLineNumbers ? formatWithLineNumbers(finalContent, (request.offset ?? 0) + 1) : finalContent;
+          const formatted = request.showLineNumbers
+            ? formatWithLineNumbers(finalContent, (request.offset ?? 0) + 1)
+            : finalContent;
 
           return formatted;
         } catch (error) {
@@ -355,9 +390,13 @@ Examples:
     const writeFileSchema = z.object({
       path: z.string().describe('The path where to write the file (e.g., "/data/output.txt")'),
       content: z.string().describe('The content to write to the file'),
-      overwrite: z.boolean().optional().default(false).describe(
-        'If false (default), writing to an existing file will fail. If true, will overwrite.',
-      ),
+      overwrite: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'If false (default), writing to an existing file will fail. If true, will overwrite.',
+        ),
     });
 
     actions.push({
@@ -399,13 +438,17 @@ Examples:
     // workspace_edit_file
     const editFileSchema = z.object({
       path: z.string().describe('The path to the file to edit'),
-      old_string: z.string().describe(
-        'The exact text to find and replace. Must be unique in the file.',
-      ),
+      old_string: z
+        .string()
+        .describe('The exact text to find and replace. Must be unique in the file.'),
       new_string: z.string().describe('The text to replace old_string with'),
-      replace_all: z.boolean().optional().default(false).describe(
-        'If true, replace all occurrences. If false (default), old_string must be unique.',
-      ),
+      replace_all: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'If true, replace all occurrences. If false (default), old_string must be unique.',
+        ),
     });
 
     actions.push({
@@ -443,7 +486,10 @@ Examples:
             if (content.indexOf(request.old_string, index + 1) !== -1) {
               return `Error: old_string appears multiple times. Use replace_all: true or include more context to make it unique.`;
             }
-            result = content.slice(0, index) + request.new_string + content.slice(index + request.old_string.length);
+            result =
+              content.slice(0, index) +
+              request.new_string +
+              content.slice(index + request.old_string.length);
             replacements = 1;
           }
 
@@ -462,24 +508,28 @@ Examples:
     // workspace_list_files
     const listFilesSchema = z.object({
       path: z.string().optional().default('.').describe('Directory path to list'),
-      maxDepth: z.number().optional().default(1).describe(
-        'Maximum depth for recursive listing. 1 = current directory only, 2 = one level deep, etc.',
-      ),
-      showHidden: z.boolean().optional().default(false).describe(
-        'Include hidden files (files starting with ".")',
-      ),
-      dirsOnly: z.boolean().optional().default(false).describe(
-        'Only list directories, not files',
-      ),
-      exclude: z.array(z.string()).optional().describe(
-        'Array of patterns to exclude from results (e.g., ["node_modules", "*.log"])',
-      ),
-      extension: z.string().optional().describe(
-        'Only list files with this extension (e.g., "ts", "js", "json")',
-      ),
-      pattern: z.string().optional().describe(
-        'Filter files by regex pattern in their name',
-      ),
+      maxDepth: z
+        .number()
+        .optional()
+        .default(1)
+        .describe(
+          'Maximum depth for recursive listing. 1 = current directory only, 2 = one level deep, etc.',
+        ),
+      showHidden: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('Include hidden files (files starting with ".")'),
+      dirsOnly: z.boolean().optional().default(false).describe('Only list directories, not files'),
+      exclude: z
+        .array(z.string())
+        .optional()
+        .describe('Array of patterns to exclude from results (e.g., ["node_modules", "*.log"])'),
+      extension: z
+        .string()
+        .optional()
+        .describe('Only list files with this extension (e.g., "ts", "js", "json")'),
+      pattern: z.string().optional().describe('Filter files by regex pattern in their name'),
     });
 
     actions.push({
@@ -538,19 +588,27 @@ Examples:
     // workspace_grep
     const grepSchema = z.object({
       pattern: z.string().describe('Regex pattern to search for'),
-      path: z.string().optional().default('.').describe(
-        'File, directory, or glob pattern to search within (default: ".")',
-      ),
-      contextLines: z.number().optional().default(0).describe(
-        'Number of lines of context to include before and after each match (default: 0)',
-      ),
+      path: z
+        .string()
+        .optional()
+        .default('.')
+        .describe('File, directory, or glob pattern to search within (default: ".")'),
+      contextLines: z
+        .number()
+        .optional()
+        .default(0)
+        .describe('Number of lines of context to include before and after each match (default: 0)'),
       maxCount: z.number().optional().describe('Maximum total matches to return'),
-      caseSensitive: z.boolean().optional().default(true).describe(
-        'Whether the search is case-sensitive (default: true)',
-      ),
-      includeHidden: z.boolean().optional().default(false).describe(
-        'Include hidden files and directories (default: false)',
-      ),
+      caseSensitive: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Whether the search is case-sensitive (default: true)'),
+      includeHidden: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('Include hidden files and directories (default: false)'),
     });
 
     actions.push({
@@ -666,16 +724,19 @@ Usage:
 // HELPERS
 // =============================================================================
 
-async function listWorkspaceEntries(input: {
-  filesystem: NonNullable<WorkspaceActionPackOptions['filesystem']>;
-  rootPath: string;
-  maxDepth: number;
-  showHidden: boolean;
-  dirsOnly: boolean;
-  exclude: string[];
-  extension?: string;
-  pattern?: string;
-}, currentDepth: number = 0): Promise<Array<{ name: string; path: string; isDirectory: boolean; size: number }>> {
+async function listWorkspaceEntries(
+  input: {
+    filesystem: NonNullable<WorkspaceActionPackOptions['filesystem']>;
+    rootPath: string;
+    maxDepth: number;
+    showHidden: boolean;
+    dirsOnly: boolean;
+    exclude: string[];
+    extension?: string;
+    pattern?: string;
+  },
+  currentDepth: number = 0,
+): Promise<Array<{ name: string; path: string; isDirectory: boolean; size: number }>> {
   const entries = await input.filesystem.listDirectory(input.rootPath);
   const filteredEntries = entries.filter((entry) => {
     // Filter hidden
@@ -715,10 +776,13 @@ async function listWorkspaceEntries(input: {
 
     // Recurse if needed
     if (entry.isDirectory && currentDepth < input.maxDepth - 1) {
-      const nestedEntries = await listWorkspaceEntries({
-        ...input,
-        rootPath: entry.path,
-      }, currentDepth + 1);
+      const nestedEntries = await listWorkspaceEntries(
+        {
+          ...input,
+          rootPath: entry.path,
+        },
+        currentDepth + 1,
+      );
       result.push(...nestedEntries);
     }
   }

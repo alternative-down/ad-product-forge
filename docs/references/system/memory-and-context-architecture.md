@@ -9,6 +9,7 @@ The agent memory system has three distinct layers:
 3. **Long-Term Memory (LTM)** — Semantic search over observations and workspace files, recovered per step
 
 Together, these layers provide the agent with:
+
 - Immediate access to the current thread's state
 - Compressed knowledge from past interactions
 - Persistent recall of relevant information during each step
@@ -18,11 +19,13 @@ Together, these layers provide the agent with:
 ## 1. Working Memory
 
 Working Memory is provided by Mastra's native `Memory` system. It maintains:
+
 - The raw message history of the current thread
 - Workspace state (enabled, scope: 'thread')
 - Raw storage in LibSQL (`LibSQLStore`)
 
 **Configuration** (`memory.ts`):
+
 ```typescript
 new Memory({
   embedder: fastembed,
@@ -38,7 +41,7 @@ new Memory({
       template: WORKING_MEMORY_TEMPLATE,
     },
   },
-})
+});
 ```
 
 The system disables Mastra's built-in semantic recall and observational memory in favor of our custom implementations.
@@ -48,11 +51,13 @@ The system disables Mastra's built-in semantic recall and observational memory i
 ## 2. Observational Memory
 
 Observational Memory (OM) runs as a native Mastra `Processor`. It:
+
 - Observes at the end of each step, compressing the step's messages into observations
 - Produces reflections (summaries) from those observations
 - Stores observations with metadata per thread and resource
 
 **Configuration** (`observational-memory.ts`):
+
 ```typescript
 new ObservationalMemory({
   storage: config.storage.stores.memory!,
@@ -60,7 +65,7 @@ new ObservationalMemory({
   scope: 'thread',
   observation: { messageTokens: 15000 },
   reflection: { observationTokens: 20000 },
-})
+});
 ```
 
 ---
@@ -68,11 +73,13 @@ new ObservationalMemory({
 ## 3. Long-Term Memory (LTM)
 
 LongTermMemory is a custom `Processor` that:
+
 - Runs on every input step
 - Searches for relevant past information based on the current step's query
 - Injects recovered context into the message list as a system message
 
 **Layers searched:**
+
 1. **Workspace** — BM25 + semantic hybrid search over `.forge-memory/<agentId>/observations/` markdown files
 2. **Graph** — GraphRAG semantic search over the vector index
 
@@ -112,12 +119,12 @@ processOutputStep:
 
 ## 5. Storage Architecture
 
-| Component | Technology | Role |
-| :--- | :--- | :--- |
-| **Working Memory Store** | LibSQLStore | Raw messages, current thread state |
-| **OM Store** | LibSQLStore (memory table) | Observation records, per thread |
-| **Workspace** | LocalFilesystem + BM25/semantic index | Long-term knowledge in markdown |
-| **Vector Index** | LibSQLVector | Embeddings for workspace and graph search |
+| Component                | Technology                            | Role                                      |
+| :----------------------- | :------------------------------------ | :---------------------------------------- |
+| **Working Memory Store** | LibSQLStore                           | Raw messages, current thread state        |
+| **OM Store**             | LibSQLStore (memory table)            | Observation records, per thread           |
+| **Workspace**            | LocalFilesystem + BM25/semantic index | Long-term knowledge in markdown           |
+| **Vector Index**         | LibSQLVector                          | Embeddings for workspace and graph search |
 
 ---
 

@@ -5,18 +5,30 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
-export const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api', 'skills-creator'] as const;
+export const BUNDLED_SKILL_DIRECTORY_NAMES = [
+  'github-api',
+  'coolify-api',
+  'skills-creator',
+] as const;
 
 function parseSkillName(skillContent: string) {
   if (!skillContent.startsWith('---\n')) {
-    forgeDebug({ scope: 'bundled-workspace-skills', level: 'warn', message: 'parseBundledSkillMeta: missing YAML frontmatter' });
+    forgeDebug({
+      scope: 'bundled-workspace-skills',
+      level: 'warn',
+      message: 'parseBundledSkillMeta: missing YAML frontmatter',
+    });
     throw new Error('Bundled skill is missing YAML frontmatter.');
   }
 
   const endIndex = skillContent.indexOf('\n---\n', 4);
 
   if (endIndex === -1) {
-    forgeDebug({ scope: 'bundled-workspace-skills', level: 'warn', message: 'parseBundledSkillMeta: frontmatter not closed' });
+    forgeDebug({
+      scope: 'bundled-workspace-skills',
+      level: 'warn',
+      message: 'parseBundledSkillMeta: frontmatter not closed',
+    });
     throw new Error('Bundled skill frontmatter is not closed.');
   }
 
@@ -30,14 +42,21 @@ function parseSkillName(skillContent: string) {
     }
 
     const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
+    const value = line
+      .slice(separatorIndex + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
 
     if (key === 'name' && value) {
       return value;
     }
   }
 
-  forgeDebug({ scope: 'bundled-workspace-skills', level: 'warn', message: 'parseBundledSkillMeta: frontmatter missing name' });
+  forgeDebug({
+    scope: 'bundled-workspace-skills',
+    level: 'warn',
+    message: 'parseBundledSkillMeta: frontmatter missing name',
+  });
   throw new Error('Bundled skill frontmatter is missing name.');
 }
 
@@ -88,11 +107,21 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
       await fs.access(skillFilePath);
       return path.resolve(candidateRoot, sourceDirectoryName);
     } catch (error) {
-      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error: error instanceof Error ? error.message : String(error), skillFilePath } });
+      forgeDebug({
+        scope: 'bundled-workspace-skills',
+        level: 'debug',
+        message: 'Skill file not accessible',
+        context: { error: error instanceof Error ? error.message : String(error), skillFilePath },
+      });
       continue;
     }
   }
 
-  forgeDebug({ scope: 'bundled-workspace-skills', level: 'warn', message: 'listBundledWorkspaceSkills: source not found', context: { sourceDirectoryName } });
+  forgeDebug({
+    scope: 'bundled-workspace-skills',
+    level: 'warn',
+    message: 'listBundledWorkspaceSkills: source not found',
+    context: { sourceDirectoryName },
+  });
   throw new Error(`Bundled skill source not found for ${sourceDirectoryName}`);
 }

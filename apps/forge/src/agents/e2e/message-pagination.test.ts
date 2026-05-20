@@ -74,8 +74,22 @@ function makeMockConversationRequest(query: Record<string, string | undefined> =
 // ─── Shared test data constants ──────────────────────────────────────────────
 
 const MOCK_NOW = 1740000000000;
-const MOCK_ACCOUNT = { id: 'acct-1', agentId: null, slug: 'alice', displayName: 'Alice', description: null, createdAt: MOCK_NOW, updatedAt: MOCK_NOW };
-const MOCK_CONV = { id: 'conv-1', name: 'Team Chat', type: 'group', updatedAt: MOCK_NOW, createdAt: MOCK_NOW };
+const MOCK_ACCOUNT = {
+  id: 'acct-1',
+  agentId: null,
+  slug: 'alice',
+  displayName: 'Alice',
+  description: null,
+  createdAt: MOCK_NOW,
+  updatedAt: MOCK_NOW,
+};
+const MOCK_CONV = {
+  id: 'conv-1',
+  name: 'Team Chat',
+  type: 'group',
+  updatedAt: MOCK_NOW,
+  createdAt: MOCK_NOW,
+};
 
 // ─── Test Suite ───────────────────────────────────────────────────────────────
 
@@ -119,14 +133,24 @@ describe('GET /admin/internal-chat/messages — pagination', () => {
   });
 
   it('accepts limit and offset query parameters', async () => {
-    const req = makeMockRequest({ accountId: 'acct-1', conversationId: 'conv-1', limit: '5', offset: '10' });
+    const req = makeMockRequest({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      limit: '5',
+      offset: '10',
+    });
     const url = new URL(req.url);
     expect(url.searchParams.get('limit')).toBe('5');
     expect(url.searchParams.get('offset')).toBe('10');
   });
 
   it('parses dateFrom and dateTo query parameters', async () => {
-    const req = makeMockRequest({ accountId: 'acct-1', conversationId: 'conv-1', dateFrom: '2025-01-01', dateTo: '2025-12-31' });
+    const req = makeMockRequest({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      dateFrom: '2025-01-01',
+      dateTo: '2025-12-31',
+    });
     const url = new URL(req.url);
     expect(url.searchParams.get('dateFrom')).toBe('2025-01-01');
     expect(url.searchParams.get('dateTo')).toBe('2025-12-31');
@@ -215,7 +239,12 @@ describe('message pagination — boundary conditions', () => {
   });
 
   it('dateFrom and dateTo together define a date range', () => {
-    const params = { accountId: 'acct-1', conversationId: 'conv-1', dateFrom: '2025-01-01', dateTo: '2025-12-31' };
+    const params = {
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      dateFrom: '2025-01-01',
+      dateTo: '2025-12-31',
+    };
     const req = makeMockRequest(params);
     const url = new URL(req.url);
     expect(url.searchParams.get('dateFrom')).toBe('2025-01-01');
@@ -230,7 +259,13 @@ describe('message pagination — boundary conditions', () => {
   });
 
   it('query with date range combines filters', () => {
-    const params = { accountId: 'acct-1', conversationId: 'conv-1', query: 'budget', dateFrom: '2025-03-01', dateTo: '2025-03-31' };
+    const params = {
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      query: 'budget',
+      dateFrom: '2025-03-01',
+      dateTo: '2025-03-31',
+    };
     const req = makeMockRequest(params);
     const url = new URL(req.url);
     expect(url.searchParams.get('query')).toBe('budget');

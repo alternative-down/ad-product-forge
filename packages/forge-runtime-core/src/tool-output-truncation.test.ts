@@ -57,12 +57,20 @@ describe('truncateToolOutputValue', () => {
 
   describe('objects', () => {
     it('returns object unchanged when within key limit', () => {
-      const input = Object.fromEntries(Array(40).fill(null).map((_, i) => [`key${i}`, i]));
+      const input = Object.fromEntries(
+        Array(40)
+          .fill(null)
+          .map((_, i) => [`key${i}`, i]),
+      );
       expect(truncateToolOutputValue(input)).toEqual(input);
     });
 
     it('truncates object exceeding key limit', () => {
-      const input = Object.fromEntries(Array(100).fill(null).map((_, i) => [`key${i}`, i]));
+      const input = Object.fromEntries(
+        Array(100)
+          .fill(null)
+          .map((_, i) => [`key${i}`, i]),
+      );
       const result = truncateToolOutputValue(input) as Record<string, unknown>;
       expect(Object.keys(result).length).toBeLessThan(100);
       expect(result.truncated).toBe(true);
@@ -75,7 +83,11 @@ describe('truncateToolOutputValue', () => {
     });
 
     it('truncates nested objects', () => {
-      const inner = Object.fromEntries(Array(100).fill(null).map((_, i) => [`k${i}`, i]));
+      const inner = Object.fromEntries(
+        Array(100)
+          .fill(null)
+          .map((_, i) => [`k${i}`, i]),
+      );
       const input = { outer: inner };
       const result = truncateToolOutputValue(input) as Record<string, unknown>;
       const outer = result.outer as Record<string, unknown>;
@@ -87,7 +99,8 @@ describe('truncateToolOutputValue', () => {
     it('returns numbers unchanged', () => expect(truncateToolOutputValue(42)).toBe(42));
     it('returns booleans unchanged', () => expect(truncateToolOutputValue(true)).toBe(true));
     it('returns null unchanged', () => expect(truncateToolOutputValue(null)).toBe(null));
-    it('returns undefined unchanged', () => expect(truncateToolOutputValue(undefined)).toBe(undefined));
+    it('returns undefined unchanged', () =>
+      expect(truncateToolOutputValue(undefined)).toBe(undefined));
   });
 
   describe('mixed structures', () => {

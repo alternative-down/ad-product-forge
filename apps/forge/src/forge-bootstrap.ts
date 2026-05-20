@@ -82,17 +82,20 @@ export async function createForgeBootstrap() {
   const env = envSchema.parse(process.env);
 
   const adminApiKey = decodeAdminApiKey(env.FORGE_ADMIN_API_KEY);
-  const allowInsecureLocal = env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === 'true'
-    || env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === '1';
-  const allowedOrigins = env.FORGE_ADMIN_ALLOWED_ORIGINS !== null && env.FORGE_ADMIN_ALLOWED_ORIGINS !== undefined
-    ? env.FORGE_ADMIN_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-    : undefined;
+  const allowInsecureLocal =
+    env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === 'true' || env.FORGE_ADMIN_ALLOW_INSECURE_LOCAL === '1';
+  const allowedOrigins =
+    env.FORGE_ADMIN_ALLOWED_ORIGINS !== null && env.FORGE_ADMIN_ALLOWED_ORIGINS !== undefined
+      ? env.FORGE_ADMIN_ALLOWED_ORIGINS.split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : undefined;
 
   if (adminApiKey === undefined && !allowInsecureLocal) {
     forgeDebug({ scope: 'main', level: 'error', message: 'main: configuration check failed' });
     throw new Error(
-      'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set'
-      + ' FORGE_ADMIN_ALLOW_INSECURE_LOCAL=true for local development only.',
+      'FORGE_ADMIN_API_KEY is not configured. Set it in your environment or set' +
+        ' FORGE_ADMIN_ALLOW_INSECURE_LOCAL=true for local development only.',
     );
   }
 
@@ -131,7 +134,15 @@ export async function createForgeBootstrap() {
       // runner has no public execution state query, default to 'idle' when runner exists
       return Promise.resolve('idle');
     },
-    notifyAgent: ({ agentId, scheduleId, scheduleKind: _sKind, scheduleName: _sName, content: msg, timestamp, idleOnly }) => {
+    notifyAgent: ({
+      agentId,
+      scheduleId,
+      scheduleKind: _sKind,
+      scheduleName: _sName,
+      content: msg,
+      timestamp,
+      idleOnly,
+    }) => {
       const entry = registry.get(agentId);
       if (entry) {
         entry.runner.notifyExternalEvent({

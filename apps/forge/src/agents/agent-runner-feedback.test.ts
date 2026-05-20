@@ -80,16 +80,15 @@ describe('stuck loop detection', () => {
     setNextStepAt = vi.fn();
   });
 
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('returns continue:false when loop is stuck', async () => {
     const loopDetector = makeLoopDetector(true, 5);
     const deps = makeDeps();
 
-    const result = await buildIterationFeedback(
-      makeArg({ innerIteration: 0 }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ innerIteration: 0 }) as any, deps);
 
     expect(result).toEqual({ continue: false, feedbackMessages: [] });
   });
@@ -130,10 +129,7 @@ describe('stop directive', () => {
     const setNextStepAt = vi.fn();
     const deps = makeDeps({ setNextStepAt });
 
-    const result = await buildIterationFeedback(
-      makeArg({ text: 'STOP_AND_IDLE' }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ text: 'STOP_AND_IDLE' }) as any, deps);
 
     expect(result).toEqual({ continue: false, feedbackMessages: [] });
     expect(setNextStepAt).toHaveBeenCalledWith(null);
@@ -143,10 +139,7 @@ describe('stop directive', () => {
     const setNextStepAt = vi.fn();
     const deps = makeDeps({ setNextStepAt });
 
-    const result = await buildIterationFeedback(
-      makeArg({ text: 'NO_ACTION_NEEDED' }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ text: 'NO_ACTION_NEEDED' }) as any, deps);
 
     expect(setNextStepAt).not.toHaveBeenCalled();
     // With ignore directive + visible text 'NO_ACTION_NEEDED' + no tool calls
@@ -164,7 +157,9 @@ describe('no-tool-call reminder', () => {
     setSuppressNoToolCallReminder = vi.fn();
   });
 
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('adds RUN_STOP_REMINDER when no tools and has text', async () => {
     const deps = makeDeps({
@@ -179,7 +174,9 @@ describe('no-tool-call reminder', () => {
 
     expect(result).toMatchObject({
       continue: true,
-      feedbackMessages: [{ role: 'user', content: expect.stringContaining('A response without tool calls') }],
+      feedbackMessages: [
+        { role: 'user', content: expect.stringContaining('A response without tool calls') },
+      ],
     });
   });
 
@@ -236,10 +233,7 @@ describe('flush pending run messages', () => {
       flushPendingRunMessages: flushMock,
     });
 
-    const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ toolCalls: [] }) as any, deps);
 
     expect(result).toEqual({
       continue: true,
@@ -253,10 +247,7 @@ describe('flush pending run messages', () => {
       flushPendingRunMessages: vi.fn<() => string | null>().mockReturnValue(null),
     });
 
-    const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ toolCalls: [] }) as any, deps);
 
     expect(result).toBeUndefined();
   });
@@ -274,7 +265,9 @@ describe('flush pending run messages', () => {
 
     expect(result).toMatchObject({
       continue: true,
-      feedbackMessages: [{ role: 'user', content: expect.stringContaining('A response without tool calls') }],
+      feedbackMessages: [
+        { role: 'user', content: expect.stringContaining('A response without tool calls') },
+      ],
     });
   });
 });
@@ -282,7 +275,9 @@ describe('flush pending run messages', () => {
 // ─── LTM recall ───────────────────────────────────────────────────────────────
 
 describe('LTM recall', () => {
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('returns undefined when no recall', async () => {
     const deps = makeDeps({
@@ -295,10 +290,7 @@ describe('LTM recall', () => {
       },
     });
 
-    const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ toolCalls: [] }) as any, deps);
 
     expect(result).toBeUndefined();
   });
@@ -312,10 +304,7 @@ describe('LTM recall', () => {
       },
     });
 
-    const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ toolCalls: [] }) as any, deps);
 
     expect(result).toBeUndefined();
   });
@@ -324,7 +313,9 @@ describe('LTM recall', () => {
 // ─── Combined feedback ────────────────────────────────────────────────────────
 
 describe('combined feedback', () => {
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('combines flush + LTM recall into multiple messages', async () => {
     const deps = makeDeps({
@@ -338,10 +329,7 @@ describe('combined feedback', () => {
       },
     });
 
-    const result = await buildIterationFeedback(
-      makeArg({ toolCalls: [] }) as any,
-      deps,
-    );
+    const result = await buildIterationFeedback(makeArg({ toolCalls: [] }) as any, deps);
 
     expect(result).toMatchObject({
       continue: true,

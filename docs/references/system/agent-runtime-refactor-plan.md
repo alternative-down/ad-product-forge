@@ -9,6 +9,7 @@ This document explains the current architecture of the agent runtime system in `
 ## Problem Statement
 
 The system needed to support:
+
 - **Persistent agents** with stable identity and state
 - **Multiple memory layers** (working, observational, long-term)
 - **External integrations** (Discord, internal chat)
@@ -24,6 +25,7 @@ The system needed to support:
 **Decision:** Agents operate in a single thread, rather than cloning threads for execution isolation.
 
 **Why:**
+
 - Simplifies persistence and identity — the agent's state is directly the thread state
 - Eliminates sync overhead and complexity
 - Enables cleaner storage model
@@ -36,13 +38,14 @@ The system needed to support:
 
 **Decision:** Memory is organized into three distinct layers with different responsibilities:
 
-| Layer | Purpose | Technology |
-| :--- | :--- | :--- |
-| **Working Memory** | Current conversation state | Mastra's native `Memory` + LibSQLStore |
+| Layer                    | Purpose                      | Technology                                      |
+| :----------------------- | :--------------------------- | :---------------------------------------------- |
+| **Working Memory**       | Current conversation state   | Mastra's native `Memory` + LibSQLStore          |
 | **Observational Memory** | Compressed past interactions | Mastra `Processor` + LibSQLStore (memory table) |
-| **Long-Term Memory** | Semantic recovery per step | Custom `Processor` + Workspace + Vector search |
+| **Long-Term Memory**     | Semantic recovery per step   | Custom `Processor` + Workspace + Vector search  |
 
 **Why:**
+
 - Each layer has a clear, minimal responsibility
 - OM compresses; LTM recovers — this separation allows efficient storage and retrieval
 - Per-step recovery (LTM) avoids stale context injection
@@ -55,7 +58,8 @@ The system needed to support:
 **Decision:** Memory functionality is implemented as Mastra `Processor` implementations, not custom hooks or overrides.
 
 **Why:**
-- Works *with* Mastra's lifecycle, not around it
+
+- Works _with_ Mastra's lifecycle, not around it
 - Automatic integration into `processInputStep` and `processOutputStep` hooks
 - Type-safe and versioning-friendly
 - Easier testing (processors are isolated)
@@ -67,6 +71,7 @@ The system needed to support:
 **Decision:** Observations are written to markdown files in `.forge-memory/<agentId>/observations/`, not just stored in a database.
 
 **Why:**
+
 - Enables auditing and manual inspection
 - Supports re-indexing without losing original data
 - Hybrid search (BM25 + semantic) is more powerful on filesystem-backed content
@@ -80,6 +85,7 @@ The system needed to support:
 **Decision:** Each input step builds a fresh query from the last 8 messages and searches for context. Context is not pre-loaded or cached.
 
 **Why:**
+
 - Avoids injection of irrelevant context
 - Adapts recovery to the current conversation direction
 - Cleaner than trying to predict relevance upfront
@@ -92,6 +98,7 @@ The system needed to support:
 **Decision:** LTM uses both hybrid search (BM25 + semantic) on workspace files AND GraphRAG search on the vector index.
 
 **Why:**
+
 - Hybrid captures both exact matches (tasks, dates) and semantic similarity
 - GraphRAG adds relationship-aware search (entities, concepts)
 - Together they provide comprehensive recall coverage
@@ -104,10 +111,12 @@ The system needed to support:
 **Decision:** Observations are grouped by date into separate files, with inline metadata headers.
 
 Format:
+
 ```markdown
 # Observations for {date}
 
 ## observation:{id}
+
 Type: {originType}
 CreatedAt: {timestamp}
 
@@ -115,6 +124,7 @@ CreatedAt: {timestamp}
 ```
 
 **Why:**
+
 - Enables efficient incremental updates (append only per date)
 - Dates are natural query boundaries for workspace search
 - Metadata enables filtering and later re-processing
@@ -127,6 +137,7 @@ CreatedAt: {timestamp}
 ### Provider Factory Pattern
 
 `createAgent` is the main factory:
+
 ```typescript
 createAgent(config) {
   // 1. Create storage
@@ -148,6 +159,7 @@ createAgent(config) {
 ```
 
 This pattern:
+
 - Encapsulates configuration complexity
 - Allows versioning (V1, V2 factories)
 - Supports presets (`createForgeAgent`)
@@ -168,6 +180,7 @@ Agents are awakened via `createAgentWakeQueue`:
 ```
 
 **Why:**
+
 - Prevents thrashing on rapid events
 - Ensures agent runs with latest state
 - No external job queue needed (suitable for single-agent deployments)
@@ -177,6 +190,7 @@ Agents are awakened via `createAgentWakeQueue`:
 ### Communication Module Pattern
 
 Internal agent-agent communication is via `CommunicationModule`:
+
 - Provides `send_message` and `finish` tools
 - Agents can message each other synchronously
 - Future: can be replaced with async queue (Bullmq, etc.)

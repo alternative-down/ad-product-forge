@@ -39,14 +39,8 @@ export function LtmRecallSnapshotRenderer({ result }: LtmRecallSnapshotRendererP
         />
       </div>
 
-      <MemoryDisclosure
-        title="Query usada"
-        value={result.query || '—'}
-      />
-      <MemoryDisclosure
-        title="Texto final injetado"
-        value={result.injectedSystemMessage}
-      />
+      <MemoryDisclosure title="Query usada" value={result.query || '—'} />
+      <MemoryDisclosure title="Texto final injetado" value={result.injectedSystemMessage} />
       <MemoryDisclosure
         title="Estado do índice"
         value={[
@@ -61,18 +55,12 @@ export function LtmRecallSnapshotRenderer({ result }: LtmRecallSnapshotRendererP
           `lastInitAt: ${result.lastInitAt ? formatDateTime(result.lastInitAt) : '—'}`,
         ].join('\n')}
       />
-      <MemoryDisclosure
-        title="Embedding da query"
-        value={JSON.stringify(result.queryEmbedding)}
-      />
+      <MemoryDisclosure title="Embedding da query" value={JSON.stringify(result.queryEmbedding)} />
       <MemoryDisclosure
         title="Workspace formatado"
         value={result.workspaceFormattedContext || null}
       />
-      <MemoryDisclosure
-        title="Graph query"
-        value={result.graphQuery || null}
-      />
+      <MemoryDisclosure title="Graph query" value={result.graphQuery || null} />
       <MemoryDisclosure
         title="Graph config"
         value={[
@@ -134,7 +122,13 @@ export function LtmRecallSnapshotRenderer({ result }: LtmRecallSnapshotRendererP
         <div className="text-sm text-muted-foreground">Nenhum resultado vector.</div>
       )}
 
-      {(function(){try{return JSON.parse(result.graphSourcesJson ?? '[]').length>0}catch{return false}})() ? (
+      {(function () {
+        try {
+          return JSON.parse(result.graphSourcesJson ?? '[]').length > 0;
+        } catch {
+          return false;
+        }
+      })() ? (
         <div className="space-y-3">
           <div className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Graph sources

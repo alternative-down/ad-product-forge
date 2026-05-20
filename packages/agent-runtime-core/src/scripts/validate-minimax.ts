@@ -68,22 +68,28 @@ if (!firstImage) {
 
 await writeFile(join(outputDir, 'image.jpg'), firstImage.bytes);
 
-console.log(JSON.stringify({
-  text: {
-    stepId: step.id,
-    text: spokenText,
-    usage: step.modelUsage,
-    metadata: step.modelMetadata,
-  },
-  tts: {
-    mimeType: speech.mimeType,
-    bytes: speech.bytes.length,
-    file: join(outputDir, 'tts.mp3'),
-  },
-  image: {
-    mimeType: firstImage.mimeType,
-    bytes: firstImage.bytes.length,
-    file: join(outputDir, 'image.jpg'),
-    count: imageResult.images.length,
-  },
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      text: {
+        stepId: step.id,
+        text: spokenText,
+        usage: step.modelUsage,
+        metadata: step.modelMetadata,
+      },
+      tts: {
+        mimeType: speech.mimeType,
+        bytes: speech.bytes.length,
+        file: join(outputDir, 'tts.mp3'),
+      },
+      image: {
+        mimeType: firstImage.mimeType,
+        bytes: firstImage.bytes.length,
+        file: join(outputDir, 'image.jpg'),
+        count: imageResult.images.length,
+      },
+    },
+    null,
+    2,
+  ),
+);

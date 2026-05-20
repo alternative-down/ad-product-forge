@@ -76,17 +76,18 @@ export async function createAgent<...>(config, options = {}) {
 Located in: `packages/mastra-engine/src/agent/memory/storage.ts`
 
 **Characteristics:**
+
 - File-based SQLite (one `.db` file per agent)
 - Per-agent isolation
 - Unified embedder instance (fastembed) shared across all agent stores
 
 **Components:**
 
-| Component | Purpose |
-| --- | --- |
+| Component        | Purpose                                    |
+| ---------------- | ------------------------------------------ |
 | **LibSQLClient** | SQLite connection and migration management |
-| **LibSQLStore** | Message persistence for Mastra Memory |
-| **LibSQLVector** | Vector index for semantic search |
+| **LibSQLStore**  | Message persistence for Mastra Memory      |
+| **LibSQLVector** | Vector index for semantic search           |
 
 **Storage structure:**
 
@@ -106,6 +107,7 @@ All agent data (messages, observations, vectors) lives in the same database file
 Located in: `packages/mastra-engine/src/agent/communication/module.ts`
 
 **Responsibilities:**
+
 - Register providers
 - Manage the communication store (5 LibSQL tables)
 - Orchestrate inbound message receipt
@@ -119,9 +121,11 @@ See `docs/planning/communication-module.md` for the full communication architect
 ## 4. Memory System
 
 ### Working Memory
+
 Mastra's native `Memory` system. Persists current thread's message history and manages automatic context recall.
 
 **Configuration:**
+
 - Embedder: fastembed (unified instance)
 - Storage: LibSQLStore
 - lastMessages: unlimited
@@ -129,18 +133,22 @@ Mastra's native `Memory` system. Persists current thread's message history and m
 - workingMemory: enabled with template injection
 
 ### Observational Memory (OM)
+
 Mastra `Processor<'observational-memory'>` that automatically compresses past interactions.
 
 **Configuration** (`observational-memory.ts`):
+
 - Scope: 'thread'
 - Observation: 15,000 tokens
 - Reflection: 20,000 tokens
 - Runs on every input/output step
 
 ### Long-Term Memory (LTM)
+
 Custom `Processor<'long-term-memory'>` that provides hybrid semantic search.
 
 **Configuration** (`long-term-memory.ts`):
+
 - Workspace search: BM25 + semantic hybrid over markdown observation files
 - Graph search: GraphRAG via LibSQLVector
 - Searches on every input step
@@ -158,13 +166,15 @@ Located in: `packages/mastra-engine/src/agent/wake-queue.ts`
 **Purpose:** Debounce external message events to prevent redundant agent wake-ups.
 
 **Configuration:**
+
 - Debounce: 1000ms
 - Max delay: 10000ms
 - Trigger: `agent.generate()` with "Pending external activity detected.\n\nCheck your messages, inspect what is pending, and process what matters." prompt
 
 **Integration:**
+
 ```typescript
-communication.onReceiveMessage(wakeQueue.notifyExternalEvent)
+communication.onReceiveMessage(wakeQueue.notifyExternalEvent);
 ```
 
 ---

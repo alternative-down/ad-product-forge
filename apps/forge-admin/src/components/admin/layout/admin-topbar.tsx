@@ -14,22 +14,15 @@ export function AdminTopbar(input: {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const homeActive = input.pathname === '/home';
   const agentsActive = input.pathname.startsWith('/agents');
-  const settingsActive = input.pathname.startsWith('/settings') || input.pathname.startsWith('/integrations');
+  const settingsActive =
+    input.pathname.startsWith('/settings') || input.pathname.startsWith('/integrations');
   const financeActive = input.pathname.startsWith('/finance');
 
   return (
     <div className="flex min-h-18 items-center justify-between gap-4 px-6 py-4">
       <div className="flex min-w-0 items-center gap-4 md:gap-8">
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="md:hidden"
-              />
-            }
-          >
+          <SheetTrigger render={<Button variant="ghost" size="icon-sm" className="md:hidden" />}>
             <Menu className="h-4 w-4" />
             <span className="sr-only">Abrir menu</span>
           </SheetTrigger>
@@ -41,28 +34,44 @@ export function AdminTopbar(input: {
               <Link
                 to="/home"
                 onClick={() => setMobileMenuOpen(false)}
-                className={homeActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
+                className={
+                  homeActive
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
               >
                 Home
               </Link>
               <Link
                 to="/agents"
                 onClick={() => setMobileMenuOpen(false)}
-                className={agentsActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
+                className={
+                  agentsActive
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
               >
                 Agentes
               </Link>
               <Link
                 to="/finance"
                 onClick={() => setMobileMenuOpen(false)}
-                className={financeActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
+                className={
+                  financeActive
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
               >
                 Financeiro
               </Link>
               <Link
                 to="/settings"
                 onClick={() => setMobileMenuOpen(false)}
-                className={settingsActive ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground' : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'}
+                className={
+                  settingsActive
+                    ? 'rounded-sm bg-muted px-3 py-2 text-sm font-medium text-foreground'
+                    : 'rounded-sm px-3 py-2 text-sm text-muted-foreground'
+                }
               >
                 Configurações
               </Link>
@@ -74,25 +83,37 @@ export function AdminTopbar(input: {
         <nav className="hidden items-center gap-4 md:flex">
           <Link
             to="/home"
-            className={homeActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+            className={
+              homeActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'
+            }
           >
             Home
           </Link>
           <Link
             to="/agents"
-            className={agentsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+            className={
+              agentsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'
+            }
           >
             Agentes
           </Link>
           <Link
             to="/finance"
-            className={financeActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+            className={
+              financeActive
+                ? 'text-sm font-medium text-foreground'
+                : 'text-sm text-muted-foreground'
+            }
           >
             Financeiro
           </Link>
           <Link
             to="/settings"
-            className={settingsActive ? 'text-sm font-medium text-foreground' : 'text-sm text-muted-foreground'}
+            className={
+              settingsActive
+                ? 'text-sm font-medium text-foreground'
+                : 'text-sm text-muted-foreground'
+            }
           >
             Configurações
           </Link>

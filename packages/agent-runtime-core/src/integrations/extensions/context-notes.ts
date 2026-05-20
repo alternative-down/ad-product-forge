@@ -7,9 +7,7 @@ export type ContextNotesPluginOptions = {
   maxNotes?: number;
 };
 
-export function createContextNotesPlugin(
-  options: ContextNotesPluginOptions,
-): RuntimePlugin {
+export function createContextNotesPlugin(options: ContextNotesPluginOptions): RuntimePlugin {
   const maxNotes = options.maxNotes ?? Number.MAX_SAFE_INTEGER;
 
   return {

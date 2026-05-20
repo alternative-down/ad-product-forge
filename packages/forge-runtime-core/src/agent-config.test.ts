@@ -59,7 +59,12 @@ describe('agent-config', () => {
     });
 
     it('accepts config with typed requestContext', () => {
-      const config: AgentConfig<string, Record<string, unknown>, unknown, { userId: string; role: string }> = {
+      const config: AgentConfig<
+        string,
+        Record<string, unknown>,
+        unknown,
+        { userId: string; role: string }
+      > = {
         id: 'ctx-agent',
         name: 'Context Agent',
         model: 'claude-sonnet-4-20250514',

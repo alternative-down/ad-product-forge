@@ -20,7 +20,10 @@ function parseSkillMetadata(skillContent: string) {
     const sep = line.indexOf(':');
     if (sep === -1) continue;
     const key = line.slice(0, sep).trim();
-    const value = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, '');
+    const value = line
+      .slice(sep + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
     if (key === 'description' && value) description = value;
   }
   return { description };
@@ -60,12 +63,12 @@ describe('parseSkillMetadata', () => {
   });
 
   it('strips double and single quotes from description values', () => {
-    expect(
-      parseSkillMetadata('---\ndescription: "quoted value"\n---\n').description,
-    ).toBe('quoted value');
-    expect(
-      parseSkillMetadata("---\ndescription: 'single quoted'\n---\n").description,
-    ).toBe('single quoted');
+    expect(parseSkillMetadata('---\ndescription: "quoted value"\n---\n').description).toBe(
+      'quoted value',
+    );
+    expect(parseSkillMetadata("---\ndescription: 'single quoted'\n---\n").description).toBe(
+      'single quoted',
+    );
   });
 
   it('handles description with no value', () => {
@@ -74,16 +77,12 @@ describe('parseSkillMetadata', () => {
   });
 
   it('handles description with trailing whitespace', () => {
-    const result = parseSkillMetadata(
-      '---\ndescription:   "some description"  \n---\n',
-    );
+    const result = parseSkillMetadata('---\ndescription:   "some description"  \n---\n');
     expect(result.description).toBe('some description');
   });
 
   it('uses first description in frontmatter', () => {
-    const result = parseSkillMetadata(
-      '---\ndescription: First\ndescription: Second\n---\n',
-    );
+    const result = parseSkillMetadata('---\ndescription: First\ndescription: Second\n---\n');
     expect(result.description).toBe('Second'); // last occurrence wins
   });
 });
@@ -208,11 +207,7 @@ describe('listAgentWorkspaceSkills', () => {
     );
     const agent = { id: 'agent-abc', workspaceFilesystem: null };
     const result = await listAgentWorkspaceSkills(tempRoot, agent);
-    expect(result.map((s) => s.skillName)).toEqual([
-      'alpha-skill',
-      'mike-skill',
-      'zulu-skill',
-    ]);
+    expect(result.map((s) => s.skillName)).toEqual(['alpha-skill', 'mike-skill', 'zulu-skill']);
   });
 });
 

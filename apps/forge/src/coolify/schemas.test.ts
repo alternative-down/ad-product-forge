@@ -50,7 +50,9 @@ describe('GitHubAppSchema', () => {
   });
 
   it('accepts null for nullable organization', () => {
-    expect(GitHubAppSchema.parse({ uuid: 'x', organization: null })).toMatchObject({ organization: null });
+    expect(GitHubAppSchema.parse({ uuid: 'x', organization: null })).toMatchObject({
+      organization: null,
+    });
   });
 });
 
@@ -58,7 +60,9 @@ describe('GitHubAppSchema', () => {
 
 describe('GitHubRepositorySchema', () => {
   it('parses minimal valid input', () => {
-    expect(GitHubRepositorySchema.parse({ name: 'repo-name' })).toMatchObject({ name: 'repo-name' });
+    expect(GitHubRepositorySchema.parse({ name: 'repo-name' })).toMatchObject({
+      name: 'repo-name',
+    });
   });
 
   it('parses full valid input', () => {
@@ -224,7 +228,9 @@ describe('ProjectSchema', () => {
   });
 
   it('parses full valid input', () => {
-    expect(ProjectSchema.parse({ uuid: 'proj-1', name: 'My Project' })).toMatchObject({ name: 'My Project' });
+    expect(ProjectSchema.parse({ uuid: 'proj-1', name: 'My Project' })).toMatchObject({
+      name: 'My Project',
+    });
   });
 
   it('rejects when uuid is missing', () => {
@@ -240,7 +246,9 @@ describe('EnvironmentSchema', () => {
   });
 
   it('parses full valid input', () => {
-    expect(EnvironmentSchema.parse({ uuid: 'env-1', name: 'Production' })).toMatchObject({ name: 'Production' });
+    expect(EnvironmentSchema.parse({ uuid: 'env-1', name: 'Production' })).toMatchObject({
+      name: 'Production',
+    });
   });
 
   it('rejects when uuid is missing', () => {

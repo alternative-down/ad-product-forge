@@ -1,6 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import type { AgentLoaderConfig } from './agent-loader';
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
@@ -50,18 +50,18 @@ export function createPerAgentGitHubManager(config: {
   return createGitHubAppManager(config);
 }
 
-
-
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
-  let loaderConfig: (Omit<AgentLoaderConfig, "emailMailboxes" | "coolify" | "githubApps"> & {
-    httpServer: Parameters<typeof createGitHubAppManager>[0]["httpServer"];
-    publicBaseUrl: string;
-    integrations: Parameters<typeof createGitHubAppManager>[0]["integrations"];
-  }) | null = null;
+  let loaderConfig:
+    | (Omit<AgentLoaderConfig, 'emailMailboxes' | 'coolify' | 'githubApps'> & {
+        httpServer: Parameters<typeof createGitHubAppManager>[0]['httpServer'];
+        publicBaseUrl: string;
+        integrations: Parameters<typeof createGitHubAppManager>[0]['integrations'];
+      })
+    | null = null;
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
-    loaderConfig = (config as any);
+    loaderConfig = config as any;
     const existingAgentIds = new Set(agents.keys());
 
     // loadAgents returns runtimes — pass a config WITHOUT coolify/emailMailboxes
@@ -74,10 +74,10 @@ function createInternalAgentRegistry() {
       internalChat: config.internalChat,
       // intentionally omitted: emailMailboxes, coolify, githubApps
     };
-    const runtimes = await loadAgents(db, (cleanConfig as any));
+    const runtimes = await loadAgents(db, cleanConfig as any);
 
     for (const runtime of runtimes.values()) {
-      await add(db, runtime, (config as any));
+      await add(db, runtime, config as any);
       existingAgentIds.delete(runtime.id);
     }
 
@@ -102,10 +102,10 @@ function createInternalAgentRegistry() {
     const _coolify = createPerAgentCoolifyManager(db);
     const _githubApps = createPerAgentGitHubManager({
       db,
-      httpServer: ((loaderConfig as any)?.httpServer),
-      integrations: ((loaderConfig as any)?.integrations),
-              publicBaseUrl: '',
-        });
+      httpServer: (loaderConfig as any)?.httpServer,
+      integrations: (loaderConfig as any)?.integrations,
+      publicBaseUrl: '',
+    });
 
     const entry = {
       runtime,
@@ -116,7 +116,11 @@ function createInternalAgentRegistry() {
       workspaceBasePath: loaderConfig?.workspaceBasePath,
       reloadRuntime: async () => {
         if (!loaderConfig) {
-          forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'internal-agent-registry: validation/requirement failed' });
+          forgeDebug({
+            scope: 'internal-agent-registry',
+            level: 'error',
+            message: 'internal-agent-registry: validation/requirement failed',
+          });
           throw new Error('Agent loader config is not available for runtime reload');
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);
@@ -125,10 +129,10 @@ function createInternalAgentRegistry() {
           db,
           httpServer: (loaderConfig as any).httpServer,
           integrations: (loaderConfig as any).integrations,
-                  publicBaseUrl: '',
+          publicBaseUrl: '',
         });
-         
-  return await loadAgent(db, {
+
+        return await loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
           coolify: reloadCoolify,
@@ -161,7 +165,12 @@ function createInternalAgentRegistry() {
     } catch (error) {
       runner.stop();
       await runtime.dispose().catch((disposeError) => {
-        forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'Failed to dispose replacement runtime', context: { runtimeId: runtime.id, error: disposeError } });
+        forgeDebug({
+          scope: 'internal-agent-registry',
+          level: 'error',
+          message: 'Failed to dispose replacement runtime',
+          context: { runtimeId: runtime.id, error: disposeError },
+        });
       });
       throw error;
     }
@@ -176,7 +185,12 @@ function createInternalAgentRegistry() {
 
     agent.runner.stop();
     void agent.runtime.dispose().catch((error) => {
-      forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
+      forgeDebug({
+        scope: 'internal-agent-registry',
+        level: 'error',
+        message: 'Failed to dispose runtime',
+        context: { agentId, error },
+      });
     });
 
     agents.delete(agentId);

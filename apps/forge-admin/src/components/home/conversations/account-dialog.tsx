@@ -27,7 +27,9 @@ export function AccountDialog(input: {
     <Dialog open={input.open} onOpenChange={input.onOpenChange}>
       <AdminDialogContent>
         <AdminDialogHeader>
-          <AdminDialogTitle>{input.mode === 'edit' ? 'Editar conta' : 'Nova conta'}</AdminDialogTitle>
+          <AdminDialogTitle>
+            {input.mode === 'edit' ? 'Editar conta' : 'Nova conta'}
+          </AdminDialogTitle>
         </AdminDialogHeader>
 
         <form
@@ -92,7 +94,12 @@ export function AccountDialog(input: {
           </AdminDialogBody>
           <AdminDialogFooter>
             {input.mode === 'edit' && input.form.accountId && input.onDelete ? (
-              <AdminButton type="button" variant="outline" className="mr-auto" onClick={input.onDelete}>
+              <AdminButton
+                type="button"
+                variant="outline"
+                className="mr-auto"
+                onClick={input.onDelete}
+              >
                 Excluir
               </AdminButton>
             ) : null}

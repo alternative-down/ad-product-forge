@@ -151,8 +151,8 @@ const result = await fetchData();
 const processed = await processData(result);
 
 // Evitar
-fetchData().then(result => {
-  processData(result).then(processed => {
+fetchData().then((result) => {
+  processData(result).then((processed) => {
     // callback hell
   });
 });
@@ -169,7 +169,7 @@ forgeDebug({
   scope: 'module-name',
   level: 'error', // 'debug' | 'info' | 'warn' | 'error'
   message: 'Description of event',
-  context: { 
+  context: {
     relevantData: 'value',
     error: error,
   },
@@ -177,6 +177,7 @@ forgeDebug({
 ```
 
 **Níveis:**
+
 - `debug` — detalhes de execução (verbose)
 - `info` — eventos significativos
 - `warn` — situações inesperadas mas não-críticas
@@ -214,11 +215,11 @@ Log e recupere, não propague:
 try {
   await riskyOperation();
 } catch (error) {
-  forgeDebug({ 
-    scope: 'my-module', 
-    level: 'warn', 
-    message: 'Operation failed but continuing', 
-    context: { error } 
+  forgeDebug({
+    scope: 'my-module',
+    level: 'warn',
+    message: 'Operation failed but continuing',
+    context: { error },
   });
   return defaultValue;
 }
@@ -233,11 +234,11 @@ async function criticalOperation() {
   try {
     await mightFail();
   } catch (error) {
-    forgeDebug({ 
-      scope: 'my-module', 
-      level: 'error', 
-      message: 'Critical failure', 
-      context: { error } 
+    forgeDebug({
+      scope: 'my-module',
+      level: 'error',
+      message: 'Critical failure',
+      context: { error },
     });
     throw error;
   }
@@ -273,20 +274,24 @@ import { agents, agentExecutionSteps } from './schema';
 const allAgents = await db.select().from(agents);
 
 // Com filtros
-const activeAgents = await db.select().from(agents)
-  .where(eq(agents.status, 'active'));
+const activeAgents = await db.select().from(agents).where(eq(agents.status, 'active'));
 
 // Com ordenação
-const recentSteps = await db.select().from(agentExecutionSteps)
+const recentSteps = await db
+  .select()
+  .from(agentExecutionSteps)
   .where(eq(agentExecutionSteps.agentId, agentId))
   .orderBy(desc(agentExecutionSteps.createdAt))
   .limit(100);
 
 // Com join
-const agentWithRole = await db.select({
-  agent: agents,
-  role: agentRoles,
-}).from(agents).innerJoin(agentRoles, eq(agents.roleId, agentRoles.id));
+const agentWithRole = await db
+  .select({
+    agent: agents,
+    role: agentRoles,
+  })
+  .from(agents)
+  .innerJoin(agentRoles, eq(agents.roleId, agentRoles.id));
 ```
 
 ## Testes
@@ -308,7 +313,7 @@ describe('myFunction', () => {
     vi.mock('./dependency', () => ({
       fetchData: vi.fn().mockRejectedValue(new Error('Network error')),
     }));
-    
+
     const result = await myFunction('input');
     expect(result).toBeNull();
   });

@@ -26,9 +26,7 @@ export interface SchedulerHealthcheckDeps {
 
 const RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
 
-export function createSchedulerHealthcheck(
-  _deps: SchedulerHealthcheckDeps,
-): SchedulerHealthcheck {
+export function createSchedulerHealthcheck(_deps: SchedulerHealthcheckDeps): SchedulerHealthcheck {
   let healthcheckTimer: ReturnType<typeof setInterval> | null = null;
   const healthcheckNextAt: number | null = null;
 

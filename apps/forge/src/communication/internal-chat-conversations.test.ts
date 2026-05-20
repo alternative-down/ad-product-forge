@@ -100,7 +100,17 @@ describe('createInternalChatConversations', () => {
   });
 
   it('archiveConversationByAccount calls getRequiredConversationForAccount before deleting', async () => {
-    const getRequiredConversationForAccount = vi.fn(async () => ({ id: 'conv_1', type: 'dm' as const, name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any));
+    const getRequiredConversationForAccount = vi.fn(
+      async () =>
+        ({
+          id: 'conv_1',
+          type: 'dm' as const,
+          name: null,
+          createdAt: 0,
+          updatedAt: 0,
+          createdByAccountId: null,
+        }) as any,
+    );
     mockDb.query.internalChatConversationMembers.findMany = vi.fn(async () => []);
     mockDb.query.internalChatConversations.findFirst = vi.fn(async () => null);
 
@@ -124,7 +134,9 @@ describe('createInternalChatConversations', () => {
       ],
       convRows: [CONV_EXISTING],
     });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
     const result = await convs.ensureDirectConversation(LEFT, RIGHT);
 
@@ -135,7 +147,9 @@ describe('createInternalChatConversations', () => {
 
   it('creates a new DM conversation when no shared conversation exists', async () => {
     const db = makeMockDb({ memberRows: [] });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
     await convs.ensureDirectConversation(LEFT, RIGHT);
 
@@ -144,7 +158,9 @@ describe('createInternalChatConversations', () => {
 
   it('inserts two member records when creating new conversation', async () => {
     const db = makeMockDb({ memberRows: [] });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
     await convs.ensureDirectConversation(LEFT, RIGHT);
 
@@ -159,9 +175,13 @@ describe('createInternalChatConversations', () => {
       ],
       findFirstError: new Error('db findFirst failed'),
     });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
-    await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow('db findFirst failed');
+    await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow(
+      'db findFirst failed',
+    );
   });
 
   it('throws when insert throws on conversation creation', async () => {
@@ -169,7 +189,9 @@ describe('createInternalChatConversations', () => {
       memberRows: [],
       insertError: new Error('insert failed'),
     });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
     await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow('insert failed');
   });
@@ -183,12 +205,22 @@ describe('createInternalChatConversations', () => {
         { conversationId: 'conv-1', accountId: RIGHT },
       ],
     });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
     await convs.archiveConversationByAccount({
       accountId: LEFT,
       conversationId: 'conv-1',
-      getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
+      getRequiredConversationForAccount: async () =>
+        ({
+          id: 'conv-1',
+          type: 'dm',
+          name: null,
+          createdAt: 0,
+          updatedAt: 0,
+          createdByAccountId: null,
+        }) as any,
     });
 
     expect(db.delete).toHaveBeenCalledTimes(1);
@@ -199,21 +231,33 @@ describe('createInternalChatConversations', () => {
     let deleteCount = 0;
     let findManyReturnsEmpty = false;
     const db = makeMockDb({ memberRows: [row] });
-    db.query.internalChatConversationMembers.findMany = vi.fn<() => Promise<typeof row[]>>().mockImplementation(async () => {
-      if (findManyReturnsEmpty) return [];
-      return [row];
-    });
+    db.query.internalChatConversationMembers.findMany = vi
+      .fn<() => Promise<(typeof row)[]>>()
+      .mockImplementation(async () => {
+        if (findManyReturnsEmpty) return [];
+        return [row];
+      });
     db.delete = vi.fn().mockImplementation((_table) => {
       deleteCount++;
       findManyReturnsEmpty = true;
       return { where: async () => ({ rowsAffected: 1 }) };
     });
-    const convs = createInternalChatConversations(db as unknown as Parameters<typeof createInternalChatConversations>[0]);
+    const convs = createInternalChatConversations(
+      db as unknown as Parameters<typeof createInternalChatConversations>[0],
+    );
 
     await convs.archiveConversationByAccount({
       accountId: LEFT,
       conversationId: 'conv-1',
-      getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
+      getRequiredConversationForAccount: async () =>
+        ({
+          id: 'conv-1',
+          type: 'dm',
+          name: null,
+          createdAt: 0,
+          updatedAt: 0,
+          createdByAccountId: null,
+        }) as any,
     });
 
     expect(deleteCount).toBe(2);
@@ -253,14 +297,12 @@ describe('createInternalChatConversations', () => {
         ],
         convRows: [],
       });
-      db.query.internalChatConversations.findFirst = vi.fn().mockRejectedValue(
-        new Error('findFirst failed'),
-      );
+      db.query.internalChatConversations.findFirst = vi
+        .fn()
+        .mockRejectedValue(new Error('findFirst failed'));
       const convs = createInternalChatConversations(db as never);
 
-      await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow(
-        'findFirst failed',
-      );
+      await expect(convs.ensureDirectConversation(LEFT, RIGHT)).rejects.toThrow('findFirst failed');
     });
   });
 
@@ -278,23 +320,39 @@ describe('createInternalChatConversations', () => {
         convs.archiveConversationByAccount({
           accountId: 'alice',
           conversationId: 'conv-1',
-          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
+          getRequiredConversationForAccount: async () =>
+            ({
+              id: 'conv-1',
+              type: 'dm',
+              name: null,
+              createdAt: 0,
+              updatedAt: 0,
+              createdByAccountId: null,
+            }) as any,
         }),
       ).rejects.toThrow('delete failed');
     });
 
     it('throws when findMany fails when checking remaining members', async () => {
       const db = makeMockDb({ memberRows: [] });
-      db.query.internalChatConversationMembers.findMany = vi.fn().mockRejectedValue(
-        new Error('findMany failed'),
-      );
+      db.query.internalChatConversationMembers.findMany = vi
+        .fn()
+        .mockRejectedValue(new Error('findMany failed'));
       const convs = createInternalChatConversations(db as never);
 
       await expect(
         convs.archiveConversationByAccount({
           accountId: 'alice',
           conversationId: 'conv-1',
-          getRequiredConversationForAccount: async () => ({ id: 'conv-1', type: 'dm', name: null, createdAt: 0, updatedAt: 0, createdByAccountId: null } as any),
+          getRequiredConversationForAccount: async () =>
+            ({
+              id: 'conv-1',
+              type: 'dm',
+              name: null,
+              createdAt: 0,
+              updatedAt: 0,
+              createdByAccountId: null,
+            }) as any,
         }),
       ).rejects.toThrow('findMany failed');
     });

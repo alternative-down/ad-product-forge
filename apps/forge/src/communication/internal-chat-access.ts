@@ -23,27 +23,36 @@ export interface InternalChatAccessDeps {
 }
 
 export function createInternalChatAccess(db: Database, deps: InternalChatAccessDeps) {
-
   async function getRequiredExternalAccount(accountId: string) {
-      const account = await deps.getRequiredAccount(accountId);
+    const account = await deps.getRequiredAccount(accountId);
 
-      if (account.agentId !== null && account.agentId !== undefined) {
-        forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireExternalAccount: not found', context: { accountId } });
-        throw new ExternalAccountNotFoundError(accountId, "External internal chat account not found");
-      }
+    if (account.agentId !== null && account.agentId !== undefined) {
+      forgeDebug({
+        scope: 'internal-chat-access',
+        level: 'warn',
+        message: 'requireExternalAccount: not found',
+        context: { accountId },
+      });
+      throw new ExternalAccountNotFoundError(accountId, 'External internal chat account not found');
+    }
 
-      return account;
+    return account;
   }
 
   async function getRequiredAccountBySlug(slug: string) {
-      const account = await deps.getAccountBySlug(slug);
+    const account = await deps.getAccountBySlug(slug);
 
-      if (!account) {
-        forgeDebug({ scope: 'internal-chat-access', level: 'warn', message: 'requireInternalChatAccount: not found', context: { slug } });
-        throw new InternalChatAccountNotFoundError(slug);
-      }
+    if (!account) {
+      forgeDebug({
+        scope: 'internal-chat-access',
+        level: 'warn',
+        message: 'requireInternalChatAccount: not found',
+        context: { slug },
+      });
+      throw new InternalChatAccountNotFoundError(slug);
+    }
 
-      return account;
+    return account;
   }
 
   return { getRequiredExternalAccount, getRequiredAccountBySlug };

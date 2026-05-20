@@ -1,9 +1,4 @@
-import type {
-  AvatarAnimation,
-  AvatarExpression,
-  AvatarGateway,
-  AvatarMovement,
-} from './avatar.js';
+import type { AvatarAnimation, AvatarExpression, AvatarGateway, AvatarMovement } from './avatar.js';
 
 export type AvatarEvent =
   | { type: 'expression'; expression: AvatarExpression; recordedAt: string }

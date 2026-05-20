@@ -8,20 +8,18 @@ export type LongTermRecallPluginOptions = {
   topK?: number;
   threshold?: number;
   dedupeWindow?: number;
-  buildQuery(context: {
-    pendingInputs: RuntimeInput[];
-    steps: StepRecord[];
-  }): string | null;
-  renderResult?(input: {
-    id: string;
-    text: string;
-    score: number;
-  }, index: number): StepContextEntry;
+  buildQuery(context: { pendingInputs: RuntimeInput[]; steps: StepRecord[] }): string | null;
+  renderResult?(
+    input: {
+      id: string;
+      text: string;
+      score: number;
+    },
+    index: number,
+  ): StepContextEntry;
 };
 
-export function createLongTermRecallPlugin(
-  options: LongTermRecallPluginOptions,
-): RuntimePlugin {
+export function createLongTermRecallPlugin(options: LongTermRecallPluginOptions): RuntimePlugin {
   const recentIds: string[] = [];
 
   return {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyStepModelMiddlewares, defineStepModelMiddleware } from '../integrations/adapters/model-middleware.js';
+import {
+  applyStepModelMiddlewares,
+  defineStepModelMiddleware,
+} from '../integrations/adapters/model-middleware.js';
 import { AgentRuntime } from '../core/runtime.js';
 import { createRuntimeHost } from '../integrations/hosts/runtime-host.js';
 import { FakeStepModelAdapter } from '../integrations/testing/fake-model.js';

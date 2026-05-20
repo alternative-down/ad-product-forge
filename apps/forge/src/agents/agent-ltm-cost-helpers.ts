@@ -43,10 +43,10 @@ export function estimateLtmDelayMs(params: {
   const avgUncached = Math.max(avgInput - avgCached, 0);
 
   const estimatedStepUsd =
-    ((avgUncached / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-      + (avgCached / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-      + (avgOutput / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-    * pricing.contractCostMultiplier;
+    ((avgUncached / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+      (avgCached / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+      (avgOutput / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+    pricing.contractCostMultiplier;
 
   if (estimatedStepUsd <= 0) {
     return 0;
@@ -84,9 +84,9 @@ export function calculateLtmStepCost(params: {
 
   const uncachedInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
   return (
-    ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-      + (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-      + (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-    * pricing.contractCostMultiplier
+    ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+      (cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+      (outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+    pricing.contractCostMultiplier
   );
 }

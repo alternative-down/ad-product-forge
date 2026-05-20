@@ -76,7 +76,8 @@ export function registerLifecycleOps(
           entry = ops.registry.get(agentId);
         }
 
-        const runner = (entry as { runner: { notifyExternalEvent: (opts: unknown) => void } }).runner;
+        const runner = (entry as { runner: { notifyExternalEvent: (opts: unknown) => void } })
+          .runner;
         runner.notifyExternalEvent({
           type: 'admin-rewakeup',
           groupKey: `admin-rewakeup:${agentId}`,

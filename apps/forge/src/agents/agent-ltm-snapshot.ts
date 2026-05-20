@@ -101,7 +101,9 @@ export interface PartitionRecallResultsOutput {
   historyFingerprints: string[];
 }
 
-export function partitionRecallResults(input: PartitionRecallResultsInput): PartitionRecallResultsOutput {
+export function partitionRecallResults(
+  input: PartitionRecallResultsInput,
+): PartitionRecallResultsOutput {
   const seenFingerprints = new Set(input.recentFingerprints);
   const workspaceEntries = input.results.map((result) => ({
     result,

@@ -24,32 +24,58 @@ import type {
 
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {
-    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmTotalContextTokens required' });
+    forgeDebug({
+      scope: 'create-forge-agent',
+      level: 'error',
+      message: 'buildAgentRuntimeConfig: checkpointedOmTotalContextTokens required',
+    });
     throw new Error('checkpointedOmTotalContextTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmRecentRawTokens === undefined) {
-    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmRecentRawTokens required' });
+    forgeDebug({
+      scope: 'create-forge-agent',
+      level: 'error',
+      message: 'buildAgentRuntimeConfig: checkpointedOmRecentRawTokens required',
+    });
     throw new Error('checkpointedOmRecentRawTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmRawObservationBatchTokens === undefined) {
-    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmRawObservationBatchTokens required' });
+    forgeDebug({
+      scope: 'create-forge-agent',
+      level: 'error',
+      message: 'buildAgentRuntimeConfig: checkpointedOmRawObservationBatchTokens required',
+    });
     throw new Error('checkpointedOmRawObservationBatchTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmObservationReflectionBatchTokens === undefined) {
-    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmObservationReflectionBatchTokens required' });
-    throw new Error('checkpointedOmObservationReflectionBatchTokens is required in agent runtime config.');
+    forgeDebug({
+      scope: 'create-forge-agent',
+      level: 'error',
+      message: 'buildAgentRuntimeConfig: checkpointedOmObservationReflectionBatchTokens required',
+    });
+    throw new Error(
+      'checkpointedOmObservationReflectionBatchTokens is required in agent runtime config.',
+    );
   }
 
   if (config.checkpointedOmObservationSupportTokens === undefined) {
-    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmObservationSupportTokens required' });
+    forgeDebug({
+      scope: 'create-forge-agent',
+      level: 'error',
+      message: 'buildAgentRuntimeConfig: checkpointedOmObservationSupportTokens required',
+    });
     throw new Error('checkpointedOmObservationSupportTokens is required in agent runtime config.');
   }
 
   if (config.checkpointedOmReflectionSupportTokens === undefined) {
-    forgeDebug({ scope: 'create-forge-agent', level: 'error', message: 'buildAgentRuntimeConfig: checkpointedOmReflectionSupportTokens required' });
+    forgeDebug({
+      scope: 'create-forge-agent',
+      level: 'error',
+      message: 'buildAgentRuntimeConfig: checkpointedOmReflectionSupportTokens required',
+    });
     throw new Error('checkpointedOmReflectionSupportTokens is required in agent runtime config.');
   }
 
@@ -128,28 +154,29 @@ export async function createInternalAgentRuntime<
     companyContext: config.companyContext,
   });
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  const longTermMemory = options.longTermMemory && options.contractStore
+  const longTermMemory =
+    options.longTermMemory && options.contractStore
       ? createAgentLongTermMemory({
-        agentId: config.id,
-        agentName: config.name,
-        agentDescription: config.description,
-        roleName: config.roleName,
-        roleDescription: config.roleDescription,
-        instructions: typeof config.instructions === 'string' ? config.instructions : '',
-        agentWorkspacePath: platform.agentWorkspacePath,
-        agentMemoryPath: platform.agentMemoryPath,
-        threadId: platform.mastraId,
-        resourceId: platform.mastraId,
-        model: (config.omModel ?? config.model) as never,
-        pricingModelKey: omPricingModelKey,
-        modelProfileId: config.omModelProfileId,
-        contractStore: options.contractStore,
-        conversationStore: platform.conversationStore,
-        workspaceActions: platform.workspaceActions,
-        workspaceEmbedder: config.workspaceEmbedder,
-        persistenceStore: longTermMemoryStore,
-      })
-    : null;
+          agentId: config.id,
+          agentName: config.name,
+          agentDescription: config.description,
+          roleName: config.roleName,
+          roleDescription: config.roleDescription,
+          instructions: typeof config.instructions === 'string' ? config.instructions : '',
+          agentWorkspacePath: platform.agentWorkspacePath,
+          agentMemoryPath: platform.agentMemoryPath,
+          threadId: platform.mastraId,
+          resourceId: platform.mastraId,
+          model: (config.omModel ?? config.model) as never,
+          pricingModelKey: omPricingModelKey,
+          modelProfileId: config.omModelProfileId,
+          contractStore: options.contractStore,
+          conversationStore: platform.conversationStore,
+          workspaceActions: platform.workspaceActions,
+          workspaceEmbedder: config.workspaceEmbedder,
+          persistenceStore: longTermMemoryStore,
+        })
+      : null;
 
   const runtimeMemory = await createAgentRuntimeMemory({
     agentId: config.id,
@@ -192,12 +219,10 @@ export async function createInternalAgentRuntime<
     conversationStore: platform.conversationStore,
     checkpointedOmLimits,
     checkpointedOmModel: (config.omModel ?? config.model) as never,
-    checkpointedOmSystemPrompt: typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
+    checkpointedOmSystemPrompt:
+      typeof agentSystemPrompt === 'string' ? agentSystemPrompt : undefined,
     onCheckpointAdvanced: (longTermMemory as any)?.onCheckpointAdvanced,
-    runtimeActions: [
-      ...platform.workspaceActions,
-      ...toolsToRuntimeActions(allAgentTools),
-    ],
+    runtimeActions: [...platform.workspaceActions, ...toolsToRuntimeActions(allAgentTools)],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
   } as any);
@@ -214,8 +239,8 @@ export async function createInternalAgentRuntime<
     agent,
     workspace: platform.workspace,
     communication: platform.communication as CommunicationModule,
-    longTermMemoryRecall: (runtimeMemory.longTermMemoryRecall as any),
-    longTermMemory: (longTermMemory as any),
+    longTermMemoryRecall: runtimeMemory.longTermMemoryRecall as any,
+    longTermMemory: longTermMemory as any,
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
       const cleanupResults = await Promise.allSettled([
@@ -239,8 +264,6 @@ export async function createForgeAgent<
   TTools extends Record<string, unknown> = Record<string, unknown>,
   TOutput = undefined,
   TRequestContext extends Record<string, unknown> | unknown = unknown,
->(
-  config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>,
-): Promise<RuntimeAgent> {
+>(config: CreateAgentConfig<TAgentId, TTools, TOutput, TRequestContext>): Promise<RuntimeAgent> {
   return await createAgent(config, { longTermMemory: false });
 }

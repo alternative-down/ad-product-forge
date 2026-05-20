@@ -4,10 +4,7 @@
  * Zero prior coverage.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  upsertSystemIntegrationSchema,
-  deleteSystemIntegrationSchema,
-} from './providers';
+import { upsertSystemIntegrationSchema, deleteSystemIntegrationSchema } from './providers';
 
 // ─── upsertSystemIntegrationSchema — migadu provider ───────────────────────
 
@@ -23,22 +20,29 @@ describe('upsertSystemIntegrationSchema — migadu provider', () => {
 
   it('parses with isEnabled', () => {
     const result = upsertSystemIntegrationSchema.parse({
-      providerType: 'migadu', isEnabled: false,
+      providerType: 'migadu',
+      isEnabled: false,
       config: { apiUser: 'u@e.com', apiKey: 'k' },
     });
     expect(result.isEnabled).toBe(false);
   });
 
   it('rejects invalid email for apiUser', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'migadu', config: { apiUser: 'not-email', apiKey: 'k' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'migadu',
+        config: { apiUser: 'not-email', apiKey: 'k' },
+      }),
+    ).toThrow();
   });
 
   it('rejects empty apiKey', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'migadu', config: { apiUser: 'u@e.com', apiKey: '' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'migadu',
+        config: { apiUser: 'u@e.com', apiKey: '' },
+      }),
+    ).toThrow();
   });
 });
 
@@ -61,9 +65,13 @@ describe('upsertSystemIntegrationSchema — coolify provider', () => {
 
   it('parses with optional applicationsBaseDomain', () => {
     const result = upsertSystemIntegrationSchema.parse({
-      providerType: 'coolify', isEnabled: true,
+      providerType: 'coolify',
+      isEnabled: true,
       config: {
-        baseUrl: 'https://c.io', adminToken: 't', serverId: 's', destinationId: 'd',
+        baseUrl: 'https://c.io',
+        adminToken: 't',
+        serverId: 's',
+        destinationId: 'd',
         applicationsBaseDomain: 'app.example.com',
       },
     });
@@ -71,21 +79,30 @@ describe('upsertSystemIntegrationSchema — coolify provider', () => {
   });
 
   it('rejects invalid baseUrl', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'coolify', config: { baseUrl: 'not-url', adminToken: 't', serverId: 's', destinationId: 'd' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'coolify',
+        config: { baseUrl: 'not-url', adminToken: 't', serverId: 's', destinationId: 'd' },
+      }),
+    ).toThrow();
   });
 
   it('rejects empty adminToken', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'coolify', config: { baseUrl: 'https://c.io', adminToken: '', serverId: 's', destinationId: 'd' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'coolify',
+        config: { baseUrl: 'https://c.io', adminToken: '', serverId: 's', destinationId: 'd' },
+      }),
+    ).toThrow();
   });
 
   it('rejects empty serverId', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'coolify', config: { baseUrl: 'https://c.io', adminToken: 't', serverId: '', destinationId: 'd' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'coolify',
+        config: { baseUrl: 'https://c.io', adminToken: 't', serverId: '', destinationId: 'd' },
+      }),
+    ).toThrow();
   });
 });
 
@@ -105,15 +122,21 @@ describe('upsertSystemIntegrationSchema — github provider', () => {
   });
 
   it('rejects invalid appHomeUrl', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'github', config: { organization: 'org', appHomeUrl: 'not-a-url' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'github',
+        config: { organization: 'org', appHomeUrl: 'not-a-url' },
+      }),
+    ).toThrow();
   });
 
   it('rejects empty organization', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'github', config: { organization: '', appHomeUrl: 'https://github.com/a' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'github',
+        config: { organization: '', appHomeUrl: 'https://github.com/a' },
+      }),
+    ).toThrow();
   });
 });
 
@@ -130,9 +153,12 @@ describe('upsertSystemIntegrationSchema — minimax provider', () => {
   });
 
   it('rejects empty apiKey', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'minimax', config: { apiKey: '' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'minimax',
+        config: { apiKey: '' },
+      }),
+    ).toThrow();
   });
 });
 
@@ -140,9 +166,12 @@ describe('upsertSystemIntegrationSchema — minimax provider', () => {
 
 describe('upsertSystemIntegrationSchema — invalid provider', () => {
   it('rejects unknown providerType', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'unknown-provider', config: {},
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'unknown-provider',
+        config: {},
+      }),
+    ).toThrow();
   });
 
   it('rejects missing providerType', () => {
@@ -150,9 +179,12 @@ describe('upsertSystemIntegrationSchema — invalid provider', () => {
   });
 
   it('rejects wrong config shape for provider', () => {
-    expect(() => upsertSystemIntegrationSchema.parse({
-      providerType: 'migadu', config: { apiKey: 'k' },
-    })).toThrow();
+    expect(() =>
+      upsertSystemIntegrationSchema.parse({
+        providerType: 'migadu',
+        config: { apiKey: 'k' },
+      }),
+    ).toThrow();
   });
 });
 
@@ -160,13 +192,15 @@ describe('upsertSystemIntegrationSchema — invalid provider', () => {
 
 describe('deleteSystemIntegrationSchema', () => {
   it('parses valid input', () => {
-    expect(deleteSystemIntegrationSchema.parse({ providerType: 'migadu' }))
-      .toMatchObject({ providerType: 'migadu' });
+    expect(deleteSystemIntegrationSchema.parse({ providerType: 'migadu' })).toMatchObject({
+      providerType: 'migadu',
+    });
   });
 
   it('parses valid input for coolify', () => {
-    expect(deleteSystemIntegrationSchema.parse({ providerType: 'coolify' }))
-      .toMatchObject({ providerType: 'coolify' });
+    expect(deleteSystemIntegrationSchema.parse({ providerType: 'coolify' })).toMatchObject({
+      providerType: 'coolify',
+    });
   });
 
   it('rejects unknown providerType', () => {
@@ -183,14 +217,16 @@ describe('deleteSystemIntegrationSchema', () => {
 describe('schema.safeParse', () => {
   it('upsertSystemIntegrationSchema safeParse returns success false for missing apiUser', () => {
     const result = upsertSystemIntegrationSchema.safeParse({
-      providerType: 'migadu', config: { apiKey: 'k' },
+      providerType: 'migadu',
+      config: { apiKey: 'k' },
     });
     expect(result.success).toBe(false);
   });
 
   it('upsertSystemIntegrationSchema safeParse returns success true for valid migadu', () => {
     const result = upsertSystemIntegrationSchema.safeParse({
-      providerType: 'migadu', config: { apiUser: 'u@e.com', apiKey: 'k' },
+      providerType: 'migadu',
+      config: { apiUser: 'u@e.com', apiKey: 'k' },
     });
     expect(result.success).toBe(true);
   });

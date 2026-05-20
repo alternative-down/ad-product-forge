@@ -13,6 +13,7 @@ Standard API integration uses fixed API keys for per-usage billing. To use accou
 **Gateway:** `OAuthGateway` (extends `MastraModelGateway`)
 
 **Supported providers:**
+
 - `claude-max` — Anthropic Claude via OAuth
 - `openai-codex` — OpenAI Codex via OAuth
 
@@ -23,20 +24,21 @@ Standard API integration uses fixed API keys for per-usage billing. To use accou
 ## 2. Architecture
 
 ### Location
+
 - **Main gateway:** `packages/mastra-engine/src/llm/oauth-gateway.ts`
 - **Auth handlers:** `packages/mastra-engine/src/llm/auth/anthropic.ts` and `openai-codex.ts`
 - **Storage:** `packages/mastra-engine/src/llm/auth/store.ts`
 
 ### Key Components
 
-| Component | Purpose |
-| --- | --- |
-| `OAuthGateway` | Mastra gateway extending `MastraModelGateway` |
-| `resolveAnthropicCredential()` | Fetch/refresh Claude OAuth tokens |
-| `resolveOpenAICodexCredential()` | Fetch/refresh Codex OAuth tokens |
-| `oauthStore` | Persistent credential storage in `~/.mastra-engine/oauth.json` |
-| Middleware chain | Provider-specific request/response transformation |
-| Custom fetch | Token injection and header management |
+| Component                        | Purpose                                                        |
+| -------------------------------- | -------------------------------------------------------------- |
+| `OAuthGateway`                   | Mastra gateway extending `MastraModelGateway`                  |
+| `resolveAnthropicCredential()`   | Fetch/refresh Claude OAuth tokens                              |
+| `resolveOpenAICodexCredential()` | Fetch/refresh Codex OAuth tokens                               |
+| `oauthStore`                     | Persistent credential storage in `~/.mastra-engine/oauth.json` |
+| Middleware chain                 | Provider-specific request/response transformation              |
+| Custom fetch                     | Token injection and header management                          |
 
 ### Supported Features
 
@@ -55,6 +57,7 @@ Standard API integration uses fixed API keys for per-usage billing. To use accou
 **File:** `packages/mastra-engine/src/llm/auth/anthropic.ts`
 
 **Resolution order:**
+
 1. Check stored token in `~/.mastra-engine/oauth.json`
 2. If not expired, return stored token
 3. If expired but refresh token exists, call refresh endpoint
@@ -62,6 +65,7 @@ Standard API integration uses fixed API keys for per-usage billing. To use accou
 5. If `authFilePath` provided, read from that file
 
 **Refresh process:**
+
 ```
 POST https://console.anthropic.com/v1/oauth/token
 Content-Type: application/json
@@ -74,11 +78,12 @@ Content-Type: application/json
 ```
 
 **Token storage:**
+
 ```typescript
 type OAuthCredential = {
-  access: string;      // access token
-  refresh?: string;    // refresh token
-  expires?: number;    // milliseconds since epoch
+  access: string; // access token
+  refresh?: string; // refresh token
+  expires?: number; // milliseconds since epoch
 };
 ```
 
@@ -89,12 +94,14 @@ type OAuthCredential = {
 **File:** `packages/mastra-engine/src/llm/auth/openai-codex.ts`
 
 **Resolution order:**
+
 1. Check stored token in `~/.mastra-engine/oauth.json`
 2. If not expired, return stored token
 3. If expired but refresh token exists, call refresh endpoint
 4. Read from OpenAI CLI auth file `~/.codex/auth.json`
 
 **CLI auth file format:**
+
 ```json
 {
   "tokens": {
@@ -106,6 +113,7 @@ type OAuthCredential = {
 ```
 
 **Refresh process:**
+
 ```
 POST https://auth.openai.com/oauth/token
 Content-Type: application/x-www-form-urlencoded
@@ -124,10 +132,12 @@ client_id=app_EMoamEEZ73f0CkXaXp7hrann
 **Location:** `~/.mastra-engine/oauth.json`
 
 **File permissions:**
+
 - File: mode `0o600` (user read/write only)
 - Parent directory: mode `0o700` (user rwx only)
 
 **Storage schema:**
+
 ```json
 {
   "anthropic": {
@@ -153,10 +163,12 @@ client_id=app_EMoamEEZ73f0CkXaXp7hrann
 **Location:** `oauth-gateway.ts`, `claudeCodeMiddleware`
 
 **Transformations:**
+
 1. Inject identity system message: "You are Claude Code, Anthropic's official CLI for Claude."
 2. Remove `topP` parameter if `temperature` is set (API incompatibility)
 
 **Headers added:**
+
 - `anthropic-beta`: OAuth-2025-04-20, claude-code-20250219, interleaved-thinking-2025-05-14, fine-grained-tool-streaming-2025-05-14
 - `anthropic-version`: 2023-06-01
 
@@ -165,6 +177,7 @@ client_id=app_EMoamEEZ73f0CkXaXp7hrann
 **Location:** `oauth-gateway.ts`, `openAIMiddleware`
 
 **Transformations:**
+
 1. Extract system prompts and convert to `store.instructions` parameter
 2. Handle streamed responses with fine-grained buffering:
    - Text streaming: `text-start` → `text-delta` → `text-end`
@@ -179,6 +192,7 @@ client_id=app_EMoamEEZ73f0CkXaXp7hrann
 **Feature:** Ephemeral prompt caching for reduced latency and cost
 
 **Configuration:**
+
 - Applies to system message and last user message
 - TTL: 1 hour (ephemeral)
 - Cache-control type: `ephemeral`
@@ -232,26 +246,31 @@ const agent = new Agent({
 ### 5.2 Model Format
 
 Gateway-referenced models use the format:
+
 ```
 account-oauth/<provider>/<model-id>
 ```
 
 **Supported providers:**
+
 - `claude-max` — Anthropic Claude
 - `openai-codex` — OpenAI Codex
 
 **Supported models:**
+
 - Claude: All models in `CLAUDE_MAX_MODELS` list
 - Codex: All models in `OPENAI_CODEX_MODELS` list
 
 ### 5.3 Token Setup
 
 **Claude:**
+
 1. Place access token in `/tmp/claude_oauth_token`, OR
 2. Provide `authFilePath` pointing to JSON with `access_token` and `refresh_token`, OR
 3. Let it read from previously cached `~/.mastra-engine/oauth.json`
 
 **Codex:**
+
 1. OpenAI CLI automatically creates `~/.codex/auth.json` when you authenticate, OR
 2. Provide custom `cliAuthFilePath` to override location, OR
 3. Let it read from previously cached `~/.mastra-engine/oauth.json`
@@ -262,12 +281,12 @@ account-oauth/<provider>/<model-id>
 
 **Common errors:**
 
-| Error | Cause | Resolution |
-| --- | --- | --- |
-| `Claude setup token not found in /tmp/claude_oauth_token` | Token file missing | Write token to `/tmp/claude_oauth_token` or configure path |
-| `Anthropic refresh token missing` | No refresh token in stored credential | Re-authenticate or provide auth file |
-| `Codex access token not found in ~/.codex/auth.json` | CLI auth file missing | Run OpenAI CLI auth flow |
-| `Token refresh failed: 401` | Invalid refresh token | Re-authenticate or manually update store |
+| Error                                                     | Cause                                 | Resolution                                                 |
+| --------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------- |
+| `Claude setup token not found in /tmp/claude_oauth_token` | Token file missing                    | Write token to `/tmp/claude_oauth_token` or configure path |
+| `Anthropic refresh token missing`                         | No refresh token in stored credential | Re-authenticate or provide auth file                       |
+| `Codex access token not found in ~/.codex/auth.json`      | CLI auth file missing                 | Run OpenAI CLI auth flow                                   |
+| `Token refresh failed: 401`                               | Invalid refresh token                 | Re-authenticate or manually update store                   |
 
 All errors include detailed context for debugging. Check `~/.mastra-engine/oauth.json` to verify stored credentials and expiry.
 

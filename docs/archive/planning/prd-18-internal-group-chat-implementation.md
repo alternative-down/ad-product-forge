@@ -34,6 +34,7 @@ Adicionar campo `participants` (array de IDs de agente/contato) ao schema de `co
 ### 3.1 Schema de Participants
 
 **Tabela: `conversation_participants`** (nova)
+
 ```typescript
 conversation_participants {
   conversationId: UUID          // FK -> conversations
@@ -44,6 +45,7 @@ conversation_participants {
 ```
 
 **OU adicionar à tabela `conversations`:**
+
 ```typescript
 conversations {
   conversationId: UUID
@@ -64,6 +66,7 @@ conversations {
 **IMPORTANTE:** Gestão de grupo (criar/remover/listar grupos) NÃO é responsabilidade da infraestrutura de mensagens.
 
 Gestão de grupos é implementada como **Tools separadas** que agentes usam, acessando o **provider de chat interno** (PRD-02):
+
 - `createGroup(name, participants)` — Cria conversa com múltiplos participants
 - `addMemberToGroup(conversationId, participantId)` — Adiciona participant
 - `removeMemberFromGroup(conversationId, participantId)` — Remove participant
@@ -76,19 +79,23 @@ Essas Tools são disponibilizadas via o provider de comunicação interna para q
 ## 4. Requisitos Funcionais
 
 **FR1: Persistência de Participants**
+
 - Campo `participants` (array ou tabela separada) armazena IDs de todos os members
 - Quando conversa criada, participants registrados
 - Quando mensagem enviada, vai para todos os participants
 
 **FR2: Retorno de Mensagens para Múltiplos Destinatários**
+
 - Ao enviar mensagem para conversa com N participants, mensagem chega em todos
 - Cada agente recebe localmente na sua DB
 
 **FR3: Compatibilidade Retrógrada**
+
 - Conversas 1-a-1 existentes continuam funcionando
 - Participants simplesmente [agente1, agente2] para conversas 1-a-1
 
 **FR4: Tools de Gestão (no Provider Interno)**
+
 - Agentes conseguem criar conversas com múltiplos participants via tool
 - Agentes conseguem adicionar/remover members via tool
 
@@ -122,4 +129,5 @@ Essas Tools são disponibilizadas via o provider de comunicação interna para q
 ---
 
 **Histórico do Documento:**
+
 - v1.0 (2026-03-15): Foco em infraestrutura de participants, gestão de grupo como Tools separadas

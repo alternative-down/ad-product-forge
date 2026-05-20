@@ -32,17 +32,20 @@ Permitir que agentes de Nicolas interajam com páginas web para pesquisa, coleta
 ## O Que Precisa Ser Investigado
 
 ### 1. Viabilidade em Sandbox
+
 - [ ] Playwright pode rodar em sandbox Mastra com configuração correta?
 - [ ] Qual é a configuração necessária?
 - [ ] Existem limitações fundamentais do sandbox que impedem browser automation?
 
 ### 2. Soluções Existentes
+
 - [ ] Como **openclaw** implementa browser automation? (referência conhecida que funciona)
 - [ ] Qual abordagem eles usam? (sandbox, externo, container, etc)
 - [ ] Podemos adaptar a solução deles?
 - [ ] Existem outras projetos de code agents que resolvem isso?
 
 ### 3. Alternativas Possíveis
+
 - [ ] Serviço externo separado (como descrito no rascunho anterior)
 - [ ] Container Docker com Playwright
 - [ ] API de browser automation como serviço (BrowserStack, etc)
@@ -50,6 +53,7 @@ Permitir que agentes de Nicolas interajam com páginas web para pesquisa, coleta
 - [ ] Abordagem sem navegador (busca por API endpoints em vez de scraping UI)
 
 ### 4. Trade-offs de Cada Abordagem
+
 - [ ] Complexidade de implementação
 - [ ] Performance
 - [ ] Confiabilidade
@@ -63,22 +67,26 @@ Permitir que agentes de Nicolas interajam com páginas web para pesquisa, coleta
 Se viável, espera-se:
 
 **FR1: Web Navigation**
+
 - Navegar para URLs
 - Recuperar conteúdo (HTML, texto)
 - Seguir redirects
 
 **FR2: Web Interaction**
+
 - Clicar elementos
 - Preencher formulários
 - Submeter dados
 - Aguardar conteúdo dinâmico
 
 **FR3: Content Extraction**
+
 - Consultar elementos por CSS/XPath
 - Extrair texto e atributos
 - Fazer scraping de dados estruturados (tabelas, listas)
 
 **FR4: Session Management**
+
 - Manter cookies/estado entre operações
 - Cleanup automático de sessões
 

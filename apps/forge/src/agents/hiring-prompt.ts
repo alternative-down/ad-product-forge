@@ -50,7 +50,9 @@ export function buildHiringPrompt(input: HiringPromptInput): string {
     sections.push(
       [
         'Existing internal collaborators:',
-        ...input.existingAgents.map((agent) => `- ${agent.name} — ${agent.roleName ?? 'Sem função definida'}`),
+        ...input.existingAgents.map(
+          (agent) => `- ${agent.name} — ${agent.roleName ?? 'Sem função definida'}`,
+        ),
         'Avoid duplicate names and avoid names that look too similar to the existing ones.',
       ].join('\n'),
     );
@@ -60,15 +62,25 @@ export function buildHiringPrompt(input: HiringPromptInput): string {
     sections.push(
       [
         'Company context:',
-        input.companyName !== null && input.companyName !== undefined && input.companyName.trim() ? `Company name: ${input.companyName.trim()}` : null,
-        input.companyContext !== null && input.companyContext !== undefined && input.companyContext.trim() ? `Company information: ${input.companyContext.trim()}` : null,
+        input.companyName !== null && input.companyName !== undefined && input.companyName.trim()
+          ? `Company name: ${input.companyName.trim()}`
+          : null,
+        input.companyContext !== null &&
+        input.companyContext !== undefined &&
+        input.companyContext.trim()
+          ? `Company information: ${input.companyContext.trim()}`
+          : null,
       ]
         .filter(Boolean)
         .join('\n'),
     );
   }
 
-  if (input.additionalContext !== null && input.additionalContext !== undefined && input.additionalContext.trim()) {
+  if (
+    input.additionalContext !== null &&
+    input.additionalContext !== undefined &&
+    input.additionalContext.trim()
+  ) {
     sections.push(`Additional hiring context:\n${input.additionalContext.trim()}`);
   }
 

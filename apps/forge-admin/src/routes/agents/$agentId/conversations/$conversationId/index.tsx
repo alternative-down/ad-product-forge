@@ -30,7 +30,8 @@ function AgentConversationDetailIndexRoute() {
   });
   const conversations = useMemo(() => agentQuery.data ?? [], [agentQuery.data]);
   const selectedConversation =
-    conversations.find((conversation) => conversation.conversationId === decodedConversationId) ?? null;
+    conversations.find((conversation) => conversation.conversationId === decodedConversationId) ??
+    null;
   const messagesQuery = useInfiniteQuery({
     queryKey: ['admin', 'agent', agentId, 'conversation', decodedConversationId],
     queryFn: ({ pageParam }) => {
@@ -94,17 +95,20 @@ function AgentConversationDetailIndexRoute() {
       return;
     }
 
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        pendingPrependScrollRef.current = {
-          scrollHeight: viewport.scrollHeight,
-          scrollTop: viewport.scrollTop,
-        };
-        void fetchNextPage();
-      }
-    }, {
-      root: viewport,
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          pendingPrependScrollRef.current = {
+            scrollHeight: viewport.scrollHeight,
+            scrollTop: viewport.scrollTop,
+          };
+          void fetchNextPage();
+        }
+      },
+      {
+        root: viewport,
+      },
+    );
 
     observer.observe(target);
     return () => observer.disconnect();
@@ -120,7 +124,9 @@ function AgentConversationDetailIndexRoute() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => void navigate({ to: '/agents/$agentId/conversations', params: { agentId } })}
+            onClick={() =>
+              void navigate({ to: '/agents/$agentId/conversations', params: { agentId } })
+            }
             className="text-muted-foreground md:hidden"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -134,41 +140,49 @@ function AgentConversationDetailIndexRoute() {
 
       <div ref={scrollAreaRef} className="h-full min-h-0">
         <AdminScrollArea className="h-full min-h-0" contentClassName="space-y-3">
-            <div ref={topSentinelRef} className="h-4" />
-            {isFetchingNextPage ? <div className="text-sm text-muted-foreground">Carregando mais...</div> : null}
-            {messages.map((message) => (
-              <article key={message.messageId} className="flex items-start gap-3 py-1">
-                {message.authorAgentId ? (
-                  <Link
-                    to="/agents/$agentId"
-                    params={{ agentId: message.authorAgentId }}
-                    className="shrink-0"
-                  >
-                    <Avatar className="h-9 w-9 border border-border bg-muted">
-                      <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                        {getInitials(message.authorDisplayName)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Link>
-                ) : (
+          <div ref={topSentinelRef} className="h-4" />
+          {isFetchingNextPage ? (
+            <div className="text-sm text-muted-foreground">Carregando mais...</div>
+          ) : null}
+          {messages.map((message) => (
+            <article key={message.messageId} className="flex items-start gap-3 py-1">
+              {message.authorAgentId ? (
+                <Link
+                  to="/agents/$agentId"
+                  params={{ agentId: message.authorAgentId }}
+                  className="shrink-0"
+                >
                   <Avatar className="h-9 w-9 border border-border bg-muted">
                     <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
                       {getInitials(message.authorDisplayName)}
                     </AvatarFallback>
                   </Avatar>
-                )}
-                <div className="min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="font-medium text-foreground">{message.authorDisplayName}</span>
-                    <span className="text-xs text-muted-foreground">{formatRecentMessageTime(Date.parse(message.createdAt))}</span>
-                  </div>
-                  <div className="whitespace-pre-wrap break-all text-sm leading-6 text-foreground">{message.content}</div>
+                </Link>
+              ) : (
+                <Avatar className="h-9 w-9 border border-border bg-muted">
+                  <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                    {getInitials(message.authorDisplayName)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-foreground">{message.authorDisplayName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatRecentMessageTime(Date.parse(message.createdAt))}
+                  </span>
                 </div>
-              </article>
-            ))}
+                <div className="whitespace-pre-wrap break-all text-sm leading-6 text-foreground">
+                  {message.content}
+                </div>
+              </div>
+            </article>
+          ))}
         </AdminScrollArea>
       </div>
-      {messagesQuery.error ? <div className="text-sm text-destructive">{messagesQuery.error.message}</div> : null}
+      {messagesQuery.error ? (
+        <div className="text-sm text-destructive">{messagesQuery.error.message}</div>
+      ) : null}
     </div>
   );
 }

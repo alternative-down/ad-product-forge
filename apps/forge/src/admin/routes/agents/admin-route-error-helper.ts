@@ -8,8 +8,5 @@ export function adminRouteError(error: unknown) {
     message: 'Admin route failed',
     context: { error: error instanceof Error ? error.message : String(error) },
   });
-  return jsonResponse(
-    { error: error instanceof Error ? error.message : String(error) },
-    500,
-  );
+  return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
 }

@@ -7,9 +7,12 @@ import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
 // import type { StoredSchedule } from './store'; // TODO: fix missing
-export type StoredSchedule = { scheduleId: string; creatorId: string | null; agentId: string; name: string; };
-
-
+export type StoredSchedule = {
+  scheduleId: string;
+  creatorId: string | null;
+  agentId: string;
+  name: string;
+};
 
 const scheduleBaseSchema = {
   name: z.string().min(1),
@@ -88,7 +91,12 @@ export function isScheduleEditor(schedule: any, requesterAgentId: string): boole
  */
 export function requireScheduleEditor(schedule: any, requesterAgentId: string): void {
   if (!isScheduleEditor(schedule, requesterAgentId)) {
-    forgeDebug({ scope: 'schedule-impl-helpers', level: 'warn', message: 'checkScheduleAuthorization: not authorized to edit', context: { scheduleId: schedule.scheduleId } });
+    forgeDebug({
+      scope: 'schedule-impl-helpers',
+      level: 'warn',
+      message: 'checkScheduleAuthorization: not authorized to edit',
+      context: { scheduleId: schedule.scheduleId },
+    });
     throw new Error(`Not authorized to edit schedule: ${schedule.scheduleId}`);
   }
 }
@@ -98,7 +106,12 @@ export function requireScheduleEditor(schedule: any, requesterAgentId: string): 
  */
 export function requireScheduleDeleter(schedule: any, requesterAgentId: string): void {
   if (!isScheduleEditor(schedule, requesterAgentId)) {
-    forgeDebug({ scope: 'schedule-impl-helpers', level: 'warn', message: 'checkScheduleAuthorization: not authorized to delete', context: { scheduleId: schedule.scheduleId } });
+    forgeDebug({
+      scope: 'schedule-impl-helpers',
+      level: 'warn',
+      message: 'checkScheduleAuthorization: not authorized to delete',
+      context: { scheduleId: schedule.scheduleId },
+    });
     throw new Error(`Not authorized to delete schedule: ${schedule.scheduleId}`);
   }
 }

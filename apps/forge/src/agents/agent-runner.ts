@@ -6,19 +6,19 @@ import type { AgentWakeEvent } from '@forge-runtime/core';
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentContractStore } from './agent-contract-store';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
 import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
-import { createRunnerMessageManager, type RunnerMessageManagerState } from './agent-runner-message-manager';
-
 import {
-  AGENT_CONTEXT_WARNING_CHAR_LIMIT,
-  AGENT_CONTEXT_FILE_PATH,
-} from '../utils/constants';
+  createRunnerMessageManager,
+  type RunnerMessageManagerState,
+} from './agent-runner-message-manager';
+
+import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
 
 import {
   serializeError,
@@ -36,15 +36,17 @@ import {
   buildIterationLoopSignature,
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
-import {
-  collectStepTextParts,
-} from './agent-runner-control-directives';
-import {
-  extractControlDirective,
-} from './agent-runner-helpers';
+import { collectStepTextParts } from './agent-runner-control-directives';
+import { extractControlDirective } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
 import { createLoopDetector } from './agent-runner-loop-detector';
-import { isStaleRun, advanceRunEpoch, advanceStepEpoch, advanceGenerateToken, resetBackoff } from './agent-runner-state';
+import {
+  isStaleRun,
+  advanceRunEpoch,
+  advanceStepEpoch,
+  advanceGenerateToken,
+  resetBackoff,
+} from './agent-runner-state';
 import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
@@ -59,17 +61,7 @@ import {
   type GenerateTimeoutHandle,
 } from './agent-runner-generate-timeout';
 
-
-
-
-
-
-
-
-import {
-  startGenerateAttempt,
-  finishGenerateAttempt,
-} from './agent-runner-attempt-lifecycle';
+import { startGenerateAttempt, finishGenerateAttempt } from './agent-runner-attempt-lifecycle';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
@@ -125,13 +117,11 @@ export function createAgentRunner(
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
   let lastStepStage: string | null = null;
-  let lastGenerateProgress:
-    | {
-        stage: string;
-        at: number;
-        detail: Record<string, unknown> | null;
-      }
-    | null = null;
+  let lastGenerateProgress: {
+    stage: string;
+    at: number;
+    detail: Record<string, unknown> | null;
+  } | null = null;
   const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
   let activeRunId: string | null = null;
   let currentGenerateAbortController: AbortController | null = null;
@@ -188,14 +178,21 @@ export function createAgentRunner(
     );
   }
 
-  function clearTimer() { scheduler.clearTimer(); }
+  function clearTimer() {
+    scheduler.clearTimer();
+  }
 
-   
-  function _startHealthcheck() { scheduler.startHealthcheck(); }
+  function _startHealthcheck() {
+    scheduler.startHealthcheck();
+  }
 
-  function clearHealthcheck() { scheduler.clearHealthcheck(); }
+  function clearHealthcheck() {
+    scheduler.clearHealthcheck();
+  }
 
-  function schedule(delayMs: number) { scheduler.scheduleNextStep(delayMs); }
+  function schedule(delayMs: number) {
+    scheduler.scheduleNextStep(delayMs);
+  }
 
   async function start() {
     if (stopped) {
@@ -280,9 +277,11 @@ export function createAgentRunner(
     void messageManager.appendPendingRunMessages(events, options);
   }
 
-  function flushPendingRunMessages(options: {
-    allowOriginIdleOnly?: boolean;
-  } = {}) {
+  function flushPendingRunMessages(
+    options: {
+      allowOriginIdleOnly?: boolean;
+    } = {},
+  ) {
     return messageManager.flushPendingRunMessages(options);
   }
 
@@ -299,9 +298,11 @@ export function createAgentRunner(
     messageManager.reset();
   }
 
-  async function forceIdle(options: {
-    preserveQueuedWork?: boolean;
-  } = {}) {
+  async function forceIdle(
+    options: {
+      preserveQueuedWork?: boolean;
+    } = {},
+  ) {
     const runEpoch = startNewRunEpoch();
     startingRun = false;
     startingRunStartedAt = null;
@@ -320,7 +321,12 @@ export function createAgentRunner(
   async function runHealthcheck() {
     if (stopped) return;
     const _onStartingRunTimeout: () => void = () => {
-      forgeDebug({ scope: 'agent-runner', level: 'warn', runtimeId: runtime.id, message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state` });
+      forgeDebug({
+        scope: 'agent-runner',
+        level: 'warn',
+        runtimeId: runtime.id,
+        message: `startingRun exceeded ${STARTING_RUN_TIMEOUT_MS}ms; recovering local runner state`,
+      });
       void startNewRunEpoch();
       startingRun = false;
       startingRunStartedAt = null;
@@ -329,19 +335,40 @@ export function createAgentRunner(
     await healthcheckRunHealthcheck({
       runtimeId: runtime.id,
       getExecutionState: (id) =>
-        withTimeout(store.getExecutionState(id), RUNNER_AWAIT_TIMEOUT_MS, `Agent execution state lookup timed out for ${id}`),
+        withTimeout(
+          store.getExecutionState(id),
+          RUNNER_AWAIT_TIMEOUT_MS,
+          `Agent execution state lookup timed out for ${id}`,
+        ),
       isLocallyIdle,
       getPendingCount: () => messageManager.getPendingCount(),
-      getWakeSnapshot: () => ({ ...wakeQueue.getSnapshot(), pending: wakeQueue.getSnapshot().pending ? 1 : 0 }),
+      getWakeSnapshot: () => ({
+        ...wakeQueue.getSnapshot(),
+        pending: wakeQueue.getSnapshot().pending ? 1 : 0,
+      }),
       onRunnerIdle: () => wakeQueue.onRunnerIdle(),
       beginRun: (opts) => beginRun(opts),
       queueNextStep,
       onStartingRunTimeout: _onStartingRunTimeout,
-      syncStarterState: (running, startedAt) => { startingRun = running; startingRunStartedAt = startedAt; },
-      syncExecuting: (val) => { executing = val; },
-      syncTimer: (val) => { timer = val; },
+      syncStarterState: (running, startedAt) => {
+        startingRun = running;
+        startingRunStartedAt = startedAt;
+      },
+      syncExecuting: (val) => {
+        executing = val;
+      },
+      syncTimer: (val) => {
+        timer = val;
+      },
       isStaleRun,
-      notifyError: (error) => forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'healthcheck failed', context: { error: error instanceof Error ? error.message : String(error) } }),
+      notifyError: (error) =>
+        forgeDebug({
+          scope: 'agent-runner',
+          level: 'error',
+          runtimeId: runtime.id,
+          message: 'healthcheck failed',
+          context: { error: error instanceof Error ? error.message : String(error) },
+        }),
     });
   }
 
@@ -393,7 +420,13 @@ export function createAgentRunner(
 
       await queueNextStep(runEpoch);
     } catch (error) {
-      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to begin run', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'agent-runner',
+        level: 'error',
+        runtimeId: runtime.id,
+        message: 'failed to begin run',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
       if (!isStaleRun(runEpoch)) {
         await transitionToIdle(runEpoch);
       }
@@ -441,7 +474,13 @@ export function createAgentRunner(
       scheduler.setInstant(false);
       scheduler.scheduleNextStep(delayMs, () => executeStep(nextAttempt.contractId, runEpoch));
     } catch (error) {
-      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to schedule next step', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'agent-runner',
+        level: 'error',
+        runtimeId: runtime.id,
+        message: 'failed to schedule next step',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
       scheduler.setInstant(false);
       schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
     }
@@ -508,10 +547,16 @@ export function createAgentRunner(
       const stepLongTermMemoryRecallSystemText = pendingLongTermMemoryRecallSystemText;
       pendingLongTermMemoryRecallSystemText = null;
       lastStepStage = 'flushing-pending-run-messages';
-      prompt = flushPendingRunMessages({
-        allowOriginIdleOnly: true,
-      }) ?? '';
-      forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: runtime.id, message: 'executing step' });
+      prompt =
+        flushPendingRunMessages({
+          allowOriginIdleOnly: true,
+        }) ?? '';
+      forgeDebug({
+        scope: 'agent-runner',
+        level: 'debug',
+        runtimeId: runtime.id,
+        message: 'executing step',
+      });
 
       lastStepStage = 'agent-generate';
       const result = await generateWithTimeoutRetries(
@@ -525,18 +570,24 @@ export function createAgentRunner(
           runtime,
           currentRuntime,
           store,
-          usage: (usage as unknown as any),
+          usage: usage as unknown as any,
           notifications,
           homeMetricSnapshots,
           messageManager: messageManager as any,
           runLastMessages,
           flushPendingRunMessages,
-          scheduler: (scheduler as any),
+          scheduler: scheduler as any,
           epochState: { activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0 } as any,
           backoffState: { backoffMs, instant, nextStepAt: _nextStepAt } as any,
           progressState: { stepsThisRun: 0, tokensThisRun: 0, lastGenerateProgress: null } as any,
           loopState: { lastLoopSignature: null, repeatedLoopCount: 0 } as any,
-          loopDetector: { register: () => 1, isStuck: () => false, reset: () => {}, getSignatureCount: () => 0, getCurrentSignature: () => null } as any,
+          loopDetector: {
+            register: () => 1,
+            isStuck: () => false,
+            reset: () => {},
+            getSignatureCount: () => 0,
+            getCurrentSignature: () => null,
+          } as any,
           currentGenerateAbortController,
           setCurrentGenerateAbortController: (c) => {
             currentGenerateAbortController = c;
@@ -556,7 +607,10 @@ export function createAgentRunner(
           },
           loopSignature: loopManager.getState().lastLoopSignature ?? '',
           activeRunId,
-          loadAgentContextInstructions: loadAgentContextInstructions as (currentRuntime: InternalAgentRuntime, db: Database) => Promise<string | null>,
+          loadAgentContextInstructions: loadAgentContextInstructions as (
+            currentRuntime: InternalAgentRuntime,
+            db: Database,
+          ) => Promise<string | null>,
           isStopped: () => stopped,
         },
       );
@@ -565,7 +619,9 @@ export function createAgentRunner(
         return;
       }
       lastStepStage = 'finalizing-run';
-      if (!result) { throw new Error('Unexpected: generate result is undefined'); }
+      if (!result) {
+        throw new Error('Unexpected: generate result is undefined');
+      }
       const controlDirective = extractRunnerControlDirective(result);
       const stopRequested = controlDirective === 'stop';
 
@@ -587,31 +643,40 @@ export function createAgentRunner(
       }
 
       forgeDebug({
-          scope: 'agent-runner',
-          level: 'error',
-          runtimeId: runtime.id,
-          message: 'step failed',
-          context: {
-            mastraId: currentRuntime.mastraId,
-            pricingModelKey: currentRuntime.pricingModelKey,
-            modelProfileId: currentRuntime.modelProfileId,
-            stepStartedAt: lastStepStartedAt,
-            stepStage: lastStepStage,
-            lastGenerateProgress,
-            prompt,
-            error: serializeError(error),
-          },
-        });
-      await withTimeout(
-        store.setExecutionAbsent(runtime.id, formatAbsentExecutionError({
-          stage: lastStepStage,
+        scope: 'agent-runner',
+        level: 'error',
+        runtimeId: runtime.id,
+        message: 'step failed',
+        context: {
+          mastraId: currentRuntime.mastraId,
+          pricingModelKey: currentRuntime.pricingModelKey,
+          modelProfileId: currentRuntime.modelProfileId,
+          stepStartedAt: lastStepStartedAt,
+          stepStage: lastStepStage,
           lastGenerateProgress,
-          error,
-        })),
+          prompt,
+          error: serializeError(error),
+        },
+      });
+      await withTimeout(
+        store.setExecutionAbsent(
+          runtime.id,
+          formatAbsentExecutionError({
+            stage: lastStepStage,
+            lastGenerateProgress,
+            error,
+          }),
+        ),
         RUNNER_AWAIT_TIMEOUT_MS,
         `Agent execution state update timed out for ${runtime.id}`,
       ).catch((stateError) => {
-        forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: runtime.id, message: 'failed to set absent state', context: { stateError } });
+        forgeDebug({
+          scope: 'agent-runner',
+          level: 'error',
+          runtimeId: runtime.id,
+          message: 'failed to set absent state',
+          context: { stateError },
+        });
       });
       schedule(nextExponentialBackoffMs(backoffMs).current);
     } finally {
@@ -633,7 +698,6 @@ export function createAgentRunner(
       }
     }
   }
-
 
   function applyIdleState(runEpoch: number) {
     clearTimer();
@@ -737,14 +801,12 @@ export function createAgentRunner(
     return {
       execute: true as const,
       contractId: contract.id,
-      delayMs: scheduler.getState().instant
-        || !settings.stepDelayEnabled
-        ? 0
-        : calculateBudgetDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
+      delayMs:
+        scheduler.getState().instant || !settings.stepDelayEnabled
+          ? 0
+          : calculateBudgetDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd),
     };
   }
-
-
 
   function getSnapshot() {
     const s = scheduler.getState();
@@ -841,7 +903,6 @@ export function createAgentRunner(
 
     await wakeQueue.onRunnerIdle();
   }
-
 }
 
 export type InternalAgentRunner = ReturnType<typeof createAgentRunner>;

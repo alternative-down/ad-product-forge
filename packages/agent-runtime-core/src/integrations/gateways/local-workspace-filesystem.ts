@@ -18,7 +18,9 @@ export class LocalWorkspaceFilesystem {
     this.root = path.resolve(options.root);
     this.contained = options.contained ?? true;
     this.readOnly = options.readOnly ?? false;
-    this.allowedPaths = (options.allowedPaths ?? []).map((allowedPath) => path.resolve(allowedPath));
+    this.allowedPaths = (options.allowedPaths ?? []).map((allowedPath) =>
+      path.resolve(allowedPath),
+    );
   }
 
   async exists(targetPath: string) {
@@ -49,20 +51,22 @@ export class LocalWorkspaceFilesystem {
     const absolutePath = await this.resolveContainedPath(targetPath, false);
     const entries = await fs.readdir(absolutePath, { withFileTypes: true });
 
-    return Promise.all(entries.map(async (entry) => {
-      const entryAbsolutePath = path.join(absolutePath, entry.name);
-      const stats = await fs.stat(entryAbsolutePath);
+    return Promise.all(
+      entries.map(async (entry) => {
+        const entryAbsolutePath = path.join(absolutePath, entry.name);
+        const stats = await fs.stat(entryAbsolutePath);
 
-      // Return paths relative to the workspace root to prevent exposing
-      // absolute host paths to agents
-      const relativePath = path.relative(this.root, entryAbsolutePath);
-      return {
-        name: entry.name,
-        path: relativePath === '' ? '.' : relativePath,
-        isDirectory: entry.isDirectory(),
-        size: stats.size,
-      };
-    }));
+        // Return paths relative to the workspace root to prevent exposing
+        // absolute host paths to agents
+        const relativePath = path.relative(this.root, entryAbsolutePath);
+        return {
+          name: entry.name,
+          path: relativePath === '' ? '.' : relativePath,
+          isDirectory: entry.isDirectory(),
+          size: stats.size,
+        };
+      }),
+    );
   }
 
   resolveAbsolutePath(targetPath: string) {
@@ -90,7 +94,11 @@ export class LocalWorkspaceFilesystem {
     const checkPath = forWrite ? path.dirname(absolutePath) : absolutePath;
     const realPath = await resolveExistingRealPath(checkPath);
 
-    if (realPath && this.contained && !isWithinAnyRoot(realPath, [this.root, ...this.allowedPaths])) {
+    if (
+      realPath &&
+      this.contained &&
+      !isWithinAnyRoot(realPath, [this.root, ...this.allowedPaths])
+    ) {
       throw new Error(`Workspace path escapes allowed roots: ${targetPath}`);
     }
 

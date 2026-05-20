@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createInternalChatAccess } from './internal-chat-access';
-import { ExternalAccountNotFoundError, InternalChatAccountNotFoundError } from './internal-chat-errors';
+import {
+  ExternalAccountNotFoundError,
+  InternalChatAccountNotFoundError,
+} from './internal-chat-errors';
 
 const makeDb = () => {
   const query = {
@@ -12,7 +15,6 @@ const makeDb = () => {
 };
 
 describe('createInternalChatAccess', () => {
-
   // -------------------------------------------------------------------------
   // getRequiredExternalAccount
   // -------------------------------------------------------------------------
@@ -46,7 +48,9 @@ describe('createInternalChatAccess', () => {
       const db = makeDb();
       const { getRequiredExternalAccount } = createInternalChatAccess(db, deps as any);
 
-      await expect(getRequiredExternalAccount('acc_1')).rejects.toThrow(ExternalAccountNotFoundError);
+      await expect(getRequiredExternalAccount('acc_1')).rejects.toThrow(
+        ExternalAccountNotFoundError,
+      );
     });
   });
 
@@ -78,10 +82,11 @@ describe('createInternalChatAccess', () => {
       const db = makeDb();
       const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
-      await expect(getRequiredAccountBySlug('unknown-slug')).rejects.toThrow(InternalChatAccountNotFoundError);
+      await expect(getRequiredAccountBySlug('unknown-slug')).rejects.toThrow(
+        InternalChatAccountNotFoundError,
+      );
     });
   });
-
 
   // ─── Expanded: getRequiredExternalAccount ─────────────────────────────────
 
@@ -143,7 +148,9 @@ describe('createInternalChatAccess', () => {
       const db = makeDb();
       const { getRequiredAccountBySlug } = createInternalChatAccess(db, deps as any);
 
-      await expect(getRequiredAccountBySlug('nobody')).rejects.toThrow(InternalChatAccountNotFoundError);
+      await expect(getRequiredAccountBySlug('nobody')).rejects.toThrow(
+        InternalChatAccountNotFoundError,
+      );
     });
 
     it('InternalChatAccountNotFoundError includes the slug', async () => {
@@ -171,5 +178,4 @@ describe('createInternalChatAccess', () => {
       await expect(getRequiredAccountBySlug('alice')).rejects.toThrow('db lookup failed');
     });
   });
-
 });

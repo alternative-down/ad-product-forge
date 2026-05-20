@@ -1,4 +1,4 @@
-import type {Database} from '../database/client'
+import type { Database } from '../database/client';
 
 export interface InternalChatGroupsAccountDeps {
   addMemberToGroupByAccount(input: {
@@ -29,7 +29,10 @@ export interface InternalChatGroupsAccountDeps {
   }): Promise<{ success: boolean; name?: string }>;
 }
 
-export function createInternalChatGroupsAccount(_db: Database, deps: InternalChatGroupsAccountDeps) {
+export function createInternalChatGroupsAccount(
+  _db: Database,
+  deps: InternalChatGroupsAccountDeps,
+) {
   async function addMemberToGroupByAccount(input: {
     accountId: string;
     groupId: string;

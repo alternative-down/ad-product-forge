@@ -22,15 +22,15 @@ type RoutingOpsDeps = {
   buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
 };
 
-export function createRoutingOps(
-  ctx: OpsContext,
-  routingDeps?: Partial<RoutingOpsDeps>
-) {
+export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingOpsDeps>) {
   function html(status: number, body: string) {
     return { status, headers: { 'content-type': 'text/html; charset=utf-8' }, body };
   }
 
-  function buildProvisioning(agentId: string, credentials: GitHubAppCredentials): GitHubAppProvisioning {
+  function buildProvisioning(
+    agentId: string,
+    credentials: GitHubAppCredentials,
+  ): GitHubAppProvisioning {
     if (routingDeps?.buildProvisioning) return routingDeps.buildProvisioning(agentId, credentials);
     const registrationUrl = `${ctx.config.publicBaseUrl}${ctx.getRegisterPath(agentId)}`;
     const manifestConfig = credentials.manifestConfig;
@@ -49,20 +49,38 @@ export function createRoutingOps(
   function registerAgentRoutes(agentId: string) {
     const cleanups = [
       ctx.config.httpServer.registerRoute({
-        method: 'GET', path: ctx.getRegisterPath(agentId),
+        method: 'GET',
+        path: ctx.getRegisterPath(agentId),
         handler: async () => await handleRegisterPage(agentId),
       }),
       ctx.config.httpServer.registerRoute({
-        method: 'GET', path: ctx.getManifestCallbackPath(agentId),
-        handler: async (request: HttpRequest) => await handleManifestCallback(agentId, request.query.get('code'), request.query.get('state')),
+        method: 'GET',
+        path: ctx.getManifestCallbackPath(agentId),
+        handler: async (request: HttpRequest) =>
+          await handleManifestCallback(
+            agentId,
+            request.query.get('code'),
+            request.query.get('state'),
+          ),
       }),
       ctx.config.httpServer.registerRoute({
-        method: 'GET', path: ctx.getSetupPath(agentId),
-        handler: async (request: HttpRequest) => await handleSetupCallback(agentId, request.query.get('installation_id')),
+        method: 'GET',
+        path: ctx.getSetupPath(agentId),
+        handler: async (request: HttpRequest) =>
+          await handleSetupCallback(agentId, request.query.get('installation_id')),
       }),
       ctx.config.httpServer.registerRoute({
-        method: 'POST', path: ctx.getWebhookPath(agentId),
-        handler: async (request: HttpRequest) => { const headers = request.headers; const bodyText = request.bodyText; return await handleWebhook(agentId, headers as Record<string, string | undefined>, bodyText ?? ""); },
+        method: 'POST',
+        path: ctx.getWebhookPath(agentId),
+        handler: async (request: HttpRequest) => {
+          const headers = request.headers;
+          const bodyText = request.bodyText;
+          return await handleWebhook(
+            agentId,
+            headers as Record<string, string | undefined>,
+            bodyText ?? '',
+          );
+        },
       }),
     ];
     ctx.routeCleanups.set(agentId, cleanups);
@@ -71,7 +89,10 @@ export function createRoutingOps(
   async function handleRegisterPage(agentId: string) {
     const credentials = await ctx.getCredentials(agentId);
     if (!credentials) {
-      return html(404, `<h1>GitHub App not provisioned</h1><p>No pending GitHub App configuration exists for agent ${ctx.escapeHtml(agentId)}.</p>`);
+      return html(
+        404,
+        `<h1>GitHub App not provisioned</h1><p>No pending GitHub App configuration exists for agent ${ctx.escapeHtml(agentId)}.</p>`,
+      );
     }
     if (credentials.status !== 'pending') {
       return html(200, `<h1>GitHub App ${ctx.escapeHtml(credentials.status)}</h1>`);
@@ -82,16 +103,26 @@ export function createRoutingOps(
       url: githubConfig.appHomeUrl,
       redirect_url: `${ctx.config.publicBaseUrl}${ctx.getManifestCallbackPath(agentId)}`,
       setup_url: `${ctx.config.publicBaseUrl}${ctx.getSetupPath(agentId)}`,
-      hook_attributes: { url: `${ctx.config.publicBaseUrl}${ctx.getWebhookPath(agentId)}`, active: true },
+      hook_attributes: {
+        url: `${ctx.config.publicBaseUrl}${ctx.getWebhookPath(agentId)}`,
+        active: true,
+      },
       public: false,
       default_permissions: ctx.buildManifestPermissions(credentials.manifestConfig as never),
       default_events: ctx.buildManifestEvents(credentials.manifestConfig as never),
     });
     const action = `https://github.com/organizations/${encodeURIComponent(githubConfig.organization)}/settings/apps/new?state=${encodeURIComponent(credentials.state)}`;
-    return html(200, `<!doctype html><html><body><form id="f" action="${ctx.escapeHtml(action)}" method="post"><input type="hidden" name="manifest" value="${ctx.escapeHtml(manifest)}" /></form><p>Redirecting…</p><script>document.getElementById('f').submit();</script></body></html>`);
+    return html(
+      200,
+      `<!doctype html><html><body><form id="f" action="${ctx.escapeHtml(action)}" method="post"><input type="hidden" name="manifest" value="${ctx.escapeHtml(manifest)}" /></form><p>Redirecting…</p><script>document.getElementById('f').submit();</script></body></html>`,
+    );
   }
 
-  async function handleManifestCallback(agentId: string, code: string | null, state: string | null) {
+  async function handleManifestCallback(
+    agentId: string,
+    code: string | null,
+    state: string | null,
+  ) {
     const credentials = await ctx.getCredentials(agentId);
     if (!credentials || credentials.status !== 'pending') {
       return html(404, '<h1>GitHub App registration not pending</h1>');
@@ -99,12 +130,22 @@ export function createRoutingOps(
     if (code === null || code === undefined || state !== credentials.state) {
       return html(400, '<h1>Invalid manifest callback</h1>');
     }
-    const anonymousOctokit = new App({} as unknown as any) as unknown as { request: (url: string, opts?: unknown) => Promise<{ data: unknown }> };
+    const anonymousOctokit = new App({} as unknown as any) as unknown as {
+      request: (url: string, opts?: unknown) => Promise<{ data: unknown }>;
+    };
     try {
-      const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', { code });
-      const { pem, id: appId, webhook_secret } = response.data as { pem: string; id: number; webhook_secret: string };
+      const response = await anonymousOctokit.request('POST /app-manifests/{code}/conversions', {
+        code,
+      });
+      const {
+        pem,
+        id: appId,
+        webhook_secret,
+      } = response.data as { pem: string; id: number; webhook_secret: string };
       const app = new App({ appId, privateKey: pem });
-      const appResponse = await (app.octokit as unknown as { request: (url: string) => Promise<{ data: { slug?: string } }> }).request('GET /app');
+      const appResponse = await (
+        app.octokit as unknown as { request: (url: string) => Promise<{ data: { slug?: string } }> }
+      ).request('GET /app');
       const slug = (appResponse.data as { slug?: string }).slug ?? 'unknown';
       const created = {
         status: 'created' as const,
@@ -117,9 +158,17 @@ export function createRoutingOps(
         createdAt: credentials.createdAt,
       };
       await ctx.saveCredentials(agentId, created);
-      return html(200, `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(slug)}/installations/new">install the app</a>.</p>`);
+      return html(
+        200,
+        `<h1>GitHub App created</h1><p>Now <a href="https://github.com/apps/${ctx.escapeHtml(slug)}/installations/new">install the app</a>.</p>`,
+      );
     } catch (err) {
-      forgeDebug({ scope: 'github-ops', level: 'error', message: 'handleSetupCreate createApp failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'github-ops',
+        level: 'error',
+        message: 'handleSetupCreate createApp failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       return html(500, `<h1>Failed</h1><pre>${ctx.escapeHtml(String(err))}</pre>`);
     }
   }
@@ -129,7 +178,8 @@ export function createRoutingOps(
     if (!credentials || credentials.status !== 'created') {
       return html(404, '<h1>GitHub App not ready</h1>');
     }
-    if (installationIdValue === null || installationIdValue === undefined) return html(400, '<h1>Missing installation_id</h1>');
+    if (installationIdValue === null || installationIdValue === undefined)
+      return html(400, '<h1>Missing installation_id</h1>');
     const installationId = Number.parseInt(installationIdValue, 10);
     if (!Number.isInteger(installationId)) return html(400, '<h1>Invalid installation_id</h1>');
     const activeCredentials: Extract<GitHubAppCredentials, { status: 'active' }> = {
@@ -147,19 +197,50 @@ export function createRoutingOps(
     const githubConfig = await ctx.getGlobalConfig();
     await ctx.notifications.createNotification({
       agentId,
-      content: String(ctx.createGitHubInstallWakeContent({ agentId, installationId, organization: githubConfig.organization, appName: activeCredentials.appName, appSlug: activeCredentials.appSlug, timestamp: Date.now() })),
+      content: String(
+        ctx.createGitHubInstallWakeContent({
+          agentId,
+          installationId,
+          organization: githubConfig.organization,
+          appName: activeCredentials.appName,
+          appSlug: activeCredentials.appSlug,
+          timestamp: Date.now(),
+        }),
+      ),
     });
     return html(200, '<h1>GitHub App installed</h1>');
   }
 
-  async function handleWebhook(agentId: string, headers: Record<string, string | undefined>, bodyText: string) {
+  async function handleWebhook(
+    agentId: string,
+    headers: Record<string, string | undefined>,
+    bodyText: string,
+  ) {
     const event = ctx.getHeader(headers, 'x-github-event');
     const delivery = ctx.getHeader(headers, 'x-github-delivery');
-    if (event === null || event === undefined || delivery === null || delivery === undefined) return html(400, '<h1>Missing webhook headers</h1>');
+    if (event === null || event === undefined || delivery === null || delivery === undefined)
+      return html(400, '<h1>Missing webhook headers</h1>');
     let payload: Record<string, unknown>;
-    try { payload = JSON.parse(bodyText); } catch { return html(400, '<h1>Invalid JSON</h1>'); }
-    if (ctx.isGitHubSelfEvent(payload)) { ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: 'Ignoring self event', context: { agentId, event } }); return html(200, 'ok'); }
-    ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: `Webhook ${event}`, context: { agentId, delivery } });
+    try {
+      payload = JSON.parse(bodyText);
+    } catch {
+      return html(400, '<h1>Invalid JSON</h1>');
+    }
+    if (ctx.isGitHubSelfEvent(payload)) {
+      ctx.forgeDebug({
+        scope: 'github-ops',
+        level: 'info',
+        message: 'Ignoring self event',
+        context: { agentId, event },
+      });
+      return html(200, 'ok');
+    }
+    ctx.forgeDebug({
+      scope: 'github-ops',
+      level: 'info',
+      message: `Webhook ${event}`,
+      context: { agentId, delivery },
+    });
     await ctx.notifications.createNotification({
       agentId,
       content: String(ctx.createGitHubWebhookWakeContent({ event, delivery, payload })),
@@ -167,5 +248,12 @@ export function createRoutingOps(
     return html(202, 'Accepted');
   }
 
-  return { buildProvisioning, registerAgentRoutes, handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook };
+  return {
+    buildProvisioning,
+    registerAgentRoutes,
+    handleRegisterPage,
+    handleManifestCallback,
+    handleSetupCallback,
+    handleWebhook,
+  };
 }

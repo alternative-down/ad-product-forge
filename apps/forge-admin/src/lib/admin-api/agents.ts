@@ -15,7 +15,7 @@ import type {
   HireAgentInput,
   HireAgentResult,
   TopUpAgentContractInput,
-UpsertAgentProviderInput,
+  UpsertAgentProviderInput,
 } from './types';
 
 export function getAgents() {
@@ -65,7 +65,11 @@ export function getAgentThreadMessages(agentId: string, page: number, perPage: n
   );
 }
 
-export function getAgentLongTermMemoryThreadMessages(agentId: string, page: number, perPage: number) {
+export function getAgentLongTermMemoryThreadMessages(
+  agentId: string,
+  page: number,
+  perPage: number,
+) {
   return request<AgentThreadMessagesResponse>(
     `/admin/agent/ltm-thread-messages?agentId=${encodeURIComponent(agentId)}&page=${page}&perPage=${perPage}`,
   );
@@ -81,19 +85,19 @@ export function clearAgentHistory(input: {
   agentId: string;
   includeLongTermMemoryThread?: boolean;
 }) {
-  return request<{ success: true; agentId: string; includeLongTermMemoryThread: boolean }>('/admin/agent/clear-history', {
-    method: 'POST',
-    body: JSON.stringify({
-      agentId: input.agentId,
-      includeLongTermMemoryThread: input.includeLongTermMemoryThread ?? true,
-    }),
-  });
+  return request<{ success: true; agentId: string; includeLongTermMemoryThread: boolean }>(
+    '/admin/agent/clear-history',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        agentId: input.agentId,
+        includeLongTermMemoryThread: input.includeLongTermMemoryThread ?? true,
+      }),
+    },
+  );
 }
 
-export function runAgentLongTermMemoryRecallSearch(input: {
-  agentId: string;
-  query: string;
-}) {
+export function runAgentLongTermMemoryRecallSearch(input: { agentId: string; query: string }) {
   return request<AgentLongTermMemoryRecallDebugSearchResult>('/admin/agent/ltm-recall-search', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -113,17 +117,23 @@ export function getAgentConversationMessages(
 }
 
 export function upsertAgentProvider(input: UpsertAgentProviderInput) {
-  return request<{ success: true; agentId: string; providerType: string }>('/admin/agent-provider/upsert', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ success: true; agentId: string; providerType: string }>(
+    '/admin/agent-provider/upsert',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function deleteAgentProvider(agentId: string, providerType: 'discord' | 'email') {
-  return request<{ success: true; agentId: string; providerType: string }>('/admin/agent-provider/delete', {
-    method: 'POST',
-    body: JSON.stringify({ agentId, providerType }),
-  });
+  return request<{ success: true; agentId: string; providerType: string }>(
+    '/admin/agent-provider/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify({ agentId, providerType }),
+    },
+  );
 }
 
 export function updateAgentConfig(input: {
@@ -142,10 +152,7 @@ export function updateAgentConfig(input: {
   });
 }
 
-export function changeAgentRole(input: {
-  agentId: string;
-  roleId: string;
-}) {
+export function changeAgentRole(input: { agentId: string; roleId: string }) {
   return request<{ success: true; agentId: string; roleId: string }>('/admin/agent/change-role', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -156,10 +163,13 @@ export function updateAgentGitHubManifestConfig(input: {
   agentId: string;
   manifestConfig: NonNullable<AgentDetail['githubProvisioning']>['manifestConfig'];
 }) {
-  return request<NonNullable<AgentDetail['githubProvisioning']>>('/admin/agent/github-manifest-config/update', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<NonNullable<AgentDetail['githubProvisioning']>>(
+    '/admin/agent/github-manifest-config/update',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function topUpAgentContract(input: TopUpAgentContractInput) {
@@ -223,10 +233,13 @@ export function assignAgentMcpServer(input: {
   serverId: string;
   isActive?: boolean;
 }) {
-  return request<{ success: true; agentId: string; configId: string; serverId: string }>('/admin/agent-mcp/assign', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ success: true; agentId: string; configId: string; serverId: string }>(
+    '/admin/agent-mcp/assign',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function setAgentMcpServerActive(input: {
@@ -234,16 +247,16 @@ export function setAgentMcpServerActive(input: {
   configId: string;
   isActive: boolean;
 }) {
-  return request<{ success: true; agentId: string; configId: string; isActive: boolean }>('/admin/agent-mcp/set-active', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ success: true; agentId: string; configId: string; isActive: boolean }>(
+    '/admin/agent-mcp/set-active',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
-export function detachAgentMcpServer(input: {
-  agentId: string;
-  configId: string;
-}) {
+export function detachAgentMcpServer(input: { agentId: string; configId: string }) {
   return request<{ success: true; agentId: string; configId: string }>('/admin/agent-mcp/detach', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -251,30 +264,33 @@ export function detachAgentMcpServer(input: {
 }
 
 export function deleteAgentSkill(input: DeleteAgentSkillInput) {
-  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/delete', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ success: true; agentId: string; skillName: string }>(
+    '/admin/agent-skills/delete',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
-export function installGlobalSkillForAgent(input: {
-  agentId: string;
-  skillName: string;
-}) {
-  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/install-global', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+export function installGlobalSkillForAgent(input: { agentId: string; skillName: string }) {
+  return request<{ success: true; agentId: string; skillName: string }>(
+    '/admin/agent-skills/install-global',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
-export function publishAgentSkillToGlobalCatalog(input: {
-  agentId: string;
-  skillName: string;
-}) {
-  return request<{ success: true; agentId: string; skillName: string }>('/admin/agent-skills/publish-global', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+export function publishAgentSkillToGlobalCatalog(input: { agentId: string; skillName: string }) {
+  return request<{ success: true; agentId: string; skillName: string }>(
+    '/admin/agent-skills/publish-global',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function createSchedule(input: CreateScheduleInput) {

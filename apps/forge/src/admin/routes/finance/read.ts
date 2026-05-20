@@ -12,17 +12,23 @@ import { jsonResponse } from '../index';
 type CompanyCash = {
   getOverview: () => Promise<unknown>;
   listContractSummaries: () => Promise<unknown>;
-}
+};
 
 type FinanceReadInput = {
   companyCash: CompanyCash;
-}
+};
 
 /**
  * Register GET routes for finance read operations
  */
 export function registerFinanceReadRoutes(
-  httpServer: { registerRoute: (route: { method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      path: string;
+      handler: HttpHandler;
+    }) => void;
+  },
   db: Database,
   finance?: FinanceReadInput,
 ) {
@@ -34,7 +40,12 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await finance?.companyCash.getOverview());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance overview route failed',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },
@@ -48,7 +59,12 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await finance?.companyCash.listContractSummaries());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance contracts route failed',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
     },

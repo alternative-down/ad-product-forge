@@ -39,7 +39,15 @@ describe('writeLtmState', () => {
       packages: [],
     };
     const mockStore = { writeState: vi.fn().mockResolvedValue(persistedResult) };
-    const state = { lastRunAt: null, lastRunError: null, lastRunErrorAt: null, lastWrittenPackageId: null, lastWrittenAt: null, packages: [], updatedAt: Date.now() } as any;
+    const state = {
+      lastRunAt: null,
+      lastRunError: null,
+      lastRunErrorAt: null,
+      lastWrittenPackageId: null,
+      lastWrittenAt: null,
+      packages: [],
+      updatedAt: Date.now(),
+    } as any;
 
     const result = await writeLtmState(mockStore, state);
 
@@ -112,7 +120,9 @@ describe('scheduleLtmRun', () => {
 
 describe('clearLtmTimer', () => {
   it('clears the timer and sets current to null', () => {
-    const timer = { current: setTimeout(() => {}, 5_000) } as { current: ReturnType<typeof setTimeout> | null };
+    const timer = { current: setTimeout(() => {}, 5_000) } as {
+      current: ReturnType<typeof setTimeout> | null;
+    };
 
     clearLtmTimer(timer);
 

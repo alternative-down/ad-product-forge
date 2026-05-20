@@ -48,10 +48,7 @@ export function withRouteErrorHandler<Args extends unknown[]>(
  * Extracts a query parameter from the request.
  * Returns null if the parameter is missing or empty.
  */
-export function getQueryParam(
-  request: InternalChatRequest,
-  key: string,
-): string | null {
+export function getQueryParam(request: InternalChatRequest, key: string): string | null {
   const value = request.query.get(key);
   return value !== null && value !== undefined && value.length > 0 ? value : null;
 }

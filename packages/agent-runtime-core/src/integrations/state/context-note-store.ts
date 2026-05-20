@@ -34,12 +34,14 @@ export class InMemoryContextNoteStore implements ContextNoteStore {
   async list(runtimeId: string): Promise<StepContextEntry[]> {
     const runtimeState = this.getOrCreateState(runtimeId);
 
-    return Array.from(runtimeState.notes.values(), (note) => createTextStepContextEntry({
-      id: note.id,
-      kind: note.kind ?? 'context-note',
-      title: note.title,
-      text: note.text,
-    }));
+    return Array.from(runtimeState.notes.values(), (note) =>
+      createTextStepContextEntry({
+        id: note.id,
+        kind: note.kind ?? 'context-note',
+        title: note.title,
+        text: note.text,
+      }),
+    );
   }
 
   private getOrCreateState(runtimeId: string) {

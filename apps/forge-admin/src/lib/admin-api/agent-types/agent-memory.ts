@@ -1,5 +1,4 @@
 export type AgentRuntimeMemorySnapshot = {
-
   workingMemory: string | null;
 
   agentContext: string | null;
@@ -29,7 +28,6 @@ export type AgentRuntimeMemorySnapshot = {
   checkpointUpdatedAt: number | null;
 
   ltmRecall: {
-
     status: 'hit' | 'miss' | 'error';
 
     query: string;
@@ -67,11 +65,9 @@ export type AgentRuntimeMemorySnapshot = {
     checkpointFileCount: number;
 
     error: string | null;
-
   } | null;
 
   ltm: {
-
     running: boolean;
 
     queued: boolean;
@@ -87,11 +83,9 @@ export type AgentRuntimeMemorySnapshot = {
     lastWrittenAt: number | null;
 
     packageCount: number;
-
   } | null;
 
   metrics: {
-
     rawMessageCount: number;
 
     recentRawMessageCount: number;
@@ -123,9 +117,5 @@ export type AgentRuntimeMemorySnapshot = {
     checkpointSummaryUpToGeneration: number | null;
 
     latestThreadMessageAt: number | null;
-
   };
-
 };
-
-

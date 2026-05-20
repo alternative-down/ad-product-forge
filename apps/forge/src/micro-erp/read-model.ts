@@ -1,9 +1,13 @@
 import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-
-import type {Database} from '../database/schema';
-import { agents, agentExecutionContracts, agentExecutionSteps, companyCashLedger } from '../database/schema';
+import type { Database } from '../database/schema';
+import {
+  agents,
+  agentExecutionContracts,
+  agentExecutionSteps,
+  companyCashLedger,
+} from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 
 const IN = 'in';
@@ -28,7 +32,7 @@ export function createMicroErpReadModel(db: Database) {
   const companyCash = createCompanyCashLedger(db);
 
   async function getCompanyCashBalance() {
-const balanceUsd = await companyCash.getCurrentBalanceUsd();
+    const balanceUsd = await companyCash.getCurrentBalanceUsd();
     return { balanceUsd };
   }
 
@@ -91,10 +95,12 @@ const balanceUsd = await companyCash.getCurrentBalanceUsd();
     };
   }
 
-  async function getCompanyCashSummary(input: {
-    periodStart?: number;
-    periodEnd?: number;
-  } = {}) {
+  async function getCompanyCashSummary(
+    input: {
+      periodStart?: number;
+      periodEnd?: number;
+    } = {},
+  ) {
     const now = Date.now();
     const periodStart = input.periodStart ?? startOfCurrentMonth(now);
     const periodEnd = input.periodEnd ?? now;
@@ -159,12 +165,10 @@ const balanceUsd = await companyCash.getCurrentBalanceUsd();
       .from(agentExecutionContracts)
       .innerJoin(agents, eq(agents.id, agentExecutionContracts.agentId))
       .where(
-        and(
-          lte(agentExecutionContracts.startsAt, now),
-          gte(agentExecutionContracts.endsAt, now),
-        ),
+        and(lte(agentExecutionContracts.startsAt, now), gte(agentExecutionContracts.endsAt, now)),
       )
-      .orderBy(desc(agentExecutionContracts.endsAt)).all();
+      .orderBy(desc(agentExecutionContracts.endsAt))
+      .all();
     const metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
@@ -232,7 +236,8 @@ const balanceUsd = await companyCash.getCurrentBalanceUsd();
       contracts.map((contract) => [contract.contractId, contract.endsAt]),
     );
 
-    const [spendRows, stepRows]: [Array<{ contractId: string; total: number }>, typeof stepRows] = await Promise.all([
+    const [spendRows, stepRows]: [Array<{ contractId: string; total: number }>, typeof stepRows] =
+      await Promise.all([
         db
           .select({
             contractId: agentExecutionSteps.contractId,
@@ -240,16 +245,15 @@ const balanceUsd = await companyCash.getCurrentBalanceUsd();
           })
           .from(agentExecutionSteps)
           .where(inArray(agentExecutionSteps.contractId, contractIds))
-          .groupBy(agentExecutionSteps.contractId).all(),
+          .groupBy(agentExecutionSteps.contractId)
+          .all(),
         db.query.agentExecutionSteps.findMany({
           where: inArray(agentExecutionSteps.contractId, contractIds),
           orderBy: [desc(agentExecutionSteps.createdAt)],
         }),
       ]);
 
-    const spentUsdByContractId = new Map(
-      spendRows.map((row) => [row.contractId, row.total]),
-    );
+    const spentUsdByContractId = new Map(spendRows.map((row) => [row.contractId, row.total]));
     const recentStepsByContractId = new Map<string, typeof stepRows>();
 
     for (const step of stepRows) {

@@ -7,7 +7,9 @@ import type { RuntimeAgentSessionIteration } from './runtime-agent-session.js';
 import type { RuntimeAgentSessionGenerateOptions } from './runtime-agent-session.js';
 import type { RuntimeSessionModelMessage } from './runtime-agent-session-messages.js';
 
-const makeMessage = (overrides: Partial<RuntimeSessionModelMessage> = {}): RuntimeSessionModelMessage =>
+const makeMessage = (
+  overrides: Partial<RuntimeSessionModelMessage> = {},
+): RuntimeSessionModelMessage =>
   ({
     role: 'assistant',
     content: [],
@@ -44,12 +46,14 @@ describe('runtime-agent-session-iteration', () => {
         responseMessages: [
           makeMessage({
             role: 'assistant',
-            content: [{
-              type: 'tool-call',
-              toolCallId: 'tc-1',
-              toolName: 'search',
-              input: { query: 'test' },
-            }],
+            content: [
+              {
+                type: 'tool-call',
+                toolCallId: 'tc-1',
+                toolName: 'search',
+                input: { query: 'test' },
+              },
+            ],
           }),
         ],
         text: 'Using search',
@@ -75,11 +79,13 @@ describe('runtime-agent-session-iteration', () => {
         responseMessages: [
           makeMessage({
             role: 'assistant',
-            content: [{
-              type: 'tool-call',
-              toolName: 'search',
-              input: {},
-            }],
+            content: [
+              {
+                type: 'tool-call',
+                toolName: 'search',
+                input: {},
+              },
+            ],
           }),
         ],
         text: '',
@@ -99,12 +105,14 @@ describe('runtime-agent-session-iteration', () => {
         responseMessages: [
           makeMessage({
             role: 'tool',
-            content: [{
-              type: 'tool-result',
-              toolCallId: 'tc-1',
-              toolName: 'search',
-              output: { type: 'json', value: ['result 1', 'result 2'] },
-            }],
+            content: [
+              {
+                type: 'tool-result',
+                toolCallId: 'tc-1',
+                toolName: 'search',
+                output: { type: 'json', value: ['result 1', 'result 2'] },
+              },
+            ],
           }),
         ],
         text: '',
@@ -125,11 +133,13 @@ describe('runtime-agent-session-iteration', () => {
         responseMessages: [
           makeMessage({
             role: 'tool',
-            content: [{
-              type: 'tool-result',
-              toolName: 'search',
-              output: 'plain output',
-            }],
+            content: [
+              {
+                type: 'tool-result',
+                toolName: 'search',
+                output: 'plain output',
+              },
+            ],
           }),
         ],
         text: '',
@@ -198,7 +208,9 @@ describe('runtime-agent-session-iteration', () => {
   });
 
   describe('resolveRuntimeAgentSessionContinuation', () => {
-    const makeIteration = (overrides: Partial<RuntimeAgentSessionIteration> = {}): RuntimeAgentSessionIteration =>
+    const makeIteration = (
+      overrides: Partial<RuntimeAgentSessionIteration> = {},
+    ): RuntimeAgentSessionIteration =>
       ({
         iteration: 1,
         text: '',

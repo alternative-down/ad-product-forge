@@ -51,10 +51,12 @@ export class RuntimeVoiceSession {
     this.onSpeechStream = options.onSpeechStream;
   }
 
-  async start(options: {
-    language?: string;
-    headers?: Record<string, string>;
-  } = {}) {
+  async start(
+    options: {
+      language?: string;
+      headers?: Record<string, string>;
+    } = {},
+  ) {
     const speechSession = await this.speechBridge.startSession(options);
     const unsubscribe = this.messageStream.subscribe(async (event) => {
       await this.handleMessageEvent(event);

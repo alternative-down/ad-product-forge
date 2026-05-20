@@ -15,6 +15,7 @@ const github = createGitHubAppManager({
 ```
 
 Responsabilidades:
+
 - Gerencia tokens de instalação
 - Cria webhooks
 - Opera repositórios (issues, PRs, commits)
@@ -67,6 +68,7 @@ const coolify = createCoolifyManager({
 ```
 
 Responsabilidades:
+
 - Listar aplicações
 - Deployar versões
 - Gerenciar environment variables
@@ -134,6 +136,7 @@ const email = createAgentEmailManager({
 ```
 
 Responsabilidades:
+
 - Provisionar mailboxes para agentes
 - Deletar mailboxes
 - Buscar emails via IMAP
@@ -181,11 +184,11 @@ const results = await Promise.all([
 Todas as integrações usam `forgeDebug` para logging:
 
 ```typescript
-forgeDebug({ 
-  scope: 'github/manager', 
-  level: 'error', 
-  message: 'Failed to create issue', 
-  context: { error } 
+forgeDebug({
+  scope: 'github/manager',
+  level: 'error',
+  message: 'Failed to create issue',
+  context: { error },
 });
 ```
 

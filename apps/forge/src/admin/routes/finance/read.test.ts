@@ -46,14 +46,14 @@ describe('registerFinanceReadRoutes', () => {
 
   it('registers GET /admin/finance route', () => {
     registerFinanceReadRoutes(mockServer, mockReadModel);
-    const route = mockServer.routes.find(r => r.path === '/admin/finance');
+    const route = mockServer.routes.find((r) => r.path === '/admin/finance');
     expect(route).toBeDefined();
     expect(route!.method).toBe('GET');
   });
 
   it('registers GET /admin/finance/contracts route', () => {
     registerFinanceReadRoutes(mockServer, mockReadModel);
-    const route = mockServer.routes.find(r => r.path === '/admin/finance/contracts');
+    const route = mockServer.routes.find((r) => r.path === '/admin/finance/contracts');
     expect(route).toBeDefined();
     expect(route!.method).toBe('GET');
   });
@@ -61,7 +61,8 @@ describe('registerFinanceReadRoutes', () => {
   it('GET /admin/finance calls getFinance and returns its result', async () => {
     registerFinanceReadRoutes(mockServer, mockReadModel);
     mockReadModel.getFinance.mockResolvedValue({ totalCash: 50000, totalPayables: 12000 });
-    const handler = mockServer.routes.find(r => r.path === '/admin/finance')!.handler as () => Promise<unknown>;
+    const handler = mockServer.routes.find((r) => r.path === '/admin/finance')!
+      .handler as () => Promise<unknown>;
     const response = await handler();
     expect(mockReadModel.getFinance).toHaveBeenCalled();
     const { jsonResponse } = await import('../index');
@@ -72,7 +73,8 @@ describe('registerFinanceReadRoutes', () => {
   it('GET /admin/finance/contracts calls getFinanceContracts and returns its result', async () => {
     registerFinanceReadRoutes(mockServer, mockReadModel);
     mockReadModel.getFinanceContracts.mockResolvedValue([{ id: 'contract-1', amount: 1000 }]);
-    const handler = mockServer.routes.find(r => r.path === '/admin/finance/contracts')!.handler as () => Promise<unknown>;
+    const handler = mockServer.routes.find((r) => r.path === '/admin/finance/contracts')!
+      .handler as () => Promise<unknown>;
     const response = await handler();
     expect(mockReadModel.getFinanceContracts).toHaveBeenCalled();
     const { jsonResponse } = await import('../index');
@@ -83,7 +85,7 @@ describe('registerFinanceReadRoutes', () => {
   it('handlers are async functions', async () => {
     registerFinanceReadRoutes(mockServer, mockReadModel);
     mockReadModel.getFinance.mockResolvedValue(null);
-    const handler = mockServer.routes.find(r => r.path === '/admin/finance')!.handler;
+    const handler = mockServer.routes.find((r) => r.path === '/admin/finance')!.handler;
     const result = (handler as Function)();
     expect(result).toBeInstanceOf(Promise);
     await result;

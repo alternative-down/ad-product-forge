@@ -17,7 +17,7 @@ const mockCreateSystemSettingsStore = vi.hoisted(() =>
       checkpointedOmObservationReflectionBatchTokens: 0,
       checkpointedOmTotalContextTokens: 0,
     }),
-  })
+  }),
 );
 
 vi.mock('@forge-runtime/core', () => ({
@@ -106,7 +106,11 @@ describe('createAgentListReadModel', () => {
   describe('listAgents', () => {
     it('returns empty array when no agents exist', async () => {
       const db = makeMockDb();
-      const model = createAgentListReadModel({ db, registry: makeMockRegistry(), workspaceBasePath: '/tmp' });
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
       const result = await model.listAgents();
       expect(result).toEqual([]);
     });
@@ -115,9 +119,16 @@ describe('createAgentListReadModel', () => {
       const db = makeMockDb();
       db.query.agents.findMany.mockResolvedValueOnce([
         {
-          id: 'a1', name: 'Test Agent', description: 'A test agent',
-          executionState: 'idle', role: null, modelProfileId: null,
-          omModelProfileId: null, loaded: false, createdAt: 0, updatedAt: 0,
+          id: 'a1',
+          name: 'Test Agent',
+          description: 'A test agent',
+          executionState: 'idle',
+          role: null,
+          modelProfileId: null,
+          omModelProfileId: null,
+          loaded: false,
+          createdAt: 0,
+          updatedAt: 0,
         },
       ]);
       db.query.agentRoles.findMany.mockResolvedValueOnce([]);
@@ -132,7 +143,11 @@ describe('createAgentListReadModel', () => {
         }),
       });
 
-      const model = createAgentListReadModel({ db, registry: makeMockRegistry(new Map([['a1', {}]])), workspaceBasePath: '/tmp' });
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(new Map([['a1', {}]])),
+        workspaceBasePath: '/tmp',
+      });
       const result = await model.listAgents();
 
       expect(result).toHaveLength(1);
@@ -145,9 +160,16 @@ describe('createAgentListReadModel', () => {
       const db = makeMockDb();
       db.query.agents.findMany.mockResolvedValueOnce([
         {
-          id: 'ghost', name: 'Ghost', description: null, executionState: null,
-          role: null, modelProfileId: null, omModelProfileId: null,
-          loaded: false, createdAt: 0, updatedAt: 0,
+          id: 'ghost',
+          name: 'Ghost',
+          description: null,
+          executionState: null,
+          role: null,
+          modelProfileId: null,
+          omModelProfileId: null,
+          loaded: false,
+          createdAt: 0,
+          updatedAt: 0,
         },
       ]);
       db.query.agentRoles.findMany.mockResolvedValueOnce([]);
@@ -162,7 +184,11 @@ describe('createAgentListReadModel', () => {
         }),
       });
 
-      const model = createAgentListReadModel({ db, registry: makeMockRegistry(), workspaceBasePath: '/tmp' });
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
       const result = await model.listAgents();
       expect(result[0].executionState).toBe('absent');
     });
@@ -171,7 +197,11 @@ describe('createAgentListReadModel', () => {
   describe('getAgent', () => {
     it('returns null when agent not found', async () => {
       const db = makeMockDb();
-      const model = createAgentListReadModel({ db, registry: makeMockRegistry(), workspaceBasePath: '/tmp' });
+      const model = createAgentListReadModel({
+        db,
+        registry: makeMockRegistry(),
+        workspaceBasePath: '/tmp',
+      });
       const result = await model.getAgent('ghost-agent');
       expect(result).toBeNull();
     });

@@ -3,17 +3,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
 import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { createSchedule, deleteSchedule, getAgent, updateSchedule } from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 import { ScheduleDialog } from '@/components/agents/schedules/schedule-dialog';
-import { createEmptyScheduleForm, createScheduleForm, formatDateTime, type ScheduleForm } from '@/components/agents/schedules/schedule-helpers';
+import {
+  createEmptyScheduleForm,
+  createScheduleForm,
+  formatDateTime,
+  type ScheduleForm,
+} from '@/components/agents/schedules/schedule-helpers';
 
 export const Route = createFileRoute('/agents/$agentId/schedules/')({
   component: AgentSchedulesIndexRoute,
@@ -67,7 +75,10 @@ function AgentSchedulesIndexRoute() {
     onMutate: (current) =>
       startAdminAction(current.scheduleId ? 'Salvando agendamento...' : 'Criando agendamento...'),
     onSuccess: async (_data, current, context) => {
-      succeedAdminAction(context, current.scheduleId ? 'Agendamento atualizado.' : 'Agendamento criado.');
+      succeedAdminAction(
+        context,
+        current.scheduleId ? 'Agendamento atualizado.' : 'Agendamento criado.',
+      );
       setDialogOpen(false);
       setForm(createEmptyScheduleForm());
       await queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId] });
@@ -92,7 +103,9 @@ function AgentSchedulesIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando agendamentos..." /> : null}
+      {agentQuery.isLoading && !agentQuery.data ? (
+        <AdminLoadingState label="Carregando agendamentos..." />
+      ) : null}
       <PageHeader title="Agendamentos" />
 
       {heartbeat ? (
@@ -135,7 +148,9 @@ function AgentSchedulesIndexRoute() {
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground">{heartbeat.content || 'Sem conteúdo configurado.'}</div>
+          <div className="text-sm text-muted-foreground">
+            {heartbeat.content || 'Sem conteúdo configurado.'}
+          </div>
         </section>
       ) : null}
 
@@ -166,13 +181,19 @@ function AgentSchedulesIndexRoute() {
               {schedules.map((schedule) => (
                 <TableRow key={schedule.scheduleId}>
                   <TableCell className="px-4 py-3">{schedule.name}</TableCell>
-                  <TableCell className="px-4 py-3">{schedule.scheduleType === 'cron' ? 'Cron' : 'Data'}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {schedule.scheduleType === 'cron' ? 'Cron' : 'Data'}
+                  </TableCell>
                   <TableCell className="px-4 py-3">
                     {schedule.scheduleType === 'cron'
-                      ? schedule.wakeWhenRunning ? 'Sim' : 'Só ocioso'
+                      ? schedule.wakeWhenRunning
+                        ? 'Sim'
+                        : 'Só ocioso'
                       : '—'}
                   </TableCell>
-                  <TableCell className="px-4 py-3">{schedule.nextTriggerAt ? formatDateTime(schedule.nextTriggerAt) : '—'}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {schedule.nextTriggerAt ? formatDateTime(schedule.nextTriggerAt) : '—'}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <AdminButton
@@ -210,9 +231,15 @@ function AgentSchedulesIndexRoute() {
           </Table>
         </div>
 
-        {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
-        {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
-        {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
+        {agentQuery.error ? (
+          <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+        ) : null}
+        {mutation.error ? (
+          <div className="text-sm text-destructive">{mutation.error.message}</div>
+        ) : null}
+        {deleteMutation.error ? (
+          <div className="text-sm text-destructive">{deleteMutation.error.message}</div>
+        ) : null}
       </section>
 
       <ScheduleDialog

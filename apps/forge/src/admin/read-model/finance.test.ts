@@ -35,7 +35,7 @@ vi.mock('../../finance/company-payables', () => ({
 
 import { createFinanceReadModel } from './finance';
 
-import type {Database} from '../../database/schema';
+import type { Database } from '../../database/schema';
 
 // =============================================================================
 // Test helpers

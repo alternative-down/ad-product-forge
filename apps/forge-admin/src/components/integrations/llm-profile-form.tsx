@@ -8,7 +8,13 @@ import {
   AdminInput,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import type { UpsertLlmProfileInput } from '@/lib/admin-api/index';
 
@@ -26,7 +32,9 @@ export function LlmProfileDialog(input: {
     <Dialog open={input.open} onOpenChange={input.onOpenChange}>
       <AdminDialogContent>
         <AdminDialogHeader>
-          <AdminDialogTitle>{input.profileForm.profileId ? 'Editar perfil' : 'Novo perfil'}</AdminDialogTitle>
+          <AdminDialogTitle>
+            {input.profileForm.profileId ? 'Editar perfil' : 'Novo perfil'}
+          </AdminDialogTitle>
         </AdminDialogHeader>
 
         <form
@@ -65,10 +73,17 @@ export function LlmProfileDialog(input: {
                   }
                   disabled={input.pending || input.modelKeys.length === 0}
                 >
-                  <SelectTrigger id="llm-model-key" className="w-full min-w-0 max-w-full overflow-hidden">
+                  <SelectTrigger
+                    id="llm-model-key"
+                    className="w-full min-w-0 max-w-full overflow-hidden"
+                  >
                     <SelectValue
                       className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
-                      placeholder={input.modelKeys.length > 0 ? 'Selecione um model key' : 'Cadastre um preço antes'}
+                      placeholder={
+                        input.modelKeys.length > 0
+                          ? 'Selecione um model key'
+                          : 'Cadastre um preço antes'
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -127,7 +142,9 @@ export function LlmProfileDialog(input: {
                 disabled={input.pending}
               />
             </div>
-            {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}
+            {input.errorMessage ? (
+              <div className="text-sm text-destructive">{input.errorMessage}</div>
+            ) : null}
           </AdminDialogBody>
           <AdminDialogFooter>
             <AdminButton type="submit" disabled={input.pending}>

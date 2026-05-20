@@ -2,13 +2,16 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { logger } from "../../logger.js";
+import { logger } from '../../logger.js';
 
 import { z } from 'zod';
 
 import { oauthStore, type OAuthCredential } from './store';
 
-const ANTHROPIC_CLIENT_ID = Buffer.from('OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl', 'base64').toString('utf8');
+const ANTHROPIC_CLIENT_ID = Buffer.from(
+  'OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl',
+  'base64',
+).toString('utf8');
 const ANTHROPIC_TOKEN_URL = 'https://console.anthropic.com/v1/oauth/token';
 const claudeCliAuthSchema = z.object({
   claudeAiOauth: z.object({
@@ -19,7 +22,9 @@ const claudeCliAuthSchema = z.object({
 });
 const DEFAULT_ANTHROPIC_SETUP_TOKEN_FILE_PATH = '/tmp/claude_oauth_token';
 
-export function getAnthropicCliAuthFilePath(filePath = path.join(os.homedir(), '.claude', '.credentials.json')) {
+export function getAnthropicCliAuthFilePath(
+  filePath = path.join(os.homedir(), '.claude', '.credentials.json'),
+) {
   return filePath;
 }
 
@@ -29,7 +34,7 @@ export function getAnthropicSetupTokenFilePath(filePath = DEFAULT_ANTHROPIC_SETU
 
 async function refresh(credential: OAuthCredential) {
   if (!credential.refresh) {
-        logger.warn("auth", "refresh: Anthropic refresh token missing");
+    logger.warn('auth', 'refresh: Anthropic refresh token missing');
     throw new Error('Anthropic refresh token missing.');
   }
 

@@ -5,21 +5,14 @@ export function getRoles() {
   return request<RolesResponse>('/admin/roles');
 }
 
-export function createRole(input: {
-  name: string;
-  description?: string;
-}) {
+export function createRole(input: { name: string; description?: string }) {
   return request<RoleItem>('/admin/role/create', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export function updateRole(input: {
-  roleId: string;
-  name?: string;
-  description?: string | null;
-}) {
+export function updateRole(input: { roleId: string; name?: string; description?: string | null }) {
   return request<RoleItem>('/admin/role/update', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -33,20 +26,14 @@ export function deleteRole(roleId: string) {
   });
 }
 
-export function addRoleCapability(input: {
-  roleId: string;
-  capabilityId: string;
-}) {
+export function addRoleCapability(input: { roleId: string; capabilityId: string }) {
   return request<{ success?: boolean }>('/admin/role-capability/add', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export function removeRoleCapability(input: {
-  roleId: string;
-  capabilityId: string;
-}) {
+export function removeRoleCapability(input: { roleId: string; capabilityId: string }) {
   return request<{ success?: boolean }>('/admin/role-capability/remove', {
     method: 'POST',
     body: JSON.stringify(input),

@@ -3,17 +3,18 @@ import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type AgentThreadMessage } from '@/lib/admin-api/index';
 
-export function ThreadMessageArticle(input: {
-  message: AgentThreadMessage;
-  index: number;
-}) {
+export function ThreadMessageArticle(input: { message: AgentThreadMessage; index: number }) {
   return (
-    <article className={`min-w-0 overflow-hidden ${input.index > 0 ? 'border-t border-border pt-5' : ''}`}>
+    <article
+      className={`min-w-0 overflow-hidden ${input.index > 0 ? 'border-t border-border pt-5' : ''}`}
+    >
       <div className="min-w-0 space-y-3 pb-5">
         <header className="flex flex-wrap items-center gap-3">
           <Badge variant="outline">{humanizeRole(input.message.role)}</Badge>
           {input.message.type ? <Badge variant="outline">{input.message.type}</Badge> : null}
-          <div className="text-xs text-muted-foreground">{formatDateTime(input.message.createdAt)}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatDateTime(input.message.createdAt)}
+          </div>
         </header>
 
         <ThreadMessageContent message={input.message} />
@@ -22,22 +23,19 @@ export function ThreadMessageArticle(input: {
   );
 }
 
-function threadMessageContent(input: {
-  message: AgentThreadMessage;
-}) {
+function threadMessageContent(input: { message: AgentThreadMessage }) {
   const content = input.message.content;
   const parts = Array.isArray(content.parts) ? content.parts : [];
   const visibleParts = parts.filter(shouldRenderPart);
   const hasVisibleTextPart = visibleParts.some((part) => getPartType(part) === 'text');
-  const hasToolInvocationPart = visibleParts.some((part) => getPartType(part) === 'tool-invocation');
+  const hasToolInvocationPart = visibleParts.some(
+    (part) => getPartType(part) === 'tool-invocation',
+  );
 
   return (
     <div className="min-w-0 space-y-3 overflow-hidden">
       {!hasVisibleTextPart && typeof content.content === 'string' && content.content.trim() ? (
-        <ThreadTextSegments
-          label="content.content"
-          value={content.content.trim()}
-        />
+        <ThreadTextSegments label="content.content" value={content.content.trim()} />
       ) : null}
 
       {visibleParts.map((part, index) => (
@@ -52,7 +50,9 @@ function threadMessageContent(input: {
         />
       ) : null}
 
-      {Array.isArray(content.toolInvocations) && content.toolInvocations.length > 0 && !hasToolInvocationPart ? (
+      {Array.isArray(content.toolInvocations) &&
+      content.toolInvocations.length > 0 &&
+      !hasToolInvocationPart ? (
         <ThreadJsonDisclosure
           summary="content.toolInvocations"
           label="toolInvocations"
@@ -70,9 +70,7 @@ function threadMessageContent(input: {
   );
 }
 
-function ThreadPart(input: {
-  part: Record<string, unknown>;
-}) {
+function ThreadPart(input: { part: Record<string, unknown> }) {
   const type = getPartType(input.part);
 
   if (type === 'text') {
@@ -82,12 +80,7 @@ function ThreadPart(input: {
       return null;
     }
 
-    return (
-      <ThreadTextSegments
-        label="content.parts.text"
-        value={text}
-      />
-    );
+    return <ThreadTextSegments label="content.parts.text" value={text} />;
   }
 
   if (type === 'reasoning') {
@@ -108,7 +101,8 @@ function ThreadPart(input: {
 
   if (type === 'tool-invocation') {
     const toolInvocation = isRecord(input.part.toolInvocation) ? input.part.toolInvocation : null;
-    const toolName = typeof toolInvocation?.toolName === 'string' ? toolInvocation.toolName : 'tool';
+    const toolName =
+      typeof toolInvocation?.toolName === 'string' ? toolInvocation.toolName : 'tool';
     const state = typeof toolInvocation?.state === 'string' ? toolInvocation.state : null;
     const summary = state === 'result' ? `Tool result: ${toolName}` : `Tool call: ${toolName}`;
 
@@ -138,28 +132,13 @@ function ThreadPart(input: {
   if (type === 'file') {
     const mimeType = typeof input.part.mimeType === 'string' ? input.part.mimeType : 'file';
 
-    return (
-      <ThreadJsonDisclosure
-        summary={`file: ${mimeType}`}
-        label="file"
-        value={input.part}
-      />
-    );
+    return <ThreadJsonDisclosure summary={`file: ${mimeType}`} label="file" value={input.part} />;
   }
 
-  return (
-    <ThreadJsonDisclosure
-      summary={type}
-      label="part"
-      value={input.part}
-    />
-  );
+  return <ThreadJsonDisclosure summary={type} label="part" value={input.part} />;
 }
 
-function ThreadSection(input: {
-  label: string;
-  children: string;
-}) {
+function ThreadSection(input: { label: string; children: string }) {
   return (
     <div className="min-w-0 space-y-1 overflow-hidden">
       <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
@@ -218,7 +197,7 @@ function decodeXmlEntities(value: string) {
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
     .replaceAll('&quot;', '"')
-    .replaceAll('&apos;', '\'')
+    .replaceAll('&apos;', "'")
     .replaceAll('&amp;', '&');
 }
 
@@ -253,66 +232,48 @@ function parseMemoryRecallXml(value: string) {
   };
 }
 
-function ThreadTextSegments(input: {
-  label: string;
-  value: string;
-}) {
+function ThreadTextSegments(input: { label: string; value: string }) {
   const segments = splitMemoryRecallSegments(input.value);
 
   if (segments.length === 0) {
-    return isMemoryRecallText(input.value)
-      ? (
-        <ThreadDisclosure
-          summary="Memory Recall"
-          label={`Memory Recall · ${input.label}`}
-          value={input.value}
-        />
-      )
-      : (
-        <ThreadSection label={`Response text · ${input.label}`}>
-          {input.value}
-        </ThreadSection>
-      );
+    return isMemoryRecallText(input.value) ? (
+      <ThreadDisclosure
+        summary="Memory Recall"
+        label={`Memory Recall · ${input.label}`}
+        value={input.value}
+      />
+    ) : (
+      <ThreadSection label={`Response text · ${input.label}`}>{input.value}</ThreadSection>
+    );
   }
 
   return (
     <div className="min-w-0 space-y-3 overflow-hidden">
-      {segments.map((segment, index) => (
-        segment.kind === 'memory-recall'
-          ? (
-            <ThreadMemoryRecallDisclosure
-              key={`${input.label}:memory-recall:${index}`}
-              xml={segment.value}
-              label={`Memory Recall · ${input.label}`}
-            />
-          )
-          : (
-            <ThreadSection
-              key={`${input.label}:text:${index}`}
-              label={`Response text · ${input.label}`}
-            >
-              {segment.value}
-            </ThreadSection>
-          )
-      ))}
+      {segments.map((segment, index) =>
+        segment.kind === 'memory-recall' ? (
+          <ThreadMemoryRecallDisclosure
+            key={`${input.label}:memory-recall:${index}`}
+            xml={segment.value}
+            label={`Memory Recall · ${input.label}`}
+          />
+        ) : (
+          <ThreadSection
+            key={`${input.label}:text:${index}`}
+            label={`Response text · ${input.label}`}
+          >
+            {segment.value}
+          </ThreadSection>
+        ),
+      )}
     </div>
   );
 }
 
-function ThreadMemoryRecallDisclosure(input: {
-  label: string;
-  xml: string;
-}) {
+function ThreadMemoryRecallDisclosure(input: { label: string; xml: string }) {
   const parsed = parseMemoryRecallXml(input.xml);
 
   if (!parsed) {
-    return (
-      <ThreadDisclosure
-        summary="Memory Recall"
-        label={input.label}
-        value={input.xml}
-      />
-    );
+    return <ThreadDisclosure summary="Memory Recall" label={input.label} value={input.xml} />;
   }
 
   return (
@@ -322,15 +283,9 @@ function ThreadMemoryRecallDisclosure(input: {
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="min-w-0 space-y-3 overflow-hidden pt-3">
-        {parsed.instructions
-          ? (
-            <ThreadDisclosure
-              summary="Instructions"
-              label={null}
-              value={parsed.instructions}
-            />
-          )
-          : null}
+        {parsed.instructions ? (
+          <ThreadDisclosure summary="Instructions" label={null} value={parsed.instructions} />
+        ) : null}
 
         {parsed.items.map((item, index) => (
           <ThreadDisclosure
@@ -355,11 +310,7 @@ function formatMemoryRecallItemSummary(index: number, score: string | undefined)
   return `Item ${index + 1} - score ${scoreValue.toFixed(2)}`;
 }
 
-function ThreadDisclosure(input: {
-  summary: string;
-  label: string | null;
-  value: string;
-}) {
+function ThreadDisclosure(input: { summary: string; label: string | null; value: string }) {
   return (
     <details className="group">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -367,7 +318,9 @@ function ThreadDisclosure(input: {
         <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="min-w-0 space-y-1 overflow-hidden pt-3">
-        {input.label ? <div className="text-xs font-medium text-muted-foreground">{input.label}</div> : null}
+        {input.label ? (
+          <div className="text-xs font-medium text-muted-foreground">{input.label}</div>
+        ) : null}
         <div className="min-w-0 overflow-hidden whitespace-pre-wrap break-all text-sm leading-6 text-foreground [overflow-wrap:anywhere]">
           {input.value}
         </div>
@@ -376,11 +329,7 @@ function ThreadDisclosure(input: {
   );
 }
 
-function ThreadJsonDisclosure(input: {
-  summary: string;
-  label: string;
-  value: unknown;
-}) {
+function ThreadJsonDisclosure(input: { summary: string; label: string; value: unknown }) {
   return (
     <details className="group">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -434,7 +383,9 @@ function getReasoningText(part: Record<string, unknown>) {
 
   return part.details
     .filter(isRecord)
-    .filter((detail) => detail.type === 'text' && typeof detail.text === 'string' && detail.text.trim())
+    .filter(
+      (detail) => detail.type === 'text' && typeof detail.text === 'string' && detail.text.trim(),
+    )
     .map((detail) => detail.text as string)
     .join('\n')
     .trim();

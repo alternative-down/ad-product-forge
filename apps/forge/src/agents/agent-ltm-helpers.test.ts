@@ -26,7 +26,9 @@ describe('safeSerializeRecallSteps', () => {
 
   it('serializes simple steps', () => {
     const steps = [{ role: 'user', text: 'hello' }];
-    expect(safeSerializeRecallSteps(steps)).toBe('[\n  {\n    "role": "user",\n    "text": "hello"\n  }\n]');
+    expect(safeSerializeRecallSteps(steps)).toBe(
+      '[\n  {\n    "role": "user",\n    "text": "hello"\n  }\n]',
+    );
   });
 
   it('serializes nested objects', () => {
@@ -85,7 +87,7 @@ describe('escapeXml', () => {
   });
 
   it('escapes single-quote', () => {
-    expect(escapeXml("say 'hi'")).toBe("say &apos;hi&apos;");
+    expect(escapeXml("say 'hi'")).toBe('say &apos;hi&apos;');
   });
 
   it('escapes multiple special chars', () => {
@@ -194,9 +196,7 @@ describe('buildRecallSystemMessage', () => {
   });
 
   it('escapes XML special chars in workspace content', () => {
-    const results: LtmSearchResult[] = [
-      { id: 'doc-1', content: 'a > b & c < d' },
-    ];
+    const results: LtmSearchResult[] = [{ id: 'doc-1', content: 'a > b & c < d' }];
     const result = buildRecallSystemMessage({
       query: 'test',
       graphHit: false,
@@ -208,9 +208,7 @@ describe('buildRecallSystemMessage', () => {
   });
 
   it('escapes XML special chars in result id', () => {
-    const results: LtmSearchResult[] = [
-      { id: 'id <tag> & stuff', content: 'content' },
-    ];
+    const results: LtmSearchResult[] = [{ id: 'id <tag> & stuff', content: 'content' }];
     const result = buildRecallSystemMessage({
       query: 'test',
       graphHit: false,

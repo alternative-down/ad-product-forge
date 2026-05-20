@@ -11,40 +11,39 @@ import type {
 
 export type RuntimeEvent =
   | {
-    type: 'dispatch';
-    runtimeId: string;
-    input: RuntimeInput;
-  }
+      type: 'dispatch';
+      runtimeId: string;
+      input: RuntimeInput;
+    }
   | {
-    type: 'status-changed';
-    runtimeId: string;
-    status: RuntimeStatus;
-  }
+      type: 'status-changed';
+      runtimeId: string;
+      status: RuntimeStatus;
+    }
   | {
-    type: 'after-model';
-    runtimeId: string;
-    stepId: string;
-    stepNumber: number;
-    response: StepModelResponse;
-  }
+      type: 'after-model';
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      response: StepModelResponse;
+    }
   | {
-    type: 'after-actions';
-    runtimeId: string;
-    stepId: string;
-    stepNumber: number;
-    actionResults: ActionResult[];
-  }
+      type: 'after-actions';
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      actionResults: ActionResult[];
+    }
   | {
-    type: 'after-step';
-    runtimeId: string;
-    record: StepRecord;
-    snapshot: RuntimeSnapshot;
-  };
+      type: 'after-step';
+      runtimeId: string;
+      record: StepRecord;
+      snapshot: RuntimeSnapshot;
+    };
 
 export type RuntimeEventListener = AsyncEventListener<RuntimeEvent>;
 
 export class RuntimeEventStream extends AsyncEventChannel<RuntimeEvent> {
-
   createObserver(name = 'runtime-event-stream'): RuntimeObserver {
     return {
       name,

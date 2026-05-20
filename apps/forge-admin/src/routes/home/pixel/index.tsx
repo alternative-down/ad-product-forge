@@ -98,11 +98,24 @@ function HomePixelRoute() {
   const [displaySceneAgents, setDisplaySceneAgents] = useState<SceneAgent[]>([]);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [canvasLayout, setCanvasLayout] = useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, left: 0, top: 0 });
-  const [deskAnimationState, setDeskAnimationState] = useState<Record<string, DeskAnimationState>>({});
+  const [canvasLayout, setCanvasLayout] = useState({
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
+    left: 0,
+    top: 0,
+  });
+  const [deskAnimationState, setDeskAnimationState] = useState<Record<string, DeskAnimationState>>(
+    {},
+  );
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const dragOriginRef = useRef<{ pointerId: number; x: number; y: number; cameraX: number; cameraY: number } | null>(null);
+  const dragOriginRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    cameraX: number;
+    cameraY: number;
+  } | null>(null);
   const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchDistanceRef = useRef<number | null>(null);
   const agentsRef = useRef<AgentListItem[]>([]);
@@ -124,14 +137,18 @@ function HomePixelRoute() {
     const timer = window.setInterval(() => {
       setTick((value) => {
         const nextValue = value + 1;
-        setDeskAnimationState((currentState) => advanceDeskAnimationState({
-          currentState,
-          agents: agentsRef.current,
-          animationDeadlines: animationDeadlinesRef.current,
-          nowMs: Date.now(),
-          tick: nextValue,
-        }));
-        setDisplaySceneAgents((currentAgents) => interpolateSceneAgents(currentAgents, targetSceneAgentsRef.current, nextValue));
+        setDeskAnimationState((currentState) =>
+          advanceDeskAnimationState({
+            currentState,
+            agents: agentsRef.current,
+            animationDeadlines: animationDeadlinesRef.current,
+            nowMs: Date.now(),
+            tick: nextValue,
+          }),
+        );
+        setDisplaySceneAgents((currentAgents) =>
+          interpolateSceneAgents(currentAgents, targetSceneAgentsRef.current, nextValue),
+        );
         return nextValue;
       });
       setNowMs(Date.now());
@@ -142,7 +159,9 @@ function HomePixelRoute() {
 
   useEffect(() => {
     let active = true;
-    const urls = Object.values(ASSET_URLS).flatMap((value) => Array.isArray(value) ? value : [value]);
+    const urls = Object.values(ASSET_URLS).flatMap((value) =>
+      Array.isArray(value) ? value : [value],
+    );
 
     void Promise.all(
       urls.map(async (url) => {
@@ -209,14 +228,15 @@ function HomePixelRoute() {
   }, [agents, nowMs]);
 
   const targetSceneAgents = useMemo(
-    () => buildSceneAgents({
-      agents,
-      tick,
-      nowMs,
-      animationDeadlines,
-      bubbleDeadlines,
-      deskAnimationState,
-    }),
+    () =>
+      buildSceneAgents({
+        agents,
+        tick,
+        nowMs,
+        animationDeadlines,
+        bubbleDeadlines,
+        deskAnimationState,
+      }),
     [agents, animationDeadlines, bubbleDeadlines, deskAnimationState, nowMs, tick],
   );
 
@@ -224,7 +244,8 @@ function HomePixelRoute() {
     targetSceneAgentsRef.current = targetSceneAgents;
   }, [targetSceneAgents]);
 
-  const visibleSceneAgents = displaySceneAgents.length === 0 ? targetSceneAgents : displaySceneAgents;
+  const visibleSceneAgents =
+    displaySceneAgents.length === 0 ? targetSceneAgents : displaySceneAgents;
 
   useEffect(() => {
     if (!images || !canvasRef.current) {
@@ -291,12 +312,13 @@ function HomePixelRoute() {
 
       const hitAgent = [...visibleSceneAgents]
         .reverse()
-        .find((sceneAgent) => (
-          normalizedX >= sceneAgent.x - 8 &&
-          normalizedX <= sceneAgent.x + 8 &&
-          normalizedY >= sceneAgent.y - 24 &&
-          normalizedY <= sceneAgent.y + 8
-        ));
+        .find(
+          (sceneAgent) =>
+            normalizedX >= sceneAgent.x - 8 &&
+            normalizedX <= sceneAgent.x + 8 &&
+            normalizedY >= sceneAgent.y - 24 &&
+            normalizedY <= sceneAgent.y + 8,
+        );
 
       if (!hitAgent) {
         return;
@@ -338,7 +360,10 @@ function HomePixelRoute() {
 
       if (activePointersRef.current.size === 2) {
         const pointers = [...activePointersRef.current.values()];
-        const pinchDistance = Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y);
+        const pinchDistance = Math.hypot(
+          pointers[0].x - pointers[1].x,
+          pointers[0].y - pointers[1].y,
+        );
 
         if (pinchDistanceRef.current !== null) {
           const nextZoom = clampZoom(zoom * (pinchDistance / pinchDistanceRef.current));
@@ -354,12 +379,11 @@ function HomePixelRoute() {
         return;
       }
 
-      const nextCameraX = dragOriginRef.current.cameraX - ((event.clientX - dragOriginRef.current.x) / (SCALE * zoom));
-      const nextCameraY = dragOriginRef.current.cameraY - ((event.clientY - dragOriginRef.current.y) / (SCALE * zoom));
-      setCamera(() => clampCamera(
-        { x: nextCameraX, y: nextCameraY },
-        zoom,
-      ));
+      const nextCameraX =
+        dragOriginRef.current.cameraX - (event.clientX - dragOriginRef.current.x) / (SCALE * zoom);
+      const nextCameraY =
+        dragOriginRef.current.cameraY - (event.clientY - dragOriginRef.current.y) / (SCALE * zoom);
+      setCamera(() => clampCamera({ x: nextCameraX, y: nextCameraY }, zoom));
     }
 
     function handlePointerUp(event: PointerEvent) {
@@ -417,13 +441,21 @@ function HomePixelRoute() {
       const step = 14;
 
       if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x - step, y: currentCamera.y }, zoom));
+        setCamera((currentCamera) =>
+          clampCamera({ x: currentCamera.x - step, y: currentCamera.y }, zoom),
+        );
       } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x + step, y: currentCamera.y }, zoom));
+        setCamera((currentCamera) =>
+          clampCamera({ x: currentCamera.x + step, y: currentCamera.y }, zoom),
+        );
       } else if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y - step }, zoom));
+        setCamera((currentCamera) =>
+          clampCamera({ x: currentCamera.x, y: currentCamera.y - step }, zoom),
+        );
       } else if (event.key === 'ArrowDown' || event.key.toLowerCase() === 's') {
-        setCamera((currentCamera) => clampCamera({ x: currentCamera.x, y: currentCamera.y + step }, zoom));
+        setCamera((currentCamera) =>
+          clampCamera({ x: currentCamera.x, y: currentCamera.y + step }, zoom),
+        );
       } else {
         return;
       }
@@ -446,7 +478,9 @@ function HomePixelRoute() {
           <h1 className="text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-4xl">
             {settingsQuery.data?.companyName?.trim() || 'Empresa'}
           </h1>
-          {settingsQuery.isLoading && !settingsQuery.data ? <AdminLoadingState label="Carregando empresa..." /> : null}
+          {settingsQuery.isLoading && !settingsQuery.data ? (
+            <AdminLoadingState label="Carregando empresa..." />
+          ) : null}
         </div>
 
         <AdminButton
@@ -464,7 +498,10 @@ function HomePixelRoute() {
 
       <section className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full min-h-0 rounded-[1.5rem] bg-[#f4efe7] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-          <div ref={viewportRef} className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]">
+          <div
+            ref={viewportRef}
+            className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[1.25rem] bg-[#ddd4c7]"
+          >
             <canvas
               ref={canvasRef}
               width={CANVAS_WIDTH}
@@ -482,8 +519,10 @@ function HomePixelRoute() {
               const bubbleGapPx = 8;
               const canvasScaleX = canvasLayout.width / CANVAS_WIDTH;
               const canvasScaleY = canvasLayout.height / CANVAS_HEIGHT;
-              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom * canvasScaleX;
-              const bubbleY = canvasLayout.top + (sceneAgent.y - 26 - camera.y) * SCALE * zoom * canvasScaleY;
+              const bubbleX =
+                canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom * canvasScaleX;
+              const bubbleY =
+                canvasLayout.top + (sceneAgent.y - 26 - camera.y) * SCALE * zoom * canvasScaleY;
 
               if (
                 bubbleX < -80 ||
@@ -505,9 +544,7 @@ function HomePixelRoute() {
                     transformOrigin: 'center bottom',
                   }}
                 >
-                  <div
-                    className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
-                  >
+                  <div className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                     {sceneAgent.name}
                   </div>
                   <div className="line-clamp-2">{sceneAgent.bubble}</div>
@@ -524,8 +561,10 @@ function HomePixelRoute() {
               const bubbleGapPx = 7;
               const canvasScaleX = canvasLayout.width / CANVAS_WIDTH;
               const canvasScaleY = canvasLayout.height / CANVAS_HEIGHT;
-              const bubbleX = canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom * canvasScaleX;
-              const bubbleY = canvasLayout.top + (sceneAgent.y - 24 - camera.y) * SCALE * zoom * canvasScaleY;
+              const bubbleX =
+                canvasLayout.left + (sceneAgent.x - camera.x) * SCALE * zoom * canvasScaleX;
+              const bubbleY =
+                canvasLayout.top + (sceneAgent.y - 24 - camera.y) * SCALE * zoom * canvasScaleY;
 
               if (
                 bubbleX < -80 ||
@@ -556,12 +595,15 @@ function HomePixelRoute() {
         </div>
       </section>
 
-      {agents.length === 0 && agentsQuery.isLoading ? <AdminLoadingState label="Carregando agentes..." /> : null}
-      {agentsQuery.error ? <div className="text-sm text-destructive">{agentsQuery.error.message}</div> : null}
+      {agents.length === 0 && agentsQuery.isLoading ? (
+        <AdminLoadingState label="Carregando agentes..." />
+      ) : null}
+      {agentsQuery.error ? (
+        <div className="text-sm text-destructive">{agentsQuery.error.message}</div>
+      ) : null}
     </div>
   );
 }
-
 
 function renderScene(input: {
   canvas: HTMLCanvasElement;
@@ -648,20 +690,76 @@ function drawFurnitureBackground(
   zoom: number,
 ) {
   const items = [
-    { key: ASSET_URLS.painting, x: WORLD_OFFSET_X / TILE_SIZE + 12.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.2 },
-    { key: ASSET_URLS.whiteboard, x: WORLD_OFFSET_X / TILE_SIZE + 15.4, y: WORLD_OFFSET_Y / TILE_SIZE + 1.3 },
-    { key: ASSET_URLS.shelf, x: WORLD_OFFSET_X / TILE_SIZE + 18.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.25 },
-    { key: ASSET_URLS.plantLarge, x: WORLD_OFFSET_X / TILE_SIZE + 13.1, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
-    { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 19.2, y: WORLD_OFFSET_Y / TILE_SIZE + 1.55 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 5.0 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 9.4 },
-    { key: ASSET_URLS.chairFront, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 9.4 },
-    { key: ASSET_URLS.sofaBack, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
-    { key: ASSET_URLS.sofaBack, x: WORLD_OFFSET_X / TILE_SIZE + 15.25, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
-    { key: ASSET_URLS.coffeeTable, x: WORLD_OFFSET_X / TILE_SIZE + 14.45, y: WORLD_OFFSET_Y / TILE_SIZE + 11.2 },
-    { key: ASSET_URLS.bin, x: WORLD_OFFSET_X / TILE_SIZE + 10.9, y: WORLD_OFFSET_Y / TILE_SIZE + 4.8 },
-    { key: ASSET_URLS.bin, x: WORLD_OFFSET_X / TILE_SIZE + 10.9, y: WORLD_OFFSET_Y / TILE_SIZE + 9.2 },
+    {
+      key: ASSET_URLS.painting,
+      x: WORLD_OFFSET_X / TILE_SIZE + 12.1,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 1.2,
+    },
+    {
+      key: ASSET_URLS.whiteboard,
+      x: WORLD_OFFSET_X / TILE_SIZE + 15.4,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 1.3,
+    },
+    {
+      key: ASSET_URLS.shelf,
+      x: WORLD_OFFSET_X / TILE_SIZE + 18.1,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 1.25,
+    },
+    {
+      key: ASSET_URLS.plantLarge,
+      x: WORLD_OFFSET_X / TILE_SIZE + 13.1,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 1.55,
+    },
+    {
+      key: ASSET_URLS.plant,
+      x: WORLD_OFFSET_X / TILE_SIZE + 19.2,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 1.55,
+    },
+    {
+      key: ASSET_URLS.chairFront,
+      x: WORLD_OFFSET_X / TILE_SIZE + 3.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 5.0,
+    },
+    {
+      key: ASSET_URLS.chairFront,
+      x: WORLD_OFFSET_X / TILE_SIZE + 7.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 5.0,
+    },
+    {
+      key: ASSET_URLS.chairFront,
+      x: WORLD_OFFSET_X / TILE_SIZE + 3.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 9.4,
+    },
+    {
+      key: ASSET_URLS.chairFront,
+      x: WORLD_OFFSET_X / TILE_SIZE + 7.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 9.4,
+    },
+    {
+      key: ASSET_URLS.sofaBack,
+      x: WORLD_OFFSET_X / TILE_SIZE + 13.15,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.05,
+    },
+    {
+      key: ASSET_URLS.sofaBack,
+      x: WORLD_OFFSET_X / TILE_SIZE + 15.25,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.05,
+    },
+    {
+      key: ASSET_URLS.coffeeTable,
+      x: WORLD_OFFSET_X / TILE_SIZE + 14.45,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 11.2,
+    },
+    {
+      key: ASSET_URLS.bin,
+      x: WORLD_OFFSET_X / TILE_SIZE + 10.9,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 4.8,
+    },
+    {
+      key: ASSET_URLS.bin,
+      x: WORLD_OFFSET_X / TILE_SIZE + 10.9,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 9.2,
+    },
   ];
 
   drawFurnitureLayer(context, images, items, camera, zoom);
@@ -677,17 +775,61 @@ function drawFurnitureForeground(
   zoom: number,
 ) {
   const items = [
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 6.3 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 6.3 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 2.6, y: WORLD_OFFSET_Y / TILE_SIZE + 10.7 },
-    { key: ASSET_URLS.desk, x: WORLD_OFFSET_X / TILE_SIZE + 6.6, y: WORLD_OFFSET_Y / TILE_SIZE + 10.7 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 6.05 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 3.55, y: WORLD_OFFSET_Y / TILE_SIZE + 10.45 },
-    { key: ASSET_URLS.pcBack, x: WORLD_OFFSET_X / TILE_SIZE + 7.55, y: WORLD_OFFSET_Y / TILE_SIZE + 10.45 },
-    { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 13.15, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
-    { key: ASSET_URLS.sofa, x: WORLD_OFFSET_X / TILE_SIZE + 15.25, y: WORLD_OFFSET_Y / TILE_SIZE + 10.05 },
-    { key: ASSET_URLS.plant, x: WORLD_OFFSET_X / TILE_SIZE + 18.35, y: WORLD_OFFSET_Y / TILE_SIZE + 11.0 },
+    {
+      key: ASSET_URLS.desk,
+      x: WORLD_OFFSET_X / TILE_SIZE + 2.6,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 6.3,
+    },
+    {
+      key: ASSET_URLS.desk,
+      x: WORLD_OFFSET_X / TILE_SIZE + 6.6,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 6.3,
+    },
+    {
+      key: ASSET_URLS.desk,
+      x: WORLD_OFFSET_X / TILE_SIZE + 2.6,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.7,
+    },
+    {
+      key: ASSET_URLS.desk,
+      x: WORLD_OFFSET_X / TILE_SIZE + 6.6,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.7,
+    },
+    {
+      key: ASSET_URLS.pcBack,
+      x: WORLD_OFFSET_X / TILE_SIZE + 3.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 6.05,
+    },
+    {
+      key: ASSET_URLS.pcBack,
+      x: WORLD_OFFSET_X / TILE_SIZE + 7.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 6.05,
+    },
+    {
+      key: ASSET_URLS.pcBack,
+      x: WORLD_OFFSET_X / TILE_SIZE + 3.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.45,
+    },
+    {
+      key: ASSET_URLS.pcBack,
+      x: WORLD_OFFSET_X / TILE_SIZE + 7.55,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.45,
+    },
+    {
+      key: ASSET_URLS.sofa,
+      x: WORLD_OFFSET_X / TILE_SIZE + 13.15,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.05,
+    },
+    {
+      key: ASSET_URLS.sofa,
+      x: WORLD_OFFSET_X / TILE_SIZE + 15.25,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 10.05,
+    },
+    {
+      key: ASSET_URLS.plant,
+      x: WORLD_OFFSET_X / TILE_SIZE + 18.35,
+      y: WORLD_OFFSET_Y / TILE_SIZE + 11.0,
+    },
   ];
 
   drawFurnitureLayer(context, images, items, camera, zoom);
@@ -735,8 +877,9 @@ function drawSceneAgents(
   const sortedAgents = [...sceneAgents].sort((left, right) => left.y - right.y);
 
   for (const sceneAgent of sortedAgents) {
-    const image = images[ASSET_URLS.characters[resolveSpriteSeed(sceneAgent) % ASSET_URLS.characters.length]]
-      ?? images[ASSET_URLS.characters[0]];
+    const image =
+      images[ASSET_URLS.characters[resolveSpriteSeed(sceneAgent) % ASSET_URLS.characters.length]] ??
+      images[ASSET_URLS.characters[0]];
 
     if (!image) {
       continue;
@@ -764,7 +907,11 @@ function clampCamera(input: { x: number; y: number }, zoom: number) {
   };
 }
 
-function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: SceneAgent[], tick: number) {
+function interpolateSceneAgents(
+  currentAgents: SceneAgent[],
+  targetAgents: SceneAgent[],
+  tick: number,
+) {
   const walkSpeed = 1.35;
 
   return targetAgents.map((targetAgent) => {
@@ -782,9 +929,14 @@ function interpolateSceneAgents(currentAgents: SceneAgent[], targetAgents: Scene
       return targetAgent;
     }
 
-    const movingDir = Math.abs(deltaX) > Math.abs(deltaY)
-      ? deltaX > 0 ? 'right' : 'left'
-      : deltaY > 0 ? 'down' : 'up';
+    const movingDir =
+      Math.abs(deltaX) > Math.abs(deltaY)
+        ? deltaX > 0
+          ? 'right'
+          : 'left'
+        : deltaY > 0
+          ? 'down'
+          : 'up';
     const travelFrame = Math.floor((tick + resolveSpriteSeed(targetAgent)) / 2) % 4;
 
     return {
@@ -911,7 +1063,7 @@ export function resolveDeskAmbientPose(input: {
   }
 
   return {
-    dir: eventTick < halfDuration ? 'left' as const : 'right' as const,
+    dir: eventTick < halfDuration ? ('left' as const) : ('right' as const),
     frame: 1,
   };
 }
@@ -940,47 +1092,55 @@ function advanceDeskAnimationState(input: {
   tick: number;
 }) {
   const nextState: Record<string, DeskAnimationState> = {};
-  const runningAgents = input.agents.filter((agent) => agent.executionState === 'running' && !agent.overview.ltm.running);
+  const runningAgents = input.agents.filter(
+    (agent) => agent.executionState === 'running' && !agent.overview.ltm.running,
+  );
 
   for (const agent of runningAgents) {
-    const currentState = input.currentState[agent.agentId]
-      ?? createDeskAnimationState({
+    const currentState =
+      input.currentState[agent.agentId] ??
+      createDeskAnimationState({
         agentId: agent.agentId,
         cycleIndex: 0,
         tick: input.tick,
       });
-    const forceDefault = input.animationDeadlines[agent.agentId] > input.nowMs && Boolean(agent.overview.lastToolBadge);
+    const forceDefault =
+      input.animationDeadlines[agent.agentId] > input.nowMs &&
+      Boolean(agent.overview.lastToolBadge);
 
     if (forceDefault) {
-      nextState[agent.agentId] = currentState.mode === 'default'
-        ? currentState
-        : createDeskAnimationState({
-            agentId: agent.agentId,
-            cycleIndex: currentState.cycleIndex + 1,
-            tick: input.tick,
-          });
+      nextState[agent.agentId] =
+        currentState.mode === 'default'
+          ? currentState
+          : createDeskAnimationState({
+              agentId: agent.agentId,
+              cycleIndex: currentState.cycleIndex + 1,
+              tick: input.tick,
+            });
       continue;
     }
 
     if (currentState.mode === 'default') {
-      nextState[agent.agentId] = input.tick - currentState.defaultStartedAtTick >= currentState.restDuration
-        ? {
-            ...currentState,
-            mode: 'event',
-            eventStartedAtTick: input.tick,
-          }
-        : currentState;
+      nextState[agent.agentId] =
+        input.tick - currentState.defaultStartedAtTick >= currentState.restDuration
+          ? {
+              ...currentState,
+              mode: 'event',
+              eventStartedAtTick: input.tick,
+            }
+          : currentState;
       continue;
     }
 
-    nextState[agent.agentId] = currentState.eventStartedAtTick !== null &&
+    nextState[agent.agentId] =
+      currentState.eventStartedAtTick !== null &&
       input.tick - currentState.eventStartedAtTick >= currentState.eventDuration
-      ? createDeskAnimationState({
-          agentId: agent.agentId,
-          cycleIndex: currentState.cycleIndex + 1,
-          tick: input.tick,
-        })
-      : currentState;
+        ? createDeskAnimationState({
+            agentId: agent.agentId,
+            cycleIndex: currentState.cycleIndex + 1,
+            tick: input.tick,
+          })
+        : currentState;
   }
 
   return nextState;

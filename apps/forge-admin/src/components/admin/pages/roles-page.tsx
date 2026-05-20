@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 
+import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
 import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   addRoleCapability,
   createRole,
@@ -38,7 +41,10 @@ export function RolesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [roleForm, setRoleForm] = useState<RoleForm>(createEmptyRoleForm);
   const roles = useMemo(
-    () => [...(rolesQuery.data?.items ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
+    () =>
+      [...(rolesQuery.data?.items ?? [])].sort((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
     [rolesQuery.data?.items],
   );
   const toolSections = useMemo(
@@ -114,7 +120,9 @@ export function RolesPage() {
       />
 
       <section className="space-y-5">
-        {rolesQuery.isLoading && roles.length === 0 ? <AdminLoadingState label="Carregando papéis..." /> : null}
+        {rolesQuery.isLoading && roles.length === 0 ? (
+          <AdminLoadingState label="Carregando papéis..." />
+        ) : null}
         <div className="space-y-1">
           <div className="text-lg font-semibold tracking-[-0.03em]">Papéis cadastrados</div>
         </div>
@@ -181,8 +189,12 @@ export function RolesPage() {
           </Table>
         </div>
 
-        {rolesQuery.error ? <div className="text-sm text-destructive">{rolesQuery.error.message}</div> : null}
-        {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
+        {rolesQuery.error ? (
+          <div className="text-sm text-destructive">{rolesQuery.error.message}</div>
+        ) : null}
+        {deleteMutation.error ? (
+          <div className="text-sm text-destructive">{deleteMutation.error.message}</div>
+        ) : null}
       </section>
 
       <RoleDialog

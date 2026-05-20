@@ -132,8 +132,14 @@ describe('flushPendingRunMessages', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
     const now = Date.now();
-    state.pendingRunMessages.set('k2', makeEvent({ text: 'second', timestamp: now + 2, idempotencyKey: 'k2' }));
-    state.pendingRunMessages.set('k1', makeEvent({ text: 'first', timestamp: now + 1, idempotencyKey: 'k1' }));
+    state.pendingRunMessages.set(
+      'k2',
+      makeEvent({ text: 'second', timestamp: now + 2, idempotencyKey: 'k2' }),
+    );
+    state.pendingRunMessages.set(
+      'k1',
+      makeEvent({ text: 'first', timestamp: now + 1, idempotencyKey: 'k1' }),
+    );
 
     const result = manager.flushPendingRunMessages();
 
@@ -155,7 +161,12 @@ describe('flushPendingRunMessages', () => {
   it('skips originIdleOnly events when allowOriginIdleOnly is false', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
-    const idleEvent = makeEvent({ originIdleOnly: true, idleOnly: true, text: 'idle-msg', idempotencyKey: 'k1' });
+    const idleEvent = makeEvent({
+      originIdleOnly: true,
+      idleOnly: true,
+      text: 'idle-msg',
+      idempotencyKey: 'k1',
+    });
     state.pendingRunMessages.set('k1', idleEvent);
 
     const result = manager.flushPendingRunMessages();
@@ -168,7 +179,12 @@ describe('flushPendingRunMessages', () => {
   it('includes originIdleOnly events when allowOriginIdleOnly is true', () => {
     const state = makeState();
     const manager = createMessageManager(state, mockFormatter);
-    const idleEvent = makeEvent({ originIdleOnly: true, idleOnly: true, text: 'idle-msg', idempotencyKey: 'k1' });
+    const idleEvent = makeEvent({
+      originIdleOnly: true,
+      idleOnly: true,
+      text: 'idle-msg',
+      idempotencyKey: 'k1',
+    });
     state.pendingRunMessages.set('k1', idleEvent);
 
     const result = manager.flushPendingRunMessages({ allowOriginIdleOnly: true });
@@ -263,7 +279,12 @@ describe('resetFlushedRunEventKeys', () => {
 
 describe('shouldIncludePendingRunEventInFlush', () => {
   it('always returns true for non-message type events', () => {
-    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: false } });
+    const state = makeState({
+      currentFlushSettings: {
+        communicationDmFlushingEnabled: false,
+        communicationGroupFlushingEnabled: false,
+      },
+    });
     const manager = createMessageManager(state, mockFormatter);
     const event = makeEvent({ type: 'schedule:tick', groupMetadata: undefined });
 
@@ -271,15 +292,28 @@ describe('shouldIncludePendingRunEventInFlush', () => {
   });
 
   it('respects group flush setting for group conversations', () => {
-    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: false } });
+    const state = makeState({
+      currentFlushSettings: {
+        communicationDmFlushingEnabled: true,
+        communicationGroupFlushingEnabled: false,
+      },
+    });
     const manager = createMessageManager(state, mockFormatter);
-    const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'group' } });
+    const event = makeEvent({
+      type: 'message:dummy',
+      groupMetadata: { ConversationType: 'group' },
+    });
 
     expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(false);
   });
 
   it('respects dm flush setting for dm conversations', () => {
-    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: true } });
+    const state = makeState({
+      currentFlushSettings: {
+        communicationDmFlushingEnabled: false,
+        communicationGroupFlushingEnabled: true,
+      },
+    });
     const manager = createMessageManager(state, mockFormatter);
     const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'dm' } });
 
@@ -287,15 +321,28 @@ describe('shouldIncludePendingRunEventInFlush', () => {
   });
 
   it('returns true for group conversation when group flush is enabled', () => {
-    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: true } });
+    const state = makeState({
+      currentFlushSettings: {
+        communicationDmFlushingEnabled: false,
+        communicationGroupFlushingEnabled: true,
+      },
+    });
     const manager = createMessageManager(state, mockFormatter);
-    const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'group' } });
+    const event = makeEvent({
+      type: 'message:dummy',
+      groupMetadata: { ConversationType: 'group' },
+    });
 
     expect(manager.shouldIncludePendingRunEventInFlush(event)).toBe(true);
   });
 
   it('returns true for dm conversation when dm flush is enabled', () => {
-    const state = makeState({ currentFlushSettings: { communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: false } });
+    const state = makeState({
+      currentFlushSettings: {
+        communicationDmFlushingEnabled: true,
+        communicationGroupFlushingEnabled: false,
+      },
+    });
     const manager = createMessageManager(state, mockFormatter);
     const event = makeEvent({ type: 'message:dummy', groupMetadata: { ConversationType: 'dm' } });
 

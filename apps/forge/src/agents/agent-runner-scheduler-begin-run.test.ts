@@ -3,7 +3,11 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { ONE_MINUTE_MS } from './time-constants';
-import { createScheduler, type SchedulerState, type SchedulerDependencies } from './agent-runner-scheduler';
+import {
+  createScheduler,
+  type SchedulerState,
+  type SchedulerDependencies,
+} from './agent-runner-scheduler';
 
 function makeDefaultState(): SchedulerState {
   return {
@@ -17,10 +21,18 @@ function makeDefaultState(): SchedulerState {
   };
 }
 
-function depsWith(getRunnableContract: () => Promise<{ id: string; budgetUsd: number; endsAt: number } | null>): SchedulerDependencies {
+function depsWith(
+  getRunnableContract: () => Promise<{ id: string; budgetUsd: number; endsAt: number } | null>,
+): SchedulerDependencies {
   return {
     runtimeId: 'agent-1',
-    getSystemSettings: async () => ({ stepDelayEnabled: true, memoryLastMessagesFullEnabled: false, memoryLastMessagesCount: 10, communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: true }),
+    getSystemSettings: async () => ({
+      stepDelayEnabled: true,
+      memoryLastMessagesFullEnabled: false,
+      memoryLastMessagesCount: 10,
+      communicationDmFlushingEnabled: true,
+      communicationGroupFlushingEnabled: true,
+    }),
     getRunnableContract,
     getContractSpend: async () => 0,
     estimateStepCostUsd: async () => 0.01,
@@ -28,7 +40,10 @@ function depsWith(getRunnableContract: () => Promise<{ id: string; budgetUsd: nu
   };
 }
 
-function depsWithSettings(getRunnableContract: () => Promise<any>, settings: any): SchedulerDependencies {
+function depsWithSettings(
+  getRunnableContract: () => Promise<any>,
+  settings: any,
+): SchedulerDependencies {
   return {
     runtimeId: 'agent-1',
     getSystemSettings: async () => settings,
@@ -56,7 +71,9 @@ describe('beginRun', () => {
     getPendingCount = vi.fn<() => number>().mockReturnValue(0);
   });
 
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   const makeInput = () => ({
     reloadRuntime: false,
@@ -71,7 +88,10 @@ describe('beginRun', () => {
 
   it('returns early when stopped', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     scheduler.stop();
     await scheduler.beginRun(0, makeInput() as any);
     expect(onAgentRunning).not.toHaveBeenCalled();
@@ -80,7 +100,10 @@ describe('beginRun', () => {
 
   it('returns early when already starting a run', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     const p = scheduler.beginRun(0, makeInput() as any);
     await scheduler.beginRun(0, makeInput() as any);
     await p;
@@ -89,7 +112,10 @@ describe('beginRun', () => {
 
   it('sets isStartingRun=true during beginRun', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     expect(scheduler.isStartingRun()).toBe(false);
     const p = scheduler.beginRun(0, makeInput() as any);
     expect(scheduler.isStartingRun()).toBe(true);
@@ -99,14 +125,20 @@ describe('beginRun', () => {
 
   it('clears startingRunStartedAt after beginRun completes', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.beginRun(0, makeInput() as any);
     expect(scheduler.getStartingRunAgeMs()).toBe(0);
   });
 
   it('calls onReloadRuntime when reloadRuntime is true', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     const input = makeInput() as any;
     input.reloadRuntime = true;
     await scheduler.beginRun(0, input);
@@ -116,7 +148,10 @@ describe('beginRun', () => {
   it('onReloadRuntime receives the new run epoch (activeRunEpoch + 1)', async () => {
     const state = makeDefaultState();
     state.activeRunEpoch = 5;
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     const input = makeInput() as any;
     input.reloadRuntime = true;
     await scheduler.beginRun(5, input);
@@ -126,7 +161,10 @@ describe('beginRun', () => {
   it('sets state.instant to true on successful beginRun', async () => {
     const state = makeDefaultState();
     expect(state.instant).toBe(false);
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.beginRun(0, makeInput() as any);
     expect(state.instant).toBe(true);
   });
@@ -134,14 +172,20 @@ describe('beginRun', () => {
   it('resets backoff to ONE_MINUTE_MS on successful beginRun', async () => {
     const state = makeDefaultState();
     state.backoffMs = ONE_MINUTE_MS * 8;
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.beginRun(0, makeInput() as any);
     expect(scheduler.getBackoffMs()).toBe(ONE_MINUTE_MS);
   });
 
   it('calls setExecutionState(running) when markRunning is true', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     const input = makeInput() as any;
     input.markRunning = true;
     await scheduler.beginRun(0, input);
@@ -150,19 +194,29 @@ describe('beginRun', () => {
 
   it('does NOT call setExecutionState when markRunning is false', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.beginRun(0, makeInput() as any);
     expect(setExecutionState).not.toHaveBeenCalled();
   });
 
   it('calls onAgentRunning after onReloadRuntime', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     const order: string[] = [];
     const reloadSpy = vi.fn<() => Promise<void>>();
-    reloadSpy.mockImplementation(async () => { order.push('reloadRuntime'); });
+    reloadSpy.mockImplementation(async () => {
+      order.push('reloadRuntime');
+    });
     const runningSpy = vi.fn();
-    runningSpy.mockImplementation(() => { order.push('onAgentRunning'); });
+    runningSpy.mockImplementation(() => {
+      order.push('onAgentRunning');
+    });
     const input = makeInput();
     input.reloadRuntime = true;
     input.onReloadRuntime = reloadSpy;
@@ -174,7 +228,10 @@ describe('beginRun', () => {
   it('increments activeRunEpoch', async () => {
     const state = makeDefaultState();
     state.activeRunEpoch = 0;
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.beginRun(0, makeInput() as any);
     expect(state.activeRunEpoch).toBe(1);
   });
@@ -182,17 +239,25 @@ describe('beginRun', () => {
   it('resets activeStepEpoch to 0 on new run', async () => {
     const state = makeDefaultState();
     state.activeStepEpoch = 99;
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.beginRun(0, makeInput() as any);
     expect(state.activeStepEpoch).toBe(0);
   });
 
   it('does not throw when queueNextStep rejects', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWithSettings(
-      async () => { throw new Error('contract error'); },
-      { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
-    ));
+    const scheduler = createScheduler(
+      state,
+      depsWithSettings(
+        async () => {
+          throw new Error('contract error');
+        },
+        { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
+      ),
+    );
     await expect(scheduler.beginRun(0, makeInput() as any)).resolves.toBeUndefined();
   });
 });
@@ -200,12 +265,20 @@ describe('beginRun', () => {
 // ─── queueNextStep() tests ─────────────────────────────────────────────────────
 
 describe('queueNextStep', () => {
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('returns early when stopped', async () => {
     const state = makeDefaultState();
     let called = false;
-    const scheduler = createScheduler(state, depsWith(async () => { called = true; return null; }));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => {
+        called = true;
+        return null;
+      }),
+    );
     scheduler.stop(); // sets internal stopped=true
     await scheduler.queueNextStep();
     expect(called).toBe(false);
@@ -214,7 +287,13 @@ describe('queueNextStep', () => {
   it('returns early when executing', async () => {
     const state = makeDefaultState();
     let called = false;
-    const scheduler = createScheduler(state, depsWith(async () => { called = true; return null; }));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => {
+        called = true;
+        return null;
+      }),
+    );
     scheduler.setExecuting(true);
     await scheduler.queueNextStep();
     expect(called).toBe(false);
@@ -224,7 +303,13 @@ describe('queueNextStep', () => {
     const state = makeDefaultState();
     state.nextStepAt = Date.now() + 60_000;
     let called = false;
-    const scheduler = createScheduler(state, depsWith(async () => { called = true; return null; }));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => {
+        called = true;
+        return null;
+      }),
+    );
     await scheduler.queueNextStep();
     expect(called).toBe(false);
   });
@@ -232,7 +317,10 @@ describe('queueNextStep', () => {
   it('returns early on stale run', async () => {
     const state = makeDefaultState();
     state.activeRunEpoch = 5;
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     scheduler.startNewRunEpoch(); // epoch 6, stale relative to state.activeRunEpoch
     await scheduler.queueNextStep();
     expect(scheduler.isTimerActive()).toBe(false);
@@ -242,17 +330,26 @@ describe('queueNextStep', () => {
     const state = makeDefaultState();
     const mockContract = { id: 'c1', budgetUsd: 100, endsAt: Date.now() + 60_000 };
     let called = false;
-    const scheduler = createScheduler(state, depsWithSettings(
-      async () => { called = true; return mockContract; },
-      { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
-    ));
+    const scheduler = createScheduler(
+      state,
+      depsWithSettings(
+        async () => {
+          called = true;
+          return mockContract;
+        },
+        { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
+      ),
+    );
     await scheduler.queueNextStep();
     expect(called).toBe(true);
   });
 
   it('returns early when contract is null (idle)', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     await scheduler.queueNextStep();
     expect(scheduler.isTimerActive()).toBe(false);
   });
@@ -260,10 +357,13 @@ describe('queueNextStep', () => {
   it('sets nextStepAt when contract exists and planning succeeds', async () => {
     const state = makeDefaultState();
     const mockContract = { id: 'c1', budgetUsd: 100, endsAt: Date.now() + 60_000 };
-    const scheduler = createScheduler(state, depsWithSettings(
-      async () => mockContract,
-      { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
-    ));
+    const scheduler = createScheduler(
+      state,
+      depsWithSettings(async () => mockContract, {
+        stepDelayEnabled: false,
+        memoryLastMessagesFullEnabled: false,
+      }),
+    );
     await scheduler.queueNextStep();
     expect(state.nextStepAt).toBeGreaterThan(Date.now() - 1000);
   });
@@ -273,10 +373,13 @@ describe('queueNextStep', () => {
     try {
       const state = makeDefaultState();
       const mockContract = { id: 'c1', budgetUsd: 100, endsAt: Date.now() + 60_000 };
-      const scheduler = createScheduler(state, depsWithSettings(
-        async () => mockContract,
-        { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
-      ));
+      const scheduler = createScheduler(
+        state,
+        depsWithSettings(async () => mockContract, {
+          stepDelayEnabled: false,
+          memoryLastMessagesFullEnabled: false,
+        }),
+      );
       // Advance to epoch 3
       scheduler.startNewRunEpoch(); // epoch 1
       scheduler.startNewRunEpoch(); // epoch 2
@@ -297,7 +400,10 @@ describe('queueNextStep', () => {
 
   it('does not invoke stepCallback when contract is null', async () => {
     const state = makeDefaultState();
-    const scheduler = createScheduler(state, depsWith(async () => null));
+    const scheduler = createScheduler(
+      state,
+      depsWith(async () => null),
+    );
     const stepCallback = vi.fn<() => Promise<void>>();
     scheduler.setStepCallback(stepCallback);
     await scheduler.queueNextStep();
@@ -312,10 +418,13 @@ describe('queueNextStep', () => {
     const state = makeDefaultState();
     state.activeRunEpoch = 5;
     const mockContract = { id: 'c1', budgetUsd: 100, endsAt: Date.now() + 60_000 };
-    const scheduler = createScheduler(state, depsWithSettings(
-      async () => mockContract,
-      { stepDelayEnabled: false, memoryLastMessagesFullEnabled: false },
-    ));
+    const scheduler = createScheduler(
+      state,
+      depsWithSettings(async () => mockContract, {
+        stepDelayEnabled: false,
+        memoryLastMessagesFullEnabled: false,
+      }),
+    );
     // Stale the run
     scheduler.startNewRunEpoch(); // epoch 6, epoch 5 is now stale
     const stepCallback = vi.fn<() => Promise<void>>();

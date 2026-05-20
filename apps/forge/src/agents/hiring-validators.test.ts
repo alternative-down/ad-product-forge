@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { normalizeAgentName, validateGeneratedAgentProfile, isToolResultWithOutput, validateHireAgentInput } from './hiring-validators';
+import {
+  normalizeAgentName,
+  validateGeneratedAgentProfile,
+  isToolResultWithOutput,
+  validateHireAgentInput,
+} from './hiring-validators';
 
 // ─── Mock setup ────────────────────────────────────────────────────────────────
 
@@ -83,7 +88,10 @@ describe('validateGeneratedAgentProfile', () => {
       backstory: 'Expert',
     } as any);
     expect(result.valid).toBe(false);
-    if (!result.valid) { expect(result.hint).toContain('send_message'); expect(result.hint).toContain('list_contacts'); }
+    if (!result.valid) {
+      expect(result.hint).toContain('send_message');
+      expect(result.hint).toContain('list_contacts');
+    }
   });
 
   it('returns valid for profile with no secondary goals', () => {
@@ -160,7 +168,10 @@ describe('validateHireAgentInput', () => {
     });
     const result = await validateHireAgentInput(mockCapabilities, 'developer');
     expect(result.valid).toBe(true);
-    if (result.valid) { expect((result as any).roleId).toBe('developer'); expect((result as any).roleName).toBe('Developer'); }
+    if (result.valid) {
+      expect((result as any).roleId).toBe('developer');
+      expect((result as any).roleName).toBe('Developer');
+    }
   });
 
   it('returns invalid when role is missing base tools', async () => {
@@ -182,7 +193,9 @@ describe('validateHireAgentInput', () => {
     });
     const result = await validateHireAgentInput(mockCapabilities, 'incomplete-role');
     expect(result.valid).toBe(false);
-    expect((result as { valid: false; error: string; hint?: string }).hint).toContain('Call manage_role_capabilities');
+    expect((result as { valid: false; error: string; hint?: string }).hint).toContain(
+      'Call manage_role_capabilities',
+    );
   });
 
   it('includes roleDescription when available', async () => {
@@ -200,7 +213,9 @@ describe('validateHireAgentInput', () => {
     });
     const result = await validateHireAgentInput(mockCapabilities, 'developer');
     expect(result.valid).toBe(true);
-    expect((result as { valid: true; roleDescription?: string }).roleDescription).toBe('Fullstack developer');
+    expect((result as { valid: true; roleDescription?: string }).roleDescription).toBe(
+      'Fullstack developer',
+    );
   });
 
   it('excludes roleDescription when undefined', async () => {

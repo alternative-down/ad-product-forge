@@ -1,21 +1,20 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from 'drizzle-orm';
 
-import type { CommunicationFile } from "@forge-runtime/core";
-import { forgeDebug } from "@forge-runtime/core";
+import type { CommunicationFile } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 
-
-import type {Database} from "../database/schema";
+import type { Database } from '../database/schema';
 import {
   internalChatAccounts,
   internalChatConversations,
   internalChatMessageReads,
   internalChatMessages,
-} from "../database/schema";
+} from '../database/schema';
 import type {
   InternalChatGroupMember,
   InternalChatGroupParticipant,
-} from "./internal-chat-helpers";
-import { buildGroupMetadata } from "./internal-chat-helpers";
+} from './internal-chat-helpers';
+import { buildGroupMetadata } from './internal-chat-helpers';
 
 export interface InternalChatHandler {
   (message: InternalChatDeliveryMessage): Promise<void>;
@@ -32,7 +31,7 @@ export interface InternalChatDeliveryMessage {
   attachments: CommunicationFile[];
   createdAt: string;
   metadata: {
-    conversationType: "dm" | "group";
+    conversationType: 'dm' | 'group';
     groupMembers?: InternalChatGroupMember[];
   };
 }
@@ -57,7 +56,7 @@ export interface InternalChatConnection {
    */
   deliverToParticipants(params: {
     participants: InternalChatGroupParticipant[];
-    conversation: { id: string; name: string; type: "dm" | "group" };
+    conversation: { id: string; name: string; type: 'dm' | 'group' };
     messageId: string;
     author: { id: string; displayName: string; slug: string };
     content: string;
@@ -90,10 +89,10 @@ function createConnectionImpl(
 
     void replayUnreadMessages(agentId, handler).catch((error) => {
       forgeDebug({
-        scope: "internal-chat",
-        level: "error",
+        scope: 'internal-chat',
+        level: 'error',
         agentId,
-        message: "Failed to replay unread messages",
+        message: 'Failed to replay unread messages',
         context: { error: error instanceof Error ? error.message : String(error) },
       });
     });
@@ -112,10 +111,7 @@ function createConnectionImpl(
     handlers.delete(agentId);
   }
 
-  function deliverMessage(
-    agentId: string,
-    message: InternalChatDeliveryMessage,
-  ): boolean {
+  function deliverMessage(agentId: string, message: InternalChatDeliveryMessage): boolean {
     const handler = handlers.get(agentId);
     if (!handler) {
       return false;
@@ -125,10 +121,7 @@ function createConnectionImpl(
     return true;
   }
 
-  async function replayUnreadMessages(
-    agentId: string,
-    handler: InternalChatHandler,
-  ) {
+  async function replayUnreadMessages(agentId: string, handler: InternalChatHandler) {
     const unreadRows = await db
       .select({
         conversationId: internalChatMessages.conversationId,
@@ -155,12 +148,10 @@ function createConnectionImpl(
         eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
       )
       .where(
-        and(
-          eq(internalChatMessageReads.agentId, agentId),
-          isNull(internalChatMessageReads.readAt),
-        ),
+        and(eq(internalChatMessageReads.agentId, agentId), isNull(internalChatMessageReads.readAt)),
       )
-      .orderBy(internalChatMessages.createdAt).all();
+      .orderBy(internalChatMessages.createdAt)
+      .all();
 
     if (unreadRows.length === 0) {
       return;
@@ -181,7 +172,7 @@ function createConnectionImpl(
         messageId: row.messageId,
         conversationName:
           row.conversationName ??
-          (row.conversationType === "dm" ? row.authorDisplayName : undefined),
+          (row.conversationType === 'dm' ? row.authorDisplayName : undefined),
         authorId: row.authorAccountId,
         authorDisplayName: row.authorDisplayName,
         authorUsername: row.authorSlug,
@@ -190,29 +181,27 @@ function createConnectionImpl(
         createdAt: new Date(row.createdAt).toISOString(),
         metadata: {
           conversationType: row.conversationType as any,
-          groupMembers: (row.conversationType as string) === "group"
-            ? participants.map((participant) => ({
-                participantId: participant.accountId,
-                agentId: (participant.agentId ?? null) as string,
-                slug: participant.slug,
-                displayName: participant.displayName,
-              }))
-            : undefined,
+          groupMembers:
+            (row.conversationType as string) === 'group'
+              ? participants.map((participant) => ({
+                  participantId: participant.accountId,
+                  agentId: (participant.agentId ?? null) as string,
+                  slug: participant.slug,
+                  displayName: participant.displayName,
+                }))
+              : undefined,
         } as any,
       });
     }
   }
 
-  function deliverToHandler(
-    agentId: string,
-    message: InternalChatDeliveryMessage,
-  ): boolean {
+  function deliverToHandler(agentId: string, message: InternalChatDeliveryMessage): boolean {
     return deliverMessage(agentId, message);
   }
 
   function deliverToParticipants(params: {
     participants: InternalChatGroupParticipant[];
-    conversation: { id: string; name: string; type: "dm" | "group" };
+    conversation: { id: string; name: string; type: 'dm' | 'group' };
     messageId: string;
     author: { id: string; displayName: string; slug: string };
     content: string;
@@ -232,7 +221,11 @@ function createConnectionImpl(
       ) {
         continue;
       }
-      if (participant.agentId === null || participant.agentId === undefined || !handlers.has(participant.agentId)) {
+      if (
+        participant.agentId === null ||
+        participant.agentId === undefined ||
+        !handlers.has(participant.agentId)
+      ) {
         continue;
       }
 
@@ -249,7 +242,7 @@ function createConnectionImpl(
         metadata: {
           conversationType: params.conversation.type,
           groupMembers:
-            params.conversation.type === "group"
+            params.conversation.type === 'group'
               ? buildGroupMetadata(params.participants)
               : undefined,
         } as any,

@@ -75,7 +75,8 @@ function formatPendingRunEventItem(event: AgentWakeEvent) {
     .filter(Boolean)
     .join('');
 
-  const suffix = attachments !== null && attachments !== undefined ? ` (attachments: ${attachments})` : '';
+  const suffix =
+    attachments !== null && attachments !== undefined ? ` (attachments: ${attachments})` : '';
 
   if (text.includes('\n')) {
     return actor
@@ -92,7 +93,9 @@ function describeWakeGroup(event: AgentWakeEvent) {
   if (event.type.startsWith('message:')) {
     const targetKey = normalizeProviderCode(event.groupMetadata?.TargetKey) ?? event.groupKey;
     const lines = [
-      ...(event.groupMetadata?.Provider !== null && event.groupMetadata?.Provider !== undefined ? [`provider: ${event.groupMetadata.Provider}`] : []),
+      ...(event.groupMetadata?.Provider !== null && event.groupMetadata?.Provider !== undefined
+        ? [`provider: ${event.groupMetadata.Provider}`]
+        : []),
       `targetKey: ${targetKey}`,
     ];
 
@@ -100,11 +103,17 @@ function describeWakeGroup(event: AgentWakeEvent) {
       lines.push('conversationType: group');
     }
 
-    if (event.groupMetadata?.ConversationName !== null && event.groupMetadata?.ConversationName !== undefined) {
+    if (
+      event.groupMetadata?.ConversationName !== null &&
+      event.groupMetadata?.ConversationName !== undefined
+    ) {
       lines.push(`conversationName: ${event.groupMetadata.ConversationName}`);
     }
 
-    if (event.groupMetadata?.Participants !== null && event.groupMetadata?.Participants !== undefined) {
+    if (
+      event.groupMetadata?.Participants !== null &&
+      event.groupMetadata?.Participants !== undefined
+    ) {
       lines.push(`participants: ${event.groupMetadata.Participants}`);
     }
 
@@ -148,9 +157,7 @@ function normalizeProviderCode(value?: string) {
     return value;
   }
 
-  return value
-    .replace(/^conv_/, '')
-    .replace(/^msg_/, '');
+  return value.replace(/^conv_/, '').replace(/^msg_/, '');
 }
 
 function describeWakeActor(event: AgentWakeEvent) {

@@ -14,7 +14,14 @@ const mockConversations = [
     targetKey: 'conv-1',
     name: 'Team Chat',
     messages: [
-      { messageId: 'm1', createdAt: '2026-04-29T10:00:00Z', unread: false, authorDisplayName: 'Alice', content: 'Hello world', attachments: [] },
+      {
+        messageId: 'm1',
+        createdAt: '2026-04-29T10:00:00Z',
+        unread: false,
+        authorDisplayName: 'Alice',
+        content: 'Hello world',
+        attachments: [],
+      },
     ],
     participants: ['alice', 'bob'],
     latestMessageAt: '2026-04-29T10:00:00Z',
@@ -22,15 +29,38 @@ const mockConversations = [
   },
 ];
 const mockMessages = [
-  { messageId: 'm1', createdAt: '2026-04-29T10:00:00Z', unread: false, authorDisplayName: 'Alice', content: 'Hello', attachments: [], provider: 'internal-chat', targetKey: 'conv-1' },
+  {
+    messageId: 'm1',
+    createdAt: '2026-04-29T10:00:00Z',
+    unread: false,
+    authorDisplayName: 'Alice',
+    content: 'Hello',
+    attachments: [],
+    provider: 'internal-chat',
+    targetKey: 'conv-1',
+  },
 ];
 const mockConv = {
   provider: 'internal-chat',
   targetKey: 'conv-1',
   name: 'Team',
   messages: [
-    { messageId: 'm1', createdAt: '2026-04-29T10:00:00Z', unread: false, authorDisplayName: 'Alice', content: 'Hello world and some extra content', attachments: [] },
-    { messageId: 'm2', createdAt: '2026-04-29T10:01:00Z', unread: true, authorDisplayName: 'Bob', content: 'Reply here', attachments: [{ type: 'file' as const, name: 'doc.pdf', url: 'https://example.com/doc.pdf' }] },
+    {
+      messageId: 'm1',
+      createdAt: '2026-04-29T10:00:00Z',
+      unread: false,
+      authorDisplayName: 'Alice',
+      content: 'Hello world and some extra content',
+      attachments: [],
+    },
+    {
+      messageId: 'm2',
+      createdAt: '2026-04-29T10:01:00Z',
+      unread: true,
+      authorDisplayName: 'Bob',
+      content: 'Reply here',
+      attachments: [{ type: 'file' as const, name: 'doc.pdf', url: 'https://example.com/doc.pdf' }],
+    },
   ],
   participants: ['alice', 'bob', 'charlie', 'david', 'eve', 'frank', 'grace', 'henry', 'iris'],
   latestMessageAt: '2026-04-29T10:01:00Z',
@@ -118,22 +148,37 @@ describe('list_contacts tool', () => {
 describe('upsert_contact tool', () => {
   it('returns contact on success', async () => {
     const { upsert_contact } = tools();
-    const result = await upsert_contact.execute!({ slug: 'john', displayName: 'John Doe', description: 'Dev' });
+    const result = await upsert_contact.execute!({
+      slug: 'john',
+      displayName: 'John Doe',
+      description: 'Dev',
+    });
     expect(result).toMatchObject({ valid: true, slug: 'new-slug', displayName: 'New Contact' });
-    expect(mockUpsertContact).toHaveBeenCalledWith({ slug: 'john', displayName: 'John Doe', description: 'Dev' });
+    expect(mockUpsertContact).toHaveBeenCalledWith({
+      slug: 'john',
+      displayName: 'John Doe',
+      description: 'Dev',
+    });
   });
 
   it('omits description when not provided', async () => {
     const { upsert_contact } = tools();
     await upsert_contact.execute!({ slug: 'jane', displayName: 'Jane' });
-    expect(mockUpsertContact).toHaveBeenCalledWith({ slug: 'jane', displayName: 'Jane', description: undefined });
+    expect(mockUpsertContact).toHaveBeenCalledWith({
+      slug: 'jane',
+      displayName: 'Jane',
+      description: undefined,
+    });
   });
 
   it('returns error on non-Error throw', async () => {
     mockUpsertContact.mockRejectedValueOnce('boom');
     const { upsert_contact } = tools();
     const result = await upsert_contact.execute!({ slug: 'x', displayName: 'Y' });
-    expect(result).toMatchObject({ valid: false, error: 'An unknown error occurred while upserting the contact' });
+    expect(result).toMatchObject({
+      valid: false,
+      error: 'An unknown error occurred while upserting the contact',
+    });
   });
 
   it('returns specific error message on Error instance', async () => {
@@ -159,13 +204,21 @@ describe('list_conversations tool', () => {
   it('passes provider and unread filters', async () => {
     const { list_conversations } = tools();
     await list_conversations.execute!({ provider: 'slack', unread: true, limit: 50 });
-    expect(mockListConversations).toHaveBeenCalledWith({ provider: 'slack', unread: true, limit: 20 });
+    expect(mockListConversations).toHaveBeenCalledWith({
+      provider: 'slack',
+      unread: true,
+      limit: 20,
+    });
   });
 
   it('caps limit at MAX_RETURNED_CONVERSATIONS (20)', async () => {
     const { list_conversations } = tools();
     await list_conversations.execute!({ limit: 999 });
-    expect(mockListConversations).toHaveBeenCalledWith({ provider: undefined, unread: undefined, limit: 20 });
+    expect(mockListConversations).toHaveBeenCalledWith({
+      provider: undefined,
+      unread: undefined,
+      limit: 20,
+    });
   });
 
   it('returns error on failure', async () => {
@@ -178,10 +231,12 @@ describe('list_conversations tool', () => {
 
 describe('summarizeConversation (via list_conversations)', () => {
   it('truncates long message content to 280 chars', async () => {
-    mockListConversations.mockResolvedValueOnce([{
-      ...mockConv,
-      messages: [{ ...mockConv.messages[0], content: 'A'.repeat(400), attachments: [] }],
-    }]);
+    mockListConversations.mockResolvedValueOnce([
+      {
+        ...mockConv,
+        messages: [{ ...mockConv.messages[0], content: 'A'.repeat(400), attachments: [] }],
+      },
+    ]);
     const { list_conversations } = tools();
     const result = await list_conversations.execute!({});
     expect(result.conversations[0].messages[0].content.length).toBeLessThanOrEqual(280);
@@ -196,15 +251,45 @@ describe('summarizeConversation (via list_conversations)', () => {
   });
 
   it('marks hasMoreMessages when more than 3 messages', async () => {
-    mockListConversations.mockResolvedValueOnce([{
-      ...mockConv,
-      messages: [
-        { messageId: 'm1', createdAt: '2026-01-01', unread: false, authorDisplayName: 'A', content: 'one', attachments: [] },
-        { messageId: 'm2', createdAt: '2026-01-02', unread: false, authorDisplayName: 'A', content: 'two', attachments: [] },
-        { messageId: 'm3', createdAt: '2026-01-03', unread: false, authorDisplayName: 'A', content: 'three', attachments: [] },
-        { messageId: 'm4', createdAt: '2026-01-04', unread: false, authorDisplayName: 'A', content: 'four', attachments: [] },
-      ],
-    }]);
+    mockListConversations.mockResolvedValueOnce([
+      {
+        ...mockConv,
+        messages: [
+          {
+            messageId: 'm1',
+            createdAt: '2026-01-01',
+            unread: false,
+            authorDisplayName: 'A',
+            content: 'one',
+            attachments: [],
+          },
+          {
+            messageId: 'm2',
+            createdAt: '2026-01-02',
+            unread: false,
+            authorDisplayName: 'A',
+            content: 'two',
+            attachments: [],
+          },
+          {
+            messageId: 'm3',
+            createdAt: '2026-01-03',
+            unread: false,
+            authorDisplayName: 'A',
+            content: 'three',
+            attachments: [],
+          },
+          {
+            messageId: 'm4',
+            createdAt: '2026-01-04',
+            unread: false,
+            authorDisplayName: 'A',
+            content: 'four',
+            attachments: [],
+          },
+        ],
+      },
+    ]);
     const { list_conversations } = tools();
     const result = await list_conversations.execute!({});
     expect(result.conversations[0].hasMoreMessages).toBe(true);
@@ -213,7 +298,9 @@ describe('summarizeConversation (via list_conversations)', () => {
   });
 
   it('hasMoreMessages false with 3 or fewer messages', async () => {
-    mockListConversations.mockResolvedValueOnce([{ ...mockConv, messages: mockConv.messages.slice(0, 2) }]);
+    mockListConversations.mockResolvedValueOnce([
+      { ...mockConv, messages: mockConv.messages.slice(0, 2) },
+    ]);
     const { list_conversations } = tools();
     const result = await list_conversations.execute!({});
     expect(result.conversations[0].hasMoreMessages).toBe(false);
@@ -230,37 +317,67 @@ describe('summarizeConversation (via list_conversations)', () => {
 describe('get_messages tool', () => {
   it('returns messages on success', async () => {
     const { get_messages } = tools();
-    const result = await get_messages.execute!({ provider: 'slack', targetKey: 'channel-1', limit: 50, offset: 10 });
+    const result = await get_messages.execute!({
+      provider: 'slack',
+      targetKey: 'channel-1',
+      limit: 50,
+      offset: 10,
+    });
     expect(result).toEqual({ valid: true, messages: mockMessages });
   });
 
   it('uses defaults for optional fields', async () => {
     const { get_messages } = tools();
     await get_messages.execute!({ provider: 'x', targetKey: 'y' });
-    expect(mockGetMessages).toHaveBeenCalledWith({ provider: 'x', targetKey: 'y', limit: 100, offset: 0, query: undefined, dateFrom: undefined, dateTo: undefined });
+    expect(mockGetMessages).toHaveBeenCalledWith({
+      provider: 'x',
+      targetKey: 'y',
+      limit: 100,
+      offset: 0,
+      query: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
+    });
   });
 
   it('returns provider-hint on ProviderNotAvailable error', async () => {
     mockGetMessages.mockRejectedValueOnce(new Error('Provider not available: slack'));
     const { get_messages } = tools();
     const result = await get_messages.execute!({ provider: 'slack', targetKey: 'ch' });
-    expect(result).toMatchObject({ valid: false, hint: 'Use a provider configured for this agent.' });
+    expect(result).toMatchObject({
+      valid: false,
+      hint: 'Use a provider configured for this agent.',
+    });
   });
 
   it('returns generic hint on other errors', async () => {
     mockGetMessages.mockRejectedValueOnce(new Error('read failed'));
     const { get_messages } = tools();
     const result = await get_messages.execute!({ provider: 'x', targetKey: 'y' });
-    expect(result).toMatchObject({ valid: false, error: 'read failed', hint: 'Verify the provider and targetKey are valid.' });
+    expect(result).toMatchObject({
+      valid: false,
+      error: 'read failed',
+      hint: 'Verify the provider and targetKey are valid.',
+    });
   });
 });
 
 describe('send_message tool', () => {
   it('returns delivered result on success', async () => {
     const { send_message } = tools();
-    const result = await send_message.execute!({ provider: 'slack', targetKey: 'ch-1', content: 'Hello!', attachments: [] });
+    const result = await send_message.execute!({
+      provider: 'slack',
+      targetKey: 'ch-1',
+      content: 'Hello!',
+      attachments: [],
+    });
     expect(result).toEqual({ delivered: true });
-    expect(mockSendMessage).toHaveBeenCalledWith({ provider: 'slack', targetKey: 'ch-1', content: 'Hello!', attachments: [] });
+    expect(mockSendMessage).toHaveBeenCalledWith({
+      provider: 'slack',
+      targetKey: 'ch-1',
+      content: 'Hello!',
+      attachments: [],
+    });
   });
 
   it('returns error on failure', async () => {

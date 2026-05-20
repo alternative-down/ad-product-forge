@@ -15,13 +15,15 @@ const internalChatCredentialsSchema = z.object({
 
 const discordChannelCredentialsSchema = z.object({
   token: z.string(),
-  channels: z.array(
-    z.object({
-      channelId: z.string(),
-      channelName: z.string().nullish(),
-      respondToMentionsOnly: z.boolean(),
-    }),
-  ).nullish(),
+  channels: z
+    .array(
+      z.object({
+        channelId: z.string(),
+        channelName: z.string().nullish(),
+        respondToMentionsOnly: z.boolean(),
+      }),
+    )
+    .nullish(),
 });
 
 const discordLegacyCredentialsSchema = z.object({
@@ -106,14 +108,20 @@ export async function loadCommunicationProviders(
     const internalChat = internalChatCredentialsSchema.parse(credentials['internal-chat']);
 
     if (!config?.internalChat) {
-      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'loadProvider: internalChat service required' });
+      forgeDebug({
+        scope: 'provider-loader',
+        level: 'error',
+        message: 'loadProvider: internalChat service required',
+      });
       throw new Error('Internal chat provider requires the internalChat service');
     }
 
-    providers.push(createInternalChatProvider({
-      agentId: internalChat.agentId,
-      internalChat: config.internalChat,
-    }));
+    providers.push(
+      createInternalChatProvider({
+        agentId: internalChat.agentId,
+        internalChat: config.internalChat,
+      }),
+    );
   }
 
   if (credentials.discord) {
@@ -128,7 +136,12 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'provider-loader',
+        level: 'warn',
+        message: 'Skipping Discord provider because it failed to start',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
     }
   }
 
@@ -140,10 +153,15 @@ export async function loadCommunicationProviders(
           imap: email.imap,
           smtp: email.smtp,
           bcc: email.bcc ?? undefined,
-        })
+        }),
       );
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'Failed to load email provider', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'provider-loader',
+        level: 'error',
+        message: 'Failed to load email provider',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
       throw error;
     }
   }

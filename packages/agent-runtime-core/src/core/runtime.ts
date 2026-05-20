@@ -6,10 +6,7 @@ import {
   type ActionExecutionStrategy,
 } from './action-execution.js';
 import { RuntimeActionRegistry, type RuntimeActionDefinition } from './actions.js';
-import {
-  createDefaultContinuationResolver,
-  type ContinuationResolver,
-} from './continuation.js';
+import { createDefaultContinuationResolver, type ContinuationResolver } from './continuation.js';
 import { createDefaultContextFormatter, type ContextFormatter } from './context-formatters.js';
 import {
   createConsumeAllInputBatchingStrategy,
@@ -86,7 +83,9 @@ export class AgentRuntime {
     this.observers.add(observer);
   }
 
-  async dispatch<TPayload>(input: Omit<RuntimeInput<TPayload>, 'receivedAt'> & { receivedAt?: string }) {
+  async dispatch<TPayload>(
+    input: Omit<RuntimeInput<TPayload>, 'receivedAt'> & { receivedAt?: string },
+  ) {
     const normalizedInput: RuntimeInput<TPayload> = {
       ...input,
       receivedAt: input.receivedAt ?? new Date().toISOString(),
@@ -152,7 +151,11 @@ export class AgentRuntime {
         });
       }
 
-      const actionResults = await this.executeActions(stepId, stepNumber, modelResponse.actionRequests);
+      const actionResults = await this.executeActions(
+        stepId,
+        stepNumber,
+        modelResponse.actionRequests,
+      );
 
       if (actionResults.length > 0) {
         for (const plugin of this.plugins.list()) {
@@ -381,16 +384,14 @@ export class AgentRuntime {
     return context;
   }
 
-  private async resolveModelRequest(
-    input: {
-      pendingInputs: RuntimeInput[];
-      runtimeId: string;
-      stepId: string;
-      stepNumber: number;
-      context: StepContextEntry[];
-      actions: StepActionDescriptor[];
-    },
-  ): Promise<StepModelRequest> {
+  private async resolveModelRequest(input: {
+    pendingInputs: RuntimeInput[];
+    runtimeId: string;
+    stepId: string;
+    stepNumber: number;
+    context: StepContextEntry[];
+    actions: StepActionDescriptor[];
+  }): Promise<StepModelRequest> {
     let resolvedRequest: StepModelRequest = {
       runtimeId: input.runtimeId,
       stepId: input.stepId,
@@ -419,9 +420,9 @@ export class AgentRuntime {
         ...partialRequest,
         providerOptions: partialRequest.providerOptions
           ? {
-            ...(resolvedRequest.providerOptions ?? {}),
-            ...partialRequest.providerOptions,
-          }
+              ...(resolvedRequest.providerOptions ?? {}),
+              ...partialRequest.providerOptions,
+            }
           : resolvedRequest.providerOptions,
       };
     }
@@ -434,13 +435,13 @@ export class AgentRuntime {
     stepNumber: number,
     actionRequests: Array<{ name: string; input: Record<string, unknown> }>,
   ) {
-    return this.actionExecution.execute(actionRequests, (actionRequest) => (
+    return this.actionExecution.execute(actionRequests, (actionRequest) =>
       this.actions.execute(actionRequest.name, actionRequest.input, {
         runtimeId: this.runtimeId,
         stepId,
         stepNumber,
-      })
-    ));
+      }),
+    );
   }
 
   private async setStatus(status: RuntimeStatus) {

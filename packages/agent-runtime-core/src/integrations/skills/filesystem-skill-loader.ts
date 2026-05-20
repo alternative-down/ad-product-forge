@@ -51,7 +51,7 @@ async function findSkillFiles(basePath: string): Promise<string[]> {
     const absolutePath = join(basePath, entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...await findSkillFiles(absolutePath));
+      files.push(...(await findSkillFiles(absolutePath)));
       continue;
     }
 

@@ -1,4 +1,7 @@
-import { applyStepModelMiddlewares, type StepModelMiddleware } from '../adapters/model-middleware.js';
+import {
+  applyStepModelMiddlewares,
+  type StepModelMiddleware,
+} from '../adapters/model-middleware.js';
 import type { RuntimeActionDefinition } from '../../core/actions.js';
 import { RuntimeEventStream } from '../../core/runtime-events.js';
 import { AgentRuntime, type AgentRuntimeOptions } from '../../core/runtime.js';
@@ -45,23 +48,28 @@ export type RuntimeHost = {
 export function createRuntimeHost(options: RuntimeHostOptions): RuntimeHost {
   const runtimeOptions: AgentRuntimeOptions = options.modelMiddlewares?.length
     ? {
-      ...options.runtime,
-      model: applyStepModelMiddlewares(options.runtime.model, options.modelMiddlewares),
-    }
+        ...options.runtime,
+        model: applyStepModelMiddlewares(options.runtime.model, options.modelMiddlewares),
+      }
     : options.runtime;
   const runtime = new AgentRuntime(runtimeOptions);
   const journal = options.journal ?? new InMemoryRuntimeJournal();
   const notes = options.notes ?? new InMemoryContextNoteStore();
-  const scheduler = options.schedulerInstance ?? (options.scheduler ? new InMemoryRuntimeScheduler() : null);
+  const scheduler =
+    options.schedulerInstance ?? (options.scheduler ? new InMemoryRuntimeScheduler() : null);
   const snapshotStore = options.snapshotStore ?? null;
-  const eventStream = options.eventStream === true || options.messageStream === true
-    ? (options.eventStream instanceof RuntimeEventStream ? options.eventStream : new RuntimeEventStream())
-    : options.eventStream ?? null;
-  const messageStream = options.messageStream === true
-    ? new RuntimeMessageStream({
-      subscribe: eventStream!.subscribe.bind(eventStream),
-    })
-    : options.messageStream ?? null;
+  const eventStream =
+    options.eventStream === true || options.messageStream === true
+      ? options.eventStream instanceof RuntimeEventStream
+        ? options.eventStream
+        : new RuntimeEventStream()
+      : (options.eventStream ?? null);
+  const messageStream =
+    options.messageStream === true
+      ? new RuntimeMessageStream({
+          subscribe: eventStream!.subscribe.bind(eventStream),
+        })
+      : (options.messageStream ?? null);
 
   runtime.use(createRuntimeJournalPlugin({ journal }));
   runtime.use(createContextNotesPlugin({ store: notes }));

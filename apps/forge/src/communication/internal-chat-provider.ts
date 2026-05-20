@@ -1,4 +1,8 @@
-import { forgeDebug, type CommunicationInboundMessage, type CommunicationProvider } from '@forge-runtime/core';
+import {
+  forgeDebug,
+  type CommunicationInboundMessage,
+  type CommunicationProvider,
+} from '@forge-runtime/core';
 
 import type { InternalChatService } from './internal-chat-service';
 
@@ -70,7 +74,12 @@ export function createInternalChatProvider(input: {
       const account = await input.internalChat.getAccountByAgentId(input.agentId);
 
       if (account === null || account === undefined) {
-        forgeDebug({ scope: 'internal-chat-provider', level: 'warn', message: 'resolveAccount: internal chat account not found', context: { agentId: input.agentId } });
+        forgeDebug({
+          scope: 'internal-chat-provider',
+          level: 'warn',
+          message: 'resolveAccount: internal chat account not found',
+          context: { agentId: input.agentId },
+        });
         throw new Error(`Internal chat account not found for agent: ${input.agentId}`);
       }
 

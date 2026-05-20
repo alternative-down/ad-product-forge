@@ -10,7 +10,12 @@ export function safeSerializeRecallSteps(steps: unknown[]) {
   try {
     return JSON.stringify(steps, null, 2);
   } catch (error) {
-    forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize recall steps', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({
+      scope: 'agent-long-term-memory-recall',
+      level: 'warn',
+      message: 'Failed to serialize recall steps',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
     return '[unserializable steps payload]';
   }
 }
@@ -19,7 +24,12 @@ export function safeSerializeGraphResult(result: unknown) {
   try {
     return JSON.stringify(result, null, 2);
   } catch (error) {
-    forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize graph result', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({
+      scope: 'agent-long-term-memory-recall',
+      level: 'warn',
+      message: 'Failed to serialize graph result',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
     return '[unserializable graph result]';
   }
 }
@@ -30,7 +40,7 @@ export function escapeXml(value: string) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
-    .replaceAll('\'', '&apos;');
+    .replaceAll("'", '&apos;');
 }
 
 export function buildRecallSystemMessage(input: {
@@ -41,16 +51,15 @@ export function buildRecallSystemMessage(input: {
   results: LtmSearchResult[];
 }) {
   const items = input.graphHit
-    ? (
-        input.graphContext.trim()
-          ? [
-              `  <item source="graph" query="${escapeXml(input.query)}"${typeof input.graphScore === 'number' ? ` score="${input.graphScore.toFixed(4)}"` : ''}>${escapeXml(input.graphContext.trim())}</item>`,
-            ]
-          : []
-      )
-    : input.results.map((result) => (
-      `  <item source="workspace" id="${escapeXml(result.id)}" score="${typeof result.score === 'number' ? result.score.toFixed(4) : '0.0000'}">${escapeXml(result.content)}</item>`
-    ));
+    ? input.graphContext.trim()
+      ? [
+          `  <item source="graph" query="${escapeXml(input.query)}"${typeof input.graphScore === 'number' ? ` score="${input.graphScore.toFixed(4)}"` : ''}>${escapeXml(input.graphContext.trim())}</item>`,
+        ]
+      : []
+    : input.results.map(
+        (result) =>
+          `  <item source="workspace" id="${escapeXml(result.id)}" score="${typeof result.score === 'number' ? result.score.toFixed(4) : '0.0000'}">${escapeXml(result.content)}</item>`,
+      );
 
   if (items.length === 0) {
     return null;

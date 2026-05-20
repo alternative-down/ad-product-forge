@@ -43,13 +43,15 @@ type GenerateResult = {
  * Collects all text content from step uiMessages parts.
  * Used to augment control directive detection with text from streaming steps.
  */
-export function collectStepTextParts(steps: Array<{
-  response?: {
-    uiMessages?: Array<{
-      parts?: Array<unknown>;
-    }>;
-  };
-}>): string[] {
+export function collectStepTextParts(
+  steps: Array<{
+    response?: {
+      uiMessages?: Array<{
+        parts?: Array<unknown>;
+      }>;
+    };
+  }>,
+): string[] {
   const texts: string[] = [];
   for (const step of steps) {
     for (const message of step.response?.uiMessages ?? []) {
@@ -59,7 +61,12 @@ export function collectStepTextParts(steps: Array<{
         }
 
         const partObj = part as Record<string, unknown>;
-        if ('type' in partObj && partObj.type === 'text' && 'text' in partObj && typeof partObj.text === 'string') {
+        if (
+          'type' in partObj &&
+          partObj.type === 'text' &&
+          'text' in partObj &&
+          typeof partObj.text === 'string'
+        ) {
           texts.push(partObj.text as string);
         }
       }
@@ -78,10 +85,7 @@ export function collectStepTextParts(steps: Array<{
  * - Otherwise → null
  */
 export function extractRunnerControlDirective(result: GenerateResult): 'stop' | 'ignore' | null {
-  const texts = [
-    result.text,
-    ...collectStepTextParts(result.steps ?? []),
-  ]
+  const texts = [result.text, ...collectStepTextParts(result.steps ?? [])]
     .map((value) => value.trim())
     .filter(Boolean);
 
@@ -104,9 +108,9 @@ export function extractRunnerControlDirective(result: GenerateResult): 'stop' | 
 export function buildStepSystemPrompt(input: {
   agentContextInstructions: string | null | undefined;
 }): string | null {
-  const sections = [
-    input.agentContextInstructions?.trim() ?? null,
-  ].filter((value): value is string => Boolean(value));
+  const sections = [input.agentContextInstructions?.trim() ?? null].filter(
+    (value): value is string => Boolean(value),
+  );
 
   if (sections.length === 0) {
     return null;
@@ -116,7 +120,6 @@ export function buildStepSystemPrompt(input: {
 }
 
 // ─── Constants (re-exported for consumers) ───────────────────────────────────
-
 
 // Returns the control directive ('stop' | 'ignore' | null) from an LLM iteration.
 // Uses hasExactControlDirective (defined in this module) to scan the trimmed text.

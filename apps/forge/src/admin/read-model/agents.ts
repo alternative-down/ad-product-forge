@@ -1,12 +1,9 @@
 import { desc, eq } from 'drizzle-orm';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 
-import {
-  agentExecutionContracts,
-  agentExecutionSteps,
-} from '../../database/schema';
+import { agentExecutionContracts, agentExecutionSteps } from '../../database/schema';
 
-import type {Database} from '../../database/index';
+import type { Database } from '../../database/index';
 import type { MicroErpReadModel } from '../../micro-erp/read-model';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 
@@ -27,15 +24,10 @@ interface AgentsReadModelDeps {
 }
 
 export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel {
-  const {
-    db,
-    finance,
-    internalChat,
-    workspaceBasePath,
-  } = deps;
+  const { db, finance, internalChat, workspaceBasePath } = deps;
 
   const registry = getInternalAgentRegistry();
-   
+
   const registryWithSize = registry as unknown as { get(agentId: string): unknown; size: number };
 
   async function getDashboard() {
@@ -44,17 +36,24 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
   }
 
   async function getTotals() {
-    const rows = await db.query.agents.findMany({ columns: { id: true, executionState: true, roleId: true } });
+    const rows = await db.query.agents.findMany({
+      columns: { id: true, executionState: true, roleId: true },
+    });
 
     const loadedAgents = registry.list().length;
     const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
     const runningAgents = rows.filter((r) => r.executionState === 'running').length;
-    const absentAgents = rows.filter((r) => r.executionState === null || r.executionState === undefined || r.executionState === 'absent').length;
+    const absentAgents = rows.filter(
+      (r) =>
+        r.executionState === null ||
+        r.executionState === undefined ||
+        r.executionState === 'absent',
+    ).length;
 
     const activeContracts = await db.query.agentExecutionContracts.findMany({
-        where: eq(agentExecutionContracts.isActive, 1),
-        columns: { id: true },
-      });
+      where: eq(agentExecutionContracts.isActive, 1),
+      columns: { id: true },
+    });
 
     const roles = new Set(rows.map((r) => r.roleId).filter(Boolean)).size;
     return {
@@ -76,7 +75,11 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     ]);
     return {
       balanceUsd: balanceResult.balanceUsd,
-      summary: { income: cashSummary.totalInUsd, expenses: cashSummary.totalOutUsd, net: cashSummary.netUsd },
+      summary: {
+        income: cashSummary.totalInUsd,
+        expenses: cashSummary.totalOutUsd,
+        net: cashSummary.netUsd,
+      },
       recentMovements: recentResult.items,
     };
   }
@@ -117,13 +120,17 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     listAgentLongTermMemoryThreadMessages,
   } = conversationsRM;
 
-  async function listAgentExecutionSteps(input: { agentId: string; limit: number; offset: number }) {
+  async function listAgentExecutionSteps(input: {
+    agentId: string;
+    limit: number;
+    offset: number;
+  }) {
     const rows = await db.query.agentExecutionSteps.findMany({
-        where: eq(agentExecutionSteps.agentId, input.agentId),
-        orderBy: desc(agentExecutionSteps.createdAt),
-        limit: input.limit,
-        offset: input.offset,
-      });
+      where: eq(agentExecutionSteps.agentId, input.agentId),
+      orderBy: desc(agentExecutionSteps.createdAt),
+      limit: input.limit,
+      offset: input.offset,
+    });
     return rows.map((row) => {
       const { id, ...rest } = row;
       return { ...rest, stepId: id };
@@ -137,28 +144,25 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     getAgentRuntimeMemory,
     listRecentAgentHomeMetricSnapshots,
   });
-  const {
+  const { getAgentOmDebugExport, debugAgentLongTermMemoryRecallSearch } = debugRM;
+
+  return {
+    getDashboard,
+    listAgents,
+    getAgent,
+    listAgentRecentConversations,
+    listAgentExecutionSteps,
+    listAgentThreadMessages,
+    listAgentLongTermMemoryThreadMessages,
+    listRecentAgentHomeMetricSnapshots,
     getAgentOmDebugExport,
     debugAgentLongTermMemoryRecallSearch,
-  } = debugRM;
-
-return {
-  getDashboard,
-  listAgents,
-  getAgent,
-  listAgentRecentConversations,
-  listAgentExecutionSteps,
-  listAgentThreadMessages,
-  listAgentLongTermMemoryThreadMessages,
-  listRecentAgentHomeMetricSnapshots,
-  getAgentOmDebugExport,
-  debugAgentLongTermMemoryRecallSearch,
-  listAgentConversationMessages,
-  listAgentContracts,
-  listAgentSchedules,
-  listAgentNotifications,
-  listAgentMcpServers,
-  listAgentLlmProfiles,
-  getAgentRuntimeMemory,
-};
+    listAgentConversationMessages,
+    listAgentContracts,
+    listAgentSchedules,
+    listAgentNotifications,
+    listAgentMcpServers,
+    listAgentLlmProfiles,
+    getAgentRuntimeMemory,
+  };
 }

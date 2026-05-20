@@ -17,18 +17,26 @@ export function createReposOps(ctx: OpsContext) {
         url: repository.html_url,
       }));
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-repos', level: 'error', message: '[github-repos] listRepositories failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({
+        scope: 'github-repos',
+        level: 'error',
+        message: '[github-repos] listRepositories failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
 
-  async function createRepository(agentId: string, input: {
-    name: string;
-    description?: string;
-    private?: boolean;
-    autoInit?: boolean;
-    defaultBranch?: string;
-  }) {
+  async function createRepository(
+    agentId: string,
+    input: {
+      name: string;
+      description?: string;
+      private?: boolean;
+      autoInit?: boolean;
+      defaultBranch?: string;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const githubConfig = await ctx.getGlobalConfig();
@@ -38,7 +46,8 @@ export function createReposOps(ctx: OpsContext) {
         description: input.description,
         private: input.private ?? true,
         auto_init: input.autoInit ?? false,
-        ...(input.defaultBranch !== null && input.defaultBranch !== undefined && { default_branch: input.defaultBranch }),
+        ...(input.defaultBranch !== null &&
+          input.defaultBranch !== undefined && { default_branch: input.defaultBranch }),
       });
       return {
         id: response.data.id,
@@ -49,19 +58,27 @@ export function createReposOps(ctx: OpsContext) {
         url: response.data.html_url,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-repos', level: 'error', message: '[github-repos] createRepository failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({
+        scope: 'github-repos',
+        level: 'error',
+        message: '[github-repos] createRepository failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
 
-  async function updateRepository(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-    name?: string;
-    description?: string;
-    private?: boolean;
-    defaultBranch?: string;
-  }) {
+  async function updateRepository(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+      name?: string;
+      description?: string;
+      private?: boolean;
+      defaultBranch?: string;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
@@ -84,34 +101,53 @@ export function createReposOps(ctx: OpsContext) {
         sshUrl: response.data.ssh_url,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-repos', level: 'error', message: '[github-repos] updateRepository failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({
+        scope: 'github-repos',
+        level: 'error',
+        message: '[github-repos] updateRepository failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
 
-  async function deleteRepository(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-  }) {
+  async function deleteRepository(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
       await octokit.request('DELETE /repos/{owner}/{repo}', { owner, repo: input.repositoryName });
       return { success: true };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-repos', level: 'error', message: '[github-repos] deleteRepository failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({
+        scope: 'github-repos',
+        level: 'error',
+        message: '[github-repos] deleteRepository failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
 
-  async function getRepository(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-  }) {
+  async function getRepository(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
-      const response = await octokit.request('GET /repos/{owner}/{repo}', { owner, repo: input.repositoryName });
+      const response = await octokit.request('GET /repos/{owner}/{repo}', {
+        owner,
+        repo: input.repositoryName,
+      });
       return {
         id: response.data.id,
         name: response.data.name,
@@ -123,7 +159,12 @@ export function createReposOps(ctx: OpsContext) {
         sshUrl: response.data.ssh_url,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-repos', level: 'error', message: '[github-repos] getRepository failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({
+        scope: 'github-repos',
+        level: 'error',
+        message: '[github-repos] getRepository failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }

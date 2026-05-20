@@ -109,7 +109,10 @@ describe('createSchedule', () => {
   it('default wakeWhenRunning to 1 (true) when not provided', async () => {
     let captured: Record<string, unknown> = {};
     const db = createMockDb([]);
-    db.values = vi.fn((r: Record<string, unknown>) => { captured = r; return Promise.resolve(); });
+    db.values = vi.fn((r: Record<string, unknown>) => {
+      captured = r;
+      return Promise.resolve();
+    });
     const store = createAgentScheduleStore(db as any);
 
     await store.createSchedule({
@@ -128,7 +131,10 @@ describe('createSchedule', () => {
   it('sets wakeWhenRunning to 0 when explicitly false', async () => {
     let captured: Record<string, unknown> = {};
     const db = createMockDb([]);
-    db.values = vi.fn((r: Record<string, unknown>) => { captured = r; return Promise.resolve(); });
+    db.values = vi.fn((r: Record<string, unknown>) => {
+      captured = r;
+      return Promise.resolve();
+    });
     const store = createAgentScheduleStore(db as any);
 
     await store.createSchedule({
@@ -249,9 +255,7 @@ describe('listActiveSchedules', () => {
   });
 
   it('records include creatorId', async () => {
-    const rows = [
-      createMockRow({ id: 'sch_001', creatorId: 'ag_creator', isActive: 1 }),
-    ];
+    const rows = [createMockRow({ id: 'sch_001', creatorId: 'ag_creator', isActive: 1 })];
     const db = createMockDb(rows);
     db.query.agentSchedules.findMany = vi.fn(async () => rows);
     const store = createAgentScheduleStore(db as any);
@@ -282,7 +286,9 @@ describe('getAgentSchedule', () => {
   });
 
   it('returns schedule record for agent kind', async () => {
-    const rows = [createMockRow({ id: 'sch_001', agentId: 'ag_001', kind: 'agent', name: 'My Schedule' })];
+    const rows = [
+      createMockRow({ id: 'sch_001', agentId: 'ag_001', kind: 'agent', name: 'My Schedule' }),
+    ];
     const db = createMockDb(rows);
     // findFirst returns row[0] which is agent kind -> toScheduleRecord -> has scheduleId
     db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
@@ -294,7 +300,6 @@ describe('getAgentSchedule', () => {
     expect(result!.scheduleId).toBe('sch_001');
   });
 });
-
 
 // Tests for getScheduleById — previously not covered
 describe('getScheduleById', () => {
@@ -316,7 +321,9 @@ describe('getScheduleById', () => {
   });
 
   it('returns schedule record for agent kind', async () => {
-    const rows = [createMockRow({ id: 'sch_001', agentId: 'ag_001', kind: 'agent', name: 'My Schedule' })];
+    const rows = [
+      createMockRow({ id: 'sch_001', agentId: 'ag_001', kind: 'agent', name: 'My Schedule' }),
+    ];
     const db = createMockDb(rows);
     db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
     const store = createAgentScheduleStore(db as any);
@@ -428,7 +435,9 @@ describe('updateAgentSchedule', () => {
     (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
 
-    const result = await store.updateAgentSchedule('ag_001', 'sch_nonexistent', { name: 'New Name' });
+    const result = await store.updateAgentSchedule('ag_001', 'sch_nonexistent', {
+      name: 'New Name',
+    });
     expect(result).toBeNull();
   });
 
@@ -461,13 +470,14 @@ describe('updateAgentSchedule', () => {
   });
 });
 
-
 describe('updateOwnedSchedule', () => {
   it('returns null when schedule not found', async () => {
     const db = createMockDb([]);
     (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
     const store = createAgentScheduleStore(db as any);
-    const result = await store.updateOwnedSchedule('ag_001', 'sch_nonexistent', { name: 'New Name' });
+    const result = await store.updateOwnedSchedule('ag_001', 'sch_nonexistent', {
+      name: 'New Name',
+    });
     expect(result).toBeNull();
   });
 
@@ -496,7 +506,6 @@ describe('updateOwnedSchedule', () => {
     expect(db.update).toHaveBeenCalled();
   });
 });
-
 
 describe('deleteAgentSchedule', () => {
   it('returns false when schedule not found', async () => {
@@ -614,7 +623,6 @@ describe('markTriggered', () => {
 
     const setCall = (db.set as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(setCall.isActive).toBe(0);
-
   });
 });
 
@@ -626,7 +634,9 @@ describe('listCreatedAgentSchedules', () => {
       createMockRow({ id: 'sch_003', creatorId: 'ag_creator', kind: 'heartbeat' }),
     ];
     const db = createMockDb(rows);
-    db.query.agentSchedules.findMany = vi.fn(async () => rows.filter((r) => r.creatorId === 'ag_creator'));
+    db.query.agentSchedules.findMany = vi.fn(async () =>
+      rows.filter((r) => r.creatorId === 'ag_creator'),
+    );
     const store = createAgentScheduleStore(db as any);
 
     const result = await store.listCreatedAgentSchedules('ag_creator');
@@ -636,14 +646,17 @@ describe('listCreatedAgentSchedules', () => {
 
   it('filters by targetAgentId when provided', async () => {
     const rows = [
-      createMockRow({ id: 'sch_001', creatorId: 'ag_creator', agentId: 'ag_target', kind: 'agent' }),
+      createMockRow({
+        id: 'sch_001',
+        creatorId: 'ag_creator',
+        agentId: 'ag_target',
+        kind: 'agent',
+      }),
       createMockRow({ id: 'sch_002', creatorId: 'ag_creator', agentId: 'ag_other', kind: 'agent' }),
     ];
     const db = createMockDb(rows);
     db.query.agentSchedules.findMany = vi.fn(async () =>
-      rows.filter(
-        (r) => r.creatorId === 'ag_creator' && r.agentId === 'ag_target',
-      ),
+      rows.filter((r) => r.creatorId === 'ag_creator' && r.agentId === 'ag_target'),
     );
     const store = createAgentScheduleStore(db as any);
 

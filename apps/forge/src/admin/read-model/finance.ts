@@ -8,9 +8,11 @@ import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../../database/index';
 
 export interface FinanceReadModel {
-  getFinance: () => Promise<Awaited<ReturnType<typeof getFinanceOverview>> & {
-    recurringPayables: Awaited<ReturnType<typeof getRecurringPayables>>;
-  }>;
+  getFinance: () => Promise<
+    Awaited<ReturnType<typeof getFinanceOverview>> & {
+      recurringPayables: Awaited<ReturnType<typeof getRecurringPayables>>;
+    }
+  >;
   getFinanceContracts: () => Promise<{
     items: Array<{
       contractId: string;
@@ -44,7 +46,12 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
         recurringPayables,
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-finance', level: 'error', message: '[finance-readmodel] getFinance failed', context: { err: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({
+        scope: 'admin-read-model-finance',
+        level: 'error',
+        message: '[finance-readmodel] getFinance failed',
+        context: { err: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
@@ -53,7 +60,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
     try {
       const contracts = await finance.listActiveInternalAgentContracts();
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!contracts || !Array.isArray(contracts.items)) {
         return { items: [], hasMore: false };
       }
@@ -71,7 +78,8 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
         })
         .from(agentExecutionSteps)
         .where(inArray(agentExecutionSteps.contractId, contractIds))
-        .groupBy(agentExecutionSteps.contractId).all();
+        .groupBy(agentExecutionSteps.contractId)
+        .all();
 
       const spentUsdByContractId = new Map<string, number>();
       for (const row of spendRows) {
@@ -87,14 +95,18 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
           return {
             ...contract,
             spentUsd,
-            spentPercent: contract.weeklyValueUsd > 0
-              ? (spentUsd / contract.weeklyValueUsd) * 100
-              : 0,
+            spentPercent:
+              contract.weeklyValueUsd > 0 ? (spentUsd / contract.weeklyValueUsd) * 100 : 0,
           };
         }),
       };
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-finance', level: 'error', message: '[finance-readmodel] getFinanceContracts failed', context: { err: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({
+        scope: 'admin-read-model-finance',
+        level: 'error',
+        message: '[finance-readmodel] getFinanceContracts failed',
+        context: { err: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }

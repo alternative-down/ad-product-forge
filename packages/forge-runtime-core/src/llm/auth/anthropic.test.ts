@@ -18,7 +18,9 @@ const mocks = {
   read: vi.fn().mockResolvedValue({}),
   write: vi.fn().mockResolvedValue(undefined),
   readJsonFile: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-  readCredentialFile: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+  readCredentialFile: vi
+    .fn()
+    .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
 };
 
 // Store the original module reference for proper mocking
@@ -40,7 +42,12 @@ vi.mock('./store.js', async () => {
 
 const fsActual = await import('node:fs');
 
-const { getAnthropicCliAuthFilePath, getAnthropicSetupTokenFilePath, syncAnthropicCredential, resolveAnthropicCredential } = await import('./anthropic.js');
+const {
+  getAnthropicCliAuthFilePath,
+  getAnthropicSetupTokenFilePath,
+  syncAnthropicCredential,
+  resolveAnthropicCredential,
+} = await import('./anthropic.js');
 
 describe('Anthropic OAuth', () => {
   const tmpDir = path.join(os.tmpdir(), `forge-test-anthropic-${Date.now()}`);
@@ -51,8 +58,12 @@ describe('Anthropic OAuth', () => {
     mocks.isExpired = vi.fn().mockReturnValue(false);
     mocks.read = vi.fn().mockResolvedValue({});
     mocks.write = vi.fn().mockResolvedValue(undefined);
-    mocks.readJsonFile = vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
-    mocks.readCredentialFile = vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    mocks.readJsonFile = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    mocks.readCredentialFile = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
   });
 
   afterEach(async () => {
@@ -124,7 +135,11 @@ describe('Anthropic OAuth', () => {
 
     it('falls back to CLI auth file when setup token missing', async () => {
       const cliAuthContent = JSON.stringify({
-        claudeAiOauth: { accessToken: 'cli-access', refreshToken: 'cli-refresh', expiresAt: 9999999999999 },
+        claudeAiOauth: {
+          accessToken: 'cli-access',
+          refreshToken: 'cli-refresh',
+          expiresAt: 9999999999999,
+        },
       });
 
       // First call: setup token not found (throws), Second call: CLI auth file read
@@ -164,7 +179,12 @@ describe('Anthropic OAuth', () => {
 
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ access_token: 'refreshed', refresh_token: 'new-refresh', expires_in: 3600 }),
+        json: () =>
+          Promise.resolve({
+            access_token: 'refreshed',
+            refresh_token: 'new-refresh',
+            expires_in: 3600,
+          }),
       });
       global.fetch = fetchMock;
 

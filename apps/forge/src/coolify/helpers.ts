@@ -34,7 +34,7 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
     return z.array(schema).parse(data);
   }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
 
@@ -60,7 +60,7 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
 }
 
 export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
 
@@ -86,12 +86,27 @@ export function extractItem<T>(data: unknown, schema: z.ZodSchema<T>): T {
       return parsed.data;
     }
 
-    forgeDebug({ scope: 'coolify-helpers', level: 'warn', message: 'extractCollection: failed to extract item', context: { dataType: typeof data } });
-    forgeDebug({ scope: 'coolify-helpers', level: 'warn', message: 'extractItem: failed to extract item', context: { dataType: typeof data } });
-  throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
+    forgeDebug({
+      scope: 'coolify-helpers',
+      level: 'warn',
+      message: 'extractCollection: failed to extract item',
+      context: { dataType: typeof data },
+    });
+    forgeDebug({
+      scope: 'coolify-helpers',
+      level: 'warn',
+      message: 'extractItem: failed to extract item',
+      context: { dataType: typeof data },
+    });
+    throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
   }
 
-  forgeDebug({ scope: 'coolify-helpers', level: 'warn', message: 'extractItem: failed to extract item', context: { dataType: typeof data } });
+  forgeDebug({
+    scope: 'coolify-helpers',
+    level: 'warn',
+    message: 'extractItem: failed to extract item',
+    context: { dataType: typeof data },
+  });
   throw new Error(`Failed to extract item from: ${JSON.stringify(data)}`);
 }
 
@@ -100,7 +115,7 @@ export function extractLogs(data: unknown): string {
     return data;
   }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
 
@@ -162,10 +177,8 @@ export function toTimestamp(value: string | number | null): number {
 
   return 0;
 }
- 
-function _toApplicationSummary(
-  application: z.infer<typeof ApplicationSchema>,
-) {
+
+function _toApplicationSummary(application: z.infer<typeof ApplicationSchema>) {
   return {
     applicationUuid: application.uuid,
     name: application.name ?? null,
@@ -176,10 +189,7 @@ function _toApplicationSummary(
   };
 }
 
- 
-function _toApplicationDetails(
-  application: z.infer<typeof ApplicationSchema>,
-) {
+function _toApplicationDetails(application: z.infer<typeof ApplicationSchema>) {
   return {
     applicationUuid: application.uuid,
     name: application.name ?? null,
@@ -191,10 +201,7 @@ function _toApplicationDetails(
   };
 }
 
- 
-function _toEnvDetails(
-  env: z.infer<typeof ApplicationEnvSchema>,
-) {
+function _toEnvDetails(env: z.infer<typeof ApplicationEnvSchema>) {
   return {
     envId: env.uuid ?? env.id ?? env.key,
     key: env.key,

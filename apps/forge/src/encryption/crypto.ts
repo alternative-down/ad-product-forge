@@ -14,7 +14,11 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ?? null;
  */
 function requireEncryptionKey(): Buffer {
   if (ENCRYPTION_KEY === null || ENCRYPTION_KEY === undefined) {
-    forgeDebug({ scope: 'encryption-crypto', level: 'error', message: 'encryption-crypto: validation/requirement failed' });
+    forgeDebug({
+      scope: 'encryption-crypto',
+      level: 'error',
+      message: 'encryption-crypto: validation/requirement failed',
+    });
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }
 
@@ -23,7 +27,7 @@ function requireEncryptionKey(): Buffer {
   if (key.length !== 32) {
     throw new Error(
       'ENCRYPTION_KEY must be 256-bit (32 bytes). ' +
-        'Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"',
+        "Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
     );
   }
 

@@ -14,6 +14,7 @@ It is a capability filter over the runtime surface that Forge already exposes.
 ## Scope
 
 This PRD covers:
+
 - role and function records
 - permission records by `tool.id`
 - permission records by `workflow.id`
@@ -23,6 +24,7 @@ This PRD covers:
 - management tools/workflows for roles and functions
 
 This PRD does not cover:
+
 - communication providers as permissions
 - Mastra built-in injected tools as permissions
 - resource-level ACLs
@@ -34,6 +36,7 @@ This PRD does not cover:
 ### 1. Permission target is literal id
 
 Permissions are keyed by the literal runtime identifier:
+
 - custom tool permission = `tool.id`
 - workflow permission = `workflow.id`
 
@@ -47,6 +50,7 @@ Providers are provisioned during hiring and load.
 They are not granted or denied through the role system.
 
 So the separation is:
+
 - providers = what external capability the agent has configured
 - permissions = which custom tools and workflows the agent can invoke
 
@@ -55,6 +59,7 @@ So the separation is:
 Mastra tools automatically injected by the framework are not filtered by this system.
 
 The permission layer only applies to:
+
 - Forge custom tools
 - MCP tools
 - Forge workflows
@@ -68,6 +73,7 @@ A function is an organizational grouping.
 A role is the capability set.
 
 For the first version:
+
 - agent belongs to one function
 - function points to one role
 - role defines the allowed tools and workflows
@@ -78,6 +84,7 @@ This keeps the model linear.
 ## Data Model Direction
 
 ### functions
+
 - `id`
 - `name`
 - `description`
@@ -85,6 +92,7 @@ This keeps the model linear.
 - `updatedAt`
 
 ### roles
+
 - `id`
 - `name`
 - `description`
@@ -92,21 +100,26 @@ This keeps the model linear.
 - `updatedAt`
 
 ### function_roles
+
 - `functionId`
 - `roleId`
 
 This keeps one active role per function in the first version.
 
 ### role_tool_permissions
+
 - `roleId`
 - `toolId`
 
 ### role_workflow_permissions
+
 - `roleId`
 - `workflowId`
 
 ### agents
+
 Direction for the first version:
+
 - add required `functionId`
 
 The role is derived from the function.
@@ -119,6 +132,7 @@ There is no separate direct `roleId` assignment on the agent in v1.
 At runtime Forge already builds the custom tool map before it passes the map into `ToolSearchProcessor`.
 
 The permission filter should happen exactly there:
+
 1. Forge builds the full map of custom tools and MCP tools
 2. Forge loads the role-derived allowed tool ids for the agent
 3. Forge filters the map by `tool.id`
@@ -129,6 +143,7 @@ Mastra built-in tools are not part of this filtered set.
 ### Workflow filtering
 
 The same rule applies to workflows:
+
 1. Forge builds the full workflow map
 2. Forge loads the role-derived allowed workflow ids
 3. Forge filters the workflow map by `workflow.id`
@@ -144,6 +159,7 @@ They are not filtered by the permission system.
 The system should expose management capabilities for authorized agents.
 
 Initial capability surface:
+
 - `list_agent_functions`
 - `get_agent_function`
 - `manage_agent_function`
@@ -159,6 +175,7 @@ Initial capability surface:
 - `list_available_capabilities`
 
 Direction:
+
 - `list_*` and `get_*` return richer views
 - `manage_*` groups `create | update | delete`
 - separate `toggle_*` is only needed when there is a reciprocal state pair
@@ -170,11 +187,13 @@ The same permission model applies to these management tools too.
 ### Runtime boundary
 
 The correct runtime boundary is:
+
 - resolve allowed tool ids first
 - build only the allowed custom and MCP tools
 - then give that set to `ToolSearchProcessor`
 
 Not:
+
 - build separate agent classes per role
 - dynamically deny tool calls after exposure
 - build every custom tool and discard most of them later
@@ -207,6 +226,7 @@ This PRD deliberately keeps the first version small.
 
 The goal is not full RBAC.
 The goal is simply to control:
+
 - which custom tools the agent can use
 - which workflows the agent can use
 
@@ -215,6 +235,7 @@ Everything else should be postponed until there is real pressure for a more comp
 ## Initial Seed Roles
 
 The first migration seeds initial roles grouped by context:
+
 - `finance`
 - `github`
 - `deployment`

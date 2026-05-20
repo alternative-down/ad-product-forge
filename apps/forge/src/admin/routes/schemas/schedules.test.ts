@@ -59,8 +59,13 @@ describe('createScheduleSchema — cron type', () => {
 
   it('parses with all optional fields', () => {
     const result = createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *',
-      content: 'c', description: 'A description', timezone: 'America/New_York',
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'cron',
+      cronExpression: '* * * * *',
+      content: 'c',
+      description: 'A description',
+      timezone: 'America/New_York',
       wakeWhenRunning: true,
     });
     expect(result.description).toBe('A description');
@@ -69,51 +74,95 @@ describe('createScheduleSchema — cron type', () => {
   });
 
   it('rejects missing agentId', () => {
-    expect(() => createScheduleSchema.parse({
-      name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        name: 'n',
+        scheduleType: 'cron',
+        cronExpression: '* * * * *',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects empty agentId', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: '', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: '',
+        name: 'n',
+        scheduleType: 'cron',
+        cronExpression: '* * * * *',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing name', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        scheduleType: 'cron',
+        cronExpression: '* * * * *',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing scheduleType', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', name: 'n', cronExpression: '* * * * *', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        name: 'n',
+        cronExpression: '* * * * *',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects invalid scheduleType', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'hourly', cronExpression: '* * * * *', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        name: 'n',
+        scheduleType: 'hourly',
+        cronExpression: '* * * * *',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects empty cronExpression', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        name: 'n',
+        scheduleType: 'cron',
+        cronExpression: '',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing content', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        name: 'n',
+        scheduleType: 'cron',
+        cronExpression: '* * * * *',
+      }),
+    ).toThrow();
   });
 
   it('rejects empty content', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: '',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        name: 'n',
+        scheduleType: 'cron',
+        cronExpression: '* * * * *',
+        content: '',
+      }),
+    ).toThrow();
   });
 });
 
@@ -122,16 +171,26 @@ describe('createScheduleSchema — cron type', () => {
 describe('createScheduleSchema — date type', () => {
   it('parses minimal valid date input', () => {
     const result = createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'date', scheduledDate: '2025-06-01T10:00:00Z', content: 'c',
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'date',
+      scheduledDate: '2025-06-01T10:00:00Z',
+      content: 'c',
     });
     expect(result.scheduleType).toBe('date');
     expect(result.scheduledDate).toBe('2025-06-01T10:00:00Z');
   });
 
   it('rejects empty scheduledDate', () => {
-    expect(() => createScheduleSchema.parse({
-      agentId: 'a', name: 'n', scheduleType: 'date', scheduledDate: '', content: 'c',
-    })).toThrow();
+    expect(() =>
+      createScheduleSchema.parse({
+        agentId: 'a',
+        name: 'n',
+        scheduleType: 'date',
+        scheduledDate: '',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 });
 
@@ -140,7 +199,8 @@ describe('createScheduleSchema — date type', () => {
 describe('updateScheduleSchema', () => {
   it('parses with agentId and scheduleId only (all other fields optional)', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'agent-1', scheduleId: 'schedule-1',
+      agentId: 'agent-1',
+      scheduleId: 'schedule-1',
     });
     expect(result.agentId).toBe('agent-1');
     expect(result.scheduleId).toBe('schedule-1');
@@ -148,9 +208,16 @@ describe('updateScheduleSchema', () => {
 
   it('parses with all optional fields', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'a', scheduleId: 's', name: 'Updated', description: 'Desc',
-      scheduleType: 'date', scheduledDate: '2025-12-01T00:00:00Z',
-      timezone: 'Europe/London', content: 'New content', wakeWhenRunning: false, isActive: false,
+      agentId: 'a',
+      scheduleId: 's',
+      name: 'Updated',
+      description: 'Desc',
+      scheduleType: 'date',
+      scheduledDate: '2025-12-01T00:00:00Z',
+      timezone: 'Europe/London',
+      content: 'New content',
+      wakeWhenRunning: false,
+      isActive: false,
     });
     expect(result.name).toBe('Updated');
     expect(result.isActive).toBe(false);
@@ -159,21 +226,27 @@ describe('updateScheduleSchema', () => {
 
   it('accepts nullable description', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'a', scheduleId: 's', description: null,
+      agentId: 'a',
+      scheduleId: 's',
+      description: null,
     });
     expect(result.description).toBeNull();
   });
 
   it('accepts nullable cronExpression', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'a', scheduleId: 's', cronExpression: null,
+      agentId: 'a',
+      scheduleId: 's',
+      cronExpression: null,
     });
     expect(result.cronExpression).toBeNull();
   });
 
   it('accepts nullable scheduledDate', () => {
     const result = updateScheduleSchema.parse({
-      agentId: 'a', scheduleId: 's', scheduledDate: null,
+      agentId: 'a',
+      scheduleId: 's',
+      scheduledDate: null,
     });
     expect(result.scheduledDate).toBeNull();
   });
@@ -187,9 +260,13 @@ describe('updateScheduleSchema', () => {
   });
 
   it('rejects invalid scheduleType', () => {
-    expect(() => updateScheduleSchema.parse({
-      agentId: 'a', scheduleId: 's', scheduleType: 'hourly',
-    })).toThrow();
+    expect(() =>
+      updateScheduleSchema.parse({
+        agentId: 'a',
+        scheduleId: 's',
+        scheduleType: 'hourly',
+      }),
+    ).toThrow();
   });
 });
 
@@ -197,9 +274,12 @@ describe('updateScheduleSchema', () => {
 
 describe('deleteScheduleSchema', () => {
   it('parses valid input', () => {
-    expect(deleteScheduleSchema.parse({
-      agentId: 'agent-1', scheduleId: 'schedule-1',
-    })).toMatchObject({ agentId: 'agent-1', scheduleId: 'schedule-1' });
+    expect(
+      deleteScheduleSchema.parse({
+        agentId: 'agent-1',
+        scheduleId: 'schedule-1',
+      }),
+    ).toMatchObject({ agentId: 'agent-1', scheduleId: 'schedule-1' });
   });
 
   it('rejects missing agentId', () => {
@@ -224,14 +304,21 @@ describe('deleteScheduleSchema', () => {
 describe('schema.safeParse', () => {
   it('createScheduleSchema safeParse returns success false for missing content', () => {
     const result = createScheduleSchema.safeParse({
-      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *',
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'cron',
+      cronExpression: '* * * * *',
     });
     expect(result.success).toBe(false);
   });
 
   it('createScheduleSchema safeParse returns success true for valid cron input', () => {
     const result = createScheduleSchema.safeParse({
-      agentId: 'a', name: 'n', scheduleType: 'cron', cronExpression: '* * * * *', content: 'c',
+      agentId: 'a',
+      name: 'n',
+      scheduleType: 'cron',
+      cronExpression: '* * * * *',
+      content: 'c',
     });
     expect(result.success).toBe(true);
   });

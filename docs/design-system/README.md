@@ -101,18 +101,18 @@ rounded-lg           → border-radius: var(--radius-lg)
 
 ## Status
 
-| Category | Status | Notes |
-|----------|--------|-------|
-| Colors | ✅ Foundation | Brand, semantic, neutral, status |
-| Typography | ✅ Foundation | Fonts, sizes, weights, styles |
-| Spacing | ✅ Foundation | Scale, patterns, radius |
-| Shadows | ✅ Foundation | Shadow scale, elevation |
-| Grid | ✅ Foundation | Breakpoints, containers |
-| Elevation | ✅ Foundation | Z-index scale |
-| Motion | ✅ Foundation | Timing, easing, animations |
-| Button | ✅ Foundation | All variants and states |
-| Input | ✅ Foundation | All variants and validation |
-| Card | ✅ Foundation | All variants and sections |
+| Category   | Status        | Notes                            |
+| ---------- | ------------- | -------------------------------- |
+| Colors     | ✅ Foundation | Brand, semantic, neutral, status |
+| Typography | ✅ Foundation | Fonts, sizes, weights, styles    |
+| Spacing    | ✅ Foundation | Scale, patterns, radius          |
+| Shadows    | ✅ Foundation | Shadow scale, elevation          |
+| Grid       | ✅ Foundation | Breakpoints, containers          |
+| Elevation  | ✅ Foundation | Z-index scale                    |
+| Motion     | ✅ Foundation | Timing, easing, animations       |
+| Button     | ✅ Foundation | All variants and states          |
+| Input      | ✅ Foundation | All variants and validation      |
+| Card       | ✅ Foundation | All variants and sections        |
 
 ## Next Steps
 

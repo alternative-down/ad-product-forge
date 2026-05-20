@@ -3,8 +3,22 @@ import type { HttpRequest, HttpResponse } from '../http/server';
 import { forgeDebug } from '@forge-runtime/core';
 
 type Store = {
-  getRoute(routeId: string): Promise<{ routeId: string; agentId: string; name: string; secret: string | null; isActive: boolean } | null>;
-  createEvent(input: { routeId: string; agentId: string; payload: Record<string, unknown>; headers: Record<string, string>; idempotencyKey?: string }): Promise<{ eventId: string }>;
+  getRoute(
+    routeId: string,
+  ): Promise<{
+    routeId: string;
+    agentId: string;
+    name: string;
+    secret: string | null;
+    isActive: boolean;
+  } | null>;
+  createEvent(input: {
+    routeId: string;
+    agentId: string;
+    payload: Record<string, unknown>;
+    headers: Record<string, string>;
+    idempotencyKey?: string;
+  }): Promise<{ eventId: string }>;
 };
 
 type NotifyAgent = (input: {
@@ -33,9 +47,15 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     }
 
     if (route.secret !== null && route.secret !== undefined) {
-      const signatureHeader = request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
+      const signatureHeader =
+        request.headers['x-forge-signature'] ?? request.headers['x-hub-signature-256'];
       if (signatureHeader === null || signatureHeader === undefined) {
-        forgeDebug({ scope: 'webhooks', level: 'warn', message: 'Missing signature header', context: { routeId } });
+        forgeDebug({
+          scope: 'webhooks',
+          level: 'warn',
+          message: 'Missing signature header',
+          context: { routeId },
+        });
         return { status: 401, body: 'Missing signature' };
       }
       const rawBody = request.bodyText;
@@ -66,9 +86,14 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
       headers: {
         'content-type': request.headers['content-type'] ?? '',
         'user-agent': request.headers['user-agent'] ?? '',
-        'x-forwarded-for': Array.isArray(request.headers['x-forwarded-for']) ? request.headers['x-forwarded-for'][0] : request.headers['x-forwarded-for'] ?? '',
+        'x-forwarded-for': Array.isArray(request.headers['x-forwarded-for'])
+          ? request.headers['x-forwarded-for'][0]
+          : (request.headers['x-forwarded-for'] ?? ''),
       } as Record<string, string>,
-      idempotencyKey: typeof request.headers['x-idempotency-key'] === 'string' ? request.headers['x-idempotency-key'] : undefined,
+      idempotencyKey:
+        typeof request.headers['x-idempotency-key'] === 'string'
+          ? request.headers['x-idempotency-key']
+          : undefined,
     });
 
     input.notifyAgent({

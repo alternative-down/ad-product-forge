@@ -36,11 +36,14 @@ export const forgeCustomToolIds = [
   'terminate-internal-agent',
 ] as const;
 
-export type ForgeCustomToolId = typeof forgeCustomToolIds[number];
+export type ForgeCustomToolId = (typeof forgeCustomToolIds)[number];
 export const forgeCapabilityIds = [...forgeCustomToolIds] as const;
-export type ForgeCapabilityId = typeof forgeCapabilityIds[number];
+export type ForgeCapabilityId = (typeof forgeCapabilityIds)[number];
 
-export function hasToolPermission(allowedToolIds: Set<string> | null | undefined, toolId: ForgeCustomToolId) {
+export function hasToolPermission(
+  allowedToolIds: Set<string> | null | undefined,
+  toolId: ForgeCustomToolId,
+) {
   if (!allowedToolIds) {
     return true;
   }
@@ -51,7 +54,6 @@ export function hasToolPermission(allowedToolIds: Set<string> | null | undefined
 
   return false;
 }
-
 
 export function normalizeToolPermissionIds(toolIds: readonly string[]) {
   return [...new Set(toolIds)].sort((left, right) => left.localeCompare(right));

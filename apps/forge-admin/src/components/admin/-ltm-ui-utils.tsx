@@ -19,22 +19,12 @@ export function MetricTile({
       <div className="mt-1 text-sm font-medium text-foreground">
         {formatNumber(current)} {unit ?? 'tokens'}
       </div>
-      {detail ? (
-        <div className="mt-1 text-xs text-muted-foreground">
-          {detail}
-        </div>
-      ) : null}
+      {detail ? <div className="mt-1 text-xs text-muted-foreground">{detail}</div> : null}
     </div>
   );
 }
 
-export function MemoryDisclosure({
-  title,
-  value,
-}: {
-  title: string;
-  value: string | null;
-}) {
+export function MemoryDisclosure({ title, value }: { title: string; value: string | null }) {
   return (
     <details className="group">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">

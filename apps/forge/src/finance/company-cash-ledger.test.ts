@@ -21,9 +21,14 @@ function isStringChunk(x: unknown): boolean {
 function isColumn(x: unknown): boolean {
   const n = (x as { constructor?: { name?: string } })?.constructor?.name;
   return (
-    n === 'SQLiteText' || n === 'SQLiteInteger' || n === 'SQLiteBlob' || n === 'SQLiteReal' ||
-    n === 'SQLiteTextBuilder' || n === 'SQLiteIntegerBuilder' ||
-    n === 'SQLiteBlobBuilder' || n === 'SQLiteRealBuilder'
+    n === 'SQLiteText' ||
+    n === 'SQLiteInteger' ||
+    n === 'SQLiteBlob' ||
+    n === 'SQLiteReal' ||
+    n === 'SQLiteTextBuilder' ||
+    n === 'SQLiteIntegerBuilder' ||
+    n === 'SQLiteBlobBuilder' ||
+    n === 'SQLiteRealBuilder'
   );
 }
 
@@ -56,7 +61,11 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
       'value' in valChunk
     ) {
       value = (valChunk as { value: unknown }).value;
-    } else if (typeof valChunk === 'string' || typeof valChunk === 'number' || typeof valChunk === 'boolean') {
+    } else if (
+      typeof valChunk === 'string' ||
+      typeof valChunk === 'number' ||
+      typeof valChunk === 'boolean'
+    ) {
       value = valChunk;
     } else {
       i = j;
@@ -134,7 +143,8 @@ function createMockCashDb(initialRows: CashLedgerRow[] = []) {
             const idx = rowStore.findIndex((r) =>
               Object.entries(filter).every(([k, v]) => r[k as keyof CashLedgerRow] === v),
             );
-            if (idx !== -1) rowStore[idx] = { ...rowStore[idx], ...capturedValues } as CashLedgerRow;
+            if (idx !== -1)
+              rowStore[idx] = { ...rowStore[idx], ...capturedValues } as CashLedgerRow;
             return Promise.resolve({ rowCount: idx === -1 ? 0 : 1 });
           },
         };
@@ -172,7 +182,11 @@ function createMockCashDb(initialRows: CashLedgerRow[] = []) {
     },
   } as unknown as {
     select: (table: unknown) => ReturnType<typeof select>;
-    insert: (table: unknown) => ReturnType<ReturnType<typeof insert>['values']> extends Promise<infer T> ? { values: (v: unknown) => Promise<T> } : never;
+    insert: (
+      table: unknown,
+    ) => ReturnType<ReturnType<typeof insert>['values']> extends Promise<infer T>
+      ? { values: (v: unknown) => Promise<T> }
+      : never;
     update: (table: unknown) => any;
     query: { companyCashLedger: { findFirst: typeof findFirst } };
   };
@@ -221,7 +235,13 @@ describe('company-cash-ledger', () => {
     const { db } = createMockCashDb([
       makeEntry({ id: 'e1', direction: 'in', amountUsd: 100, status: 'posted', effectiveAt: now }),
       makeEntry({ id: 'e2', direction: 'in', amountUsd: 999, status: 'planned', effectiveAt: now }),
-      makeEntry({ id: 'e3', direction: 'in', amountUsd: 888, status: 'canceled', effectiveAt: now }),
+      makeEntry({
+        id: 'e3',
+        direction: 'in',
+        amountUsd: 888,
+        status: 'canceled',
+        effectiveAt: now,
+      }),
     ]);
     const { getCurrentBalanceUsd } = createCompanyCashLedger(db as never);
     await expect(getCurrentBalanceUsd()).resolves.toBe(100);
@@ -232,7 +252,13 @@ describe('company-cash-ledger', () => {
     const future = now + 86400_000;
     const { db } = createMockCashDb([
       makeEntry({ id: 'e1', direction: 'in', amountUsd: 100, status: 'posted', effectiveAt: now }),
-      makeEntry({ id: 'e2', direction: 'in', amountUsd: 999, status: 'posted', effectiveAt: future }),
+      makeEntry({
+        id: 'e2',
+        direction: 'in',
+        amountUsd: 999,
+        status: 'posted',
+        effectiveAt: future,
+      }),
     ]);
     const { getCurrentBalanceUsd } = createCompanyCashLedger(db as never);
     await expect(getCurrentBalanceUsd()).resolves.toBe(100);
@@ -364,9 +390,7 @@ describe('company-cash-operations', () => {
   });
 
   test('cancelPlannedEntry throws for non-planned entry', async () => {
-    const { db } = createMockCashDb([
-      makeEntry({ id: 'entry-1', status: 'posted' }),
-    ]);
+    const { db } = createMockCashDb([makeEntry({ id: 'entry-1', status: 'posted' })]);
     const { cancelPlannedEntry } = createCompanyCashOperations(db as never);
     await expect(cancelPlannedEntry('entry-1')).rejects.toThrow(
       'Only planned company cash entries can be canceled: entry-1',
@@ -409,9 +433,7 @@ describe('company-cash-operations', () => {
   });
 
   test('postPlannedEntry throws for non-planned entry', async () => {
-    const { db } = createMockCashDb([
-      makeEntry({ id: 'entry-1', status: 'posted' }),
-    ]);
+    const { db } = createMockCashDb([makeEntry({ id: 'entry-1', status: 'posted' })]);
     const { postPlannedEntry } = createCompanyCashOperations(db as never);
     await expect(postPlannedEntry('entry-1')).rejects.toThrow(
       'Only planned company cash entries can be posted: entry-1',

@@ -53,11 +53,13 @@ describe('getFinanceOverview', () => {
     finance.listCompanyCashMovements.mockResolvedValue([]);
 
     await expect(getFinanceOverview(finance as any)).rejects.toThrow('Balance DB error');
-    expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'getFinanceOverview failed',
-    }));
+    expect(forgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'getFinanceOverview failed',
+      }),
+    );
   });
 
   it('throws and logs on getCompanyCashSummary failure', async () => {

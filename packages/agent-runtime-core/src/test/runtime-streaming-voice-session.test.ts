@@ -51,10 +51,7 @@ describe('runtime streaming voice session', () => {
     });
     const activeSession = await voiceSession.start();
 
-    await Promise.all([
-      stepStream!.completion,
-      activeSession.completion,
-    ]);
+    await Promise.all([stepStream!.completion, activeSession.completion]);
 
     expect(heard).toEqual(['hello ', 'world']);
   });

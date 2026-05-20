@@ -92,7 +92,10 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
           scope: 'schedules',
           level: 'warn',
           message: 'loadAll: skipped schedule due to registration failure',
-          context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+          context: {
+            scheduleId: record.scheduleId,
+            error: err instanceof Error ? err.message : String(err),
+          },
         });
         // Continue loading remaining schedules
       }
@@ -144,7 +147,10 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
           scope: 'schedules',
           level: 'warn',
           message: 'register: failed to schedule date job',
-          context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+          context: {
+            scheduleId: record.scheduleId,
+            error: err instanceof Error ? err.message : String(err),
+          },
         });
         throw err;
       }
@@ -171,7 +177,10 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
         scope: 'schedules',
         level: 'warn',
         message: 'register: failed to schedule cron job',
-        context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+        context: {
+          scheduleId: record.scheduleId,
+          error: err instanceof Error ? err.message : String(err),
+        },
       });
       throw err;
     }
@@ -179,4 +188,3 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
 
   return { loadAll, cancel: cancelJob, stop, register };
 }
-

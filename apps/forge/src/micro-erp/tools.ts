@@ -1,8 +1,7 @@
 import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createMicroErpReadModel } from './read-model';
 import { adjustAgentContractBudget } from '../agents/adjust-agent-contract-budget';
@@ -20,47 +19,117 @@ const listCompanyCashInputSchema = z.object({
 
 const manageCompanyCashMovementInputSchema = z.object({
   action: z
-    .enum(['record_in', 'record_out', 'schedule_in', 'schedule_out', 'post_planned', 'cancel_planned'])
+    .enum([
+      'record_in',
+      'record_out',
+      'schedule_in',
+      'schedule_out',
+      'post_planned',
+      'cancel_planned',
+    ])
     .describe('The cash movement operation to perform.'),
-  recordIn: z.object({
-    type: z.string().optional().describe('Required movement type for the immediate cash-in entry.'),
-    amountUsd: z.coerce.number().positive().optional().describe('Required USD amount for the immediate cash-in entry.'),
-    description: z.string().optional(),
-    referenceType: z.string().optional(),
-    referenceId: z.string().optional(),
-    effectiveAt: z.coerce.number().int().optional().describe('Optional posting time for the immediate cash-in entry.'),
-  }).optional().describe('Provide this object only when action is record_in.'),
-  recordOut: z.object({
-    type: z.string().optional().describe('Required movement type for the immediate cash-out entry.'),
-    amountUsd: z.coerce.number().positive().optional().describe('Required USD amount for the immediate cash-out entry.'),
-    description: z.string().optional(),
-    referenceType: z.string().optional(),
-    referenceId: z.string().optional(),
-    effectiveAt: z.coerce.number().int().optional().describe('Optional posting time for the immediate cash-out entry.'),
-  }).optional().describe('Provide this object only when action is record_out.'),
-  scheduleIn: z.object({
-    type: z.string().optional().describe('Required movement type for the planned cash-in entry.'),
-    amountUsd: z.coerce.number().positive().optional().describe('Required USD amount for the planned cash-in entry.'),
-    description: z.string().optional(),
-    referenceType: z.string().optional(),
-    referenceId: z.string().optional(),
-    dueAt: z.coerce.number().int().optional().describe('Required due date for the planned cash-in entry.'),
-  }).optional().describe('Provide this object only when action is schedule_in.'),
-  scheduleOut: z.object({
-    type: z.string().optional().describe('Required movement type for the planned cash-out entry.'),
-    amountUsd: z.coerce.number().positive().optional().describe('Required USD amount for the planned cash-out entry.'),
-    description: z.string().optional(),
-    referenceType: z.string().optional(),
-    referenceId: z.string().optional(),
-    dueAt: z.coerce.number().int().optional().describe('Required due date for the planned cash-out entry.'),
-  }).optional().describe('Provide this object only when action is schedule_out.'),
-  postPlanned: z.object({
-    entryId: z.string().optional().describe('Required planned entryId to post.'),
-    effectiveAt: z.coerce.number().int().optional().describe('Optional posting time for the planned entry.'),
-  }).optional().describe('Provide this object only when action is post_planned.'),
-  cancelPlanned: z.object({
-    entryId: z.string().optional().describe('Required planned entryId to cancel.'),
-  }).optional().describe('Provide this object only when action is cancel_planned.'),
+  recordIn: z
+    .object({
+      type: z
+        .string()
+        .optional()
+        .describe('Required movement type for the immediate cash-in entry.'),
+      amountUsd: z.coerce
+        .number()
+        .positive()
+        .optional()
+        .describe('Required USD amount for the immediate cash-in entry.'),
+      description: z.string().optional(),
+      referenceType: z.string().optional(),
+      referenceId: z.string().optional(),
+      effectiveAt: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('Optional posting time for the immediate cash-in entry.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is record_in.'),
+  recordOut: z
+    .object({
+      type: z
+        .string()
+        .optional()
+        .describe('Required movement type for the immediate cash-out entry.'),
+      amountUsd: z.coerce
+        .number()
+        .positive()
+        .optional()
+        .describe('Required USD amount for the immediate cash-out entry.'),
+      description: z.string().optional(),
+      referenceType: z.string().optional(),
+      referenceId: z.string().optional(),
+      effectiveAt: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('Optional posting time for the immediate cash-out entry.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is record_out.'),
+  scheduleIn: z
+    .object({
+      type: z.string().optional().describe('Required movement type for the planned cash-in entry.'),
+      amountUsd: z.coerce
+        .number()
+        .positive()
+        .optional()
+        .describe('Required USD amount for the planned cash-in entry.'),
+      description: z.string().optional(),
+      referenceType: z.string().optional(),
+      referenceId: z.string().optional(),
+      dueAt: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('Required due date for the planned cash-in entry.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is schedule_in.'),
+  scheduleOut: z
+    .object({
+      type: z
+        .string()
+        .optional()
+        .describe('Required movement type for the planned cash-out entry.'),
+      amountUsd: z.coerce
+        .number()
+        .positive()
+        .optional()
+        .describe('Required USD amount for the planned cash-out entry.'),
+      description: z.string().optional(),
+      referenceType: z.string().optional(),
+      referenceId: z.string().optional(),
+      dueAt: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('Required due date for the planned cash-out entry.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is schedule_out.'),
+  postPlanned: z
+    .object({
+      entryId: z.string().optional().describe('Required planned entryId to post.'),
+      effectiveAt: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('Optional posting time for the planned entry.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is post_planned.'),
+  cancelPlanned: z
+    .object({
+      entryId: z.string().optional().describe('Required planned entryId to cancel.'),
+    })
+    .optional()
+    .describe('Provide this object only when action is cancel_planned.'),
 });
 
 export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> | null) {
@@ -77,7 +146,12 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.getCompanyCashBalance();
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({
+            scope: 'micro-erp',
+            level: 'error',
+            message: 'MicroERP tool failed',
+            context: { error: error instanceof Error ? error.message : String(error) },
+          });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -91,13 +165,19 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'list_company_cash')) {
     tools.list_company_cash = createTool({
       id: 'list_company_cash',
-      description: 'List company cash movements for the selected period and return the cash summary. Use this when you need to inspect income, expenses, or balance changes.',
+      description:
+        'List company cash movements for the selected period and return the cash summary. Use this when you need to inspect income, expenses, or balance changes.',
       inputSchema: listCompanyCashInputSchema,
       execute: async (input) => {
         try {
           return await microErp.listCompanyCashMovements(input);
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({
+            scope: 'micro-erp',
+            level: 'error',
+            message: 'MicroERP tool failed',
+            context: { error: error instanceof Error ? error.message : String(error) },
+          });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -111,13 +191,19 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'list_internal_agent_contracts')) {
     tools.list_internal_agent_contracts = createTool({
       id: 'list_internal_agent_contracts',
-      description: 'List the active contracts for internal agents, including budget usage and recent execution interval. Use this before deciding whether a contract needs a budget adjustment.',
+      description:
+        'List the active contracts for internal agents, including budget usage and recent execution interval. Use this before deciding whether a contract needs a budget adjustment.',
       inputSchema: z.object({}),
       execute: async () => {
         try {
           return await microErp.listActiveInternalAgentContracts();
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({
+            scope: 'micro-erp',
+            level: 'error',
+            message: 'MicroERP tool failed',
+            context: { error: error instanceof Error ? error.message : String(error) },
+          });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -131,7 +217,8 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'manage_company_cash_movement')) {
     tools.manage_company_cash_movement = createTool({
       id: 'manage_company_cash_movement',
-      description: 'Create and manage company cash movements. Use this to record immediate entries, schedule planned entries, post a planned entry, or cancel a planned entry.',
+      description:
+        'Create and manage company cash movements. Use this to record immediate entries, schedule planned entries, post a planned entry, or cancel a planned entry.',
       inputSchema: manageCompanyCashMovementInputSchema,
       execute: async (input) => {
         try {
@@ -341,7 +428,12 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
           const result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
           return { valid: true, action: input.action, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({
+            scope: 'micro-erp',
+            level: 'error',
+            message: 'MicroERP tool failed',
+            context: { error: error instanceof Error ? error.message : String(error) },
+          });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),
@@ -355,10 +447,19 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
   if (hasToolPermission(allowedToolIds, 'adjust_agent_contract_budget')) {
     tools.adjust_agent_contract_budget = createTool({
       id: 'adjust_agent_contract_budget',
-      description: 'Set a new budget target for an internal agent contract. You can increase or decrease it, but not below what has already been spent. Returns the updated contract information.',
+      description:
+        'Set a new budget target for an internal agent contract. You can increase or decrease it, but not below what has already been spent. Returns the updated contract information.',
       inputSchema: z.object({
-        agentId: z.string().min(1).describe('The agentId of the agent whose contract budget should be changed.'),
-        newBudgetUsd: z.coerce.number().min(0).describe('The new total budget, in USD, that the contract should have after the change.'),
+        agentId: z
+          .string()
+          .min(1)
+          .describe('The agentId of the agent whose contract budget should be changed.'),
+        newBudgetUsd: z.coerce
+          .number()
+          .min(0)
+          .describe(
+            'The new total budget, in USD, that the contract should have after the change.',
+          ),
       }),
       execute: async (input) => {
         try {
@@ -371,7 +472,12 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({
+            scope: 'micro-erp',
+            level: 'error',
+            message: 'MicroERP tool failed',
+            context: { error: error instanceof Error ? error.message : String(error) },
+          });
           return {
             valid: false,
             error: error instanceof Error ? error.message : String(error),

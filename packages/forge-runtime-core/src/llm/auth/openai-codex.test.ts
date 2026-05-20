@@ -42,11 +42,8 @@ function makeRefreshPayload(newAccess: string, expiresIn: number, newRefresh?: s
 
 // ─── Module import ────────────────────────────────────────────────────────────
 
-const {
-  getOpenAICodexCliAuthFilePath,
-  syncOpenAICodexCredential,
-  resolveOpenAICodexCredential,
-} = await import('./openai-codex.js');
+const { getOpenAICodexCliAuthFilePath, syncOpenAICodexCredential, resolveOpenAICodexCredential } =
+  await import('./openai-codex.js');
 
 // ─── Reset between tests ───────────────────────────────────────────────────────
 
@@ -97,7 +94,11 @@ describe('syncOpenAICodexCredential', () => {
 
     expect(mockStore.write).toHaveBeenCalledWith(
       'openai-codex',
-      expect.objectContaining({ access: 'cli-access', refresh: 'cli-refresh', accountId: 'acct_xyz' }),
+      expect.objectContaining({
+        access: 'cli-access',
+        refresh: 'cli-refresh',
+        accountId: 'acct_xyz',
+      }),
       '/tmp/store.json',
     );
     expect(result.access).toBe('cli-access');
@@ -185,7 +186,11 @@ describe('syncOpenAICodexCredential', () => {
 
 describe('resolveOpenAICodexCredential', () => {
   it('returns stored credential when valid and not expired', async () => {
-    const stored: OAuthCredential = { access: 'stored-access', expires: Date.now() + 3600 * 1000, accountId: 'acct_1' };
+    const stored: OAuthCredential = {
+      access: 'stored-access',
+      expires: Date.now() + 3600 * 1000,
+      accountId: 'acct_1',
+    };
     mockStore.read.mockResolvedValue({ 'openai-codex': stored });
     mockStore.isExpired.mockReturnValue(false);
 
@@ -197,7 +202,11 @@ describe('resolveOpenAICodexCredential', () => {
   });
 
   it('refreshes stored credential when expired but has refresh token', async () => {
-    const expired: OAuthCredential = { access: 'old', refresh: 'stored-refresh', expires: Date.now() - 1000 };
+    const expired: OAuthCredential = {
+      access: 'old',
+      refresh: 'stored-refresh',
+      expires: Date.now() - 1000,
+    };
     mockStore.read.mockResolvedValue({ 'openai-codex': expired });
     mockStore.isExpired.mockReturnValue(true);
     mockFetch.mockResolvedValue({

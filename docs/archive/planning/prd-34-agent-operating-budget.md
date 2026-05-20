@@ -24,6 +24,7 @@ The budget is not visible to the agent and is not a wallet owned by the agent. I
 This document covers only the simple operating budget model and its runtime execution loop.
 
 It does not define:
+
 - advanced execution policies
 - permission rules
 - complex financial accounting
@@ -39,6 +40,7 @@ The company has a single cash balance.
 The company cash ledger itself is defined in `PRD-08: Company Cash Ledger`.
 
 This PRD depends on that ledger for:
+
 - contract funding
 - contract renewal
 - contract top-up
@@ -48,6 +50,7 @@ This PRD depends on that ledger for:
 An agent contract defines a fixed operating period.
 
 For now:
+
 - duration is 7 days
 - it has a reserved budget in USD
 - it may have auto-renew enabled or disabled
@@ -57,6 +60,7 @@ For now:
 The operating budget is the reserved execution budget for that contract period.
 
 It is:
+
 - internal to the application
 - consumed by agent execution
 - not exposed to the agent
@@ -68,6 +72,7 @@ Each step consumes part of the contract budget.
 The consumed amount is based on model pricing in USD.
 
 This includes not only the agent execution itself, but also other LLM-backed internal operations such as:
+
 - OM
 - future LTM processing
 
@@ -76,9 +81,11 @@ This includes not only the agent execution itself, but also other LLM-backed int
 A minimal model can be built around these records:
 
 ### `agent_execution_contracts`
+
 Tracks the active and historical contract periods for agents.
 
 Suggested fields:
+
 - `id`
 - `agentId`
 - `startsAt`
@@ -88,6 +95,7 @@ Suggested fields:
 - `fundedAt`
 
 ### `agent_execution_steps`
+
 Tracks step-level cost consumption.
 
 This table is only for agent execution and agent-owned internal LLM work.
@@ -95,6 +103,7 @@ This table is only for agent execution and agent-owned internal LLM work.
 It does not include workflow-only costs such as the hiring workflow from `PRD-03`.
 
 Suggested fields:
+
 - `id`
 - `contractId`
 - `agentId`
@@ -107,18 +116,22 @@ Suggested fields:
 - `createdAt`
 
 `kind` values for the first version:
+
 - `agent-step`
 - `om`
 - `ltm`
 
 ### `llm_model_prices`
+
 Tracks model pricing in USD.
 
 The key format should match the runtime model format used by Mastra:
+
 - `gateway/provider/modelId`
 - or `provider/modelId`
 
 Suggested fields:
+
 - `modelKey`
 - `inputPerMillionUsd`
 - `inputCachePerMillionUsd`
@@ -131,6 +144,7 @@ All values are stored in USD.
 This PRD does not define the company ledger itself.
 
 `PRD-08` is responsible for:
+
 - company cash entries
 - company cash outflows
 - current balance
@@ -138,23 +152,27 @@ This PRD does not define the company ledger itself.
 - financial snapshots
 
 `PRD-34` is responsible for:
+
 - reserving part of company cash into an agent contract
 - consuming that contract budget through execution
 - controlling pacing from the remaining contract budget
 
 In practice:
+
 - contract funding, renewal, and top-up should create ledger entries in `PRD-08`
 - the contract runtime described here consumes the budget reserved by those financial movements
 
 ## Agent Runtime State
 
 The agent has a simple execution state:
+
 - `idle`
 - `running`
 
 This execution state can be stored on the agent itself.
 
 It does not need a separate runtime table for:
+
 - next execution timestamp
 - pacing value
 - last delay
@@ -164,12 +182,16 @@ Those values are derived when the loop runs.
 ## State Rules
 
 ### `idle`
+
 The agent is idle when:
+
 - it never executed a run yet
 - or the most recent step finished with only response text and no tool calls
 
 ### `running`
+
 The agent is running when:
+
 - the current logical run has not finished yet
 - the most recent step still produced tool calls
 - or the run is waiting for budget to continue
@@ -183,10 +205,12 @@ They do not describe contract state.
 The system does not keep one `generate()` call open.
 
 Instead:
+
 - the application re-executes the agent in a loop
 - each loop iteration runs exactly one bounded step
 
 Execution call shape:
+
 - `agent.generate([], { maxSteps: 1, ... })`
 
 The continuation comes from the agent thread/memory, not from sending a new prompt each time.
@@ -194,10 +218,12 @@ The continuation comes from the agent thread/memory, not from sending a new prom
 ## Step Continuation Rule
 
 The stop/continue rule is simple:
+
 - if the step returns tool calls, the agent stays in `running`
 - if the step returns only text and no tool calls, the agent goes back to `idle`
 
 In short:
+
 - tool call = continue
 - text only = stop
 
@@ -208,6 +234,7 @@ External events do not execute the agent directly.
 They only go through the wake mechanism already used by the application.
 
 So:
+
 - new events trigger wake
 - if the agent is already running, new events do not directly start a new execution
 - they only become part of what the agent will see in the next step
@@ -215,12 +242,14 @@ So:
 ## Entry Into Running
 
 When the agent goes from `idle` to `running`:
+
 - an in-memory flag `instant` is set to `true`
 - the first loop iteration still calculates the delay
 - but if execution is allowed, the first wait becomes `0`
 - after the first iteration, `instant = false`
 
 This `instant` flag:
+
 - starts as `false`
 - is only used when entering `running`
 - is not persisted
@@ -231,15 +260,18 @@ This `instant` flag:
 The system should not use a fixed execution interval.
 
 Instead, it should calculate pacing from:
+
 - remaining contract budget
 - remaining time until contract end
 - estimated step cost
 
 Simple formula for the first version:
+
 - `stepsPossible = remainingBudget / estimatedStepCost`
 - `delay = remainingTime / stepsPossible`
 
 This means:
+
 - if there is more budget remaining, the agent can execute more often
 - if there is less budget remaining, the agent executes less often
 
@@ -248,11 +280,13 @@ This means:
 A simple heuristic is enough for the first version.
 
 Use:
+
 - `inputEstimatedUsd = lastStepInputTokens * currentModelInputCost`
 - `averageStepUsd = average of last X step records for the agent`
 - `estimatedStepUsd = (inputEstimatedUsd + averageStepUsd) / 2`
 
 Notes:
+
 - this intentionally ignores cache hit in the estimate
 - that makes the estimate slightly conservative
 - the average of recent steps brings the estimate closer to reality
@@ -261,9 +295,11 @@ Notes:
 ### History Window
 
 Use:
+
 - last `10` step records
 
 This history is:
+
 - independent of contract
 - independent of model
 - independent of kind
@@ -272,6 +308,7 @@ This history is:
 ### First Execution
 
 For the very first execution with no history yet:
+
 - do not block execution
 - just allow it to run
 
@@ -280,17 +317,20 @@ For the very first execution with no history yet:
 Insufficient remaining budget does **not** end the logical run.
 
 If the agent is already `running` and budget is insufficient:
+
 - it stays in `running`
 - it does not execute the next step yet
 - it waits and retries later
 
 Reason:
+
 - the run has not finished logically
 - it is only temporarily unable to advance
 
 ## Backoff While Budget Is Insufficient
 
 When the agent is `running` but cannot execute because budget is insufficient:
+
 - use exponential backoff
 - initial backoff: `60s`
 - maximum backoff: `10 minutes`
@@ -302,12 +342,14 @@ This backoff resets when the agent is able to execute a step again.
 If the contract ends while the agent is still `running`:
 
 ### if `autoRenew = true`
+
 - renew the contract at period end
 - continue the loop
 
 The renewed contract becomes the active contract immediately for the next loop calculation.
 
 ### if `autoRenew = false`
+
 - keep the agent in `running`
 - do not execute new steps until there is a valid contract condition again
 - continue using the wait/retry loop
@@ -317,6 +359,7 @@ This keeps the logical run alive even if financial conditions temporarily block 
 ## Budget Top-Up Behavior
 
 If budget is added while the agent is already `running`:
+
 - nothing special happens immediately
 - on the next loop iteration, the delay is recalculated using the updated budget data
 - if conditions allow, execution continues normally
@@ -326,6 +369,7 @@ If budget is added while the agent is already `running`:
 **Status:** Partially Implemented
 
 Implemented today:
+
 - `agent_execution_contracts` exists
 - `agent_execution_steps` exists
 - `llm_model_prices` exists
@@ -345,23 +389,27 @@ Implemented today:
 - active contract top-up is implemented and debited from company cash
 
 Current implementation notes:
+
 - contract rows use `fundedAt` instead of a separate contract status
 - hiring creates the first contract but does not fund it directly
 - the runner resolves a runnable contract before each step
 - if no funded runnable contract is available, the runner stays in backoff
 
 Still pending:
+
 - future LTM cost registration into `agent_execution_steps`
 - richer reporting or management views over contract history and spend
 
 ## Idle Wake Without Budget
 
 If the agent is `idle` and receives wake, but there is no active contract budget available yet:
+
 - it still transitions to `running`
 - the loop starts
 - execution waits until budget conditions allow progress
 
 Reason:
+
 - the wake represents pending work
 - the run has started logically even if it cannot advance immediately
 

@@ -3,31 +3,24 @@
  * POST routes that perform system-level operations extracted from routes.ts
  */
 
-import {
-  syncOpenAICodexCredential,
-  syncAnthropicCredential,
-} from '@forge-runtime/core';
+import { syncOpenAICodexCredential, syncAnthropicCredential } from '@forge-runtime/core';
 import { forgeDebug } from '../debug';
 import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
-import {
-  jsonResponse,
-  parseJsonBody,
-  normalizeOptionalText,
-  normalizeJsonText,
-} from '../helpers';
+import { jsonResponse, parseJsonBody, normalizeOptionalText, normalizeJsonText } from '../helpers';
 import { upsertSystemSettingsSchema, upsertLlmModelPriceSchema } from '../schemas/llm';
 import { upsertSystemMcpServerSchema, deleteSystemMcpServerSchema } from '../schemas/mcp';
 import { uploadSystemSkillsSchema, deleteSystemSkillSchema } from '../schemas/skills';
 import { upsertSystemIntegrationSchema, deleteSystemIntegrationSchema } from '../schemas/providers';
-import { upsertLlmProfileSchema, deleteLlmProfileSchema, updateLlmDefaultsSchema } from '../schemas/llm';
-import { syncOauthSchema } from '../schemas/oauth';
-import type {Database} from '../../../database/client'
-import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
 import {
-  installGlobalSkillsFromZip,
-  deleteGlobalSkill,
-} from '../../../agents/global-skills';
+  upsertLlmProfileSchema,
+  deleteLlmProfileSchema,
+  updateLlmDefaultsSchema,
+} from '../schemas/llm';
+import { syncOauthSchema } from '../schemas/oauth';
+import type { Database } from '../../../database/client';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
+import { installGlobalSkillsFromZip, deleteGlobalSkill } from '../../../agents/global-skills';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { createForgeHttpServer } from '../../../http/server';
 import type { SystemSettingsStore } from '../../../system-settings/store';
@@ -50,8 +43,6 @@ interface SystemWriteRoutesInput {
   loadAgent: typeof loadAgent;
 }
 
-
-
 export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   const {
     httpServer,
@@ -72,7 +63,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/settings/upsert',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody(request.bodyText, upsertSystemSettingsSchema) as any);
+        const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema) as any;
         const result = await systemSettings.upsertSettings({
           companyName: body.companyName.trim(),
           companyContext: body.companyContext.trim(),
@@ -111,10 +102,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/settings/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/settings/upsert',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/mcp/upsert
   httpServer.registerRoute({
@@ -130,18 +127,28 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           description: normalizeOptionalText(body.description),
           transport: body.transport,
           command: body.transport === 'stdio' ? body.command : null,
-          args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-          envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+          args:
+            body.transport === 'stdio'
+              ? normalizeJsonText(body.argsText, 'argsText', 'array')
+              : null,
+          envVars:
+            body.transport === 'stdio'
+              ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
+              : null,
           url: body.transport === 'http_streamable' ? body.url : null,
-          headers: body.transport === 'http_streamable'
-            ? normalizeJsonText(body.headersText, 'headersText', 'object')
-            : null,
+          headers:
+            body.transport === 'http_streamable'
+              ? normalizeJsonText(body.headersText, 'headersText', 'object')
+              : null,
           isActive: body.isActive ? 1 : 0,
           updatedAt: Date.now(),
         };
 
         if (body.serverId !== null && body.serverId !== undefined) {
-          await db.update(mcpServerConfigs).set(values).where(eq(mcpServerConfigs.id, body.serverId));
+          await db
+            .update(mcpServerConfigs)
+            .set(values)
+            .where(eq(mcpServerConfigs.id, body.serverId));
         } else {
           await db.insert(mcpServerConfigs).values({
             id: serverId,
@@ -179,10 +186,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           updatedAt: server?.updatedAt ?? Date.now(),
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/mcp/upsert',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/mcp/delete
   httpServer.registerRoute({
@@ -206,10 +219,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse({ success: true, serverId: body.serverId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/delete', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/mcp/delete',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/skills/upload
   httpServer.registerRoute({
@@ -224,10 +243,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
         return jsonResponse({ success: true, installedSkillNames }, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/skills/upload', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/skills/upload',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/skills/delete
   httpServer.registerRoute({
@@ -242,10 +267,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
         return jsonResponse({ success: true, skillName: body.skillName });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/skills/delete', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/skills/delete',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/llm/price/upsert
   httpServer.registerRoute({
@@ -256,10 +287,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, upsertLlmModelPriceSchema);
         return jsonResponse(await (llmModelPrices as any).upsertPrice(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/price/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/llm/price/upsert',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/integration/upsert
   httpServer.registerRoute({
@@ -270,10 +307,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, upsertSystemIntegrationSchema);
         return jsonResponse(await (integrations as any).upsert(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/integration/upsert',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/integration/delete
   httpServer.registerRoute({
@@ -285,10 +328,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await (integrations as any).delete({ id: (body as any).integrationId });
         return jsonResponse({ success: true, integrationId: (body as any).integrationId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/delete', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/integration/delete',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/llm/profile/upsert
   httpServer.registerRoute({
@@ -299,10 +348,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/llm/profile/upsert',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/llm/profile/delete
   httpServer.registerRoute({
@@ -314,10 +369,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await llmSettings.deleteProfile((body as any).profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/delete', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/llm/profile/delete',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/llm/defaults/update
   httpServer.registerRoute({
@@ -328,10 +389,16 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/defaults/update', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/llm/defaults/update',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 
   // POST /admin/system/oauth/sync
   httpServer.registerRoute({
@@ -342,7 +409,11 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, syncOauthSchema);
         const providerIds: Array<'openai-codex' | 'anthropic'> =
           body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
-        const results: Array<{ providerId: 'openai-codex' | 'anthropic'; synced: boolean; error?: string }> = [];
+        const results: Array<{
+          providerId: 'openai-codex' | 'anthropic';
+          synced: boolean;
+          error?: string;
+        }> = [];
 
         for (const providerId of providerIds) {
           try {
@@ -353,7 +424,12 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
             }
             results.push({ providerId, synced: true });
           } catch (err) {
-            forgeDebug({ scope: 'admin', level: 'error', message: 'LLM provider sync failed', context: { error: err instanceof Error ? err.message : String(err) } });
+            forgeDebug({
+              scope: 'admin',
+              level: 'error',
+              message: 'LLM provider sync failed',
+              context: { error: err instanceof Error ? err.message : String(err) },
+            });
             results.push({
               providerId,
               synced: false,
@@ -364,8 +440,14 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse({ state: await buildOauthState(), results });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/oauth/sync', context: { error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/system/oauth/sync',
+          context: { error: err instanceof Error ? err.message : String(err) },
+        });
         return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
       }
-    },  });
+    },
+  });
 }

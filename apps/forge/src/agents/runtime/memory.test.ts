@@ -77,12 +77,14 @@ describe('createAgentRuntimeMemory', () => {
 
   it('passes correct params to createAgentLongTermMemoryRecall', async () => {
     const { createAgentLongTermMemoryRecall } = await import('../ltm/recall');
-    await createAgentRuntimeMemory(makeInput({
-      longTermMemory: true,
-      workspaceEmbedder: 'openai' as const,
-      ltmRecallScoreThreshold: 0.6,
-      ltmRecallDocumentCount: 15,
-    }) as any);
+    await createAgentRuntimeMemory(
+      makeInput({
+        longTermMemory: true,
+        workspaceEmbedder: 'openai' as const,
+        ltmRecallScoreThreshold: 0.6,
+        ltmRecallDocumentCount: 15,
+      }) as any,
+    );
     expect(createAgentLongTermMemoryRecall).toHaveBeenCalledWith(
       expect.objectContaining({
         agentId: 'agent-test-1',
@@ -117,24 +119,30 @@ describe('createAgentRuntimeMemory', () => {
   });
 
   it('accepts optional omModel override', async () => {
-    const result = await createAgentRuntimeMemory(makeInput({ omModel: { model: 'gpt-3.5' } }) as any);
+    const result = await createAgentRuntimeMemory(
+      makeInput({ omModel: { model: 'gpt-3.5' } }) as any,
+    );
     expect(result.longTermMemoryRecall).toBeNull();
   });
 
   it('accepts memoryLastMessagesCount and tokenCountFilterLimit', async () => {
-    const result = await createAgentRuntimeMemory(makeInput({
-      memoryLastMessagesCount: 50,
-      tokenCountFilterLimit: 4096,
-    }) as any);
+    const result = await createAgentRuntimeMemory(
+      makeInput({
+        memoryLastMessagesCount: 50,
+        tokenCountFilterLimit: 4096,
+      }) as any,
+    );
     expect(result.longTermMemoryRecall).toBeNull();
   });
 
   it('passes checkpointedOmLimits.recentRawTokens to recall factory', async () => {
     const { createAgentLongTermMemoryRecall } = await import('../ltm/recall');
-    await createAgentRuntimeMemory(makeInput({
-      longTermMemory: true,
-      checkpointedOmLimits: { recentRawTokens: 2048 },
-    }) as any);
+    await createAgentRuntimeMemory(
+      makeInput({
+        longTermMemory: true,
+        checkpointedOmLimits: { recentRawTokens: 2048 },
+      }) as any,
+    );
     expect(createAgentLongTermMemoryRecall).toHaveBeenCalledWith(
       expect.objectContaining({ recentRawTokens: 2048 }),
     );

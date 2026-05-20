@@ -11,10 +11,7 @@ type AgentAvatarProps = {
 export function AgentAvatar(input: AgentAvatarProps) {
   return (
     <Avatar size={input.size} className={input.className}>
-      <AvatarImage
-        src={buildAgentAvatarUrl(input.agentId, input.name)}
-        alt={input.name}
-      />
+      <AvatarImage src={buildAgentAvatarUrl(input.agentId, input.name)} alt={input.name} />
       <AvatarFallback className={input.fallbackClassName}>
         {getAgentInitials(input.name)}
       </AvatarFallback>

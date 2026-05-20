@@ -21,6 +21,7 @@ Endpoint simples de webhook para sistemas externos dispararem ações de agente.
 **Comportamento Core:** HTTP POST → validar assinatura → enfileirar evento → acordar agente → agente processa evento.
 
 **Casos de Uso de Aplicação:**
+
 - Webhooks GitHub disparam agentes de desenvolvimento
 - Webhooks de sistema de pagamento disparam agentes de billing
 - Webhooks de deployment podem notificar agentes de operações quando não houver adapter-specific endpoint próprio
@@ -51,12 +52,12 @@ Payload HTTP bruto recebido de sistema externo.
 
 ```typescript
 {
-  eventId: string;              // UUID
-  routeId: string;              // Qual rota recebeu isto
-  agentId: string;              // Agente que possui a rota
-  payload: Record<string, unknown>;  // Payload JSON bruto
-  receivedAt: string;           // Quando recebido
-  isProcessed: boolean;         // Agente processou?
+  eventId: string; // UUID
+  routeId: string; // Qual rota recebeu isto
+  agentId: string; // Agente que possui a rota
+  payload: Record<string, unknown>; // Payload JSON bruto
+  receivedAt: string; // Quando recebido
+  isProcessed: boolean; // Agente processou?
 }
 ```
 
@@ -78,6 +79,7 @@ Eventos armazenados por agente, fila em memória simples.
 ### 4. Roteamento de Evento
 
 Fluxo simples:
+
 1. HTTP POST para `/webhook/{routeId}`
 2. Verificar assinatura se segredo configurado
 3. Criar registro de evento
@@ -92,6 +94,7 @@ Fluxo simples:
 ### Servidor HTTP
 
 Servidor HTTP simples que aceita requisições POST:
+
 - Porta: 3001 (configurável via var env)
 - Caminho base: `/webhook`
 - Endpoint: `POST /webhook/{routeId}`

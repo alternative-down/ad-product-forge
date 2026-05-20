@@ -1,5 +1,8 @@
 import type { AudioChunk, RealtimeTextToSpeechGateway } from '../gateways/speech.js';
-import type { RuntimeMessageChunkEvent, RuntimeMessageChunkStream } from './runtime-message-chunk-stream.js';
+import type {
+  RuntimeMessageChunkEvent,
+  RuntimeMessageChunkStream,
+} from './runtime-message-chunk-stream.js';
 
 export type RuntimeStreamingVoiceSessionOptions = {
   messageStream: RuntimeMessageChunkStream;

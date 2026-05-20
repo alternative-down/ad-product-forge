@@ -49,11 +49,15 @@ describe('RuntimeActionRegistry', () => {
         execute: async (input) => ({ greeting: 'Hello, ' + input.name }),
       });
 
-      const result = await registry.execute('greet', { name: 'Alice' }, {
-        runtimeId: 'r1',
-        stepId: 's1',
-        stepNumber: 1,
-      });
+      const result = await registry.execute(
+        'greet',
+        { name: 'Alice' },
+        {
+          runtimeId: 'r1',
+          stepId: 's1',
+          stepNumber: 1,
+        },
+      );
 
       expect(result.name).toBe('greet');
       expect((result.output as { greeting: string }).greeting).toBe('Hello, Alice');
@@ -63,11 +67,15 @@ describe('RuntimeActionRegistry', () => {
       const registry = new RuntimeActionRegistry();
 
       await expect(
-        registry.execute('unknown-action', {}, {
-          runtimeId: 'r1',
-          stepId: 's1',
-          stepNumber: 1,
-        }),
+        registry.execute(
+          'unknown-action',
+          {},
+          {
+            runtimeId: 'r1',
+            stepId: 's1',
+            stepNumber: 1,
+          },
+        ),
       ).rejects.toThrow('Unknown action: unknown-action');
     });
 
@@ -81,11 +89,15 @@ describe('RuntimeActionRegistry', () => {
       });
 
       await expect(
-        registry.execute('strict-action', { name: '' }, {
-          runtimeId: 'r1',
-          stepId: 's1',
-          stepNumber: 1,
-        }),
+        registry.execute(
+          'strict-action',
+          { name: '' },
+          {
+            runtimeId: 'r1',
+            stepId: 's1',
+            stepNumber: 1,
+          },
+        ),
       ).rejects.toThrow();
     });
 
@@ -95,17 +107,22 @@ describe('RuntimeActionRegistry', () => {
         name: 'custom-parse',
         description: 'Custom parse',
         inputSchema: z.object({}),
-        parseInput: (input: Record<string, unknown>) => ({
-          parsed: String(input['raw']),
-        }) as Record<string, unknown>,
+        parseInput: (input: Record<string, unknown>) =>
+          ({
+            parsed: String(input['raw']),
+          }) as Record<string, unknown>,
         execute: async (input) => input,
       });
 
-      const result = await registry.execute('custom-parse', { raw: 42 }, {
-        runtimeId: 'r1',
-        stepId: 's1',
-        stepNumber: 1,
-      });
+      const result = await registry.execute(
+        'custom-parse',
+        { raw: 42 },
+        {
+          runtimeId: 'r1',
+          stepId: 's1',
+          stepNumber: 1,
+        },
+      );
 
       expect(result.output).toEqual({ parsed: '42' });
     });

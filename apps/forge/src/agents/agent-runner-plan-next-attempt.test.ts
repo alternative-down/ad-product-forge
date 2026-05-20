@@ -13,10 +13,12 @@ import { planNextAttempt } from './agent-runner-plan-next-attempt';
 
 // ─── Mock helpers ────────────────────────────────────────────────────────────────
 
-function mockStore(overrides: Partial<{
-  getRunnableContract: ReturnType<typeof vi.fn>;
-  getContractSpend: ReturnType<typeof vi.fn>;
-}> = {}) {
+function mockStore(
+  overrides: Partial<{
+    getRunnableContract: ReturnType<typeof vi.fn>;
+    getContractSpend: ReturnType<typeof vi.fn>;
+  }> = {},
+) {
   return {
     getRunnableContract: vi.fn().mockResolvedValue(null),
     getContractSpend: vi.fn().mockResolvedValue(0),
@@ -24,28 +26,34 @@ function mockStore(overrides: Partial<{
   };
 }
 
-function mockUsage(overrides: Partial<{
-  estimateStepCostUsd: ReturnType<typeof vi.fn>;
-}> = {}) {
+function mockUsage(
+  overrides: Partial<{
+    estimateStepCostUsd: ReturnType<typeof vi.fn>;
+  }> = {},
+) {
   return {
     estimateStepCostUsd: vi.fn().mockResolvedValue(1.0),
     ...overrides,
   };
 }
 
-function mockSystemSettings(overrides: Partial<{
-  getSettings: ReturnType<typeof vi.fn>;
-}> = {}) {
+function mockSystemSettings(
+  overrides: Partial<{
+    getSettings: ReturnType<typeof vi.fn>;
+  }> = {},
+) {
   return {
     getSettings: vi.fn().mockResolvedValue({ stepDelayEnabled: true }),
     ...overrides,
   };
 }
 
-function mockScheduler(overrides: Partial<{
-  getState: ReturnType<typeof vi.fn>;
-  resetBackoff: ReturnType<typeof vi.fn>;
-}> = {}) {
+function mockScheduler(
+  overrides: Partial<{
+    getState: ReturnType<typeof vi.fn>;
+    resetBackoff: ReturnType<typeof vi.fn>;
+  }> = {},
+) {
   return {
     getState: vi.fn().mockReturnValue({ instant: false }),
     resetBackoff: vi.fn(),
@@ -53,14 +61,16 @@ function mockScheduler(overrides: Partial<{
   };
 }
 
-function makeDeps(overrides: {
-  runtimeId?: string;
-  store?: ReturnType<typeof mockStore>;
-  usage?: ReturnType<typeof mockUsage>;
-  systemSettings?: ReturnType<typeof mockSystemSettings>;
-  scheduler?: ReturnType<typeof mockScheduler>;
-  calculateBudgetDelayMs?: ReturnType<typeof vi.fn>;
-} = {}) {
+function makeDeps(
+  overrides: {
+    runtimeId?: string;
+    store?: ReturnType<typeof mockStore>;
+    usage?: ReturnType<typeof mockUsage>;
+    systemSettings?: ReturnType<typeof mockSystemSettings>;
+    scheduler?: ReturnType<typeof mockScheduler>;
+    calculateBudgetDelayMs?: ReturnType<typeof vi.fn>;
+  } = {},
+) {
   return {
     runtimeId: 'runtime-1',
     store: mockStore(),
@@ -71,11 +81,13 @@ function makeDeps(overrides: {
   };
 }
 
-function makeContract(overrides: Partial<{
-  id: string;
-  budgetUsd: number;
-  endsAt: number;
-}> = {}) {
+function makeContract(
+  overrides: Partial<{
+    id: string;
+    budgetUsd: number;
+    endsAt: number;
+  }> = {},
+) {
   return {
     id: 'contract-1',
     budgetUsd: 100,
@@ -199,7 +211,13 @@ describe('planNextAttempt', () => {
     });
     const scheduler = mockScheduler();
     const calculateBudgetDelayMs = vi.fn().mockReturnValue(30_000);
-    const deps = makeDeps({ store, usage, systemSettings, scheduler, calculateBudgetDelayMs }) as any;
+    const deps = makeDeps({
+      store,
+      usage,
+      systemSettings,
+      scheduler,
+      calculateBudgetDelayMs,
+    }) as any;
     const result = await planNextAttempt(deps);
     expect(result).toEqual({
       execute: true,
@@ -252,7 +270,7 @@ describe('planNextAttempt', () => {
     });
     const scheduler = mockScheduler();
     const deps = makeDeps({ store, usage, systemSettings, scheduler }) as any;
-    const result = await planNextAttempt(deps) as any;
+    const result = (await planNextAttempt(deps)) as any;
     // Default calculateBudgetDelayMs computes a positive value
     expect(result.execute).toBe(true);
     expect(typeof result.delayMs).toBe('number');

@@ -10,10 +10,7 @@ import type {
 
 export type RuntimePlugin = {
   name: string;
-  onDispatch?(context: {
-    runtimeId: string;
-    input: RuntimeInput;
-  }): Promise<void> | void;
+  onDispatch?(context: { runtimeId: string; input: RuntimeInput }): Promise<void> | void;
   provideContext?(context: {
     runtimeId: string;
     stepId: string;

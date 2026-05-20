@@ -2,11 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
+import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
 import {
   cancelPlannedLedgerEntry,
   createInvestment,
@@ -26,7 +22,11 @@ import {
   humanizeMovementType,
   humanizeRecurrencePeriod,
 } from '@/components/finance/accounts/finance-accounts-format';
-import { createEmptyMovementForm, toPayableInput, type MovementForm } from '@/components/finance/accounts/finance-accounts-types';
+import {
+  createEmptyMovementForm,
+  toPayableInput,
+  type MovementForm,
+} from '@/components/finance/accounts/finance-accounts-types';
 import { MovementAgendaTable } from '@/components/finance/accounts/movement-agenda-table';
 import { MovementDialog } from '@/components/finance/accounts/movement-dialog';
 import { MovementsTable } from '@/components/finance/accounts/movements-table';
@@ -97,9 +97,13 @@ function FinanceAccountsIndexRoute() {
   const recurringMutation = useMutation({
     mutationFn: ({ payableId, isActive }: { payableId: string; isActive: boolean }) =>
       setRecurringPayableActive(payableId, isActive),
-    onMutate: ({ isActive }) => startAdminAction(isActive ? 'Ativando recorrência...' : 'Inativando recorrência...'),
+    onMutate: ({ isActive }) =>
+      startAdminAction(isActive ? 'Ativando recorrência...' : 'Inativando recorrência...'),
     onSuccess: async (_data, variables, context) => {
-      succeedAdminAction(context, variables.isActive ? 'Recorrência ativada.' : 'Recorrência inativada.');
+      succeedAdminAction(
+        context,
+        variables.isActive ? 'Recorrência ativada.' : 'Recorrência inativada.',
+      );
       await queryClient.invalidateQueries({ queryKey: ['admin', 'finance'] });
     },
     onError: (error, _variables, context) => {
@@ -158,7 +162,9 @@ function FinanceAccountsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {financeQuery.isLoading && !financeQuery.data ? <AdminLoadingState label="Carregando contas..." /> : null}
+      {financeQuery.isLoading && !financeQuery.data ? (
+        <AdminLoadingState label="Carregando contas..." />
+      ) : null}
       <PageHeader title="Contas a pagar/receber" />
 
       <section className="space-y-5">
@@ -177,7 +183,9 @@ function FinanceAccountsIndexRoute() {
           </AdminButton>
         </div>
 
-        {createMutation.error ? <div className="text-sm text-destructive">{createMutation.error.message}</div> : null}
+        {createMutation.error ? (
+          <div className="text-sm text-destructive">{createMutation.error.message}</div>
+        ) : null}
 
         <MovementsTable movements={movements} />
       </section>
@@ -189,17 +197,31 @@ function FinanceAccountsIndexRoute() {
 
         <MovementAgendaTable
           rows={agendaRows}
-          pending={postMutation.isPending || cancelMutation.isPending || recurringMutation.isPending}
+          pending={
+            postMutation.isPending || cancelMutation.isPending || recurringMutation.isPending
+          }
           onPost={(entryId) => postMutation.mutate({ entryId })}
           onCancel={(entryId) => cancelMutation.mutate(entryId)}
-          onToggleRecurring={(payableId, isActive) => recurringMutation.mutate({ payableId, isActive })}
+          onToggleRecurring={(payableId, isActive) =>
+            recurringMutation.mutate({ payableId, isActive })
+          }
         />
 
-        {financeQuery.error ? <div className="text-sm text-destructive">{financeQuery.error.message}</div> : null}
-        {contractsQuery.error ? <div className="text-sm text-destructive">{contractsQuery.error.message}</div> : null}
-        {postMutation.error ? <div className="text-sm text-destructive">{postMutation.error.message}</div> : null}
-        {cancelMutation.error ? <div className="text-sm text-destructive">{cancelMutation.error.message}</div> : null}
-        {recurringMutation.error ? <div className="text-sm text-destructive">{recurringMutation.error.message}</div> : null}
+        {financeQuery.error ? (
+          <div className="text-sm text-destructive">{financeQuery.error.message}</div>
+        ) : null}
+        {contractsQuery.error ? (
+          <div className="text-sm text-destructive">{contractsQuery.error.message}</div>
+        ) : null}
+        {postMutation.error ? (
+          <div className="text-sm text-destructive">{postMutation.error.message}</div>
+        ) : null}
+        {cancelMutation.error ? (
+          <div className="text-sm text-destructive">{cancelMutation.error.message}</div>
+        ) : null}
+        {recurringMutation.error ? (
+          <div className="text-sm text-destructive">{recurringMutation.error.message}</div>
+        ) : null}
       </section>
 
       <MovementDialog

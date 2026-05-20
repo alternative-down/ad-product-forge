@@ -86,7 +86,6 @@ describe('getQueryParam', () => {
     const request = makeRequest({ query: new Map([['accountId', '']]) });
     expect(getQueryParam(request, 'accountId')).toBeNull();
   });
-
 });
 
 // ─── requireQueryParam tests ────────────────────────────────────────────────

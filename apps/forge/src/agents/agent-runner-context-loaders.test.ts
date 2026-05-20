@@ -18,17 +18,25 @@ import * as loaders from './agent-runner-context-loaders';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fakeFilesystem(overrides: {
-  exists?: (path: string) => Promise<boolean>;
-  readFile?: (path: string) => Promise<string | Buffer | null>;
-} = {}) {
+function fakeFilesystem(
+  overrides: {
+    exists?: (path: string) => Promise<boolean>;
+    readFile?: (path: string) => Promise<string | Buffer | null>;
+  } = {},
+) {
   return {
     exists: overrides.exists ?? vi.fn<() => Promise<boolean>>(),
     readFile: overrides.readFile ?? vi.fn<() => Promise<string | Buffer | null>>(),
   };
 }
 
-function fakeDb(scheduleRows: Array<{ name: string | null; cronExpression: string | null; timezone: string | null }>) {
+function fakeDb(
+  scheduleRows: Array<{
+    name: string | null;
+    cronExpression: string | null;
+    timezone: string | null;
+  }>,
+) {
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
@@ -43,8 +51,12 @@ function fakeDb(scheduleRows: Array<{ name: string | null; cronExpression: strin
 // ─── Tests: loadActiveScheduleSummary ───────────────────────────────────────
 
 describe('loadActiveScheduleSummary', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('returns null when no active schedules exist', async () => {
     const db = fakeDb([]);
@@ -65,9 +77,7 @@ describe('loadActiveScheduleSummary', () => {
   });
 
   it('uses UTC as default timezone', async () => {
-    const db = fakeDb([
-      { name: 'Test', cronExpression: '0 * * * *', timezone: null },
-    ]);
+    const db = fakeDb([{ name: 'Test', cronExpression: '0 * * * *', timezone: null }]);
     const result = await loaders.loadActiveScheduleSummary(db as never, 'agent-1');
     expect(result).toContain('[UTC]');
   });
@@ -90,8 +100,12 @@ describe('loadActiveScheduleSummary', () => {
 // ─── Tests: loadAgentContextContent ──────────────────────────────────────────
 
 describe('loadAgentContextContent', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('returns null when filesystem is absent', async () => {
     const result = await loaders.loadAgentContextContent(null as never);
@@ -155,7 +169,9 @@ describe('loadAgentContextContent', () => {
   it('returns null when readFile throws', async () => {
     const fs = fakeFilesystem({
       exists: async () => true,
-      readFile: async () => { throw new Error('read error'); },
+      readFile: async () => {
+        throw new Error('read error');
+      },
     });
     const result = await loaders.loadAgentContextContent(fs as never);
     expect(result).toBeNull();
@@ -165,8 +181,12 @@ describe('loadAgentContextContent', () => {
 // ─── Tests: loadAgentContextInstructions ─────────────────────────────────────
 
 describe('loadAgentContextInstructions', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('returns undefined when no schedule and no context file', async () => {
     const db = fakeDb([]);

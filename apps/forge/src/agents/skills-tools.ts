@@ -5,8 +5,7 @@ import path from 'node:path';
 import { createTool } from '@forge-runtime/core';
 import { z } from 'zod';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { hasToolPermission } from '../capabilities/catalog';
 import { publishAgentWorkspaceSkillToGlobalCatalog } from './global-skills';
 import { resolveAgentSkillRoot } from './workspace-skill-paths';
@@ -20,7 +19,7 @@ async function listSkillFiles(skillRoot: string, prefix = ''): Promise<string[]>
     const entryPath = path.resolve(skillRoot, entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...await listSkillFiles(entryPath, relativePath));
+      files.push(...(await listSkillFiles(entryPath, relativePath)));
       continue;
     }
 
@@ -36,7 +35,12 @@ async function readTextFileIfPossible(filePath: string) {
   try {
     return await fs.readFile(filePath, 'utf8');
   } catch (error) {
-    forgeDebug({ scope: 'skills-tools', level: 'warn', message: 'Failed to read file', context: { error: error instanceof Error ? error.message : String(error), filePath } });
+    forgeDebug({
+      scope: 'skills-tools',
+      level: 'warn',
+      message: 'Failed to read file',
+      context: { error: error instanceof Error ? error.message : String(error), filePath },
+    });
     return null;
   }
 }
@@ -49,11 +53,7 @@ export function createAgentSkillTools(input: {
 }) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
   const loadSkillSchema = z.object({
-    skillName: z
-      .string()
-      .trim()
-      .min(1)
-      .describe('Skill directory name inside `skills/`.'),
+    skillName: z.string().trim().min(1).describe('Skill directory name inside `skills/`.'),
   });
 
   tools.load_workspace_skill = createTool({
@@ -62,7 +62,6 @@ export function createAgentSkillTools(input: {
     inputSchema: loadSkillSchema,
     execute: async (inputData) => {
       const agent = await input.db.query.agents.findFirst({
-  
         where: (fields, operators) => operators.eq(fields.id, input.agentId),
         columns: {
           id: true,
@@ -71,7 +70,12 @@ export function createAgentSkillTools(input: {
       });
 
       if (agent === null || agent === undefined) {
-        forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill agent not found', context: { agentId: input.agentId } });
+        forgeDebug({
+          scope: 'skills-tools',
+          level: 'error',
+          message: 'load_workspace_skill agent not found',
+          context: { agentId: input.agentId },
+        });
         throw new Error(`Agent not found: ${input.agentId}`);
       }
 
@@ -83,7 +87,12 @@ export function createAgentSkillTools(input: {
       const relativePath = path.relative(skillsRoot, skillRoot);
 
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-        forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill invalid skill name', context: { skillName: inputData.skillName } });
+        forgeDebug({
+          scope: 'skills-tools',
+          level: 'error',
+          message: 'load_workspace_skill invalid skill name',
+          context: { skillName: inputData.skillName },
+        });
         throw new Error(`Invalid skill name: ${inputData.skillName}`);
       }
 
@@ -126,7 +135,6 @@ export function createAgentSkillTools(input: {
       }),
       execute: async (inputData) => {
         const agent = await input.db.query.agents.findFirst({
-  
           where: (fields, operators) => operators.eq(fields.id, input.agentId),
           columns: {
             id: true,
@@ -134,8 +142,13 @@ export function createAgentSkillTools(input: {
           },
         });
 
-if (agent === null || agent === undefined) {
-          forgeDebug({ scope: 'skills-tools', level: 'error', message: 'load_workspace_skill agent not found', context: { agentId: input.agentId } });
+        if (agent === null || agent === undefined) {
+          forgeDebug({
+            scope: 'skills-tools',
+            level: 'error',
+            message: 'load_workspace_skill agent not found',
+            context: { agentId: input.agentId },
+          });
           throw new Error(`Agent not found: ${input.agentId}`);
         }
 

@@ -1,5 +1,4 @@
 export type AgentRecentConversation = {
-
   conversationId: string;
 
   conversationKey: string;
@@ -15,7 +14,6 @@ export type AgentRecentConversation = {
   updatedAt: number;
 
   messages: Array<{
-
     messageId: string;
 
     content: string;
@@ -25,9 +23,5 @@ export type AgentRecentConversation = {
     authorDisplayName: string;
 
     createdAt: number;
-
   }>;
-
 };
-
-

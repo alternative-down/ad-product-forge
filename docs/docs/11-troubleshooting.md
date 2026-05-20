@@ -7,11 +7,13 @@
 **Sintoma**: Agente fica em `absent` após hire.
 
 **Causas possíveis**:
+
 1. Credenciais inválidas no provider
 2. Token Discord expirado
 3. LLM API key inválida
 
 **Solução**:
+
 ```bash
 # Verificar logs
 curl http://localhost:3000/admin/agent/:agentId/logs
@@ -30,11 +32,13 @@ curl -X PUT http://localhost:3000/admin/agent-provider \
 **Sintoma**: `Discord provider failed` no log.
 
 **Causas possíveis**:
+
 1. Token bot inválido
 2. Intent não habilitado (Message Content Intent)
 3. Rate limiting
 
 **Solução**:
+
 1. Verificar token em https://discord.com/developers
 2. Habilitar Message Content Intent em Bot settings
 3. Verificar rate limits em https://discord.status
@@ -44,11 +48,13 @@ curl -X PUT http://localhost:3000/admin/agent-provider \
 **Sintoma**: Agente não dispara nextStep.
 
 **Causas possíveis**:
+
 1. Schedule desativado (`isActive: false`)
 2. `nextStepAt` no passado
 3. Scheduler não está rodando
 
 **Solução**:
+
 ```bash
 # Verificar schedule
 curl http://localhost:3000/admin/schedules?agentId=:agentId
@@ -67,6 +73,7 @@ curl -X PUT http://localhost:3000/admin/schedule/:scheduleId \
 **Sintoma**: Agente para de executar, `budget_usd <= 0`.
 
 **Solução**:
+
 ```bash
 # Ver contrato
 curl http://localhost:3000/admin/agent/:agentId/contract
@@ -84,6 +91,7 @@ curl -X POST http://localhost:3000/admin/finance/top-up \
 **Causa**: Credenciais inválidas com graceful degradation.
 
 **Solução**:
+
 ```bash
 # Testar todos os providers
 curl http://localhost:3000/admin/agent/:agentId/providers
@@ -99,6 +107,7 @@ echo "TOKEN_STATUS: OK" # testar manualmente no Discord
 **Sintoma**: `Migration failed: table already exists` ou similar.
 
 **Solução**:
+
 ```bash
 # Ver migrations pendentes
 npm run db:status
@@ -116,6 +125,7 @@ npm run db:migrate
 **Causa**: Operações concorrentes no SQLite.
 
 **Solução**:
+
 ```typescript
 // Aguardar um pouco e retry
 for (let i = 0; i < 3; i++) {
@@ -139,6 +149,7 @@ for (let i = 0; i < 3; i++) {
 **Sintoma**: `429 Too Many Requests`.
 
 **Solução**:
+
 - Implementar exponential backoff
 - Verificar rate limits do provider
 - Considerar modelo mais barato
@@ -148,6 +159,7 @@ for (let i = 0; i < 3; i++) {
 **Sintoma**: `Maximum context exceeded`.
 
 **Solução**:
+
 ```typescript
 // Reduzir tokens no checkpoint
 // Ajustar checkpointedOmRecentRawTokens no system settings
@@ -161,6 +173,7 @@ curl -X PUT http://localhost:3000/admin/system/settings \
 **Sintoma**: `401 Unauthorized`.
 
 **Solução**:
+
 ```bash
 # Verificar key
 echo $OPENAI_API_KEY | head -c 10
@@ -176,6 +189,7 @@ export OPENAI_API_KEY=sk-novo-token
 **Sintoma**: `GitHub API: Token expired`.
 
 **Solução**:
+
 ```bash
 # Refresh installation token
 curl -X POST http://localhost:3000/admin/github/refresh-token \
@@ -188,6 +202,7 @@ curl -X POST http://localhost:3000/admin/github/refresh-token \
 **Sintoma**: `ECONNREFUSED` ou timeout.
 
 **Solução**:
+
 1. Verificar se Coolify está online
 2. Verificar URL da API
 3. Verificar firewall
@@ -218,10 +233,13 @@ grep "scope: 'agent-runner'" logs/forge.log | tail -100
 const registry = getInternalAgentRegistry();
 const agents = registry.list();
 
-console.log('Agents:', agents.map(a => ({
-  id: a.runtime.id,
-  status: a.runner.status,
-})));
+console.log(
+  'Agents:',
+  agents.map((a) => ({
+    id: a.runtime.id,
+    status: a.runner.status,
+  })),
+);
 ```
 
 ### Testar provider manualmente
@@ -241,6 +259,7 @@ await discord.sendMessage({
 **Sintoma**: Agente fica em `running` permanentemente.
 
 **Solução**:
+
 ```bash
 # Stop agent
 curl -X POST http://localhost:3000/admin/agent/:agentId/stop
@@ -257,6 +276,7 @@ curl -X POST http://localhost:3000/admin/agent/:agentId/wake
 **Sintoma**: Agente comportamento estranho, mensagens incoerentes.
 
 **Solução**:
+
 ```bash
 # Clear checkpointed state
 curl -X DELETE http://localhost:3000/admin/agent/:agentId/om-state
@@ -270,6 +290,7 @@ curl -X DELETE http://localhost:3000/admin/agent/:agentId/om-state
 **Sintoma**: Sistema não responde.
 
 **Solução**:
+
 ```bash
 # Limpar workspaces antigos
 rm -rf ./workspaces/*-archived

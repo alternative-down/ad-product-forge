@@ -305,7 +305,7 @@ describe('estimateTextTokens', () => {
   });
 
   it('divides length by 4 and rounds up', () => {
-    expect(estimateTextTokens('abcdef')).toBe(2);  // 6/4 = 1.5 → 2
+    expect(estimateTextTokens('abcdef')).toBe(2); // 6/4 = 1.5 → 2
     expect(estimateTextTokens('abcdefgh')).toBe(2); // 8/4 = 2
     expect(estimateTextTokens('abcdefghi')).toBe(3); // 9/4 = 2.25 → 3
   });
@@ -357,7 +357,7 @@ describe('getLastAssistantText', () => {
   it('skips null messages when finding last assistant', () => {
     const messages = [
       { role: 'user', content: 'hello' },
-            null,
+      null,
       { role: 'assistant', content: 'found' },
     ] as unknown as NativeToolLoopMessage[];
     expect(getLastAssistantText(messages)).toBe('found');
@@ -386,7 +386,9 @@ describe('buildStepDiagnostics', () => {
     const diagnostics = buildStepDiagnostics([
       {
         role: 'assistant',
-        content: [{ type: 'tool-call', toolName: 'reportHiringState', input: { status: 'working' } }],
+        content: [
+          { type: 'tool-call', toolName: 'reportHiringState', input: { status: 'working' } },
+        ],
       },
     ]);
     expect(diagnostics).toHaveLength(1);
@@ -496,7 +498,10 @@ describe('buildGeneratedAgentInstructions', () => {
 
 describe('buildHiringPrompt', () => {
   it('includes hiring request', () => {
-    const prompt = buildHiringPrompt({ hiringRequest: 'Hire a senior fullstack developer', existingAgents: [] });
+    const prompt = buildHiringPrompt({
+      hiringRequest: 'Hire a senior fullstack developer',
+      existingAgents: [],
+    });
     expect(prompt).toContain('Hire a senior fullstack developer');
   });
 

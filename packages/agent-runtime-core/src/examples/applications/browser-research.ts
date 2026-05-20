@@ -9,9 +9,7 @@ export type BrowserResearchApplicationOptions = {
   browser: BrowserGateway;
 };
 
-export function createBrowserResearchApplication(
-  options: BrowserResearchApplicationOptions,
-) {
+export function createBrowserResearchApplication(options: BrowserResearchApplicationOptions) {
   const host = createRuntimeHost({
     runtime: options.runtime,
   });
@@ -73,13 +71,16 @@ export function createBrowserResearchApplication(
   });
   host.runtime.registerAction({
     name: 'browser_open_session',
-    description: 'Open or replace the shared browser session with specific headers, user agent, or viewport.',
+    description:
+      'Open or replace the shared browser session with specific headers, user agent, or viewport.',
     inputSchema: z.object({
       userAgent: z.string().optional(),
-      viewport: z.object({
-        width: z.number().int().positive(),
-        height: z.number().int().positive(),
-      }).optional(),
+      viewport: z
+        .object({
+          width: z.number().int().positive(),
+          height: z.number().int().positive(),
+        })
+        .optional(),
       headers: z.record(z.string(), z.string()).optional(),
     }),
     async execute(input) {
@@ -124,21 +125,14 @@ export function createBrowserResearchApplication(
     runtime: host.runtime,
     journal: host.journal,
     notes: host.notes,
-    async queueResearchTask(task: {
-      id: string;
-      text: string;
-    }) {
+    async queueResearchTask(task: { id: string; text: string }) {
       await host.runtime.dispatch({
         id: task.id,
         type: 'browser-task',
         payload: task,
       });
     },
-    async inspectUrl(input: {
-      id: string;
-      url: string;
-      headers?: Record<string, string>;
-    }) {
+    async inspectUrl(input: { id: string; url: string; headers?: Record<string, string> }) {
       const session = await options.browser.createSession({
         headers: input.headers,
       });

@@ -138,7 +138,11 @@ describe('updateMessage', () => {
   it('updates message parts', async () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1', parts: [makePart('old')] }));
-    await store.updateMessage({ threadId: 'thread-1', messageId: 'msg-1', parts: [makePart('new content')] });
+    await store.updateMessage({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      parts: [makePart('new content')],
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect((messages[0].parts[0] as { type: string; text: string }).text).toBe('new content');
@@ -147,7 +151,11 @@ describe('updateMessage', () => {
   it('updates message metadata', async () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1' }));
-    await store.updateMessage({ threadId: 'thread-1', messageId: 'msg-1', metadata: { key: 'value' } });
+    await store.updateMessage({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      metadata: { key: 'value' },
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect(messages[0].metadata).toEqual({ key: 'value' });
@@ -157,7 +165,11 @@ describe('updateMessage', () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1' }));
 
-    await store.updateMessage({ threadId: 'thread-1', messageId: 'non-existent', role: 'assistant' });
+    await store.updateMessage({
+      threadId: 'thread-1',
+      messageId: 'non-existent',
+      role: 'assistant',
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect(messages[0].role).toBe('user'); // unchanged
@@ -176,7 +188,11 @@ describe('updateMessageMetadata', () => {
   it('replaces entire metadata', async () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1', metadata: { old: 'value' } }));
-    await store.updateMessageMetadata({ threadId: 'thread-1', messageId: 'msg-1', metadata: { new: 'data' } });
+    await store.updateMessageMetadata({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      metadata: { new: 'data' },
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect(messages[0].metadata).toEqual({ new: 'data' });
@@ -185,7 +201,11 @@ describe('updateMessageMetadata', () => {
   it('sets metadata to undefined when metadata is undefined', async () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1', metadata: { key: 'val' } }));
-    await store.updateMessageMetadata({ threadId: 'thread-1', messageId: 'msg-1', metadata: undefined });
+    await store.updateMessageMetadata({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      metadata: undefined,
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect(messages[0].metadata).toBeUndefined();
@@ -197,7 +217,11 @@ describe('updateMessageReplacement', () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1' }));
     await store.appendMessage(makeMessage({ id: 'msg-2' }));
-    await store.updateMessageReplacement({ threadId: 'thread-1', messageId: 'msg-1', replacedByMessageId: 'msg-2' });
+    await store.updateMessageReplacement({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      replacedByMessageId: 'msg-2',
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect(messages[0].replacedByMessageId).toBe('msg-2');
@@ -206,7 +230,11 @@ describe('updateMessageReplacement', () => {
   it('can set replacedByMessageId to null', async () => {
     const store = new InMemoryConversationStore();
     await store.appendMessage(makeMessage({ id: 'msg-1', replacedByMessageId: 'msg-old' }));
-    await store.updateMessageReplacement({ threadId: 'thread-1', messageId: 'msg-1', replacedByMessageId: null });
+    await store.updateMessageReplacement({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      replacedByMessageId: null,
+    });
 
     const messages = await store.listMessages({ threadId: 'thread-1' });
     expect(messages[0].replacedByMessageId).toBeNull();

@@ -48,11 +48,13 @@ describe('reloadLinkedAgentsForMcpServer', () => {
     const db = {
       query: {
         agentMcpConfigs: {
-          findMany: vi.fn().mockResolvedValue([
-            { agentId: 'agent-a' },
-            { agentId: 'agent-b' },
-            { agentId: 'agent-c' },
-          ]),
+          findMany: vi
+            .fn()
+            .mockResolvedValue([
+              { agentId: 'agent-a' },
+              { agentId: 'agent-b' },
+              { agentId: 'agent-c' },
+            ]),
         },
       },
     } as never;

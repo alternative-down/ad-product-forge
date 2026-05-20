@@ -2,30 +2,38 @@ import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 
 // Re-create the schemas from write.ts to test validation
-const createInvestmentSchema = z.object({
-  amountUsd: z.number().positive(),
-  description: z.string().optional(),
-  effectiveAt: z.string().optional(),
-}).strict();
+const createInvestmentSchema = z
+  .object({
+    amountUsd: z.number().positive(),
+    description: z.string().optional(),
+    effectiveAt: z.string().optional(),
+  })
+  .strict();
 
-const createPayableSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  amountUsd: z.number().positive(),
-  dueAt: z.string(),
-  kind: z.enum(['single', 'recurring']),
-  recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
-}).strict();
+const createPayableSchema = z
+  .object({
+    name: z.string(),
+    description: z.string().optional(),
+    amountUsd: z.number().positive(),
+    dueAt: z.string(),
+    kind: z.enum(['single', 'recurring']),
+    recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
+  })
+  .strict();
 
-const ledgerEntryActionSchema = z.object({
-  entryId: z.string().min(1),
-  effectiveAt: z.string().optional(),
-}).strict();
+const ledgerEntryActionSchema = z
+  .object({
+    entryId: z.string().min(1),
+    effectiveAt: z.string().optional(),
+  })
+  .strict();
 
-const recurringPayableStatusSchema = z.object({
-  payableId: z.string(),
-  isActive: z.boolean(),
-}).strict();
+const recurringPayableStatusSchema = z
+  .object({
+    payableId: z.string(),
+    isActive: z.boolean(),
+  })
+  .strict();
 
 describe('Finance Route Schemas', () => {
   describe('createInvestmentSchema', () => {
@@ -58,10 +66,12 @@ describe('Finance Route Schemas', () => {
     });
 
     it('rejects extra fields', () => {
-      expect(() => createInvestmentSchema.parse({
-        amountUsd: 100,
-        extra: 'not allowed',
-      })).toThrow();
+      expect(() =>
+        createInvestmentSchema.parse({
+          amountUsd: 100,
+          extra: 'not allowed',
+        }),
+      ).toThrow();
     });
   });
 
@@ -90,39 +100,47 @@ describe('Finance Route Schemas', () => {
     });
 
     it('rejects invalid kind', () => {
-      expect(() => createPayableSchema.parse({
-        name: 'Test',
-        amountUsd: 100,
-        dueAt: '2025-01-01',
-        kind: 'quarterly',
-      })).toThrow();
+      expect(() =>
+        createPayableSchema.parse({
+          name: 'Test',
+          amountUsd: 100,
+          dueAt: '2025-01-01',
+          kind: 'quarterly',
+        }),
+      ).toThrow();
     });
 
     it('rejects daily recurrence period', () => {
-      expect(() => createPayableSchema.parse({
-        name: 'Test Daily',
-        amountUsd: 100,
-        dueAt: '2025-01-01',
-        kind: 'recurring',
-        recurrencePeriod: 'daily',
-      })).toThrow();
+      expect(() =>
+        createPayableSchema.parse({
+          name: 'Test Daily',
+          amountUsd: 100,
+          dueAt: '2025-01-01',
+          kind: 'recurring',
+          recurrencePeriod: 'daily',
+        }),
+      ).toThrow();
     });
     it('rejects invalid recurrence period', () => {
-      expect(() => createPayableSchema.parse({
-        name: 'Test',
-        amountUsd: 100,
-        dueAt: '2025-01-01',
-        kind: 'recurring',
-        recurrencePeriod: 'biweekly',
-      })).toThrow();
+      expect(() =>
+        createPayableSchema.parse({
+          name: 'Test',
+          amountUsd: 100,
+          dueAt: '2025-01-01',
+          kind: 'recurring',
+          recurrencePeriod: 'biweekly',
+        }),
+      ).toThrow();
     });
 
     it('rejects missing name', () => {
-      expect(() => createPayableSchema.parse({
-        amountUsd: 100,
-        dueAt: '2025-01-01',
-        kind: 'single',
-      })).toThrow();
+      expect(() =>
+        createPayableSchema.parse({
+          amountUsd: 100,
+          dueAt: '2025-01-01',
+          kind: 'single',
+        }),
+      ).toThrow();
     });
   });
 
@@ -147,8 +165,6 @@ describe('Finance Route Schemas', () => {
     it('rejects empty entryId', () => {
       expect(() => ledgerEntryActionSchema.parse({ entryId: '' })).toThrow();
     });
-
-
   });
 
   describe('recurringPayableStatusSchema', () => {
@@ -173,10 +189,12 @@ describe('Finance Route Schemas', () => {
     });
 
     it('rejects non-boolean isActive', () => {
-      expect(() => recurringPayableStatusSchema.parse({
-        payableId: 'payable-123',
-        isActive: 'yes',
-      })).toThrow();
+      expect(() =>
+        recurringPayableStatusSchema.parse({
+          payableId: 'payable-123',
+          isActive: 'yes',
+        }),
+      ).toThrow();
     });
   });
 });
@@ -188,7 +206,7 @@ describe('Finance Route Registration Logic', () => {
       getFinance: async () => ({ total: 1000 }),
       getFinanceContracts: async () => [],
     };
-    
+
     // Verify interface compatibility
     expect(typeof mockReadModel.getFinance).toBe('function');
     expect(typeof mockReadModel.getFinanceContracts).toBe('function');
@@ -208,7 +226,7 @@ describe('Finance Route Registration Logic', () => {
         setRecurringPayableActive: async () => ({}),
       },
     };
-    
+
     expect(typeof mockInput.companyCash.recordCashIn).toBe('function');
     expect(typeof mockInput.companyPayables.setRecurringPayableActive).toBe('function');
   });

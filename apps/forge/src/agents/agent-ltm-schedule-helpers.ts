@@ -74,9 +74,7 @@ export function scheduleLtmRun(
 /**
  * Clears any pending scheduled LTM run.
  */
-export function clearLtmTimer(
-  timer: { current: ReturnType<typeof setTimeout> | null },
-) {
+export function clearLtmTimer(timer: { current: ReturnType<typeof setTimeout> | null }) {
   if (!timer.current) {
     return;
   }
@@ -106,16 +104,19 @@ export function applyLtmStateToSnapshot(
     packages: unknown[];
   },
 ) {
-  snapshot.lastRunAt = persistedState.lastRunAt !== null && persistedState.lastRunAt !== undefined
-    ? Date.parse(persistedState.lastRunAt)
-    : snapshot.lastRunAt;
+  snapshot.lastRunAt =
+    persistedState.lastRunAt !== null && persistedState.lastRunAt !== undefined
+      ? Date.parse(persistedState.lastRunAt)
+      : snapshot.lastRunAt;
   snapshot.lastRunError = persistedState.lastRunError;
-  snapshot.lastRunErrorAt = persistedState.lastRunErrorAt !== null && persistedState.lastRunErrorAt !== undefined
-    ? Date.parse(persistedState.lastRunErrorAt)
-    : null;
+  snapshot.lastRunErrorAt =
+    persistedState.lastRunErrorAt !== null && persistedState.lastRunErrorAt !== undefined
+      ? Date.parse(persistedState.lastRunErrorAt)
+      : null;
   snapshot.lastWrittenPackageId = persistedState.lastWrittenPackageId;
-  snapshot.lastWrittenAt = persistedState.lastWrittenAt !== null && persistedState.lastWrittenAt !== undefined
-    ? Date.parse(persistedState.lastWrittenAt)
-    : null;
+  snapshot.lastWrittenAt =
+    persistedState.lastWrittenAt !== null && persistedState.lastWrittenAt !== undefined
+      ? Date.parse(persistedState.lastWrittenAt)
+      : null;
   snapshot.packageCount = persistedState.packages.length;
 }

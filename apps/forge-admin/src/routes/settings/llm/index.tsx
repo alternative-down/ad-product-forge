@@ -60,7 +60,8 @@ function SettingsLlmProfilesRoute() {
   const [profileForm, setProfileForm] = useState<UpsertLlmProfileInput>(createEmptyProfileForm);
   const mutation = useMutation({
     mutationFn: upsertLlmProfile,
-    onMutate: (input) => startAdminAction(input.profileId ? 'Salvando perfil...' : 'Criando perfil...'),
+    onMutate: (input) =>
+      startAdminAction(input.profileId ? 'Salvando perfil...' : 'Criando perfil...'),
     onSuccess: async (_data, input, context) => {
       succeedAdminAction(context, input.profileId ? 'Perfil atualizado.' : 'Perfil criado.');
       setDialogOpen(false);
@@ -94,7 +95,10 @@ function SettingsLlmProfilesRoute() {
     },
   });
   const profiles = useMemo(
-    () => [...(llmQuery.data?.profiles ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
+    () =>
+      [...(llmQuery.data?.profiles ?? [])].sort((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
     [llmQuery.data?.profiles],
   );
   const filteredProfiles = useMemo(
@@ -103,15 +107,17 @@ function SettingsLlmProfilesRoute() {
   );
   const modelKeys = useMemo(
     () =>
-      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort((left, right) =>
-        left.localeCompare(right),
+      [...new Set((llmQuery.data?.prices ?? []).map((price) => price.modelKey))].sort(
+        (left, right) => left.localeCompare(right),
       ),
     [llmQuery.data?.prices],
   );
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {llmQuery.isLoading && !llmQuery.data ? <AdminLoadingState label="Carregando perfis..." /> : null}
+      {llmQuery.isLoading && !llmQuery.data ? (
+        <AdminLoadingState label="Carregando perfis..." />
+      ) : null}
       <PageHeader title="Perfis" />
 
       <OauthSection

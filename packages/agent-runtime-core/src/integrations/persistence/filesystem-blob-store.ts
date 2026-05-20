@@ -25,11 +25,7 @@ export class FilesystemBlobStore implements BlobStore {
       bytesBase64: Buffer.from(record.bytes).toString('base64'),
     };
 
-    await writeFile(
-      this.getFilePath(record.id),
-      JSON.stringify(fileRecord, null, 2),
-      'utf8',
-    );
+    await writeFile(this.getFilePath(record.id), JSON.stringify(fileRecord, null, 2), 'utf8');
   }
 
   async read(blobId: string): Promise<BlobRecord | null> {

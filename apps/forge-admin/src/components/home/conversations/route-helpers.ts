@@ -1,4 +1,7 @@
-import type { InternalChatExternalAccount, HomeInternalChatConversation } from '@/lib/admin-api/index';
+import type {
+  InternalChatExternalAccount,
+  HomeInternalChatConversation,
+} from '@/lib/admin-api/index';
 
 import type { AccountForm, ConversationForm, LocalConversation } from './context';
 
@@ -47,7 +50,9 @@ export function normalizeAccount(account: {
   };
 }
 
-export function normalizeConversations(conversations: HomeInternalChatConversation[]): LocalConversation[] {
+export function normalizeConversations(
+  conversations: HomeInternalChatConversation[],
+): LocalConversation[] {
   return conversations.map((conversation) => ({
     id: conversation.conversationId,
     type: conversation.type,

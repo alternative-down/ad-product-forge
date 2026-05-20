@@ -30,7 +30,9 @@ describe('agent-runner-generate-timeout', () => {
       const controller = new AbortController();
       const handle = createGenerateTimeoutGuard(controller);
       let resolved = false;
-      handle.promise.then(() => { resolved = true; });
+      handle.promise.then(() => {
+        resolved = true;
+      });
       vi.advanceTimersByTime(1);
       await vi.advanceTimersToNextTimerAsync();
       expect(resolved).toBe(false);
@@ -69,7 +71,9 @@ describe('agent-runner-generate-timeout', () => {
       touchGenerateTimeout(handle, controller, null, null);
 
       let rejectedError: Error | undefined;
-      handle.promise.catch((err) => { rejectedError = err as Error; });
+      handle.promise.catch((err) => {
+        rejectedError = err as Error;
+      });
 
       vi.advanceTimersByTime(GENERATE_TIMEOUT_MS);
       await vi.advanceTimersToNextTimerAsync();
@@ -86,7 +90,9 @@ describe('agent-runner-generate-timeout', () => {
       touchGenerateTimeout(handle, controller, 'building-prompt', progress);
 
       let rejectedError: Error | undefined;
-      handle.promise.catch((err) => { rejectedError = err as Error; });
+      handle.promise.catch((err) => {
+        rejectedError = err as Error;
+      });
 
       vi.advanceTimersByTime(GENERATE_TIMEOUT_MS);
       await vi.advanceTimersToNextTimerAsync();
@@ -121,7 +127,9 @@ describe('agent-runner-generate-timeout', () => {
       clearGenerateTimeout(handle);
 
       let rejected = false;
-      handle.promise.catch(() => { rejected = true; });
+      handle.promise.catch(() => {
+        rejected = true;
+      });
 
       vi.advanceTimersByTime(GENERATE_TIMEOUT_MS);
       await vi.advanceTimersToNextTimerAsync();
@@ -140,7 +148,9 @@ describe('agent-runner-generate-timeout', () => {
       touchGenerateTimeout(handle, controller, null, null);
 
       let rejected: Error | undefined;
-      handle.promise.catch((err) => { rejected = err as Error; });
+      handle.promise.catch((err) => {
+        rejected = err as Error;
+      });
 
       vi.advanceTimersByTime(GENERATE_TIMEOUT_MS);
       await vi.advanceTimersToNextTimerAsync();

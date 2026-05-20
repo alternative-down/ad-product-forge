@@ -26,9 +26,14 @@ function isStringChunk(x: unknown): boolean {
 function isColumn(x: unknown): boolean {
   const n = (x as { constructor?: { name?: string } })?.constructor?.name;
   return (
-    n === 'SQLiteText' || n === 'SQLiteInteger' || n === 'SQLiteBlob' || n === 'SQLiteReal' ||
-    n === 'SQLiteTextBuilder' || n === 'SQLiteIntegerBuilder' ||
-    n === 'SQLiteBlobBuilder' || n === 'SQLiteRealBuilder'
+    n === 'SQLiteText' ||
+    n === 'SQLiteInteger' ||
+    n === 'SQLiteBlob' ||
+    n === 'SQLiteReal' ||
+    n === 'SQLiteTextBuilder' ||
+    n === 'SQLiteIntegerBuilder' ||
+    n === 'SQLiteBlobBuilder' ||
+    n === 'SQLiteRealBuilder'
   );
 }
 
@@ -62,7 +67,11 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
       'value' in valChunk
     ) {
       value = (valChunk as { value: unknown }).value;
-    } else if (typeof valChunk === 'string' || typeof valChunk === 'number' || typeof valChunk === 'boolean') {
+    } else if (
+      typeof valChunk === 'string' ||
+      typeof valChunk === 'number' ||
+      typeof valChunk === 'boolean'
+    ) {
       value = valChunk;
     } else {
       i = j;
@@ -109,7 +118,7 @@ interface ScheduleRow {
 function toScheduleRecord(row: Record<string, unknown>): ScheduleRow {
   return {
     id: row.id as string,
-        agentId: row.agentId as string,
+    agentId: row.agentId as string,
     name: row.name as string,
     description: row.description as string | undefined,
     scheduleType: row.scheduleType as 'cron' | 'date',
@@ -117,7 +126,8 @@ function toScheduleRecord(row: Record<string, unknown>): ScheduleRow {
     scheduledDate: row.scheduledDate as number | null | undefined,
     timezone: row.timezone as string,
     content: row.content as string,
-    wakeWhenRunning: (row.wakeWhenRunning as number) === 1 ? true : !!(row.wakeWhenRunning as boolean),
+    wakeWhenRunning:
+      (row.wakeWhenRunning as number) === 1 ? true : !!(row.wakeWhenRunning as boolean),
     isActive: (row.isActive as number) === 1 ? 1 : 0,
     lastTriggeredAt: row.lastTriggeredAt as number | null | undefined,
     nextTriggerAt: row.nextTriggerAt as number | null | undefined,
@@ -140,14 +150,15 @@ function toScheduleSummary(row: Record<string, unknown>) {
   };
 }
 
-
 // ─── Mock DB factory ──────────────────────────────────────────────────────────
 
 function createMockDb(rows: Record<string, unknown>[] = []): any {
   const rowStore: Record<string, unknown>[] = [...rows];
   // Flag: next findFirst call returns null (for simulating reload failures)
   let reloadNext = false;
-  function setReloadFails() { reloadNext = true; }
+  function setReloadFails() {
+    reloadNext = true;
+  }
   // Track findMany calls per filter — 2nd+ call returns empty (simulates reload returning no rows)
   const callTracker = new Map<string, number>();
 
@@ -159,9 +170,7 @@ function createMockDb(rows: Record<string, unknown>[] = []): any {
     if (prev > 0) return Promise.resolve([]);
     return Promise.resolve(
       rowStore
-        .filter((r) =>
-          Object.entries(filter).every(([k, v]) => r[k] === v),
-        )
+        .filter((r) => Object.entries(filter).every(([k, v]) => r[k] === v))
         .map(toScheduleSummary),
     );
   }
@@ -180,9 +189,7 @@ function createMockDb(rows: Record<string, unknown>[] = []): any {
     reloadNext = false;
     if (doReloadFail) return Promise.resolve(null);
     if (count >= 5) return Promise.resolve(null);
-    const row = rowStore.find((r) =>
-      Object.entries(filter).every(([k, v]) => r[k] === v),
-    );
+    const row = rowStore.find((r) => Object.entries(filter).every(([k, v]) => r[k] === v));
     return Promise.resolve(row ? toScheduleRecord(row) : null);
   }
   // Drizzle chainable API: db.insert(table).values(values)
@@ -457,13 +464,15 @@ describe('createAgentScheduleManager', () => {
   test('denies edit from unauthorized agent', async () => {
     const rows = [makeRow({ agentId: 'agent-1', creatorId: 'agent-1' })];
     const manager = makeManager(rows);
-    await expect(manager.editCron('agent-2', 'sid-test-1', { cronExpression: '0 0 * * *' })).rejects.toThrow(
-      /not authorized/i,
-    );
+    await expect(
+      manager.editCron('agent-2', 'sid-test-1', { cronExpression: '0 0 * * *' }),
+    ).rejects.toThrow(/not authorized/i);
   });
 
   test('updates cron expression', async () => {
-    const rows = [makeRow({ agentId: 'agent-1', creatorId: 'agent-1', cronExpression: '0 * * * *' })];
+    const rows = [
+      makeRow({ agentId: 'agent-1', creatorId: 'agent-1', cronExpression: '0 * * * *' }),
+    ];
     const manager = makeManager(rows);
     const result = await manager.editCron('agent-1', 'sid-test-1', { cronExpression: '0 0 * * *' });
     expect(result).toMatchObject({ cronExpression: '0 0 * * *' });
@@ -471,19 +480,26 @@ describe('createAgentScheduleManager', () => {
 
   test('throws for non-existent schedule', async () => {
     const manager = makeManager([]);
-    await expect(manager.editCron('agent-1', 'nonexistent', { cronExpression: '0 0 * * *' })).rejects.toThrow(
-      'not found',
-    );
+    await expect(
+      manager.editCron('agent-1', 'nonexistent', { cronExpression: '0 0 * * *' }),
+    ).rejects.toThrow('not found');
   });
 
   test('allows partial cron updates', async () => {
-    const rows = [makeRow({ agentId: 'agent-1', creatorId: 'agent-1', name: 'Old name', cronExpression: '0 * * * *' })];
+    const rows = [
+      makeRow({
+        agentId: 'agent-1',
+        creatorId: 'agent-1',
+        name: 'Old name',
+        cronExpression: '0 * * * *',
+      }),
+    ];
     const manager = makeManager(rows);
     const result = await manager.editCron('agent-1', 'sid-test-1', { name: 'New name' });
     expect(result).toMatchObject({ name: 'New name', cronExpression: '0 * * * *' });
   });
 
-// ── removeAgent ────────────────────────────────────────────────────────────────
+  // ── removeAgent ────────────────────────────────────────────────────────────────
 
   test('deletes all agent schedules from DB when agent is removed', async () => {
     const rows = [
@@ -516,5 +532,4 @@ describe('createAgentScheduleManager', () => {
     const result = await manager.listSchedules('agent-1');
     expect(result).toHaveLength(0);
   });
-
 });

@@ -36,20 +36,18 @@ import type { LoopDetector } from './agent-runner-loop-detector';
 
 import { delay, withTimeout } from '../utils/async';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { buildStepSystemPrompt, extractRunnerControlDirectiveFromIteration } from './agent-runner-control-directives';
+import {
+  buildStepSystemPrompt,
+  extractRunnerControlDirectiveFromIteration,
+} from './agent-runner-control-directives';
 import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   buildRecallStepFromIteration,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
 import { createId } from '../utils/id';
-import {
-  isStaleRun,
-  
-  resetBackoff,
-  calculateDelayMs,
-} from './agent-runner-state';
+import { isStaleRun, resetBackoff, calculateDelayMs } from './agent-runner-state';
 import {
   startGenerateAttempt,
   finishGenerateAttempt,
@@ -57,9 +55,9 @@ import {
 } from './agent-runner-attempt-lifecycle';
 import {
   buildIterationFeedback,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type BuildIterationFeedbackDeps,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type BuildIterationFeedbackInput,
 } from './agent-runner-feedback';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -68,16 +66,13 @@ import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
 import { RUN_STOP_REMINDER } from './agent-runner-wake';
 import { forgeDebug } from '@forge-runtime/core';
 
-import {
-  FIFTEEN_MINUTES_MS,
-  
-} from './time-constants';
+import { FIFTEEN_MINUTES_MS } from './time-constants';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import {
   createGenerateTimeoutGuard,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   touchGenerateTimeout,
   clearGenerateTimeout,
   type GenerateTimeoutHandle,
@@ -183,19 +178,22 @@ export async function generateWithTimeoutRetries(
   },
   longTermMemoryRecallSystemText: string | null,
   deps: GenerateDeps,
-): Promise<{
-  text: string;
-  toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
-  toolResults: Array<{ name: string; error?: Error }>;
-  finishReason: string;
-  inputTokens: number;
-  outputTokens: number;
-} | undefined> {
+): Promise<
+  | {
+      text: string;
+      toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
+      toolResults: Array<{ name: string; error?: Error }>;
+      finishReason: string;
+      inputTokens: number;
+      outputTokens: number;
+    }
+  | undefined
+> {
   const effectivePromptText = [
     (longTermMemoryRecallSystemText?.trim() ?? '') !== ''
       ? {
           role: 'assistant' as const,
-          content: (longTermMemoryRecallSystemText ?? "").trim(),
+          content: (longTermMemoryRecallSystemText ?? '').trim(),
         }
       : null,
     promptText.trim()
@@ -204,10 +202,7 @@ export async function generateWithTimeoutRetries(
           content: promptText.trim(),
         }
       : null,
-  ].filter(
-    (value): value is { role: 'assistant' | 'user'; content: string } =>
-      Boolean(value),
-  );
+  ].filter((value): value is { role: 'assistant' | 'user'; content: string } => Boolean(value));
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const runDelayMs = calculateDelayMs(deps.backoffState, {
@@ -259,15 +254,11 @@ export async function generateWithTimeoutRetries(
       });
 
       const result = await (Promise.race([
-        (deps.currentRuntime as any).generate(
-          systemPrompt,
-          effectivePromptText,
-          {
-            abortSignal: controller.signal,
-            maxSteps: GENERATE_MAX_STEPS_PER_RUN,
-            runId: deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`,
-          },
-        ),
+        (deps.currentRuntime as any).generate(systemPrompt, effectivePromptText, {
+          abortSignal: controller.signal,
+          maxSteps: GENERATE_MAX_STEPS_PER_RUN,
+          runId: deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`,
+        }),
         timeout.promise,
       ]) as any);
 

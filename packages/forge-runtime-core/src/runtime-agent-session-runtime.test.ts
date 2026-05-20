@@ -34,8 +34,6 @@ const { sharedMocks, mockLogger } = vi.hoisted(() => {
     observers: [],
   } as unknown as ForgeConversationMemory;
 
-
-
   const createForgeConversationMemory = vi.fn().mockReturnValue(conversationMemory);
   const createOperationalMemoryConversationObserver = vi.fn().mockReturnValue({
     onStepComplete: vi.fn(),
@@ -84,9 +82,9 @@ vi.mock('./memory.js', () => ({
 }));
 
 vi.mock('./operational-memory-conversation-observer.js', () => ({
-  createOperationalMemoryConversationObserver: sharedMocks.createOperationalMemoryConversationObserver,
+  createOperationalMemoryConversationObserver:
+    sharedMocks.createOperationalMemoryConversationObserver,
 }));
-
 
 vi.mock('./tools.js', () => ({
   toolToRuntimeAction: sharedMocks.toolToRuntimeAction,
@@ -112,11 +110,15 @@ const { createRuntimeAgentSessionRuntime } = await import('./runtime-agent-sessi
 
 function makeModel() {
   return new MockLanguageModelV3({
-    doGenerate: async () => { throw new Error('not used'); },
+    doGenerate: async () => {
+      throw new Error('not used');
+    },
   });
 }
 
-function makeMinimalOptions(overrides: Partial<CreateRuntimeAgentSessionOptions> = {}): CreateRuntimeAgentSessionOptions {
+function makeMinimalOptions(
+  overrides: Partial<CreateRuntimeAgentSessionOptions> = {},
+): CreateRuntimeAgentSessionOptions {
   return {
     model: makeModel(),
     threadId: 'thread_test',
@@ -162,7 +164,7 @@ describe('getRuntimeActions', () => {
     const actions = await runtime.getRuntimeActions();
 
     expect(actions).toHaveLength(2);
-    expect(actions.map(a => a.name).sort()).toEqual(['enterPlanMode', 'exitPlanMode']);
+    expect(actions.map((a) => a.name).sort()).toEqual(['enterPlanMode', 'exitPlanMode']);
   });
 
   it('appends dynamic actions when loadRuntimeActions succeeds', async () => {
@@ -183,7 +185,11 @@ describe('getRuntimeActions', () => {
 
     expect(actions).toHaveLength(3);
     expect(actions[0].name).toBe('custom-action');
-    expect(actions.map(a => a.name).sort()).toEqual(['custom-action', 'enterPlanMode', 'exitPlanMode']);
+    expect(actions.map((a) => a.name).sort()).toEqual([
+      'custom-action',
+      'enterPlanMode',
+      'exitPlanMode',
+    ]);
   });
 
   it('logs a warning and omits dynamic actions when loadRuntimeActions throws', async () => {
@@ -245,9 +251,13 @@ describe('syncState', () => {
     // syncState always records a "sync.complete" diagnostic event
     expect(recordMock).toHaveBeenCalled();
     const event = recordMock.mock.calls[0][0];
-    
+
     expect(event.scope).toBe('om');
-    expect(['sync-state-start', 'sync-state-after-conversation-memory', 'sync-state-finished']).toContain(event.phase);
+    expect([
+      'sync-state-start',
+      'sync-state-after-conversation-memory',
+      'sync-state-finished',
+    ]).toContain(event.phase);
   });
 
   it('throws when consolidateConversationOverflow is true but checkpointedOmLimits is absent', async () => {

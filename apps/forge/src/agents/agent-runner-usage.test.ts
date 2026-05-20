@@ -55,9 +55,7 @@ describe('agent-runner-usage', () => {
         runtime: createMockRuntime({ modelProfileId: undefined }),
       });
 
-      await expect(estimateStepCostUsd()).rejects.toThrow(
-        /missing primary model profile/,
-      );
+      await expect(estimateStepCostUsd()).rejects.toThrow(/missing primary model profile/);
     });
 
     it('averages cost from recent steps when no modelPrice', async () => {
@@ -100,7 +98,7 @@ describe('agent-runner-usage', () => {
         contractCostMultiplier: 1.5,
         modelPrice: {
           inputPerMillionUsd: 3,
-          inputCachePerMillionUsd: 0.30,
+          inputCachePerMillionUsd: 0.3,
           outputPerMillionUsd: 15,
         },
       });
@@ -208,9 +206,9 @@ describe('agent-runner-usage', () => {
         runtime: createMockRuntime({ modelProfileId: undefined }),
       });
 
-      await expect(
-        recordAgentStep('contract-1', 1000, 0, 500),
-      ).rejects.toThrow(/missing primary model profile/);
+      await expect(recordAgentStep('contract-1', 1000, 0, 500)).rejects.toThrow(
+        /missing primary model profile/,
+      );
     });
 
     it('computes cost correctly with uncached and cached tokens', async () => {
@@ -350,7 +348,6 @@ describe('agent-runner-usage', () => {
       });
 
       expect(() => getUsageFromResult({})).toThrow(TypeError);
-      
     });
 
     it('prioritizes inputTokenDetails.cacheReadTokens over cachedInputTokens', async () => {

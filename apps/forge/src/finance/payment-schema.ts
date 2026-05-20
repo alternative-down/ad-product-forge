@@ -46,11 +46,15 @@ export const paymentCustomers = sqliteTable('payment_customers', {
 
 export const paymentSubscriptions = sqliteTable('payment_subscriptions', {
   id: text('id').primaryKey(),
-  customerId: text('customer_id').notNull().references(() => paymentCustomers.id),
+  customerId: text('customer_id')
+    .notNull()
+    .references(() => paymentCustomers.id),
   productId: text('product_id').notNull(),
   provider: text('provider', { enum: ['stripe', 'asaas'] }).notNull(),
   providerSubscriptionId: text('provider_subscription_id').notNull(),
-  status: text('status', { enum: ['active', 'cancelled', 'past_due', 'trialing', 'incomplete'] }).notNull(),
+  status: text('status', {
+    enum: ['active', 'cancelled', 'past_due', 'trialing', 'incomplete'],
+  }).notNull(),
   amountUsd: real('amount_usd').notNull(),
   billingCycle: text('billing_cycle', { enum: ['monthly', 'annual'] }).notNull(),
   currentPeriodStart: integer('current_period_start'),
@@ -67,7 +71,9 @@ export const paymentSubscriptions = sqliteTable('payment_subscriptions', {
 export const paymentTransactions = sqliteTable('payment_transactions', {
   id: text('id').primaryKey(),
   subscriptionId: text('subscription_id').references(() => paymentSubscriptions.id),
-  customerId: text('customer_id').notNull().references(() => paymentCustomers.id),
+  customerId: text('customer_id')
+    .notNull()
+    .references(() => paymentCustomers.id),
   provider: text('provider', { enum: ['stripe', 'asaas'] }).notNull(),
   /** The raw provider payment/checkout event ID — used for idempotency */
   providerPaymentId: text('provider_payment_id').notNull(),

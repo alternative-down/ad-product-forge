@@ -35,7 +35,12 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         orderBy: desc(agentExecutionContracts.startsAt),
       });
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentContracts failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'listAgentContracts failed',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     return rows.map((row) => {
@@ -52,7 +57,12 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         orderBy: desc(agentSchedules.nextTriggerAt),
       });
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentSchedules failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'listAgentSchedules failed',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     return rows.map((row) => toScheduleSummaryHelper(row));
@@ -67,7 +77,12 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         limit: 50,
       });
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentNotifications failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'listAgentNotifications failed',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     return rows.map((n) => ({
@@ -85,16 +100,40 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         where: eq(agentMcpConfigs.agentId, agentId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentMcpServers failed (query configs)', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'listAgentMcpServers failed (query configs)',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     const serverIds = rows.map((r) => r.serverId).filter(Boolean);
-    let servers: { id: string; name: string; description?: string | null; transport: string; command?: string | null; args?: string | null; envVars?: string | null; url?: string | null; headers?: string | null; createdAt: unknown; updatedAt: unknown }[];
+    let servers: {
+      id: string;
+      name: string;
+      description?: string | null;
+      transport: string;
+      command?: string | null;
+      args?: string | null;
+      envVars?: string | null;
+      url?: string | null;
+      headers?: string | null;
+      createdAt: unknown;
+      updatedAt: unknown;
+    }[];
     if (serverIds.length > 0) {
       try {
-        servers = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, serverIds) });
+        servers = await db.query.mcpServerConfigs.findMany({
+          where: inArray(mcpServerConfigs.id, serverIds),
+        });
       } catch (err) {
-        forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentMcpServers failed (query servers)', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({
+          scope: 'admin-read-model',
+          level: 'error',
+          message: 'listAgentMcpServers failed (query servers)',
+          context: { agentId, error: err instanceof Error ? err.message : String(err) },
+        });
         throw err;
       }
     } else {
@@ -129,7 +168,12 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         columns: { modelProfileId: true, omModelProfileId: true },
       });
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles failed (query agent)', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'listAgentLlmProfiles failed (query agent)',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     if (agent === null || agent === undefined) return { profiles: [] };
@@ -141,7 +185,12 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         where: inArray(llmProfiles.id, profileIds),
       });
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'listAgentLlmProfiles failed (query profiles)', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'listAgentLlmProfiles failed (query profiles)',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     return { profiles };

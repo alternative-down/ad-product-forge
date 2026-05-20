@@ -23,7 +23,9 @@ export function AppShell(input: {
           )}
         >
           <main className="flex min-h-0 min-w-0 flex-col overflow-y-auto">{input.children}</main>
-          {input.detailPane ? <aside className="min-h-0 min-w-0 overflow-y-auto">{input.detailPane}</aside> : null}
+          {input.detailPane ? (
+            <aside className="min-h-0 min-w-0 overflow-y-auto">{input.detailPane}</aside>
+          ) : null}
         </div>
       </div>
     </div>

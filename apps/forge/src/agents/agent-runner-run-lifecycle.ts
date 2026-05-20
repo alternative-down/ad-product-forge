@@ -21,10 +21,7 @@ export type RunLifecycleDeps = {
   stopped: boolean;
 };
 
-export function createRunLifecycle(
-  state: SchedulerState,
-  deps: RunLifecycleDeps,
-): RunLifecycle {
+export function createRunLifecycle(state: SchedulerState, deps: RunLifecycleDeps): RunLifecycle {
   let currentGenerateAbortController: AbortController | null = null;
 
   function startNewRunEpoch(): number {

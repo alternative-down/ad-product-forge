@@ -89,10 +89,13 @@ export function createHomeInternalChatConversation(input: {
   name?: string;
   participantAccountIds: string[];
 }) {
-  return request<{ conversationId: string; conversationKey: string }>('/admin/internal-chat/conversation/create', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ conversationId: string; conversationKey: string }>(
+    '/admin/internal-chat/conversation/create',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function updateHomeInternalChatConversation(input: {
@@ -132,10 +135,13 @@ export function archiveHomeInternalChatConversation(input: {
   accountId: string;
   conversationId: string;
 }) {
-  return request<{ conversationId: string; archived: true }>('/admin/internal-chat/conversation/archive', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  return request<{ conversationId: string; archived: true }>(
+    '/admin/internal-chat/conversation/archive',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function getHomeInternalChatGroupMembers(accountId: string, conversationId: string) {

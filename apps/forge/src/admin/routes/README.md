@@ -15,11 +15,7 @@ routes/
 ## Usage
 
 ```typescript
-import { 
-  agentIdQuerySchema, 
-  hireAgentSchema,
-  parseQueryParams 
-} from './routes/index.js';
+import { agentIdQuerySchema, hireAgentSchema, parseQueryParams } from './routes/index.js';
 
 // In route handler:
 const query = parseQueryParams(agentIdQuerySchema, request.searchParams);

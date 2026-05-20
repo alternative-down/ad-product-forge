@@ -9,11 +9,13 @@ import { createInternalChatMessages } from './internal-chat-messages';
 
 // ─── Mock DB factory ─────────────────────────────────────────────────────────
 
-function makeMockDb(overrides: {
-  findManyRows?: unknown[];
-  deleteRowsAffected?: number;
-  deleteError?: Error;
-} = {}) {
+function makeMockDb(
+  overrides: {
+    findManyRows?: unknown[];
+    deleteRowsAffected?: number;
+    deleteError?: Error;
+  } = {},
+) {
   const findManyRows = overrides.findManyRows ?? [];
 
   // Terminal node — all chain methods return it so the chain can continue
@@ -57,11 +59,13 @@ function makeMockDb(overrides: {
 
 // ─── Mock deps factory ────────────────────────────────────────────────────────
 
-function makeMockDeps(overrides: {
-  requireConversationMembershipError?: Error;
-  requireConversationMembershipByAccountError?: Error;
-  getRequiredConversationForAccountError?: Error;
-} = {}) {
+function makeMockDeps(
+  overrides: {
+    requireConversationMembershipError?: Error;
+    requireConversationMembershipByAccountError?: Error;
+    getRequiredConversationForAccountError?: Error;
+  } = {},
+) {
   return {
     requireConversationMembership: vi.fn().mockImplementation(async () => {
       if (overrides.requireConversationMembershipError)
@@ -129,11 +133,18 @@ describe('createInternalChatMessages — getMessagesByAccount', () => {
 
   it('throws when requireConversationMembershipByAccount throws', async () => {
     const db = makeMockDb();
-    const deps = makeMockDeps({ requireConversationMembershipByAccountError: new Error('not a member') });
+    const deps = makeMockDeps({
+      requireConversationMembershipByAccountError: new Error('not a member'),
+    });
     const messages = createInternalChatMessages(db as never, deps);
 
     await expect(
-      messages.getMessagesByAccount({ accountId: 'acc-1', conversationKey: 'conv-1', limit: 20, offset: 0 }),
+      messages.getMessagesByAccount({
+        accountId: 'acc-1',
+        conversationKey: 'conv-1',
+        limit: 20,
+        offset: 0,
+      }),
     ).rejects.toThrow('not a member');
   });
 });
@@ -193,9 +204,9 @@ describe('createInternalChatMessages — archiveConversationByAccount', () => {
 
   it('throws when findMany fails checking remaining members', async () => {
     const db = makeMockDb();
-    db.query.internalChatConversationMembers.findMany = vi.fn().mockRejectedValue(
-      new Error('findMany failed'),
-    );
+    db.query.internalChatConversationMembers.findMany = vi
+      .fn()
+      .mockRejectedValue(new Error('findMany failed'));
     const deps = makeMockDeps();
     const messages = createInternalChatMessages(db as never, deps);
 

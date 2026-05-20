@@ -4,9 +4,15 @@ import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { createTimeProvider, type TimeProvider } from '../utils/time';
 
-
-import type {Database} from '../database/schema';
-import { agents, agentExecutionContracts, agentExecutionSteps, llmModelPrices, llmProfiles, type AgentExecutionContract } from '../database/schema';
+import type { Database } from '../database/schema';
+import {
+  agents,
+  agentExecutionContracts,
+  agentExecutionSteps,
+  llmModelPrices,
+  llmProfiles,
+  type AgentExecutionContract,
+} from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
@@ -23,18 +29,11 @@ export interface CreateAgentContractStoreOptions {
  */
 export type AgentContractStore = ReturnType<typeof createAgentContractStore>;
 
-export function createAgentContractStore(
-  db: Database,
-  timeProvider?: TimeProvider,
-) {
+export function createAgentContractStore(db: Database, timeProvider?: TimeProvider) {
   const time = timeProvider ?? createTimeProvider();
   const companyCash = createCompanyCashLedger(db);
   const companyCashOperations = createCompanyCashOperations(db);
-  const logContractError = (
-    context: string,
-    runtimeId: string | undefined,
-    error: unknown,
-  ) => {
+  const logContractError = (context: string, runtimeId: string | undefined, error: unknown) => {
     forgeDebug({
       scope: 'agent-contract-store',
       level: 'error',
@@ -43,9 +42,8 @@ export function createAgentContractStore(
     });
   };
 
-
   const VALID_STATES = ['idle', 'running', 'absent'] as const;
-  type ExecutionState = typeof VALID_STATES[number];
+  type ExecutionState = (typeof VALID_STATES)[number];
   function toExecutionState(raw: string | null | undefined): 'idle' | 'running' | 'absent' {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (raw && VALID_STATES.includes(raw as ExecutionState)) {
@@ -103,14 +101,18 @@ export function createAgentContractStore(
   async function getRunnableContract(agentId: string) {
     const activeContract = await getActiveContract(agentId);
 
-     
     if (activeContract !== null && activeContract !== undefined) {
       return await fundContractIfNeeded(activeContract);
     }
 
     const latestContract = await getLatestContract(agentId);
 
-    if (latestContract === null || latestContract === undefined || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
+    if (
+      latestContract === null ||
+      latestContract === undefined ||
+      !latestContract.autoRenew ||
+      latestContract.endsAt > time.now()
+    ) {
       return null;
     }
 
@@ -156,7 +158,6 @@ export function createAgentContractStore(
     return newContract;
   }
 
-
   async function getActiveContract(agentId: string) {
     const now = time.now();
     return await db.query.agentExecutionContracts.findFirst({
@@ -194,7 +195,6 @@ export function createAgentContractStore(
     }
   }
 
-
   async function getUsagePricing(input: { pricingModelKey: string; profileId: string }) {
     let priceRow;
     let profile;
@@ -209,17 +209,36 @@ export function createAgentContractStore(
         }),
       ]);
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: parallel db read failed', context: { pricingModelKey: input.pricingModelKey, profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'agent-contract-store',
+        level: 'error',
+        message: 'getUsagePricing: parallel db read failed',
+        context: {
+          pricingModelKey: input.pricingModelKey,
+          profileId: input.profileId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       throw err;
     }
 
     if (priceRow === null || priceRow === undefined) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: model price not found', context: { pricingModelKey: input.pricingModelKey } });
+      forgeDebug({
+        scope: 'agent-contract-store',
+        level: 'warn',
+        message: 'getUsagePricing: model price not found',
+        context: { pricingModelKey: input.pricingModelKey },
+      });
       return { modelPrice: null, contractCostMultiplier: 1 };
     }
 
     if (profile === null || profile === undefined) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'warn', message: 'getUsagePricing: LLM profile not found', context: { profileId: input.profileId } });
+      forgeDebug({
+        scope: 'agent-contract-store',
+        level: 'warn',
+        message: 'getUsagePricing: LLM profile not found',
+        context: { profileId: input.profileId },
+      });
       throw new Error(`LLM profile not found for pricing: ${input.profileId}`);
     }
 
@@ -281,7 +300,16 @@ export function createAgentContractStore(
       });
     } catch (err) {
       logContractError('recordAgentStep', input.agentId, err);
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'recordAgentStep: db.transaction failed', context: { agentId: input.agentId, contractId: input.contractId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'agent-contract-store',
+        level: 'error',
+        message: 'recordAgentStep: db.transaction failed',
+        context: {
+          agentId: input.agentId,
+          contractId: input.contractId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       throw err;
     }
 
@@ -300,7 +328,12 @@ export function createAgentContractStore(
       throw err;
     }
 
-    if (latestContract === null || latestContract === undefined || !latestContract.autoRenew || latestContract.endsAt > time.now()) {
+    if (
+      latestContract === null ||
+      latestContract === undefined ||
+      !latestContract.autoRenew ||
+      latestContract.endsAt > time.now()
+    ) {
       return null;
     }
 

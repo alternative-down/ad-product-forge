@@ -2,7 +2,7 @@
  * Agent List Read Model — Phase 3 of #2467
  * Extracted from admin/read-model/agents.ts
  * Contains: listAgents, getAgent
- * 
+ *
  * Backward-compatible: agents.ts re-exports types and delegates to this module
  */
 
@@ -18,7 +18,11 @@ import {
   agents,
   mcpServerConfigs,
 } from '../../database/schema';
-import { longTermMemoryStateSchema, createEmptyLongTermMemoryState, type LongTermMemoryState } from '../../agents/ltm/store';
+import {
+  longTermMemoryStateSchema,
+  createEmptyLongTermMemoryState,
+  type LongTermMemoryState,
+} from '../../agents/ltm/store';
 import { listThreadMessages } from './conversation-helpers';
 import {
   toScheduleSummary as toScheduleSummaryHelper,
@@ -29,7 +33,11 @@ import { listAgentWorkspaceSkills } from '../../agents/workspace-skills';
 
 import type { Database } from '../../database/index';
 import { createSystemSettingsStore } from '../../system-settings/store';
-import { toMastraSafeIdentifier, readOperationalMemoryState, LibsqlConversationStore } from '@forge-runtime/core';
+import {
+  toMastraSafeIdentifier,
+  readOperationalMemoryState,
+  LibsqlConversationStore,
+} from '@forge-runtime/core';
 import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
@@ -205,7 +213,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (agent === null) return null;
 
-    const loadedAgent = registry.get(agentId) as { runtime?: { longTermMemory?: { readSnapshot: () => Promise<unknown> } } } | undefined;
+    const loadedAgent = registry.get(agentId) as
+      | { runtime?: { longTermMemory?: { readSnapshot: () => Promise<unknown> } } }
+      | undefined;
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
 
@@ -216,12 +226,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       const c = createClient({ url: `file:${agentDatabasePath}` });
       c.execute('PRAGMA foreign_keys = ON');
       client = { url: `file:${agentDatabasePath}` };
-    } catch { 
+    } catch {
       return null;
     }
 
-     
-    const conversationStore = new LibsqlConversationStore({ client: client as any, tablePrefix: mastraAgentId });
+    const conversationStore = new LibsqlConversationStore({
+      client: client as any,
+      tablePrefix: mastraAgentId,
+    });
     const settings = await systemSettings.getSettings();
 
     const operationalMemoryState = await readOperationalMemoryState({
@@ -269,7 +281,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         .select({ agentId: agentNotifications.agentId, count: sql<number>`count(*)` })
         .from(agentNotifications)
         .where(sql`${agentNotifications.readAt} is null`)
-        .groupBy(agentNotifications.agentId).all(),
+        .groupBy(agentNotifications.agentId)
+        .all(),
       db.query.agentRoles.findMany(),
       db.query.llmProfiles.findMany(),
     ]);
@@ -282,15 +295,16 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     // Batch-fetch recent steps for all agents in a single query, then group by agentId
     const agentIds = agentRows.map((a) => a.id);
-    const allRecentSteps = agentIds.length > 0
-      ? await db.query.agentExecutionSteps.findMany({
-          where: and(
-            inArray(agentExecutionSteps.agentId, agentIds),
-            eq(agentExecutionSteps.kind, 'agent-step'),
-          ),
-          orderBy: [desc(agentExecutionSteps.createdAt)],
-        })
-      : [];
+    const allRecentSteps =
+      agentIds.length > 0
+        ? await db.query.agentExecutionSteps.findMany({
+            where: and(
+              inArray(agentExecutionSteps.agentId, agentIds),
+              eq(agentExecutionSteps.kind, 'agent-step'),
+            ),
+            orderBy: [desc(agentExecutionSteps.createdAt)],
+          })
+        : [];
     const recentStepsByAgentId = new Map<string, typeof allRecentSteps>();
     for (const step of allRecentSteps) {
       const existing = recentStepsByAgentId.get(step.agentId) ?? [];
@@ -300,14 +314,17 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     const runtimeMemoryByAgentId = new Map(
       await Promise.all(
-        agentRows.map(async (agent) => [
-          agent.id,
-          await withTimeout(
-            getRuntimeMemoryForAgent(agent.id),
-            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-            `Admin runtime memory read timed out for ${agent.id}`,
-          ).catch(() => null),
-        ] as const),
+        agentRows.map(
+          async (agent) =>
+            [
+              agent.id,
+              await withTimeout(
+                getRuntimeMemoryForAgent(agent.id),
+                ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+                `Admin runtime memory read timed out for ${agent.id}`,
+              ).catch(() => null),
+            ] as const,
+        ),
       ),
     );
 
@@ -318,7 +335,10 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
             listThreadMessages(workspaceBasePath, agent.id, { page: 0, perPage: 8 }),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Admin latest thread details read timed out for ${agent.id}`,
-          ).catch(() => ({ items: [] as Array<{ role: string; content: unknown }>, hasMore: false }));
+          ).catch(() => ({
+            items: [] as Array<{ role: string; content: unknown }>,
+            hasMore: false,
+          }));
 
           let preview: string | null = null;
           let toolBadge: string | null = null;
@@ -326,8 +346,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
           for (const message of threadMessages.items) {
             if (message.role !== 'assistant') continue;
             const content = message.content as unknown[];
-            preview ??= extractLatestMessagePreview(content as Parameters<typeof extractLatestMessagePreview>[0]);
-            const tb = extractLatestMessageToolBadge(content as Parameters<typeof extractLatestMessageToolBadge>[0]);
+            preview ??= extractLatestMessagePreview(
+              content as Parameters<typeof extractLatestMessagePreview>[0],
+            );
+            const tb = extractLatestMessageToolBadge(
+              content as Parameters<typeof extractLatestMessageToolBadge>[0],
+            );
             toolBadge ??= tb ? (tb.label ?? null) : null;
             if ((preview ?? '') !== '') break;
           }
@@ -338,26 +362,30 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     );
 
     // Batch-fetch LTM state for all agents in a single query, then group by agentId
-    const ltmStateRows = agentIds.length > 0
-      ? await withTimeout(
-          (async () => {
-            const rows = await db.query.agentLongTermMemoryStates.findMany({
-              where: inArray(agentLongTermMemoryStates.agentId, agentIds),
-            });
-            return rows;
-          })(),
-          ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
-          'Admin LTM state batch read timed out',
-        ).catch(() => null)
-      : null;
+    const ltmStateRows =
+      agentIds.length > 0
+        ? await withTimeout(
+            (async () => {
+              const rows = await db.query.agentLongTermMemoryStates.findMany({
+                where: inArray(agentLongTermMemoryStates.agentId, agentIds),
+              });
+              return rows;
+            })(),
+            ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
+            'Admin LTM state batch read timed out',
+          ).catch(() => null)
+        : null;
 
     const longTermMemoryStateByAgentId = new Map<string, LongTermMemoryState | null>();
     if (ltmStateRows !== null && ltmStateRows !== undefined) {
       for (const row of ltmStateRows) {
         try {
           const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
-           
-          longTermMemoryStateByAgentId.set(row.agentId, parsed.success ? parsed.data : createEmptyLongTermMemoryState());
+
+          longTermMemoryStateByAgentId.set(
+            row.agentId,
+            parsed.success ? parsed.data : createEmptyLongTermMemoryState(),
+          );
         } catch {
           longTermMemoryStateByAgentId.set(row.agentId, createEmptyLongTermMemoryState());
         }
@@ -370,30 +398,49 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     }
 
     return agentRows.map((agent) => {
-      const loadedAgent = registry.get(agent.id) as { runner?: { getSnapshot: () => unknown } } | undefined;
+      const loadedAgent = registry.get(agent.id) as
+        | { runner?: { getSnapshot: () => unknown } }
+        | undefined;
       const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
       const recentSteps = recentStepsByAgentId.get(agent.id) ?? [];
       const runtimeMemory = runtimeMemoryByAgentId.get(agent.id) ?? null;
       const longTermMemoryState = longTermMemoryStateByAgentId.get(agent.id) ?? null;
-      const latestThreadDetails = latestThreadDetailsByAgentId.get(agent.id) ?? { preview: null, toolBadge: null };
+      const latestThreadDetails = latestThreadDetailsByAgentId.get(agent.id) ?? {
+        preview: null,
+        toolBadge: null,
+      };
       const executionState = agent.executionState ?? 'absent';
 
-      const averageStepIntervalMs = recentSteps.length >= 2
-        ? Math.round(
-            recentSteps
-              .slice(0, 6)
-              .map((step, index, items) => {
-                if (index === items.length - 1) return null;
-                return Math.max(step.createdAt - (items[index + 1] as { createdAt: number }).createdAt, 0);
-              })
-              .filter((v) => v !== null)
-              .reduce((sum, v, _, arr) => sum + (v as number) / arr.length, 0),
-          )
-        : null;
+      const averageStepIntervalMs =
+        recentSteps.length >= 2
+          ? Math.round(
+              recentSteps
+                .slice(0, 6)
+                .map((step, index, items) => {
+                  if (index === items.length - 1) return null;
+                  return Math.max(
+                    step.createdAt - (items[index + 1] as { createdAt: number }).createdAt,
+                    0,
+                  );
+                })
+                .filter((v) => v !== null)
+                .reduce((sum, v, _, arr) => sum + (v as number) / arr.length, 0),
+            )
+          : null;
 
-      const firstStep = recentSteps[0] as { createdAt?: number; inputTokens?: number; cachedInputTokens?: number; outputTokens?: number; costUsd?: number | null } | undefined;
+      const firstStep = recentSteps[0] as
+        | {
+            createdAt?: number;
+            inputTokens?: number;
+            cachedInputTokens?: number;
+            outputTokens?: number;
+            costUsd?: number | null;
+          }
+        | undefined;
       const lastStepTokens = firstStep
-        ? (firstStep.inputTokens ?? 0) + ((firstStep as { cachedInputTokens?: number }).cachedInputTokens ?? 0) + (firstStep.outputTokens ?? 0)
+        ? (firstStep.inputTokens ?? 0) +
+          ((firstStep as { cachedInputTokens?: number }).cachedInputTokens ?? 0) +
+          (firstStep.outputTokens ?? 0)
         : null;
 
       return {
@@ -404,9 +451,19 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         executionState,
         lastExecutionError: agent.lastExecutionError ?? null,
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-        roleName: ((agent as { roleId?: string }).roleId ?? '') !== '' ? (roleMap.get((agent as { roleId: string }).roleId)?.name ?? null) : null,
-        modelProfile: ((agent as { modelProfileId?: string }).modelProfileId ?? '') !== '' ? (profileMap.get((agent as { modelProfileId: string }).modelProfileId)?.name ?? null) : null,
-        omModelProfile: ((agent as { omModelProfileId?: string }).omModelProfileId ?? '') !== '' ? (profileMap.get((agent as { omModelProfileId: string }).omModelProfileId)?.name ?? null) : null,
+        roleName:
+          ((agent as { roleId?: string }).roleId ?? '') !== ''
+            ? (roleMap.get((agent as { roleId: string }).roleId)?.name ?? null)
+            : null,
+        modelProfile:
+          ((agent as { modelProfileId?: string }).modelProfileId ?? '') !== ''
+            ? (profileMap.get((agent as { modelProfileId: string }).modelProfileId)?.name ?? null)
+            : null,
+        omModelProfile:
+          ((agent as { omModelProfileId?: string }).omModelProfileId ?? '') !== ''
+            ? (profileMap.get((agent as { omModelProfileId: string }).omModelProfileId)?.name ??
+              null)
+            : null,
         loaded: Boolean(loadedAgent),
         runner: runnerSnapshot,
         providerTypes: [],
@@ -449,13 +506,23 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
   async function getAgent(agentId: string): Promise<AgentDetail | null> {
     let agent;
     // eslint-disable-next-line prefer-const
-      agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
+    agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (agent === null) return null;
 
-    const loadedAgent = registry.get(agentId) as { runner?: { getSnapshot: () => unknown } } | undefined;
+    const loadedAgent = registry.get(agentId) as
+      | { runner?: { getSnapshot: () => unknown } }
+      | undefined;
     const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
 
-    const [agentMcpRows, agentScheduleRows, recentSteps, recentNotifications, activeContractRows, allRoles, allProfiles] = await Promise.all([
+    const [
+      agentMcpRows,
+      agentScheduleRows,
+      recentSteps,
+      recentNotifications,
+      activeContractRows,
+      allRoles,
+      allProfiles,
+    ] = await Promise.all([
       db.query.agentMcpConfigs.findMany({ where: eq(agentMcpConfigs.agentId, agentId) }),
       db.query.agentSchedules.findMany({ where: eq(agentSchedules.agentId, agentId) }),
       db.query.agentExecutionSteps.findMany({
@@ -478,7 +545,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const mcpServerIds = agentMcpRows.map((r) => r.serverId).filter(Boolean);
     let agentMcpServerRows: any[];
     if (mcpServerIds.length > 0) {
-        agentMcpServerRows = await db.query.mcpServerConfigs.findMany({ where: inArray(mcpServerConfigs.id, mcpServerIds) });
+      agentMcpServerRows = await db.query.mcpServerConfigs.findMany({
+        where: inArray(mcpServerConfigs.id, mcpServerIds),
+      });
     } else {
       agentMcpServerRows = [];
     }
@@ -489,13 +558,13 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       currentPeriodStart.setDate(currentPeriodStart.getDate() - (currentPeriodStart.getDay() + 7));
       let steps;
       // eslint-disable-next-line prefer-const
-        steps = await db.query.agentExecutionSteps.findMany({
-          where: and(
-            eq(agentExecutionSteps.agentId, agentId),
-            gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
-          ),
-          columns: { costUsd: true },
-        });
+      steps = await db.query.agentExecutionSteps.findMany({
+        where: and(
+          eq(agentExecutionSteps.agentId, agentId),
+          gte(agentExecutionSteps.createdAt, Math.floor(currentPeriodStart.getTime() / 1000)),
+        ),
+        columns: { costUsd: true },
+      });
       spentUsd = steps.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
     }
 
@@ -549,9 +618,17 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       description: agent!.description ?? null,
       role: agentRoleId ?? null,
       roleName: (agentRoleId ?? '') !== '' ? (roleMap.get(agentRoleId ?? '')?.name ?? null) : null,
-      modelProfile: (agentModelProfileId ?? '') !== '' ? (profileMap.get(agentModelProfileId ?? '')?.name ?? null) : null,
-      omModelProfile: (agentOmModelProfileId ?? '') !== '' ? (profileMap.get(agentOmModelProfileId ?? '')?.name ?? null) : null,
-      workspaceFilesystem: (agent as { workspaceFilesystem?: { basePath: string } | null }).workspaceFilesystem ?? null,
+      modelProfile:
+        (agentModelProfileId ?? '') !== ''
+          ? (profileMap.get(agentModelProfileId ?? '')?.name ?? null)
+          : null,
+      omModelProfile:
+        (agentOmModelProfileId ?? '') !== ''
+          ? (profileMap.get(agentOmModelProfileId ?? '')?.name ?? null)
+          : null,
+      workspaceFilesystem:
+        (agent as { workspaceFilesystem?: { basePath: string } | null }).workspaceFilesystem ??
+        null,
       lastExecutionError: agent!.lastExecutionError ?? null,
       lastExecutionErrorAt: agent!.lastExecutionErrorAt ?? null,
       loaded: Boolean(loadedAgent),
@@ -562,21 +639,27 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       recentNotifications: recentNotifications_,
       githubProvisioning,
       skills: await listAgentWorkspaceSkills(workspaceBasePath, agent!),
-      activeContract: activeContractRow !== null && activeContractRow !== undefined ? {
-        contractId: activeContractRow.id,
-        agentId: activeContractRow.agentId,
-        agentName: agent!.name ?? '',
-        startsAt: activeContractRow.startsAt,
-        endsAt: activeContractRow.endsAt,
-        weeklyValueUsd: activeContractRow.budgetUsd,
-        spentUsd,
-        spentPercent: activeContractRow.budgetUsd > 0 ? (spentUsd / activeContractRow.budgetUsd) * 100 : 0,
-        autoRenew: Boolean(activeContractRow.autoRenew),
-      } : null,
+      activeContract:
+        activeContractRow !== null && activeContractRow !== undefined
+          ? {
+              contractId: activeContractRow.id,
+              agentId: activeContractRow.agentId,
+              agentName: agent!.name ?? '',
+              startsAt: activeContractRow.startsAt,
+              endsAt: activeContractRow.endsAt,
+              weeklyValueUsd: activeContractRow.budgetUsd,
+              spentUsd,
+              spentPercent:
+                activeContractRow.budgetUsd > 0
+                  ? (spentUsd / activeContractRow.budgetUsd) * 100
+                  : 0,
+              autoRenew: Boolean(activeContractRow.autoRenew),
+            }
+          : null,
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummaryHelper),
-      heartbeat: heartbeat != null ? toScheduleSummaryHelper(heartbeat!) as unknown : null,
+      heartbeat: heartbeat != null ? (toScheduleSummaryHelper(heartbeat!) as unknown) : null,
     } as unknown as AgentDetail;
   }
 

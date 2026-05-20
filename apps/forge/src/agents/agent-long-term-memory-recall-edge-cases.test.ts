@@ -11,8 +11,12 @@ vi.mock('@forge-runtime/core', () => {
       refresh: vi.fn(async () => undefined),
       search: vi.fn(async () => []),
       searchGraph: vi.fn(async () => ({
-        hit: false, score: null, context: '',
-        sourcesCount: 0, sourcesJson: null, rawJson: null,
+        hit: false,
+        score: null,
+        context: '',
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
       })),
       getStats: vi.fn(async () => ({ dimensions: 384, documentCount: 0 })),
       listIndexes: vi.fn(async () => []),
@@ -23,21 +27,36 @@ vi.mock('@forge-runtime/core', () => {
   class SqliteWorkspaceRetrieval {
     private _inst: Record<string, any>;
     constructor(..._args: unknown[]) {
-      this._inst = __forgeInstance !== null
-        ? { ...makeDefaultInstance(), ...__forgeInstance }
-        : makeDefaultInstance();
+      this._inst =
+        __forgeInstance !== null
+          ? { ...makeDefaultInstance(), ...__forgeInstance }
+          : makeDefaultInstance();
     }
-    get refresh() { return this._inst.refresh; }
-    get search() { return this._inst.search; }
-    get searchGraph() { return this._inst.searchGraph; }
-    get getStats() { return this._inst.getStats; }
-    get listIndexes() { return this._inst.listIndexes; }
-    get queryVector() { return this._inst.queryVector; }
-    get dispose() { return this._inst.dispose; }
+    get refresh() {
+      return this._inst.refresh;
+    }
+    get search() {
+      return this._inst.search;
+    }
+    get searchGraph() {
+      return this._inst.searchGraph;
+    }
+    get getStats() {
+      return this._inst.getStats;
+    }
+    get listIndexes() {
+      return this._inst.listIndexes;
+    }
+    get queryVector() {
+      return this._inst.queryVector;
+    }
+    get dispose() {
+      return this._inst.dispose;
+    }
   }
   return {
     SqliteWorkspaceRetrieval,
-    FilesystemDocumentSource: vi.fn(function(arg: unknown) {
+    FilesystemDocumentSource: vi.fn(function (arg: unknown) {
       return { loadDocuments: vi.fn(async () => []) };
     }),
     forgeDebug: vi.fn(),
@@ -50,17 +69,28 @@ import { AgentLongTermMemoryRecall } from './ltm/recall';
 const temporaryDirectories: string[] = [];
 
 const mockConversationStore = {
-  upsertThread: vi.fn(), getThread: vi.fn(), listThreads: vi.fn(),
-  appendMessage: vi.fn(), updateMessage: vi.fn(), updateMessageMetadata: vi.fn(),
-  updateMessageReplacement: vi.fn(), listMessages: vi.fn(), listOperationalMemoryMessages: vi.fn(),
+  upsertThread: vi.fn(),
+  getThread: vi.fn(),
+  listThreads: vi.fn(),
+  appendMessage: vi.fn(),
+  updateMessage: vi.fn(),
+  updateMessageMetadata: vi.fn(),
+  updateMessageReplacement: vi.fn(),
+  listMessages: vi.fn(),
+  listOperationalMemoryMessages: vi.fn(),
 };
 
 function makePersistenceStore() {
   return {
     readState: vi.fn(async () => ({
-      version: 1 as const, packages: [] as any, lastWrittenPackageId: null,
-      lastWrittenAt: null, lastRunAt: null, lastRunError: null,
-      lastRunErrorAt: null, updatedAt: new Date().toISOString(),
+      version: 1 as const,
+      packages: [] as any,
+      lastWrittenPackageId: null,
+      lastWrittenAt: null,
+      lastRunAt: null,
+      lastRunError: null,
+      lastRunErrorAt: null,
+      updatedAt: new Date().toISOString(),
     })),
     writeState: vi.fn(),
     readRecallIndexStamp: vi.fn(async () => null),
@@ -77,9 +107,16 @@ function defaultRecallSearch() {
     results: [{ id: 'r1', content: 'the result', score: 0.9 }],
     rawWorkspaceResults: [{ id: 'r1', content: 'the result', score: 0.9 }],
     graph: {
-      queryText: 'query', dimension: 384, includeSources: false,
-      hit: false, score: null, context: '', sourcesCount: 0,
-      sourcesJson: null, rawJson: null, error: null,
+      queryText: 'query',
+      dimension: 384,
+      includeSources: false,
+      hit: false,
+      score: null,
+      context: '',
+      sourcesCount: 0,
+      sourcesJson: null,
+      rawJson: null,
+      error: null,
     },
     effectiveGraphTopK: 3,
     effectiveGraphThreshold: 0.7,
@@ -131,9 +168,13 @@ afterEach(async () => {
 describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', () => {
   it('returns empty string for null step', async () => {
     const recall = await createRecall();
-    const recallSearch = vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue(defaultRecallSearch());
+    const recallSearch = vi
+      .spyOn(recall as any, 'runRecallSearch')
+      .mockResolvedValue(defaultRecallSearch());
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     const result = await recall.recallFromStep({ step: null as any, steps: [], threadId: null });
     expect(result).toBeNull();
@@ -143,11 +184,19 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
 
   it('returns empty string for primitive step', async () => {
     const recall = await createRecall();
-    const recallSearch = vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue(defaultRecallSearch());
+    const recallSearch = vi
+      .spyOn(recall as any, 'runRecallSearch')
+      .mockResolvedValue(defaultRecallSearch());
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
-    const result = await recall.recallFromStep({ step: 'just a string' as any, steps: [], threadId: null });
+    const result = await recall.recallFromStep({
+      step: 'just a string' as any,
+      steps: [],
+      threadId: null,
+    });
     expect(result).toBeNull();
     recallSearch.mockRestore();
     threadState.mockRestore();
@@ -155,9 +204,13 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
 
   it('returns empty string when step has no recognized fields', async () => {
     const recall = await createRecall();
-    const recallSearch = vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue(defaultRecallSearch());
+    const recallSearch = vi
+      .spyOn(recall as any, 'runRecallSearch')
+      .mockResolvedValue(defaultRecallSearch());
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     const result = await recall.recallFromStep({
       step: { type: 'custom-event', data: {} } as any,
@@ -171,9 +224,13 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
 
   it('returns empty string when toolCall has no args/input', async () => {
     const recall = await createRecall();
-    const recallSearch = vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue(defaultRecallSearch());
+    const recallSearch = vi
+      .spyOn(recall as any, 'runRecallSearch')
+      .mockResolvedValue(defaultRecallSearch());
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     // formatStructuredValue returns '' for undefined/empty args → toolCall filtered out → empty query
     const result = await recall.recallFromStep({
@@ -194,7 +251,9 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       results: [{ id: 'r1', content: 'file content', score: 0.9 }],
     });
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
 
     const result = await recall.recallFromStep({
@@ -220,7 +279,9 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       results: [{ id: 'r2', content: 'nested', score: 0.85 }],
     });
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
 
     const result = await recall.recallFromStep({
@@ -240,9 +301,13 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
 
   it('returns null when assistant step has empty text', async () => {
     const recall = await createRecall();
-    const recallSearch = vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue(defaultRecallSearch());
+    const recallSearch = vi
+      .spyOn(recall as any, 'runRecallSearch')
+      .mockResolvedValue(defaultRecallSearch());
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     const result = await recall.recallFromStep({
       step: { text: '' } as any,
@@ -262,7 +327,9 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       results: [{ id: 'r3', content: 'result', score: 0.8 }],
     });
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
 
     const result = await recall.recallFromStep({
@@ -287,7 +354,9 @@ describe('AgentLongTermMemoryRecall — buildRecallQueryFromStep edge cases', ()
       results: [{ id: 'r1', content: 'test', score: 0.9 }],
     });
     const threadState = vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
 
     await recall.recallFromStep({
@@ -318,19 +387,38 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     // Second call — same graph fingerprint in history → filtered out
     vi.spyOn(recall as any, 'readRecallThreadState')
       .mockResolvedValueOnce({ recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0 })
-      .mockResolvedValueOnce({ recentFingerprints: ['graph:052a59b0dfbda092b9a767c1be95e9437d8b93f7'], windowSize: 20, rawWindowMessageCount: 0 });
+      .mockResolvedValueOnce({
+        recentFingerprints: ['graph:052a59b0dfbda092b9a767c1be95e9437d8b93f7'],
+        windowSize: 20,
+        rawWindowMessageCount: 0,
+      });
 
     const graphWithContext = {
-      queryText: 'q', dimension: 384, includeSources: false,
-      hit: true, score: 0.8, context: 'graph context',
-      sourcesCount: 0, sourcesJson: null, rawJson: null, error: null,
+      queryText: 'q',
+      dimension: 384,
+      includeSources: false,
+      hit: true,
+      score: 0.8,
+      context: 'graph context',
+      sourcesCount: 0,
+      sourcesJson: null,
+      rawJson: null,
+      error: null,
     };
     vi.spyOn(recall as any, 'runRecallSearch')
       .mockResolvedValueOnce({ ...defaultRecallSearch(), graph: graphWithContext })
       .mockResolvedValueOnce({ ...defaultRecallSearch(), graph: graphWithContext });
 
-    await recall.recallFromStep({ step: { text: 'first recall' } as any, steps: [], threadId: 't1' });
-    await recall.recallFromStep({ step: { text: 'second recall' } as any, steps: [], threadId: 't1' });
+    await recall.recallFromStep({
+      step: { text: 'first recall' } as any,
+      steps: [],
+      threadId: 't1',
+    });
+    await recall.recallFromStep({
+      step: { text: 'second recall' } as any,
+      steps: [],
+      threadId: 't1',
+    });
 
     // Second snapshot should have graphHit=false (deduped)
     const secondWrite = ps.writeRecallState.mock.calls[1];
@@ -344,7 +432,9 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const recall = await createRecall({ persistenceStore: ps });
 
     vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue({
       ...defaultRecallSearch(),
@@ -362,7 +452,9 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const recall = await createRecall({ persistenceStore: ps });
 
     vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: ['workspace:doc-A'], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: ['workspace:doc-A'],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue({
       ...defaultRecallSearch(),
@@ -372,7 +464,11 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
       ],
     });
 
-    await recall.recallFromStep({ step: { text: 'mixed recall' } as any, steps: [], threadId: null });
+    await recall.recallFromStep({
+      step: { text: 'mixed recall' } as any,
+      steps: [],
+      threadId: null,
+    });
 
     const writeCall = ps.writeRecallState.mock.calls[0];
     const resultIds: string[] = writeCall?.[0]?.snapshot?.resultIds ?? [];
@@ -385,7 +481,9 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const recall = await createRecall({ persistenceStore: ps });
 
     vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: Array(25).fill(null).map((_, i) => `workspace:doc-${i}`),
+      recentFingerprints: Array(25)
+        .fill(null)
+        .map((_, i) => `workspace:doc-${i}`),
       windowSize: 20,
       rawWindowMessageCount: 0,
     });
@@ -394,7 +492,11 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
       results: [{ id: 'new-doc', content: 'new', score: 0.9 }],
     });
 
-    await recall.recallFromStep({ step: { text: 'large history' } as any, steps: [], threadId: null });
+    await recall.recallFromStep({
+      step: { text: 'large history' } as any,
+      steps: [],
+      threadId: null,
+    });
 
     const writeCall = ps.writeRecallState.mock.calls[0];
     expect(writeCall?.[0]?.history?.recentFingerprints?.length).toBeLessThanOrEqual(20);
@@ -405,7 +507,9 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const recall = await createRecall({ persistenceStore: ps });
 
     vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
 
     const result = await recall.recallFromStep({
@@ -423,15 +527,24 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const recall = await createRecall({ persistenceStore: ps });
 
     vi.spyOn(recall as any, 'readRecallThreadState').mockResolvedValue({
-      recentFingerprints: [], windowSize: 20, rawWindowMessageCount: 0,
+      recentFingerprints: [],
+      windowSize: 20,
+      rawWindowMessageCount: 0,
     });
     vi.spyOn(recall as any, 'runRecallSearch').mockResolvedValue({
       ...defaultRecallSearch(),
       results: [{ id: 'doc-A', content: 'content', score: 0.9 }],
       graph: {
-        queryText: 'q', dimension: 384, includeSources: false,
-        hit: true, score: 0.8, context: 'graph ctx for dedup test',
-        sourcesCount: 0, sourcesJson: null, rawJson: null, error: null,
+        queryText: 'q',
+        dimension: 384,
+        includeSources: false,
+        hit: true,
+        score: 0.8,
+        context: 'graph ctx for dedup test',
+        sourcesCount: 0,
+        sourcesJson: null,
+        rawJson: null,
+        error: null,
       },
     });
 
@@ -441,7 +554,10 @@ describe('AgentLongTermMemoryRecall — dedup and history', () => {
     const writeCall = ps.writeRecallState.mock.calls[0];
     const history: string[] = writeCall?.[0]?.history?.recentFingerprints ?? [];
     expect(history).toContain('workspace:doc-A');
-    const counts = history.reduce<Record<string, number>>((acc, fp) => { acc[fp] = (acc[fp] ?? 0) + 1; return acc; }, {});
+    const counts = history.reduce<Record<string, number>>((acc, fp) => {
+      acc[fp] = (acc[fp] ?? 0) + 1;
+      return acc;
+    }, {});
     for (const count of Object.values(counts)) {
       expect(count).toBe(1);
     }

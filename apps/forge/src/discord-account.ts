@@ -1,9 +1,21 @@
-
-import { ChannelType, Client, Collection, Events, GatewayIntentBits, Message, Partials, User } from 'discord.js';
+import {
+  ChannelType,
+  Client,
+  Collection,
+  Events,
+  GatewayIntentBits,
+  Message,
+  Partials,
+  User,
+} from 'discord.js';
 
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { CommunicationFile, CommunicationInboundMessage, CommunicationProvider } from '@forge-runtime/core';
+import type {
+  CommunicationFile,
+  CommunicationInboundMessage,
+  CommunicationProvider,
+} from '@forge-runtime/core';
 
 import type { DiscordSendableChannel, DiscordOutboundFile } from './discord-types';
 
@@ -41,7 +53,9 @@ export function createDiscordProvider(config: {
 
   function pruneRecentOutboundMessages(now: number) {
     for (const [conversationKey, messages] of recentOutboundMessages.entries()) {
-      const visibleMessages = messages.filter((message) => now - message.createdAt <= OUTBOUND_ECHO_TTL_MS);
+      const visibleMessages = messages.filter(
+        (message) => now - message.createdAt <= OUTBOUND_ECHO_TTL_MS,
+      );
 
       if (visibleMessages.length === 0) {
         recentOutboundMessages.delete(conversationKey);
@@ -133,8 +147,15 @@ export function createDiscordProvider(config: {
           const response = await fetch(attachment.url);
 
           if (!response.ok) {
-            const error = new Error(`Failed to download Discord attachment: ${attachment.url} (HTTP ${response.status})`);
-            forgeDebug({ scope: 'discord-account', level: 'error', message: 'downloadAttachment: failed', context: { url: attachment.url, status: response.status, error: error.message } });
+            const error = new Error(
+              `Failed to download Discord attachment: ${attachment.url} (HTTP ${response.status})`,
+            );
+            forgeDebug({
+              scope: 'discord-account',
+              level: 'error',
+              message: 'downloadAttachment: failed',
+              context: { url: attachment.url, status: response.status, error: error.message },
+            });
             throw error;
           }
 
@@ -147,7 +168,16 @@ export function createDiscordProvider(config: {
             sizeBytes: attachment.size,
           };
         } catch (error) {
-          forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to download Discord attachment', context: { attachmentUrl: attachment.url, attachmentId: attachment.id, error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({
+            scope: 'discord-account',
+            level: 'warn',
+            message: 'Failed to download Discord attachment',
+            context: {
+              attachmentUrl: attachment.url,
+              attachmentId: attachment.id,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          });
           return {
             name: attachment.name ?? attachment.id,
             data: new Uint8Array(0),
@@ -189,7 +219,15 @@ export function createDiscordProvider(config: {
         rememberOutboundMessage(lastSentMessage.channelId, chunk);
       }
     } catch (error) {
-      forgeDebug({ scope: 'discord-account', level: 'error', message: 'sendDiscordChunks failed', context: { channelId: input.channel.id, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'error',
+        message: 'sendDiscordChunks failed',
+        context: {
+          channelId: input.channel.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       throw error;
     }
 
@@ -223,20 +261,49 @@ export function createDiscordProvider(config: {
     }
   }
 
-  async function toInboundMessage(message: Message, botUserId: string): Promise<CommunicationInboundMessage | null> {
-    forgeDebug({ scope: 'discord-account', level: 'info', message: 'MessageCreate received', context: { authorId: message.author.id, botUserId, channelType: message.channel.type, channelId: message.channelId } });
-    forgeDebug({ scope: 'discord-account', level: 'info', message: 'configuredChannels check', context: { size: configuredChannels.size, hasChannel: configuredChannels.has(message.channelId) } });
+  async function toInboundMessage(
+    message: Message,
+    botUserId: string,
+  ): Promise<CommunicationInboundMessage | null> {
+    forgeDebug({
+      scope: 'discord-account',
+      level: 'info',
+      message: 'MessageCreate received',
+      context: {
+        authorId: message.author.id,
+        botUserId,
+        channelType: message.channel.type,
+        channelId: message.channelId,
+      },
+    });
+    forgeDebug({
+      scope: 'discord-account',
+      level: 'info',
+      message: 'configuredChannels check',
+      context: {
+        size: configuredChannels.size,
+        hasChannel: configuredChannels.has(message.channelId),
+      },
+    });
 
     // Ignore messages from the bot itself
     if (message.author.id === botUserId) {
-      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: message from bot' });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'info',
+        message: 'filtered: message from bot',
+      });
       return null;
     }
 
     // Allow DMs through regardless of configured guild channels
     if (message.channel.type !== ChannelType.DM) {
       if (configuredChannels.size > 0 && !configuredChannels.has(message.channelId)) {
-        forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: guild channel not in configuredChannels' });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'info',
+          message: 'filtered: guild channel not in configuredChannels',
+        });
         return null;
       }
     }
@@ -246,20 +313,33 @@ export function createDiscordProvider(config: {
       configuredChannels.get(message.channelId) === true &&
       !message.mentions.users.has(botUserId)
     ) {
-      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: guild channel requires mention but no mention' });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'info',
+        message: 'filtered: guild channel requires mention but no mention',
+      });
       return null;
     }
 
-    const authorDisplayName = message.member?.displayName ?? message.author.globalName ?? message.author.username;
+    const authorDisplayName =
+      message.member?.displayName ?? message.author.globalName ?? message.author.username;
     const content = extractDiscordMessageContent(message, botUserId);
 
     if (!content && message.attachments.size === 0) {
-      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: empty content and no attachments' });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'info',
+        message: 'filtered: empty content and no attachments',
+      });
       return null;
     }
 
     if (isRecentOutboundEcho(message.channelId, content, message.createdTimestamp)) {
-      forgeDebug({ scope: 'discord-account', level: 'info', message: 'filtered: recent outbound echo' });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'info',
+        message: 'filtered: recent outbound echo',
+      });
       return null;
     }
 
@@ -282,10 +362,20 @@ export function createDiscordProvider(config: {
   }
 
   async function deliverMessage(message: CommunicationInboundMessage) {
-    forgeDebug({ scope: 'discord-account', level: 'info', message: 'deliverMessage called', context: { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length } });
+    forgeDebug({
+      scope: 'discord-account',
+      level: 'info',
+      message: 'deliverMessage called',
+      context: { onInboundMessage: !!onInboundMessage, pendingCount: pendingMessages.length },
+    });
     if (!onInboundMessage) {
       pendingMessages.push(message);
-      forgeDebug({ scope: 'discord-account', level: 'info', message: 'pushed to pendingMessages', context: { total: pendingMessages.length } });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'info',
+        message: 'pushed to pendingMessages',
+        context: { total: pendingMessages.length },
+      });
       return;
     }
 
@@ -309,9 +399,8 @@ export function createDiscordProvider(config: {
   }
 
   forgeDebug({ scope: 'discord-account', level: 'info', message: 'Starting login' });
-  
-  const ready = client.login(config.token)
-    .then(() => {
+
+  const ready = client.login(config.token).then(() => {
     forgeDebug({ scope: 'discord-account', level: 'info', message: 'Login succeeded' });
     if (!client.user) {
       throw new Error('Discord client did not become ready after login');
@@ -322,25 +411,52 @@ export function createDiscordProvider(config: {
         return;
       }
 
-      forgeDebug({ scope: 'discord-account', level: 'info', message: 'MessageCreate received', context: { author: message.author.username, channelType: message.channel.type, guildId: message.guildId } });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'info',
+        message: 'MessageCreate received',
+        context: {
+          author: message.author.username,
+          channelType: message.channel.type,
+          guildId: message.guildId,
+        },
+      });
 
       try {
         const inboundMessage = await toInboundMessage(message, client.user!.id);
 
         if (!inboundMessage) {
-          forgeDebug({ scope: 'discord-account', level: 'info', message: 'toInboundMessage returned null' });
+          forgeDebug({
+            scope: 'discord-account',
+            level: 'info',
+            message: 'toInboundMessage returned null',
+          });
           return;
         }
 
         forgeDebug({ scope: 'discord-account', level: 'info', message: 'calling deliverMessage' });
         await deliverMessage(inboundMessage);
-        forgeDebug({ scope: 'discord-account', level: 'info', message: 'deliverMessage completed' });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'info',
+          message: 'deliverMessage completed',
+        });
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Error handling MessageCreate event', context: { error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'error',
+          message: 'Error handling MessageCreate event',
+          context: { error: error instanceof Error ? error.message : String(error) },
+        });
       }
     });
 
-    forgeDebug({ scope: 'discord-account', level: 'info', message: 'logged in', context: { tag: client.user.tag } });
+    forgeDebug({
+      scope: 'discord-account',
+      level: 'info',
+      message: 'logged in',
+      context: { tag: client.user.tag },
+    });
 
     return client.user;
   });
@@ -371,7 +487,12 @@ export function createDiscordProvider(config: {
 
         channels.push(channel as DiscordSendableChannel);
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch channel', context: { channelId, error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'warn',
+          message: 'Failed to fetch channel',
+          context: { channelId, error: error instanceof Error ? error.message : String(error) },
+        });
       }
     }
 
@@ -398,7 +519,15 @@ export function createDiscordProvider(config: {
           rememberUser(member.user);
         }
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'warn', message: 'Failed to fetch members for guild', context: { guildId: guild.id, error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'warn',
+          message: 'Failed to fetch members for guild',
+          context: {
+            guildId: guild.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
       }
     }
 
@@ -437,7 +566,12 @@ export function createDiscordProvider(config: {
 
         return channel as DiscordSendableChannel;
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to fetch Discord channel by ID', context: { targetKey, error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'error',
+          message: 'Failed to fetch Discord channel by ID',
+          context: { targetKey, error: error instanceof Error ? error.message : String(error) },
+        });
         throw error;
       }
     }
@@ -453,7 +587,12 @@ export function createDiscordProvider(config: {
       const channel = await matchedUser.createDM();
       return channel as DiscordSendableChannel;
     } catch (error) {
-      forgeDebug({ scope: 'discord-account', level: 'error', message: 'Failed to create DM with user', context: { targetKey, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'discord-account',
+        level: 'error',
+        message: 'Failed to create DM with user',
+        context: { targetKey, error: error instanceof Error ? error.message : String(error) },
+      });
       throw error;
     }
   }
@@ -469,7 +608,9 @@ export function createDiscordProvider(config: {
     const parsedDateFrom = parseFilterDate(input.dateFrom, 'dateFrom');
     const parsedDateTo = parseFilterDate(input.dateTo, 'dateTo');
     const matchesMessage = (message: Message) =>
-      ((input.query ?? '') !== '' || message.content.includes(input.query ?? '') || message.attachments.size > 0) &&
+      ((input.query ?? '') !== '' ||
+        message.content.includes(input.query ?? '') ||
+        message.attachments.size > 0) &&
       (parsedDateFrom === null || message.createdTimestamp >= parsedDateFrom) &&
       (parsedDateTo === null || message.createdTimestamp <= parsedDateTo);
     const targetCount = input.limit + input.offset;
@@ -484,7 +625,15 @@ export function createDiscordProvider(config: {
           ...((before ?? '') !== '' ? { before } : {}),
         });
       } catch (error) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'listChannelMessages: failed to fetch message batch', context: { channelId: input.channel.id, error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'error',
+          message: 'listChannelMessages: failed to fetch message batch',
+          context: {
+            channelId: input.channel.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
         break;
       }
 
@@ -523,7 +672,8 @@ export function createDiscordProvider(config: {
         attachments: await downloadDiscordAttachments(message),
         unread: false,
         createdAt: new Date(message.createdTimestamp).toISOString(),
-        authorDisplayName: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+        authorDisplayName:
+          message.member?.displayName ?? message.author.globalName ?? message.author.username,
       })),
     );
   }
@@ -589,7 +739,12 @@ export function createDiscordProvider(config: {
       const channel = await client.channels.fetch(targetKey);
 
       if (channel?.isTextBased() === false || channel?.isSendable() === false) {
-        forgeDebug({ scope: 'discord-account', level: 'error', message: 'getMessages discord target not readable', context: { targetKey } });
+        forgeDebug({
+          scope: 'discord-account',
+          level: 'error',
+          message: 'getMessages discord target not readable',
+          context: { targetKey },
+        });
         throw new Error(`Discord target is not readable: ${targetKey}`);
       }
 
@@ -615,7 +770,7 @@ export function createDiscordProvider(config: {
         return {
           targetKey: sent.channelId,
           messageId: sent.id,
-          conversationName: 'name' in channel ? channel.name ?? undefined : undefined,
+          conversationName: 'name' in channel ? (channel.name ?? undefined) : undefined,
         };
       });
     },
@@ -623,12 +778,11 @@ export function createDiscordProvider(config: {
 }
 
 function extractDiscordMessageContent(message: Message, botUserId?: string) {
-  const textContent = ((botUserId ?? '') !== ''
-    ? message.content
-      .replaceAll(`<@${botUserId}>`, '')
-      .replaceAll(`<@!${botUserId}>`, '')
-    : message.content)
-    .trim();
+  const textContent = (
+    (botUserId ?? '') !== ''
+      ? message.content.replaceAll(`<@${botUserId}>`, '').replaceAll(`<@!${botUserId}>`, '')
+      : message.content
+  ).trim();
 
   const embedContent = message.embeds
     .map((embed) =>
@@ -648,15 +802,10 @@ function extractDiscordMessageContent(message: Message, botUserId?: string) {
     .filter((value) => value.length > 0)
     .join('\n\n');
 
-  return [textContent, embedContent]
-    .filter((value) => value.length > 0)
-    .join('\n\n');
+  return [textContent, embedContent].filter((value) => value.length > 0).join('\n\n');
 }
 
-function getDiscordConversationName(
-  channel: unknown,
-  fallbackName?: string,
-) {
+function getDiscordConversationName(channel: unknown, fallbackName?: string) {
   if (
     typeof channel === 'object' &&
     channel !== null &&
@@ -669,21 +818,33 @@ function getDiscordConversationName(
         : null;
 
     return (
-      (recipient && 'globalName' in recipient && typeof recipient.globalName === 'string' ? recipient.globalName : null)
-      ?? (recipient && 'username' in recipient && typeof recipient.username === 'string' ? recipient.username : null)
-      ?? fallbackName
-      ?? 'direct-message'
+      (recipient && 'globalName' in recipient && typeof recipient.globalName === 'string'
+        ? recipient.globalName
+        : null) ??
+      (recipient && 'username' in recipient && typeof recipient.username === 'string'
+        ? recipient.username
+        : null) ??
+      fallbackName ??
+      'direct-message'
     );
   }
 
-  if (typeof channel === 'object' && channel !== null && 'name' in channel && typeof channel.name === 'string') {
+  if (
+    typeof channel === 'object' &&
+    channel !== null &&
+    'name' in channel &&
+    typeof channel.name === 'string'
+  ) {
     return channel.name;
   }
 
   return 'unknown-channel';
 }
 
-function getDiscordConversationParticipants(channel: unknown, messages: Array<{ authorDisplayName?: string }>) {
+function getDiscordConversationParticipants(
+  channel: unknown,
+  messages: Array<{ authorDisplayName?: string }>,
+) {
   const participants = new Set<string>();
 
   if (

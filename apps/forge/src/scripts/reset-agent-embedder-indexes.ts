@@ -22,12 +22,22 @@ async function main() {
 }
 
 async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
-  forgeDebug({ scope: 'reset-embedder', level: 'info', message: 'Processing agent', context: { agentId } });
+  forgeDebug({
+    scope: 'reset-embedder',
+    level: 'info',
+    message: 'Processing agent',
+    context: { agentId },
+  });
   await resetAgentEmbedderIndexes(workspaceBasePath, agentId);
   // Indexes reset logged above
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: error instanceof Error ? error.message : String(error) } });
+  forgeDebug({
+    scope: 'reset-embedder',
+    level: 'error',
+    message: 'Failed to reset embedder indexes',
+    context: { error: error instanceof Error ? error.message : String(error) },
+  });
   process.exit(1);
 });

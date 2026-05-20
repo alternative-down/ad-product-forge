@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-import type {
-  CommunicationConversationView,
-  CommunicationModule,
-} from './communication.js';
+import type { CommunicationConversationView, CommunicationModule } from './communication.js';
 import { createTool, type ToolsInput } from './tools.js';
 
 const MAX_RETURNED_CONVERSATIONS = 20;
@@ -26,14 +23,8 @@ const upsertContactInputSchema = z.object({
 });
 
 const listConversationsInputSchema = z.object({
-  provider: z
-    .string()
-    .optional()
-    .describe('Optional provider filter.'),
-  unread: z
-    .boolean()
-    .optional()
-    .describe('Only unread conversations.'),
+  provider: z.string().optional().describe('Optional provider filter.'),
+  unread: z.boolean().optional().describe('Only unread conversations.'),
   limit: z
     .number()
     .int()
@@ -44,63 +35,20 @@ const listConversationsInputSchema = z.object({
 });
 
 const getMessagesInputSchema = z.object({
-  provider: z
-    .string()
-    .min(1)
-    .describe('Conversation provider.'),
-  targetKey: z
-    .string()
-    .min(1)
-    .describe('Conversation target key.'),
-  limit: z
-    .number()
-    .int()
-    .positive()
-    .max(200)
-    .default(100)
-    .describe('Max messages to return.'),
-  offset: z
-    .number()
-    .int()
-    .min(0)
-    .default(0)
-    .describe('How many recent messages to skip.'),
-  query: z
-    .string()
-    .trim()
-    .min(1)
-    .optional()
-    .describe('Optional text filter.'),
-  dateFrom: z
-    .string()
-    .trim()
-    .min(1)
-    .optional()
-    .describe('Optional ISO start date/time.'),
-  dateTo: z
-    .string()
-    .trim()
-    .min(1)
-    .optional()
-    .describe('Optional ISO end date/time.'),
+  provider: z.string().min(1).describe('Conversation provider.'),
+  targetKey: z.string().min(1).describe('Conversation target key.'),
+  limit: z.number().int().positive().max(200).default(100).describe('Max messages to return.'),
+  offset: z.number().int().min(0).default(0).describe('How many recent messages to skip.'),
+  query: z.string().trim().min(1).optional().describe('Optional text filter.'),
+  dateFrom: z.string().trim().min(1).optional().describe('Optional ISO start date/time.'),
+  dateTo: z.string().trim().min(1).optional().describe('Optional ISO end date/time.'),
 });
 
 const sendMessageInputSchema = z.object({
-  provider: z
-    .string()
-    .min(1)
-    .describe('Message provider.'),
-  targetKey: z
-    .string()
-    .describe('Provider target key.'),
-  content: z
-    .string()
-    .min(1)
-    .describe('Message text to send.'),
-  attachments: z
-    .array(z.string())
-    .optional()
-    .describe('Optional attachment file paths.'),
+  provider: z.string().min(1).describe('Message provider.'),
+  targetKey: z.string().describe('Provider target key.'),
+  content: z.string().min(1).describe('Message text to send.'),
+  attachments: z.array(z.string()).optional().describe('Optional attachment file paths.'),
 });
 
 // Error output schema used by all tools
@@ -115,7 +63,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
     list_contacts: createTool({
       id: 'list_contacts',
       description:
-        "List your contacts. Each contact includes the targetKey you should use with send_message, plus a slug in metadata when the provider also exposes a human-friendly identifier. Returns an array of contacts or an error object.",
+        'List your contacts. Each contact includes the targetKey you should use with send_message, plus a slug in metadata when the provider also exposes a human-friendly identifier. Returns an array of contacts or an error object.',
       inputSchema: listContactsInputSchema,
       execute: async (input) => {
         try {
@@ -328,9 +276,7 @@ export function createExternalAccountTools(communication: CommunicationModule): 
   };
 }
 
-function summarizeConversation(
-  conversation: CommunicationConversationView,
-): {
+function summarizeConversation(conversation: CommunicationConversationView): {
   provider: string;
   targetKey: string;
   name?: string;
@@ -350,14 +296,16 @@ function summarizeConversation(
   hasMoreMessages: boolean;
   hasMoreParticipants: boolean;
 } {
-  const recentMessages = conversation.messages.slice(-MAX_RETURNED_MESSAGES_PER_CONVERSATION).map((message) => ({
-    messageId: message.messageId,
-    createdAt: message.createdAt,
-    unread: message.unread,
-    authorDisplayName: message.authorDisplayName,
-    content: truncateText(message.content, MAX_MESSAGE_CONTENT_CHARS),
-    attachmentCount: message.attachments.length,
-  }));
+  const recentMessages = conversation.messages
+    .slice(-MAX_RETURNED_MESSAGES_PER_CONVERSATION)
+    .map((message) => ({
+      messageId: message.messageId,
+      createdAt: message.createdAt,
+      unread: message.unread,
+      authorDisplayName: message.authorDisplayName,
+      content: truncateText(message.content, MAX_MESSAGE_CONTENT_CHARS),
+      attachmentCount: message.attachments.length,
+    }));
 
   return {
     provider: conversation.provider,

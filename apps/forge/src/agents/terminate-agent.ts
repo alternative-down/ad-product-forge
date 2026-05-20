@@ -41,7 +41,6 @@ export async function terminateInternalAgent(
     throw err;
   }
 
-   
   if (agent === null || agent === undefined) {
     forgeDebug({
       scope: 'terminate-agent',

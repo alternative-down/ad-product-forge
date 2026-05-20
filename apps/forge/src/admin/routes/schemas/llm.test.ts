@@ -22,13 +22,21 @@ describe('upsertLlmProfileSchema', () => {
   });
 
   it('parses with optional profileId', () => {
-    const result = upsertLlmProfileSchema.parse({ profileId: 'profile-1', name: 'n', modelId: 'm' });
+    const result = upsertLlmProfileSchema.parse({
+      profileId: 'profile-1',
+      name: 'n',
+      modelId: 'm',
+    });
     expect(result.profileId).toBe('profile-1');
   });
 
   it('parses with optional tuning fields', () => {
     const result = upsertLlmProfileSchema.parse({
-      name: 'n', modelId: 'm', temperature: 0.7, maxTokens: 4096, systemPrompt: 'You are helpful',
+      name: 'n',
+      modelId: 'm',
+      temperature: 0.7,
+      maxTokens: 4096,
+      systemPrompt: 'You are helpful',
     });
     expect(result.temperature).toBe(0.7);
     expect(result.maxTokens).toBe(4096);
@@ -52,11 +60,15 @@ describe('upsertLlmProfileSchema', () => {
   });
 
   it('rejects temperature below 0', () => {
-    expect(() => upsertLlmProfileSchema.parse({ name: 'n', modelId: 'm', temperature: -0.1 })).toThrow();
+    expect(() =>
+      upsertLlmProfileSchema.parse({ name: 'n', modelId: 'm', temperature: -0.1 }),
+    ).toThrow();
   });
 
   it('rejects temperature above 2', () => {
-    expect(() => upsertLlmProfileSchema.parse({ name: 'n', modelId: 'm', temperature: 2.1 })).toThrow();
+    expect(() =>
+      upsertLlmProfileSchema.parse({ name: 'n', modelId: 'm', temperature: 2.1 }),
+    ).toThrow();
   });
 
   it('rejects zero maxTokens', () => {
@@ -64,7 +76,9 @@ describe('upsertLlmProfileSchema', () => {
   });
 
   it('rejects negative maxTokens', () => {
-    expect(() => upsertLlmProfileSchema.parse({ name: 'n', modelId: 'm', maxTokens: -1 })).toThrow();
+    expect(() =>
+      upsertLlmProfileSchema.parse({ name: 'n', modelId: 'm', maxTokens: -1 }),
+    ).toThrow();
   });
 });
 
@@ -72,8 +86,9 @@ describe('upsertLlmProfileSchema', () => {
 
 describe('deleteLlmProfileSchema', () => {
   it('parses valid profileId', () => {
-    expect(deleteLlmProfileSchema.parse({ profileId: 'profile-1' }))
-      .toMatchObject({ profileId: 'profile-1' });
+    expect(deleteLlmProfileSchema.parse({ profileId: 'profile-1' })).toMatchObject({
+      profileId: 'profile-1',
+    });
   });
 
   it('rejects missing profileId', () => {
@@ -109,7 +124,9 @@ describe('updateLlmDefaultsSchema', () => {
 
   it('parses with all fields', () => {
     const result = updateLlmDefaultsSchema.parse({
-      defaultModelId: 'm', defaultTemperature: 0.7, defaultMaxTokens: 4096,
+      defaultModelId: 'm',
+      defaultTemperature: 0.7,
+      defaultMaxTokens: 4096,
     });
     expect(result.defaultModelId).toBe('m');
   });
@@ -131,7 +148,11 @@ describe('updateLlmDefaultsSchema', () => {
 
 describe('upsertLlmModelPriceSchema', () => {
   it('parses minimal valid input', () => {
-    const result = upsertLlmModelPriceSchema.parse({ modelId: 'gpt-4o', inputPricePer1M: 2.5, outputPricePer1M: 10 });
+    const result = upsertLlmModelPriceSchema.parse({
+      modelId: 'gpt-4o',
+      inputPricePer1M: 2.5,
+      outputPricePer1M: 10,
+    });
     expect(result.modelId).toBe('gpt-4o');
     expect(result.inputPricePer1M).toBe(2.5);
     expect(result.outputPricePer1M).toBe(10);
@@ -139,26 +160,38 @@ describe('upsertLlmModelPriceSchema', () => {
 
   it('parses with optional cache pricing', () => {
     const result = upsertLlmModelPriceSchema.parse({
-      modelId: 'm', inputPricePer1M: 1, outputPricePer1M: 1, cacheReadPricePer1M: 0.1, cacheWritePricePer1M: 0.5,
+      modelId: 'm',
+      inputPricePer1M: 1,
+      outputPricePer1M: 1,
+      cacheReadPricePer1M: 0.1,
+      cacheWritePricePer1M: 0.5,
     });
     expect(result.cacheReadPricePer1M).toBe(0.1);
     expect(result.cacheWritePricePer1M).toBe(0.5);
   });
 
   it('rejects missing modelId', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ inputPricePer1M: 1, outputPricePer1M: 1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({ inputPricePer1M: 1, outputPricePer1M: 1 }),
+    ).toThrow();
   });
 
   it('rejects empty modelId', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ modelId: '', inputPricePer1M: 1, outputPricePer1M: 1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({ modelId: '', inputPricePer1M: 1, outputPricePer1M: 1 }),
+    ).toThrow();
   });
 
   it('rejects zero inputPricePer1M', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ modelId: 'm', inputPricePer1M: 0, outputPricePer1M: 1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({ modelId: 'm', inputPricePer1M: 0, outputPricePer1M: 1 }),
+    ).toThrow();
   });
 
   it('rejects negative outputPricePer1M', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ modelId: 'm', inputPricePer1M: 1, outputPricePer1M: -1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({ modelId: 'm', inputPricePer1M: 1, outputPricePer1M: -1 }),
+    ).toThrow();
   });
 });
 
@@ -172,7 +205,11 @@ describe('upsertSystemSettingsSchema', () => {
   });
 
   it('parses with optional description', () => {
-    const result = upsertSystemSettingsSchema.parse({ key: 'k', value: 'v', description: 'Site URL for the app' });
+    const result = upsertSystemSettingsSchema.parse({
+      key: 'k',
+      value: 'v',
+      description: 'Site URL for the app',
+    });
     expect(result.description).toBe('Site URL for the app');
   });
 

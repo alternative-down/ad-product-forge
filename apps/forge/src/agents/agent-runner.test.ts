@@ -57,14 +57,22 @@ function resetAllMocks() {
     mockScheduler.resetBackoff.mockReset();
     mockScheduler.scheduleNextStep.mockReset();
     mockScheduler.getSnapshot.mockReset().mockReturnValue({
-      nextStepAt: null, backoffMs: 60_000, instant: false,
-      activeRunEpoch: 0, stopped: false, activeStepEpoch: 0,
+      nextStepAt: null,
+      backoffMs: 60_000,
+      instant: false,
+      activeRunEpoch: 0,
+      stopped: false,
+      activeStepEpoch: 0,
     });
     mockScheduler.isStopped.mockReset().mockReturnValue(false);
     mockScheduler.startNewRunEpoch.mockReset();
     mockScheduler.getState.mockReset().mockReturnValue({
-      nextStepAt: null, backoffMs: 60_000, instant: false,
-      activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0,
+      nextStepAt: null,
+      backoffMs: 60_000,
+      instant: false,
+      activeRunEpoch: 0,
+      activeStepEpoch: 0,
+      activeGenerateToken: 0,
       isStopped: false,
     });
   }
@@ -260,13 +268,20 @@ function makeRuntime() {
     pricingModelKey: 'gpt-4o',
     omPricingModelKey: 'gpt-4o',
     agent: {
-      id: 'agent-1', name: 'Test Agent', systemPrompt: '',
-      defaultModel: 'gpt-4o', temperature: 0.7,
-      maxStepsPerRun: 30, budgetPerRunUsd: 5,
-      tools: [], skills: [], timezone: 'UTC',
+      id: 'agent-1',
+      name: 'Test Agent',
+      systemPrompt: '',
+      defaultModel: 'gpt-4o',
+      temperature: 0.7,
+      maxStepsPerRun: 30,
+      budgetPerRunUsd: 5,
+      tools: [],
+      skills: [],
+      timezone: 'UTC',
     },
     workspace: {
-      id: 'ws-1', path: '/tmp/test-ws',
+      id: 'ws-1',
+      path: '/tmp/test-ws',
       filesystem: {
         read: vi.fn().mockResolvedValue(''),
         write: vi.fn().mockResolvedValue(undefined),
@@ -274,7 +289,8 @@ function makeRuntime() {
       },
     },
     communication: { sendDirectMessage: vi.fn(), sendGroupMessage: vi.fn() },
-    longTermMemoryRecall: null, longTermMemory: null,
+    longTermMemoryRecall: null,
+    longTermMemory: null,
     onReceiveMessage: vi.fn(),
     dispose: vi.fn().mockResolvedValue(undefined),
   } as unknown as Parameters<typeof import('./agent-runner.js').createAgentRunner>[1];
@@ -294,7 +310,6 @@ function makeDb() {
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('createAgentRunner', () => {
-
   beforeEach(() => {
     vi.clearAllMocks();
     resetAllMocks();
@@ -347,7 +362,14 @@ describe('createAgentRunner', () => {
     it('execute with idle-check event does not throw', async () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       const runner = createAgentRunner(makeDb(), makeRuntime());
-      const event = { id: 'evt-idle-check', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any;
+      const event = {
+        id: 'evt-idle-check',
+        type: 'idle-check',
+        groupKey: 'test',
+        idempotencyKey: 'test',
+        timestamp: 0,
+        text: 'test',
+      } as any;
       await expect(runner.execute([event])).resolves.toBeUndefined();
     });
 
@@ -465,7 +487,8 @@ describe('createAgentRunner', () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       createAgentRunner(makeDb(), makeRuntime());
       mockMessageManager.updateFlushSettings({
-        memoryLastMessagesFullEnabled: false, memoryLastMessagesCount: 20,
+        memoryLastMessagesFullEnabled: false,
+        memoryLastMessagesCount: 20,
         stepDelayEnabled: true,
         communicationDmFlushingEnabled: true,
         communicationGroupFlushingEnabled: true,
@@ -493,7 +516,16 @@ describe('createAgentRunner', () => {
       mockStore.getExecutionState.mockResolvedValue('idle');
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
-      await runner.execute([{ id: 'hc', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
+      await runner.execute([
+        {
+          id: 'hc',
+          type: 'idle-check',
+          groupKey: 'test',
+          idempotencyKey: 'test',
+          timestamp: 0,
+          text: 'test',
+        } as any,
+      ]);
       expect(mockStore.getExecutionState).toHaveBeenCalledWith('test-agent-1');
     });
   });
@@ -535,7 +567,16 @@ describe('createAgentRunner', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
       // planNextAttempt fires regardless; no throw is the expected behavior
-      await runner.execute([{ id: 'evt-running', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
+      await runner.execute([
+        {
+          id: 'evt-running',
+          type: 'idle-check',
+          groupKey: 'test',
+          idempotencyKey: 'test',
+          timestamp: 0,
+          text: 'test',
+        } as any,
+      ]);
       expect(true).toBe(true);
     });
 
@@ -546,12 +587,21 @@ describe('createAgentRunner', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
       // Should not throw when absent state with no contract
-      await runner.execute([{ id: 'evt-absent', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
+      await runner.execute([
+        {
+          id: 'evt-absent',
+          type: 'idle-check',
+          groupKey: 'test',
+          idempotencyKey: 'test',
+          timestamp: 0,
+          text: 'test',
+        } as any,
+      ]);
       expect(true).toBe(true);
     });
   });
 
-describe('runHealthcheck', () => {
+  describe('runHealthcheck', () => {
     it('returns early when runner is stopped', async () => {
       const { createAgentRunner } = await import('./agent-runner.js');
       const runner = createAgentRunner(makeDb(), makeRuntime());
@@ -560,7 +610,16 @@ describe('runHealthcheck', () => {
       // runHealthcheck is called internally; we verify no throw by calling it directly
       // Note: runHealthcheck is not in the public API, so test via idle-check path
       mockStore.getExecutionState.mockResolvedValue('idle');
-      await runner.execute([{ id: 'hc-stopped', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
+      await runner.execute([
+        {
+          id: 'hc-stopped',
+          type: 'idle-check',
+          groupKey: 'test',
+          idempotencyKey: 'test',
+          timestamp: 0,
+          text: 'test',
+        } as any,
+      ]);
       expect(true).toBe(true);
     });
 
@@ -571,7 +630,16 @@ describe('runHealthcheck', () => {
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
       // With running state, planNextAttempt returns {execute: 'idle'} since no contract
-      await runner.execute([{ id: 'evt-running', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
+      await runner.execute([
+        {
+          id: 'evt-running',
+          type: 'idle-check',
+          groupKey: 'test',
+          idempotencyKey: 'test',
+          timestamp: 0,
+          text: 'test',
+        } as any,
+      ]);
       // No throw confirms the path completes
       expect(true).toBe(true);
     });
@@ -790,12 +858,19 @@ describe('runHealthcheck', () => {
       mockStore.getRunnableContract.mockResolvedValue(null);
       const runner = createAgentRunner(makeDb(), makeRuntime());
       runner.start();
-      await runner.execute([{ id: 'ic-no-contract', type: 'idle-check', groupKey: 'test', idempotencyKey: 'test', timestamp: 0, text: 'test' } as any]);
+      await runner.execute([
+        {
+          id: 'ic-no-contract',
+          type: 'idle-check',
+          groupKey: 'test',
+          idempotencyKey: 'test',
+          timestamp: 0,
+          text: 'test',
+        } as any,
+      ]);
       expect(true).toBe(true);
     });
   });
-
-
 });
 
 describe('beginRun — extra coverage', () => {
@@ -811,14 +886,23 @@ describe('beginRun — extra coverage', () => {
     mockStore.getRunnableContract.mockResolvedValue(null);
     // Simulate scheduler incrementing activeRunEpoch when startNewRunEpoch is called
     let epoch = epochBefore;
-    mockScheduler.startNewRunEpoch = vi.fn(() => { epoch += 1; return epoch; });
+    mockScheduler.startNewRunEpoch = vi.fn(() => {
+      epoch += 1;
+      return epoch;
+    });
     // Override getState to return current epoch
     mockScheduler.getState = vi.fn(() => ({
-      nextStepAt: null, backoffMs: 60_000, instant: false,
-      activeRunEpoch: epoch, activeStepEpoch: 0, activeGenerateToken: 0,
+      nextStepAt: null,
+      backoffMs: 60_000,
+      instant: false,
+      activeRunEpoch: epoch,
+      activeStepEpoch: 0,
+      activeGenerateToken: 0,
       isStopped: false,
     }));
-    await runner.execute([{ type: 'agent-wake', agentId: rt.id, runId: 'run-1', timestamp: Date.now() }] as any);
+    await runner.execute([
+      { type: 'agent-wake', agentId: rt.id, runId: 'run-1', timestamp: Date.now() },
+    ] as any);
 
     const snapAfter = runner.getSnapshot();
     expect(snapAfter.activeRunEpoch).toBeGreaterThan(epochBefore);

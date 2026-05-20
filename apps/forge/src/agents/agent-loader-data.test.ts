@@ -81,15 +81,17 @@ describe('loadAgentRuntimeData', () => {
   it('throws when agent not found in registry', async () => {
     mocks.findFirstMock.mockResolvedValue(null);
 
-    await expect(loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any))
-      .rejects.toThrow('Agent not found in registry: agent-123');
+    await expect(
+      loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any),
+    ).rejects.toThrow('Agent not found in registry: agent-123');
   });
 
   it('throws when agent is missing roleId', async () => {
     mocks.findFirstMock.mockResolvedValue({ id: 'agent-123', roleId: null });
 
-    await expect(loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any))
-      .rejects.toThrow('Agent is missing roleId: agent-123');
+    await expect(
+      loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any),
+    ).rejects.toThrow('Agent is missing roleId: agent-123');
   });
 
   it('returns runtime data with all required fields', async () => {
@@ -123,9 +125,7 @@ describe('loadAgentRuntimeData', () => {
   });
 
   it('skips providers not in communicationProviderTypes', async () => {
-    mocks.findManyMock.mockResolvedValue([
-      { providerType: 'slack', encryptedCredentials: 'bad' },
-    ]);
+    mocks.findManyMock.mockResolvedValue([{ providerType: 'slack', encryptedCredentials: 'bad' }]);
 
     await loadAgentRuntimeData(createMockDb() as any, createMockConfig() as any);
 

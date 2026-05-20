@@ -45,9 +45,7 @@ function AgentGithubIndexRoute() {
                 </a>
               </AdminButton>
             ) : (
-              <AdminButton disabled>
-                Criar app
-              </AdminButton>
+              <AdminButton disabled>Criar app</AdminButton>
             )}
             {installUrl ? (
               <AdminButton asChild variant="outline">
@@ -64,10 +62,15 @@ function AgentGithubIndexRoute() {
         }
       />
 
-      {agentQuery.isLoading && !agentQuery.data ? <AdminLoadingState label="Carregando Github App..." /> : null}
+      {agentQuery.isLoading && !agentQuery.data ? (
+        <AdminLoadingState label="Carregando Github App..." />
+      ) : null}
 
       <section className="space-y-4">
-        <ReadOnlyItem label="Status" value={provisioning ? humanizeGithubStatus(provisioning.status) : '—'} />
+        <ReadOnlyItem
+          label="Status"
+          value={provisioning ? humanizeGithubStatus(provisioning.status) : '—'}
+        />
         <ReadOnlyItem label="Link de criação" value={registrationUrl ?? '—'} />
         <ReadOnlyItem label="Link de instalação" value={installUrl ?? '—'} />
       </section>
@@ -77,12 +80,14 @@ function AgentGithubIndexRoute() {
           <ManifestFieldset
             title="Permissões"
             description="Essas permissões entram no manifest enviado para o GitHub no momento da criação do app."
-            items={Object.entries(provisioning.manifestConfig.permissions).map(([key, enabled]) => ({
-              key,
-              enabled,
-              label: humanizeManifestKey(key),
-              locked: key === 'metadata',
-            }))}
+            items={Object.entries(provisioning.manifestConfig.permissions).map(
+              ([key, enabled]) => ({
+                key,
+                enabled,
+                label: humanizeManifestKey(key),
+                locked: key === 'metadata',
+              }),
+            )}
             disabled={updateManifestMutation.isPending}
             onToggle={(key, enabled) => {
               const nextManifestConfig = {
@@ -121,7 +126,9 @@ function AgentGithubIndexRoute() {
         </section>
       ) : null}
 
-      {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
+      {agentQuery.error ? (
+        <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+      ) : null}
     </div>
   );
 }
@@ -165,10 +172,7 @@ function ManifestFieldset(input: {
   );
 }
 
-function ReadOnlyItem(input: {
-  label: string;
-  value: string;
-}) {
+function ReadOnlyItem(input: { label: string; value: string }) {
   return (
     <div className="space-y-1">
       <div className="text-sm text-muted-foreground">{input.label}</div>
@@ -190,7 +194,5 @@ function humanizeGithubStatus(status: 'pending' | 'created' | 'active') {
 }
 
 function humanizeManifestKey(value: string) {
-  return value
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase());
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (match) => match.toUpperCase());
 }

@@ -51,7 +51,12 @@ try {
   await provider.getSelfContact();
 } catch (error) {
   // Log warning, skip Discord provider
-  forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Discord provider failed', context: { error } });
+  forgeDebug({
+    scope: 'provider-loader',
+    level: 'warn',
+    message: 'Discord provider failed',
+    context: { error },
+  });
 }
 ```
 

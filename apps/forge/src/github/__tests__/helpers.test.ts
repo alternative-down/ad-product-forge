@@ -26,8 +26,25 @@ import {
 describe('normalizeManifestConfig', () => {
   it('returns parsed config when schema is valid', () => {
     const input = {
-      permissions: { administration: false, contents: true, issues: false, metadata: true, organization_projects: false, pull_requests: true, repository_projects: false, workflows: true },
-      events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: true },
+      permissions: {
+        administration: false,
+        contents: true,
+        issues: false,
+        metadata: true,
+        organization_projects: false,
+        pull_requests: true,
+        repository_projects: false,
+        workflows: true,
+      },
+      events: {
+        push: false,
+        pull_request: false,
+        pull_request_review: false,
+        issues: false,
+        issue_comment: false,
+        repository: false,
+        workflow_run: true,
+      },
     };
     const result = normalizeManifestConfig(input);
     expect(result.permissions.contents).toBe(true);
@@ -65,8 +82,25 @@ describe('normalizeGitHubAppCredentials', () => {
       appId: '123',
       privateKey: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
       manifestConfig: {
-        permissions: { administration: true, contents: true, issues: false, metadata: true, organization_projects: false, pull_requests: true, repository_projects: false, workflows: false },
-        events: { push: true, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: true,
+          contents: true,
+          issues: false,
+          metadata: true,
+          organization_projects: false,
+          pull_requests: true,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: true,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
     };
     const result = normalizeGitHubAppCredentials(credentials as unknown as any);
@@ -110,7 +144,9 @@ describe('normalizeAssignees', () => {
   });
 
   it('appends [bot] to kebab-case accounts', () => {
-    expect(normalizeAssignees(['architectron-the-scalabil-sykutp'])).toEqual(['architectron-the-scalabil-sykutp[bot]']);
+    expect(normalizeAssignees(['architectron-the-scalabil-sykutp'])).toEqual([
+      'architectron-the-scalabil-sykutp[bot]',
+    ]);
   });
 
   it('keeps accounts with [bot] suffix unchanged', () => {
@@ -171,7 +207,16 @@ describe('buildManifestPermissions', () => {
   });
 
   it('always returns metadata as read', () => {
-    const config = makeConfig({ administration: true, contents: true, issues: true, metadata: true, organization_projects: true, pull_requests: true, repository_projects: true, workflows: true }) as any;
+    const config = makeConfig({
+      administration: true,
+      contents: true,
+      issues: true,
+      metadata: true,
+      organization_projects: true,
+      pull_requests: true,
+      repository_projects: true,
+      workflows: true,
+    }) as any;
     const result = buildManifestPermissions(config);
     expect(result.metadata).toBe('read');
   });
@@ -232,7 +277,7 @@ describe('buildManifestEvents', () => {
 // ─── isGitHubSelfEvent ────────────────────────────────────────────────────────
 
 describe('isGitHubSelfEvent', () => {
-  const makeCreds = (appSlug: string) => ({ status: 'active' as const, appSlug } as any);
+  const makeCreds = (appSlug: string) => ({ status: 'active' as const, appSlug }) as any;
 
   it('returns true when sender matches appSlug', () => {
     expect(isGitHubSelfEvent('my-app', makeCreds('my-app'))).toBe(true);
@@ -328,7 +373,9 @@ describe('URL path helpers', () => {
     });
 
     it('encodes special characters in agentId', () => {
-      expect(getRegisterPath('agent/with/slash')).toBe('/github/apps/agent%2Fwith%2Fslash/register');
+      expect(getRegisterPath('agent/with/slash')).toBe(
+        '/github/apps/agent%2Fwith%2Fslash/register',
+      );
     });
   });
 
@@ -355,7 +402,9 @@ describe('URL path helpers', () => {
 
 describe('getHeader', () => {
   it('returns the value for an existing header', () => {
-    expect(getHeader({ 'content-type': 'application/json' }, 'content-type')).toBe('application/json');
+    expect(getHeader({ 'content-type': 'application/json' }, 'content-type')).toBe(
+      'application/json',
+    );
   });
 
   it('returns the first element for array values', () => {
@@ -396,7 +445,7 @@ describe('escapeHtml', () => {
   });
 
   it('escapes single quotes', () => {
-    expect(escapeHtml("it's fine")).toBe("it&#39;s fine");
+    expect(escapeHtml("it's fine")).toBe('it&#39;s fine');
   });
 
   it('escapes all characters together', () => {

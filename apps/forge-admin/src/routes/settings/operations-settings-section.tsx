@@ -82,7 +82,10 @@ export function OperationsSettingsSection({
           checked={operationsSettings.communicationDmFlushingEnabled}
           disabled={settingsMutation.isPending}
           onCheckedChange={(checked) =>
-            onOperationsDraftChange({ ...operationsSettings, communicationDmFlushingEnabled: checked })
+            onOperationsDraftChange({
+              ...operationsSettings,
+              communicationDmFlushingEnabled: checked,
+            })
           }
         />
 
@@ -92,7 +95,10 @@ export function OperationsSettingsSection({
           checked={operationsSettings.communicationGroupFlushingEnabled}
           disabled={settingsMutation.isPending}
           onCheckedChange={(checked) =>
-            onOperationsDraftChange({ ...operationsSettings, communicationGroupFlushingEnabled: checked })
+            onOperationsDraftChange({
+              ...operationsSettings,
+              communicationGroupFlushingEnabled: checked,
+            })
           }
         />
 

@@ -32,10 +32,7 @@ function AgentsLayoutRoute() {
   );
 }
 
-function buildAgentSectionItems(input: {
-  agentId: string;
-  providerTypes: string[];
-}) {
+function buildAgentSectionItems(input: { agentId: string; providerTypes: string[] }) {
   if (!input.agentId) {
     return [
       { value: '/agents', label: 'Lista' },
@@ -58,7 +55,9 @@ function buildAgentSectionItems(input: {
       continue;
     }
 
-    if (!items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)) {
+    if (
+      !items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)
+    ) {
       items.push({
         value: `/agents/${input.agentId}/providers/${providerType}`,
         label: humanizeProviderType(providerType),
@@ -67,7 +66,9 @@ function buildAgentSectionItems(input: {
   }
 
   for (const providerType of ['discord', 'email']) {
-    if (!items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)) {
+    if (
+      !items.some((item) => item.value === `/agents/${input.agentId}/providers/${providerType}`)
+    ) {
       items.push({
         value: `/agents/${input.agentId}/providers/${providerType}`,
         label: humanizeProviderType(providerType),

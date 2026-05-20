@@ -24,7 +24,9 @@ describe('tools', () => {
         inputSchema: z.object({ a: z.number(), b: z.number() }),
         outputSchema: z.object({ result: z.number() }),
         async execute(input) {
-          return { result: (input as { a: number; b: number }).a + (input as { a: number; b: number }).b };
+          return {
+            result: (input as { a: number; b: number }).a + (input as { a: number; b: number }).b,
+          };
         },
       };
       expect(tool.outputSchema).toBeDefined();
@@ -155,7 +157,12 @@ describe('tools', () => {
           return context.toolCallId;
         },
       };
-      const result = await tool.execute({}, { toolCallId: 'ctx-call-1', runtimeId: 'r1', stepId: 's1', stepNumber: 1 } as never);
+      const result = await tool.execute({}, {
+        toolCallId: 'ctx-call-1',
+        runtimeId: 'r1',
+        stepId: 's1',
+        stepNumber: 1,
+      } as never);
       expect(result).toBe('ctx-call-1');
     });
   });

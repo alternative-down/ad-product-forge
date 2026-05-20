@@ -1,15 +1,19 @@
 # Proposta de Feature — Extração, Enriquecimento e Ranking de Oportunidades
 
 ## Status
+
 Definição funcional fechada (V1)
 
 ## 1) Objetivo
+
 Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a etapa posterior de propostas de solução.
 
 ---
 
 ## 2) Escopo
+
 ### Dentro do escopo
+
 - Ingestão e consolidação de insumos ativos/passivos
 - Enriquecimento semântico no grafo
 - Mineração de insights
@@ -17,6 +21,7 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
 - Handoff estruturado para etapa posterior
 
 ### Fora do escopo
+
 - Escolha de stack final
 - Implementação técnica detalhada
 - Viabilidade de solução (fase posterior)
@@ -24,13 +29,16 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
 ---
 
 ## 3) Entradas (insumos)
+
 ### Campos mínimos
+
 - `timestamp`
 - `content`
 - `link` (opcional para entradas passivas)
 - `context`
 
 ### Regras de entrada
+
 - Armazenar bruto
 - Aplicar deduplicação interna
 - Manter ingestão simples com o mínimo de campos
@@ -38,6 +46,7 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
 ---
 
 ## 4) Processos
+
 1. **Base de insumos**
    - recebe ativo + passivo
    - aplica deduplicação interna
@@ -68,18 +77,24 @@ Transformar dados brutos em insights ranqueados e rastreáveis para alimentar a 
 ---
 
 ## 5) Saída do minerador
+
 A saída desta fase são insights de tensão de usuário/mercado (não ideias de produto).
 
 ## 5.1 Lista consolidada de problemas extraídos (saída mínima)
+
 Cada item contém:
+
 - `problem`
 - `context`
 - `graph_node_ref`
 
 Observação:
+
 - insights novos são mesclados nessa lista consolidada.
 - saída externa do minerador fica apenas nesses três campos.
+
 ## 5.2 Pontuação
+
 - `insight_id`
 - `rank_score`
 - `rank_reason`
@@ -87,12 +102,15 @@ Observação:
 ---
 
 ## 6) Fórmula de pontuação (V1)
+
 `rank_score = 0.35*evidence_strength + 0.30*recurrence + 0.20*pain_intensity + 0.15*context_breadth`
 
 Escala:
+
 - todos os critérios em 0–100 antes da ponderação
 
 ### Definições operacionais dos critérios
+
 - `evidence_strength`: força combinada de evidências ligadas ao insight no grafo (consistência + convergência)
 - `recurrence`: recorrência do padrão em insumos distintos conectados ao insight
 - `pain_intensity`: intensidade de tensão inferida (dor/desejo/oportunidade)
@@ -101,7 +119,9 @@ Escala:
 ---
 
 ## 7) Handoff para proposta de solução
+
 Pacote por item da lista:
+
 - `problem`
 - `context`
 - `graph_node_ref`
@@ -112,6 +132,7 @@ Pacote por item da lista:
 ---
 
 ## 8) Premissas finais desta feature
+
 - Sem taxonomia fixa na V1 (emergente por agentes)
 - Sem limiar de entrada no ranking
 - Insight é criado uma vez (imutável)

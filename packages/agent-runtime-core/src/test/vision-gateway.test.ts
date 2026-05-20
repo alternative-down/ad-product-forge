@@ -31,10 +31,12 @@ describe('ai sdk vision gateway', () => {
 
     const result = await gateway.analyze({
       prompt: 'Describe this image.',
-      images: [{
-        mimeType: 'image/png',
-        bytes: new Uint8Array([1, 2, 3]),
-      }],
+      images: [
+        {
+          mimeType: 'image/png',
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+      ],
     });
 
     expect(result.text).toBe('The image shows a forge.');

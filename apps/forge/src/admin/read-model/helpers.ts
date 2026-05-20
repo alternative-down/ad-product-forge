@@ -293,10 +293,19 @@ export function extractLatestMessageToolBadge(content: unknown) {
     content?: unknown;
   };
   const parts = Array.isArray(record.parts) ? record.parts : [];
-  const topLevelToolInvocations = Array.isArray(record.toolInvocations) ? record.toolInvocations : [];
+  const topLevelToolInvocations = Array.isArray(record.toolInvocations)
+    ? record.toolInvocations
+    : [];
 
   for (const part of [...parts].reverse()) {
-    if (part === null || part === undefined || typeof part !== 'object' || !('type' in part) || part.type !== 'text' || typeof part.text !== 'string') {
+    if (
+      part === null ||
+      part === undefined ||
+      typeof part !== 'object' ||
+      !('type' in part) ||
+      part.type !== 'text' ||
+      typeof part.text !== 'string'
+    ) {
       continue;
     }
 
@@ -306,24 +315,36 @@ export function extractLatestMessageToolBadge(content: unknown) {
   }
 
   if (
-    typeof record.content === 'string'
-    && splitMemoryRecallSegments(record.content).some((segment) => segment.kind === 'memory-recall')
+    typeof record.content === 'string' &&
+    splitMemoryRecallSegments(record.content).some((segment) => segment.kind === 'memory-recall')
   ) {
     return { icon: '🧠', label: 'Recall' };
   }
 
   for (const part of [...parts].reverse()) {
-    if (part === null || part === undefined || typeof part !== 'object' || !('type' in part) || part.type !== 'tool-invocation') {
+    if (
+      part === null ||
+      part === undefined ||
+      typeof part !== 'object' ||
+      !('type' in part) ||
+      part.type !== 'tool-invocation'
+    ) {
       continue;
     }
 
-    if (!('toolInvocation' in part) || part.toolInvocation === null || part.toolInvocation === undefined || typeof part.toolInvocation !== 'object') {
+    if (
+      !('toolInvocation' in part) ||
+      part.toolInvocation === null ||
+      part.toolInvocation === undefined ||
+      typeof part.toolInvocation !== 'object'
+    ) {
       continue;
     }
 
-    const toolName = 'toolName' in part.toolInvocation && typeof part.toolInvocation.toolName === 'string'
-      ? part.toolInvocation.toolName
-      : null;
+    const toolName =
+      'toolName' in part.toolInvocation && typeof part.toolInvocation.toolName === 'string'
+        ? part.toolInvocation.toolName
+        : null;
 
     if ((toolName ?? '') !== '') {
       return toToolBadge(toolName);
@@ -331,7 +352,13 @@ export function extractLatestMessageToolBadge(content: unknown) {
   }
 
   for (const invocation of [...topLevelToolInvocations].reverse()) {
-    if (invocation === null || invocation === undefined || typeof invocation !== 'object' || !('toolName' in invocation) || typeof invocation.toolName !== 'string') {
+    if (
+      invocation === null ||
+      invocation === undefined ||
+      typeof invocation !== 'object' ||
+      !('toolName' in invocation) ||
+      typeof invocation.toolName !== 'string'
+    ) {
       continue;
     }
 
@@ -351,31 +378,40 @@ export function decryptProviderConfig(encryptedCredentials: string) {
   try {
     return JSON.parse(decrypted) as unknown;
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to parse credentials JSON: ' + String(err), context: { err: err instanceof Error ? err.message : String(err) } });
-    throw new Error('Failed to parse credentials JSON: ' + (err instanceof Error ? err.message : String(err)));
+    forgeDebug({
+      scope: 'admin-read-model',
+      level: 'error',
+      message: 'Failed to parse credentials JSON: ' + String(err),
+      context: { err: err instanceof Error ? err.message : String(err) },
+    });
+    throw new Error(
+      'Failed to parse credentials JSON: ' + (err instanceof Error ? err.message : String(err)),
+    );
   }
 }
 
-export function mergeToolLogMessages(messages: Array<{
-  id: string;
-  role: string;
-  threadId: string;
-  createdAt: string;
-  parts: RuntimeStoredMessagePart[];
-  metadata?: Record<string, unknown>;
-}>) {
+export function mergeToolLogMessages(
+  messages: Array<{
+    id: string;
+    role: string;
+    threadId: string;
+    createdAt: string;
+    parts: RuntimeStoredMessagePart[];
+    metadata?: Record<string, unknown>;
+  }>,
+) {
   const merged: typeof messages = [];
 
   for (const message of messages) {
     const previousMessage = merged[merged.length - 1];
 
     if (
-      previousMessage?.role === 'assistant'
-      && message.role === 'tool'
-      && Array.isArray(previousMessage.metadata?.toolInvocations)
-      && previousMessage.metadata.toolInvocations.length > 0
-      && Array.isArray(message.metadata?.toolResults)
-      && message.metadata.toolResults.length > 0
+      previousMessage?.role === 'assistant' &&
+      message.role === 'tool' &&
+      Array.isArray(previousMessage.metadata?.toolInvocations) &&
+      previousMessage.metadata.toolInvocations.length > 0 &&
+      Array.isArray(message.metadata?.toolResults) &&
+      message.metadata.toolResults.length > 0
     ) {
       merged[merged.length - 1] = {
         ...previousMessage,
@@ -397,9 +433,9 @@ function indexToolResultsByToolCallId(toolResults: unknown[]) {
   const resultIndexesByToolCallId = new Map<string, number>();
   for (const [index, toolResult] of toolResults.entries()) {
     if (
-      typeof toolResult === 'object'
-      && toolResult !== null
-      && typeof (toolResult as Record<string, unknown>).toolCallId === 'string'
+      typeof toolResult === 'object' &&
+      toolResult !== null &&
+      typeof (toolResult as Record<string, unknown>).toolCallId === 'string'
     ) {
       resultIndexesByToolCallId.set((toolResult as { toolCallId: string }).toolCallId, index);
     }
@@ -417,22 +453,23 @@ function processToolInvocations(
 
   for (const toolInvocation of toolInvocations) {
     if (
-      typeof toolInvocation !== 'object'
-      || toolInvocation === null
-      || typeof (toolInvocation as Record<string, unknown>).toolName !== 'string'
+      typeof toolInvocation !== 'object' ||
+      toolInvocation === null ||
+      typeof (toolInvocation as Record<string, unknown>).toolName !== 'string'
     ) {
       continue;
     }
 
-    const toolCallId = typeof (toolInvocation as Record<string, unknown>).toolCallId === 'string'
-      ? (toolInvocation as Record<string, unknown>).toolCallId as string
-      : null;
-    const matchingResultIndex = (toolCallId ?? '') !== ''
-      ? resultIndexesByToolCallId.get(toolCallId ?? '')
-      : undefined;
-    const matchingResult = matchingResultIndex !== undefined
-      ? toolResults[matchingResultIndex] as Record<string, unknown> | null
-      : null;
+    const toolCallId =
+      typeof (toolInvocation as Record<string, unknown>).toolCallId === 'string'
+        ? ((toolInvocation as Record<string, unknown>).toolCallId as string)
+        : null;
+    const matchingResultIndex =
+      (toolCallId ?? '') !== '' ? resultIndexesByToolCallId.get(toolCallId ?? '') : undefined;
+    const matchingResult =
+      matchingResultIndex !== undefined
+        ? (toolResults[matchingResultIndex] as Record<string, unknown> | null)
+        : null;
 
     if (matchingResultIndex !== undefined) {
       matchedResultIndexes.add(matchingResultIndex);
@@ -457,18 +494,11 @@ function processToolInvocations(
   return { parts, matchedResultIndexes };
 }
 
-function collectUnmatchedResults(
-  toolResults: unknown[],
-  matchedResultIndexes: Set<number>,
-) {
+function collectUnmatchedResults(toolResults: unknown[], matchedResultIndexes: Set<number>) {
   const parts: Array<Record<string, unknown>> = [];
 
   for (const [index, toolResult] of toolResults.entries()) {
-    if (
-      matchedResultIndexes.has(index)
-      || typeof toolResult !== 'object'
-      || toolResult === null
-    ) {
+    if (matchedResultIndexes.has(index) || typeof toolResult !== 'object' || toolResult === null) {
       continue;
     }
 
@@ -485,12 +515,8 @@ function collectUnmatchedResults(
 }
 
 export function buildThreadToolInvocationParts(metadata: Record<string, unknown> | undefined) {
-  const toolInvocations = Array.isArray(metadata?.toolInvocations)
-    ? metadata.toolInvocations
-    : [];
-  const toolResults = Array.isArray(metadata?.toolResults)
-    ? metadata.toolResults
-    : [];
+  const toolInvocations = Array.isArray(metadata?.toolInvocations) ? metadata.toolInvocations : [];
+  const toolResults = Array.isArray(metadata?.toolResults) ? metadata.toolResults : [];
 
   const resultIndexesByToolCallId = indexToolResultsByToolCallId(toolResults);
   const { parts: invocationParts, matchedResultIndexes } = processToolInvocations(
@@ -540,4 +566,3 @@ type TextPart = Extract<MessagePart, { type: 'text' | 'reasoning' }>;
 export function isTextPart(part: MessagePart): part is TextPart {
   return (part.type === 'text' || part.type === 'reasoning') && Boolean(part.text);
 }
-

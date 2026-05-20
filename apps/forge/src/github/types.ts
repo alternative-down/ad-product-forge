@@ -66,7 +66,6 @@ export const githubAppCredentialsSchema = z.discriminatedUnion('status', [
 export type GitHubAppCredentials = z.infer<typeof githubAppCredentialsSchema>;
 export type GitHubAppManifestConfig = z.infer<typeof githubAppManifestConfigSchema>;
 
-
 export type GitHubAppProvisioning = {
   agentId: string;
   status: GitHubAppCredentials['status'];

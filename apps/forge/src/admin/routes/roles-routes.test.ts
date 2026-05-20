@@ -15,11 +15,40 @@ type HttpRequest = any;
 const { mockZod } = vi.hoisted(() => {
   const zchain = () => {
     const fn = vi.fn().mockReturnThis();
-    const methods = ['min', 'max', 'optional', 'nullable', 'default', 'describe',
-      'refine', 'transform', 'pipe', 'enum', 'email', 'url', 'cuid', 'uuid',
-      'nonempty', 'readonly', 'array', 'record', 'pick', 'omit', 'partial',
-      'required', 'brand', 'catch', 'innerType', 'output', 'input', 'and', 'or'];
-    for (const m of methods) { (fn as any)[m] = vi.fn().mockReturnThis(); }
+    const methods = [
+      'min',
+      'max',
+      'optional',
+      'nullable',
+      'default',
+      'describe',
+      'refine',
+      'transform',
+      'pipe',
+      'enum',
+      'email',
+      'url',
+      'cuid',
+      'uuid',
+      'nonempty',
+      'readonly',
+      'array',
+      'record',
+      'pick',
+      'omit',
+      'partial',
+      'required',
+      'brand',
+      'catch',
+      'innerType',
+      'output',
+      'input',
+      'and',
+      'or',
+    ];
+    for (const m of methods) {
+      (fn as any)[m] = vi.fn().mockReturnThis();
+    }
     return fn;
   };
   return {
@@ -49,7 +78,11 @@ const { mockZod } = vi.hoisted(() => {
 const { mockParseJsonBody, mockJsonResponse } = vi.hoisted(() => ({
   mockParseJsonBody: vi.fn((bodyText: string) => {
     if (!bodyText || bodyText.trim() === '{}' || bodyText.trim() === '') return {};
-    try { return JSON.parse(bodyText); } catch { return {}; }
+    try {
+      return JSON.parse(bodyText);
+    } catch {
+      return {};
+    }
   }),
   mockJsonResponse: (body: unknown, status = 200) => ({
     status,
@@ -94,7 +127,11 @@ function createMockHttpServer() {
   const routes: unknown[] = [];
   return {
     registerRoute: vi.fn((route: unknown) => routes.push(route)),
-    _routes: routes as Array<{ method: string; path: string; handler: (req: { bodyText: string }) => Promise<unknown> }>,
+    _routes: routes as Array<{
+      method: string;
+      path: string;
+      handler: (req: { bodyText: string }) => Promise<unknown>;
+    }>,
   };
 }
 
@@ -127,104 +164,161 @@ function makePostRequest(body: Record<string, unknown>) {
 
 // ─── Route registration helper ───────────────────────────────────────────────
 // Mirrors the exact inline handlers from admin/routes.ts
-function registerRoleRoutes(httpServer: ReturnType<typeof createMockHttpServer>, capabilities: ReturnType<typeof createMockCapabilities>) {
+function registerRoleRoutes(
+  httpServer: ReturnType<typeof createMockHttpServer>,
+  capabilities: ReturnType<typeof createMockCapabilities>,
+) {
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role/create',
+    method: 'POST',
+    path: '/admin/role/create',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText);
         const result = await capabilities.createRole(body);
         return mockJsonResponse(result, 201);
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role/update',
+    method: 'POST',
+    path: '/admin/role/update',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText) as { roleId: string; name?: string };
         return mockJsonResponse(await capabilities.updateRole(body));
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role/delete',
+    method: 'POST',
+    path: '/admin/role/delete',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText) as { roleId: string };
         return mockJsonResponse(await capabilities.deleteRole(body.roleId));
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role-capability/add',
+    method: 'POST',
+    path: '/admin/role-capability/add',
     handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText) as { roleId: string; capabilityId: string };
-        return mockJsonResponse(await capabilities.manageRoleCapability({ action: 'add', roleId: body.roleId, capabilityId: body.capabilityId }));
+        const body = mockParseJsonBody(request.bodyText) as {
+          roleId: string;
+          capabilityId: string;
+        };
+        return mockJsonResponse(
+          await capabilities.manageRoleCapability({
+            action: 'add',
+            roleId: body.roleId,
+            capabilityId: body.capabilityId,
+          }),
+        );
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role-capability/remove',
+    method: 'POST',
+    path: '/admin/role-capability/remove',
     handler: async (request: any) => {
       try {
-        const body = mockParseJsonBody(request.bodyText) as { roleId: string; capabilityId: string };
-        return mockJsonResponse(await capabilities.manageRoleCapability({ action: 'remove', roleId: body.roleId, capabilityId: body.capabilityId }));
+        const body = mockParseJsonBody(request.bodyText) as {
+          roleId: string;
+          capabilityId: string;
+        };
+        return mockJsonResponse(
+          await capabilities.manageRoleCapability({
+            action: 'remove',
+            roleId: body.roleId,
+            capabilityId: body.capabilityId,
+          }),
+        );
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role-tool-permission/add',
+    method: 'POST',
+    path: '/admin/role-tool-permission/add',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText) as { roleId: string; toolId: string };
         return mockJsonResponse(await capabilities.addRoleToolPermission(body));
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role-tool-permission/remove',
+    method: 'POST',
+    path: '/admin/role-tool-permission/remove',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText) as { roleId: string; toolId: string };
         return mockJsonResponse(await capabilities.removeRoleToolPermission(body));
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role-workflow-permission/add',
+    method: 'POST',
+    path: '/admin/role-workflow-permission/add',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText) as { roleId: string; workflowId: string };
         return mockJsonResponse(await capabilities.addRoleWorkflowPermission(body));
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
   httpServer.registerRoute({
-    method: 'POST', path: '/admin/role-workflow-permission/remove',
+    method: 'POST',
+    path: '/admin/role-workflow-permission/remove',
     handler: async (request: any) => {
       try {
         const body = mockParseJsonBody(request.bodyText) as { roleId: string; workflowId: string };
         return mockJsonResponse(await capabilities.removeRoleWorkflowPermission(body));
       } catch (error) {
-        return mockJsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return mockJsonResponse(
+          { error: error instanceof Error ? error.message : String(error) },
+          500,
+        );
       }
     },
   });
@@ -257,32 +351,48 @@ describe('role routes in admin/routes.ts', () => {
       expect(httpServer._routes.find((r) => r.path === '/admin/role-capability/add')).toBeDefined();
     });
     it('registers POST /admin/role-capability/remove', () => {
-      expect(httpServer._routes.find((r) => r.path === '/admin/role-capability/remove')).toBeDefined();
+      expect(
+        httpServer._routes.find((r) => r.path === '/admin/role-capability/remove'),
+      ).toBeDefined();
     });
     it('registers POST /admin/role-tool-permission/add', () => {
-      expect(httpServer._routes.find((r) => r.path === '/admin/role-tool-permission/add')).toBeDefined();
+      expect(
+        httpServer._routes.find((r) => r.path === '/admin/role-tool-permission/add'),
+      ).toBeDefined();
     });
     it('registers POST /admin/role-tool-permission/remove', () => {
-      expect(httpServer._routes.find((r) => r.path === '/admin/role-tool-permission/remove')).toBeDefined();
+      expect(
+        httpServer._routes.find((r) => r.path === '/admin/role-tool-permission/remove'),
+      ).toBeDefined();
     });
     it('registers POST /admin/role-workflow-permission/add', () => {
-      expect(httpServer._routes.find((r) => r.path === '/admin/role-workflow-permission/add')).toBeDefined();
+      expect(
+        httpServer._routes.find((r) => r.path === '/admin/role-workflow-permission/add'),
+      ).toBeDefined();
     });
     it('registers POST /admin/role-workflow-permission/remove', () => {
-      expect(httpServer._routes.find((r) => r.path === '/admin/role-workflow-permission/remove')).toBeDefined();
+      expect(
+        httpServer._routes.find((r) => r.path === '/admin/role-workflow-permission/remove'),
+      ).toBeDefined();
     });
   });
 
   describe('POST /admin/role/create', () => {
     it('creates role and returns 201', async () => {
       capabilities.createRole.mockResolvedValueOnce({ roleId: 'role-1', name: 'Admin' });
-      const response = await getHandler(httpServer, '/admin/role/create')(makePostRequest({ name: 'Admin' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role/create',
+      )(makePostRequest({ name: 'Admin' }))) as { status: number; body: string };
       expect(response.status).toBe(201);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', name: 'Admin' });
     });
     it('returns 500 when createRole throws', async () => {
       capabilities.createRole.mockRejectedValueOnce(new Error('DB constraint violation'));
-      const response = await getHandler(httpServer, '/admin/role/create')(makePostRequest({ name: 'Admin' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role/create',
+      )(makePostRequest({ name: 'Admin' }))) as { status: number; body: string };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB constraint violation');
     });
@@ -291,13 +401,25 @@ describe('role routes in admin/routes.ts', () => {
   describe('POST /admin/role/update', () => {
     it('updates role and returns 200', async () => {
       capabilities.updateRole.mockResolvedValueOnce({ roleId: 'role-1', name: 'Updated' });
-      const response = await getHandler(httpServer, '/admin/role/update')(makePostRequest({ roleId: 'role-1', name: 'Updated' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role/update',
+      )(makePostRequest({ roleId: 'role-1', name: 'Updated' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', name: 'Updated' });
     });
     it('returns 500 when updateRole throws', async () => {
       capabilities.updateRole.mockRejectedValueOnce(new Error('DB update failed'));
-      const response = await getHandler(httpServer, '/admin/role/update')(makePostRequest({ roleId: 'role-1', name: 'Updated' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role/update',
+      )(makePostRequest({ roleId: 'role-1', name: 'Updated' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB update failed');
     });
@@ -306,13 +428,19 @@ describe('role routes in admin/routes.ts', () => {
   describe('POST /admin/role/delete', () => {
     it('deletes role and returns 200', async () => {
       capabilities.deleteRole.mockResolvedValueOnce({ success: true });
-      const response = await getHandler(httpServer, '/admin/role/delete')(makePostRequest({ roleId: 'role-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role/delete',
+      )(makePostRequest({ roleId: 'role-1' }))) as { status: number; body: string };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ success: true });
     });
     it('returns 500 when deleteRole throws', async () => {
       capabilities.deleteRole.mockRejectedValueOnce(new Error('DB delete failed'));
-      const response = await getHandler(httpServer, '/admin/role/delete')(makePostRequest({ roleId: 'role-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role/delete',
+      )(makePostRequest({ roleId: 'role-1' }))) as { status: number; body: string };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB delete failed');
     });
@@ -320,14 +448,29 @@ describe('role routes in admin/routes.ts', () => {
 
   describe('POST /admin/role-capability/add', () => {
     it('adds capability and returns 200', async () => {
-      capabilities.manageRoleCapability.mockResolvedValueOnce({ roleId: 'role-1', capabilityId: 'cap-1' });
-      const response = await getHandler(httpServer, '/admin/role-capability/add')(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' })) as { status: number; body: string };
+      capabilities.manageRoleCapability.mockResolvedValueOnce({
+        roleId: 'role-1',
+        capabilityId: 'cap-1',
+      });
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-capability/add',
+      )(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', capabilityId: 'cap-1' });
     });
     it('returns 500 when manageRoleCapability throws', async () => {
       capabilities.manageRoleCapability.mockRejectedValueOnce(new Error('DB error'));
-      const response = await getHandler(httpServer, '/admin/role-capability/add')(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-capability/add',
+      )(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB error');
     });
@@ -335,14 +478,29 @@ describe('role routes in admin/routes.ts', () => {
 
   describe('POST /admin/role-capability/remove', () => {
     it('removes capability and returns 200', async () => {
-      capabilities.manageRoleCapability.mockResolvedValueOnce({ roleId: 'role-1', capabilityId: 'cap-1' });
-      const response = await getHandler(httpServer, '/admin/role-capability/remove')(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' })) as { status: number; body: string };
+      capabilities.manageRoleCapability.mockResolvedValueOnce({
+        roleId: 'role-1',
+        capabilityId: 'cap-1',
+      });
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-capability/remove',
+      )(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', capabilityId: 'cap-1' });
     });
     it('returns 500 when manageRoleCapability throws', async () => {
       capabilities.manageRoleCapability.mockRejectedValueOnce(new Error('DB error'));
-      const response = await getHandler(httpServer, '/admin/role-capability/remove')(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-capability/remove',
+      )(makePostRequest({ roleId: 'role-1', capabilityId: 'cap-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB error');
     });
@@ -350,14 +508,29 @@ describe('role routes in admin/routes.ts', () => {
 
   describe('POST /admin/role-tool-permission/add', () => {
     it('adds tool permission and returns 200', async () => {
-      capabilities.addRoleToolPermission.mockResolvedValueOnce({ roleId: 'role-1', toolId: 'tool-1' });
-      const response = await getHandler(httpServer, '/admin/role-tool-permission/add')(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' })) as { status: number; body: string };
+      capabilities.addRoleToolPermission.mockResolvedValueOnce({
+        roleId: 'role-1',
+        toolId: 'tool-1',
+      });
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-tool-permission/add',
+      )(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', toolId: 'tool-1' });
     });
     it('returns 500 when addRoleToolPermission throws', async () => {
       capabilities.addRoleToolPermission.mockRejectedValueOnce(new Error('DB insert failed'));
-      const response = await getHandler(httpServer, '/admin/role-tool-permission/add')(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-tool-permission/add',
+      )(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB insert failed');
     });
@@ -365,14 +538,29 @@ describe('role routes in admin/routes.ts', () => {
 
   describe('POST /admin/role-tool-permission/remove', () => {
     it('removes tool permission and returns 200', async () => {
-      capabilities.removeRoleToolPermission.mockResolvedValueOnce({ roleId: 'role-1', toolId: 'tool-1' });
-      const response = await getHandler(httpServer, '/admin/role-tool-permission/remove')(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' })) as { status: number; body: string };
+      capabilities.removeRoleToolPermission.mockResolvedValueOnce({
+        roleId: 'role-1',
+        toolId: 'tool-1',
+      });
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-tool-permission/remove',
+      )(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', toolId: 'tool-1' });
     });
     it('returns 500 when removeRoleToolPermission throws', async () => {
       capabilities.removeRoleToolPermission.mockRejectedValueOnce(new Error('DB delete failed'));
-      const response = await getHandler(httpServer, '/admin/role-tool-permission/remove')(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-tool-permission/remove',
+      )(makePostRequest({ roleId: 'role-1', toolId: 'tool-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB delete failed');
     });
@@ -380,14 +568,29 @@ describe('role routes in admin/routes.ts', () => {
 
   describe('POST /admin/role-workflow-permission/add', () => {
     it('adds workflow permission and returns 200', async () => {
-      capabilities.addRoleWorkflowPermission.mockResolvedValueOnce({ roleId: 'role-1', workflowId: 'wf-1' });
-      const response = await getHandler(httpServer, '/admin/role-workflow-permission/add')(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' })) as { status: number; body: string };
+      capabilities.addRoleWorkflowPermission.mockResolvedValueOnce({
+        roleId: 'role-1',
+        workflowId: 'wf-1',
+      });
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-workflow-permission/add',
+      )(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', workflowId: 'wf-1' });
     });
     it('returns 500 when addRoleWorkflowPermission throws', async () => {
       capabilities.addRoleWorkflowPermission.mockRejectedValueOnce(new Error('DB insert failed'));
-      const response = await getHandler(httpServer, '/admin/role-workflow-permission/add')(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' })) as { status: number; body: string };
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-workflow-permission/add',
+      )(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB insert failed');
     });
@@ -395,14 +598,31 @@ describe('role routes in admin/routes.ts', () => {
 
   describe('POST /admin/role-workflow-permission/remove', () => {
     it('removes workflow permission and returns 200', async () => {
-      capabilities.removeRoleWorkflowPermission.mockResolvedValueOnce({ roleId: 'role-1', workflowId: 'wf-1' });
-      const response = await getHandler(httpServer, '/admin/role-workflow-permission/remove')(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' })) as { status: number; body: string };
+      capabilities.removeRoleWorkflowPermission.mockResolvedValueOnce({
+        roleId: 'role-1',
+        workflowId: 'wf-1',
+      });
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-workflow-permission/remove',
+      )(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(200);
       expect(parseBody(response)).toEqual({ roleId: 'role-1', workflowId: 'wf-1' });
     });
     it('returns 500 when removeRoleWorkflowPermission throws', async () => {
-      capabilities.removeRoleWorkflowPermission.mockRejectedValueOnce(new Error('DB delete failed'));
-      const response = await getHandler(httpServer, '/admin/role-workflow-permission/remove')(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' })) as { status: number; body: string };
+      capabilities.removeRoleWorkflowPermission.mockRejectedValueOnce(
+        new Error('DB delete failed'),
+      );
+      const response = (await getHandler(
+        httpServer,
+        '/admin/role-workflow-permission/remove',
+      )(makePostRequest({ roleId: 'role-1', workflowId: 'wf-1' }))) as {
+        status: number;
+        body: string;
+      };
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('DB delete failed');
     });

@@ -17,10 +17,12 @@ describe('conversation runtime integrations', () => {
         seenContext.push(...request.context.map((entry) => entry.title));
 
         return {
-          segments: [{
-            kind: 'message',
-            text: 'Hi back',
-          }],
+          segments: [
+            {
+              kind: 'message',
+              text: 'Hi back',
+            },
+          ],
           actionRequests: [],
           continuation: 'stop',
         };
@@ -32,10 +34,12 @@ describe('conversation runtime integrations', () => {
     });
 
     runtime.use(createConversationHistoryPlugin({ store }));
-    runtime.observe(createConversationRuntimeObserver({
-      store,
-      authorId: 'agent-1',
-    }));
+    runtime.observe(
+      createConversationRuntimeObserver({
+        store,
+        authorId: 'agent-1',
+      }),
+    );
 
     await store.upsertThread({
       id: 'thread-1',
@@ -48,10 +52,12 @@ describe('conversation runtime integrations', () => {
       threadId: 'thread-1',
       role: 'user',
       authorId: 'user-1',
-      parts: [{
-        type: 'text',
-        text: 'First message',
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: 'First message',
+        },
+      ],
       createdAt: '2026-01-01T00:00:01.000Z',
     });
 
@@ -67,10 +73,12 @@ describe('conversation runtime integrations', () => {
         threadId: 'thread-1',
         role: 'user',
         authorId: 'user-1',
-        parts: [{
-          type: 'text',
-          text: 'Second message',
-        }],
+        parts: [
+          {
+            type: 'text',
+            text: 'Second message',
+          },
+        ],
         createdAt: '2026-01-01T00:00:02.000Z',
       },
     });

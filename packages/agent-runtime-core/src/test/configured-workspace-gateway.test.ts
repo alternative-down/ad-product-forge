@@ -28,7 +28,9 @@ function makeSpyBaseGateway() {
   return {
     execute: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0, timedOut: false }),
     startBackground: vi.fn().mockResolvedValue({ pid: 'test-pid' }),
-    getProcessOutput: vi.fn().mockResolvedValue({ pid: 'test-pid', running: false, exitCode: 0, stdout: '', stderr: '' }),
+    getProcessOutput: vi
+      .fn()
+      .mockResolvedValue({ pid: 'test-pid', running: false, exitCode: 0, stdout: '', stderr: '' }),
     killProcess: vi.fn().mockResolvedValue(null),
   };
 }
@@ -40,7 +42,9 @@ function makeSpyBaseGateway() {
 /** Returns paths for two isolated agent workspace directories */
 async function makeIsolatedWorkspaces() {
   // Unique suffix prevents cross-worker collisions
-  const base = await fs.mkdtemp(path.join(os.tmpdir(), `sandbox-iso-${Date.now()}-${Math.random().toString(36).slice(2)}-`));
+  const base = await fs.mkdtemp(
+    path.join(os.tmpdir(), `sandbox-iso-${Date.now()}-${Math.random().toString(36).slice(2)}-`),
+  );
   const agentA = path.join(base, 'agent-a');
   const agentB = path.join(base, 'agent-b');
   const subDir = path.join(agentA, 'sub');
@@ -67,9 +71,7 @@ describe('ConfiguredWorkspaceGateway', () => {
 
       await gateway.execute({ command: 'ls' });
 
-      expect(base.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd: agentA }),
-      );
+      expect(base.execute).toHaveBeenCalledWith(expect.objectContaining({ cwd: agentA }));
     });
 
     it('request-provided cwd takes precedence over gateway default', async () => {
@@ -79,9 +81,7 @@ describe('ConfiguredWorkspaceGateway', () => {
 
       await gateway.execute({ command: 'ls', cwd: subDir });
 
-      expect(base.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd: subDir }),
-      );
+      expect(base.execute).toHaveBeenCalledWith(expect.objectContaining({ cwd: subDir }));
     });
 
     it('does not default to host root when cwd is unspecified and base has no cwd', async () => {
@@ -118,7 +118,10 @@ describe('ConfiguredWorkspaceGateway', () => {
       const base = makeSpyBaseGateway();
       const gateway = new ConfiguredWorkspaceGateway({ base, workspaceRoot: agentA });
 
-      await gateway.execute({ command: 'env', env: { HOME: '/custom/path', OTHER_VAR: 'preserved' } });
+      await gateway.execute({
+        command: 'env',
+        env: { HOME: '/custom/path', OTHER_VAR: 'preserved' },
+      });
 
       const call = base.execute.mock.calls[0][0] as { env: Record<string, string> };
       // Workspace HOME is enforced for isolation — request HOME cannot override it
@@ -173,9 +176,7 @@ describe('ConfiguredWorkspaceGateway', () => {
 
       await gateway.execute({ command: 'sleep 10' });
 
-      expect(base.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ timeoutMs: 5000 }),
-      );
+      expect(base.execute).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 5000 }));
     });
 
     it('request-level timeout takes precedence over gateway default', async () => {
@@ -184,9 +185,7 @@ describe('ConfiguredWorkspaceGateway', () => {
 
       await gateway.execute({ command: 'sleep 10', timeoutMs: 1000 });
 
-      expect(base.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ timeoutMs: 1000 }),
-      );
+      expect(base.execute).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 1000 }));
     });
   });
 });
@@ -217,12 +216,8 @@ describe('ConfiguredWorkspaceGateway — agent workspace isolation', () => {
     await gatewayB.execute({ command: 'ls .' });
 
     // Each gateway scoped its own cwd
-    expect(baseAgentA.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ cwd: agentA }),
-    );
-    expect(baseAgentB.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ cwd: agentB }),
-    );
+    expect(baseAgentA.execute).toHaveBeenCalledWith(expect.objectContaining({ cwd: agentA }));
+    expect(baseAgentB.execute).toHaveBeenCalledWith(expect.objectContaining({ cwd: agentB }));
 
     // Each agent got its own HOME — not the other's workspace root
     const envA = baseAgentA.execute.mock.calls[0][0].env as Record<string, string>;
@@ -234,7 +229,7 @@ describe('ConfiguredWorkspaceGateway — agent workspace isolation', () => {
     expect(envB.HOME).not.toBe(agentA);
   });
 
-  it('agent env vars are isolated — one gateway cannot see the other gateway\'s env', async () => {
+  it("agent env vars are isolated — one gateway cannot see the other gateway's env", async () => {
     const { agentA, agentB } = await makeIsolatedWorkspaces();
     const baseA = makeSpyBaseGateway();
     const baseB = makeSpyBaseGateway();
@@ -270,23 +265,21 @@ describe('ConfiguredWorkspaceGateway — agent workspace isolation', () => {
 describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
   it('writeFile throws when path escapes workspace via parent traversal', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
-    await expect(
-      workspaceFs.writeFile('../escape.txt', 'bad'),
-    ).rejects.toThrow(/workspace.*(must stay within|escapes).*allowed roots/i);
+    await expect(workspaceFs.writeFile('../escape.txt', 'bad')).rejects.toThrow(
+      /workspace.*(must stay within|escapes).*allowed roots/i,
+    );
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
 
   it('writeFile throws when symlink inside workspace points outside to agentB', async () => {
     const { agentA, agentB, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     // Create a symlink inside agentA that points to agentB
     await fs.symlink(agentB, path.join(agentA, 'escape-link'));
 
@@ -301,9 +294,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('readFile throws when path escapes workspace via parent traversal', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
     await expect(workspaceFs.readFile('../a.txt')).rejects.toThrow(
@@ -315,9 +307,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('exists returns false for path that would escape workspace boundary', async () => {
     const { agentA, agentB, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
     // b.txt exists in agentB, but agentA's filesystem should not expose it
@@ -329,9 +320,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('exists returns false for non-existent path within workspace', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
     const result = await workspaceFs.exists('nonexistent.txt');
@@ -342,9 +332,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('readFile resolves relative path to file inside workspace', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
     const content = await workspaceFs.readFile('a.txt');
@@ -355,9 +344,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('readFile resolves absolute path to file inside workspace root', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
     const absolutePath = path.join(agentA, 'sub', 'nested.txt');
@@ -369,9 +357,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('readFile throws for absolute path outside workspace root', async () => {
     const { agentA, agentB, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
     const workspaceFs = new LocalWorkspaceFilesystem({ root: agentA });
 
     // Absolute path to agentB's file — should be rejected
@@ -384,9 +371,8 @@ describe('LocalWorkspaceFilesystem — path boundary enforcement', () => {
 
   it('listDirectory returns only files within workspace root (not agentB)', async () => {
     const { agentA, agentB, base: fixtureRoot } = await makeIsolatedWorkspaces();
-    const { LocalWorkspaceFilesystem } = await import(
-      '../integrations/gateways/local-workspace-filesystem.js'
-    );
+    const { LocalWorkspaceFilesystem } =
+      await import('../integrations/gateways/local-workspace-filesystem.js');
 
     // Plant a file in agentB with the same name as agentA's a.txt (to test name collision)
     await fs.writeFile(path.join(agentB, 'a.txt'), 'imposter-content');
@@ -416,9 +402,7 @@ describe('ConfiguredWorkspaceGateway — background process isolation', () => {
 
     await gateway.startBackground({ command: 'node server.js' });
 
-    expect(base_.startBackground).toHaveBeenCalledWith(
-      expect.objectContaining({ cwd: agentA }),
-    );
+    expect(base_.startBackground).toHaveBeenCalledWith(expect.objectContaining({ cwd: agentA }));
 
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
@@ -459,7 +443,10 @@ describe('ConfiguredWorkspaceGateway — workspace root property isolation', () 
   it('workspaceRoot is exposed as a read property for external inspection', async () => {
     const { agentA, base: fixtureRoot } = await makeIsolatedWorkspaces();
     const spy = vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0, timedOut: false });
-    const gateway = new ConfiguredWorkspaceGateway({ base: spy as unknown as WorkspaceGateway, workspaceRoot: agentA });
+    const gateway = new ConfiguredWorkspaceGateway({
+      base: spy as unknown as WorkspaceGateway,
+      workspaceRoot: agentA,
+    });
 
     // workspaceRoot is exposed on the gateway instance for inspection by callers
     expect(gateway.workspaceRoot).toBe(agentA);

@@ -22,9 +22,8 @@ export function createConversationRuntimeObserver(
         .find((input) => isConversationRuntimeInputPayload(input.payload));
       const payload = latestConversationInput?.payload;
 
-      const threadId = payload && isConversationRuntimeInputPayload(payload)
-        ? payload.threadId
-        : options.threadId;
+      const threadId =
+        payload && isConversationRuntimeInputPayload(payload) ? payload.threadId : options.threadId;
 
       if (!threadId) {
         return;
@@ -50,10 +49,12 @@ export function createConversationRuntimeObserver(
         role: 'assistant',
         authorId: options.authorId,
         parts: messageText
-          ? [{
-            type: 'text' as const,
-            text: messageText,
-          }]
+          ? [
+              {
+                type: 'text' as const,
+                text: messageText,
+              },
+            ]
           : [],
         metadata: {
           runtimeId: context.snapshot.runtimeId,

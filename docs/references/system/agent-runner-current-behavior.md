@@ -663,7 +663,7 @@ Current implementation:
 - if non-empty:
   - creates:
     ```ts
-    [{ role: 'user', content: promptText.trim() }]
+    [{ role: 'user', content: promptText.trim() }];
     ```
 - otherwise uses `[]`
 

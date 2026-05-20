@@ -22,12 +22,14 @@ function makeLoopDetector(stuck = false, signatureCount = 0) {
   };
 }
 
-function makeIteration(overrides: {
-  text?: string;
-  toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
-  toolResults?: Array<{ name: string; error?: Error }>;
-  finishReason?: string;
-} = {}): IterationArg {
+function makeIteration(
+  overrides: {
+    text?: string;
+    toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
+    toolResults?: Array<{ name: string; error?: Error }>;
+    finishReason?: string;
+  } = {},
+): IterationArg {
   // buildIterationFeedback param has: iteration, finishReason, text, toolCalls, toolResults
   // didIterationProduceVisibleAssistantText expects: iteration.text + iteration.messages
   return {
@@ -66,8 +68,12 @@ function makeMinimalDeps(overrides: Partial<Parameters<typeof buildIterationFeed
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('buildIterationFeedback', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   // ── Loop detection ──────────────────────────────────────────────────────────
 
@@ -75,7 +81,9 @@ describe('buildIterationFeedback', () => {
     it('returns continue:false when loop is stuck', async () => {
       const deps = makeMinimalDeps({
         loopDetector: makeLoopDetector(true, 5),
-        notifications: { createNotification: vi.fn<() => Promise<unknown>>().mockResolvedValue(undefined) },
+        notifications: {
+          createNotification: vi.fn<() => Promise<unknown>>().mockResolvedValue(undefined),
+        },
       });
 
       const result = await buildIterationFeedback(makeIteration(), deps);
@@ -103,7 +111,9 @@ describe('buildIterationFeedback', () => {
       const deps = makeMinimalDeps({
         setNextStepAt,
         loopDetector: makeLoopDetector(true, 1),
-        notifications: { createNotification: vi.fn<() => Promise<unknown>>().mockResolvedValue(undefined) },
+        notifications: {
+          createNotification: vi.fn<() => Promise<unknown>>().mockResolvedValue(undefined),
+        },
       });
 
       await buildIterationFeedback(makeIteration(), deps);
@@ -114,10 +124,13 @@ describe('buildIterationFeedback', () => {
     it('returns undefined when loop is not stuck and no other feedback applies', async () => {
       const deps = makeMinimalDeps();
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: '',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: '',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toBeUndefined();
     });
@@ -133,10 +146,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'STOP_AND_IDLE',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'STOP_AND_IDLE',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toEqual({ continue: false, feedbackMessages: [] });
     });
@@ -148,10 +164,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      await buildIterationFeedback(makeIteration({
-        text: 'STOP_AND_IDLE',
-        toolCalls: [],
-      }), deps);
+      await buildIterationFeedback(
+        makeIteration({
+          text: 'STOP_AND_IDLE',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(setNextStepAt).toHaveBeenCalledWith(null);
     });
@@ -168,10 +187,13 @@ describe('buildIterationFeedback', () => {
       });
 
       // suppress condition: toolCalls.length === 0 AND controlDirective === 'ignore'
-      await buildIterationFeedback(makeIteration({
-        text: 'NO_ACTION_NEEDED',
-        toolCalls: [],
-      }), deps);
+      await buildIterationFeedback(
+        makeIteration({
+          text: 'NO_ACTION_NEEDED',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(setSuppress).toHaveBeenCalledWith(true);
     });
@@ -186,10 +208,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'Some visible output',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'Some visible output',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toEqual({
         continue: true,
@@ -203,10 +228,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'STOP_AND_IDLE',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'STOP_AND_IDLE',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toEqual({ continue: false, feedbackMessages: [] });
     });
@@ -217,10 +245,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'Some visible text',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'Some visible text',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toBeUndefined();
     });
@@ -231,10 +262,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'Some visible text',
-        toolCalls: [{ name: 'someTool', args: {} }],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'Some visible text',
+          toolCalls: [{ name: 'someTool', args: {} }],
+        }),
+        deps,
+      );
 
       expect(result).toBeUndefined();
     });
@@ -245,10 +279,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: '',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: '',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toBeUndefined();
     });
@@ -264,10 +301,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'Some text',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'Some text',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(flushPendingRunMessages).toHaveBeenCalledWith({ allowOriginIdleOnly: true });
       expect(result?.feedbackMessages).toContainEqual({ role: 'user', content: 'Flushed msg' });
@@ -281,10 +321,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: '',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: '',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result).toEqual({
         continue: true,
@@ -297,7 +340,9 @@ describe('buildIterationFeedback', () => {
 
   describe('long-term memory recall', () => {
     it('appends LTM text as assistant message when present', async () => {
-      const recallFromStep = vi.fn<() => Promise<string | null>>().mockResolvedValue('Recalled memory');
+      const recallFromStep = vi
+        .fn<() => Promise<string | null>>()
+        .mockResolvedValue('Recalled memory');
       const deps = makeMinimalDeps({
         currentRuntime: {
           mastraId: 'mastra-1',
@@ -309,7 +354,10 @@ describe('buildIterationFeedback', () => {
       const result = await buildIterationFeedback(makeIteration(), deps);
 
       expect(recallFromStep).toHaveBeenCalled();
-      expect(result?.feedbackMessages).toContainEqual({ role: 'assistant', content: 'Recalled memory' });
+      expect(result?.feedbackMessages).toContainEqual({
+        role: 'assistant',
+        content: 'Recalled memory',
+      });
     });
 
     it('skips LTM recall when currentRuntime.longTermMemoryRecall is absent', async () => {
@@ -349,10 +397,13 @@ describe('buildIterationFeedback', () => {
         currentRuntime: { mastraId: 'mastra-1', longTermMemoryRecall: undefined },
       });
 
-      const result = await buildIterationFeedback(makeIteration({
-        text: 'Visible text',
-        toolCalls: [],
-      }), deps);
+      const result = await buildIterationFeedback(
+        makeIteration({
+          text: 'Visible text',
+          toolCalls: [],
+        }),
+        deps,
+      );
 
       expect(result?.feedbackMessages).toEqual([
         { role: 'user', content: 'Flushed msg' },

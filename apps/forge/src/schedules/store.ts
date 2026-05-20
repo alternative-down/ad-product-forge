@@ -2,8 +2,7 @@ import { createId } from '../utils/id';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-
-import type {Database, AgentSchedule} from '../database/schema';
+import type { Database, AgentSchedule } from '../database/schema';
 import { agentSchedules } from '../database/schema';
 
 type ScheduleType = 'cron' | 'date';
@@ -61,7 +60,15 @@ export function createAgentScheduleStore(db: Database) {
     try {
       await db.insert(agentSchedules).values(record);
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'createSchedule DB insert failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'createSchedule DB insert failed',
+        context: {
+          agentId: input.agentId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       throw err;
     }
 
@@ -83,7 +90,9 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'listAgentSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message:
+          'listAgentSchedules DB read failed: ' +
+          (err instanceof Error ? err.message : String(err)),
       });
       return [];
     }
@@ -100,7 +109,9 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'listActiveSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message:
+          'listActiveSchedules DB read failed: ' +
+          (err instanceof Error ? err.message : String(err)),
       });
       return [];
     }
@@ -109,9 +120,13 @@ export function createAgentScheduleStore(db: Database) {
   async function listCreatedAgentSchedules(creatorId: string, targetAgentId?: string) {
     try {
       const rows = await db.query.agentSchedules.findMany({
-        where: targetAgentId !== undefined
-          ? and(eq(agentSchedules.creatorId, creatorId), eq(agentSchedules.agentId, targetAgentId))
-          : eq(agentSchedules.creatorId, creatorId),
+        where:
+          targetAgentId !== undefined
+            ? and(
+                eq(agentSchedules.creatorId, creatorId),
+                eq(agentSchedules.agentId, targetAgentId),
+              )
+            : eq(agentSchedules.creatorId, creatorId),
         orderBy: [desc(agentSchedules.createdAt)],
       });
 
@@ -120,7 +135,9 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'listCreatedAgentSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message:
+          'listCreatedAgentSchedules DB read failed: ' +
+          (err instanceof Error ? err.message : String(err)),
       });
       return [];
     }
@@ -145,7 +162,8 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'getAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message:
+          'getAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
       return null;
     }
@@ -157,7 +175,7 @@ export function createAgentScheduleStore(db: Database) {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
 
-if (row === null || row === undefined || row.kind !== 'agent') {
+      if (row === null || row === undefined || row.kind !== 'agent') {
         return null;
       }
 
@@ -166,7 +184,8 @@ if (row === null || row === undefined || row.kind !== 'agent') {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'getOwnedSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message:
+          'getOwnedSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
       return null;
     }
@@ -184,7 +203,8 @@ if (row === null || row === undefined || row.kind !== 'agent') {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'getScheduleByKind DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message:
+          'getScheduleByKind DB read failed: ' + (err instanceof Error ? err.message : String(err)),
       });
       return null;
     }
@@ -198,7 +218,12 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         where: eq(agentSchedules.id, scheduleId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'getScheduleById DB read failed', context: { scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'getScheduleById DB read failed',
+        context: { scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
 
@@ -222,7 +247,12 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB read failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: '_applyUpdate DB read failed',
+        context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
 
@@ -244,17 +274,27 @@ if (row === null || row === undefined || row.kind !== 'agent') {
           timezone: input.timezone ?? existing.timezone,
           content: input.content ?? existing.content,
           wakeWhenRunning:
-            input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
+            input.wakeWhenRunning === undefined
+              ? existing.wakeWhenRunning
+              : input.wakeWhenRunning
+                ? 1
+                : 0,
           isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
           updatedAt: Date.now(),
         })
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB write failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: '_applyUpdate DB write failed',
+        context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
 
-    return { ...existing,
+    return {
+      ...existing,
       name: input.name ?? existing.name,
       description: input.description === undefined ? existing.description : input.description,
       scheduleType: input.scheduleType ?? (existing.scheduleType as ScheduleType),
@@ -265,7 +305,11 @@ if (row === null || row === undefined || row.kind !== 'agent') {
       timezone: input.timezone ?? existing.timezone,
       content: input.content ?? existing.content,
       wakeWhenRunning:
-        input.wakeWhenRunning === undefined ? existing.wakeWhenRunning : input.wakeWhenRunning ? 1 : 0,
+        input.wakeWhenRunning === undefined
+          ? existing.wakeWhenRunning
+          : input.wakeWhenRunning
+            ? 1
+            : 0,
       isActive: input.isActive === undefined ? existing.isActive : input.isActive ? 1 : 0,
       updatedAt: Date.now(),
     };
@@ -294,11 +338,15 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteAgentSchedule DB read failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deleteAgentSchedule DB read failed',
+        context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
 
-     
     if (!existing) {
       return false;
     }
@@ -308,9 +356,16 @@ if (row === null || row === undefined || row.kind !== 'agent') {
     }
 
     try {
-      await db.delete(agentSchedules).where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
+      await db
+        .delete(agentSchedules)
+        .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteAgentSchedule DB delete failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deleteAgentSchedule DB delete failed',
+        context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
     return true;
@@ -323,7 +378,12 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         .set({ isActive: 0, nextTriggerAt: null, updatedAt: Date.now() })
         .where(eq(agentSchedules.id, scheduleId));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deactivateSchedule DB update failed', context: { scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deactivateSchedule DB update failed',
+        context: { scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
@@ -333,11 +393,15 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         .delete(agentSchedules)
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, 'heartbeat')));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteHeartbeatSchedule DB delete failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'deleteHeartbeatSchedule DB delete failed',
+        context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
-
 
   async function setNextTriggerAt(scheduleId: string, nextTriggerAt: number | null) {
     try {
@@ -346,12 +410,22 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         .set({ nextTriggerAt, updatedAt: Date.now() })
         .where(eq(agentSchedules.id, scheduleId));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'setNextTriggerAt DB update failed', context: { scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'setNextTriggerAt DB update failed',
+        context: { scheduleId, error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
 
-  async function markTriggered(input: { scheduleId: string; lastTriggeredAt: number; nextTriggerAt: number | null; isActive: boolean }) {
+  async function markTriggered(input: {
+    scheduleId: string;
+    lastTriggeredAt: number;
+    nextTriggerAt: number | null;
+    isActive: boolean;
+  }) {
     try {
       await db
         .update(agentSchedules)
@@ -362,7 +436,15 @@ if (row === null || row === undefined || row.kind !== 'agent') {
         })
         .where(eq(agentSchedules.id, input.scheduleId));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'markTriggered DB update failed', context: { scheduleId: input.scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'schedules-store',
+        level: 'error',
+        message: 'markTriggered DB update failed',
+        context: {
+          scheduleId: input.scheduleId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       throw err;
     }
   }

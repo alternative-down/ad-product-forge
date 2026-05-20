@@ -23,7 +23,9 @@ describe('parseSkillMetadata', () => {
   });
 
   it('extracts description from frontmatter', () => {
-    const result = parseSkillMetadata('---\ndescription: "Build payment integrations"\n---\nSome content');
+    const result = parseSkillMetadata(
+      '---\ndescription: "Build payment integrations"\n---\nSome content',
+    );
     expect(result.description).toBe('Build payment integrations');
   });
 
@@ -38,7 +40,9 @@ describe('parseSkillMetadata', () => {
   });
 
   it('ignores lines without colon separator', () => {
-    const result = parseSkillMetadata('---\ndescription: "Test"\nunknown-line-without-colon\n---\nContent');
+    const result = parseSkillMetadata(
+      '---\ndescription: "Test"\nunknown-line-without-colon\n---\nContent',
+    );
     expect(result.description).toBe('Test');
   });
 
@@ -48,7 +52,9 @@ describe('parseSkillMetadata', () => {
   });
 
   it('handles frontmatter with multiple keys', () => {
-    const result = parseSkillMetadata('---\nname: my-skill\ndescription: "Test desc"\nversion: "1.0"\n---\nContent');
+    const result = parseSkillMetadata(
+      '---\nname: my-skill\ndescription: "Test desc"\nversion: "1.0"\n---\nContent',
+    );
     expect(result.description).toBe('Test desc');
   });
 
@@ -77,7 +83,9 @@ describe('parseSkillMetadata', () => {
   });
 
   it('ignores non-description keys', () => {
-    const result = parseSkillMetadata('---\nname: skill\ncategory: tools\ndescription: "My desc"\n---\nContent');
+    const result = parseSkillMetadata(
+      '---\nname: skill\ncategory: tools\ndescription: "My desc"\n---\nContent',
+    );
     expect(result.description).toBe('My desc');
   });
 });

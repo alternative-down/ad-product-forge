@@ -6,10 +6,7 @@
  * Issue: #2467 — extract submodules from admin/read-model/agents.ts
  */
 
-import {
-  listRecentConversations,
-  listThreadMessages,
-} from './conversation-helpers';
+import { listRecentConversations, listThreadMessages } from './conversation-helpers';
 import type { Database } from '../../database/index';
 import { toMastraSafeIdentifier } from '@forge-runtime/core';
 import type { InternalChatService } from '../../communication/internal-chat-service';
@@ -33,7 +30,6 @@ export interface AgentThreadMessagesInput {
 }
 
 export interface AgentThreadMessagesResult {
-   
   items: Array<Record<string, any>>;
   hasMore: boolean;
 }
@@ -75,14 +71,15 @@ export function createAgentConversationsReadModel(deps: AgentConversationsReadMo
   async function listAgentConversationMessages(
     params: AgentConversationMessagesInput,
   ): Promise<AgentConversationMessagesResult> {
-    const messages = await internalChat.getMessages({
-      agentId: params.agentId,
-      conversationKey: params.targetKey,
-      limit: params.limit,
-      offset: params.offset,
-    }).catch(() => []);
+    const messages = await internalChat
+      .getMessages({
+        agentId: params.agentId,
+        conversationKey: params.targetKey,
+        limit: params.limit,
+        offset: params.offset,
+      })
+      .catch(() => []);
     return {
-       
       items: messages.map((message: any) => ({ ...message, authorAgentId: null })),
       hasMore: false,
     };

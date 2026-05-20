@@ -1,7 +1,7 @@
 import { and, isNull, eq, sql } from 'drizzle-orm';
 import { internalChatMessageReads, internalChatMessages } from '../database/schema';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
 // =============================================================================
@@ -9,7 +9,6 @@ import { forgeDebug } from '@forge-runtime/core';
 // =============================================================================
 
 export function createInternalChatUnread(db: Database) {
-
   /**
    * Returns aggregate unread counts for an agent.
    */
@@ -25,17 +24,24 @@ export function createInternalChatUnread(db: Database) {
           internalChatMessages,
           eq(internalChatMessages.id, internalChatMessageReads.messageId),
         )
-        .where(and(
-          eq(internalChatMessageReads.agentId, agentId),
-          isNull(internalChatMessageReads.readAt),
-        ));
+        .where(
+          and(
+            eq(internalChatMessageReads.agentId, agentId),
+            isNull(internalChatMessageReads.readAt),
+          ),
+        );
 
       return {
         unreadMessageCount: (rows as any)[0]?.unreadMessageCount ?? 0,
         unreadConversationCount: (rows as any)[0]?.unreadConversationCount ?? 0,
       };
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat-unread', level: 'error', message: '[internal-chat-unread] getUnreadSummary failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({
+        scope: 'internal-chat-unread',
+        level: 'error',
+        message: '[internal-chat-unread] getUnreadSummary failed',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }

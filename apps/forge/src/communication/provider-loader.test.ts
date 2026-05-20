@@ -44,8 +44,20 @@ describe('loadCommunicationProviders', () => {
     const providers = await loadCommunicationProviders({
       discord: { channels: [], token: 'valid-token' },
       email: {
-        imap: { host: 'imap.example.com', port: 993, secure: true, user: 'agent@example.com', password: 'password' },
-        smtp: { host: 'smtp.example.com', port: 465, secure: true, user: 'agent@example.com', password: 'password' },
+        imap: {
+          host: 'imap.example.com',
+          port: 993,
+          secure: true,
+          user: 'agent@example.com',
+          password: 'password',
+        },
+        smtp: {
+          host: 'smtp.example.com',
+          port: 465,
+          secure: true,
+          user: 'agent@example.com',
+          password: 'password',
+        },
       },
     });
 
@@ -81,7 +93,9 @@ describe('loadCommunicationProviders', () => {
   });
 
   it('loads internal-chat provider when internalChat config is provided', async () => {
-    const mockService = { /* minimal InternalChatService */ } as any;
+    const mockService = {
+      /* minimal InternalChatService */
+    } as any;
     const providers = await loadCommunicationProviders(
       { 'internal-chat': { agentId: 'agent-1', displayName: 'Test Agent' } },
       { internalChat: mockService },
@@ -97,7 +111,10 @@ describe('loadCommunicationProviders', () => {
   });
 
   it('loads Discord provider when getSelfContact succeeds', async () => {
-    discordProvider.getSelfContact.mockResolvedValueOnce({ id: 'discord-user', displayName: 'Discord User' });
+    discordProvider.getSelfContact.mockResolvedValueOnce({
+      id: 'discord-user',
+      displayName: 'Discord User',
+    });
     const providers = await loadCommunicationProviders({
       discord: { channels: [], token: 'valid-token' },
     });
@@ -105,14 +122,29 @@ describe('loadCommunicationProviders', () => {
   });
 
   it('loads multiple providers concurrently (internal-chat + discord + email)', async () => {
-    discordProvider.getSelfContact.mockResolvedValueOnce({ id: 'discord-user', displayName: 'Discord User' });
+    discordProvider.getSelfContact.mockResolvedValueOnce({
+      id: 'discord-user',
+      displayName: 'Discord User',
+    });
     const providers = await loadCommunicationProviders(
       {
         'internal-chat': { agentId: 'agent-1' },
         discord: { channels: [], token: 'valid-token' },
         email: {
-          imap: { host: 'imap.example.com', port: 993, secure: true, user: 'a@b.com', password: 'pw' },
-          smtp: { host: 'smtp.example.com', port: 465, secure: true, user: 'a@b.com', password: 'pw' },
+          imap: {
+            host: 'imap.example.com',
+            port: 993,
+            secure: true,
+            user: 'a@b.com',
+            password: 'pw',
+          },
+          smtp: {
+            host: 'smtp.example.com',
+            port: 465,
+            secure: true,
+            user: 'a@b.com',
+            password: 'pw',
+          },
         },
       },
       { internalChat: {} as any },
@@ -128,8 +160,20 @@ describe('loadCommunicationProviders', () => {
         'internal-chat': { agentId: 'agent-1' },
         discord: { channels: [], token: 'bad-token' },
         email: {
-          imap: { host: 'imap.example.com', port: 993, secure: true, user: 'a@b.com', password: 'pw' },
-          smtp: { host: 'smtp.example.com', port: 465, secure: true, user: 'a@b.com', password: 'pw' },
+          imap: {
+            host: 'imap.example.com',
+            port: 993,
+            secure: true,
+            user: 'a@b.com',
+            password: 'pw',
+          },
+          smtp: {
+            host: 'smtp.example.com',
+            port: 465,
+            secure: true,
+            user: 'a@b.com',
+            password: 'pw',
+          },
         },
       },
       { internalChat: mockService },

@@ -282,12 +282,12 @@ export function createPaymentReceivablesStore(db: Database) {
     }
   }
 
-function getTransactionsBySubscription(subscriptionId: string) {
-  return db
-    .select()
-    .from(paymentTransactions)
-    .where(eq(paymentTransactions.subscriptionId, subscriptionId));
-}
+  function getTransactionsBySubscription(subscriptionId: string) {
+    return db
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.subscriptionId, subscriptionId));
+  }
 
   async function processPaymentEvent(input: {
     provider: PaymentProviderType;

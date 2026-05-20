@@ -3,6 +3,7 @@
 ## Conceito
 
 Um agente no Forge é uma entidade autônoma que:
+
 - Persiste em banco de dados
 - Tem seu próprio runtime (LLM config + tools)
 - Se comunica via providers configurados
@@ -27,6 +28,7 @@ Processo de admission de um novo agente:
 6. Adiciona ao registry
 
 Arquivos principais:
+
 - `hire-agent.ts` — workflow de hiring
 - `hiring-profile.ts` — profile do hired
 - `hiring-rh.ts` — lógica de RH
@@ -41,6 +43,7 @@ Agente em execução normal:
 - LTM é checkpointado após mudanças de state
 
 Arquivos principais:
+
 - `agent-runner.ts` — loop principal
 - `agent-runner-scheduler.ts` — scheduler com timers
 - `agent-runtime-platform.ts` — runtime concreto
@@ -56,6 +59,7 @@ Processo de saída de um agente:
 5. Mantém histórico em banco
 
 Arquivos principais:
+
 - `terminate-agent.ts` — workflow de termination
 
 ## Runtime
@@ -72,6 +76,7 @@ await runner.endRun();
 ```
 
 Responsabilidades:
+
 - Gerencia loop de execução
 - Detecta loops (loop detector)
 - Controla timeouts (15 min default)
@@ -101,6 +106,7 @@ scheduler.schedule(agentId, nextStepAt);
 ```
 
 Tipos de schedule:
+
 - `cron` — expressão cron (ex: `0 * * * *`)
 - `interval` — intervalo em ms
 - `oneshot` — execução única
@@ -132,6 +138,7 @@ interface AgentCheckpointedOmState {
 ```
 
 Arquivos principais:
+
 - `agent-long-term-memory.ts` — checkpointing
 - `agent-long-term-memory-recall.ts` — recall e busca
 - `agent-long-term-memory-store.ts` — persistência
@@ -150,6 +157,7 @@ const discord = createDiscordProvider({
 ```
 
 Features:
+
 - Channel filtering
 - Mention detection
 - Echo prevention (2 min TTL)

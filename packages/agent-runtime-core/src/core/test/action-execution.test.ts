@@ -11,7 +11,10 @@ describe('action execution strategies', () => {
       const executeAction = vi.fn().mockResolvedValue({ name: 'test', input: {}, output: null });
 
       const results = await strategy.execute(
-        [{ name: 'a', input: {} }, { name: 'b', input: {} }],
+        [
+          { name: 'a', input: {} },
+          { name: 'b', input: {} },
+        ],
         executeAction,
       );
 
@@ -22,14 +25,19 @@ describe('action execution strategies', () => {
     it('stops on first error', async () => {
       const strategy = createSequentialActionExecutionStrategy();
       const error = new Error('action failed');
-      const executeAction = vi.fn()
+      const executeAction = vi
+        .fn()
         .mockResolvedValueOnce({ name: 'a', input: {}, output: null })
         .mockRejectedValueOnce(error)
         .mockResolvedValueOnce({ name: 'c', input: {}, output: null });
 
       await expect(
         strategy.execute(
-          [{ name: 'a', input: {} }, { name: 'b', input: {} }, { name: 'c', input: {} }],
+          [
+            { name: 'a', input: {} },
+            { name: 'b', input: {} },
+            { name: 'c', input: {} },
+          ],
           executeAction,
         ),
       ).rejects.toThrow('action failed');
@@ -46,7 +54,11 @@ describe('action execution strategies', () => {
       });
 
       const results = await strategy.execute(
-        [{ name: 'a', input: {} }, { name: 'b', input: {} }, { name: 'c', input: {} }],
+        [
+          { name: 'a', input: {} },
+          { name: 'b', input: {} },
+          { name: 'c', input: {} },
+        ],
         executeAction,
       );
 
@@ -62,7 +74,10 @@ describe('action execution strategies', () => {
       executeAction.mockRejectedValueOnce(new Error('parallel error'));
 
       const promise = strategy.execute(
-        [{ name: 'a', input: {} }, { name: 'b', input: {} }],
+        [
+          { name: 'a', input: {} },
+          { name: 'b', input: {} },
+        ],
         executeAction,
       );
 

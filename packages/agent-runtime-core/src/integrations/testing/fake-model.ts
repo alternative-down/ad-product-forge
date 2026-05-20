@@ -7,7 +7,9 @@ import type {
   StepModelStreamEvent,
 } from '../../core/types.js';
 
-export type FakeModelHandler = (request: StepModelRequest) => Promise<StepModelResponse> | StepModelResponse;
+export type FakeModelHandler = (
+  request: StepModelRequest,
+) => Promise<StepModelResponse> | StepModelResponse;
 export type FakeStreamModelHandler = (
   request: StepModelRequest,
 ) => Promise<StepModelStream> | StepModelStream;

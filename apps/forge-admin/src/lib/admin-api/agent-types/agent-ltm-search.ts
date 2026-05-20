@@ -1,5 +1,4 @@
 export type AgentLongTermMemoryRecallDebugSearchResult = {
-
   query: string;
 
   topK: number;
@@ -25,13 +24,11 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   activeIndexName: string;
 
   activeIndexStats: {
-
     dimension: number;
 
     count: number;
 
     metric: string | null;
-
   } | null;
 
   queryEmbedding: number[];
@@ -41,7 +38,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   workspaceFormattedContext: string;
 
   workspaceResults: Array<{
-
     id: string;
 
     content: string;
@@ -49,11 +45,9 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
     score: number | null;
 
     relativePercent: number | null;
-
   }>;
 
   vectorResults: Array<{
-
     id: string;
 
     score: number;
@@ -61,7 +55,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
     metadataJson: string | null;
 
     document: string | null;
-
   }>;
 
   graphHit: boolean;
@@ -85,7 +78,4 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   graphError: string | null;
 
   injectedSystemMessage: string | null;
-
 };
-
-

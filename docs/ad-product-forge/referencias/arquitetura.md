@@ -35,14 +35,14 @@
 
 ## Stack Tecnológica
 
-| Camada | Tecnologia | Propósito |
-|--------|------------|-----------|
-| Frontend | Next.js 14 | Admin UI |
-| Backend | Node.js + Express | API REST |
-| Runtime | Mastra | Agent execution |
-| ORM | Drizzle | Database |
-| Database | SQLite (Turso) | Persistent storage |
-| Deployment | Coolify | Hosting + CI/CD |
+| Camada     | Tecnologia        | Propósito          |
+| ---------- | ----------------- | ------------------ |
+| Frontend   | Next.js 14        | Admin UI           |
+| Backend    | Node.js + Express | API REST           |
+| Runtime    | Mastra            | Agent execution    |
+| ORM        | Drizzle           | Database           |
+| Database   | SQLite (Turso)    | Persistent storage |
+| Deployment | Coolify           | Hosting + CI/CD    |
 
 ## Estrutura de Diretórios
 
@@ -214,37 +214,37 @@ ad-product-forge/
 
 ### Agentes
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/admin/agents` | Lista todos os agentes |
-| `GET` | `/admin/agent/:id` | Detalhes de um agente |
-| `POST` | `/admin/agent/hire` | Contrata novo agente |
-| `POST` | `/admin/agent/:id/terminate` | Encerra agente |
+| Método | Endpoint                     | Descrição              |
+| ------ | ---------------------------- | ---------------------- |
+| `GET`  | `/admin/agents`              | Lista todos os agentes |
+| `GET`  | `/admin/agent/:id`           | Detalhes de um agente  |
+| `POST` | `/admin/agent/hire`          | Contrata novo agente   |
+| `POST` | `/admin/agent/:id/terminate` | Encerra agente         |
 
 ### Contratos
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/admin/agent/contracts` | Lista contratos |
-| `GET` | `/admin/agent/:id/contract` | Contrato atual |
+| Método | Endpoint                              | Descrição        |
+| ------ | ------------------------------------- | ---------------- |
+| `GET`  | `/admin/agent/contracts`              | Lista contratos  |
+| `GET`  | `/admin/agent/:id/contract`           | Contrato atual   |
 | `POST` | `/admin/agent/contract/adjust-budget` | Ajusta orçamento |
-| `POST` | `/admin/agent/contract/top-up` | Adiciona fundos |
+| `POST` | `/admin/agent/contract/top-up`        | Adiciona fundos  |
 
 ### Permissões
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/admin/roles` | Lista roles |
-| `POST` | `/admin/roles` | Cria role |
-| `GET` | `/admin/role/:id/permissions` | Permissões do role |
-| `PUT` | `/admin/role/:id/permissions` | Atualiza permissões |
+| Método | Endpoint                      | Descrição           |
+| ------ | ----------------------------- | ------------------- |
+| `GET`  | `/admin/roles`                | Lista roles         |
+| `POST` | `/admin/roles`                | Cria role           |
+| `GET`  | `/admin/role/:id/permissions` | Permissões do role  |
+| `PUT`  | `/admin/role/:id/permissions` | Atualiza permissões |
 
 ### Integrações
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/admin/integrations/github/repos` | Lista repos GitHub |
-| `GET` | `/admin/integrations/coolify/apps` | Lista apps Coolify |
+| Método | Endpoint                           | Descrição          |
+| ------ | ---------------------------------- | ------------------ |
+| `GET`  | `/admin/integrations/github/repos` | Lista repos GitHub |
+| `GET`  | `/admin/integrations/coolify/apps` | Lista apps Coolify |
 
 ## Segurança
 
@@ -280,23 +280,23 @@ async function validateBudgetOperation(
 ) {
   // 1. Verificar se agente existe
   const agent = await db.query.agents.findFirst({...});
-  
+
   // 2. Verificar se contrato existe e está ativo
   const contract = await db.query.agentExecutionContracts.findFirst({...});
-  
+
   // 3. Para increase: verificar cash disponível
   if (operation === 'increase') {
     const cash = await companyCash.getCurrentBalanceUsd();
     if (cash < amount) throw new Error('Insufficient cash');
   }
-  
+
   // 4. Para decrease: verificar se novo budget >= spent
   if (operation === 'decrease') {
     if (newBudget < contract.spentUsd) {
       throw new Error('Cannot reduce below spent amount');
     }
   }
-  
+
   // 5. Transação atômica
   await db.transaction(async (tx) => {
     // Updates...
@@ -318,24 +318,24 @@ services:
       GITHUB_APP_ID: ${GITHUB_APP_ID}
       GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
     ports:
-      - "3001:3001"
+      - '3001:3001'
 
   forge-admin:
     image: ghcr.io/alternative-down/ad-product-forge/forge-admin:latest
     environment:
       NEXT_PUBLIC_API_URL: ${API_URL}
     ports:
-      - "3000:3000"
+      - '3000:3000'
 ```
 
 ### Environment Variables
 
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `DATABASE_URL` | Connection string SQLite | `file:./forge.db` |
-| `GITHUB_APP_ID` | GitHub App ID | `123456` |
-| `GITHUB_APP_PRIVATE_KEY` | Chave privada do App | `-----BEGIN RSA...` |
-| `COMPANY_CASH_INITIAL` | Saldo inicial da empresa | `10000` |
+| Variável                 | Descrição                | Exemplo             |
+| ------------------------ | ------------------------ | ------------------- |
+| `DATABASE_URL`           | Connection string SQLite | `file:./forge.db`   |
+| `GITHUB_APP_ID`          | GitHub App ID            | `123456`            |
+| `GITHUB_APP_PRIVATE_KEY` | Chave privada do App     | `-----BEGIN RSA...` |
+| `COMPANY_CASH_INITIAL`   | Saldo inicial da empresa | `10000`             |
 
 ---
 

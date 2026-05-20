@@ -10,12 +10,14 @@ type VectorDocument = {
 export class InMemoryVectorIndex implements VectorIndex {
   private readonly documents = new Map<string, VectorDocument>();
 
-  async index(documents: Array<{
-    id: string;
-    text: string;
-    vector: number[];
-    metadata?: Record<string, unknown>;
-  }>): Promise<void> {
+  async index(
+    documents: Array<{
+      id: string;
+      text: string;
+      vector: number[];
+      metadata?: Record<string, unknown>;
+    }>,
+  ): Promise<void> {
     for (const document of documents) {
       this.documents.set(document.id, document);
     }

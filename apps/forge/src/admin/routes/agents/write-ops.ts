@@ -10,20 +10,12 @@ import { registerLifecycleDelegateOps } from './_split/lifecycle-delegate-ops';
 import { registerMcpOps } from './_split/mcp-ops';
 import { registerSkillOps } from './_split/skill-ops';
 
-
-import type {Database} from '../../../../src/database/schema';
+import type { Database } from '../../../../src/database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../github/manager';
 import type { AgentEmailManager } from '../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../coolify/manager';
 import type { createAgentScheduleManager } from '../../../schedules/manager';
-
-
-
-
-
-
-
 
 interface RegistryEntry {
   runner: {
@@ -51,8 +43,16 @@ interface AgentRoutesInput {
 }
 
 interface InternalChatService {
-  registerExternalAccount: (opts: { slug: string; displayName: string }) => Promise<{ accountId: string }>;
-  sendMessage: (opts: { accountId: string; targetKey: string; content: string; attachments: unknown[] }) => Promise<{
+  registerExternalAccount: (opts: {
+    slug: string;
+    displayName: string;
+  }) => Promise<{ accountId: string }>;
+  sendMessage: (opts: {
+    accountId: string;
+    targetKey: string;
+    content: string;
+    attachments: unknown[];
+  }) => Promise<{
     conversationKey: string;
     messageId: string;
   }>;
@@ -62,10 +62,16 @@ interface InternalChatService {
  * Register POST routes for agent write operations (reload, force-idle, rewakeup, contracts, hire, terminate, roles, config, MCP, skills)
  */
 export function registerAgentWriteOpsRoutes(
-  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      path: string;
+      handler: HttpHandler;
+    }) => void;
+  },
   input: AgentRoutesInput,
   registry: Registry,
-  ops: any
+  ops: any,
 ) {
   // Lifecycle ops — extracted to split/lifecycle-ops.ts
   registerLifecycleOps(httpServer, input, ops);
@@ -77,7 +83,6 @@ export function registerAgentWriteOpsRoutes(
 
   // Skill ops — extracted to split/skill-ops.ts
   registerSkillOps(httpServer, input.db, input);
-
 
   // Role ops — extracted to split/role-ops.ts
   registerRoleOps(httpServer, input.db);

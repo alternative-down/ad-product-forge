@@ -8,10 +8,7 @@ import type {
   OperationalMemoryConversationState,
   OperationalMemoryConversationStateStore,
 } from 'agent-runtime-core/integrations';
-import type {
-  RuntimeWorkingMemoryStore,
-  WorkingMemoryRecord,
-} from './runtime-working-memory.js';
+import type { RuntimeWorkingMemoryStore, WorkingMemoryRecord } from './runtime-working-memory.js';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -37,7 +34,8 @@ export type LibsqlConversationStoreOptions = {
 };
 
 export class LibsqlConversationStore
-implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWorkingMemoryStore {
+  implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWorkingMemoryStore
+{
   private readonly client: Client;
   private readonly threadTableName: string;
   private readonly messageTableName: string;
@@ -143,9 +141,10 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
 
   async appendMessage(message: ConversationMessage): Promise<void> {
     await this.ensureSchema();
-    await this.client.batch([
-      {
-        sql: `
+    await this.client.batch(
+      [
+        {
+          sql: `
           insert or ignore into ${escapeIdentifier(this.threadTableName)} (
             id,
             title,
@@ -155,10 +154,10 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
             updated_at
           ) values (?, null, '[]', null, ?, ?)
         `,
-        args: [message.threadId, message.createdAt, message.createdAt],
-      },
-      {
-        sql: `
+          args: [message.threadId, message.createdAt, message.createdAt],
+        },
+        {
+          sql: `
           insert into ${escapeIdentifier(this.messageTableName)} (
             id,
             thread_id,
@@ -172,28 +171,30 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
             created_at
           ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
-        args: [
-          message.id,
-          message.threadId,
-          message.role,
-          message.authorId ?? null,
-          serializeJson(message.parts),
-          serializeJson(message.metadata ?? null),
-          message.replacedByMessageId ?? null,
-          message.operationalMemoryType ?? null,
-          message.operationalMemoryGeneration ?? null,
-          message.createdAt,
-        ],
-      },
-      {
-        sql: `
+          args: [
+            message.id,
+            message.threadId,
+            message.role,
+            message.authorId ?? null,
+            serializeJson(message.parts),
+            serializeJson(message.metadata ?? null),
+            message.replacedByMessageId ?? null,
+            message.operationalMemoryType ?? null,
+            message.operationalMemoryGeneration ?? null,
+            message.createdAt,
+          ],
+        },
+        {
+          sql: `
           update ${escapeIdentifier(this.threadTableName)}
           set updated_at = ?
           where id = ?
         `,
-        args: [message.createdAt, message.threadId],
-      },
-    ], 'write');
+          args: [message.createdAt, message.threadId],
+        },
+      ],
+      'write',
+    );
   }
 
   async updateMessage(input: {
@@ -241,11 +242,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
         set metadata_json = ?
         where thread_id = ? and id = ?
       `,
-      args: [
-        serializeJson(input.metadata ?? null),
-        input.threadId,
-        input.messageId,
-      ],
+      args: [serializeJson(input.metadata ?? null), input.threadId, input.messageId],
     });
   }
 
@@ -261,11 +258,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
         set replaced_by_message_id = ?
         where thread_id = ? and id = ?
       `,
-      args: [
-        input.replacedByMessageId,
-        input.threadId,
-        input.messageId,
-      ],
+      args: [input.replacedByMessageId, input.threadId, input.messageId],
     });
   }
 
@@ -338,19 +331,23 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       authorId: row.author_id != null ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
-      replacedByMessageId: row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
-      operationalMemoryType: row.om_type != null
-        ? (row.om_type ?? null) as ConversationMessage['operationalMemoryType']
-        : undefined,
+      replacedByMessageId:
+        row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType:
+        row.om_type != null
+          ? ((row.om_type ?? null) as ConversationMessage['operationalMemoryType'])
+          : undefined,
       operationalMemoryGeneration:
-        typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
+        typeof row.om_generation === 'number'
+          ? row.om_generation
+          : row.om_generation === null
+            ? null
+            : undefined,
       createdAt: String(row.created_at),
     }));
   }
 
-  async listOperationalMemoryMessages(input: {
-    threadId: string;
-  }): Promise<ConversationMessage[]> {
+  async listOperationalMemoryMessages(input: { threadId: string }): Promise<ConversationMessage[]> {
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
@@ -438,48 +435,57 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       authorId: row.author_id != null ? String(row.author_id) : undefined,
       parts: parseJson<ConversationMessage['parts']>(row.parts_json) ?? [],
       metadata: parseJson<Record<string, JsonValue>>(row.metadata_json) ?? undefined,
-      replacedByMessageId: row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
-      operationalMemoryType: row.om_type != null
-        ? (row.om_type ?? null) as ConversationMessage['operationalMemoryType']
-        : undefined,
+      replacedByMessageId:
+        row.replaced_by_message_id != null ? String(row.replaced_by_message_id) : null,
+      operationalMemoryType:
+        row.om_type != null
+          ? ((row.om_type ?? null) as ConversationMessage['operationalMemoryType'])
+          : undefined,
       operationalMemoryGeneration:
-        typeof row.om_generation === 'number' ? row.om_generation : row.om_generation === null ? null : undefined,
+        typeof row.om_generation === 'number'
+          ? row.om_generation
+          : row.om_generation === null
+            ? null
+            : undefined,
       createdAt: String(row.created_at),
     }));
   }
 
   async clearThread(threadId: string): Promise<void> {
     await this.ensureSchema();
-    await this.client.batch([
-      {
-        sql: `
+    await this.client.batch(
+      [
+        {
+          sql: `
           delete from ${escapeIdentifier(this.messageTableName)}
           where thread_id = ?
         `,
-        args: [threadId],
-      },
-      {
-        sql: `
+          args: [threadId],
+        },
+        {
+          sql: `
           delete from ${escapeIdentifier(this.stateTableName)}
           where thread_id = ?
         `,
-        args: [threadId],
-      },
-      {
-        sql: `
+          args: [threadId],
+        },
+        {
+          sql: `
           delete from ${escapeIdentifier(this.workingMemoryTableName)}
           where thread_id = ?
         `,
-        args: [threadId],
-      },
-      {
-        sql: `
+          args: [threadId],
+        },
+        {
+          sql: `
           delete from ${escapeIdentifier(this.threadTableName)}
           where id = ?
         `,
-        args: [threadId],
-      },
-    ], 'write');
+          args: [threadId],
+        },
+      ],
+      'write',
+    );
   }
 
   async load(threadId: string): Promise<OperationalMemoryConversationState | null> {
@@ -519,10 +525,7 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
     });
   }
 
-  async read(input: {
-    threadId: string;
-    resourceId: string;
-  }): Promise<WorkingMemoryRecord | null> {
+  async read(input: { threadId: string; resourceId: string }): Promise<WorkingMemoryRecord | null> {
     await this.ensureSchema();
     const result = await this.client.execute({
       sql: `
@@ -584,9 +587,10 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
       return;
     }
 
-    await this.client.batch([
-      {
-        sql: `
+    await this.client.batch(
+      [
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.threadTableName)} (
             id text primary key,
             title text,
@@ -596,9 +600,9 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
             updated_at text not null
           )
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.messageTableName)} (
             id text primary key,
             thread_id text not null,
@@ -612,24 +616,24 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
             created_at text not null
           )
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create index if not exists ${escapeIdentifier(`${this.messageTableName}_thread_created_idx`)}
           on ${escapeIdentifier(this.messageTableName)} (thread_id, created_at)
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.stateTableName)} (
             thread_id text primary key,
             state_json text not null,
             updated_at text not null
           )
         `,
-      },
-      {
-        sql: `
+        },
+        {
+          sql: `
           create table if not exists ${escapeIdentifier(this.workingMemoryTableName)} (
             thread_id text not null,
             resource_id text not null,
@@ -638,8 +642,10 @@ implements ConversationStore, OperationalMemoryConversationStateStore, RuntimeWo
             primary key (thread_id, resource_id)
           )
         `,
-      },
-    ], 'write');
+        },
+      ],
+      'write',
+    );
     await ensureColumn(this.client, this.messageTableName, 'replaced_by_message_id', 'text');
     await ensureColumn(this.client, this.messageTableName, 'om_type', 'text');
     await ensureColumn(this.client, this.messageTableName, 'om_generation', 'integer');
@@ -660,5 +666,7 @@ async function ensureColumn(
     return;
   }
 
-  await client.execute(`alter table ${escapeIdentifier(tableName)} add column ${escapeIdentifier(columnName)} ${columnDefinition}`);
+  await client.execute(
+    `alter table ${escapeIdentifier(tableName)} add column ${escapeIdentifier(columnName)} ${columnDefinition}`,
+  );
 }

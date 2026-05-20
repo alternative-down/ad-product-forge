@@ -18,14 +18,15 @@ This document resolves those questions and provides a concrete first-version rec
 
 ### Rationale
 
-| Option | Isolation | Complexity | Performance | Reliability | Verdict |
-|--------|-----------|------------|-------------|-------------|---------|
-| In-process (shared browser) | ❌ No | ✅ Low | ✅ Best | ❌ Crash affects runtime | Rejected |
-| In-process (per-agent context) | ✅ Per-context | ✅ Low | ✅ Best | ✅ Crash isolated per context | **Selected** |
-| Separate local process | ✅ Full | ⚠️ Medium | ⚠️ IPC overhead | ✅ Full isolation | Deferred |
-| Remote service/container | ✅ Full | ❌ High | ⚠️ Network | ✅ Full isolation | Deferred |
+| Option                         | Isolation      | Complexity | Performance     | Reliability                   | Verdict      |
+| ------------------------------ | -------------- | ---------- | --------------- | ----------------------------- | ------------ |
+| In-process (shared browser)    | ❌ No          | ✅ Low     | ✅ Best         | ❌ Crash affects runtime      | Rejected     |
+| In-process (per-agent context) | ✅ Per-context | ✅ Low     | ✅ Best         | ✅ Crash isolated per context | **Selected** |
+| Separate local process         | ✅ Full        | ⚠️ Medium  | ⚠️ IPC overhead | ✅ Full isolation             | Deferred     |
+| Remote service/container       | ✅ Full        | ❌ High    | ⚠️ Network      | ✅ Full isolation             | Deferred     |
 
 **In-process with per-agent browser contexts** is the right first step because:
+
 - No additional process or network boundary needed for MVP
 - Playwright's browser context API already provides cookie/localStorage isolation
 - The worker-thread model keeps browser crashes isolated from the main Node.js event loop
@@ -57,24 +58,25 @@ Each agent gets its own `Browser` instance. Within the browser, each concurrent 
 
 ### Concurrency and timeouts
 
-| Parameter | Value | Rationale |
-|-----------|-------|----------|
-| Max concurrent pages per agent | 2 | Prevent memory exhaustion on busy agents |
-| Page navigation timeout | 30s | Catch hanging navigations |
-| Default screenshot timeout | 5s | Fast feedback |
-| Idle browser cleanup | 30min after last use | Prevent resource leaks |
-| Max page lifetime | 5min | Prevent runaway pages |
+| Parameter                      | Value                | Rationale                                |
+| ------------------------------ | -------------------- | ---------------------------------------- |
+| Max concurrent pages per agent | 2                    | Prevent memory exhaustion on busy agents |
+| Page navigation timeout        | 30s                  | Catch hanging navigations                |
+| Default screenshot timeout     | 5s                   | Fast feedback                            |
+| Idle browser cleanup           | 30min after last use | Prevent resource leaks                   |
+| Max page lifetime              | 5min                 | Prevent runaway pages                    |
 
 ### What the agent receives
 
-| Output | When | Format |
-|--------|------|--------|
-| Accessibility tree | Every navigation/step | Structured text (AX tree) |
-| Screenshot | On demand or on interaction | PNG, stored in workspace |
-| DOM snapshot | On demand | Textual HTML (no dynamic frames) |
-| Extracted data | After interaction | Structured JSON via querySelector |
+| Output             | When                        | Format                            |
+| ------------------ | --------------------------- | --------------------------------- |
+| Accessibility tree | Every navigation/step       | Structured text (AX tree)         |
+| Screenshot         | On demand or on interaction | PNG, stored in workspace          |
+| DOM snapshot       | On demand                   | Textual HTML (no dynamic frames)  |
+| Extracted data     | After interaction           | Structured JSON via querySelector |
 
 **Accessibility tree** is the primary output because:
+
 - It is structured, searchable, and concise
 - It works across all page types (SPA, SSR, JS-heavy)
 - Agents can query it programmatically without parsing HTML
@@ -99,14 +101,14 @@ The browser automation module plugs into the existing workspace and tool system:
 
 ### Risks and limits
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| Browser crash kills agent | Medium | Restart on crash, limit concurrent pages |
-| Memory leak from unreleased pages | Medium | Auto-close after timeout, max page lifetime |
-| Infinite navigation loops | Low | Hard timeout on navigation, max steps per run |
-| JavaScript-heavy page never loads | Medium | Configurable waitForSelector fallback |
-| Headless browser not available in all environments | High | Detect and surface clear error message; document Docker requirement |
-| Credentials/cookies from one agent leak to another | Low | Per-agent browser context — no shared state |
+| Risk                                               | Severity | Mitigation                                                          |
+| -------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| Browser crash kills agent                          | Medium   | Restart on crash, limit concurrent pages                            |
+| Memory leak from unreleased pages                  | Medium   | Auto-close after timeout, max page lifetime                         |
+| Infinite navigation loops                          | Low      | Hard timeout on navigation, max steps per run                       |
+| JavaScript-heavy page never loads                  | Medium   | Configurable waitForSelector fallback                               |
+| Headless browser not available in all environments | High     | Detect and surface clear error message; document Docker requirement |
+| Credentials/cookies from one agent leak to another | Low      | Per-agent browser context — no shared state                         |
 
 ---
 
@@ -133,9 +135,9 @@ All selectors accept CSS selectors. `pageId` defaults to current active page.
 ```typescript
 type BrowserToolResult = {
   pageId: string;
-  accessibilityTree?: string;     // AX tree text
-  screenshotPath?: string;       // workspace-relative path
-  elements?: BrowserElement[];   // extracted structured data
+  accessibilityTree?: string; // AX tree text
+  screenshotPath?: string; // workspace-relative path
+  elements?: BrowserElement[]; // extracted structured data
   url?: string;
 };
 ```
@@ -155,6 +157,7 @@ type BrowserToolResult = {
 ## Prototype delivered
 
 This spike includes a prototype at `apps/forge/src/browser-automation/`:
+
 - `service.ts` — Playwright manager with per-agent browser/context isolation
 - `tools.ts` — agent-facing tool definitions
 - `tools.test.ts` — basic tool execution tests

@@ -102,7 +102,10 @@ export class InMemoryRuntimeScheduler {
   }
 
   private async dispatchIntoRuntime<TPayload>(
-    options: Pick<ScheduleInputOptions<TPayload>, 'target' | 'input' | 'runAfterDispatch' | 'maxSteps'>,
+    options: Pick<
+      ScheduleInputOptions<TPayload>,
+      'target' | 'input' | 'runAfterDispatch' | 'maxSteps'
+    >,
   ) {
     await options.target.dispatch(options.input);
 

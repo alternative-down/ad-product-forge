@@ -16,11 +16,7 @@ export class FilesystemLongTermMemoryStore implements LongTermMemoryStore {
 
   async write(document: LongTermMemoryDocument): Promise<void> {
     await mkdir(this.basePath, { recursive: true });
-    await writeFile(
-      this.getFilePath(document.id),
-      JSON.stringify(document, null, 2),
-      'utf8',
-    );
+    await writeFile(this.getFilePath(document.id), JSON.stringify(document, null, 2), 'utf8');
   }
 
   async remove(documentId: string): Promise<void> {

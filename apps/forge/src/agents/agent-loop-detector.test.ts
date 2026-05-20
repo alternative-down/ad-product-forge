@@ -4,10 +4,7 @@
  * Zero prior coverage.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  createLoopDetector,
-  type LoopDetectorState,
-} from './agent-runner-loop-detector';
+import { createLoopDetector, type LoopDetectorState } from './agent-runner-loop-detector';
 
 function makeState(overrides: Partial<LoopDetectorState> = {}): LoopDetectorState {
   return {

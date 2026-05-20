@@ -17,14 +17,15 @@ import {
   toMastraSafeIdentifier as _toMastraSafeIdentifier,
 } from '@forge-runtime/core';
 
-import type {Database} from '../database/client'
+import type { Database } from '../database/client';
 import type { AgentLoaderConfig } from '../agents/agent-loader';
 import { loadAgent } from '../agents/agent-loader';
-import { getInternalAgentRegistry, createPerAgentEmailManager } from '../agents/internal-agent-registry';
-import { createCapabilityStore } from '../capabilities/store';
 import {
-  changeAgentRoleFromAdmin,
-} from '../capabilities/runtime';
+  getInternalAgentRegistry,
+  createPerAgentEmailManager,
+} from '../agents/internal-agent-registry';
+import { createCapabilityStore } from '../capabilities/store';
+import { changeAgentRoleFromAdmin } from '../capabilities/runtime';
 import type { createForgeHttpServer } from '../http/server';
 import type { createAgentScheduleManager } from '../schedules/manager';
 import { createCompanyPayables } from '../finance/company-payables';
@@ -70,14 +71,30 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog as _publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../agents/global-skills';
 
-import { createRoleSchema as _createRoleSchema, roleToolPermissionSchema as _roleToolPermissionSchema, roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema, mcpServerFieldsSchema as _mcpServerFieldsSchema } from './schemas';
-import { updateRoleSchema as _updateRoleSchema, deleteRoleSchema as _deleteRoleSchema, roleCapabilitySchema as _roleCapabilitySchema } from './routes/schemas/roles';
+import {
+  createRoleSchema as _createRoleSchema,
+  roleToolPermissionSchema as _roleToolPermissionSchema,
+  roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema,
+  mcpServerFieldsSchema as _mcpServerFieldsSchema,
+} from './schemas';
+import {
+  updateRoleSchema as _updateRoleSchema,
+  deleteRoleSchema as _deleteRoleSchema,
+  roleCapabilitySchema as _roleCapabilitySchema,
+} from './routes/schemas/roles';
 import { registerInternalChatRoutes as _registerInternalChatRoutes } from './routes/internal-chat/index';
-import { registerAgentBaseRoutes, registerAgentStepsRoutes,
-  registerAgentConversationsRoutes, registerAgentMemoryRoutes,
-  registerAgentMetricsRoutes, registerAgentContractRoutes,
-  registerAgentMcpRoutes, registerAgentSchedulesRoutes,
-  registerAgentNotificationsRoutes, registerAgentProviderMcpRoutes } from './routes/agents/detail-read';
+import {
+  registerAgentBaseRoutes,
+  registerAgentStepsRoutes,
+  registerAgentConversationsRoutes,
+  registerAgentMemoryRoutes,
+  registerAgentMetricsRoutes,
+  registerAgentContractRoutes,
+  registerAgentMcpRoutes,
+  registerAgentSchedulesRoutes,
+  registerAgentNotificationsRoutes,
+  registerAgentProviderMcpRoutes,
+} from './routes/agents/detail-read';
 import { registerAgentReadRoutes as _registerAgentReadRoutes } from './routes/agents/read';
 import { registerAgentWriteRoutes as _registerAgentWriteRoutes } from './routes/agents/write';
 import { registerAgentOperationRoutes } from './routes/agents/operations';
@@ -103,8 +120,10 @@ import { createWebhookHandler } from '../webhooks/handler';
 import { registerSystemReadRoutes } from './routes/system/read';
 import { registerSystemWriteRoutes } from './routes/system/write';
 import { registerDashboardRoutes } from './routes/dashboard';
-import { reloadAgentMcp as _reloadAgentMcp, reloadLinkedAgentsForMcpServer as _reloadLinkedAgentsForMcpServer } from './routes/mcp-helpers';
-
+import {
+  reloadAgentMcp as _reloadAgentMcp,
+  reloadLinkedAgentsForMcpServer as _reloadLinkedAgentsForMcpServer,
+} from './routes/mcp-helpers';
 
 export interface AdminRouteContext {
   db: Database;
@@ -157,8 +176,11 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   };
 
   // Pass the real registry to submodules (FIX #1046: was previously a snapshot copy)
-  registerAgentOperationRoutes(input.httpServer, { internalChat: input.internalChat }, registry as any);
-
+  registerAgentOperationRoutes(
+    input.httpServer,
+    { internalChat: input.internalChat },
+    registry as any,
+  );
 
   registerAgentSkillsWriteRoutes(input.httpServer, {
     db: input.db,
@@ -212,7 +234,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   registerAgentSchedulesRoutes(input.httpServer, input.db);
   registerAgentNotificationsRoutes(input.httpServer, input.db);
 
-
   // Agent provider (credentials) and MCP server routes (extracted to ./routes/agents/provider-mcp.ts)
   // NOTE: role routes still inline (#1874 iter 2)
   registerAgentProviderMcpRoutes({
@@ -220,7 +241,6 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     db: input.db,
     loaderConfig: input.loaderConfig,
   });
-
 
   // registerRoleRoutes({ httpServer: input.httpServer, db: input.db, loaderConfig: input.loaderConfig });
 
@@ -248,7 +268,9 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     store: webhookStore,
     notifyAgent(input) {
       const entry = registry.get(input.agentId);
-      if (!entry) { return; }
+      if (!entry) {
+        return;
+      }
       entry.runner.notifyExternalEvent({
         type: input.type,
         groupKey: input.groupKey,
@@ -268,4 +290,3 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   registerWebhookAdminRoutes(input.httpServer, webhookStore);
 }
-

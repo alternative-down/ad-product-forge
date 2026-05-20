@@ -67,10 +67,12 @@ export class LibsqlCommunicationContactsStore implements CommunicationContactsSt
           state_json = excluded.state_json,
           updated_at = excluded.updated_at
       `,
-      args: [JSON.stringify({
-        version: 1,
-        contacts,
-      })],
+      args: [
+        JSON.stringify({
+          version: 1,
+          contacts,
+        }),
+      ],
     });
   }
 

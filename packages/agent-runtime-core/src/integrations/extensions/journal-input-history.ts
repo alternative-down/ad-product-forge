@@ -17,7 +17,9 @@ export function createJournalInputHistoryPlugin(
     async provideContext(context) {
       const snapshot = await options.journal.readSnapshot(context.runtimeId);
       const historicalInputs = snapshot.inputs
-        .filter((input) => !context.pendingInputs.some((pendingInput) => pendingInput.id === input.id))
+        .filter(
+          (input) => !context.pendingInputs.some((pendingInput) => pendingInput.id === input.id),
+        )
         .slice(-maxInputs);
 
       return historicalInputs.map((input) => ({

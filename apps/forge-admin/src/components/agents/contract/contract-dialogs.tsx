@@ -10,7 +10,13 @@ import {
   AdminInput,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export type ContractForm = {
   action: 'adjust-budget' | 'top-up' | 'renew';
@@ -125,14 +131,23 @@ export function ContractTerminateDialog(input: {
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
               <div className="space-y-2 text-sm text-foreground">
                 <div>Esta ação encerra o agente agora.</div>
-                <div>O saldo restante do contrato atual será estornado como entrada no caixa da empresa.</div>
+                <div>
+                  O saldo restante do contrato atual será estornado como entrada no caixa da
+                  empresa.
+                </div>
               </div>
             </div>
-            {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}
+            {input.errorMessage ? (
+              <div className="text-sm text-destructive">{input.errorMessage}</div>
+            ) : null}
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton variant="ghost" onClick={() => input.onOpenChange(false)} disabled={input.pending}>
+            <AdminButton
+              variant="ghost"
+              onClick={() => input.onOpenChange(false)}
+              disabled={input.pending}
+            >
               Cancelar
             </AdminButton>
             <AdminButton variant="destructive" onClick={input.onConfirm} disabled={input.pending}>

@@ -3,7 +3,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { and, eq } from 'drizzle-orm';
 import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { ConversationNotFoundError, ChatGroupNotFoundError } from './internal-chat-errors';
 
 export interface InternalChatGuardsDeps {
@@ -16,7 +16,6 @@ export interface InternalChatGuardsDeps {
 }
 
 export function createInternalChatGuards(db: Database, deps: InternalChatGuardsDeps) {
-
   async function requireConversationMembership(agentId: string, conversationId: string) {
     const account = await deps.getRequiredAgentAccount(agentId);
     return await requireConversationMembershipByAccount(account.id, conversationId);
@@ -31,7 +30,12 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     });
 
     if (membership === null || membership === undefined) {
-      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
+      forgeDebug({
+        scope: 'internal-chat-guards',
+        level: 'warn',
+        message: 'requireConversation: not found',
+        context: { conversationId },
+      });
       throw new ConversationNotFoundError(conversationId);
     }
   }
@@ -49,7 +53,12 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     });
 
     if (conversation === null || conversation === undefined) {
-      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireConversation: not found', context: { conversationId } });
+      forgeDebug({
+        scope: 'internal-chat-guards',
+        level: 'warn',
+        message: 'requireConversation: not found',
+        context: { conversationId },
+      });
       throw new ConversationNotFoundError(conversationId);
     }
 
@@ -60,7 +69,12 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     const group = await getRequiredConversationForAgent(agentId, groupId);
 
     if (group.type !== 'group') {
-      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireGroup: not found', context: { groupId } });
+      forgeDebug({
+        scope: 'internal-chat-guards',
+        level: 'warn',
+        message: 'requireGroup: not found',
+        context: { groupId },
+      });
       throw new ChatGroupNotFoundError(groupId);
     }
 
@@ -71,7 +85,12 @@ export function createInternalChatGuards(db: Database, deps: InternalChatGuardsD
     const group = await getRequiredConversationForAccount(accountId, groupId);
 
     if (group.type !== 'group') {
-      forgeDebug({ scope: 'internal-chat-guards', level: 'warn', message: 'requireGroup: not found', context: { groupId } });
+      forgeDebug({
+        scope: 'internal-chat-guards',
+        level: 'warn',
+        message: 'requireGroup: not found',
+        context: { groupId },
+      });
       throw new ChatGroupNotFoundError(groupId);
     }
 

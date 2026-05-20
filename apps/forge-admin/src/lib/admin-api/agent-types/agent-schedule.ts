@@ -1,5 +1,4 @@
 export type AgentSchedule = {
-
   scheduleId: string;
 
   kind: 'agent' | 'heartbeat';
@@ -29,7 +28,4 @@ export type AgentSchedule = {
   createdAt?: number;
 
   updatedAt?: number;
-
 };
-
-

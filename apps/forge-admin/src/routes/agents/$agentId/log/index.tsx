@@ -34,7 +34,11 @@ function AgentLogIndexRoute() {
     }
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
+      if (
+        entries[0]?.isIntersecting &&
+        messagesQuery.hasNextPage &&
+        !messagesQuery.isFetchingNextPage
+      ) {
         void messagesQuery.fetchNextPage();
       }
     });

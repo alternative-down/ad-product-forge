@@ -31,7 +31,7 @@ for (const dir of dirs) {
   try {
     const output = execSync(
       `find "${dir}" -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \\) 2>/dev/null | grep -v node_modules | grep -v dist | grep -v .turbo`,
-      { encoding: 'utf8', maxBuffer: 1024 * 1024 * 10 }
+      { encoding: 'utf8', maxBuffer: 1024 * 1024 * 10 },
     ).trim();
     if (!output) continue;
 
@@ -57,4 +57,3 @@ if (violations.length > 0) {
   console.log('✅ All source files follow kebab-case naming');
   process.exit(0);
 }
-

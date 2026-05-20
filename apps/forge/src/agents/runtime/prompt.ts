@@ -44,18 +44,38 @@ export function buildAgentSystemPrompt(input: {
       `- Agent id: ${input.agentId}`,
       `- Agent slug: ${input.agentSlug}`,
       `- Agent name: ${input.agentName}`,
-      input.agentDescription !== null && input.agentDescription !== undefined && input.agentDescription.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
-      input.roleName !== null && input.roleName !== undefined && input.roleName.trim() ? `- Role name: ${input.roleName.trim()}` : null,
-      input.roleDescription !== null && input.roleDescription !== undefined && input.roleDescription.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
+      input.agentDescription !== null &&
+      input.agentDescription !== undefined &&
+      input.agentDescription.trim()
+        ? `- Agent description: ${input.agentDescription.trim()}`
+        : null,
+      input.roleName !== null && input.roleName !== undefined && input.roleName.trim()
+        ? `- Role name: ${input.roleName.trim()}`
+        : null,
+      input.roleDescription !== null &&
+      input.roleDescription !== undefined &&
+      input.roleDescription.trim()
+        ? `- Role description: ${input.roleDescription.trim()}`
+        : null,
       '</agent_identity>',
-    ].filter(Boolean).join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
     [
       '<company_context>',
       '## Company Context',
-      input.companyName !== null && input.companyName !== undefined && input.companyName.trim() ? `- Company name: ${input.companyName.trim()}` : null,
-      input.companyContext !== null && input.companyContext !== undefined && input.companyContext.trim() ? `- Company information: ${input.companyContext.trim()}` : null,
+      input.companyName !== null && input.companyName !== undefined && input.companyName.trim()
+        ? `- Company name: ${input.companyName.trim()}`
+        : null,
+      input.companyContext !== null &&
+      input.companyContext !== undefined &&
+      input.companyContext.trim()
+        ? `- Company information: ${input.companyContext.trim()}`
+        : null,
       '</company_context>',
-    ].filter(Boolean).join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
     [
       '<assigned_instructions>',
       '## Assigned Instructions',

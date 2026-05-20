@@ -1,5 +1,4 @@
 export type AgentListItem = {
-
   agentId: string;
 
   name: string;
@@ -13,29 +12,24 @@ export type AgentListItem = {
   roleName: string | null;
 
   modelProfile: {
-
     profileId: string;
 
     name: string;
 
     modelKey: string;
-
   } | null;
 
   omModelProfile: {
-
     profileId: string;
 
     name: string;
 
     modelKey: string;
-
   } | null;
 
   loaded: boolean;
 
   runner: {
-
     stopped: boolean;
 
     instant: boolean;
@@ -53,7 +47,6 @@ export type AgentListItem = {
     lastWakeStartedAt: number | null;
 
     wake: {
-
       pending: boolean;
 
       waitingForIdle: boolean;
@@ -61,15 +54,12 @@ export type AgentListItem = {
       firstPendingAt: number | null;
 
       nextTriggerAt: number | null;
-
     };
-
   } | null;
 
   providerTypes: string[];
 
   overview: {
-
     lastStepAt: number | null;
 
     lastStepContextTokens: number | null;
@@ -77,11 +67,9 @@ export type AgentListItem = {
     lastStepPreview: string | null;
 
     lastToolBadge: {
-
       icon: string;
 
       label: string;
-
     } | null;
 
     lastStepTokens: number | null;
@@ -93,7 +81,6 @@ export type AgentListItem = {
     unreadNotificationCount: number;
 
     om: {
-
       generationCount: number;
 
       checkpointGeneration: number | null;
@@ -115,25 +102,18 @@ export type AgentListItem = {
       reflectionTokenLimit: number;
 
       checkpointTokenCount: number;
-
     } | null;
 
     ltm: {
-
       running: boolean;
 
       queued: boolean;
 
       packageCount: number;
-
     };
-
   };
 
   createdAt: number;
 
   updatedAt: number;
-
 };
-
-

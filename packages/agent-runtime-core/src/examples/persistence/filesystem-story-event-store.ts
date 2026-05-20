@@ -16,11 +16,7 @@ export class FilesystemStoryEventStore implements StoryEventStore {
 
   async append(event: StoryEvent): Promise<void> {
     await mkdir(this.basePath, { recursive: true });
-    await writeFile(
-      this.getFilePath(event.id),
-      JSON.stringify(event, null, 2),
-      'utf8',
-    );
+    await writeFile(this.getFilePath(event.id), JSON.stringify(event, null, 2), 'utf8');
   }
 
   async readRecent(limit = 10): Promise<StoryEvent[]> {

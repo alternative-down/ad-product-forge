@@ -58,7 +58,8 @@ function HomeConversationsLayoutRoute() {
   const [accountForm, setAccountForm] = useState<AccountForm>({
     ...createEmptyAccountForm(),
   });
-  const [conversationForm, setConversationForm] = useState<ConversationForm>(createConversationForm);
+  const [conversationForm, setConversationForm] =
+    useState<ConversationForm>(createConversationForm);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +100,8 @@ function HomeConversationsLayoutRoute() {
     window.localStorage.setItem(SELECTED_ACCOUNT_STORAGE_KEY, selectedAccountId);
   }, [selectedAccountId]);
 
-  const selectedAccount = accounts.find((account) => account.accountId === selectedAccountId) ?? null;
+  const selectedAccount =
+    accounts.find((account) => account.accountId === selectedAccountId) ?? null;
   const selectedAccountLabel = selectedAccount?.displayName ?? 'Selecione uma conta';
   const availableContacts = contacts.filter((contact) => contact.accountId !== selectedAccountId);
   const selectedConversationId = pathname.startsWith('/home/conversations/')
@@ -141,16 +143,19 @@ function HomeConversationsLayoutRoute() {
     };
   }, [reloadConversations, selectedAccountId]);
 
-  const contextValue = useMemo(() => ({
-    accounts,
-    contacts,
-    selectedAccountId,
-    setSelectedAccountId,
-    selectedAccount,
-    conversations,
-    setConversations,
-    reloadConversations,
-  }), [accounts, contacts, conversations, reloadConversations, selectedAccount, selectedAccountId]);
+  const contextValue = useMemo(
+    () => ({
+      accounts,
+      contacts,
+      selectedAccountId,
+      setSelectedAccountId,
+      selectedAccount,
+      conversations,
+      setConversations,
+      reloadConversations,
+    }),
+    [accounts, contacts, conversations, reloadConversations, selectedAccount, selectedAccountId],
+  );
 
   return (
     <HomeConversationsProvider value={contextValue}>
@@ -185,7 +190,13 @@ function HomeConversationsLayoutRoute() {
           }}
         />
 
-        <div className={mobileDetailOpen ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'hidden h-full min-h-0 flex-col overflow-hidden md:flex'}>
+        <div
+          className={
+            mobileDetailOpen
+              ? 'flex h-full min-h-0 flex-col overflow-hidden'
+              : 'hidden h-full min-h-0 flex-col overflow-hidden md:flex'
+          }
+        >
           <Outlet />
         </div>
       </div>
@@ -210,8 +221,12 @@ function HomeConversationsLayoutRoute() {
           }
 
           await deleteInternalChatAccount(accountForm.accountId);
-          setAccounts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
-          setContacts((current) => current.filter((item) => item.accountId !== accountForm.accountId));
+          setAccounts((current) =>
+            current.filter((item) => item.accountId !== accountForm.accountId),
+          );
+          setContacts((current) =>
+            current.filter((item) => item.accountId !== accountForm.accountId),
+          );
           setSelectedAccountId('');
           setAccountDialogOpen(false);
         }}
@@ -238,8 +253,12 @@ function HomeConversationsLayoutRoute() {
 
               setAccounts((current) =>
                 accountForm.accountId
-                  ? current.map((item) => (item.accountId === normalizedAccount.accountId ? normalizedAccount : item))
-                  : [...current, normalizedAccount].sort((left, right) => left.displayName.localeCompare(right.displayName)),
+                  ? current.map((item) =>
+                      item.accountId === normalizedAccount.accountId ? normalizedAccount : item,
+                    )
+                  : [...current, normalizedAccount].sort((left, right) =>
+                      left.displayName.localeCompare(right.displayName),
+                    ),
               );
               setContacts((current) => {
                 const nextContact = {
@@ -248,14 +267,20 @@ function HomeConversationsLayoutRoute() {
                 };
 
                 return accountForm.accountId
-                  ? current.map((item) => (item.accountId === nextContact.accountId ? nextContact : item))
-                  : [...current, nextContact].sort((left, right) => left.displayName.localeCompare(right.displayName));
+                  ? current.map((item) =>
+                      item.accountId === nextContact.accountId ? nextContact : item,
+                    )
+                  : [...current, nextContact].sort((left, right) =>
+                      left.displayName.localeCompare(right.displayName),
+                    );
               });
               setSelectedAccountId(normalizedAccount.accountId);
               setAccountDialogOpen(false);
               setAccountForm(createEmptyAccountForm());
             } catch (error) {
-              setAccountFormError(error instanceof Error ? error.message : 'Não foi possível salvar a conta.');
+              setAccountFormError(
+                error instanceof Error ? error.message : 'Não foi possível salvar a conta.',
+              );
             } finally {
               setAccountSaving(false);
             }
@@ -273,11 +298,13 @@ function HomeConversationsLayoutRoute() {
         onSubmit={() => {
           void (async () => {
             const participants = availableContacts
-              .filter((contact) => conversationForm.selectedParticipantIds.includes(contact.accountId))
+              .filter((contact) =>
+                conversationForm.selectedParticipantIds.includes(contact.accountId),
+              )
               .map((contact) => contact.displayName);
             const conversationName =
               conversationForm.type === 'dm'
-                ? participants[0] ?? 'Nova conversa'
+                ? (participants[0] ?? 'Nova conversa')
                 : conversationForm.name.trim() || 'Novo grupo';
             const created = await createHomeInternalChatConversation({
               accountId: selectedAccountId,

@@ -1,4 +1,5 @@
 # User Control & Freedom Wireframes
+
 ## Nielsen's Heuristic #3 — Quick Win #5
 
 **Status:** Draft  
@@ -18,12 +19,14 @@
 ## 📊 Current State Analysis
 
 **Agents Page (forge-admin):**
+
 - ContractTopUpCard: No undo after top-up confirmation
 - ContractBudgetAdjustCard: No undo after budget adjustment
 - Hiring Wizard: No draft recovery on browser close
 - Forms: No clear cancel/exit paths in several flows
 
 **Quick Win Opportunities:**
+
 1. **Destructive Action Confirmation** — Before irreversible actions
 2. **Undo/Redo Actions** — For edit operations
 3. **Clear Exit Paths** — Always-visible cancel options
@@ -39,6 +42,7 @@
 **Purpose:** Require explicit user confirmation before destructive or irreversible actions.
 
 **Wireframe — Destructive Action Confirmation:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ⚠️  Confirm Action                                         │
@@ -69,6 +73,7 @@ Design Notes:
 ```
 
 **Props:**
+
 ```typescript
 interface ConfirmationDialogProps {
   open: boolean;
@@ -98,6 +103,7 @@ interface ConfirmationDialogProps {
 **Purpose:** Show when a draft exists from a previous session and offer to restore it.
 
 **Wireframe — Draft Recovery Banner:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  📝 You have an unsaved draft from your last session       │
@@ -121,6 +127,7 @@ Design Notes:
 ```
 
 **Props:**
+
 ```typescript
 interface DraftRecoveryBannerProps {
   draftId: string;
@@ -149,6 +156,7 @@ interface DraftRecoveryBannerProps {
 **Purpose:** Show wizard progress with ability to navigate back to any completed step.
 
 **Wireframe — Wizard Breadcrumb Navigation:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                                                             │
@@ -190,6 +198,7 @@ Design Notes:
 ```
 
 **Props:**
+
 ```typescript
 interface WizardBreadcrumbProps {
   steps: WizardStep[];
@@ -213,6 +222,7 @@ interface WizardStep {
 **Purpose:** Provide undo/redo actions for text editing and form modifications.
 
 **Wireframe — Undo/Redo Toolbar:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ┌────────┐  ┌────────┐                                    │
@@ -235,6 +245,7 @@ Design Notes:
 ```
 
 **Props:**
+
 ```typescript
 interface UndoRedoToolbarProps {
   canUndo: boolean;
@@ -253,6 +264,7 @@ interface UndoRedoToolbarProps {
 **Purpose:** Warn user when navigating away from a page with unsaved changes.
 
 **Wireframe — Exit Confirmation Modal:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ⚠️  Unsaved Changes                                       │
@@ -283,6 +295,7 @@ Design Notes:
 ```
 
 **Props:**
+
 ```typescript
 interface ExitConfirmationModalProps {
   open: boolean;
@@ -306,6 +319,7 @@ interface ChangeSummary {
 **Purpose:** Allow users to revert a recent action to its previous state.
 
 **Wireframe — Budget Rollback Button:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                                                             │
@@ -329,6 +343,7 @@ Design Notes:
 ```
 
 **Props:**
+
 ```typescript
 interface RollbackButtonProps {
   actionId: string;
@@ -347,6 +362,7 @@ interface RollbackButtonProps {
 **Purpose:** Always-visible cancel option for forms and modals.
 
 **Wireframe — Form with Cancel Button:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Edit Agent Budget                                          │
@@ -383,15 +399,15 @@ Design Notes:
 
 ## 📋 Implementation Checklist
 
-| Component | Priority | Status |
-|-----------|----------|--------|
-| ConfirmationDialog | HIGH | Pending |
-| DraftRecoveryBanner | HIGH | Pending |
-| WizardBreadcrumb | HIGH | Pending |
-| UndoRedoToolbar | MEDIUM | Pending |
-| ExitConfirmationModal | HIGH | Pending |
-| RollbackButton | MEDIUM | Pending |
-| CancelActionButton | HIGH | Pending |
+| Component             | Priority | Status  |
+| --------------------- | -------- | ------- |
+| ConfirmationDialog    | HIGH     | Pending |
+| DraftRecoveryBanner   | HIGH     | Pending |
+| WizardBreadcrumb      | HIGH     | Pending |
+| UndoRedoToolbar       | MEDIUM   | Pending |
+| ExitConfirmationModal | HIGH     | Pending |
+| RollbackButton        | MEDIUM   | Pending |
+| CancelActionButton    | HIGH     | Pending |
 
 ---
 
@@ -405,13 +421,13 @@ Design Notes:
 
 ## 👥 Team Assignments
 
-| Role | Assignee |
-|------|----------|
-| Design | Pixelia |
-| Implementation | Pixel Architect (pending) |
-| Copy | Vox (already documented in Unsaved-Changes-Warning.md) |
-| Review | Quest Master |
+| Role           | Assignee                                               |
+| -------------- | ------------------------------------------------------ |
+| Design         | Pixelia                                                |
+| Implementation | Pixel Architect (pending)                              |
+| Copy           | Vox (already documented in Unsaved-Changes-Warning.md) |
+| Review         | Quest Master                                           |
 
 ---
 
-*Document generated by Pixelia — WireFrame Wizard* ✨
+_Document generated by Pixelia — WireFrame Wizard_ ✨

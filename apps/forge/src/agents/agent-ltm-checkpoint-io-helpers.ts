@@ -13,15 +13,19 @@ import { createId } from '../utils/id';
  * Bugfix #1098: uses the earliest reflection or observation createdAt,
  * not the summary.updatedAt. This preserves temporal ordering.
  */
-export function computeCheckpointTimestamp(
-  payload: CheckpointedOmCheckpointPackageInput,
-): number {
+export function computeCheckpointTimestamp(payload: CheckpointedOmCheckpointPackageInput): number {
   const allCreatedAts = [
-    ...(payload as any).reflections.map((r: { content: string; generatedAt: number; createdAt?: number }) => r.createdAt ?? r.generatedAt),
+    ...(payload as any).reflections.map(
+      (r: { content: string; generatedAt: number; createdAt?: number }) =>
+        r.createdAt ?? r.generatedAt,
+    ),
     ...(payload as any).observations.map((o: { createdAt?: string | number }) => o.createdAt),
   ];
   if (allCreatedAts.length > 0) {
-    return allCreatedAts.reduce((earliest, ts) => (ts < earliest ? ts : earliest), allCreatedAts[0]);
+    return allCreatedAts.reduce(
+      (earliest, ts) => (ts < earliest ? ts : earliest),
+      allCreatedAts[0],
+    );
   }
   return (payload as any).checkpointSummary.updatedAt;
 }
@@ -30,10 +34,7 @@ export function computeCheckpointTimestamp(
  * Computes the package ID for a checkpoint package.
  * Format: YYYY-MM-DD_NNN (zero-padded sequence)
  */
-export function formatCheckpointPackageId(
-  dayKey: string,
-  existingPackageCount: number,
-): string {
+export function formatCheckpointPackageId(dayKey: string, existingPackageCount: number): string {
   return `${dayKey}_${String(existingPackageCount + 1).padStart(3, '0')}`;
 }
 
@@ -56,7 +57,11 @@ export async function writeCheckpointFiles(
   }
   for (const [index, reflection] of (payload as any).reflections.entries()) {
     await fs.writeFile(
-      path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
+      path.resolve(
+        tempPackagePath,
+        'reflections',
+        `reflection_${String(index + 1).padStart(3, '0')}.md`,
+      ),
       renderReflectionFile(reflection),
     );
   }
@@ -66,7 +71,11 @@ export async function writeCheckpointFiles(
   }
   for (const [index, observation] of (payload as any).observations.entries()) {
     await fs.writeFile(
-      path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
+      path.resolve(
+        tempPackagePath,
+        'observations',
+        `observation_${String(index + 1).padStart(4, '0')}.md`,
+      ),
       renderObservationFile(observation),
     );
   }

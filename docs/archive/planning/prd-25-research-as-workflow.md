@@ -29,6 +29,7 @@
 ## Solução
 
 Refatorar a ferramenta de pesquisa existente para usar o padrão de workflow do Mastra:
+
 - Tool `research` → Workflow `research`
 - Usa mesma infraestrutura de workflow que workflows de deployment, hiring, etc.
 - Agentes invocam research como workflow ao invés de como tool
@@ -52,4 +53,5 @@ Refatorar a ferramenta de pesquisa existente para usar o padrão de workflow do 
 ---
 
 **Histórico do Documento:**
+
 - v1.0 (2026-03-15): Refactor de research tool para workflow pattern

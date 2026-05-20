@@ -19,14 +19,14 @@ export type RuntimeInput<TPayload = unknown> = {
 
 export type StepContextPart =
   | {
-    type: 'text';
-    text: string;
-  }
+      type: 'text';
+      text: string;
+    }
   | {
-    type: 'image';
-    mimeType: string;
-    bytes: Uint8Array;
-  };
+      type: 'image';
+      mimeType: string;
+      bytes: Uint8Array;
+    };
 
 export type StepContextEntry = {
   id: string;
@@ -74,20 +74,23 @@ export type StepModelRequest = {
   stepNumber: number;
   context: StepContextEntry[];
   actions: StepActionDescriptor[];
-  providerOptions?: Record<string, {
-    [key: string]: StepModelJsonValue | undefined;
-  }>;
+  providerOptions?: Record<
+    string,
+    {
+      [key: string]: StepModelJsonValue | undefined;
+    }
+  >;
 };
 
 export type StepModelStreamEvent =
   | {
-    type: 'segment-delta';
-    segment: StepContentSegment;
-  }
+      type: 'segment-delta';
+      segment: StepContentSegment;
+    }
   | {
-    type: 'action-request';
-    actionRequest: ActionRequest;
-  };
+      type: 'action-request';
+      actionRequest: ActionRequest;
+    };
 
 export type StepModelResponse = {
   segments: StepContentSegment[];
@@ -140,39 +143,39 @@ export type StepExecutionResult = {
 
 export type RuntimeStepStreamEvent =
   | {
-    type: 'segment-delta';
-    runtimeId: string;
-    stepId: string;
-    stepNumber: number;
-    segment: StepContentSegment;
-  }
+      type: 'segment-delta';
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      segment: StepContentSegment;
+    }
   | {
-    type: 'action-request';
-    runtimeId: string;
-    stepId: string;
-    stepNumber: number;
-    actionRequest: ActionRequest;
-  }
+      type: 'action-request';
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      actionRequest: ActionRequest;
+    }
   | {
-    type: 'action-results';
-    runtimeId: string;
-    stepId: string;
-    stepNumber: number;
-    actionResults: ActionResult[];
-  }
+      type: 'action-results';
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      actionResults: ActionResult[];
+    }
   | {
-    type: 'step-complete';
-    runtimeId: string;
-    record: StepRecord;
-    snapshot: RuntimeSnapshot;
-  }
+      type: 'step-complete';
+      runtimeId: string;
+      record: StepRecord;
+      snapshot: RuntimeSnapshot;
+    }
   | {
-    type: 'error';
-    runtimeId: string;
-    stepId: string;
-    stepNumber: number;
-    error: unknown;
-  };
+      type: 'error';
+      runtimeId: string;
+      stepId: string;
+      stepNumber: number;
+      error: unknown;
+    };
 
 export type RuntimeStepStream = {
   events: AsyncIterable<RuntimeStepStreamEvent>;

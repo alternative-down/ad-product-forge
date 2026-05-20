@@ -25,6 +25,7 @@ Fornecer templates de aplicação pré-construídos para que agentes façam scaf
 ## Declaração do Problema
 
 Atualmente, agentes começando novas aplicações devem:
+
 - Configurar autenticação manualmente
 - Configurar conexões de banco de dados
 - Criar código boilerplate
@@ -33,6 +34,7 @@ Atualmente, agentes começando novas aplicações devem:
 Isto é consumidor de tempo e repetitivo.
 
 **Cenários Alvo:**
+
 1. Agente executa: `scaffold create-app --template rest-api --name my-api`
 2. Agente obtém REST API pronto-para-customizar com auth e banco de dados
 3. Agente consegue fazer deploy imediatamente
@@ -42,6 +44,7 @@ Isto é consumidor de tempo e repetitivo.
 ## Características Principais
 
 ### 1. Gerenciamento de Template
+
 ```typescript
 // Listar templates disponíveis
 listTemplates(): Promise<Array<{
@@ -65,6 +68,7 @@ createApplication(input: {
 ```
 
 ### 2. Interface de CLI
+
 ```bash
 # Listar templates
 agent-scaffold list
@@ -84,6 +88,7 @@ agent-scaffold configure --app-path ./apps/my-api
 ## Templates Core
 
 ### Template 1: Backend de REST API
+
 - **Stack:** Node.js/Express, TypeScript, SQLite
 - **Inclui:**
   - Rotas CRUD básicas
@@ -92,6 +97,7 @@ agent-scaffold configure --app-path ./apps/my-api
   - Template .env
 
 ### Template 2: Aplicação Web Full-Stack
+
 - **Stack:** React, Node.js, SQLite, TypeScript
 - **Inclui:**
   - Login/signup básico

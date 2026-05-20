@@ -105,9 +105,11 @@ describe('LibsqlConversationStore', () => {
         createdAt: '2026-04-21T00:00:00.000Z',
         updatedAt: '2026-04-21T00:00:02.000Z',
       });
-      await expect(store.listMessages({
-        threadId: 'thread-1',
-      })).resolves.toEqual([
+      await expect(
+        store.listMessages({
+          threadId: 'thread-1',
+        }),
+      ).resolves.toEqual([
         {
           id: 'message-1',
           threadId: 'thread-1',
@@ -161,10 +163,12 @@ describe('LibsqlConversationStore', () => {
         },
         updatedAt: '2026-04-21T00:00:03.000Z',
       });
-      await expect(store.read({
-        threadId: 'thread-1',
-        resourceId: 'thread-1',
-      })).resolves.toEqual({
+      await expect(
+        store.read({
+          threadId: 'thread-1',
+          resourceId: 'thread-1',
+        }),
+      ).resolves.toEqual({
         threadId: 'thread-1',
         resourceId: 'thread-1',
         workingMemory: '{"identity":{"roleCore":"test"}}',
@@ -212,27 +216,23 @@ describe('LibsqlConversationStore', () => {
         createdAt,
       });
 
-      await expect(store.listMessages({
-        threadId: 'thread-1',
-      })).resolves.toMatchObject([
-        { id: 'message-1' },
-        { id: 'message-2' },
-        { id: 'message-3' },
-      ]);
-      await expect(store.listMessages({
-        threadId: 'thread-1',
-        afterMessageId: 'message-1',
-      })).resolves.toMatchObject([
-        { id: 'message-2' },
-        { id: 'message-3' },
-      ]);
-      await expect(store.listMessages({
-        threadId: 'thread-1',
-        beforeMessageId: 'message-3',
-      })).resolves.toMatchObject([
-        { id: 'message-1' },
-        { id: 'message-2' },
-      ]);
+      await expect(
+        store.listMessages({
+          threadId: 'thread-1',
+        }),
+      ).resolves.toMatchObject([{ id: 'message-1' }, { id: 'message-2' }, { id: 'message-3' }]);
+      await expect(
+        store.listMessages({
+          threadId: 'thread-1',
+          afterMessageId: 'message-1',
+        }),
+      ).resolves.toMatchObject([{ id: 'message-2' }, { id: 'message-3' }]);
+      await expect(
+        store.listMessages({
+          threadId: 'thread-1',
+          beforeMessageId: 'message-3',
+        }),
+      ).resolves.toMatchObject([{ id: 'message-1' }, { id: 'message-2' }]);
     } finally {
       await client.close();
     }
@@ -288,25 +288,28 @@ describe('LibsqlConversationStore', () => {
         updatedAt: '2026-04-21T00:00:04.000Z',
       });
 
-      await expect(store.listMessages({
-        threadId: 'thread-1',
-        order: 'desc',
-        limit: 2,
-      })).resolves.toMatchObject([
-        { id: 'message-2' },
-        { id: 'message-1' },
-      ]);
+      await expect(
+        store.listMessages({
+          threadId: 'thread-1',
+          order: 'desc',
+          limit: 2,
+        }),
+      ).resolves.toMatchObject([{ id: 'message-2' }, { id: 'message-1' }]);
 
       await store.clearThread('thread-1');
 
-      await expect(store.listMessages({
-        threadId: 'thread-1',
-      })).resolves.toEqual([]);
+      await expect(
+        store.listMessages({
+          threadId: 'thread-1',
+        }),
+      ).resolves.toEqual([]);
       await expect(store.load('thread-1')).resolves.toBeNull();
-      await expect(store.read({
-        threadId: 'thread-1',
-        resourceId: 'thread-1',
-      })).resolves.toBeNull();
+      await expect(
+        store.read({
+          threadId: 'thread-1',
+          resourceId: 'thread-1',
+        }),
+      ).resolves.toBeNull();
       await expect(store.getThread('thread-1')).resolves.toBeNull();
     } finally {
       await client.close();
@@ -387,11 +390,11 @@ describe('LibsqlConversationStore', () => {
         replacedByMessageId: 'checkpoint-1',
       });
 
-      await expect(store.listOperationalMemoryMessages({
-        threadId: 'thread-1',
-      })).resolves.toMatchObject([
-        { id: 'checkpoint-1' },
-      ]);
+      await expect(
+        store.listOperationalMemoryMessages({
+          threadId: 'thread-1',
+        }),
+      ).resolves.toMatchObject([{ id: 'checkpoint-1' }]);
     } finally {
       await client.close();
     }
@@ -493,11 +496,11 @@ describe('LibsqlConversationStore', () => {
       // Latest null-terminal checkpoint-summary is checkpoint-b (rowid=10)
       // SQL seed: rowid < 10 includes raw-a through ref-b
       // Chain walks: raw-a→obs-a→ref-a→checkpoint-a→ref-b→checkpoint-b (null terminal)
-      await expect(store.listOperationalMemoryMessages({
-        threadId: 'thread-2',
-      })).resolves.toMatchObject([
-        { id: 'checkpoint-b' },
-      ]);
+      await expect(
+        store.listOperationalMemoryMessages({
+          threadId: 'thread-2',
+        }),
+      ).resolves.toMatchObject([{ id: 'checkpoint-b' }]);
     } finally {
       await client.close();
     }

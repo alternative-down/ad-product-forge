@@ -6,7 +6,12 @@ function _validateCronExpression(expression: string): boolean {
     parseExpression(expression, { utc: true });
     return true;
   } catch (error) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'error', message: 'Cron expression validation failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({
+      scope: 'schedule-helpers',
+      level: 'error',
+      message: 'Cron expression validation failed',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
     return false;
   }
 }
@@ -15,7 +20,12 @@ export function parseScheduleDate(value: string) {
   const timestamp = Date.parse(value);
 
   if (Number.isNaN(timestamp)) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: invalid date', context: { scheduledDate: value } });
+    forgeDebug({
+      scope: 'schedule-helpers',
+      level: 'warn',
+      message: 'parseScheduledDate: invalid date',
+      context: { scheduledDate: value },
+    });
     throw new Error(`Invalid scheduledDate: ${value}`);
   }
 
@@ -28,12 +38,20 @@ export function validateScheduleShape(input: {
   scheduledDate?: number;
 }) {
   if (input.scheduleType === 'cron' && (input.cronExpression ?? '') === '') {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduleInput: cronExpression required for cron' });
+    forgeDebug({
+      scope: 'schedule-helpers',
+      level: 'warn',
+      message: 'parseScheduleInput: cronExpression required for cron',
+    });
     throw new Error('cronExpression is required when scheduleType is cron');
   }
 
   if (input.scheduleType === 'date' && (input.scheduledDate ?? 0) === 0) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduleInput: scheduledDate required for date' });
+    forgeDebug({
+      scope: 'schedule-helpers',
+      level: 'warn',
+      message: 'parseScheduleInput: scheduledDate required for date',
+    });
     throw new Error('scheduledDate is required when scheduleType is date');
   }
 }
@@ -44,7 +62,12 @@ export function assertFutureScheduledDate(scheduleType: 'cron' | 'date', schedul
   }
 
   if ((scheduledDate as number) <= Date.now()) {
-    forgeDebug({ scope: 'schedule-helpers', level: 'warn', message: 'parseScheduledDate: must be in future', context: { scheduledDate } });
+    forgeDebug({
+      scope: 'schedule-helpers',
+      level: 'warn',
+      message: 'parseScheduledDate: must be in future',
+      context: { scheduledDate },
+    });
     throw new Error('scheduledDate must be in the future');
   }
 }
@@ -180,12 +203,21 @@ export function toToolOutput(scheduleRecord: {
     description: scheduleRecord.description ?? undefined,
     scheduleType: scheduleRecord.scheduleType,
     cronExpression: scheduleRecord.cronExpression,
-    scheduledDate: scheduleRecord.scheduledDate !== undefined ? new Date(scheduleRecord.scheduledDate).toISOString() : undefined,
+    scheduledDate:
+      scheduleRecord.scheduledDate !== undefined
+        ? new Date(scheduleRecord.scheduledDate).toISOString()
+        : undefined,
     timezone: scheduleRecord.timezone,
     content: scheduleRecord.content,
     wakeWhenRunning: scheduleRecord.wakeWhenRunning,
     isActive: scheduleRecord.isActive,
-    lastTriggeredAt: scheduleRecord.lastTriggeredAt !== undefined ? new Date(scheduleRecord.lastTriggeredAt).toISOString() : undefined,
-    nextTriggerAt: scheduleRecord.nextTriggerAt !== undefined ? new Date(scheduleRecord.nextTriggerAt).toISOString() : undefined,
+    lastTriggeredAt:
+      scheduleRecord.lastTriggeredAt !== undefined
+        ? new Date(scheduleRecord.lastTriggeredAt).toISOString()
+        : undefined,
+    nextTriggerAt:
+      scheduleRecord.nextTriggerAt !== undefined
+        ? new Date(scheduleRecord.nextTriggerAt).toISOString()
+        : undefined,
   };
 }

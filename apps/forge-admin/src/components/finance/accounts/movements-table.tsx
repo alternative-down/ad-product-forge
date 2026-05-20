@@ -1,5 +1,17 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { humanizeMovementStatus, humanizeMovementType, formatDateTime, formatUsdSigned } from './finance-accounts-format';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  humanizeMovementStatus,
+  humanizeMovementType,
+  formatDateTime,
+  formatUsdSigned,
+} from './finance-accounts-format';
 
 export function MovementsTable(input: {
   movements: Array<{
@@ -28,7 +40,9 @@ export function MovementsTable(input: {
           {input.movements.map((movement) => (
             <TableRow key={movement.id}>
               <TableCell className="px-4 py-3">{humanizeMovementType(movement.type)}</TableCell>
-              <TableCell className="px-4 py-3">{formatUsdSigned(movement.amountUsd, movement.direction)}</TableCell>
+              <TableCell className="px-4 py-3">
+                {formatUsdSigned(movement.amountUsd, movement.direction)}
+              </TableCell>
               <TableCell className="px-4 py-3">
                 {formatDateTime(movement.effectiveAt ?? movement.dueAt ?? movement.createdAt)}
               </TableCell>

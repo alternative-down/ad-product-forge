@@ -83,11 +83,13 @@ describe('ensureRuntimeSessionThread', () => {
   it('does not call upsertThread if getThread throws', async () => {
     mockGetThread.mockRejectedValue(new Error('store error'));
 
-    await expect(ensureRuntimeSessionThread({
-      store: makeStore(),
-      threadId: 'thread-1',
-      agentId: 'agent-42',
-    })).rejects.toThrow('store error');
+    await expect(
+      ensureRuntimeSessionThread({
+        store: makeStore(),
+        threadId: 'thread-1',
+        agentId: 'agent-42',
+      }),
+    ).rejects.toThrow('store error');
 
     expect(mockUpsertThread).not.toHaveBeenCalled();
   });
@@ -192,15 +194,19 @@ describe('appendRuntimeSessionModelMessages', () => {
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'tool',
-        content: [{
-          type: 'tool-result' as const,
-          toolCallId: 'call-1',
-          toolName: 'get_weather',
-          output: { temp: 22 },
-        }],
-      }],
+      messages: [
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result' as const,
+              toolCallId: 'call-1',
+              toolName: 'get_weather',
+              output: { temp: 22 },
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -229,15 +235,16 @@ describe('appendRuntimeSessionModelMessages', () => {
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'user',
-        content: [],
-      }],
+      messages: [
+        {
+          role: 'user',
+          content: [],
+        },
+      ],
     });
 
     expect(mockAppendMessage).not.toHaveBeenCalled();
   });
-
 
   it('appends message with tool-call part', async () => {
     mockAppendMessage.mockResolvedValue(undefined);
@@ -245,15 +252,19 @@ describe('appendRuntimeSessionModelMessages', () => {
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [{
-          type: 'tool-call' as const,
-          toolCallId: 'call-1',
-          toolName: 'send_message',
-          input: { target: 'user-1', text: 'hello' },
-        }],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call' as const,
+              toolCallId: 'call-1',
+              toolName: 'send_message',
+              input: { target: 'user-1', text: 'hello' },
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -269,14 +280,18 @@ describe('appendRuntimeSessionModelMessages', () => {
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [{
-          type: 'reasoning' as const,
-          text: 'thinking about this',
-          providerOptions: { anthropic: { signature: 'sig-abc' } },
-        }],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'reasoning' as const,
+              text: 'thinking about this',
+              providerOptions: { anthropic: { signature: 'sig-abc' } },
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -302,15 +317,19 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'tool',
-        content: [{
-          type: 'tool-result' as const,
-          toolCallId: 'call-1',
-          toolName: 'fetch',
-          output: { type: 'json' as const, value: { key: 'secret' } },
-        }],
-      }],
+      messages: [
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result' as const,
+              toolCallId: 'call-1',
+              toolName: 'fetch',
+              output: { type: 'json' as const, value: { key: 'secret' } },
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -327,15 +346,19 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [{
-          type: 'tool-call' as const,
-          toolCallId: 'call-1',
-          toolName: 'ping',
-          input: null,
-        }],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call' as const,
+              toolCallId: 'call-1',
+              toolName: 'ping',
+              input: null,
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -352,15 +375,19 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [{
-          type: 'tool-call' as const,
-          toolCallId: 'call-1',
-          toolName: 'batch',
-          input: ['item1', 'item2'],
-        }],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call' as const,
+              toolCallId: 'call-1',
+              toolName: 'batch',
+              input: ['item1', 'item2'],
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -377,14 +404,18 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [{
-          type: 'reasoning' as const,
-          text: 'thinking',
-          providerMetadata: { anthropic: { redactedData: 'rd-xyz' } },
-        }],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'reasoning' as const,
+              text: 'thinking',
+              providerMetadata: { anthropic: { redactedData: 'rd-xyz' } },
+            },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -402,14 +433,16 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'tool',
-        content: [
-          { type: 'tool-result' as const, toolCallId: 'call-1', toolName: 'a', output: 'x' },
-          { type: 'text' as const, text: 'not a tool-result' }, // filtered out
-          { type: 'tool-result' as const, toolCallId: 'call-2', toolName: 'b', output: 'y' },
-        ],
-      }],
+      messages: [
+        {
+          role: 'tool',
+          content: [
+            { type: 'tool-result' as const, toolCallId: 'call-1', toolName: 'a', output: 'x' },
+            { type: 'text' as const, text: 'not a tool-result' }, // filtered out
+            { type: 'tool-result' as const, toolCallId: 'call-2', toolName: 'b', output: 'y' },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -426,10 +459,12 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'tool',
-        content: 'not an array' as never,
-      }],
+      messages: [
+        {
+          role: 'tool',
+          content: 'not an array' as never,
+        },
+      ],
     });
 
     expect(mockAppendMessage).not.toHaveBeenCalled();
@@ -441,13 +476,15 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [
-          { type: 'tool-call' as const, toolCallId: 'call-1', toolName: 'a', input: {} },
-          { type: 'tool-call' as const, toolCallId: 'call-2', toolName: 'b', input: {} },
-        ],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'tool-call' as const, toolCallId: 'call-1', toolName: 'a', input: {} },
+            { type: 'tool-call' as const, toolCallId: 'call-2', toolName: 'b', input: {} },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();
@@ -462,15 +499,17 @@ describe('toConversationMessage edge cases (via appendRuntimeSessionModelMessage
     await appendRuntimeSessionModelMessages({
       store: makeStore(),
       threadId: 'thread-1',
-      messages: [{
-        role: 'assistant',
-        content: [
-          { type: 'text' as const, text: 'Hello' },
-          { type: 'reasoning' as const, text: 'thinking' },
-          { type: 'tool-call' as const, toolCallId: 'call-1', toolName: 'ping', input: null },
-          { type: 'text' as const, text: 'World' },
-        ],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text' as const, text: 'Hello' },
+            { type: 'reasoning' as const, text: 'thinking' },
+            { type: 'tool-call' as const, toolCallId: 'call-1', toolName: 'ping', input: null },
+            { type: 'text' as const, text: 'World' },
+          ],
+        },
+      ],
     });
 
     expect(mockAppendMessage).toHaveBeenCalledOnce();

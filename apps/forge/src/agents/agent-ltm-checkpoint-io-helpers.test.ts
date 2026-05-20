@@ -45,7 +45,10 @@ const fsModule = _fsModule as any;
 describe('computeCheckpointTimestamp', () => {
   it('returns earliest reflection createdAt when reflections exist', () => {
     const payload = {
-      reflections: [{ createdAt: 1700000000000, text: 'a' }, { createdAt: 1710000000000, text: 'b' }],
+      reflections: [
+        { createdAt: 1700000000000, text: 'a' },
+        { createdAt: 1710000000000, text: 'b' },
+      ],
       observations: [],
       checkpointSummary: { updatedAt: 1720000000000, text: '' } as any,
       fromGeneration: 0,
@@ -166,14 +169,18 @@ describe('writeCheckpointFiles', () => {
 
 describe('buildCheckpointPackageManifest', () => {
   it('sets checkpointGeneration from payload.toGeneration', () => {
-    const manifest = buildCheckpointPackageManifest('2025-01-15_001', {
-      reflections: [],
-      observations: [],
-      checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
-      fromGeneration: 10,
-      toGeneration: 20,
-      threadId: 't1',
-    } as any, 1700000000000);
+    const manifest = buildCheckpointPackageManifest(
+      '2025-01-15_001',
+      {
+        reflections: [],
+        observations: [],
+        checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
+        fromGeneration: 10,
+        toGeneration: 20,
+        threadId: 't1',
+      } as any,
+      1700000000000,
+    );
 
     expect(manifest.checkpointGeneration).toBe(20);
     expect(manifest.fromGeneration).toBe(10);
@@ -181,28 +188,39 @@ describe('buildCheckpointPackageManifest', () => {
   });
 
   it('uses checkpointTimestamp for createdAt and checkpointSummaryUpdatedAt', () => {
-    const manifest = buildCheckpointPackageManifest('2025-01-15_001', {
-      reflections: [{ createdAt: 1680000000000, text: 'r' }],
-      observations: [],
-      checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
-      fromGeneration: 0,
-      toGeneration: 1,
-      threadId: 't1',
-    } as any, 1680000000000);
+    const manifest = buildCheckpointPackageManifest(
+      '2025-01-15_001',
+      {
+        reflections: [{ createdAt: 1680000000000, text: 'r' }],
+        observations: [],
+        checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
+        fromGeneration: 0,
+        toGeneration: 1,
+        threadId: 't1',
+      } as any,
+      1680000000000,
+    );
 
     expect(manifest.createdAt).toBe(1680000000000);
     expect(manifest.checkpointSummaryUpdatedAt).toBe(1680000000000);
   });
 
   it('counts reflections and observations', () => {
-    const manifest = buildCheckpointPackageManifest('2025-01-15_001', {
-      reflections: [{ createdAt: 1680000000000, text: 'a' }, { createdAt: 1690000000000, text: 'b' }],
-      observations: [{ createdAt: 1670000000000, text: 'o' }],
-      checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
-      fromGeneration: 0,
-      toGeneration: 1,
-      threadId: 't1',
-    } as any, 1680000000000);
+    const manifest = buildCheckpointPackageManifest(
+      '2025-01-15_001',
+      {
+        reflections: [
+          { createdAt: 1680000000000, text: 'a' },
+          { createdAt: 1690000000000, text: 'b' },
+        ],
+        observations: [{ createdAt: 1670000000000, text: 'o' }],
+        checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
+        fromGeneration: 0,
+        toGeneration: 1,
+        threadId: 't1',
+      } as any,
+      1680000000000,
+    );
 
     expect(manifest.reflectionCount).toBe(2);
     expect(manifest.observationCount).toBe(1);
@@ -213,8 +231,14 @@ describe('commitCheckpointPackage', () => {
   it('removes old path then renames temp to final', async () => {
     await commitCheckpointPackage('/checkpoints/pkg', '/checkpoints/pkg.some-id.tmp');
 
-    expect(fsModule.default.rm).toHaveBeenCalledWith('/checkpoints/pkg', { recursive: true, force: true });
-    expect(fsModule.default.rename).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', '/checkpoints/pkg');
+    expect(fsModule.default.rm).toHaveBeenCalledWith('/checkpoints/pkg', {
+      recursive: true,
+      force: true,
+    });
+    expect(fsModule.default.rename).toHaveBeenCalledWith(
+      '/checkpoints/pkg.some-id.tmp',
+      '/checkpoints/pkg',
+    );
   });
 });
 
@@ -222,7 +246,10 @@ describe('cleanupTempPackage', () => {
   it('removes the temp directory', async () => {
     await cleanupTempPackage('/checkpoints/pkg.some-id.tmp');
 
-    expect(fsModule.default.rm).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', { recursive: true, force: true });
+    expect(fsModule.default.rm).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', {
+      recursive: true,
+      force: true,
+    });
   });
 });
 
@@ -230,8 +257,13 @@ describe('prepareTempPackageDirectory', () => {
   it('removes existing directory then creates fresh', async () => {
     await prepareTempPackageDirectory('/checkpoints/pkg.some-id.tmp');
 
-    expect(fsModule.default.rm).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', { recursive: true, force: true });
-    expect(fsModule.default.mkdir).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', { recursive: true });
+    expect(fsModule.default.rm).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', {
+      recursive: true,
+      force: true,
+    });
+    expect(fsModule.default.mkdir).toHaveBeenCalledWith('/checkpoints/pkg.some-id.tmp', {
+      recursive: true,
+    });
   });
 });
 

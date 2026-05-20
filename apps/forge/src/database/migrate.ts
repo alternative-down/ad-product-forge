@@ -12,21 +12,64 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
   const databasePath = getAppDatabasePath();
 
   try {
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Running pending migrations for application database' });
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Application database path', context: { databasePath } });
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Working directory', context: { cwd: process.cwd() } });
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Migrations folder', context: { migrationsFolder } });
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Applied rows before migrate', context: { appliedRows: await getAppliedMigrationRows(db) } });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Running pending migrations for application database',
+    });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Application database path',
+      context: { databasePath },
+    });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Working directory',
+      context: { cwd: process.cwd() },
+    });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Migrations folder',
+      context: { migrationsFolder },
+    });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Applied rows before migrate',
+      context: { appliedRows: await getAppliedMigrationRows(db) },
+    });
 
     await migrate(db, {
       migrationsFolder,
     });
 
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Applied rows after migrate', context: { appliedRows: await getAppliedMigrationRows(db) } });
-    forgeDebug({ scope: 'migrations', level: 'info', message: 'Migrations completed successfully' });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Applied rows after migrate',
+      context: { appliedRows: await getAppliedMigrationRows(db) },
+    });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'info',
+      message: 'Migrations completed successfully',
+    });
   } catch (error) {
-    forgeDebug({ scope: 'migrations', level: 'error', message: 'Failed to run migrations', context: { error: error instanceof Error ? error.message : String(error) } });
-    forgeDebug({ scope: 'migrations', level: 'error', message: 'Applied rows at failure', context: { appliedRows: await getAppliedMigrationRows(db) } });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'error',
+      message: 'Failed to run migrations',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'error',
+      message: 'Applied rows at failure',
+      context: { appliedRows: await getAppliedMigrationRows(db) },
+    });
     throw error;
   }
 }
@@ -47,7 +90,12 @@ async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown
       limit 10
     `);
   } catch (error) {
-    forgeDebug({ scope: 'migrations', level: 'error', message: 'getAppliedMigrationRows failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({
+      scope: 'migrations',
+      level: 'error',
+      message: 'getAppliedMigrationRows failed',
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
     return {
       error: error instanceof Error ? error.message : String(error),
     };

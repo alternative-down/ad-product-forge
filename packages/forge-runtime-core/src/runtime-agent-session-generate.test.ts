@@ -26,33 +26,36 @@ function summarizeModelMessage(message: ModelMessage) {
     };
   }
 
-  return message.content.reduce((total, part) => {
-    if ('text' in part && typeof part.text === 'string') {
-      total.textChars += part.text.length;
+  return message.content.reduce(
+    (total, part) => {
+      if ('text' in part && typeof part.text === 'string') {
+        total.textChars += part.text.length;
+        return total;
+      }
+
+      if ('input' in part) {
+        total.toolCallChars += JSON.stringify(part.input).length;
+        return total;
+      }
+
+      if ('output' in part) {
+        total.toolResultChars += JSON.stringify(part.output).length;
+        return total;
+      }
+
+      if ('image' in part) {
+        total.imageCount += 1;
+      }
+
       return total;
-    }
-
-    if ('input' in part) {
-      total.toolCallChars += JSON.stringify(part.input).length;
-      return total;
-    }
-
-    if ('output' in part) {
-      total.toolResultChars += JSON.stringify(part.output).length;
-      return total;
-    }
-
-    if ('image' in part) {
-      total.imageCount += 1;
-    }
-
-    return total;
-  }, {
-    textChars: 0,
-    toolCallChars: 0,
-    toolResultChars: 0,
-    imageCount: 0,
-  });
+    },
+    {
+      textChars: 0,
+      toolCallChars: 0,
+      toolResultChars: 0,
+      imageCount: 0,
+    },
+  );
 }
 
 function summarizeGenerateRequest(input: {
@@ -65,22 +68,25 @@ function summarizeGenerateRequest(input: {
   messages: ModelMessage[];
   actions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
 }) {
-  const messageBreakdown = input.messages.reduce((total, message) => {
-    const stats = summarizeModelMessage(message);
+  const messageBreakdown = input.messages.reduce(
+    (total, message) => {
+      const stats = summarizeModelMessage(message);
 
-    total.textChars += stats.textChars;
-    total.toolCallChars += stats.toolCallChars;
-    total.toolResultChars += stats.toolResultChars;
-    total.imageCount += stats.imageCount;
-    total.roles[message.role] = (total.roles[message.role] ?? 0) + 1;
-    return total;
-  }, {
-    textChars: 0,
-    toolCallChars: 0,
-    toolResultChars: 0,
-    imageCount: 0,
-    roles: {} as Record<string, number>,
-  });
+      total.textChars += stats.textChars;
+      total.toolCallChars += stats.toolCallChars;
+      total.toolResultChars += stats.toolResultChars;
+      total.imageCount += stats.imageCount;
+      total.roles[message.role] = (total.roles[message.role] ?? 0) + 1;
+      return total;
+    },
+    {
+      textChars: 0,
+      toolCallChars: 0,
+      toolResultChars: 0,
+      imageCount: 0,
+      roles: {} as Record<string, number>,
+    },
+  );
 
   return {
     systemChars: input.system?.length ?? 0,
@@ -90,15 +96,24 @@ function summarizeGenerateRequest(input: {
       agentContext: input.systemSegments.agentContext.length,
     },
     messageCount: input.messages.length,
-    messageChars: messageBreakdown.textChars + messageBreakdown.toolCallChars + messageBreakdown.toolResultChars,
+    messageChars:
+      messageBreakdown.textChars +
+      messageBreakdown.toolCallChars +
+      messageBreakdown.toolResultChars,
     messageTextChars: messageBreakdown.textChars,
     messageToolCallChars: messageBreakdown.toolCallChars,
     messageToolResultChars: messageBreakdown.toolResultChars,
     messageImageCount: messageBreakdown.imageCount,
     messageRoles: messageBreakdown.roles,
     toolCount: input.actions.length,
-    toolDescriptionChars: input.actions.reduce((total, action) => total + (action.description?.length ?? 0), 0),
-    toolSchemaChars: input.actions.reduce((total, action) => total + JSON.stringify(action.inputSchema).length, 0),
+    toolDescriptionChars: input.actions.reduce(
+      (total, action) => total + (action.description?.length ?? 0),
+      0,
+    ),
+    toolSchemaChars: input.actions.reduce(
+      (total, action) => total + JSON.stringify(action.inputSchema).length,
+      0,
+    ),
   };
 }
 
@@ -132,12 +147,14 @@ describe('summarizeModelMessage', () => {
   it('counts tool-call input parts', () => {
     const result = summarizeModelMessage({
       role: 'assistant',
-      content: [{
-        type: 'tool-call' as const,
-        toolCallId: 'abc',
-        toolName: 'test-tool',
-        input: { foo: 'bar', nested: { key: 'value' } },
-      }],
+      content: [
+        {
+          type: 'tool-call' as const,
+          toolCallId: 'abc',
+          toolName: 'test-tool',
+          input: { foo: 'bar', nested: { key: 'value' } },
+        },
+      ],
     });
     expect(result.toolCallChars).toBeGreaterThan(0);
     expect(result.textChars).toBe(0);
@@ -147,12 +164,14 @@ describe('summarizeModelMessage', () => {
   it('counts tool-result output parts', () => {
     const result = summarizeModelMessage({
       role: 'tool',
-      content: [{
-        type: 'tool-result' as const,
-        toolCallId: 'abc',
-        toolName: 'test-tool',
-        output: { success: true, data: [1, 2, 3] },
-      }],
+      content: [
+        {
+          type: 'tool-result' as const,
+          toolCallId: 'abc',
+          toolName: 'test-tool',
+          output: { success: true, data: [1, 2, 3] },
+        },
+      ],
     });
     expect(result.toolResultChars).toBeGreaterThan(0);
   });
@@ -160,10 +179,12 @@ describe('summarizeModelMessage', () => {
   it('counts image parts', () => {
     const result = summarizeModelMessage({
       role: 'user',
-      content: [{
-        type: 'image' as const,
-        image: new Uint8Array([0x00]),
-      }],
+      content: [
+        {
+          type: 'image' as const,
+          image: new Uint8Array([0x00]),
+        },
+      ],
     });
     expect(result.imageCount).toBe(1);
   });
@@ -248,15 +269,19 @@ describe('summarizeGenerateRequest', () => {
   it('sums tool call and result chars from message content', () => {
     const result = summarizeGenerateRequest({
       systemSegments: { baseSystem: '', workingMemory: '', agentContext: '' },
-      messages: [{
-        role: 'assistant',
-        content: [{
-          type: 'tool-call' as const,
-          toolCallId: 'x',
-          toolName: 't',
-          input: { k: 'v' },
-        }],
-      }],
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call' as const,
+              toolCallId: 'x',
+              toolName: 't',
+              input: { k: 'v' },
+            },
+          ],
+        },
+      ],
       actions: [],
     });
     expect(result.messageToolCallChars).toBeGreaterThan(0);
@@ -322,14 +347,17 @@ describe('summarizeGenerateRequest', () => {
 // Helper re-implementations — appendGenerateDiagnostics
 // ---------------------------------------------------------------------------
 
-function appendGenerateDiagnostics(error: unknown, diagnostics: {
-  systemChars: number;
-  messageCount: number;
-  messageChars: number;
-  toolCount: number;
-  toolDescriptionChars: number;
-  toolSchemaChars: number;
-}) {
+function appendGenerateDiagnostics(
+  error: unknown,
+  diagnostics: {
+    systemChars: number;
+    messageCount: number;
+    messageChars: number;
+    toolCount: number;
+    toolDescriptionChars: number;
+    toolSchemaChars: number;
+  },
+) {
   const diagnosticsText = `generateDiagnostics: ${JSON.stringify(diagnostics)}`;
 
   if (error instanceof Error) {
@@ -376,8 +404,12 @@ describe('appendGenerateDiagnostics', () => {
 
   it('returns a new Error when input is null', () => {
     const result = appendGenerateDiagnostics(null as unknown, {
-      systemChars: 0, messageCount: 0, messageChars: 0,
-      toolCount: 0, toolDescriptionChars: 0, toolSchemaChars: 0,
+      systemChars: 0,
+      messageCount: 0,
+      messageChars: 0,
+      toolCount: 0,
+      toolDescriptionChars: 0,
+      toolSchemaChars: 0,
     });
     expect(result.message).toContain('null');
     expect(result.message).toContain('generateDiagnostics:');
@@ -385,8 +417,12 @@ describe('appendGenerateDiagnostics', () => {
 
   it('returns a new Error when input is undefined', () => {
     const result = appendGenerateDiagnostics(undefined as unknown, {
-      systemChars: 0, messageCount: 0, messageChars: 0,
-      toolCount: 0, toolDescriptionChars: 0, toolSchemaChars: 0,
+      systemChars: 0,
+      messageCount: 0,
+      messageChars: 0,
+      toolCount: 0,
+      toolDescriptionChars: 0,
+      toolSchemaChars: 0,
     });
     expect(result.message).toContain('undefined');
     expect(result.message).toContain('generateDiagnostics:');
@@ -394,16 +430,24 @@ describe('appendGenerateDiagnostics', () => {
 
   it('returns a new Error for a number input', () => {
     const result = appendGenerateDiagnostics(42 as unknown, {
-      systemChars: 0, messageCount: 0, messageChars: 0,
-      toolCount: 0, toolDescriptionChars: 0, toolSchemaChars: 0,
+      systemChars: 0,
+      messageCount: 0,
+      messageChars: 0,
+      toolCount: 0,
+      toolDescriptionChars: 0,
+      toolSchemaChars: 0,
     });
     expect(result.message).toContain('42');
   });
 
   it('returns a new Error for an object input', () => {
     const result = appendGenerateDiagnostics({ reason: 'oops' } as unknown, {
-      systemChars: 0, messageCount: 0, messageChars: 0,
-      toolCount: 0, toolDescriptionChars: 0, toolSchemaChars: 0,
+      systemChars: 0,
+      messageCount: 0,
+      messageChars: 0,
+      toolCount: 0,
+      toolDescriptionChars: 0,
+      toolSchemaChars: 0,
     });
     expect(result.message).toContain('[object Object]');
     expect(result.message).toContain('generateDiagnostics:');
@@ -427,14 +471,11 @@ function buildRuntimeSessionSystemPrompt(input: {
   };
 
   return {
-    text: [
-      segments.baseSystem,
-      segments.workingMemory,
-      segments.agentContext,
-    ]
-      .filter((value): value is string => Boolean(value))
-      .join('\n\n')
-      .trim() || undefined,
+    text:
+      [segments.baseSystem, segments.workingMemory, segments.agentContext]
+        .filter((value): value is string => Boolean(value))
+        .join('\n\n')
+        .trim() || undefined,
     segments,
   };
 }

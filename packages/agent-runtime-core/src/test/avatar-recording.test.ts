@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { InMemoryAvatarEventRecorder, RecordingAvatarGateway } from '../integrations/gateways/avatar-recording.js';
+import {
+  InMemoryAvatarEventRecorder,
+  RecordingAvatarGateway,
+} from '../integrations/gateways/avatar-recording.js';
 
 describe('avatar recording gateway', () => {
   it('records avatar actions', async () => {

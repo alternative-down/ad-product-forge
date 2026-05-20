@@ -79,14 +79,9 @@ export function finishGenerateAttempt(
  * Increments `state.activeGenerateToken`, aborts any in-flight generate with a
  * descriptive Error, and clears the stored controller.
  */
-export function invalidateInFlightGenerate(
-  state: EpochState,
-  genCtrl: GenControllerState,
-): void {
+export function invalidateInFlightGenerate(state: EpochState, genCtrl: GenControllerState): void {
   state.activeGenerateToken += 1;
-  genCtrl.currentAbortController?.abort(
-    new Error('Agent generate invalidated'),
-  );
+  genCtrl.currentAbortController?.abort(new Error('Agent generate invalidated'));
   genCtrl.currentAbortController = null;
 }
 

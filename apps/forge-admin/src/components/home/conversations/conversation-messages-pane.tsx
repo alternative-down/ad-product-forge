@@ -37,7 +37,11 @@ export function ConversationMessagesPane(input: {
           return (
             <article key={message.messageId} className="flex items-start gap-3 py-1">
               {authorContact?.agentId ? (
-                <Link to="/agents/$agentId" params={{ agentId: authorContact.agentId }} className="shrink-0">
+                <Link
+                  to="/agents/$agentId"
+                  params={{ agentId: authorContact.agentId }}
+                  className="shrink-0"
+                >
                   <AgentAvatar
                     agentId={authorContact.agentId}
                     name={message.authorDisplayName}
@@ -59,7 +63,9 @@ export function ConversationMessagesPane(input: {
                     {formatRecentMessageTime(message.createdAt)}
                   </span>
                 </div>
-                <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">{message.content}</div>
+                <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                  {message.content}
+                </div>
                 {message.attachments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {message.attachments.map((attachment) => (

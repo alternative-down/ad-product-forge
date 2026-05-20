@@ -3,10 +3,9 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 const mkdirCalls: [string, { recursive: boolean }][] = [];
 
 vi.mock('node:fs', () => ({
-  default: Object.assign(
-    () => {},
-    { mkdirSync: vi.fn((p: string, o: { recursive: false }) => mkdirCalls.push([p, o])) }
-  ),
+  default: Object.assign(() => {}, {
+    mkdirSync: vi.fn((p: string, o: { recursive: false }) => mkdirCalls.push([p, o])),
+  }),
   mkdirSync: vi.fn((p: string, o: { recursive: false }) => mkdirCalls.push([p, o])),
 }));
 

@@ -4,8 +4,7 @@ import { resolve } from 'node:path';
 
 import { sql } from 'drizzle-orm';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { createMicroErpReadModel } from '../micro-erp/read-model';
 import { createCompanyPayables } from '../finance/company-payables';
 import { createCapabilityStore } from '../capabilities/store';
@@ -36,8 +35,8 @@ export function createAdminReadModel(input: {
   const capabilities = createCapabilityStore(db);
   const llmSettings = createLlmSettingsStore(db);
   const notifications = createAgentNotificationStore(db);
-const _integrations = createSystemIntegrationStore(db);
-const _llmModelPrices = createLlmModelPriceStore(db);
+  const _integrations = createSystemIntegrationStore(db);
+  const _llmModelPrices = createLlmModelPriceStore(db);
   const systemSettings = createSystemSettingsStore(db);
 
   // Domain read-model submodules
@@ -57,19 +56,19 @@ const _llmModelPrices = createLlmModelPriceStore(db);
   const financeRM = createFinanceReadModel({ db });
 
   async function getApplicationMigrations() {
-      const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
-      const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
-        entries: Array<{
-          idx: number;
-          when: number;
-          tag: string;
-        }>;
-      };
-      const appliedRows = await db.all<{
-        id: number;
-        hash: string | null;
-        createdAt: number;
-      }>(sql`
+    const journalPath = resolve(process.cwd(), 'migrations/meta/_journal.json');
+    const journal = JSON.parse(await readFile(journalPath, 'utf8')) as {
+      entries: Array<{
+        idx: number;
+        when: number;
+        tag: string;
+      }>;
+    };
+    const appliedRows = await db.all<{
+      id: number;
+      hash: string | null;
+      createdAt: number;
+    }>(sql`
         select
           id,
           hash,
@@ -77,23 +76,23 @@ const _llmModelPrices = createLlmModelPriceStore(db);
         from __drizzle_migrations
         order by created_at asc
       `);
-      const appliedByCreatedAt = new Map(appliedRows.map((row) => [row.createdAt, row]));
+    const appliedByCreatedAt = new Map(appliedRows.map((row) => [row.createdAt, row]));
 
-      return {
-        applied: appliedRows,
-        entries: journal.entries.map((entry) => {
-          const applied = appliedByCreatedAt.get(entry.when);
+    return {
+      applied: appliedRows,
+      entries: journal.entries.map((entry) => {
+        const applied = appliedByCreatedAt.get(entry.when);
 
-          return {
-            idx: entry.idx,
-            tag: entry.tag,
-            createdAt: entry.when,
-            applied: Boolean(applied),
-            hash: applied?.hash ?? null,
-            rowId: applied?.id ?? null,
-          };
-        }),
-      };
+        return {
+          idx: entry.idx,
+          tag: entry.tag,
+          createdAt: entry.when,
+          applied: Boolean(applied),
+          hash: applied?.hash ?? null,
+          rowId: applied?.id ?? null,
+        };
+      }),
+    };
   }
 
   return {

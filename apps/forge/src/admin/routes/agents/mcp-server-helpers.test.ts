@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { normalizeMcpServerRecord, createAgentMcpServer, updateAgentMcpServer, deleteAgentMcpServer } from './mcp-server-helpers';
+import {
+  normalizeMcpServerRecord,
+  createAgentMcpServer,
+  updateAgentMcpServer,
+  deleteAgentMcpServer,
+} from './mcp-server-helpers';
 
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 vi.mock('../../../database/client', () => ({}));

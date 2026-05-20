@@ -12,8 +12,9 @@ const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true })),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
 
@@ -89,9 +90,18 @@ describe('SqliteWorkspaceRetrieval', () => {
     const databasePath = path.join(rootPath, 'retrieval.db');
 
     await mkdir(path.join(docsPath, 'memory'), { recursive: true });
-    await writeFile(path.join(docsPath, 'memory', 'alpha.md'), 'alpha system design and API contracts');
-    await writeFile(path.join(docsPath, 'memory', 'beta.md'), 'beta implementation notes and API dependencies');
-    await writeFile(path.join(docsPath, 'memory', 'gamma.md'), 'gamma release checklist and launch tasks');
+    await writeFile(
+      path.join(docsPath, 'memory', 'alpha.md'),
+      'alpha system design and API contracts',
+    );
+    await writeFile(
+      path.join(docsPath, 'memory', 'beta.md'),
+      'beta implementation notes and API dependencies',
+    );
+    await writeFile(
+      path.join(docsPath, 'memory', 'gamma.md'),
+      'gamma release checklist and launch tasks',
+    );
 
     const retrieval = new SqliteWorkspaceRetrieval({
       databasePath,
@@ -125,8 +135,14 @@ describe('SqliteWorkspaceRetrieval', () => {
     const databasePath = path.join(rootPath, 'retrieval.db');
 
     await mkdir(path.join(docsPath, 'memory'), { recursive: true });
-    await writeFile(path.join(docsPath, 'memory', 'alpha.md'), 'alpha rendering pipeline and lighting');
-    await writeFile(path.join(docsPath, 'memory', 'unrelated.md'), 'zeta payroll onboarding and hr policy');
+    await writeFile(
+      path.join(docsPath, 'memory', 'alpha.md'),
+      'alpha rendering pipeline and lighting',
+    );
+    await writeFile(
+      path.join(docsPath, 'memory', 'unrelated.md'),
+      'zeta payroll onboarding and hr policy',
+    );
 
     const retrieval = new SqliteWorkspaceRetrieval({
       databasePath,
@@ -171,10 +187,12 @@ describe('SqliteWorkspaceRetrieval', () => {
 
     await retrieval.refresh();
 
-    await expect(retrieval.search('- checkpointed call:', {
-      topK: 5,
-      mode: 'bm25',
-    })).resolves.toEqual([
+    await expect(
+      retrieval.search('- checkpointed call:', {
+        topK: 5,
+        mode: 'bm25',
+      }),
+    ).resolves.toEqual([
       expect.objectContaining({
         id: expect.stringContaining('checkpointed.md'),
       }),

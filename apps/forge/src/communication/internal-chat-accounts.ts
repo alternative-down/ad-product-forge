@@ -23,10 +23,7 @@ import {
   createInternalChatSlug,
   sortParticipantsBySelfFirst,
 } from './internal-chat-helpers';
-import {
-  InternalChatAccountNotFoundError,
-  InternalChatError,
-} from './internal-chat-errors';
+import { InternalChatAccountNotFoundError, InternalChatError } from './internal-chat-errors';
 
 export function createInternalChatAccounts(db: Database) {
   // ── Account registration ──────────────────────────────────────────────

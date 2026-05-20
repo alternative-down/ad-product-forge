@@ -111,7 +111,9 @@ describe('settings-types helpers', () => {
     });
 
     it('preserves non-overwritten base fields', () => {
-      const base = { ...FULL_SETTINGS, someOtherField: 'preserve' } as unknown as Parameters<typeof fromRuntimeDraft>[1];
+      const base = { ...FULL_SETTINGS, someOtherField: 'preserve' } as unknown as Parameters<
+        typeof fromRuntimeDraft
+      >[1];
       const draft = {
         memoryLastMessagesFullEnabled: true,
         memoryLastMessagesCount: '5',

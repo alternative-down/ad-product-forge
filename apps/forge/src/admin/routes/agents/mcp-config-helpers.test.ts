@@ -29,7 +29,11 @@ describe('assignAgentMcpServer', () => {
   it('updates existing config when link found', async () => {
     const updateMock = (vi.fn() as any).mockReturnThis();
     updateMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue({ id: 'existing-config', agentId: 'agent-1', serverId: 'server-1' });
+    const findFirstMock = (vi.fn() as any).mockResolvedValue({
+      id: 'existing-config',
+      agentId: 'agent-1',
+      serverId: 'server-1',
+    });
     const db = {
       query: { agentMcpConfigs: { findFirst: findFirstMock } },
       update: updateMock,
@@ -55,9 +59,7 @@ describe('assignAgentMcpServer', () => {
 
     await assignAgentMcpServer(db, 'agent-1', 'server-1');
 
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ isActive: 1 }),
-    );
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ isActive: 1 }));
   });
 });
 
@@ -96,7 +98,10 @@ describe('detachMcpServer', () => {
   it('deletes config and returns true when config exists', async () => {
     const deleteMock = (vi.fn() as any).mockReturnThis();
     deleteMock.where = (vi.fn() as any).mockResolvedValue(undefined);
-    const findFirstMock = (vi.fn() as any).mockResolvedValue({ id: 'config-1', agentId: 'agent-1' });
+    const findFirstMock = (vi.fn() as any).mockResolvedValue({
+      id: 'config-1',
+      agentId: 'agent-1',
+    });
     const db = {
       query: { agentMcpConfigs: { findFirst: findFirstMock } },
       delete: deleteMock,

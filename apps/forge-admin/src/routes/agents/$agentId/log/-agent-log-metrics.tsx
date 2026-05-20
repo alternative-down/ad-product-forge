@@ -9,9 +9,7 @@ interface MetricTileProps {
 }
 
 function MetricTile({ label, current, unit, limit, detail }: MetricTileProps) {
-  const percent = limit && limit > 0
-    ? Math.min(999, Math.round((current / limit) * 100))
-    : null;
+  const percent = limit && limit > 0 ? Math.min(999, Math.round((current / limit) * 100)) : null;
 
   return (
     <div className="rounded-2xl border border-border/80 bg-background/70 px-4 py-3">
@@ -26,11 +24,7 @@ function MetricTile({ label, current, unit, limit, detail }: MetricTileProps) {
           de {formatNumber(limit)} • {percent}%
         </div>
       ) : null}
-      {detail ? (
-        <div className="mt-1 text-xs text-muted-foreground">
-          {detail}
-        </div>
-      ) : null}
+      {detail ? <div className="mt-1 text-xs text-muted-foreground">{detail}</div> : null}
     </div>
   );
 }
@@ -107,8 +101,8 @@ export function AgentLogMetrics({
           metrics.latestThreadMessageAt
             ? `última mensagem ${formatDateTime(metrics.latestThreadMessageAt)}`
             : checkpointMessageId
-            ? 'sem mensagens após checkpoint'
-            : 'sem checkpoint ativo'
+              ? 'sem mensagens após checkpoint'
+              : 'sem checkpoint ativo'
         }
       />
     </div>

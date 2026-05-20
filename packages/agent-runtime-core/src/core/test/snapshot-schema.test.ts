@@ -42,19 +42,21 @@ describe('runtimeSnapshotSchema', () => {
       status: 'idle',
       pendingInputs: [],
       lastActionResults: [],
-      steps: [{
-        id: 'step-1',
-        stepNumber: 0,
-        inputs: [],
-        context: [],
-        modelResponse: { segments: [], actionRequests: [], continuation: 'stop' },
-        modelUsage: null,
-        modelMetadata: null,
-        actionResults: [],
-        continuation: 'stop',
-        startedAt: '2026-01-01T00:00:00Z',
-        finishedAt: '2026-01-01T00:00:01Z',
-      }],
+      steps: [
+        {
+          id: 'step-1',
+          stepNumber: 0,
+          inputs: [],
+          context: [],
+          modelResponse: { segments: [], actionRequests: [], continuation: 'stop' },
+          modelUsage: null,
+          modelMetadata: null,
+          actionResults: [],
+          continuation: 'stop',
+          startedAt: '2026-01-01T00:00:00Z',
+          finishedAt: '2026-01-01T00:00:01Z',
+        },
+      ],
     });
     expect(result.success).toBe(false);
   });
@@ -65,19 +67,21 @@ describe('runtimeSnapshotSchema', () => {
       status: 'idle',
       pendingInputs: [],
       lastActionResults: [],
-      steps: [{
-        id: 'step-1',
-        stepNumber: 1,
-        inputs: [],
-        context: [],
-        modelResponse: { segments: [], actionRequests: [], continuation: 'stop' },
-        modelUsage: null,
-        modelMetadata: null,
-        actionResults: [],
-        continuation: 'stop',
-        startedAt: '',
-        finishedAt: '2026-01-01T00:00:01Z',
-      }],
+      steps: [
+        {
+          id: 'step-1',
+          stepNumber: 1,
+          inputs: [],
+          context: [],
+          modelResponse: { segments: [], actionRequests: [], continuation: 'stop' },
+          modelUsage: null,
+          modelMetadata: null,
+          actionResults: [],
+          continuation: 'stop',
+          startedAt: '',
+          finishedAt: '2026-01-01T00:00:01Z',
+        },
+      ],
     });
     expect(result.success).toBe(false);
   });
@@ -99,19 +103,21 @@ describe('runtimeSnapshotSchema', () => {
       status: 'idle',
       pendingInputs: [],
       lastActionResults: [],
-      steps: [{
-        id: 'step-1',
-        stepNumber: 1,
-        inputs: [],
-        context: [],
-        modelResponse: { segments: [], actionRequests: [], continuation: 'pause' },
-        modelUsage: null,
-        modelMetadata: null,
-        actionResults: [],
-        continuation: 'pause',
-        startedAt: '2026-01-01T00:00:00Z',
-        finishedAt: '2026-01-01T00:00:01Z',
-      }],
+      steps: [
+        {
+          id: 'step-1',
+          stepNumber: 1,
+          inputs: [],
+          context: [],
+          modelResponse: { segments: [], actionRequests: [], continuation: 'pause' },
+          modelUsage: null,
+          modelMetadata: null,
+          actionResults: [],
+          continuation: 'pause',
+          startedAt: '2026-01-01T00:00:00Z',
+          finishedAt: '2026-01-01T00:00:01Z',
+        },
+      ],
     });
     expect(result.success).toBe(false);
   });

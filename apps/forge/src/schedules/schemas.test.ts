@@ -214,7 +214,9 @@ describe('updateScheduleSchema', () => {
   });
 
   it('accepts partial update — timezone only', () => {
-    const result = updateScheduleSchema.parse({ timezone: 'America/New_York' }) as UpdateScheduleInput;
+    const result = updateScheduleSchema.parse({
+      timezone: 'America/New_York',
+    }) as UpdateScheduleInput;
     expect(result.timezone).toBe('America/New_York');
   });
 

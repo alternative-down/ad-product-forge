@@ -6,7 +6,10 @@ import {
   parseStripeCheckoutCompleted,
 } from './stripe';
 
-function makeStripeEvent(type: string, data: Record<string, unknown> = {}): import('./stripe').StripeWebhookPayload {
+function makeStripeEvent(
+  type: string,
+  data: Record<string, unknown> = {},
+): import('./stripe').StripeWebhookPayload {
   return {
     id: 'evt_test_123',
     type,
@@ -106,7 +109,10 @@ describe('stripe adapter', () => {
     });
 
     it('includes rawEventJson in result', () => {
-      const event = makeStripeEvent('payment_intent.succeeded', { customer: 'cus_123', amount: 1000 });
+      const event = makeStripeEvent('payment_intent.succeeded', {
+        customer: 'cus_123',
+        amount: 1000,
+      });
       const result = normalizeStripeEvent(event);
       expect(result).not.toBeNull();
       expect(result!.rawEventJson).toBeDefined();

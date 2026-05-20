@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { llmModelPrices } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -10,11 +9,15 @@ export function createLlmModelPriceStore(db: Database) {
   async function listPrices() {
     try {
       return await db.query.llmModelPrices.findMany({
-  
         orderBy: (fields, { asc }) => [asc(fields.modelKey)],
       });
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'error', message: 'Failed to list LLM model prices', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to list LLM model prices',
+        context: { error: err instanceof Error ? err.message : String(err) },
+      });
       throw err;
     }
   }
@@ -32,27 +35,32 @@ export function createLlmModelPriceStore(db: Database) {
       });
 
       if (existing != null) {
-          await db
-            .update(llmModelPrices)
-            .set({
-              inputPerMillionUsd: input.inputPerMillionUsd,
-              inputCachePerMillionUsd: input.inputCachePerMillionUsd,
-              outputPerMillionUsd: input.outputPerMillionUsd,
-              updatedAt: now,
-            })
-            .where(eq(llmModelPrices.modelKey, input.modelKey));
-      } else {
-          await db.insert(llmModelPrices).values({
-            modelKey: input.modelKey,
+        await db
+          .update(llmModelPrices)
+          .set({
             inputPerMillionUsd: input.inputPerMillionUsd,
             inputCachePerMillionUsd: input.inputCachePerMillionUsd,
             outputPerMillionUsd: input.outputPerMillionUsd,
-            createdAt: now,
             updatedAt: now,
-          });
+          })
+          .where(eq(llmModelPrices.modelKey, input.modelKey));
+      } else {
+        await db.insert(llmModelPrices).values({
+          modelKey: input.modelKey,
+          inputPerMillionUsd: input.inputPerMillionUsd,
+          inputCachePerMillionUsd: input.inputCachePerMillionUsd,
+          outputPerMillionUsd: input.outputPerMillionUsd,
+          createdAt: now,
+          updatedAt: now,
+        });
       }
     } catch (err) {
-      forgeDebug({ scope: 'llm', level: 'error', message: 'Failed to upsert LLM model price', context: { modelKey: input.modelKey, error: err } });
+      forgeDebug({
+        scope: 'llm',
+        level: 'error',
+        message: 'Failed to upsert LLM model price',
+        context: { modelKey: input.modelKey, error: err },
+      });
       throw err;
     }
 

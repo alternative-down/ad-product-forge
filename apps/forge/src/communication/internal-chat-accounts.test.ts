@@ -15,11 +15,10 @@ function createChain(result: unknown) {
     all: vi.fn(() => Promise.resolve(result)),
   };
   chain[Symbol.iterator] = function* () {
-    yield* (result as unknown[]);
+    yield* result as unknown[];
   };
   Object.defineProperty(chain, 'then', {
-    value: (onFulfilled: (v: unknown) => unknown) =>
-      Promise.resolve(result).then(onFulfilled),
+    value: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(result).then(onFulfilled),
     configurable: true,
     writable: true,
   });
@@ -29,9 +28,7 @@ function createChain(result: unknown) {
 // ---------------------------------------------------------------------------
 // Mock DB factory
 // ---------------------------------------------------------------------------
-function createMockDb(overrides?: {
-  accounts?: unknown[];
-}) {
+function createMockDb(overrides?: { accounts?: unknown[] }) {
   const accounts = overrides?.accounts ?? [];
 
   return {
@@ -131,7 +128,9 @@ describe('createInternalChatAccounts', () => {
     it('registers a new agent account', async () => {
       const existingAgent = { ...AGENT_ACCOUNT, id: 'acct_agent_000', agentId: 'agent_000' };
       const testDb = createMockDb({ accounts: [existingAgent] });
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.registerAgentAccount({
         agentId: 'agent_001',
@@ -151,9 +150,12 @@ describe('createInternalChatAccounts', () => {
 
     it('updates existing agent account when already registered', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(AGENT_ACCOUNT);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(AGENT_ACCOUNT);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.registerAgentAccount({
         agentId: 'agent_001',
@@ -237,9 +239,9 @@ describe('createInternalChatAccounts', () => {
       });
       accounts = createInternalChatAccounts(db as unknown as import('../database/index').Database);
 
-      await expect(
-        accounts.deleteExternalAccount({ accountId: 'acct_ext_001' }),
-      ).rejects.toThrow('delete failed');
+      await expect(accounts.deleteExternalAccount({ accountId: 'acct_ext_001' })).rejects.toThrow(
+        'delete failed',
+      );
     });
   });
 
@@ -248,7 +250,9 @@ describe('createInternalChatAccounts', () => {
   describe('listAccounts', () => {
     it('returns all accounts when no filter', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT, EXTERNAL_ACCOUNT] });
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.listAccounts();
 
@@ -258,7 +262,9 @@ describe('createInternalChatAccounts', () => {
 
     it('filters accounts when excludeAgentId is provided', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT, EXTERNAL_ACCOUNT] });
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.listAccounts({ excludeAgentId: 'agent_001' });
 
@@ -280,9 +286,12 @@ describe('createInternalChatAccounts', () => {
   describe('getAccountBySlug', () => {
     it('returns account when found', async () => {
       const testDb = createMockDb({ accounts: [EXTERNAL_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(EXTERNAL_ACCOUNT);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(EXTERNAL_ACCOUNT);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getAccountBySlug('alice-external');
 
@@ -291,9 +300,12 @@ describe('createInternalChatAccounts', () => {
 
     it('returns null when not found', async () => {
       const testDb = createMockDb({ accounts: [] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getAccountBySlug('nonexistent');
 
@@ -306,9 +318,12 @@ describe('createInternalChatAccounts', () => {
   describe('getAccountByAgentId', () => {
     it('returns account when found', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(AGENT_ACCOUNT);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(AGENT_ACCOUNT);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getAccountByAgentId('agent_001');
 
@@ -317,9 +332,12 @@ describe('createInternalChatAccounts', () => {
 
     it('returns null when not found', async () => {
       const testDb = createMockDb({ accounts: [] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getAccountByAgentId('nonexistent');
 
@@ -335,7 +353,9 @@ describe('createInternalChatAccounts', () => {
       (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(EXTERNAL_ACCOUNT)
         .mockResolvedValueOnce(null);
-      const accounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const accounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
       const result = await accounts.getAccountByTargetKey('test-external');
       expect(result).toEqual(EXTERNAL_ACCOUNT);
     });
@@ -345,7 +365,9 @@ describe('createInternalChatAccounts', () => {
       (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(EXTERNAL_ACCOUNT);
-      const accounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const accounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
       const result = await accounts.getAccountByTargetKey('ext-acc-1');
       expect(result).toEqual(EXTERNAL_ACCOUNT);
     });
@@ -355,7 +377,9 @@ describe('createInternalChatAccounts', () => {
       (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
-      const accounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const accounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
       const result = await accounts.getAccountByTargetKey('nonexistent');
       expect(result).toBeNull();
     });
@@ -366,9 +390,12 @@ describe('createInternalChatAccounts', () => {
   describe('getRequiredAccount', () => {
     it('returns account when found', async () => {
       const testDb = createMockDb({ accounts: [EXTERNAL_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(EXTERNAL_ACCOUNT);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(EXTERNAL_ACCOUNT);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getRequiredAccount('acct_ext_001');
 
@@ -377,9 +404,12 @@ describe('createInternalChatAccounts', () => {
 
     it('throws InternalChatAccountNotFoundError when not found', async () => {
       const testDb = createMockDb({ accounts: [] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       await expect(testAccounts.getRequiredAccount('nonexistent')).rejects.toThrow(
         InternalChatAccountNotFoundError,
@@ -392,9 +422,12 @@ describe('createInternalChatAccounts', () => {
   describe('getRequiredAgentAccount', () => {
     it('returns account when found', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(AGENT_ACCOUNT);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(AGENT_ACCOUNT);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getRequiredAgentAccount('agent_001');
 
@@ -403,9 +436,12 @@ describe('createInternalChatAccounts', () => {
 
     it('throws InternalChatAccountNotFoundError when not found', async () => {
       const testDb = createMockDb({ accounts: [] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       await expect(testAccounts.getRequiredAgentAccount('nonexistent')).rejects.toThrow(
         InternalChatAccountNotFoundError,
@@ -418,9 +454,12 @@ describe('createInternalChatAccounts', () => {
   describe('getRequiredAccountBySlug', () => {
     it('returns account when found', async () => {
       const testDb = createMockDb({ accounts: [EXTERNAL_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(EXTERNAL_ACCOUNT);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(EXTERNAL_ACCOUNT);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getRequiredAccountBySlug('alice-external');
 
@@ -429,9 +468,12 @@ describe('createInternalChatAccounts', () => {
 
     it('throws InternalChatAccountNotFoundError when not found', async () => {
       const testDb = createMockDb({ accounts: [] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       await expect(testAccounts.getRequiredAccountBySlug('nonexistent')).rejects.toThrow(
         InternalChatAccountNotFoundError,
@@ -444,11 +486,15 @@ describe('createInternalChatAccounts', () => {
   describe('getConversationForAgent', () => {
     it('returns conversation when found', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(AGENT_ACCOUNT); // account lookup
-      (testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(DM_CONVERSATION); // conversation lookup
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(AGENT_ACCOUNT); // account lookup
+      (
+        testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(DM_CONVERSATION); // conversation lookup
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.getConversationForAgent('agent_001', 'conv_dm_001');
 
@@ -457,9 +503,12 @@ describe('createInternalChatAccounts', () => {
 
     it('throws InternalChatError when no account found for agent', async () => {
       const testDb = createMockDb({ accounts: [] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       await expect(
         testAccounts.getConversationForAgent('agent_001', 'conv_dm_001'),
@@ -468,11 +517,15 @@ describe('createInternalChatAccounts', () => {
 
     it('throws InternalChatError when conversation not found', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT] });
-      (testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(AGENT_ACCOUNT); // account lookup
-      (testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(null); // conversation not found
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      (
+        testDb.query.internalChatAccounts.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(AGENT_ACCOUNT); // account lookup
+      (
+        testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null); // conversation not found
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       await expect(
         testAccounts.getConversationForAgent('agent_001', 'nonexistent'),
@@ -485,13 +538,17 @@ describe('createInternalChatAccounts', () => {
   describe('ensureDirectConversation', () => {
     it('returns existing DM conversation when one exists between two accounts', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT, EXTERNAL_ACCOUNT] });
-      testDb.select = vi.fn().mockReturnValue(createChain([
-        { conversationId: 'conv_dm_001' },
-        { conversationId: 'conv_dm_001' },
-      ]));
-      (testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(DM_CONVERSATION);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      testDb.select = vi
+        .fn()
+        .mockReturnValue(
+          createChain([{ conversationId: 'conv_dm_001' }, { conversationId: 'conv_dm_001' }]),
+        );
+      (
+        testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(DM_CONVERSATION);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.ensureDirectConversation('acct_agent_001', 'acct_ext_001');
 
@@ -501,10 +558,21 @@ describe('createInternalChatAccounts', () => {
     it('creates a new DM conversation when none exists', async () => {
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT, EXTERNAL_ACCOUNT] });
       testDb.select = vi.fn().mockReturnValue(createChain([]));
-      const newConv = { id: 'conv_new_001', type: 'dm', name: null, createdByAccountId: 'acct_agent_001', createdAt: 1710000000000, updatedAt: 1710000000000 };
-      const findFirstMock = testDb.query.internalChatConversations.findFirst as ReturnType<typeof vi.fn>;
+      const newConv = {
+        id: 'conv_new_001',
+        type: 'dm',
+        name: null,
+        createdByAccountId: 'acct_agent_001',
+        createdAt: 1710000000000,
+        updatedAt: 1710000000000,
+      };
+      const findFirstMock = testDb.query.internalChatConversations.findFirst as ReturnType<
+        typeof vi.fn
+      >;
       findFirstMock.mockReturnValueOnce(null).mockReturnValueOnce(newConv);
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.ensureDirectConversation('acct_agent_001', 'acct_ext_001');
 
@@ -523,7 +591,9 @@ describe('createInternalChatAccounts', () => {
       ];
       const testDb = createMockDb({ accounts: [AGENT_ACCOUNT] });
       testDb.select = vi.fn().mockReturnValue(createChain(mockRows));
-      const testAccounts = createInternalChatAccounts(testDb as unknown as import('../database/index').Database);
+      const testAccounts = createInternalChatAccounts(
+        testDb as unknown as import('../database/index').Database,
+      );
 
       const result = await testAccounts.listGroupMembersOrDmPeersByAccount('acct_1', 'conv_001');
 

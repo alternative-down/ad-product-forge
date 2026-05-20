@@ -88,7 +88,7 @@ describe('registerFinanceWriteRoutes', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    const route = mockServer.routes.find(r => r.path === '/admin/finance/investment/create');
+    const route = mockServer.routes.find((r) => r.path === '/admin/finance/investment/create');
     expect(route).toBeDefined();
     expect(route!.method).toBe('POST');
   });
@@ -99,7 +99,7 @@ describe('registerFinanceWriteRoutes', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    const route = mockServer.routes.find(r => r.path === '/admin/finance/payable/create');
+    const route = mockServer.routes.find((r) => r.path === '/admin/finance/payable/create');
     expect(route).toBeDefined();
     expect(route!.method).toBe('POST');
   });
@@ -110,7 +110,7 @@ describe('registerFinanceWriteRoutes', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    const route = mockServer.routes.find(r => r.path === '/admin/finance/ledger/post');
+    const route = mockServer.routes.find((r) => r.path === '/admin/finance/ledger/post');
     expect(route).toBeDefined();
     expect(route!.method).toBe('POST');
   });
@@ -121,7 +121,7 @@ describe('registerFinanceWriteRoutes', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    const route = mockServer.routes.find(r => r.path === '/admin/finance/ledger/cancel');
+    const route = mockServer.routes.find((r) => r.path === '/admin/finance/ledger/cancel');
     expect(route).toBeDefined();
     expect(route!.method).toBe('POST');
   });
@@ -132,7 +132,9 @@ describe('registerFinanceWriteRoutes', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    const route = mockServer.routes.find(r => r.path === '/admin/finance/recurring-payable/set-active');
+    const route = mockServer.routes.find(
+      (r) => r.path === '/admin/finance/recurring-payable/set-active',
+    );
     expect(route).toBeDefined();
     expect(route!.method).toBe('POST');
   });
@@ -155,7 +157,8 @@ describe('POST /admin/finance/investment/create — handler', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    handler = mockServer.routes.find(r => r.path === '/admin/finance/investment/create')!.handler as typeof handler;
+    handler = mockServer.routes.find((r) => r.path === '/admin/finance/investment/create')!
+      .handler as typeof handler;
     mockCompanyCash.recordCashIn.mockResolvedValue({ entryId: 'inv-001' });
   });
 
@@ -180,7 +183,9 @@ describe('POST /admin/finance/investment/create — handler', () => {
   });
 
   it('passes effectiveAt timestamp when provided', async () => {
-    await handler(makeMockRequest(JSON.stringify({ amountUsd: 200, effectiveAt: '2025-06-01T10:00:00Z' })));
+    await handler(
+      makeMockRequest(JSON.stringify({ amountUsd: 200, effectiveAt: '2025-06-01T10:00:00Z' })),
+    );
 
     expect(mockCompanyCash.recordCashIn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -217,18 +222,26 @@ describe('POST /admin/finance/payable/create — handler', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    handler = mockServer.routes.find(r => r.path === '/admin/finance/payable/create')!.handler as typeof handler;
+    handler = mockServer.routes.find((r) => r.path === '/admin/finance/payable/create')!
+      .handler as typeof handler;
     mockCompanyCash.scheduleCashOut.mockResolvedValue({ entryId: 'pay-001' });
-    mockCompanyPayables.createRecurringPayable.mockResolvedValue({ payableId: 'rec-001', entryId: 'pay-002' });
+    mockCompanyPayables.createRecurringPayable.mockResolvedValue({
+      payableId: 'rec-001',
+      entryId: 'pay-002',
+    });
   });
 
   it('for single payable: calls companyCash.scheduleCashOut', async () => {
-    await handler(makeMockRequest(JSON.stringify({
-      name: 'Rent',
-      amountUsd: 1500,
-      dueAt: '2025-06-01',
-      kind: 'single',
-    })));
+    await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Rent',
+          amountUsd: 1500,
+          dueAt: '2025-06-01',
+          kind: 'single',
+        }),
+      ),
+    );
 
     expect(mockCompanyCash.scheduleCashOut).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -242,12 +255,16 @@ describe('POST /admin/finance/payable/create — handler', () => {
   });
 
   it('for single payable: uses name as description when description not provided', async () => {
-    await handler(makeMockRequest(JSON.stringify({
-      name: 'Rent',
-      amountUsd: 1500,
-      dueAt: '2025-06-01',
-      kind: 'single',
-    })));
+    await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Rent',
+          amountUsd: 1500,
+          dueAt: '2025-06-01',
+          kind: 'single',
+        }),
+      ),
+    );
 
     expect(mockCompanyCash.scheduleCashOut).toHaveBeenCalledWith(
       expect.objectContaining({ description: 'Rent' }),
@@ -255,13 +272,17 @@ describe('POST /admin/finance/payable/create — handler', () => {
   });
 
   it('for recurring payable: calls companyPayables.createRecurringPayable', async () => {
-    await handler(makeMockRequest(JSON.stringify({
-      name: 'Netflix',
-      amountUsd: 15,
-      dueAt: '2025-06-01',
-      kind: 'recurring',
-      recurrencePeriod: 'monthly',
-    })));
+    await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Netflix',
+          amountUsd: 15,
+          dueAt: '2025-06-01',
+          kind: 'recurring',
+          recurrencePeriod: 'monthly',
+        }),
+      ),
+    );
 
     expect(mockCompanyPayables.createRecurringPayable).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -273,12 +294,16 @@ describe('POST /admin/finance/payable/create — handler', () => {
   });
 
   it('defaults recurrencePeriod to monthly when not provided on recurring', async () => {
-    await handler(makeMockRequest(JSON.stringify({
-      name: 'Spotify',
-      amountUsd: 10,
-      dueAt: '2025-06-01',
-      kind: 'recurring',
-    })));
+    await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Spotify',
+          amountUsd: 10,
+          dueAt: '2025-06-01',
+          kind: 'recurring',
+        }),
+      ),
+    );
 
     expect(mockCompanyPayables.createRecurringPayable).toHaveBeenCalledWith(
       expect.objectContaining({ recurrencePeriod: 'monthly' }),
@@ -286,12 +311,16 @@ describe('POST /admin/finance/payable/create — handler', () => {
   });
 
   it('returns 201 with entryId for single payable', async () => {
-    const response = await handler(makeMockRequest(JSON.stringify({
-      name: 'Rent',
-      amountUsd: 1500,
-      dueAt: '2025-06-01',
-      kind: 'single',
-    })));
+    const response = await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Rent',
+          amountUsd: 1500,
+          dueAt: '2025-06-01',
+          kind: 'single',
+        }),
+      ),
+    );
 
     expect(response).toMatchObject({ status: 201 });
     const body = JSON.parse((response as { body: string }).body);
@@ -300,12 +329,16 @@ describe('POST /admin/finance/payable/create — handler', () => {
   });
 
   it('returns 201 with payableId and entryId for recurring payable', async () => {
-    const response = await handler(makeMockRequest(JSON.stringify({
-      name: 'Netflix',
-      amountUsd: 15,
-      dueAt: '2025-06-01',
-      kind: 'recurring',
-    })));
+    const response = await handler(
+      makeMockRequest(
+        JSON.stringify({
+          name: 'Netflix',
+          amountUsd: 15,
+          dueAt: '2025-06-01',
+          kind: 'recurring',
+        }),
+      ),
+    );
 
     expect(response).toMatchObject({ status: 201 });
     const body = JSON.parse((response as { body: string }).body);
@@ -315,12 +348,18 @@ describe('POST /admin/finance/payable/create — handler', () => {
   });
 
   it('throws on invalid dueAt date', async () => {
-    await expect(handler(makeMockRequest(JSON.stringify({
-      name: 'Rent',
-      amountUsd: 1500,
-      dueAt: 'not-a-date',
-      kind: 'single',
-    })))).rejects.toThrow('Invalid payable dueAt');
+    await expect(
+      handler(
+        makeMockRequest(
+          JSON.stringify({
+            name: 'Rent',
+            amountUsd: 1500,
+            dueAt: 'not-a-date',
+            kind: 'single',
+          }),
+        ),
+      ),
+    ).rejects.toThrow('Invalid payable dueAt');
   });
 });
 
@@ -341,7 +380,8 @@ describe('POST /admin/finance/ledger/post — handler', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    handler = mockServer.routes.find(r => r.path === '/admin/finance/ledger/post')!.handler as typeof handler;
+    handler = mockServer.routes.find((r) => r.path === '/admin/finance/ledger/post')!
+      .handler as typeof handler;
     mockCompanyCash.postPlannedEntry.mockResolvedValue({ posted: true });
     mockCompanyPayables.syncRecurringPayableOccurrence.mockResolvedValue(undefined);
   });
@@ -355,14 +395,20 @@ describe('POST /admin/finance/ledger/post — handler', () => {
   it('calls syncRecurringPayableOccurrence with entryId', async () => {
     await handler(makeMockRequest(JSON.stringify({ entryId: 'entry-xyz' })));
 
-    expect(mockCompanyPayables.syncRecurringPayableOccurrence).toHaveBeenCalledWith({ entryId: 'entry-xyz' });
+    expect(mockCompanyPayables.syncRecurringPayableOccurrence).toHaveBeenCalledWith({
+      entryId: 'entry-xyz',
+    });
   });
 
   it('passes effectiveAt when provided', async () => {
-    await handler(makeMockRequest(JSON.stringify({
-      entryId: 'entry-abc',
-      effectiveAt: '2025-07-01T12:00:00Z',
-    })));
+    await handler(
+      makeMockRequest(
+        JSON.stringify({
+          entryId: 'entry-abc',
+          effectiveAt: '2025-07-01T12:00:00Z',
+        }),
+      ),
+    );
 
     expect(mockCompanyCash.postPlannedEntry).toHaveBeenCalledWith(
       'entry-abc',
@@ -388,7 +434,8 @@ describe('POST /admin/finance/ledger/cancel — handler', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    handler = mockServer.routes.find(r => r.path === '/admin/finance/ledger/cancel')!.handler as typeof handler;
+    handler = mockServer.routes.find((r) => r.path === '/admin/finance/ledger/cancel')!
+      .handler as typeof handler;
     mockCompanyCash.cancelPlannedEntry.mockResolvedValue({ cancelled: true });
     mockCompanyPayables.syncRecurringPayableOccurrence.mockResolvedValue(undefined);
   });
@@ -402,7 +449,9 @@ describe('POST /admin/finance/ledger/cancel — handler', () => {
   it('also syncs recurring payable occurrence', async () => {
     await handler(makeMockRequest(JSON.stringify({ entryId: 'entry-cancel-123' })));
 
-    expect(mockCompanyPayables.syncRecurringPayableOccurrence).toHaveBeenCalledWith({ entryId: 'entry-cancel-123' });
+    expect(mockCompanyPayables.syncRecurringPayableOccurrence).toHaveBeenCalledWith({
+      entryId: 'entry-cancel-123',
+    });
   });
 });
 
@@ -421,7 +470,9 @@ describe('POST /admin/finance/recurring-payable/set-active — handler', () => {
       companyPayables: mockCompanyPayables as any,
     });
 
-    handler = mockServer.routes.find(r => r.path === '/admin/finance/recurring-payable/set-active')!.handler as typeof handler;
+    handler = mockServer.routes.find(
+      (r) => r.path === '/admin/finance/recurring-payable/set-active',
+    )!.handler as typeof handler;
     mockCompanyPayables.setRecurringPayableActive.mockResolvedValue({ updated: true });
   });
 
@@ -434,6 +485,9 @@ describe('POST /admin/finance/recurring-payable/set-active — handler', () => {
   it('calls with false when deactivating', async () => {
     await handler(makeMockRequest(JSON.stringify({ payableId: 'payable-abc', isActive: false })));
 
-    expect(mockCompanyPayables.setRecurringPayableActive).toHaveBeenCalledWith('payable-abc', false);
+    expect(mockCompanyPayables.setRecurringPayableActive).toHaveBeenCalledWith(
+      'payable-abc',
+      false,
+    );
   });
 });

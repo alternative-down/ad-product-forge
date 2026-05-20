@@ -4,11 +4,10 @@ import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
 
 const DEFAULT_MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB
-const MAX_BODY_BYTES = parseInt(process.env.FORGE_HTTP_MAX_BODY_BYTES ?? '', 10) || DEFAULT_MAX_BODY_BYTES;
+const MAX_BODY_BYTES =
+  parseInt(process.env.FORGE_HTTP_MAX_BODY_BYTES ?? '', 10) || DEFAULT_MAX_BODY_BYTES;
 
-type BodyResult =
-  | { isRejected: true }
-  | { isRejected: false; buffer: Buffer };
+type BodyResult = { isRejected: true } | { isRejected: false; buffer: Buffer };
 
 export type HttpRequest = {
   method: string;
@@ -93,10 +92,15 @@ export interface ForgeHttpServer {
  *  Used by admin route modules that don't need start/stop/port. */
 export type ForgeHttpServerAdapter = Pick<ForgeHttpServer, 'registerRoute'>;
 
-export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Promise<ForgeHttpServer> & ForgeHttpServer {
-  const allowedOrigins = config.allowedOrigins !== null && config.allowedOrigins !== undefined && config.allowedOrigins.length
-    ? new Set(config.allowedOrigins)
-    : null;
+export function createForgeHttpServer(
+  config: CreateForgeHttpServerConfig,
+): Promise<ForgeHttpServer> & ForgeHttpServer {
+  const allowedOrigins =
+    config.allowedOrigins !== null &&
+    config.allowedOrigins !== undefined &&
+    config.allowedOrigins.length
+      ? new Set(config.allowedOrigins)
+      : null;
   const limit = config.maxBodyBytes ?? MAX_BODY_BYTES;
   const routes = new Map<RouteKey, HttpHandler>();
 
@@ -123,9 +127,10 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
   }
   const server = http.createServer(async (req, res) => {
     if (req.url === undefined || req.method === undefined) {
-      const origin = getHeaderValue(req.headers['origin'])
-        ?? getHeaderValue(req.headers['host']);
-      res.writeHead(400, buildCorsHeaders(origin ?? null, allowedOrigins)).end('Missing request data');
+      const origin = getHeaderValue(req.headers['origin']) ?? getHeaderValue(req.headers['host']);
+      res
+        .writeHead(400, buildCorsHeaders(origin ?? null, allowedOrigins))
+        .end('Missing request data');
       return;
     }
 
@@ -152,8 +157,8 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
       if (config.adminApiKey === undefined) {
         if (config.allowInsecureLocal === true) {
           console.warn(
-            '[forge-http] WARNING: /admin/* served without authentication.'
-            + ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
+            '[forge-http] WARNING: /admin/* served without authentication.' +
+              ' Set FORGE_ADMIN_API_KEY to protect admin routes.',
           );
         } else {
           res.writeHead(503, {
@@ -161,9 +166,12 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
             'content-type': 'application/json; charset=utf-8',
             'cache-control': 'no-store',
           });
-          res.end(JSON.stringify({
-            error: 'Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect admin routes.',
-          }));
+          res.end(
+            JSON.stringify({
+              error:
+                'Admin authentication not configured. Set FORGE_ADMIN_API_KEY to protect admin routes.',
+            }),
+          );
           return;
         }
       } else {

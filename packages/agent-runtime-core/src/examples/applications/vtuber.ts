@@ -1,7 +1,10 @@
 import type { AgentRuntimeOptions } from '../../core/runtime.js';
 import type { AvatarGateway } from '../../integrations/gateways/avatar.js';
 import type { BrowserGateway } from '../../integrations/gateways/browser.js';
-import type { RealtimeSpeechToTextGateway, TextToSpeechGateway } from '../../integrations/gateways/speech.js';
+import type {
+  RealtimeSpeechToTextGateway,
+  TextToSpeechGateway,
+} from '../../integrations/gateways/speech.js';
 import type { VisionGateway } from '../../integrations/gateways/vision.js';
 import { z } from 'zod';
 
@@ -21,7 +24,9 @@ export function createVtuberApplication(options: VtuberApplicationOptions) {
   const host = createRuntimeHost({
     runtime: options.runtime,
   });
-  let referenceSessionPromise: Promise<Awaited<ReturnType<BrowserGateway['createSession']>>> | null = null;
+  let referenceSessionPromise: Promise<
+    Awaited<ReturnType<BrowserGateway['createSession']>>
+  > | null = null;
 
   const getReferenceSession = async () => {
     if (!options.browser) {
@@ -75,10 +80,14 @@ export function createVtuberApplication(options: VtuberApplicationOptions) {
     description: 'Analyze one or more images and return a textual vision summary.',
     inputSchema: z.object({
       prompt: z.string().optional(),
-      images: z.array(z.object({
-        mimeType: z.string().min(1),
-        bytes: z.array(z.number().int().min(0).max(255)),
-      })).min(1),
+      images: z
+        .array(
+          z.object({
+            mimeType: z.string().min(1),
+            bytes: z.array(z.number().int().min(0).max(255)),
+          }),
+        )
+        .min(1),
     }),
     execute(input) {
       return options.vision.analyze({
@@ -144,11 +153,7 @@ export function createVtuberApplication(options: VtuberApplicationOptions) {
     runtime: host.runtime,
     journal: host.journal,
     notes: host.notes,
-    async receiveChatMessage(message: {
-      id: string;
-      author: string;
-      text: string;
-    }) {
+    async receiveChatMessage(message: { id: string; author: string; text: string }) {
       await host.runtime.dispatch({
         id: message.id,
         type: 'chat-message',

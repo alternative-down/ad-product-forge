@@ -23,7 +23,8 @@ export function meta() {
         recommended: false,
       },
       messages: {
-        badFilename: 'Filename "{{ filename }}" is not kebab-case. Use lowercase with hyphens (e.g., "{{ suggestion }}").',
+        badFilename:
+          'Filename "{{ filename }}" is not kebab-case. Use lowercase with hyphens (e.g., "{{ suggestion }}").',
       },
     },
     create(context) {

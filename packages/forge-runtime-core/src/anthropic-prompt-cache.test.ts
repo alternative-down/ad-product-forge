@@ -7,66 +7,68 @@ import { wrapAnthropicPromptCacheModel } from './anthropic-prompt-cache.js';
 
 describe('wrapAnthropicPromptCacheModel', () => {
   it('marks all messages except the last one for prompt caching', async () => {
-    const model = wrapAnthropicPromptCacheModel(new MockLanguageModelV3({
-      doGenerate: async (options: LanguageModelV3CallOptions) => {
-        const prompt = options.prompt;
+    const model = wrapAnthropicPromptCacheModel(
+      new MockLanguageModelV3({
+        doGenerate: async (options: LanguageModelV3CallOptions) => {
+          const prompt = options.prompt;
 
-        // First system message should be cached
-        expect(prompt[0]).toMatchObject({
-          role: 'system',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
+          // First system message should be cached
+          expect(prompt[0]).toMatchObject({
+            role: 'system',
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
             },
-          },
-        });
+          });
 
-        // Second message (assistant from previous step) should be cached
-        expect(prompt[1]).toMatchObject({
-          role: 'assistant',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
+          // Second message (assistant from previous step) should be cached
+          expect(prompt[1]).toMatchObject({
+            role: 'assistant',
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
             },
-          },
-        });
+          });
 
-        // Third message (user) should be cached
-        expect(prompt[2]).toMatchObject({
-          role: 'user',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
+          // Third message (user) should be cached
+          expect(prompt[2]).toMatchObject({
+            role: 'user',
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
             },
-          },
-        });
+          });
 
-        // Last message (latest assistant output) should NOT be cached
-        expect(prompt[3]).toMatchObject({
-          role: 'assistant',
-          providerOptions: undefined,
-        });
+          // Last message (latest assistant output) should NOT be cached
+          expect(prompt[3]).toMatchObject({
+            role: 'assistant',
+            providerOptions: undefined,
+          });
 
-        return {
-          content: [{ type: 'text', text: 'ok' }],
-          finishReason: { raw: 'stop', unified: 'stop' },
-          usage: {
-            inputTokens: {
-              total: 10,
-              noCache: 10,
-              cacheRead: 0,
-              cacheWrite: 0,
+          return {
+            content: [{ type: 'text', text: 'ok' }],
+            finishReason: { raw: 'stop', unified: 'stop' },
+            usage: {
+              inputTokens: {
+                total: 10,
+                noCache: 10,
+                cacheRead: 0,
+                cacheWrite: 0,
+              },
+              outputTokens: {
+                total: 2,
+                text: 2,
+                reasoning: 0,
+              },
             },
-            outputTokens: {
-              total: 2,
-              text: 2,
-              reasoning: 0,
-            },
-          },
-          warnings: [],
-        };
-      },
-    }));
+            warnings: [],
+          };
+        },
+      }),
+    );
 
     await generateText({
       model,
@@ -90,44 +92,44 @@ describe('wrapAnthropicPromptCacheModel', () => {
 
   it('caches only the system message when there are two messages total', async () => {
     // With system + user (2 messages), only system gets cached (not the last)
-    const model = wrapAnthropicPromptCacheModel(new MockLanguageModelV3({
-      doGenerate: async (options: LanguageModelV3CallOptions) => {
-        const prompt = options.prompt;
+    const model = wrapAnthropicPromptCacheModel(
+      new MockLanguageModelV3({
+        doGenerate: async (options: LanguageModelV3CallOptions) => {
+          const prompt = options.prompt;
 
-        // System message should be cached (not last)
-        expect(prompt[0]).toMatchObject({
-          role: 'system',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
+          // System message should be cached (not last)
+          expect(prompt[0]).toMatchObject({
+            role: 'system',
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
             },
-          },
-        });
+          });
 
-        // User message (last) should NOT be cached
-        expect(prompt[1]).toMatchObject({
-          role: 'user',
-          providerOptions: undefined,
-        });
+          // User message (last) should NOT be cached
+          expect(prompt[1]).toMatchObject({
+            role: 'user',
+            providerOptions: undefined,
+          });
 
-        return {
-          content: [{ type: 'text', text: 'ok' }],
-          finishReason: { raw: 'stop', unified: 'stop' },
-          usage: {
-            inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
-            outputTokens: { total: 2, text: 2, reasoning: 0 },
-          },
-          warnings: [],
-        };
-      },
-    }));
+          return {
+            content: [{ type: 'text', text: 'ok' }],
+            finishReason: { raw: 'stop', unified: 'stop' },
+            usage: {
+              inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 2, text: 2, reasoning: 0 },
+            },
+            warnings: [],
+          };
+        },
+      }),
+    );
 
     await generateText({
       model,
       system: 'Single system message.',
-      messages: [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
-      ],
+      messages: [{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }],
     });
   });
 
@@ -135,56 +137,56 @@ describe('wrapAnthropicPromptCacheModel', () => {
     // System has existing cache with 30m ttl - should preserve it
     // Assistant at index 1 should get cache control (not last)
     // Assistant at index 2 is last, should NOT get cache control
-    const model = wrapAnthropicPromptCacheModel(new MockLanguageModelV3({
-      doGenerate: async (options: LanguageModelV3CallOptions) => {
-        const prompt = options.prompt;
+    const model = wrapAnthropicPromptCacheModel(
+      new MockLanguageModelV3({
+        doGenerate: async (options: LanguageModelV3CallOptions) => {
+          const prompt = options.prompt;
 
-        // System message should keep its original ttl (30m), not 1h
-        expect(prompt[0]).toMatchObject({
-          role: 'system',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '30m' },
+          // System message should keep its original ttl (30m), not 1h
+          expect(prompt[0]).toMatchObject({
+            role: 'system',
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '30m' },
+              },
             },
-          },
-        });
+          });
 
-        // Assistant at index 1 should get cache control added
-        expect(prompt[1]).toMatchObject({
-          role: 'assistant',
-          providerOptions: {
-            anthropic: {
-              cacheControl: { type: 'ephemeral', ttl: '1h' },
+          // Assistant at index 1 should get cache control added
+          expect(prompt[1]).toMatchObject({
+            role: 'assistant',
+            providerOptions: {
+              anthropic: {
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
             },
-          },
-        });
+          });
 
-        // Assistant at index 2 is LAST - should NOT get cache control
-        expect(prompt[2]).toMatchObject({
-          role: 'assistant',
-          providerOptions: undefined,
-        });
+          // Assistant at index 2 is LAST - should NOT get cache control
+          expect(prompt[2]).toMatchObject({
+            role: 'assistant',
+            providerOptions: undefined,
+          });
 
-        return {
-          content: [{ type: 'text', text: 'ok' }],
-          finishReason: { raw: 'stop', unified: 'stop' },
-          usage: {
-            inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
-            outputTokens: { total: 2, text: 2, reasoning: 0 },
-          },
-          warnings: [],
-        };
-      },
-    }));
+          return {
+            content: [{ type: 'text', text: 'ok' }],
+            finishReason: { raw: 'stop', unified: 'stop' },
+            usage: {
+              inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 2, text: 2, reasoning: 0 },
+            },
+            warnings: [],
+          };
+        },
+      }),
+    );
 
     await generateText({
       model,
       system: [
         {
           role: 'system',
-          content: [
-            { type: 'text', text: 'System with existing cache.' },
-          ],
+          content: [{ type: 'text', text: 'System with existing cache.' }],
           providerOptions: {
             anthropic: { cacheControl: { type: 'ephemeral', ttl: '30m' } },
           },

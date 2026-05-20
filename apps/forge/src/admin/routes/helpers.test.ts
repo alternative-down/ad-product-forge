@@ -67,11 +67,15 @@ describe('normalizeJsonText', () => {
   });
 
   it('throws when expected object but got array', () => {
-    expect(() => normalizeJsonText('[1,2,3]', 'field', 'object')).toThrow('field must be a JSON object');
+    expect(() => normalizeJsonText('[1,2,3]', 'field', 'object')).toThrow(
+      'field must be a JSON object',
+    );
   });
 
   it('throws when expected array but got object', () => {
-    expect(() => normalizeJsonText('{"key":"value"}', 'field', 'array')).toThrow('field must be a JSON array');
+    expect(() => normalizeJsonText('{"key":"value"}', 'field', 'array')).toThrow(
+      'field must be a JSON array',
+    );
   });
 
   it('throws for invalid JSON', () => {
@@ -318,10 +322,7 @@ describe('extractLatestHealthcheckMessagePreview', () => {
 
   it('returns reasoning text when no text parts exist', () => {
     const content = {
-      parts: [
-        { type: 'reasoning', text: 'thinking process' },
-        { type: 'tool_use' },
-      ],
+      parts: [{ type: 'reasoning', text: 'thinking process' }, { type: 'tool_use' }],
     };
     expect(extractLatestHealthcheckMessagePreview(content)).toBe('thinking process');
   });
@@ -353,11 +354,7 @@ describe('summarizeActiveItems', () => {
   });
 
   it('counts total items per constructor name', () => {
-    const items = [
-      { a: 1 },
-      { b: 2 },
-      { c: 3 },
-    ];
+    const items = [{ a: 1 }, { b: 2 }, { c: 3 }];
     const result = summarizeActiveItems(items);
     expect(result).toContainEqual({ name: 'Object', count: 3 });
   });
@@ -365,11 +362,7 @@ describe('summarizeActiveItems', () => {
   it('sorts by count descending', () => {
     class Agent {}
     class Schedule {}
-    const items = [
-      new Schedule(),
-      new Schedule(),
-      new Agent(),
-    ];
+    const items = [new Schedule(), new Schedule(), new Agent()];
     const result = summarizeActiveItems(items);
     // Schedule (count 2) should come before Agent (count 1)
     expect(result[0].name).toBe('Schedule');
@@ -377,11 +370,9 @@ describe('summarizeActiveItems', () => {
   });
 
   it('handles primitives (uses typeof for non-objects)', () => {
-    const items: unknown[] = [
-      'string', 'string', 42, true, null,
-    ];
+    const items: unknown[] = ['string', 'string', 42, true, null];
     const result = summarizeActiveItems(items);
     // string → 'string' (typeof), number → 'number', boolean → 'boolean', null → 'null' (typeof)
-    expect(result.map(r => r.name)).toContain('string');
+    expect(result.map((r) => r.name)).toContain('string');
   });
 });

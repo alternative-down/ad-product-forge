@@ -24,7 +24,9 @@ function AgentConversationsLayoutRoute() {
   const selectedConversationId = pathname.startsWith(`/agents/${agentId}/conversations/`)
     ? decodeURIComponent(pathname.split('/conversations/')[1] ?? '')
     : null;
-  const selectedConversation = conversations.find((conversation) => conversation.conversationId === selectedConversationId) ?? null;
+  const selectedConversation =
+    conversations.find((conversation) => conversation.conversationId === selectedConversationId) ??
+    null;
 
   return (
     <div className="min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -32,59 +34,65 @@ function AgentConversationsLayoutRoute() {
         <div className="flex h-[calc(100dvh-12rem)] min-h-0 flex-col md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
           <div className={selectedConversation ? 'hidden min-h-0 md:block' : 'min-h-0'}>
             <AdminScrollArea className="h-full" contentClassName="space-y-1">
-                {conversations.map((conversation) => {
-                  const selected = conversation.conversationId === selectedConversation?.conversationId;
-                  const latestMessage = conversation.messages.at(-1) ?? null;
-                  const conversationPath = buildConversationPath(agentId, conversation.conversationId);
+              {conversations.map((conversation) => {
+                const selected =
+                  conversation.conversationId === selectedConversation?.conversationId;
+                const latestMessage = conversation.messages.at(-1) ?? null;
+                const conversationPath = buildConversationPath(
+                  agentId,
+                  conversation.conversationId,
+                );
 
-                  return (
-                    <Link
-                      key={conversation.conversationId}
-                      to={conversationPath}
-                      className={
-                        selected
-                          ? 'block w-full rounded-sm border border-border bg-muted px-4 py-3 text-left'
-                          : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
-                      }
-                    >
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-9 w-9 border border-border bg-muted">
-                            <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
-                              {getInitials(conversation.name ?? conversation.provider)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 text-sm font-medium text-foreground">
-                                {conversation.name ?? conversation.provider}
-                              </div>
-                              {latestMessage ? (
-                                <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
-                                  {formatRecentMessageTime(latestMessage.createdAt)}
-                                </span>
-                              ) : null}
-                              <div className="flex shrink-0 items-center gap-2 md:hidden">
-                                {latestMessage ? (
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatRecentMessageTime(latestMessage.createdAt)}
-                                  </span>
-                                ) : null}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </div>
+                return (
+                  <Link
+                    key={conversation.conversationId}
+                    to={conversationPath}
+                    className={
+                      selected
+                        ? 'block w-full rounded-sm border border-border bg-muted px-4 py-3 text-left'
+                        : 'block w-full rounded-sm border border-border bg-background px-4 py-3 text-left'
+                    }
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-9 w-9 border border-border bg-muted">
+                        <AvatarFallback className="bg-muted text-xs font-medium text-foreground">
+                          {getInitials(conversation.name ?? conversation.provider)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 text-sm font-medium text-foreground">
+                            {conversation.name ?? conversation.provider}
+                          </div>
+                          {latestMessage ? (
+                            <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
+                              {formatRecentMessageTime(latestMessage.createdAt)}
+                            </span>
+                          ) : null}
+                          <div className="flex shrink-0 items-center gap-2 md:hidden">
                             {latestMessage ? (
-                              <div className="space-y-1 pt-2">
-                                <div className="truncate text-sm text-foreground">
-                                  <span className="text-muted-foreground">{latestMessage.authorDisplayName}: </span>
-                                  <span>{latestMessage.content}</span>
-                                </div>
-                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {formatRecentMessageTime(latestMessage.createdAt)}
+                              </span>
                             ) : null}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
-                      </Link>
-                  );
-                })}
+                        {latestMessage ? (
+                          <div className="space-y-1 pt-2">
+                            <div className="truncate text-sm text-foreground">
+                              <span className="text-muted-foreground">
+                                {latestMessage.authorDisplayName}:{' '}
+                              </span>
+                              <span>{latestMessage.content}</span>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </AdminScrollArea>
           </div>
 
@@ -94,8 +102,12 @@ function AgentConversationsLayoutRoute() {
         </div>
       ) : null}
 
-      {conversations.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma conversa recente.</div> : null}
-      {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
+      {conversations.length === 0 ? (
+        <div className="text-sm text-muted-foreground">Nenhuma conversa recente.</div>
+      ) : null}
+      {agentQuery.error ? (
+        <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+      ) : null}
     </div>
   );
 }

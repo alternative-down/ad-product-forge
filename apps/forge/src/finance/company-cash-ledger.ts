@@ -3,7 +3,7 @@ import { createId } from '../utils/id';
 
 import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { companyCashLedger } from '../database/schema';
 type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
@@ -27,7 +27,12 @@ export function createCompanyCashLedger(db: Database) {
       const r = rows as any;
       return r?.[0]?.total ?? 0;
     } catch (error) {
-      forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'getCurrentBalanceUsd failed', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'company-cash-ledger',
+        level: 'error',
+        message: 'getCurrentBalanceUsd failed',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
       throw error;
     }
   }
@@ -60,7 +65,15 @@ export function createCompanyCashLedger(db: Database) {
         createdAt: now,
       });
     } catch (error) {
-      forgeDebug({ scope: 'company-cash-ledger', level: 'error', message: 'postEntry failed', context: { error: error instanceof Error ? error.message : String(error), input: { type: input.type, direction: input.direction, amountUsd: input.amountUsd } } });
+      forgeDebug({
+        scope: 'company-cash-ledger',
+        level: 'error',
+        message: 'postEntry failed',
+        context: {
+          error: error instanceof Error ? error.message : String(error),
+          input: { type: input.type, direction: input.direction, amountUsd: input.amountUsd },
+        },
+      });
       throw error;
     }
   }

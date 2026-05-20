@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { createTextStepContextEntry, getStepContextParts } from '../core/step-context.js';
 import { AgentRuntime } from '../core/runtime.js';
 import { RuntimeMessageChunkStream } from '../integrations/runtime/runtime-message-chunk-stream.js';
-import { FakeStepModelAdapter, FakeStreamingStepModelAdapter } from '../integrations/testing/fake-model.js';
+import {
+  FakeStepModelAdapter,
+  FakeStreamingStepModelAdapter,
+} from '../integrations/testing/fake-model.js';
 
 describe('runtime streaming', () => {
   it('streams message deltas from a streaming model', async () => {

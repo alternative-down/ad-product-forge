@@ -66,9 +66,17 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
   >();
 
   async function connectImap(): Promise<ImapFlow> {
-        forgeDebug({ scope: 'email-account', level: 'warn', message: 'connectImap: provider already disposed' });
+    forgeDebug({
+      scope: 'email-account',
+      level: 'warn',
+      message: 'connectImap: provider already disposed',
+    });
     if (disposed) {
-      forgeDebug({ scope: 'email-account', level: 'warn', message: 'connectImap: provider disposed' });
+      forgeDebug({
+        scope: 'email-account',
+        level: 'warn',
+        message: 'connectImap: provider disposed',
+      });
       throw new Error('Email provider is disposed');
     }
     if (client) return client;
@@ -130,7 +138,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       try {
         await queryClient.logout();
       } catch (error) {
-        forgeDebug({ scope: 'email-account', level: 'info', message: 'Logout failed (best-effort)', context: { error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({
+          scope: 'email-account',
+          level: 'info',
+          message: 'Logout failed (best-effort)',
+          context: { error: error instanceof Error ? error.message : String(error) },
+        });
       }
     }
   }
@@ -180,12 +193,20 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         } as CommunicationInboundMessage);
       }
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'info', message: 'Error processing message', context: { uid, error } });
+      forgeDebug({
+        scope: 'email-account',
+        level: 'info',
+        message: 'Error processing message',
+        context: { uid, error },
+      });
     }
   }
 
   async function processUnseenMessages(currentClient: ImapFlow): Promise<void> {
-    const unseenUids = (await currentClient.search({ seen: false }, { uid: true })) as Iterable<number>;
+    const unseenUids = (await currentClient.search(
+      { seen: false },
+      { uid: true },
+    )) as Iterable<number>;
     for (const uid of [...unseenUids].sort((left, right) => right - left)) {
       await processMessage(uid, currentClient);
     }
@@ -212,7 +233,11 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         threadKey: string;
       }> = [];
 
-      for await (const message of queryClient.fetch(recentUids, { source: true, flags: true }, { uid: true })) {
+      for await (const message of queryClient.fetch(
+        recentUids,
+        { source: true, flags: true },
+        { uid: true },
+      )) {
         if (!(message.source instanceof Uint8Array) && typeof message.source !== 'string') continue;
 
         const source =
@@ -223,7 +248,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         const participant = resolveConversationParticipant(parsed, config.imap.user.toLowerCase());
         if (!participant) continue;
 
-        const providerMessageId = parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
+        const providerMessageId =
+          parsed.messageId ?? `${message.uid ?? Date.now()}-${items.length}`;
         const threadKey = resolveEmailThreadKey(parsed);
         items.push({
           messageId: providerMessageId,
@@ -260,7 +286,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const currentClient = await connectImap();
       await processUnseenMessages(currentClient);
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'info', message: 'listen() failed', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({
+        scope: 'email-account',
+        level: 'info',
+        message: 'listen() failed',
+        context: { error: error instanceof Error ? error.message : String(error) },
+      });
     }
   }
 
@@ -316,7 +347,10 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       return [...contacts.values()];
     },
 
-    async listConversations(input: { limit: number; unread?: boolean }): Promise<CommunicationProviderConversation[]> {
+    async listConversations(input: {
+      limit: number;
+      unread?: boolean;
+    }): Promise<CommunicationProviderConversation[]> {
       const inboxEmails = await listRecentInboxEmails(50);
       const grouped = new Map<string, typeof inboxEmails>();
 
@@ -355,7 +389,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       query?: string;
       dateFrom?: string;
       dateTo?: string;
-    }): Promise<CommunicationProviderMessage[]> {  
+    }): Promise<CommunicationProviderMessage[]> {
       const { targetKey, limit, offset, dateFrom, dateTo } = input;
       const parsedDateFrom = parseFilterDate(dateFrom, 'dateFrom');
       const parsedDateTo = parseFilterDate(dateTo, 'dateTo');
@@ -381,7 +415,12 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const recipientAddress = input.targetKey;
 
       if (!recipientAddress) {
-        forgeDebug({ scope: 'email-account', level: 'warn', message: 'send: targetKey missing', context: { targetKey: input.targetKey } });
+        forgeDebug({
+          scope: 'email-account',
+          level: 'warn',
+          message: 'send: targetKey missing',
+          context: { targetKey: input.targetKey },
+        });
         forgeDebug({ scope: 'email-account', level: 'warn', message: 'send: targetKey missing' });
         throw new Error('[email] Cannot send without a targetKey');
       }
@@ -391,9 +430,13 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         .filter((email) => email.targetKey === recipientAddress)
         .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
 
-      const subject = latestConversationEmail !== null && latestConversationEmail !== undefined && latestConversationEmail.conversationName !== null && latestConversationEmail.conversationName !== undefined
-        ? toReplySubject(latestConversationEmail.conversationName)
-        : `Message from ${config.smtp.user}`;
+      const subject =
+        latestConversationEmail !== null &&
+        latestConversationEmail !== undefined &&
+        latestConversationEmail.conversationName !== null &&
+        latestConversationEmail.conversationName !== undefined
+          ? toReplySubject(latestConversationEmail.conversationName)
+          : `Message from ${config.smtp.user}`;
 
       const transporter = nodemailer.createTransport({
         host: config.smtp.host,
