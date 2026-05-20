@@ -6,7 +6,6 @@
  *
  * @module
  */
-import { eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { CommunicationFile } from '@forge-runtime/core';
