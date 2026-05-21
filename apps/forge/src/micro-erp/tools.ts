@@ -77,10 +77,10 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.getCompanyCashBalance();
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Try again in a moment. If the problem persists, verify the finance ledger is available.',
           };
         }
@@ -97,10 +97,10 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.listCompanyCashMovements(input);
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Review the selected filters and period, then try again.',
           };
         }
@@ -117,10 +117,10 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
         try {
           return await microErp.listActiveInternalAgentContracts();
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Try again in a moment. If the problem persists, verify the contract store is available.',
           };
         }
@@ -341,10 +341,10 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
           const result = await companyCash.cancelPlannedEntry(input.cancelPlanned.entryId);
           return { valid: true, action: input.action, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
           };
         }
@@ -371,10 +371,10 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'micro-erp', level: 'error', message: 'MicroERP tool failed', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Use list_internal_agent_contracts to confirm the agent contract exists and is not currently running.',
           };
         }
@@ -384,3 +384,4 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
 
   return tools as Record<string, Tool<unknown, unknown>>;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';

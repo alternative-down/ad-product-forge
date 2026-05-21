@@ -40,6 +40,7 @@ const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 function buildProviderId(config: EmailProviderConfig): string {
   return config.id ?? 'email';
 }
+import { serializeError } from './agents/agent-runner-error-formatting';
 
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
   const providerId = buildProviderId(config);
@@ -130,7 +131,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       try {
         await queryClient.logout();
       } catch (error) {
-        forgeDebug({ scope: 'email-account', level: 'info', message: 'Logout failed (best-effort)', context: { error: error instanceof Error ? error.message : String(error) } });
+        forgeDebug({ scope: 'email-account', level: 'info', message: 'Logout failed (best-effort)', context: { error: String(serializeError(error)) } });
       }
     }
   }
@@ -260,7 +261,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       const currentClient = await connectImap();
       await processUnseenMessages(currentClient);
     } catch (error) {
-      forgeDebug({ scope: 'email-account', level: 'info', message: 'listen() failed', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'email-account', level: 'info', message: 'listen() failed', context: { error: String(serializeError(error)) } });
     }
   }
 

@@ -21,11 +21,11 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           return { success: true as const, applications };
         } catch (error) {
           forgeDebug({ scope: 'tools:coolify', level: 'error', message: 'list_coolify_applications error', context: {
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           } });
           return {
             success: false as const,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           };
         }
       },
@@ -45,12 +45,12 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           return { success: true as const, applicationUuid: input.applicationUuid };
         } catch (error) {
           forgeDebug({ scope: 'tools:coolify', level: 'error', message: 'start_coolify_application error', context: {
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           } });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           };
         }
       },
@@ -70,12 +70,12 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           return { success: true as const, applicationUuid: input.applicationUuid };
         } catch (error) {
           forgeDebug({ scope: 'tools:coolify', level: 'error', message: 'stop_coolify_application error', context: {
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           } });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           };
         }
       },
@@ -96,12 +96,12 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
           return { success: true as const, ...result };
         } catch (error) {
           forgeDebug({ scope: 'tools:coolify', level: 'error', message: 'get_coolify_application_logs error', context: {
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           } });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
           };
         }
       },
@@ -110,3 +110,4 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
 
   return tools;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';

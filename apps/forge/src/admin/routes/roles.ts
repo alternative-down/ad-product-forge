@@ -29,6 +29,7 @@ export interface RoleRoutesDeps {
   db: Database;
   loaderConfig: AgentLoaderConfig;
 }
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesDeps) {
   const capabilities = createCapabilityStore(db);
@@ -55,7 +56,7 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         const body = parseJsonBody(request.bodyText, updateRoleSchema);
         const result = await capabilities.updateRole(body);
         void reloadAgentsForRole(db, loaderConfig, body.roleId).catch((error) => {
-          forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to reload agents for role', context: { roleId: body.roleId, error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to reload agents for role', context: { roleId: body.roleId, error: String(serializeError(error)) } });
         });
         return jsonResponse(result);
       } catch (err) {

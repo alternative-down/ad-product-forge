@@ -6,10 +6,11 @@ export function adminRouteError(error: unknown) {
     scope: 'admin',
     level: 'error',
     message: 'Admin route failed',
-    context: { error: error instanceof Error ? error.message : String(error) },
+    context: { error: String(serializeError(error)) },
   });
   return jsonResponse(
-    { error: error instanceof Error ? error.message : String(error) },
+    { error: String(serializeError(error)) },
     500,
   );
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';

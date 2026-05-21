@@ -25,11 +25,12 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     forgeDebug({ scope: 'migrations', level: 'info', message: 'Applied rows after migrate', context: { appliedRows: await getAppliedMigrationRows(db) } });
     forgeDebug({ scope: 'migrations', level: 'info', message: 'Migrations completed successfully' });
   } catch (error) {
-    forgeDebug({ scope: 'migrations', level: 'error', message: 'Failed to run migrations', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'migrations', level: 'error', message: 'Failed to run migrations', context: { error: String(serializeError(error)) } });
     forgeDebug({ scope: 'migrations', level: 'error', message: 'Applied rows at failure', context: { appliedRows: await getAppliedMigrationRows(db) } });
     throw error;
   }
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown>>) {
   try {
@@ -47,9 +48,9 @@ async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown
       limit 10
     `);
   } catch (error) {
-    forgeDebug({ scope: 'migrations', level: 'error', message: 'getAppliedMigrationRows failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'migrations', level: 'error', message: 'getAppliedMigrationRows failed', context: { error: String(serializeError(error)) } });
     return {
-      error: error instanceof Error ? error.message : String(error),
+      error: String(serializeError(error)),
     };
   }
 }

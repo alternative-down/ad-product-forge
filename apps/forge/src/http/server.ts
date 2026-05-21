@@ -61,6 +61,7 @@ function buildCorsHeaders(
     'access-control-allow-headers': CORS_ALLOWED_HEADERS,
   };
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export type CreateForgeHttpServerConfig = {
   port: number;
@@ -261,7 +262,7 @@ export function createForgeHttpServer(config: CreateForgeHttpServerConfig): Prom
       });
       res.end(
         JSON.stringify({
-          error: error instanceof Error ? error.message : String(error),
+          error: String(serializeError(error)),
         }),
       );
     }

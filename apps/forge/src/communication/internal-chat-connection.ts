@@ -21,6 +21,7 @@ import { buildGroupMetadata } from "./internal-chat-helpers";
 export interface InternalChatHandler {
   (message: InternalChatDeliveryMessage): Promise<void>;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export interface InternalChatDeliveryMessage {
   targetKey: string;
@@ -95,7 +96,7 @@ function createConnectionImpl(
         level: "error",
         agentId,
         message: "Failed to replay unread messages",
-        context: { error: error instanceof Error ? error.message : String(error) },
+        context: { error: String(serializeError(error)) },
       });
     });
   }

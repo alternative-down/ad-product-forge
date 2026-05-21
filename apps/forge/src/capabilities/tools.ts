@@ -39,10 +39,10 @@ export function createCapabilityTools(
           } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_agent_roles error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_agent_roles error', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
           };
         }
@@ -164,10 +164,10 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_agent_role success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'manage_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'manage_agent_role error', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
           };
         }
@@ -197,10 +197,10 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'change_agent_role success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'change_agent_role error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'change_agent_role error', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Use list_agents and list_agent_roles to verify the agentId and roleId.',
           };
         }
@@ -227,10 +227,10 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'list_agent_statuses result', context: { count: result.length } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_agent_statuses error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_agent_statuses error', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Verify the agentId when filtering one agent.',
           };
         }
@@ -251,10 +251,10 @@ export function createCapabilityTools(
         try {
           return await capabilities.listRoleCapabilities(input.roleId);
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'list_role_capabilities error', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Use list_agent_roles to confirm the roleId.',
           };
         }
@@ -280,10 +280,10 @@ export function createCapabilityTools(
           forgeDebug({ scope: 'tools:capabilities', level: 'info', message: 'manage_role_capabilities success', context: { result } });
           return { valid: true, ...result };
         } catch (error) {
-          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'manage_role_capabilities error', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'tools:capabilities', level: 'error', message: 'manage_role_capabilities error', context: { error: String(serializeError(error)) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Use list_agent_roles and list_role_capabilities to verify the roleId and capabilityId.',
           };
         }
@@ -293,3 +293,4 @@ export function createCapabilityTools(
 
   return tools;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';

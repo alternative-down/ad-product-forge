@@ -28,8 +28,9 @@ async function main() {
   // Contract info logged above via forgeDebug
   // Budget info logged above via forgeDebug
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 main().catch((error) => {
-  forgeDebug({ scope: 'top-up-contract', level: 'error', message: 'Failed to top up active contract', context: { error: error instanceof Error ? error.message : String(error) } });
+  forgeDebug({ scope: 'top-up-contract', level: 'error', message: 'Failed to top up active contract', context: { error: String(serializeError(error)) } });
   process.exit(1);
 });

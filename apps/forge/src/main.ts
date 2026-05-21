@@ -33,10 +33,11 @@ export async function main() {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }
+import { serializeError } from './agents/agent-runner-error-formatting';
 
 main().catch((error) => {
    
-  console.error('[forge-main] Fatal error during startup:', error instanceof Error ? error.message : String(error));
+  console.error('[forge-main] Fatal error during startup:', serializeError(error));
   if (error instanceof Error && error.stack !== null && error.stack !== undefined) {
      
     console.error(error.stack);
