@@ -35,10 +35,11 @@ export function createInternalChatUnread(db: Database) {
         unreadConversationCount: (rows as any)[0]?.unreadConversationCount ?? 0,
       };
     } catch (err) {
-      forgeDebug({ scope: 'internal-chat-unread', level: 'error', message: '[internal-chat-unread] getUnreadSummary failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'internal-chat-unread', level: 'error', message: '[internal-chat-unread] getUnreadSummary failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
 
   return { getUnreadSummary };
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
