@@ -132,7 +132,7 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error: String(serializeError(error)) } });
     }
   }
 
@@ -147,13 +147,14 @@ export async function loadCommunicationProviders(
         })
       );
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'Failed to load email provider', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'Failed to load email provider', context: { error: String(serializeError(error)) } });
       throw error;
     }
   }
 
   return providers;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export function parseProviderCredentials(
   providerType: keyof ProviderCredentialsMap,

@@ -42,10 +42,11 @@ export function verifyAsaasWebhookRequest(
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
   } catch (error) {
-    forgeDebug({ scope: 'asaas', level: 'error', message: 'Asaas webhook JSON parse failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'asaas', level: 'error', message: 'Asaas webhook JSON parse failed', context: { error: String(serializeError(error)) } });
     throw new Error('Asaas webhook: failed to parse JSON payload');
   }
 }
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 /** Normalize an Asaas PAYMENT_RECEIVED event. */
 export function normalizeAsaasPaymentReceived(

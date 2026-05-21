@@ -20,6 +20,7 @@ async function main() {
     await resetAgentIndexes(input.workspaceBasePath, agentId);
   }
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
   forgeDebug({ scope: 'reset-embedder', level: 'info', message: 'Processing agent', context: { agentId } });
@@ -28,6 +29,6 @@ async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: error instanceof Error ? error.message : String(error) } });
+  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: String(serializeError(error)) } });
   process.exit(1);
 });

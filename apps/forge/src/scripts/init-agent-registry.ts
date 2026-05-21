@@ -205,9 +205,10 @@ async function initAgentRegistry() {
     forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Agent registry initialized successfully' });
     process.exit(0);
   } catch (error) {
-    forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error: String(serializeError(error)) } });
     process.exit(1);
   }
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 initAgentRegistry();

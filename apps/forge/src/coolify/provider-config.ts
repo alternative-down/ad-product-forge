@@ -17,6 +17,7 @@ export interface ProviderConfig {
   destinationId: string;
   applicationsBaseDomain: string | null;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export async function getProviderConfig(
   integrations: ReturnType<typeof createSystemIntegrationStore>,
@@ -62,10 +63,10 @@ export async function getApplicationsBaseDomain(
 
     return wildcardDomain;
   } catch (error) {
-    forgeDebug({ scope: 'coolify-provider-config', level: 'error', message: 'Coolify provider config failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'coolify-provider-config', level: 'error', message: 'Coolify provider config failed', context: { error: String(serializeError(error)) } });
     throw new Error(
       `Failed to resolve Coolify applications base domain: ${
-        error instanceof Error ? error.message : String(error)
+        String(serializeError(error))
       }`,
     );
   }

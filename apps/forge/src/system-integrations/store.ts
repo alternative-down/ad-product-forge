@@ -260,7 +260,7 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       return parseIntegrationConfig(providerType, encryptedConfig);
     } catch (error) {
-      forgeDebug({ scope: 'system-integrations', level: 'info', message: 'Failed to parse integration config', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'system-integrations', level: 'info', message: 'Failed to parse integration config', context: { error: String(serializeError(error)) } });
       return null;
     }
   }
@@ -311,3 +311,4 @@ export function createSystemIntegrationStore(db: Database) {
     deleteIntegration,
   };
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';

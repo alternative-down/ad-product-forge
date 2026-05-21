@@ -26,10 +26,10 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
             limit: input.limit ?? 20,
           });
         } catch (error) {
-          forgeDebug({ scope: 'notifications', level: 'error', message: '[notifications] list_agent_notifications failed', context: { error: error instanceof Error ? error.message : String(error) }});
+          forgeDebug({ scope: 'notifications', level: 'error', message: '[notifications] list_agent_notifications failed', context: { error: String(serializeError(error)) }});
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(serializeError(error)),
             hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
           };
         }
@@ -39,3 +39,4 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
 
   return tools as Record<string, Tool<unknown, unknown>>;
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
