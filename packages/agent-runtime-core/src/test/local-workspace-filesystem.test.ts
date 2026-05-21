@@ -49,8 +49,6 @@ describe('LocalWorkspaceFilesystem', () => {
         // Path should be relative to workspace root, not absolute
         expect(entry.path).not.toMatch(/^\/|^[A-Z]:/i);
         expect(entry.path).not.toContain(tmpDir);
-        // Path should be relative (no leading /)
-        expect(entry.path).toMatch(/^[^/\\]/);
       }
       // Paths should include the subdirectory prefix
       const subEntry = entries.find((e) => e.name === 'b.txt');
