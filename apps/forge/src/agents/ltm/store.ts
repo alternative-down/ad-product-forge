@@ -286,8 +286,8 @@ export interface CheckpointedOmCheckpointPackageInput {
   threadId: string;
   toGeneration: number;
   fromGeneration: number | null;
-  reflections: Array<{ content: string; generatedAt: number }>;
-  observations: Array<{ content: string; generatedAt: number }>;
+  reflections: Array<{ content: string; generatedAt?: number; createdAt?: number }>;
+  observations: Array<{ content: string; generatedAt?: number; createdAt?: number }>;
   checkpointSummary: { text: string; updatedAt: number };
 }
 

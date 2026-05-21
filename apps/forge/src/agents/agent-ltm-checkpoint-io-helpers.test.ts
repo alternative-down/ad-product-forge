@@ -45,9 +45,9 @@ const fsModule = _fsModule as any;
 describe('computeCheckpointTimestamp', () => {
   it('returns earliest reflection createdAt when reflections exist', () => {
     const payload = {
-      reflections: [{ createdAt: 1700000000000, text: 'a' }, { createdAt: 1710000000000, text: 'b' }],
+      reflections: [{ createdAt: 1700000000000, content: 'a' }, { createdAt: 1710000000000, content: 'b' }],
       observations: [],
-      checkpointSummary: { updatedAt: 1720000000000, text: '' } as any,
+      checkpointSummary: { updatedAt: 1720000000000, text: '' },
       fromGeneration: 0,
       toGeneration: 1,
       threadId: 't1',
@@ -58,7 +58,7 @@ describe('computeCheckpointTimestamp', () => {
   it('returns earliest observation createdAt when no reflections', () => {
     const payload = {
       reflections: [],
-      observations: [{ createdAt: 1690000000000, text: 'o1' }],
+      observations: [{ createdAt: 1690000000000, content: 'o1' }],
       checkpointSummary: { updatedAt: 1720000000000, text: '' } as any,
       fromGeneration: 0,
       toGeneration: 1,
@@ -69,8 +69,8 @@ describe('computeCheckpointTimestamp', () => {
 
   it('favors earliest across both arrays when both exist', () => {
     const payload = {
-      reflections: [{ createdAt: 1700000000000, text: 'a' }],
-      observations: [{ createdAt: 1680000000000, text: 'o1' }],
+      reflections: [{ createdAt: 1700000000000, content: 'a' }],
+      observations: [{ createdAt: 1680000000000, content: 'o1' }],
       checkpointSummary: { updatedAt: 1720000000000, text: '' } as any,
       fromGeneration: 0,
       toGeneration: 1,
@@ -110,7 +110,7 @@ describe('writeCheckpointFiles', () => {
     const payload = {
       reflections: [],
       observations: [],
-      checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
+      checkpointSummary: { updatedAt: 1700000000000, text: '' },
       fromGeneration: 0,
       toGeneration: 1,
       threadId: 't1',
@@ -182,7 +182,7 @@ describe('buildCheckpointPackageManifest', () => {
 
   it('uses checkpointTimestamp for createdAt and checkpointSummaryUpdatedAt', () => {
     const manifest = buildCheckpointPackageManifest('2025-01-15_001', {
-      reflections: [{ createdAt: 1680000000000, text: 'r' }],
+      reflections: [{ createdAt: 1680000000000, content: 'r' }],
       observations: [],
       checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
       fromGeneration: 0,
@@ -190,14 +190,14 @@ describe('buildCheckpointPackageManifest', () => {
       threadId: 't1',
     } as any, 1680000000000);
 
-    expect(manifest.createdAt).toBe(1680000000000);
-    expect(manifest.checkpointSummaryUpdatedAt).toBe(1680000000000);
+    expect(manifest.createdAt).toBe('1680000000000');
+    expect(manifest.checkpointSummaryUpdatedAt).toBe('1680000000000');
   });
 
   it('counts reflections and observations', () => {
     const manifest = buildCheckpointPackageManifest('2025-01-15_001', {
-      reflections: [{ createdAt: 1680000000000, text: 'a' }, { createdAt: 1690000000000, text: 'b' }],
-      observations: [{ createdAt: 1670000000000, text: 'o' }],
+      reflections: [{ createdAt: 1680000000000, content: 'a' }, { createdAt: 1690000000000, content: 'b' }],
+      observations: [{ createdAt: 1670000000000, content: 'o' }],
       checkpointSummary: { updatedAt: 1700000000000, text: '' } as any,
       fromGeneration: 0,
       toGeneration: 1,
