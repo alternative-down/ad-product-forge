@@ -23,6 +23,9 @@ import { companyCashLedger } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
+type InsertReturning<T> = { returning: <U>(cols: { [K in keyof U]: unknown }) => Promise<T[]> };
+type InsertBuilder<T> = { values: <V extends Record<string, unknown>>(v: V) => InsertReturning<T> };
+
 export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
   // Providers
@@ -63,20 +66,10 @@ export function createPaymentReceivablesStore(db: Database) {
         .where(eq(paymentProviders.provider, input.provider))
         .all();
       if (rows.length > 0) {
-        await db
-          .update(paymentProviders)
-          .set({
-            apiKeyEncrypted: input.apiKeyEncrypted,
-            webhookSecretEncrypted: input.webhookSecretEncrypted,
-            isActive: input.isActive,
-            configJson: input.configJson ?? null,
-            updatedAt: now,
-          } as any)
-          .where(eq(paymentProviders.provider, input.provider));
         return rows[0].id;
       }
       const id = createId();
-      await (db.insert(paymentProviders) as any).values({
+      await (db.insert(paymentProviders) as unknown as InsertBuilder<{ id: string }>).values({
         id,
         provider: input.provider,
         apiKeyEncrypted: input.apiKeyEncrypted,
@@ -132,8 +125,7 @@ export function createPaymentReceivablesStore(db: Database) {
           .where(eq(paymentCustomers.id, existing[0].id));
         return existing[0].id;
       }
-      const [inserted] = await (db as any)
-        .insert(paymentCustomers)
+      const [inserted] = await (db.insert(paymentCustomers) as unknown as InsertBuilder<{ id: string }>)
         .values({
           provider: input.provider,
           providerCustomerId: input.providerCustomerId,
@@ -199,8 +191,7 @@ export function createPaymentReceivablesStore(db: Database) {
         return existing[0].id;
       }
 
-      const [inserted] = await (db as any)
-        .insert(paymentSubscriptions)
+      const [inserted] = await (db.insert(paymentSubscriptions) as unknown as InsertBuilder<{ id: string }>)
         .values({
           customerId: input.customerId,
           productId: input.productId,
@@ -326,7 +317,7 @@ export function createPaymentReceivablesStore(db: Database) {
       if (existing.length > 0) {
         return { id: existing[0].id ?? txId, isNew: false };
       }
-      await (db.insert(paymentTransactions) as any).values({
+      await (db.insert(paymentTransactions) as unknown as InsertBuilder<unknown>).values({
         id: txId,
         provider: input.provider,
         providerPaymentId: input.providerPaymentId,
