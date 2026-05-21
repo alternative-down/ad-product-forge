@@ -103,11 +103,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
 
         for (const entry of registry.list()) {
-          const runtime = await loadAgentFn(db, {
-            ...loaderConfig,
-            agentId: entry.runtime.id,
-          });
-          await registry.add(db, runtime);
+          const agentEntry = registry.get(entry.id);
+          if (!agentEntry?.runtime) continue;
+          await registry.add(db, agentEntry.runtime);
         }
 
         return jsonResponse(result);
