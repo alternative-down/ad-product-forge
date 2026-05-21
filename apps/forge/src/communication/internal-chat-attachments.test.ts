@@ -77,9 +77,9 @@ describe('createChatAttachments — storeMessageAttachments', () => {
     const db = makeMockDb({ insertError: new Error('insert failed') });
     const attachments = createChatAttachments(db as never);
 
-    await expect(
-      attachments.storeMessageAttachments('msg-1', [makeFile()]),
-    ).rejects.toThrow('insert failed');
+    await expect(attachments.storeMessageAttachments('msg-1', [makeFile()])).rejects.toThrow(
+      'insert failed',
+    );
   });
 });
 
@@ -88,13 +88,15 @@ describe('createChatAttachments — storeMessageAttachments', () => {
 describe('createChatAttachments — readMessageAttachments', () => {
   it('returns mapped CommunicationFile objects from DB rows', async () => {
     const db = makeMockDb({
-      attachmentRows: [{
-        name: 'doc.pdf',
-        data: Buffer.from([0x01, 0x02]),
-        contentType: 'application/pdf',
-        sizeBytes: 2,
-        attachmentIndex: 0,
-      }],
+      attachmentRows: [
+        {
+          name: 'doc.pdf',
+          data: Buffer.from([0x01, 0x02]),
+          contentType: 'application/pdf',
+          sizeBytes: 2,
+          attachmentIndex: 0,
+        },
+      ],
     });
     const attachments = createChatAttachments(db as never);
 
@@ -108,13 +110,15 @@ describe('createChatAttachments — readMessageAttachments', () => {
 
   it('returns attachment with null contentType when row has null contentType', async () => {
     const db = makeMockDb({
-      attachmentRows: [{
-        name: 'script.js',
-        data: Buffer.from([0x01]),
-        contentType: null,
-        sizeBytes: 1,
-        attachmentIndex: 0,
-      }],
+      attachmentRows: [
+        {
+          name: 'script.js',
+          data: Buffer.from([0x01]),
+          contentType: null,
+          sizeBytes: 1,
+          attachmentIndex: 0,
+        },
+      ],
     });
     const attachments = createChatAttachments(db as never);
 
@@ -147,9 +151,7 @@ describe('createChatAttachments — readMessageAttachments', () => {
     const db = makeMockDb({ findManyError: new Error('findMany failed') });
     const attachments = createChatAttachments(db as never);
 
-    await expect(
-      attachments.readMessageAttachments('msg-1'),
-    ).rejects.toThrow('findMany failed');
+    await expect(attachments.readMessageAttachments('msg-1')).rejects.toThrow('findMany failed');
   });
 });
 
@@ -158,13 +160,15 @@ describe('createChatAttachments — readMessageAttachments', () => {
 describe('createChatAttachments — readMessageAttachment', () => {
   it('returns single attachment when found by name', async () => {
     const db = makeMockDb({
-      attachmentRows: [{
-        name: 'file.pdf',
-        data: Buffer.from([0x01]),
-        contentType: 'application/pdf',
-        sizeBytes: 1,
-        attachmentIndex: 0,
-      }],
+      attachmentRows: [
+        {
+          name: 'file.pdf',
+          data: Buffer.from([0x01]),
+          contentType: 'application/pdf',
+          sizeBytes: 1,
+          attachmentIndex: 0,
+        },
+      ],
     });
     const attachments = createChatAttachments(db as never);
 
@@ -176,13 +180,15 @@ describe('createChatAttachments — readMessageAttachment', () => {
 
   it('returns null when no attachment matches the name', async () => {
     const db = makeMockDb({
-      attachmentRows: [{
-        name: 'other.pdf',
-        data: Buffer.from([0x01]),
-        contentType: 'application/pdf',
-        sizeBytes: 1,
-        attachmentIndex: 0,
-      }],
+      attachmentRows: [
+        {
+          name: 'other.pdf',
+          data: Buffer.from([0x01]),
+          contentType: 'application/pdf',
+          sizeBytes: 1,
+          attachmentIndex: 0,
+        },
+      ],
     });
     const attachments = createChatAttachments(db as never);
 
@@ -204,8 +210,8 @@ describe('createChatAttachments — readMessageAttachment', () => {
     const db = makeMockDb({ findManyError: new Error('upstream failed') });
     const attachments = createChatAttachments(db as never);
 
-    await expect(
-      attachments.readMessageAttachment('msg-1', 'file.pdf'),
-    ).rejects.toThrow('upstream failed');
+    await expect(attachments.readMessageAttachment('msg-1', 'file.pdf')).rejects.toThrow(
+      'upstream failed',
+    );
   });
 });

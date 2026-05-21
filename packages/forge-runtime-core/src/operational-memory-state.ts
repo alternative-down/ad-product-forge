@@ -36,18 +36,15 @@ export async function readOperationalMemoryState(input: {
     const messages = await input.store.listOperationalMemoryMessages({
       threadId: input.threadId,
     });
-    const checkpointSummaryMessage = messages.find(
-      (message) => message.operationalMemoryType === 'checkpoint-summary',
-    ) ?? null;
+    const checkpointSummaryMessage =
+      messages.find((message) => message.operationalMemoryType === 'checkpoint-summary') ?? null;
     const reflectionMessages = messages.filter(
       (message) => message.operationalMemoryType === 'reflection',
     );
     const observationMessages = messages.filter(
       (message) => message.operationalMemoryType === 'observation',
     );
-    const rawMessages = messages.filter(
-      (message) => !message.operationalMemoryType,
-    );
+    const rawMessages = messages.filter((message) => !message.operationalMemoryType);
     const rawBands = splitRawMessagesByRecentReserve({
       messages: rawMessages,
       recentTokenLimit: input.recentTokenLimit,
@@ -147,10 +144,7 @@ function splitRawMessagesByRecentReserve(input: {
     recentMessages,
     recentTokenCount,
     overflowMessages,
-    overflowTokenCount: overflowGroups.reduce(
-      (total, group) => total + group.tokenCount,
-      0,
-    ),
+    overflowTokenCount: overflowGroups.reduce((total, group) => total + group.tokenCount, 0),
   };
 }
 
@@ -164,9 +158,7 @@ function groupRawConversationMessages(messages: ConversationMessage[]) {
       Array.isArray(message.metadata?.toolInvocations)
         ? message.metadata.toolInvocations
             .filter(
-              (
-                tc,
-              ): tc is { toolCallId: string; toolName: string } =>
+              (tc): tc is { toolCallId: string; toolName: string } =>
                 typeof tc === 'object' &&
                 tc !== null &&
                 typeof tc.toolCallId === 'string' &&
@@ -176,11 +168,7 @@ function groupRawConversationMessages(messages: ConversationMessage[]) {
         : [],
     );
 
-    if (
-      currentGroup !== null
-      && message.role === 'user'
-      && currentGroup.toolCallIds.size === 0
-    ) {
+    if (currentGroup !== null && message.role === 'user' && currentGroup.toolCallIds.size === 0) {
       currentGroup = {
         messages: [...currentGroup.messages, message],
         tokenCount: currentGroup.tokenCount + tokenCount,
@@ -218,8 +206,10 @@ function getMessageBudgetText(message: ConversationMessage) {
 
 function getMessageText(message: ConversationMessage) {
   return message.parts
-    .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
-      part.type === 'text' || part.type === 'reasoning')
+    .filter(
+      (part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+        part.type === 'text' || part.type === 'reasoning',
+    )
     .map((part) => part.text.trim())
     .filter(Boolean)
     .join('\n');
@@ -235,15 +225,11 @@ function getToolInvocationBudgetTexts(message: ConversationMessage) {
       return [];
     }
 
-    const toolName = typeof toolInvocation.toolName === 'string'
-      ? toolInvocation.toolName
-      : 'unknown';
+    const toolName =
+      typeof toolInvocation.toolName === 'string' ? toolInvocation.toolName : 'unknown';
     const args = serializeBudgetValue(toolInvocation.args);
 
-    return [[
-      `Tool call: ${toolName}`,
-      args,
-    ].filter(Boolean).join('\n')];
+    return [[`Tool call: ${toolName}`, args].filter(Boolean).join('\n')];
   });
 }
 
@@ -257,15 +243,10 @@ function getToolResultBudgetTexts(message: ConversationMessage) {
       return [];
     }
 
-    const toolName = typeof toolResult.toolName === 'string'
-      ? toolResult.toolName
-      : 'unknown';
+    const toolName = typeof toolResult.toolName === 'string' ? toolResult.toolName : 'unknown';
     const result = serializeBudgetValue(toolResult.result);
 
-    return [[
-      `Tool result: ${toolName}`,
-      result,
-    ].filter(Boolean).join('\n')];
+    return [[`Tool result: ${toolName}`, result].filter(Boolean).join('\n')];
   });
 }
 

@@ -1,7 +1,7 @@
 import type { CoolifyManager } from '../coolify/manager';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import type { AgentEmailManager } from '../email/migadu-manager';
 import type { GitHubAppManager } from '../github/manager';
 import type { MiniMaxManager } from '../minimax/manager';

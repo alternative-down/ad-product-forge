@@ -12,10 +12,7 @@ export type InMemoryRecallPluginOptions = {
   name?: string;
   maxItems?: number;
   dedupeWindow?: number;
-  buildQuery(context: {
-    pendingInputs: RuntimeInput[];
-    steps: StepRecord[];
-  }): string | null;
+  buildQuery(context: { pendingInputs: RuntimeInput[]; steps: StepRecord[] }): string | null;
   retrieve(context: {
     query: string;
     pendingInputs: RuntimeInput[];
@@ -24,9 +21,7 @@ export type InMemoryRecallPluginOptions = {
   renderDocument?(document: RecallDocument, index: number): StepContextEntry;
 };
 
-export function createInMemoryRecallPlugin(
-  options: InMemoryRecallPluginOptions,
-): RuntimePlugin {
+export function createInMemoryRecallPlugin(options: InMemoryRecallPluginOptions): RuntimePlugin {
   const maxItems = options.maxItems ?? 3;
   const dedupeWindow = options.dedupeWindow ?? 10;
   const recentDocumentIds: string[] = [];
@@ -70,9 +65,8 @@ export function createInMemoryRecallPlugin(
           return options.renderDocument(document, index);
         }
 
-        const scoreText = typeof document.score === 'number'
-          ? ` - score ${document.score.toFixed(2)}`
-          : '';
+        const scoreText =
+          typeof document.score === 'number' ? ` - score ${document.score.toFixed(2)}` : '';
 
         return createTextStepContextEntry({
           id: `recall:${document.id}`,

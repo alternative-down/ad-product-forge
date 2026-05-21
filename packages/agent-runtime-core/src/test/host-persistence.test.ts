@@ -59,42 +59,52 @@ describe('runtime host persistence', () => {
         runtimeId: 'host-configured',
         model: new FakeStepModelAdapter(() => ({
           segments: [{ kind: 'message', text: 'configured' }],
-          actionRequests: [{
-            name: 'echo_value',
-            input: {
-              value: 'hello',
+          actionRequests: [
+            {
+              name: 'echo_value',
+              input: {
+                value: 'hello',
+              },
             },
-          }],
+          ],
           continuation: 'stop',
         })),
       },
-      actions: [{
-        name: 'echo_value',
-        description: 'Echo a value.',
-        inputSchema: z.object({
-          value: z.string(),
-        }),
-        execute(input) {
-          return input.value;
+      actions: [
+        {
+          name: 'echo_value',
+          description: 'Echo a value.',
+          inputSchema: z.object({
+            value: z.string(),
+          }),
+          execute(input) {
+            return input.value;
+          },
         },
-      }],
-      plugins: [{
-        name: 'plugin-note',
-        provideContext() {
-          return [{
-            id: 'note-1',
-            kind: 'note',
-            title: 'Configured note',
-            text: 'Injected by plugin.',
-          }];
+      ],
+      plugins: [
+        {
+          name: 'plugin-note',
+          provideContext() {
+            return [
+              {
+                id: 'note-1',
+                kind: 'note',
+                title: 'Configured note',
+                text: 'Injected by plugin.',
+              },
+            ];
+          },
         },
-      }],
-      observers: [{
-        name: 'status-observer',
-        onStatusChanged(context) {
-          observedStatuses.push(context.status);
+      ],
+      observers: [
+        {
+          name: 'status-observer',
+          onStatusChanged(context) {
+            observedStatuses.push(context.status);
+          },
         },
-      }],
+      ],
     });
 
     await host.runtime.dispatch({

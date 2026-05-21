@@ -53,7 +53,9 @@ function makeHttpServer() {
       routes.push(route);
       return () => {};
     },
-    getRoutes() { return routes; },
+    getRoutes() {
+      return routes;
+    },
   };
 }
 
@@ -82,7 +84,7 @@ describe('registerAgentBaseRoutes', () => {
 
   it('registers GET /admin/agents/:agentId', () => {
     registerAgentBaseRoutes(httpServer, mockGetAgent);
-    const route = httpServer.getRoutes().find(r => r.path.includes('/admin/agents/'));
+    const route = httpServer.getRoutes().find((r) => r.path.includes('/admin/agents/'));
     expect(route).toBeDefined();
     expect(route!.method).toBe('GET');
     expect(route!.path).toBe('/admin/agents/:agentId');
@@ -131,9 +133,9 @@ describe('registerAgentStepsRoutes', () => {
     mockDb = {
       query: {
         agentExecutionSteps: {
-          findMany: vi.fn().mockResolvedValue([
-            { id: 'step-1', agentId: 'agent-1', createdAt: Date.now() },
-          ]),
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ id: 'step-1', agentId: 'agent-1', createdAt: Date.now() }]),
         },
       },
     };
@@ -162,7 +164,10 @@ describe('registerAgentStepsRoutes', () => {
   it('uses query params for limit and offset', async () => {
     registerAgentStepsRoutes(httpServer, mockDb);
     const route = httpServer.getRoutes()[0];
-    const query = new Map([['limit', '20'], ['offset', '5']]);
+    const query = new Map([
+      ['limit', '20'],
+      ['offset', '5'],
+    ]);
     await route.handler(makeRequest('/admin/agents/agent-1/steps', query));
     expect(mockDb.query.agentExecutionSteps.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 20, offset: 5 }),
@@ -390,9 +395,9 @@ describe('registerAgentMcpRoutes', () => {
       { id: 'link-1', agentId: 'agent-1', serverId: 'srv-1' },
     ]);
     mockDb.query.mcpServerConfigs = {
-      findMany: vi.fn().mockResolvedValue([
-        { id: 'srv-1', name: 'Test MCP', description: 'A test server' },
-      ]),
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: 'srv-1', name: 'Test MCP', description: 'A test server' }]),
     };
     registerAgentMcpRoutes(httpServer, mockDb);
     const route = httpServer.getRoutes()[0];
@@ -459,9 +464,17 @@ describe('registerAgentNotificationsRoutes', () => {
     mockDb = {
       query: {
         agentNotifications: {
-          findMany: vi.fn().mockResolvedValue([
-            { id: 'n1', agentId: 'agent-1', content: 'Hello', createdAt: Date.now(), readAt: null },
-          ]),
+          findMany: vi
+            .fn()
+            .mockResolvedValue([
+              {
+                id: 'n1',
+                agentId: 'agent-1',
+                content: 'Hello',
+                createdAt: Date.now(),
+                readAt: null,
+              },
+            ]),
         },
       },
     };

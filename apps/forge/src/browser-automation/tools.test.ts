@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createBrowserTools } from './tools';
 
 describe('BrowserTools', () => {
-   
   let mockService: any;
-   
+
   let tools: any;
 
   beforeEach(() => {
@@ -39,7 +38,10 @@ describe('BrowserTools', () => {
 
   describe('browser_click', () => {
     it('calls service.click with selector and pageId', async () => {
-      mockService.click.mockResolvedValue({ pageId: 'page-1', accessibilityTree: '[button] Submit' });
+      mockService.click.mockResolvedValue({
+        pageId: 'page-1',
+        accessibilityTree: '[button] Submit',
+      });
       const result = await tools.browser_click({ selector: '#btn', pageId: 'page-1' });
       expect(mockService.click).toHaveBeenCalledWith('agent-1', '#btn', 'page-1');
       expect(result.accessibilityTree).toBeDefined();
@@ -55,14 +57,26 @@ describe('BrowserTools', () => {
   describe('browser_fill', () => {
     it('passes selector, value, and pageId to service', async () => {
       mockService.fill.mockResolvedValue({ pageId: 'page-1', url: 'https://example.com' });
-      await tools.browser_fill({ selector: 'input[name=email]', value: 'test@example.com', pageId: 'page-1' });
-      expect(mockService.fill).toHaveBeenCalledWith('agent-1', 'input[name=email]', 'test@example.com', 'page-1');
+      await tools.browser_fill({
+        selector: 'input[name=email]',
+        value: 'test@example.com',
+        pageId: 'page-1',
+      });
+      expect(mockService.fill).toHaveBeenCalledWith(
+        'agent-1',
+        'input[name=email]',
+        'test@example.com',
+        'page-1',
+      );
     });
   });
 
   describe('browser_screenshot', () => {
     it('returns screenshot path from service', async () => {
-      mockService.screenshot.mockResolvedValue({ pageId: 'page-1', screenshotPath: '/tmp/shot.png' });
+      mockService.screenshot.mockResolvedValue({
+        pageId: 'page-1',
+        screenshotPath: '/tmp/shot.png',
+      });
       const result = await tools.browser_screenshot({ pageId: 'page-1' });
       expect(result.screenshotPath).toBe('/tmp/shot.png');
     });

@@ -8,9 +8,6 @@ export function adminRouteError(error: unknown) {
     message: 'Admin route failed',
     context: { error: String(serializeError(error)) },
   });
-  return jsonResponse(
-    { error: String(serializeError(error)) },
-    500,
-  );
+  return jsonResponse({ error: String(serializeError(error)) }, 500);
 }
 import { serializeError } from '../../../agents/agent-runner-error-formatting';

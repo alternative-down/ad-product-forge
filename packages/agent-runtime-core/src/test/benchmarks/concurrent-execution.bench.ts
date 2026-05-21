@@ -71,9 +71,7 @@ describe('concurrent step execution', () => {
     for (let i = 0; i < 4; i++) {
       runtime.dispatch({ id: `input-${i}`, type: 'event', payload: { text: `msg ${i}` } });
     }
-    await Promise.all([
-      runtime.step(), runtime.step(), runtime.step(), runtime.step(),
-    ]);
+    await Promise.all([runtime.step(), runtime.step(), runtime.step(), runtime.step()]);
   });
 
   bench('8 parallel step() calls', async () => {
@@ -82,8 +80,14 @@ describe('concurrent step execution', () => {
       runtime.dispatch({ id: `input-${i}`, type: 'event', payload: { text: `msg ${i}` } });
     }
     await Promise.all([
-      runtime.step(), runtime.step(), runtime.step(), runtime.step(),
-      runtime.step(), runtime.step(), runtime.step(), runtime.step(),
+      runtime.step(),
+      runtime.step(),
+      runtime.step(),
+      runtime.step(),
+      runtime.step(),
+      runtime.step(),
+      runtime.step(),
+      runtime.step(),
     ]);
   });
 });
@@ -104,8 +108,9 @@ describe('multiple runtimes, shared model', () => {
 
   bench('4 concurrent runtimes', async () => {
     const sharedModel = makeFastModel();
-    const runtimes = Array.from({ length: 4 }, (_, i) =>
-      new AgentRuntime({ runtimeId: `bench-r${i}`, model: sharedModel }),
+    const runtimes = Array.from(
+      { length: 4 },
+      (_, i) => new AgentRuntime({ runtimeId: `bench-r${i}`, model: sharedModel }),
     );
     runtimes.forEach((runtime, i) => {
       runtime.dispatch({ id: `r${i}-i1`, type: 'event', payload: { text: `msg ${i}` } });
@@ -115,8 +120,9 @@ describe('multiple runtimes, shared model', () => {
 
   bench('8 concurrent runtimes', async () => {
     const sharedModel = makeFastModel();
-    const runtimes = Array.from({ length: 8 }, (_, i) =>
-      new AgentRuntime({ runtimeId: `bench-r${i}`, model: sharedModel }),
+    const runtimes = Array.from(
+      { length: 8 },
+      (_, i) => new AgentRuntime({ runtimeId: `bench-r${i}`, model: sharedModel }),
     );
     runtimes.forEach((runtime, i) => {
       runtime.dispatch({ id: `r${i}-i1`, type: 'event', payload: { text: `msg ${i}` } });
@@ -147,8 +153,9 @@ describe('latency under load — slow model', () => {
 
   bench('4 parallel runtimes with 10ms model delay each', async () => {
     const sharedModel = makeSlowModel(10);
-    const runtimes = Array.from({ length: 4 }, (_, i) =>
-      new AgentRuntime({ runtimeId: `bench-lat4-r${i}`, model: sharedModel }),
+    const runtimes = Array.from(
+      { length: 4 },
+      (_, i) => new AgentRuntime({ runtimeId: `bench-lat4-r${i}`, model: sharedModel }),
     );
     runtimes.forEach((runtime, i) => {
       runtime.dispatch({ id: `lat4-r${i}-i1`, type: 'event', payload: { text: `msg ${i}` } });
@@ -167,8 +174,9 @@ describe('memory baseline — concurrent runtimes', () => {
   });
 
   bench('create and step 4 runtimes concurrently', async () => {
-    const runtimes = Array.from({ length: 4 }, (_, i) =>
-      new AgentRuntime({ runtimeId: `bench-mem4-r${i}`, model: makeFastModel() }),
+    const runtimes = Array.from(
+      { length: 4 },
+      (_, i) => new AgentRuntime({ runtimeId: `bench-mem4-r${i}`, model: makeFastModel() }),
     );
     runtimes.forEach((runtime, i) => {
       runtime.dispatch({ id: `mem4-r${i}-i1`, type: 'event', payload: { text: `msg ${i}` } });
@@ -177,8 +185,9 @@ describe('memory baseline — concurrent runtimes', () => {
   });
 
   bench('create and step 8 runtimes concurrently', async () => {
-    const runtimes = Array.from({ length: 8 }, (_, i) =>
-      new AgentRuntime({ runtimeId: `bench-mem8-r${i}`, model: makeFastModel() }),
+    const runtimes = Array.from(
+      { length: 8 },
+      (_, i) => new AgentRuntime({ runtimeId: `bench-mem8-r${i}`, model: makeFastModel() }),
     );
     runtimes.forEach((runtime, i) => {
       runtime.dispatch({ id: `mem8-r${i}-i1`, type: 'event', payload: { text: `msg ${i}` } });

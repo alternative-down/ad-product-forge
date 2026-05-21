@@ -13,7 +13,11 @@ import {
 } from 'agent-runtime-core/integrations';
 
 import { createConversationRuntimeContextFormatter } from './conversation-runtime-context-formatter.js';
-import { forgeAgentRuntimeConfigSchema, type ForgeAgentRuntimeConfig, type ForgeMcpServerConfig } from './contracts.js';
+import {
+  forgeAgentRuntimeConfigSchema,
+  type ForgeAgentRuntimeConfig,
+  type ForgeMcpServerConfig,
+} from './contracts.js';
 import {
   createForgeConversationMemory,
   type ForgeConversationMemory,
@@ -26,7 +30,10 @@ export type CreateForgeAgentRuntimeOptions = {
   config: ForgeAgentRuntimeConfig;
   model: StepModelAdapter;
   conversationStore: ConversationStore;
-  memory: Omit<ForgeConversationMemoryOptions, 'threadId' | 'conversationStore' | 'assistantAuthorId'>;
+  memory: Omit<
+    ForgeConversationMemoryOptions,
+    'threadId' | 'conversationStore' | 'assistantAuthorId'
+  >;
   mcpServers?: ForgeMcpServerConfig[];
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
   mcpRuntimeActionOptions?: Omit<McpRuntimeActionOptions, 'session'>;
@@ -56,13 +63,11 @@ export async function createForgeAgentRuntime(
   });
   const mcpToolset = options.mcpServers?.length
     ? new ForgeMcpToolset({
-      servers: options.mcpServers,
-      runtimeActionOptions: options.mcpRuntimeActionOptions,
-    })
+        servers: options.mcpServers,
+        runtimeActionOptions: options.mcpRuntimeActionOptions,
+      })
     : null;
-  const mcpActions = mcpToolset
-    ? await mcpToolset.createRuntimeActions()
-    : [];
+  const mcpActions = mcpToolset ? await mcpToolset.createRuntimeActions() : [];
   const observers = [...conversationMemory.observers];
 
   if (options.usageSink) {
@@ -79,14 +84,8 @@ export async function createForgeAgentRuntime(
       model: options.model,
       contextFormatter: createConversationRuntimeContextFormatter(),
     },
-    actions: [
-      ...(options.runtimeActions ?? []),
-      ...mcpActions,
-    ],
-    plugins: [
-      ...conversationMemory.plugins,
-      ...(options.runtimePlugins ?? []),
-    ],
+    actions: [...(options.runtimeActions ?? []), ...mcpActions],
+    plugins: [...conversationMemory.plugins, ...(options.runtimePlugins ?? [])],
     observers,
     eventStream: true,
     messageStream: true,

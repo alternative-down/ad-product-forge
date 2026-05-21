@@ -41,10 +41,7 @@ export async function ensureDirectory(targetPath: string): Promise<void> {
   }
 }
 
-export async function ensureParentDirectories(
-  targetPath: string,
-  rootPath: string,
-): Promise<void> {
+export async function ensureParentDirectories(targetPath: string, rootPath: string): Promise<void> {
   const rel = path.relative(rootPath, targetPath);
   const parts = rel.split(path.sep);
 

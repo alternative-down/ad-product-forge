@@ -110,13 +110,15 @@ describe('createAgentDebugReadModel', () => {
     it('handles LTM state timeout gracefully', async () => {
       const agent = { id: 'agent-1' };
       mockReadLongTermMemoryState.mockRejectedValue(new Error('DB timeout'));
-      ((mockWithTimeout.mockImplementation as any) as any)(async (promise: Promise<unknown>, _ms: number, _msg: string) => {
-        try {
-          return await promise;
-        } catch {
-          return null; // LTM timed out → null
-        }
-      });
+      (mockWithTimeout.mockImplementation as any as any)(
+        async (promise: Promise<unknown>, _ms: number, _msg: string) => {
+          try {
+            return await promise;
+          } catch {
+            return null; // LTM timed out → null
+          }
+        },
+      );
 
       const deps = makeMockDeps({
         getAgent: vi.fn().mockResolvedValue(agent),
@@ -128,9 +130,7 @@ describe('createAgentDebugReadModel', () => {
 
       expect(result).not.toBeNull();
       expect(result!.agent).toBeDefined();
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ level: 'warn' }),
-      );
+      expect(mockForgeDebug).toHaveBeenCalledWith(expect.objectContaining({ level: 'warn' }));
     });
 
     it('logs forgeDebug when runtime memory times out', async () => {
@@ -156,8 +156,11 @@ describe('createAgentDebugReadModel', () => {
       const agent = { id: 'agent-1' };
       mockReadLongTermMemoryState.mockRejectedValue(new Error('DB timeout'));
       mockWithTimeout.mockImplementation(async (promise) => {
-        try { return await promise; }
-        catch { return null; }
+        try {
+          return await promise;
+        } catch {
+          return null;
+        }
       });
 
       const deps = makeMockDeps({
@@ -169,9 +172,7 @@ describe('createAgentDebugReadModel', () => {
       const model = createAgentDebugReadModel(deps);
       await model.getAgentOmDebugExport('agent-1');
 
-      expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ level: 'warn' }),
-      );
+      expect(mockForgeDebug).toHaveBeenCalledWith(expect.objectContaining({ level: 'warn' }));
     });
   });
 

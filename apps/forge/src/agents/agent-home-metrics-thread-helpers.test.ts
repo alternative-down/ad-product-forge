@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildAverageStepIntervalMs, readLatestThreadDetails, readAgentRuntimeMemory } from './agent-home-metrics-thread-helpers';
+import {
+  buildAverageStepIntervalMs,
+  readLatestThreadDetails,
+  readAgentRuntimeMemory,
+} from './agent-home-metrics-thread-helpers';
 
 // ---------------------------------------------------------------------------
 // vi.mock — hoisted. All mock fns are declared inside factory bodies so there
@@ -74,19 +78,15 @@ describe('buildAverageStepIntervalMs', () => {
 
   it('computes average interval between consecutive steps', () => {
     // t=100, t=60, t=30 → intervals: 40, 30 → avg: 35
-    expect(buildAverageStepIntervalMs([
-      { createdAt: 100 },
-      { createdAt: 60 },
-      { createdAt: 30 },
-    ])).toBe(35);
+    expect(
+      buildAverageStepIntervalMs([{ createdAt: 100 }, { createdAt: 60 }, { createdAt: 30 }]),
+    ).toBe(35);
   });
 
   it('caps negative deltas at 0', () => {
-    expect(buildAverageStepIntervalMs([
-      { createdAt: 100 },
-      { createdAt: 200 },
-      { createdAt: 300 },
-    ])).toBe(0);
+    expect(
+      buildAverageStepIntervalMs([{ createdAt: 100 }, { createdAt: 200 }, { createdAt: 300 }]),
+    ).toBe(0);
   });
 
   it('only considers first 6 steps', () => {

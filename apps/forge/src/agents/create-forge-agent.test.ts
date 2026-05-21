@@ -16,7 +16,7 @@ const mockRuntimeMemory = vi.hoisted(() => ({
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 vi.mock('@forge-runtime/core', async () => {
-  const actual = await vi.importActual('@forge-runtime/core') as any;
+  const actual = (await vi.importActual('@forge-runtime/core')) as any;
   const mockSession = vi.fn();
   return {
     ...actual,
@@ -142,8 +142,6 @@ describe('createAgent — config validation', () => {
   test('createAgent with longTermMemory=true requires contractStore', async () => {
     const config = { ...minimalConfig };
     const options = { longTermMemory: true };
-    await expect(
-      createAgent(config as any, options),
-    ).rejects.toThrow();
+    await expect(createAgent(config as any, options)).rejects.toThrow();
   });
 });

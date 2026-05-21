@@ -21,4 +21,3 @@ export type ImageGenerationResponse = {
 export interface ImageGenerationGateway {
   generate(request: ImageGenerationRequest): Promise<ImageGenerationResponse>;
 }
-

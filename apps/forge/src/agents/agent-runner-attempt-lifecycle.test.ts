@@ -3,16 +3,22 @@
  * Functions: startGenerateAttempt, finishGenerateAttempt, invalidateInFlightGenerate
  */
 import { describe, expect, it, vi } from 'vitest';
-import { startGenerateAttempt, finishGenerateAttempt, invalidateInFlightGenerate } from './agent-runner-attempt-lifecycle';
+import {
+  startGenerateAttempt,
+  finishGenerateAttempt,
+  invalidateInFlightGenerate,
+} from './agent-runner-attempt-lifecycle';
 
 function makeEpochState() {
   return { activeGenerateToken: 0 };
 }
 
-function makeDeps(overrides?: Partial<{
-  setCurrentGenerateAbortController: ReturnType<typeof vi.fn>;
-  currentGenerateAbortController: AbortController | null;
-}>) {
+function makeDeps(
+  overrides?: Partial<{
+    setCurrentGenerateAbortController: ReturnType<typeof vi.fn>;
+    currentGenerateAbortController: AbortController | null;
+  }>,
+) {
   const setFn = vi.fn<(ctrl: AbortController | null) => void>();
   return {
     epochState: makeEpochState(),

@@ -40,11 +40,14 @@ export function createTimerManager(state: SchedulerState): TimerManager {
   function scheduleNextStep(delayMs: number) {
     clearTimer();
     state.nextStepAt = Date.now() + delayMs;
-    timer = setTimeout(() => {
-      timer = null;
-      state.nextStepAt = null;
-      stepFn?.(0);
-    }, Math.max(delayMs, 0));
+    timer = setTimeout(
+      () => {
+        timer = null;
+        state.nextStepAt = null;
+        stepFn?.(0);
+      },
+      Math.max(delayMs, 0),
+    );
   }
 
   function scheduleAt(timestamp: number) {

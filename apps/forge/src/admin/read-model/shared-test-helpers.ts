@@ -9,7 +9,6 @@ type MockFn<T = unknown> = {
   mockReturnValue: (val: T) => MockFn<T>;
 };
 
-
 /**
  * Creates a minimal mock DB object matching what the read-model factories expect.
  * This is the canonical mock DB factory shared across admin read-model test files.

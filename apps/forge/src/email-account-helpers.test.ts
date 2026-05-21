@@ -69,10 +69,7 @@ describe('parseFirstRecipient', () => {
   });
 
   it('skips entries without address', () => {
-    const addrs = [
-      { name: 'No Address' },
-      { address: 'bob@example.com', name: 'Bob' },
-    ];
+    const addrs = [{ name: 'No Address' }, { address: 'bob@example.com', name: 'Bob' }];
     expect(parseFirstRecipient(addrs as any)).toEqual({
       address: 'bob@example.com',
       displayName: 'Bob',

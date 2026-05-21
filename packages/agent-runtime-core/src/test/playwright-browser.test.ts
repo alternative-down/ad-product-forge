@@ -9,4 +9,3 @@ describe('PlaywrightBrowserGateway', () => {
     expect(gateway).toBeInstanceOf(PlaywrightBrowserGateway);
   });
 });
-

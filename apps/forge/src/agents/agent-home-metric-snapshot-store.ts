@@ -25,7 +25,12 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
         createdAt,
       });
     } catch (err) {
-      forgeDebug({ scope: 'agent-home-metric-snapshot', level: 'error', message: 'recordSnapshot DB insert failed', context: { agentId: input.agentId, stepId: input.stepId, error: serializeError(err) } });
+      forgeDebug({
+        scope: 'agent-home-metric-snapshot',
+        level: 'error',
+        message: 'recordSnapshot DB insert failed',
+        context: { agentId: input.agentId, stepId: input.stepId, error: serializeError(err) },
+      });
       throw err;
     }
 

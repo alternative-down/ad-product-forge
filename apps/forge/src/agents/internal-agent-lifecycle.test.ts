@@ -1,6 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const { mockBuildHiredAgentProfile, mockGenerateHiredAgentInstructions, mockHireInternalAgent, mockTerminateInternalAgent, mockCreateCompanyCashOperations, mockRecordCashOut, mockCreateAgentApp, mockIsConfigured } = vi.hoisted(() => {
+const {
+  mockBuildHiredAgentProfile,
+  mockGenerateHiredAgentInstructions,
+  mockHireInternalAgent,
+  mockTerminateInternalAgent,
+  mockCreateCompanyCashOperations,
+  mockRecordCashOut,
+  mockCreateAgentApp,
+  mockIsConfigured,
+} = vi.hoisted(() => {
   const mockRecordCashOut = vi.fn().mockResolvedValue(undefined);
   return {
     mockBuildHiredAgentProfile: vi.fn().mockResolvedValue({
@@ -30,7 +39,9 @@ const { mockBuildHiredAgentProfile, mockGenerateHiredAgentInstructions, mockHire
     mockCreateCompanyCashOperations: vi.fn().mockReturnValue({
       recordCashOut: mockRecordCashOut,
     }),
-    mockCreateAgentApp: vi.fn().mockResolvedValue({ registrationUrl: 'https://github.com/apps/test' }),
+    mockCreateAgentApp: vi
+      .fn()
+      .mockResolvedValue({ registrationUrl: 'https://github.com/apps/test' }),
     mockIsConfigured: vi.fn().mockResolvedValue(true),
   };
 });
@@ -64,7 +75,7 @@ vi.mock('../github/manager', () => ({
 
 import { runInternalHiring, runInternalTermination } from './internal-agent-lifecycle';
 
-import type {Database} from '../database/client';
+import type { Database } from '../database/client';
 
 const mockDb = {} as Database;
 
@@ -130,33 +141,43 @@ describe('runInternalHiring', () => {
   it('generates hiring instructions and hires agent', async () => {
     const result = await runInternalHiring(mockDb, makeInput());
 
-    expect(mockGenerateHiredAgentInstructions).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      hiringRequest: 'Hire a test agent',
-    }));
-    expect(mockBuildHiredAgentProfile).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      agentName: 'Test Agent',
-      agentDescription: 'A test agent',
-    }));
+    expect(mockGenerateHiredAgentInstructions).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        hiringRequest: 'Hire a test agent',
+      }),
+    );
+    expect(mockBuildHiredAgentProfile).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        agentName: 'Test Agent',
+        agentDescription: 'A test agent',
+      }),
+    );
     expect(result.agentId).toBe('agent-new');
   });
 
   it('records cash out for hiring workflow cost', async () => {
     await runInternalHiring(mockDb, makeInput());
 
-    expect(mockRecordCashOut).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'agent-hiring-process',
-      amountUsd: 50,
-      referenceType: 'hiring-workflow',
-    }));
+    expect(mockRecordCashOut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'agent-hiring-process',
+        amountUsd: 50,
+        referenceType: 'hiring-workflow',
+      }),
+    );
   });
 
   it('creates GitHub app when GitHub is configured', async () => {
     await runInternalHiring(mockDb, makeInput());
 
-    expect(mockCreateAgentApp).toHaveBeenCalledWith(expect.objectContaining({
-      agentId: 'agent-new',
-      agentName: 'Test Agent',
-    }));
+    expect(mockCreateAgentApp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: 'agent-new',
+        agentName: 'Test Agent',
+      }),
+    );
   });
 
   it('returns registration URL from GitHub app', async () => {
@@ -188,26 +209,40 @@ describe('runInternalHiring', () => {
 
     await expect(runInternalHiring(mockDb, makeInput())).rejects.toThrow('GitHub API error');
 
-    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      agentId: 'agent-new',
-    }));
+    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        agentId: 'agent-new',
+      }),
+    );
   });
   it('passes internalChat to terminateInternalAgent on rollback', async () => {
     mockCreateAgentApp.mockRejectedValue(new Error('GitHub API error'));
     const mockInternalChat = createMockInternalChat();
-    await expect(runInternalHiring(mockDb, makeInput({ internalChat: mockInternalChat as any }))).rejects.toThrow('GitHub API error');
-    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      agentId: 'agent-new',
-      internalChat: mockInternalChat,
-    }));
+    await expect(
+      runInternalHiring(mockDb, makeInput({ internalChat: mockInternalChat as any })),
+    ).rejects.toThrow('GitHub API error');
+    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        agentId: 'agent-new',
+        internalChat: mockInternalChat,
+      }),
+    );
   });
 
   it('passes additional context to hiring instructions', async () => {
-    await runInternalHiring(mockDb, makeInput({ additionalContext: 'Custom context for the agent' }));
+    await runInternalHiring(
+      mockDb,
+      makeInput({ additionalContext: 'Custom context for the agent' }),
+    );
 
-    expect(mockGenerateHiredAgentInstructions).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      additionalContext: 'Custom context for the agent',
-    }));
+    expect(mockGenerateHiredAgentInstructions).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        additionalContext: 'Custom context for the agent',
+      }),
+    );
   });
 });
 
@@ -222,9 +257,12 @@ describe('runInternalTermination', () => {
       schedules: createMockSchedules() as any,
     });
 
-    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(mockDb, expect.objectContaining({
-      agentId: 'agent-1',
-      workspaceBasePath: '/ws',
-    }));
+    expect(mockTerminateInternalAgent).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        agentId: 'agent-1',
+        workspaceBasePath: '/ws',
+      }),
+    );
   });
 });

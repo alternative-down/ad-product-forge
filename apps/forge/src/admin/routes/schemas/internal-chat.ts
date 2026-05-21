@@ -52,11 +52,15 @@ export const sendInternalChatConversationMessageSchema = z.object({
   conversationId: z.string().min(1),
   content: z.string().min(1),
   parentMessageId: z.string().min(1).optional(),
-  attachments: z.array(z.object({
-    name: z.string(),
-    contentType: z.string(),
-    dataBase64: z.string(),
-  })).optional(),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string(),
+        contentType: z.string(),
+        dataBase64: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 export const updateInternalChatConversationSchema = z.object({

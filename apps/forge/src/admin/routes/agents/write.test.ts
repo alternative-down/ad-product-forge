@@ -34,7 +34,9 @@ describe('registerAgentWriteRoutes', () => {
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(routes.find(r => r.path === '/admin/agent/clear-history' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/clear-history' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('registers POST /admin/agent/ltm-recall-search', () => {
@@ -43,7 +45,9 @@ describe('registerAgentWriteRoutes', () => {
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(routes.find(r => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('both routes are POST method', () => {
@@ -52,7 +56,7 @@ describe('registerAgentWriteRoutes', () => {
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(routes.every(r => r.method === 'POST')).toBe(true);
+    expect(routes.every((r) => r.method === 'POST')).toBe(true);
   });
 
   it('each route has a handler function', () => {

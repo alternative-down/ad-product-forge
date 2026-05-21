@@ -18,16 +18,18 @@ export class BufferedRealtimeSpeechToTextGateway implements RealtimeSpeechToText
     this.stt = options.stt;
   }
 
-  async createSession(options: {
-    language?: string;
-    headers?: Record<string, string>;
-    onTranscription?(event: {
-      id: string;
-      text: string;
-      isFinal: boolean;
+  async createSession(
+    options: {
       language?: string;
-    }): Promise<void> | void;
-  } = {}): Promise<RealtimeSpeechToTextSession> {
+      headers?: Record<string, string>;
+      onTranscription?(event: {
+        id: string;
+        text: string;
+        isFinal: boolean;
+        language?: string;
+      }): Promise<void> | void;
+    } = {},
+  ): Promise<RealtimeSpeechToTextSession> {
     return new BufferedRealtimeSpeechToTextSession({
       stt: this.stt,
       language: options.language,

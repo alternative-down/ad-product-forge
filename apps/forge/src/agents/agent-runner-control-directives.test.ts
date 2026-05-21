@@ -65,9 +65,7 @@ describe('collectStepTextParts', () => {
         response: {
           uiMessages: [
             {
-              parts: [
-                { type: 'text', text: 'Hello world' },
-              ],
+              parts: [{ type: 'text', text: 'Hello world' }],
             },
           ],
         },
@@ -100,9 +98,7 @@ describe('collectStepTextParts', () => {
         response: {
           uiMessages: [
             {
-              parts: [
-                { type: 'tool_call', name: 'search' },
-              ],
+              parts: [{ type: 'tool_call', name: 'search' }],
             },
           ],
         },
@@ -117,9 +113,7 @@ describe('collectStepTextParts', () => {
         response: {
           uiMessages: [
             {
-              parts: [
-                { type: 'text', text: 123 as unknown as string },
-              ],
+              parts: [{ type: 'text', text: 123 as unknown as string }],
             },
           ],
         },
@@ -238,7 +232,9 @@ describe('buildStepSystemPrompt', () => {
   });
 
   it('returns trimmed instructions as-is', () => {
-    const result = buildStepSystemPrompt({ agentContextInstructions: '  You are a helpful assistant.  ' });
+    const result = buildStepSystemPrompt({
+      agentContextInstructions: '  You are a helpful assistant.  ',
+    });
     expect(result).toBe('You are a helpful assistant.');
   });
 

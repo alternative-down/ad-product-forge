@@ -3,7 +3,6 @@ import { createAgentMetricsReadModel } from './agents-metrics';
 
 function makeMockDb(findManyFn: ReturnType<typeof vi.fn> = vi.fn().mockResolvedValue([])) {
   return {
-
     batch: vi.fn().mockReturnThis(),
     resultKind: vi.fn().mockReturnThis(),
     _: vi.fn().mockReturnThis(),
@@ -35,7 +34,10 @@ describe('createAgentMetricsReadModel', () => {
     it('returns empty array when no snapshots exist', async () => {
       const db = makeMockDb();
       const model = createAgentMetricsReadModel({ db });
-      const result = await model.listRecentAgentHomeMetricSnapshots({ agentId: 'agent-1', limit: 10 });
+      const result = await model.listRecentAgentHomeMetricSnapshots({
+        agentId: 'agent-1',
+        limit: 10,
+      });
       expect(result).toEqual([]);
     });
 
@@ -66,8 +68,20 @@ describe('createAgentMetricsReadModel', () => {
 
     it('maps id to snapshotId and strips id from each row', async () => {
       const rows = [
-        { id: 1, agentId: 'a1', snapshotType: 'cpu', snapshotData: { cpu: 0.5 }, createdAt: new Date() },
-        { id: 2, agentId: 'a1', snapshotType: 'memory', snapshotData: { memory: 0.3 }, createdAt: new Date() },
+        {
+          id: 1,
+          agentId: 'a1',
+          snapshotType: 'cpu',
+          snapshotData: { cpu: 0.5 },
+          createdAt: new Date(),
+        },
+        {
+          id: 2,
+          agentId: 'a1',
+          snapshotType: 'memory',
+          snapshotData: { memory: 0.3 },
+          createdAt: new Date(),
+        },
       ];
       const db = makeMockDb(vi.fn().mockResolvedValue(rows));
       const model = createAgentMetricsReadModel({ db });
@@ -82,11 +96,20 @@ describe('createAgentMetricsReadModel', () => {
     it('preserves snapshotType, snapshotData, agentId, createdAt in mapped rows', async () => {
       const createdAt = new Date('2026-01-01');
       const rows = [
-        { id: 5, agentId: 'my-agent', snapshotType: 'tasks', snapshotData: { pending: 3 }, createdAt },
+        {
+          id: 5,
+          agentId: 'my-agent',
+          snapshotType: 'tasks',
+          snapshotData: { pending: 3 },
+          createdAt,
+        },
       ];
       const db = makeMockDb(vi.fn().mockResolvedValue(rows));
       const model = createAgentMetricsReadModel({ db });
-      const result = await model.listRecentAgentHomeMetricSnapshots({ agentId: 'my-agent', limit: 10 });
+      const result = await model.listRecentAgentHomeMetricSnapshots({
+        agentId: 'my-agent',
+        limit: 10,
+      });
       expect(result[0]).toEqual({
         agentId: 'my-agent',
         snapshotType: 'tasks',
@@ -99,8 +122,9 @@ describe('createAgentMetricsReadModel', () => {
     it('propagates DB error as-is', async () => {
       const db = makeMockDb(vi.fn().mockRejectedValue(new Error('snapshot read failed')));
       const model = createAgentMetricsReadModel({ db });
-      await expect(model.listRecentAgentHomeMetricSnapshots({ agentId: 'agent-1', limit: 10 }))
-        .rejects.toThrow('snapshot read failed');
+      await expect(
+        model.listRecentAgentHomeMetricSnapshots({ agentId: 'agent-1', limit: 10 }),
+      ).rejects.toThrow('snapshot read failed');
     });
   });
 });

@@ -13,7 +13,9 @@ export class AvatarDirector {
   }
 
   async presentStep(record: StepRecord): Promise<void> {
-    const hasReasoning = record.modelResponse.segments.some((segment) => segment.kind === 'reasoning');
+    const hasReasoning = record.modelResponse.segments.some(
+      (segment) => segment.kind === 'reasoning',
+    );
     const messageSegments = record.modelResponse.segments
       .filter((segment) => segment.kind === 'message')
       .map((segment) => segment.text.trim())

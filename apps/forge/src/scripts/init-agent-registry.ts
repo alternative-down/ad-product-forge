@@ -36,13 +36,17 @@ async function initAgentRegistry() {
   try {
     const systemPrompt = await readFile(
       path.resolve(import.meta.dirname, '../forge-system.md'),
-      'utf8'
+      'utf8',
     );
 
     // Get database connection
     const db = getDatabase();
 
-    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Running database migrations' });
+    forgeDebug({
+      scope: 'init-agent-registry',
+      level: 'info',
+      message: 'Running database migrations',
+    });
     await runMigrations(db);
     forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Migrations completed' });
 
@@ -97,7 +101,11 @@ async function initAgentRegistry() {
     ];
 
     // Register agents
-    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Registering agents in database' });
+    forgeDebug({
+      scope: 'init-agent-registry',
+      level: 'info',
+      message: 'Registering agents in database',
+    });
     for (const config of agentConfigs) {
       const now = Date.now();
 
@@ -125,7 +133,12 @@ async function initAgentRegistry() {
           })
           .where(eq(schema.agents.id, config.id));
 
-        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Updated agent', context: { agentId: config.id } });
+        forgeDebug({
+          scope: 'init-agent-registry',
+          level: 'info',
+          message: 'Updated agent',
+          context: { agentId: config.id },
+        });
       } else {
         // Insert new agent
         await db.insert(schema.agents).values({
@@ -144,12 +157,21 @@ async function initAgentRegistry() {
           updatedAt: now,
         });
 
-        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Created agent', context: { agentId: config.id } });
+        forgeDebug({
+          scope: 'init-agent-registry',
+          level: 'info',
+          message: 'Created agent',
+          context: { agentId: config.id },
+        });
       }
     }
 
     // Register communication providers for agents
-    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Registering communication providers' });
+    forgeDebug({
+      scope: 'init-agent-registry',
+      level: 'info',
+      message: 'Registering communication providers',
+    });
 
     // Configure internal-chat provider for both agents
     const agentProviderConfigs = [
@@ -170,7 +192,7 @@ async function initAgentRegistry() {
       const existing = await db.query.agentProviders.findFirst({
         where: and(
           eq(schema.agentProviders.agentId, providerConfig.agentId),
-          eq(schema.agentProviders.providerType, providerConfig.providerType)
+          eq(schema.agentProviders.providerType, providerConfig.providerType),
         ),
       });
 
@@ -187,7 +209,12 @@ async function initAgentRegistry() {
           })
           .where(eq(schema.agentProviders.id, existing.id));
 
-        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Updated provider', context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType } });
+        forgeDebug({
+          scope: 'init-agent-registry',
+          level: 'info',
+          message: 'Updated provider',
+          context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType },
+        });
       } else {
         // Insert new provider
         await (db.insert(schema.agentProviders) as any).values({
@@ -198,14 +225,28 @@ async function initAgentRegistry() {
           createdAt: now,
         });
 
-        forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Created provider', context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType } });
+        forgeDebug({
+          scope: 'init-agent-registry',
+          level: 'info',
+          message: 'Created provider',
+          context: { agentId: providerConfig.agentId, providerType: providerConfig.providerType },
+        });
       }
     }
 
-    forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Agent registry initialized successfully' });
+    forgeDebug({
+      scope: 'init-agent-registry',
+      level: 'info',
+      message: 'Agent registry initialized successfully',
+    });
     process.exit(0);
   } catch (error) {
-    forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error: String(serializeError(error)) } });
+    forgeDebug({
+      scope: 'init-agent-registry',
+      level: 'error',
+      message: 'Error initializing agent registry',
+      context: { error: String(serializeError(error)) },
+    });
     process.exit(1);
   }
 }

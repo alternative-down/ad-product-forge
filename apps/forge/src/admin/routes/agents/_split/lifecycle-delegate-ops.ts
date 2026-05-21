@@ -10,7 +10,9 @@ import { jsonResponse, parseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
 
 export function registerLifecycleDelegateOps(
-  httpServer: { registerRoute: (route: { method: "POST"; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
+  },
   input: {
     db: any;
     workspaceBasePath: string;
@@ -32,7 +34,14 @@ export function registerLifecycleDelegateOps(
     path: '/admin/agent/hire',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, z.object({ hiringRequest: z.string(), additionalContext: z.string().optional(), weeklyBudgetUsd: z.number() }));
+        const body = parseJsonBody(
+          request.bodyText,
+          z.object({
+            hiringRequest: z.string(),
+            additionalContext: z.string().optional(),
+            weeklyBudgetUsd: z.number(),
+          }),
+        );
         const result = await ops.runInternalHiring(input.db, {
           hiringRequest: body.hiringRequest,
           additionalContext: body.additionalContext,
@@ -46,7 +55,12 @@ export function registerLifecycleDelegateOps(
         });
         return jsonResponse(result, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/hire route handler failed',
+          context: { path: '/admin/agent/hire', error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -59,17 +73,24 @@ export function registerLifecycleDelegateOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string() }));
-        return jsonResponse(await ops.runInternalTermination(input.db, {
-          agentId: body.agentId,
-          workspaceBasePath: input.workspaceBasePath,
-          githubApps: input.githubApps,
-          emailMailboxes: input.emailMailboxes,
-          coolify: input.coolify,
-          schedules: input.schedules,
-          internalChat: input.internalChat,
-        }));
+        return jsonResponse(
+          await ops.runInternalTermination(input.db, {
+            agentId: body.agentId,
+            workspaceBasePath: input.workspaceBasePath,
+            githubApps: input.githubApps,
+            emailMailboxes: input.emailMailboxes,
+            coolify: input.coolify,
+            schedules: input.schedules,
+            internalChat: input.internalChat,
+          }),
+        );
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/terminate route handler failed',
+          context: { path: '/admin/agent/terminate', error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -81,11 +102,22 @@ export function registerLifecycleDelegateOps(
     path: '/admin/agent/change-role',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, z.object({ agentId: z.string(), roleId: z.string() }));
-        await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
+        const body = parseJsonBody(
+          request.bodyText,
+          z.object({ agentId: z.string(), roleId: z.string() }),
+        );
+        await ops.changeAgentRoleFromAdmin(input.db, {
+          agentId: body.agentId,
+          roleId: body.roleId,
+        });
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/change-role route handler failed',
+          context: { path: '/admin/agent/change-role', error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

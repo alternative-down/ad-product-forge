@@ -10,7 +10,10 @@ describe('createInternalChatReads', () => {
   it('returns an object with 4 methods (no init() in DI pattern)', () => {
     const mockDeps = {
       unread: { getUnreadSummary: vi.fn() },
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: vi.fn(),
     };
     const reads = createInternalChatReads(mockDeps);
@@ -28,7 +31,10 @@ describe('createInternalChatReads', () => {
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: vi.fn(),
     });
 
@@ -44,7 +50,10 @@ describe('createInternalChatReads', () => {
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: vi.fn(),
     });
 
@@ -58,7 +67,10 @@ describe('createInternalChatReads', () => {
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: vi.fn(),
     });
 
@@ -66,11 +78,17 @@ describe('createInternalChatReads', () => {
   });
 
   it('listRecentConversations delegates to deps.listConversations with correct args', async () => {
-    const mockConvs = [{ id: 'conv-1', name: 'General' }, { id: 'conv-2', name: 'Random' }];
+    const mockConvs = [
+      { id: 'conv-1', name: 'General' },
+      { id: 'conv-2', name: 'Random' },
+    ];
     const mockListConversations = vi.fn().mockResolvedValue(mockConvs);
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: mockListConversations,
     });
 
@@ -83,7 +101,10 @@ describe('createInternalChatReads', () => {
     const mockListConversations = vi.fn().mockResolvedValue([]);
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: mockListConversations,
     });
 
@@ -122,7 +143,10 @@ describe('createInternalChatReads', () => {
 
     const result = await reads.listGroupMembersOrDmPeersByAccount('acct-456', 'conv-789');
     expect(result).toEqual(mockPeers);
-    expect(mockParticipants.listGroupMembersOrDmPeersByAccount).toHaveBeenCalledWith('acct-456', 'conv-789');
+    expect(mockParticipants.listGroupMembersOrDmPeersByAccount).toHaveBeenCalledWith(
+      'acct-456',
+      'conv-789',
+    );
   });
 
   it('deps cannot be called before construction — no runtime crash possible', async () => {
@@ -133,7 +157,10 @@ describe('createInternalChatReads', () => {
     };
     const reads = createInternalChatReads({
       unread: mockUnread,
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: vi.fn(),
     });
 
@@ -146,7 +173,10 @@ describe('createInternalChatReads', () => {
     const mockListConversations = vi.fn().mockResolvedValue([]);
     const reads = createInternalChatReads({
       unread: { getUnreadSummary: vi.fn() },
-      participants: { listGroupMembersOrDmPeers: vi.fn(), listGroupMembersOrDmPeersByAccount: vi.fn() },
+      participants: {
+        listGroupMembersOrDmPeers: vi.fn(),
+        listGroupMembersOrDmPeersByAccount: vi.fn(),
+      },
       listConversations: mockListConversations,
     });
 

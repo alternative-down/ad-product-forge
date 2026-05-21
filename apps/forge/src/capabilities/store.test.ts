@@ -107,7 +107,8 @@ const ROLE_INSPECTION_TOOL_IDS = [
 ];
 function resolveLoadedToolIds(toolIds: string[]) {
   const resolvedToolIds = new Set(toolIds);
-  const hasCrossAgentCronTools = resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
+  const hasCrossAgentCronTools =
+    resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
   const hasRoleInspection = ROLE_INSPECTION_TOOL_IDS.some((toolId) => resolvedToolIds.has(toolId));
 
   if (hasRoleInspection) {
@@ -133,10 +134,19 @@ function resolveLoadedToolIds(toolIds: string[]) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 describe('resolveLoadedToolIds', () => {
   it('returns sorted toolIds when no cross-agent tools present', () => {
-    expect(resolveLoadedToolIds(['list_agents', 'send_message'])).toEqual(['list_agents', 'list_self_crons', 'manage_self_crons', 'send_message']);
+    expect(resolveLoadedToolIds(['list_agents', 'send_message'])).toEqual([
+      'list_agents',
+      'list_self_crons',
+      'manage_self_crons',
+      'send_message',
+    ]);
   });
   it('returns sorted toolIds when no special tools at all', () => {
-    expect(resolveLoadedToolIds(['get_weather'])).toEqual(['get_weather', 'list_self_crons', 'manage_self_crons']);
+    expect(resolveLoadedToolIds(['get_weather'])).toEqual([
+      'get_weather',
+      'list_self_crons',
+      'manage_self_crons',
+    ]);
   });
   it('adds list_agent_roles when has role inspection tool', () => {
     expect(resolveLoadedToolIds(['manage_agent_role'])).toContain('list_agent_roles');
@@ -147,7 +157,12 @@ describe('resolveLoadedToolIds', () => {
     expect(result).toContain('manage_role_capabilities');
   });
   it('removes *_self_crons when cross-agent cron tools present', () => {
-    const result = resolveLoadedToolIds(['manage_crons', 'list_crons', 'manage_self_crons', 'list_self_crons']);
+    const result = resolveLoadedToolIds([
+      'manage_crons',
+      'list_crons',
+      'manage_self_crons',
+      'list_self_crons',
+    ]);
     expect(result).not.toContain('manage_self_crons');
     expect(result).not.toContain('list_self_crons');
     expect(result).toContain('manage_crons');
@@ -172,7 +187,13 @@ describe('resolveLoadedToolIds', () => {
     expect(resolveLoadedToolIds([])).toEqual(['list_self_crons', 'manage_self_crons']);
   });
   it('handles no cross-agent tools and no role inspection tools', () => {
-    expect(resolveLoadedToolIds(['get_weather', 'send_message', 'list_agents'])).toEqual(['get_weather', 'list_agents', 'list_self_crons', 'manage_self_crons', 'send_message']);
+    expect(resolveLoadedToolIds(['get_weather', 'send_message', 'list_agents'])).toEqual([
+      'get_weather',
+      'list_agents',
+      'list_self_crons',
+      'manage_self_crons',
+      'send_message',
+    ]);
   });
 });
 
@@ -183,7 +204,7 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findMany.mockResolvedValue([
         createMockRole({ id: 'r-1', name: 'Alpha Role' }),
-        createMockRole({ id: 'r-2', name: 'Zeta Role' })
+        createMockRole({ id: 'r-2', name: 'Zeta Role' }),
       ]);
       const store = createCapabilityStore(db);
       const result = await store.listRoles();
@@ -207,10 +228,17 @@ describe('capabilities/store', () => {
     it('maps all role fields correctly', async () => {
       const { db, query } = createMockDb();
       const ts = 1700000000000;
-      query.agentRoles.findMany.mockResolvedValue([createMockRole({ createdAt: ts, updatedAt: ts + 100 })]);
+      query.agentRoles.findMany.mockResolvedValue([
+        createMockRole({ createdAt: ts, updatedAt: ts + 100 }),
+      ]);
       const store = createCapabilityStore(db);
       const result = await store.listRoles();
-      expect(result[0]).toMatchObject({ roleId: 'role-test', name: 'Test Role', createdAt: ts, updatedAt: ts + 100 });
+      expect(result[0]).toMatchObject({
+        roleId: 'role-test',
+        name: 'Test Role',
+        createdAt: ts,
+        updatedAt: ts + 100,
+      });
     });
   });
 
@@ -225,10 +253,16 @@ describe('capabilities/store', () => {
     });
     it('returns role when found', async () => {
       const { db, query } = createMockDb();
-      query.agentRoles.findFirst.mockResolvedValue(createMockRole({ name: 'Admin', description: 'The admin role' }));
+      query.agentRoles.findFirst.mockResolvedValue(
+        createMockRole({ name: 'Admin', description: 'The admin role' }),
+      );
       const store = createCapabilityStore(db);
       const result = await store.getRole('role-test');
-      expect(result).toMatchObject({ roleId: 'role-test', name: 'Admin', description: 'The admin role' });
+      expect(result).toMatchObject({
+        roleId: 'role-test',
+        name: 'Admin',
+        description: 'The admin role',
+      });
     });
   });
 
@@ -270,7 +304,9 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findFirst.mockResolvedValue(null);
       const store = createCapabilityStore(db);
-      await expect(store.updateRole({ roleId: 'non-existent', name: 'New Name' })).rejects.toThrow('Role not found');
+      await expect(store.updateRole({ roleId: 'non-existent', name: 'New Name' })).rejects.toThrow(
+        'Role not found',
+      );
     });
     it('updates name', async () => {
       const { db, query } = createMockDb();
@@ -284,7 +320,10 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findFirst.mockResolvedValue(createMockRole({ description: null }));
       const store = createCapabilityStore(db);
-      const result = await store.updateRole({ roleId: 'role-test', description: 'New Description' });
+      const result = await store.updateRole({
+        roleId: 'role-test',
+        description: 'New Description',
+      });
       expect(result.description).toBe('New Description');
     });
     it('updates description to null -> undefined', async () => {
@@ -296,7 +335,9 @@ describe('capabilities/store', () => {
     });
     it('preserves existing fields when not provided', async () => {
       const { db, query } = createMockDb();
-      query.agentRoles.findFirst.mockResolvedValue(createMockRole({ name: 'Keep', description: 'Keep Desc' }));
+      query.agentRoles.findFirst.mockResolvedValue(
+        createMockRole({ name: 'Keep', description: 'Keep Desc' }),
+      );
       const store = createCapabilityStore(db);
       const result = await store.updateRole({ roleId: 'role-test', name: 'New' });
       expect(result.name).toBe('New');
@@ -315,7 +356,9 @@ describe('capabilities/store', () => {
         return fn(tx);
       });
       const store = createCapabilityStore(db);
-      await expect(store.deleteRole('role-test')).rejects.toThrow('Cannot delete role with assigned agents');
+      await expect(store.deleteRole('role-test')).rejects.toThrow(
+        'Cannot delete role with assigned agents',
+      );
     });
     it('deletes role when no agents assigned', async () => {
       const { db } = createMockDb();
@@ -336,23 +379,33 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
-      expect(await store.listRoleToolPermissions('role-test')).toEqual(['list_self_crons', 'manage_self_crons']);
+      expect(await store.listRoleToolPermissions('role-test')).toEqual([
+        'list_self_crons',
+        'manage_self_crons',
+      ]);
     });
     it('resolves and sorts tool IDs from permission rows, adds base self-cron tools', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([
         { roleId: 'role-test', toolId: 'send_message', createdAt: 1000 },
-        { roleId: 'role-test', toolId: 'list_agents', createdAt: 1000 }
+        { roleId: 'role-test', toolId: 'list_agents', createdAt: 1000 },
       ]);
       const store = createCapabilityStore(db);
-      expect(await store.listRoleToolPermissions('role-test')).toEqual(['list_agents', 'list_self_crons', 'manage_self_crons', 'send_message']);
+      expect(await store.listRoleToolPermissions('role-test')).toEqual([
+        'list_agents',
+        'list_self_crons',
+        'manage_self_crons',
+        'send_message',
+      ]);
     });
     it('queries with roleId filter', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
       await store.listRoleToolPermissions('role-xyz');
-      expect(query.roleToolPermissions.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.anything() }));
+      expect(query.roleToolPermissions.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.anything() }),
+      );
     });
   });
 
@@ -361,7 +414,10 @@ describe('capabilities/store', () => {
     it('inserts permission into roleToolPermissions', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.addRoleToolPermission({ roleId: 'role-1', toolId: 'send_message' });
+      const result = await store.addRoleToolPermission({
+        roleId: 'role-1',
+        toolId: 'send_message',
+      });
       expect(result).toEqual({ roleId: 'role-1', toolId: 'send_message' });
       expect(db.insert).toHaveBeenCalledWith(roleToolPermissions);
     });
@@ -372,7 +428,10 @@ describe('capabilities/store', () => {
     it('deletes permission and returns success', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.removeRoleToolPermission({ roleId: 'role-1', toolId: 'send_message' });
+      const result = await store.removeRoleToolPermission({
+        roleId: 'role-1',
+        toolId: 'send_message',
+      });
       expect(result).toEqual({ roleId: 'role-1', toolId: 'send_message', success: true });
       expect(db.delete).toHaveBeenCalled();
     });
@@ -400,7 +459,9 @@ describe('capabilities/store', () => {
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
       await store.listRoleWorkflowPermissions('role-xyz');
-      expect(query.roleWorkflowPermissions.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.anything() }));
+      expect(query.roleWorkflowPermissions.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.anything() }),
+      );
     });
   });
 
@@ -409,7 +470,10 @@ describe('capabilities/store', () => {
     it('inserts workflow permission', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.addRoleWorkflowPermission({ roleId: 'role-1', workflowId: 'wf-1' });
+      const result = await store.addRoleWorkflowPermission({
+        roleId: 'role-1',
+        workflowId: 'wf-1',
+      });
       expect(result).toEqual({ roleId: 'role-1', workflowId: 'wf-1' });
       expect(db.insert).toHaveBeenCalledWith(roleWorkflowPermissions);
     });
@@ -420,7 +484,10 @@ describe('capabilities/store', () => {
     it('deletes workflow permission and returns success', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.removeRoleWorkflowPermission({ roleId: 'role-1', workflowId: 'wf-1' });
+      const result = await store.removeRoleWorkflowPermission({
+        roleId: 'role-1',
+        workflowId: 'wf-1',
+      });
       expect(result).toEqual({ roleId: 'role-1', workflowId: 'wf-1', success: true });
       expect(db.delete).toHaveBeenCalled();
     });
@@ -432,11 +499,11 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([
         { roleId: 'role-1', toolId: 'send_message', createdAt: 0 },
-        { roleId: 'role-1', toolId: 'list_agents', createdAt: 0 }
+        { roleId: 'role-1', toolId: 'list_agents', createdAt: 0 },
       ]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([
         { roleId: 'role-1', workflowId: 'wf-alpha', createdAt: 0 },
-        { roleId: 'role-1', workflowId: 'wf-beta', createdAt: 0 }
+        { roleId: 'role-1', workflowId: 'wf-beta', createdAt: 0 },
       ]);
       const store = createCapabilityStore(db);
       expect(await store.listGrantedRoleCapabilities('role-1')).toEqual([
@@ -445,7 +512,7 @@ describe('capabilities/store', () => {
         'manage_self_crons',
         'send_message',
         'wf-alpha',
-        'wf-beta'
+        'wf-beta',
       ]);
     });
     it('returns base self-cron tools when no permissions at all', async () => {
@@ -453,7 +520,10 @@ describe('capabilities/store', () => {
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
-      expect(await store.listGrantedRoleCapabilities('role-1')).toEqual(['list_self_crons', 'manage_self_crons']);
+      expect(await store.listGrantedRoleCapabilities('role-1')).toEqual([
+        'list_self_crons',
+        'manage_self_crons',
+      ]);
     });
   });
 
@@ -467,17 +537,23 @@ describe('capabilities/store', () => {
       const result = await store.listRoleCapabilities('role-1');
       expect(result.length).toBeGreaterThan(0);
       // Base self-cron tools are granted by default
-      const selfCronTools = result.filter((item) => item.capabilityId === 'list_self_crons' || item.capabilityId === 'manage_self_crons');
+      const selfCronTools = result.filter(
+        (item) =>
+          item.capabilityId === 'list_self_crons' || item.capabilityId === 'manage_self_crons',
+      );
       expect(selfCronTools.length).toBe(2);
       expect(selfCronTools.every((item) => item.granted === true)).toBe(true);
       // All other tools still granted=false
-      const otherTools = result.filter((item) => item.capabilityId !== 'list_self_crons' && item.capabilityId !== 'manage_self_crons');
+      const otherTools = result.filter(
+        (item) =>
+          item.capabilityId !== 'list_self_crons' && item.capabilityId !== 'manage_self_crons',
+      );
       expect(otherTools.every((item) => item.granted === false)).toBe(true);
     });
     it('marks granted=true for capabilities the role has', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([
-        { roleId: 'role-1', toolId: 'send_message', createdAt: 0 }
+        { roleId: 'role-1', toolId: 'send_message', createdAt: 0 },
       ]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
@@ -502,26 +578,36 @@ describe('capabilities/store', () => {
     it('create: throws when name is missing', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      await expect(store.manageRole({ action: 'create', name: '' })).rejects.toThrow('Role name is required.');
+      await expect(store.manageRole({ action: 'create', name: '' })).rejects.toThrow(
+        'Role name is required.',
+      );
     });
     it('create: throws when name is only whitespace', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      await expect(store.manageRole({ action: 'create', name: '   ' })).rejects.toThrow('Role name is required.');
+      await expect(store.manageRole({ action: 'create', name: '   ' })).rejects.toThrow(
+        'Role name is required.',
+      );
     });
     it('create: trims name and description', async () => {
       const { db, query } = createMockDb();
       query.roleToolPermissions.findMany.mockResolvedValue([]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
-      const result = await store.manageRole({ action: 'create', name: '  Trimmed Name  ', description: '  Desc  ' }) as { name: string; description: string | null; roleId: string };
+      const result = (await store.manageRole({
+        action: 'create',
+        name: '  Trimmed Name  ',
+        description: '  Desc  ',
+      })) as { name: string; description: string | null; roleId: string };
       expect(result.name).toBe('Trimmed Name');
       expect(result.description).toBe('Desc');
     });
     it('update: throws when roleId is missing', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      await expect(store.manageRole({ action: 'update', name: 'New Name' })).rejects.toThrow('roleId is required.');
+      await expect(store.manageRole({ action: 'update', name: 'New Name' })).rejects.toThrow(
+        'roleId is required.',
+      );
     });
     it('update: throws when neither name nor description provided', async () => {
       const { db, query } = createMockDb();
@@ -535,7 +621,12 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findFirst.mockResolvedValue(createMockRole({ name: 'Old' }));
       const store = createCapabilityStore(db);
-      const result = await store.manageRole({ action: 'update', roleId: 'role-test', name: '  New Name  ', description: '  New Desc  ' }) as { name?: string; description?: string | null; roleId: string };
+      const result = (await store.manageRole({
+        action: 'update',
+        roleId: 'role-test',
+        name: '  New Name  ',
+        description: '  New Desc  ',
+      })) as { name?: string; description?: string | null; roleId: string };
       expect(result.name).toBe('New Name');
       expect(result.description).toBe('New Desc');
     });
@@ -543,7 +634,12 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agentRoles.findFirst.mockResolvedValue(createMockRole({ name: 'Old' }));
       const store = createCapabilityStore(db);
-      const result = await store.manageRole({ action: 'update', roleId: 'role-test', name: 'New', description: '   ' }) as { name?: string; description?: string | null; roleId: string };
+      const result = (await store.manageRole({
+        action: 'update',
+        roleId: 'role-test',
+        name: 'New',
+        description: '   ',
+      })) as { name?: string; description?: string | null; roleId: string };
       expect(result.description).toBeUndefined();
     });
     it('delete: throws when roleId is missing', async () => {
@@ -565,28 +661,44 @@ describe('capabilities/store', () => {
     it('grant tool: calls addRoleToolPermission', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.manageRoleCapability({ action: 'add', roleId: 'role-1', capabilityId: 'send_message',  });
+      const result = await store.manageRoleCapability({
+        action: 'add',
+        roleId: 'role-1',
+        capabilityId: 'send_message',
+      });
       expect(result).toEqual({ roleId: 'role-1', toolId: 'send_message' });
       expect(db.insert).toHaveBeenCalled();
     });
     it('grant workflow: calls addRoleWorkflowPermission', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.manageRoleCapability({ action: 'add', roleId: 'role-1', capabilityId: 'wf-1',  });
+      const result = await store.manageRoleCapability({
+        action: 'add',
+        roleId: 'role-1',
+        capabilityId: 'wf-1',
+      });
       expect(result).toEqual({ roleId: 'role-1', workflowId: 'wf-1' });
       expect(db.insert).toHaveBeenCalled();
     });
     it('revoke tool: calls removeRoleToolPermission', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.manageRoleCapability({ action: 'remove', roleId: 'role-1', capabilityId: 'send_message',  });
+      const result = await store.manageRoleCapability({
+        action: 'remove',
+        roleId: 'role-1',
+        capabilityId: 'send_message',
+      });
       expect(result).toEqual({ roleId: 'role-1', toolId: 'send_message', success: true });
       expect(db.delete).toHaveBeenCalled();
     });
     it('revoke workflow: calls removeRoleWorkflowPermission', async () => {
       const { db } = createMockDb();
       const store = createCapabilityStore(db);
-      const result = await store.manageRoleCapability({ action: 'remove', roleId: 'role-1', capabilityId: 'wf-1',  });
+      const result = await store.manageRoleCapability({
+        action: 'remove',
+        roleId: 'role-1',
+        capabilityId: 'wf-1',
+      });
       expect(result).toEqual({ roleId: 'role-1', workflowId: 'wf-1', success: true });
       expect(db.delete).toHaveBeenCalled();
     });
@@ -604,12 +716,16 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agents.findFirst.mockResolvedValue(createMockAgent({ id: 'ag-1', roleId: null }));
       const store = createCapabilityStore(db);
-      await expect(store.getAgentCapabilities('ag-1')).rejects.toThrow('Agent is missing roleId: ag-1');
+      await expect(store.getAgentCapabilities('ag-1')).rejects.toThrow(
+        'Agent is missing roleId: ag-1',
+      );
     });
     it('returns granted capabilities for agent with roleId', async () => {
       const { db, query } = createMockDb();
       query.agents.findFirst.mockResolvedValue(createMockAgent({ id: 'ag-1', roleId: 'role-1' }));
-      query.roleToolPermissions.findMany.mockResolvedValue([{ roleId: 'role-1', toolId: 'send_message', createdAt: 0 }]);
+      query.roleToolPermissions.findMany.mockResolvedValue([
+        { roleId: 'role-1', toolId: 'send_message', createdAt: 0 },
+      ]);
       query.roleWorkflowPermissions.findMany.mockResolvedValue([]);
       const store = createCapabilityStore(db);
       const result = await store.getAgentCapabilities('ag-1');
@@ -623,7 +739,7 @@ describe('capabilities/store', () => {
       const { db, query } = createMockDb();
       query.agents.findMany.mockResolvedValue([
         createMockAgent({ id: 'ag-1', executionState: 'running' }),
-        createMockAgent({ id: 'ag-2', executionState: 'idle' })
+        createMockAgent({ id: 'ag-2', executionState: 'idle' }),
       ]);
       const store = createCapabilityStore(db);
       const result = await store.listAgentStatuses({});
@@ -660,7 +776,7 @@ describe('capabilities/store', () => {
     it('filters by both agentId and executionState', async () => {
       const { db, query } = createMockDb();
       query.agents.findMany.mockResolvedValue([
-        createMockAgent({ id: 'ag-1', executionState: 'running' })
+        createMockAgent({ id: 'ag-1', executionState: 'running' }),
       ]);
       const store = createCapabilityStore(db);
       const result = await store.listAgentStatuses({ agentId: 'ag-1', executionState: 'running' });

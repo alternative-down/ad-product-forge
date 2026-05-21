@@ -127,12 +127,11 @@ export class InMemoryConversationStore implements ConversationStore {
     return selectedMessages.slice(-query.limit);
   }
 
-  async listOperationalMemoryMessages(input: {
-    threadId: string;
-  }): Promise<ConversationMessage[]> {
+  async listOperationalMemoryMessages(input: { threadId: string }): Promise<ConversationMessage[]> {
     const threadMessages = this.messagesByThread.get(input.threadId) ?? [];
     const checkpointIndex = findOperationalMemoryCheckpointIndex(threadMessages);
-    const seedMessages = checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
+    const seedMessages =
+      checkpointIndex >= 0 ? threadMessages.slice(checkpointIndex) : [...threadMessages];
     const messageMap = new Map(threadMessages.map((message) => [message.id, message]));
     const visibleMessages: ConversationMessage[] = [];
     const seenTerminalIds = new Set<string>();

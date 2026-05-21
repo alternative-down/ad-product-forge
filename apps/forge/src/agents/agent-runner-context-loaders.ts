@@ -11,12 +11,9 @@ import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
 import { agentSchedules } from '../database/schema';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import type { InternalAgentRuntime } from './runtime/types';
-import {
-  AGENT_CONTEXT_WARNING_CHAR_LIMIT,
-  AGENT_CONTEXT_FILE_PATH,
-} from '../utils/constants';
+import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
 
 const CONTEXT_DECORATION_TIMEOUT_MS = 5_000;
 
@@ -28,10 +25,7 @@ export async function loadAgentContextInstructions(
   const agentContextContent = await loadAgentContextContent(filesystem);
   const scheduleSummary = await loadActiveScheduleSummary(db, currentRuntime.id);
 
-  const sections: Array<string | null> = [
-    scheduleSummary,
-    agentContextContent,
-  ];
+  const sections: Array<string | null> = [scheduleSummary, agentContextContent];
 
   const filtered = sections.filter((v): v is string => Boolean(v));
   if (filtered.length === 0) {
@@ -39,7 +33,9 @@ export async function loadAgentContextInstructions(
   }
 
   const _lines: Array<string | null> = [
-    ...(scheduleSummary !== null && scheduleSummary !== undefined ? ['Automatically loaded active schedule context.', ''] : []),
+    ...(scheduleSummary !== null && scheduleSummary !== undefined
+      ? ['Automatically loaded active schedule context.', '']
+      : []),
     ...(agentContextContent !== null && agentContextContent !== undefined
       ? [
           'Automatically loaded workspace context file.',
@@ -67,13 +63,9 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
           timezone: agentSchedules.timezone,
         })
         .from(agentSchedules)
-        .where(
-          and(
-            eq(agentSchedules.agentId, runtimeId),
-            eq(agentSchedules.isActive, 1),
-          ),
-        )
-        .limit(20).all(),
+        .where(and(eq(agentSchedules.agentId, runtimeId), eq(agentSchedules.isActive, 1)))
+        .limit(20)
+        .all(),
       5_000,
       'Active schedule summary lookup timed out',
     );
@@ -82,12 +74,14 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
       return null;
     }
 
-    const lines = (rows as any[]).map((s: { id: string; name?: string; cronExpression?: string; timezone?: string }) => {
-      const cron = s.cronExpression ?? '';
-      const tz = s.timezone ?? 'UTC';
-      const name = s.name ?? '(unnamed)';
-      return `  ${name}: "${cron}" [${tz}]`;
-    });
+    const lines = (rows as any[]).map(
+      (s: { id: string; name?: string; cronExpression?: string; timezone?: string }) => {
+        const cron = s.cronExpression ?? '';
+        const tz = s.timezone ?? 'UTC';
+        const name = s.name ?? '(unnamed)';
+        return `  ${name}: "${cron}" [${tz}]`;
+      },
+    );
 
     return [
       '## Active Schedules',
@@ -118,7 +112,15 @@ export async function loadAgentContextContent(
     filesystem.exists(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context existence check timed out for filesystem`,
-  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: serializeError(err) } }); return false; });
+  ).catch((err) => {
+    forgeDebug({
+      scope: 'agent-runner',
+      level: 'error',
+      message: '[safe-catch] context decoration check',
+      context: { error: serializeError(err) },
+    });
+    return false;
+  });
 
   if (!exists) {
     return null;
@@ -128,7 +130,15 @@ export async function loadAgentContextContent(
     filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context read timed out for filesystem`,
-  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: serializeError(err) } }); return null; });
+  ).catch((err) => {
+    forgeDebug({
+      scope: 'agent-runner',
+      level: 'error',
+      message: '[safe-catch] context decoration read',
+      context: { error: serializeError(err) },
+    });
+    return null;
+  });
 
   if (data === null || data === undefined) {
     return null;

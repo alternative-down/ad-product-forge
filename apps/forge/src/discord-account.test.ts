@@ -4,11 +4,20 @@ import { createDiscordProvider } from './discord-account';
 
 // ── discord.js mock — inline so all function refs are consistent ─────────────
 vi.mock('discord.js', () => {
-  const mockUser = { id: 'bot-id', username: 'test-bot', globalName: 'Test Bot', tag: 'test#1', dmChannel: null };
+  const mockUser = {
+    id: 'bot-id',
+    username: 'test-bot',
+    globalName: 'Test Bot',
+    tag: 'test#1',
+    dmChannel: null,
+  };
 
   const mockChannel = {
-    id: 'ch-123', name: 'general', type: 0,
-    isSendable: () => true, isTextBased: () => true,
+    id: 'ch-123',
+    name: 'general',
+    type: 0,
+    isSendable: () => true,
+    isTextBased: () => true,
     sendTyping: () => Promise.resolve(),
     send: () => Promise.resolve({ id: 'sent-msg-1', channelId: 'ch-123' }),
     messages: { fetch: () => Promise.resolve(new Map()) },
@@ -16,8 +25,11 @@ vi.mock('discord.js', () => {
   };
 
   const mockDMChannel = {
-    id: 'dm-456', name: undefined, type: 1,
-    isSendable: () => true, isTextBased: () => true,
+    id: 'dm-456',
+    name: undefined,
+    type: 1,
+    isSendable: () => true,
+    isTextBased: () => true,
     sendTyping: () => Promise.resolve(),
     send: () => Promise.resolve({ id: 'sent-dm-1', channelId: 'dm-456' }),
     messages: { fetch: () => Promise.resolve(new Map()) },
@@ -25,14 +37,17 @@ vi.mock('discord.js', () => {
   };
 
   const mockGuild = {
-    id: 'guild-1', name: 'Test Guild',
+    id: 'guild-1',
+    name: 'Test Guild',
     members: { fetch: () => Promise.resolve(new Map()) },
   };
 
   const mockClient = {
     login: vi.fn().mockResolvedValue(undefined),
-    on: vi.fn(), once: vi.fn(),
-    removeAllListeners: vi.fn(), destroy: vi.fn(),
+    on: vi.fn(),
+    once: vi.fn(),
+    removeAllListeners: vi.fn(),
+    destroy: vi.fn(),
     user: mockUser,
     channels: {
       cache: new Map([['ch-123', mockChannel]]),
@@ -52,8 +67,18 @@ vi.mock('discord.js', () => {
   (globalThis as any).__discordMockGuild = mockGuild;
 
   return {
-    Client: class { constructor() { Object.assign(this, mockClient); } },
-    GatewayIntentBits: { Guilds: 1, GuildMembers: 2, GuildMessages: 4, DirectMessages: 8, MessageContent: 16 },
+    Client: class {
+      constructor() {
+        Object.assign(this, mockClient);
+      }
+    },
+    GatewayIntentBits: {
+      Guilds: 1,
+      GuildMembers: 2,
+      GuildMessages: 4,
+      DirectMessages: 8,
+      MessageContent: 16,
+    },
     ChannelType: { DM: 1, GuildText: 0 },
     Events: { Ready: 'ready', MessageCreate: 'messageCreate' },
     Collection: Map,
@@ -65,12 +90,22 @@ vi.mock('discord.js', () => {
 
 vi.mock('@forge-runtime/core', () => ({ forgeDebug: vi.fn() }));
 
-function wait(ms = 30) { return new Promise((r) => setTimeout(r, ms)); }
+function wait(ms = 30) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
-function getMockClient() { return (globalThis as any).__discordMockClient; }
-function getMockChannel() { return (globalThis as any).__discordMockChannel; }
-function getMockDMChannel() { return (globalThis as any).__discordMockDMChannel; }
-function getMockGuild() { return (globalThis as any).__discordMockGuild; }
+function getMockClient() {
+  return (globalThis as any).__discordMockClient;
+}
+function getMockChannel() {
+  return (globalThis as any).__discordMockChannel;
+}
+function getMockDMChannel() {
+  return (globalThis as any).__discordMockDMChannel;
+}
+function getMockGuild() {
+  return (globalThis as any).__discordMockGuild;
+}
 
 describe('discord-account — new coverage', () => {
   let provider: ReturnType<typeof createDiscordProvider>;
@@ -81,13 +116,21 @@ describe('discord-account — new coverage', () => {
     const mg = getMockGuild();
     const mch = getMockChannel();
     mc.login.mockResolvedValue(undefined);
-    mc.user = { id: 'bot-id', username: 'test-bot', globalName: 'Test Bot', tag: 'test#1', dmChannel: null };
+    mc.user = {
+      id: 'bot-id',
+      username: 'test-bot',
+      globalName: 'Test Bot',
+      tag: 'test#1',
+      dmChannel: null,
+    };
     mch.messages.fetch = () => Promise.resolve(new Map());
     mg.members.fetch = () => Promise.resolve(new Map());
     provider = createDiscordProvider({ token: 'test-token' });
   });
 
-  afterEach(() => { provider?.dispose?.(); });
+  afterEach(() => {
+    provider?.dispose?.();
+  });
 
   // ── getSelfContact ───────────────────────────────────────────────────────
   describe('getSelfContact', () => {
@@ -129,16 +172,22 @@ describe('discord-account — new coverage', () => {
   describe('getMessages', () => {
     it('throws when channel not found', async () => {
       await wait();
-      await expect((provider as any).getMessages({ targetKey: 'does-not-exist', limit: 10, offset: 0 }))
-        .rejects.toThrow('Discord target is not readable');
+      await expect(
+        (provider as any).getMessages({ targetKey: 'does-not-exist', limit: 10, offset: 0 }),
+      ).rejects.toThrow('Discord target is not readable');
     });
 
     it('throws when channel is not text-based', async () => {
       await wait();
       const mc = getMockClient();
-      mc.channels.fetch = async () => ({ id: 'vc-1', isTextBased: () => false, isSendable: () => false });
-      await expect((provider as any).getMessages({ targetKey: 'vc-1', limit: 10, offset: 0 }))
-        .rejects.toThrow('Discord target is not readable');
+      mc.channels.fetch = async () => ({
+        id: 'vc-1',
+        isTextBased: () => false,
+        isSendable: () => false,
+      });
+      await expect(
+        (provider as any).getMessages({ targetKey: 'vc-1', limit: 10, offset: 0 }),
+      ).rejects.toThrow('Discord target is not readable');
     });
   });
 
@@ -148,14 +197,16 @@ describe('discord-account — new coverage', () => {
       await wait();
       const mc = getMockClient();
       mc.channels.fetch = async () => ({ ...getMockChannel(), isSendable: () => false });
-      await expect((provider as any).sendMessage({ targetKey: '999', content: 'test', attachments: [] }))
-        .rejects.toThrow('Discord target is not sendable');
+      await expect(
+        (provider as any).sendMessage({ targetKey: '999', content: 'test', attachments: [] }),
+      ).rejects.toThrow('Discord target is not sendable');
     });
 
     it('throws when username is not found', async () => {
       await wait();
-      await expect((provider as any).sendMessage({ targetKey: 'nobody', content: 'hi', attachments: [] }))
-        .rejects.toThrow('Discord user not found');
+      await expect(
+        (provider as any).sendMessage({ targetKey: 'nobody', content: 'hi', attachments: [] }),
+      ).rejects.toThrow('Discord user not found');
     });
   });
 
@@ -170,8 +221,11 @@ describe('discord-account — new coverage', () => {
       expect(handler).toBeDefined();
       const ownMsg = {
         author: { id: 'bot-id', username: 'test-bot', globalName: 'Test Bot', dmChannel: null },
-        content: 'my own', channelId: 'ch-123',
-        channel: getMockChannel(), createdTimestamp: Date.now(), attachments: new Map(),
+        content: 'my own',
+        channelId: 'ch-123',
+        channel: getMockChannel(),
+        createdTimestamp: Date.now(),
+        attachments: new Map(),
       };
       await handler(ownMsg);
       expect(inboundHandler).not.toHaveBeenCalled();
@@ -190,9 +244,12 @@ describe('discord-account — new coverage', () => {
       const handler = mc.on.mock.calls.find((c: unknown[]) => c[0] === 'messageCreate')?.[1];
       const msg = {
         author: { id: 'other', username: 'other', globalName: 'Other', dmChannel: null },
-        content: 'hello', channelId: 'ch-123',
-        channel: getMockChannel(), createdTimestamp: Date.now(),
-        mentions: { users: new Map() }, attachments: new Map(),
+        content: 'hello',
+        channelId: 'ch-123',
+        channel: getMockChannel(),
+        createdTimestamp: Date.now(),
+        mentions: { users: new Map() },
+        attachments: new Map(),
       };
       await handler(msg);
       expect(inboundHandler).not.toHaveBeenCalled();

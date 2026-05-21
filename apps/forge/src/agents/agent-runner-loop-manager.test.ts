@@ -84,7 +84,9 @@ describe('agent-runner-loop-manager', () => {
       });
 
       it('respects custom stuckLoopRepeatLimit', () => {
-        const customManager = createLoopManager(createLoopManagerState(), { stuckLoopRepeatLimit: 3 });
+        const customManager = createLoopManager(createLoopManagerState(), {
+          stuckLoopRepeatLimit: 3,
+        });
         for (let i = 0; i < 3; i++) {
           customManager.register('stuck');
         }

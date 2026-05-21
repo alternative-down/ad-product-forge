@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import type {Database} from '../database/index';
+import type { Database } from '../database/index';
 import { createAdminReadModel } from './read-model';
 
 const { mockReadFile } = vi.hoisted(() => ({
@@ -11,7 +11,9 @@ vi.mock('node:fs/promises', () => ({
   readFile: (...args: unknown[]) => mockReadFile(...args),
 }));
 
-function makeMockDb(appliedMigrations: Array<{ id: number; hash: string; createdAt: number }> = []) {
+function makeMockDb(
+  appliedMigrations: Array<{ id: number; hash: string; createdAt: number }> = [],
+) {
   return {
     all: vi.fn().mockResolvedValue(appliedMigrations),
   } as unknown as Database;
@@ -33,12 +35,14 @@ describe('createAdminReadModel', () => {
 
   describe('getApplicationMigrations', () => {
     it('returns empty applied list when no migrations have run', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify({
-        entries: [
-          { idx: 1, when: 1710000000, tag: '0001_init' },
-          { idx: 2, when: 1710100000, tag: '0002_add_agents' },
-        ],
-      }));
+      mockReadFile.mockResolvedValueOnce(
+        JSON.stringify({
+          entries: [
+            { idx: 1, when: 1710000000, tag: '0001_init' },
+            { idx: 2, when: 1710100000, tag: '0002_add_agents' },
+          ],
+        }),
+      );
 
       const readModel = createAdminReadModel(makeInput(makeMockDb([])));
       const result = await readModel.getApplicationMigrations();
@@ -55,15 +59,15 @@ describe('createAdminReadModel', () => {
     });
 
     it('marks migration as applied when a matching row exists', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify({
-        entries: [
-          { idx: 1, when: 1710000000, tag: '0001_init' },
-        ],
-      }));
+      mockReadFile.mockResolvedValueOnce(
+        JSON.stringify({
+          entries: [{ idx: 1, when: 1710000000, tag: '0001_init' }],
+        }),
+      );
 
-      const readModel = createAdminReadModel(makeInput(makeMockDb([
-        { id: 5, hash: 'abc123def', createdAt: 1710000000 },
-      ])));
+      const readModel = createAdminReadModel(
+        makeInput(makeMockDb([{ id: 5, hash: 'abc123def', createdAt: 1710000000 }])),
+      );
       const result = await readModel.getApplicationMigrations();
 
       expect(result.entries[0]).toMatchObject({
@@ -76,31 +80,33 @@ describe('createAdminReadModel', () => {
     });
 
     it('maps db created_at column to createdAt field', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify({
-        entries: [
-          { idx: 3, when: 1710200000, tag: '0003_add_roles' },
-        ],
-      }));
+      mockReadFile.mockResolvedValueOnce(
+        JSON.stringify({
+          entries: [{ idx: 3, when: 1710200000, tag: '0003_add_roles' }],
+        }),
+      );
 
-      const readModel = createAdminReadModel(makeInput(makeMockDb([
-        { id: 1, hash: 'xyz', createdAt: 1710200000 },
-      ])));
+      const readModel = createAdminReadModel(
+        makeInput(makeMockDb([{ id: 1, hash: 'xyz', createdAt: 1710200000 }])),
+      );
       const result = await readModel.getApplicationMigrations();
 
       expect(result.entries[0].createdAt).toBe(1710200000);
     });
 
     it('marks only migrations with matching timestamp as applied', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify({
-        entries: [
-          { idx: 1, when: 1710000000, tag: '0001_init' },
-          { idx: 2, when: 1710100000, tag: '0002_add_agents' },
-        ],
-      }));
+      mockReadFile.mockResolvedValueOnce(
+        JSON.stringify({
+          entries: [
+            { idx: 1, when: 1710000000, tag: '0001_init' },
+            { idx: 2, when: 1710100000, tag: '0002_add_agents' },
+          ],
+        }),
+      );
 
-      const readModel = createAdminReadModel(makeInput(makeMockDb([
-        { id: 1, hash: 'hash1', createdAt: 1710000000 },
-      ])));
+      const readModel = createAdminReadModel(
+        makeInput(makeMockDb([{ id: 1, hash: 'hash1', createdAt: 1710000000 }])),
+      );
       const result = await readModel.getApplicationMigrations();
 
       expect(result.entries[0].applied).toBe(true);
@@ -108,11 +114,11 @@ describe('createAdminReadModel', () => {
     });
 
     it('preserves entry idx and tag from journal', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify({
-        entries: [
-          { idx: 5, when: 1710500000, tag: '0005_complex_migration' },
-        ],
-      }));
+      mockReadFile.mockResolvedValueOnce(
+        JSON.stringify({
+          entries: [{ idx: 5, when: 1710500000, tag: '0005_complex_migration' }],
+        }),
+      );
 
       const readModel = createAdminReadModel(makeInput(makeMockDb([])));
       const result = await readModel.getApplicationMigrations();
@@ -141,7 +147,9 @@ describe('createAdminReadModel', () => {
     it('re-throws when db query fails', async () => {
       mockReadFile.mockResolvedValueOnce(JSON.stringify({ entries: [] }));
 
-      const failingDb = { all: vi.fn().mockRejectedValue(new Error('DB connection failed')) } as unknown as Database;
+      const failingDb = {
+        all: vi.fn().mockRejectedValue(new Error('DB connection failed')),
+      } as unknown as Database;
       const readModel = createAdminReadModel(makeInput(failingDb));
       await expect(readModel.getApplicationMigrations()).rejects.toThrow('DB connection failed');
     });

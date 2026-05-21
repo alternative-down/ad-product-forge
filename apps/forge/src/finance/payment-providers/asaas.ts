@@ -32,26 +32,37 @@ export function verifyAsaasWebhookRequest(
   authHeader: string | null,
 ): AsaasWebhookPayload {
   if (authHeader === null || authHeader === undefined || !authHeader.startsWith('Bearer ')) {
-    forgeDebug({ scope: 'asaas', level: 'warn', message: 'verifyAsaasWebhookAuth: missing or invalid Bearer header' });
+    forgeDebug({
+      scope: 'asaas',
+      level: 'warn',
+      message: 'verifyAsaasWebhookAuth: missing or invalid Bearer header',
+    });
     throw new Error('Asaas webhook: missing or invalid Bearer authorization header');
   }
   if (authHeader.slice(7) !== apiKey) {
-    forgeDebug({ scope: 'asaas', level: 'warn', message: 'verifyAsaasWebhookAuth: invalid API key in header' });
+    forgeDebug({
+      scope: 'asaas',
+      level: 'warn',
+      message: 'verifyAsaasWebhookAuth: invalid API key in header',
+    });
     throw new Error('Asaas webhook: invalid API key in authorization header');
   }
   try {
     return JSON.parse(payloadBody) as AsaasWebhookPayload;
   } catch (error) {
-    forgeDebug({ scope: 'asaas', level: 'error', message: 'Asaas webhook JSON parse failed', context: { error: String(serializeError(error)) } });
+    forgeDebug({
+      scope: 'asaas',
+      level: 'error',
+      message: 'Asaas webhook JSON parse failed',
+      context: { error: String(serializeError(error)) },
+    });
     throw new Error('Asaas webhook: failed to parse JSON payload');
   }
 }
 import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 /** Normalize an Asaas PAYMENT_RECEIVED event. */
-export function normalizeAsaasPaymentReceived(
-  payload: AsaasWebhookPayload,
-): {
+export function normalizeAsaasPaymentReceived(payload: AsaasWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
   subscriptionId?: string;
@@ -76,9 +87,7 @@ export function normalizeAsaasPaymentReceived(
 }
 
 /** Normalize an Asaas PAYMENT_CONFIRMED event. */
-export function normalizeAsaasPaymentConfirmed(
-  payload: AsaasWebhookPayload,
-): {
+export function normalizeAsaasPaymentConfirmed(payload: AsaasWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
   subscriptionId?: string;
@@ -103,9 +112,7 @@ export function normalizeAsaasPaymentConfirmed(
 }
 
 /** Normalize an Asaas PAYMENT_CONFIRMED event. */
-export function normalizeAsaasPaymentFailed(
-  payload: AsaasWebhookPayload,
-): {
+export function normalizeAsaasPaymentFailed(payload: AsaasWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
   subscriptionId?: string;
@@ -115,7 +122,8 @@ export function normalizeAsaasPaymentFailed(
   status: 'failed';
   rawEventJson: string;
 } | null {
-  if (payload.event !== 'PAYMENT_AWAITING_RISK_ANALYSIS' && payload.event !== 'PAYMENT_DENIED') return null;
+  if (payload.event !== 'PAYMENT_AWAITING_RISK_ANALYSIS' && payload.event !== 'PAYMENT_DENIED')
+    return null;
   const p = payload.payment;
   return {
     provider: 'asaas',
@@ -130,9 +138,7 @@ export function normalizeAsaasPaymentFailed(
 }
 
 /** Map any Asaas webhook event to a normalized payment status. */
-export function normalizeAsaasEvent(
-  payload: AsaasWebhookPayload,
-): {
+export function normalizeAsaasEvent(payload: AsaasWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
   subscriptionId?: string;

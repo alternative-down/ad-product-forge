@@ -19,7 +19,11 @@ import type { Database } from '../../database/schema';
 // @ts-ignore
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { createAgentNotificationStore } from '../../notifications/store';
-import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from '../types';
+import type {
+  GitHubAppCredentials,
+  GitHubAppManifestConfig,
+  GitHubAppProvisioning,
+} from '../types';
 // Deferred: imports from ../helpers.ts — use unknown to avoid namespace resolution errors
 // import type { IssuePayload, IssueSummary, IssueDetails } from '../helpers.js';
 
@@ -41,18 +45,29 @@ export interface GithubOpsDebug {
 /** GitHub API token and credential management. */
 export interface GithubOpsAuth {
   getInstallationOctokit: (agentId: string) => Promise<Octokit>;
-  getInstallationToken: (credentials: Extract<GitHubAppCredentials, { status: 'active' }>) => Promise<string>;
+  getInstallationToken: (
+    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+  ) => Promise<string>;
   getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
-  getActiveCredentials: (agentId: string) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
+  getActiveCredentials: (
+    agentId: string,
+  ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
-  createInstallationOctokit: (credentials: Extract<GitHubAppCredentials, { status: 'active' }>) => Promise<Octokit>;
-  createGitHubApp: (credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) => unknown;
+  createInstallationOctokit: (
+    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+  ) => Promise<Octokit>;
+  createGitHubApp: (
+    credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>,
+  ) => unknown;
 }
 
 /** HTTP routing path helpers and header utilities. */
 export interface GithubOpsRouting {
-  getHeader: (headers: Record<string, string | string[] | undefined>, key: string) => string | undefined;
+  getHeader: (
+    headers: Record<string, string | string[] | undefined>,
+    key: string,
+  ) => string | undefined;
   getRegisterPath: (agentId: string) => string;
   getManifestCallbackPath: (agentId: string) => string;
   getSetupPath: (agentId: string) => string;
@@ -118,15 +133,26 @@ export interface OpsContext {
   getGlobalConfig: () => Promise<{ organization: string; appHomeUrl: string }>;
   getDefaultOwner: (owner?: string) => Promise<string>;
   getInstallationOctokit: (agentId: string) => Promise<Octokit>;
-  getInstallationToken: (credentials: Extract<GitHubAppCredentials, { status: 'active' }>) => Promise<string>;
+  getInstallationToken: (
+    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+  ) => Promise<string>;
   getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
-  getActiveCredentials: (agentId: string) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
+  getActiveCredentials: (
+    agentId: string,
+  ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
-  createInstallationOctokit: (credentials: Extract<GitHubAppCredentials, { status: 'active' }>) => Promise<Octokit>;
-  createGitHubApp: (credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) => unknown;
+  createInstallationOctokit: (
+    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+  ) => Promise<Octokit>;
+  createGitHubApp: (
+    credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>,
+  ) => unknown;
 
-  getHeader: (headers: Record<string, string | string[] | undefined>, key: string) => string | undefined;
+  getHeader: (
+    headers: Record<string, string | string[] | undefined>,
+    key: string,
+  ) => string | undefined;
   getRegisterPath: (agentId: string) => string;
   getManifestCallbackPath: (agentId: string) => string;
   getSetupPath: (agentId: string) => string;
@@ -148,11 +174,25 @@ export interface OpsContext {
   normalizeManifestConfig: (raw: unknown) => GitHubAppManifestConfig;
 
   opsRouting: {
-    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
+    buildProvisioning: (
+      agentId: string,
+      credentials: GitHubAppCredentials,
+    ) => GitHubAppProvisioning;
     registerAgentRoutes: (agentId: string) => void;
     handleRegisterPage: (agentId: string) => Promise<import('../../http/server.js').HttpResponse>;
-    handleManifestCallback: (agentId: string, code: string | null, state: string | null) => Promise<import('../../http/server.js').HttpResponse>;
-    handleSetupCallback: (agentId: string, installationIdValue: string | null) => Promise<import('../../http/server.js').HttpResponse>;
-    handleWebhook: (agentId: string, headers: Record<string, string>, bodyText: string) => Promise<import('../../http/server.js').HttpResponse>;
+    handleManifestCallback: (
+      agentId: string,
+      code: string | null,
+      state: string | null,
+    ) => Promise<import('../../http/server.js').HttpResponse>;
+    handleSetupCallback: (
+      agentId: string,
+      installationIdValue: string | null,
+    ) => Promise<import('../../http/server.js').HttpResponse>;
+    handleWebhook: (
+      agentId: string,
+      headers: Record<string, string>,
+      bodyText: string,
+    ) => Promise<import('../../http/server.js').HttpResponse>;
   };
 }

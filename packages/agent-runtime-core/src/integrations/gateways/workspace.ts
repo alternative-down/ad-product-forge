@@ -34,7 +34,9 @@ export type WorkspaceProcessOutputResult = {
 
 export interface WorkspaceGateway {
   execute(request: WorkspaceCommandRequest): Promise<WorkspaceCommandResult>;
-  startBackground?(request: WorkspaceBackgroundCommandRequest): Promise<WorkspaceBackgroundCommandResult>;
+  startBackground?(
+    request: WorkspaceBackgroundCommandRequest,
+  ): Promise<WorkspaceBackgroundCommandResult>;
   getProcessOutput?(request: WorkspaceProcessOutputRequest): Promise<WorkspaceProcessOutputResult>;
   killProcess?(pid: string): Promise<WorkspaceProcessOutputResult | null>;
 }

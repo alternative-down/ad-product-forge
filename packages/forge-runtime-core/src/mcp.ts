@@ -27,42 +27,51 @@ export class ForgeMcpToolset {
     this.runtimeActionOptions = options.runtimeActionOptions ?? {};
   }
 
-  async createRuntimeActions(): Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>> {
-    const definitions = await Promise.all(this.servers.map((server) => {
-      return this.sessions.getActionDefinitions(
-        this.buildSessionKey(server),
-        mapServerToTransport(server),
-        this.runtimeActionOptions,
-      );
-    }));
+  async createRuntimeActions(): Promise<
+    Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>
+  > {
+    const definitions = await Promise.all(
+      this.servers.map((server) => {
+        return this.sessions.getActionDefinitions(
+          this.buildSessionKey(server),
+          mapServerToTransport(server),
+          this.runtimeActionOptions,
+        );
+      }),
+    );
 
     return definitions.flat();
   }
 
   async createTools(): Promise<Record<string, Tool<Record<string, unknown>, unknown>>> {
-    const toolEntries = await Promise.all(this.servers.map(async (server) => {
-      const session = await this.sessions.getSession(
-        this.buildSessionKey(server),
-        mapServerToTransport(server),
-      );
-      const tools = await session.listTools();
+    const toolEntries = await Promise.all(
+      this.servers.map(async (server) => {
+        const session = await this.sessions.getSession(
+          this.buildSessionKey(server),
+          mapServerToTransport(server),
+        );
+        const tools = await session.listTools();
 
-      return tools.map((tool) => [
-        tool.name,
-        createTool({
-          id: tool.name,
-          description: tool.description?.trim() || `Call MCP tool ${tool.name}.`,
-          inputSchema: {
-            parse(input: unknown) {
-              return input as Record<string, unknown>;
-            },
-          },
-          execute(input) {
-            return session.callTool(tool.name, input);
-          },
-        }),
-      ] as const);
-    }));
+        return tools.map(
+          (tool) =>
+            [
+              tool.name,
+              createTool({
+                id: tool.name,
+                description: tool.description?.trim() || `Call MCP tool ${tool.name}.`,
+                inputSchema: {
+                  parse(input: unknown) {
+                    return input as Record<string, unknown>;
+                  },
+                },
+                execute(input) {
+                  return session.callTool(tool.name, input);
+                },
+              }),
+            ] as const,
+        );
+      }),
+    );
 
     return Object.fromEntries(toolEntries.flat());
   }

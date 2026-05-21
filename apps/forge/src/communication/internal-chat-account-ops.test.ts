@@ -10,50 +10,84 @@ import { createInternalChatAccountOps } from './internal-chat-account-ops';
 
 // ─── Mock deps factory ────────────────────────────────────────────────────────
 
-function makeMockDeps(overrides: {
-  getRequiredAccountError?: Error;
-  getRequiredExternalAccountError?: Error;
-  ensureDirectConversationResult?: { id: string; type: string; name: string | null; createdByAccountId: string; createdAt: number; updatedAt: number } | null;
-  ensureDirectConversationError?: Error;
-  listGroupMembersByAccountResult?: Array<{ participantId: string; participantName: string; role: string; joinedAt: string }>;
-  listGroupMembersByAccountError?: Error;
-  getRequiredGroupForAccountError?: Error;
-  getRequiredGroupForAccountResult?: { id: string; type: string; name: string | null };
-} = {}) {
+function makeMockDeps(
+  overrides: {
+    getRequiredAccountError?: Error;
+    getRequiredExternalAccountError?: Error;
+    ensureDirectConversationResult?: {
+      id: string;
+      type: string;
+      name: string | null;
+      createdByAccountId: string;
+      createdAt: number;
+      updatedAt: number;
+    } | null;
+    ensureDirectConversationError?: Error;
+    listGroupMembersByAccountResult?: Array<{
+      participantId: string;
+      participantName: string;
+      role: string;
+      joinedAt: string;
+    }>;
+    listGroupMembersByAccountError?: Error;
+    getRequiredGroupForAccountError?: Error;
+    getRequiredGroupForAccountResult?: { id: string; type: string; name: string | null };
+  } = {},
+) {
   return {
     getRequiredAccount: vi.fn().mockImplementation(async (id: string) => {
       if (overrides.getRequiredAccountError) throw overrides.getRequiredAccountError;
       return { id, agentId: 'agent-1', slug: 'user', displayName: 'User' };
     }),
     getRequiredExternalAccount: vi.fn().mockImplementation(async (id: string) => {
-      if (overrides.getRequiredExternalAccountError) throw overrides.getRequiredExternalAccountError;
+      if (overrides.getRequiredExternalAccountError)
+        throw overrides.getRequiredExternalAccountError;
       return { id, agentId: 'agent-1', slug: 'user', displayName: 'User' };
     }),
     ensureDirectConversation: vi.fn().mockImplementation(async (left: string, right: string) => {
       if (overrides.ensureDirectConversationError) throw overrides.ensureDirectConversationError;
-      return overrides.ensureDirectConversationResult ?? { id: `conv-${right}`, type: 'dm', name: null, createdByAccountId: left, createdAt: 1, updatedAt: 1 };
+      return (
+        overrides.ensureDirectConversationResult ?? {
+          id: `conv-${right}`,
+          type: 'dm',
+          name: null,
+          createdByAccountId: left,
+          createdAt: 1,
+          updatedAt: 1,
+        }
+      );
     }),
-    listGroupMembersByAccount: vi.fn().mockImplementation(async (input: { accountId: string; groupId: string }) => {
-      if (overrides.listGroupMembersByAccountError) throw overrides.listGroupMembersByAccountError;
-      return overrides.listGroupMembersByAccountResult ?? [];
-    }),
-    getRequiredGroupForAccount: vi.fn().mockImplementation(async (accountId: string, groupId: string) => {
-      if (overrides.getRequiredGroupForAccountError) throw overrides.getRequiredGroupForAccountError;
-      return overrides.getRequiredGroupForAccountResult ?? { id: groupId, type: 'group', name: null };
-    }),
+    listGroupMembersByAccount: vi
+      .fn()
+      .mockImplementation(async (input: { accountId: string; groupId: string }) => {
+        if (overrides.listGroupMembersByAccountError)
+          throw overrides.listGroupMembersByAccountError;
+        return overrides.listGroupMembersByAccountResult ?? [];
+      }),
+    getRequiredGroupForAccount: vi
+      .fn()
+      .mockImplementation(async (accountId: string, groupId: string) => {
+        if (overrides.getRequiredGroupForAccountError)
+          throw overrides.getRequiredGroupForAccountError;
+        return (
+          overrides.getRequiredGroupForAccountResult ?? { id: groupId, type: 'group', name: null }
+        );
+      }),
   };
 }
 
 // ─── Mock DB factory ──────────────────────────────────────────────────────────
 
-function makeMockDb(overrides: {
-  findFirstResult?: unknown;
-  findFirstError?: Error;
-  updateRowsAffected?: number;
-  updateError?: Error;
-  deleteRowsAffected?: number;
-  deleteError?: Error;
-} = {}) {
+function makeMockDb(
+  overrides: {
+    findFirstResult?: unknown;
+    findFirstError?: Error;
+    updateRowsAffected?: number;
+    updateError?: Error;
+    deleteRowsAffected?: number;
+    deleteError?: Error;
+  } = {},
+) {
   return {
     query: {
       internalChatConversations: {
@@ -128,7 +162,11 @@ describe('createInternalChatAccountOps — createExternalChatGroup', () => {
     const ops = createInternalChatAccountOps(db as never, deps);
 
     await expect(
-      ops.createExternalChatGroup({ accountId: 'acc-1', conversationKey: 'group-existing', name: 'Test' }),
+      ops.createExternalChatGroup({
+        accountId: 'acc-1',
+        conversationKey: 'group-existing',
+        name: 'Test',
+      }),
     ).rejects.toThrow('already exists');
   });
 });
@@ -138,7 +176,16 @@ describe('createInternalChatAccountOps — createExternalChatGroup', () => {
 describe('createInternalChatAccountOps — ensureDirectConversationByAccount', () => {
   it('delegates to deps.ensureDirectConversation', async () => {
     const db = makeMockDb();
-    const deps = makeMockDeps({ ensureDirectConversationResult: { id: 'conv-2', type: 'dm', name: null, createdByAccountId: 'acc-1', createdAt: 1, updatedAt: 1 } });
+    const deps = makeMockDeps({
+      ensureDirectConversationResult: {
+        id: 'conv-2',
+        type: 'dm',
+        name: null,
+        createdByAccountId: 'acc-1',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    });
     const ops = createInternalChatAccountOps(db as never, deps);
 
     const result = await ops.ensureDirectConversationByAccount({
@@ -177,7 +224,11 @@ describe('createInternalChatAccountOps — addMemberToGroupByAccount', () => {
     const ops = createInternalChatAccountOps(db as never, deps);
 
     await expect(
-      ops.addMemberToGroupByAccount({ accountId: 'acc-1', groupId: 'group-1', participantAccountId: 'acc-2' }),
+      ops.addMemberToGroupByAccount({
+        accountId: 'acc-1',
+        groupId: 'group-1',
+        participantAccountId: 'acc-2',
+      }),
     ).rejects.toThrow('not a group');
   });
 });
@@ -207,7 +258,12 @@ describe('createInternalChatAccountOps — updateMemberRoleByAccount', () => {
     const ops = createInternalChatAccountOps(db as never, deps);
 
     await expect(
-      ops.updateMemberRoleByAccount({ accountId: 'acc-1', groupId: 'group-1', participantAccountId: 'member-1', role: 'admin' }),
+      ops.updateMemberRoleByAccount({
+        accountId: 'acc-1',
+        groupId: 'group-1',
+        participantAccountId: 'member-1',
+        role: 'admin',
+      }),
     ).rejects.toThrow('not found');
   });
 });

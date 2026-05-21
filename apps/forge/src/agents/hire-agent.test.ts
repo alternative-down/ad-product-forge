@@ -14,17 +14,20 @@ vi.mock('./agent-runner', () => ({
 }));
 
 vi.mock('./agent-loader', () => ({
-  loadAgent: vi.fn().mockResolvedValue({ agentId: 'agent-new', name: 'Test Agent', dispose: vi.fn() }),
+  loadAgent: vi
+    .fn()
+    .mockResolvedValue({ agentId: 'agent-new', name: 'Test Agent', dispose: vi.fn() }),
 }));
 
 vi.mock('../utils/id', () => ({ createId: vi.fn().mockReturnValue('generated-id') }));
-vi.mock('../encryption/crypto', () => ({ encryptSecret: vi.fn().mockReturnValue('encrypted-value') }));
+vi.mock('../encryption/crypto', () => ({
+  encryptSecret: vi.fn().mockReturnValue('encrypted-value'),
+}));
 
 import { hireInternalAgent } from './hire-agent';
 const agents = 'agents';
 const agentExecutionContracts = 'agentExecutionContracts';
 const agentProviders = 'agentProviders';
-
 
 const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 const mockDelete = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
@@ -64,7 +67,9 @@ function createInput() {
 }
 
 describe('hireInternalAgent', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('inserts agent record into database', async () => {
     const db = createMockDb();
@@ -75,7 +80,7 @@ describe('hireInternalAgent', () => {
   it('inserts contract record with budget from input', async () => {
     const db = createMockDb();
     await hireInternalAgent(db as any, createInput());
-    const insertCall = mockInsert.mock.calls.find(c => c[0] === agentExecutionContracts);
+    const insertCall = mockInsert.mock.calls.find((c) => c[0] === agentExecutionContracts);
     expect(insertCall).toBeDefined();
   });
 
@@ -135,7 +140,6 @@ describe('hireInternalAgent', () => {
     expect(mockDelete).toHaveBeenCalled();
   });
 
-
   it('calls deleteAgentAccount on createHeartbeatSchedule failure', async () => {
     const db = createMockDb();
     const input = createInput();
@@ -168,7 +172,9 @@ describe('hireInternalAgent', () => {
     const input = createInput();
     input.emailMailboxes = {
       isConfigured: vi.fn().mockResolvedValue(true),
-      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', pass: 'p' } }),
+      provisionMailbox: vi
+        .fn()
+        .mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', pass: 'p' } }),
       deleteMailboxByAddress: vi.fn(),
     } as any;
     await hireInternalAgent(db as any, input);
@@ -192,7 +198,9 @@ describe('hireInternalAgent', () => {
     const input = createInput();
     input.emailMailboxes = {
       isConfigured: vi.fn().mockResolvedValue(true),
-      provisionMailbox: vi.fn().mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', token: 't' } }),
+      provisionMailbox: vi
+        .fn()
+        .mockResolvedValue({ address: 'agent@test.com', credentials: { user: 'u', token: 't' } }),
       deleteMailboxByAddress: vi.fn().mockResolvedValue(undefined),
     } as any;
     input.internalChat = {
@@ -202,7 +210,6 @@ describe('hireInternalAgent', () => {
     await expect(hireInternalAgent(db as any, input)).rejects.toThrow('chat registration failed');
     expect(input.emailMailboxes.deleteMailboxByAddress).toHaveBeenCalledWith('agent@test.com');
   });
-
 
   it('calls rollbackHireDbAndEmail (no external ops) on registerAgentAccount failure', async () => {
     const db = createMockDb();
@@ -228,5 +235,4 @@ describe('hireInternalAgent', () => {
     // mockDelete still called (DB rollback), but no email attempts
     expect(mockDelete).toHaveBeenCalled();
   });
-
 });

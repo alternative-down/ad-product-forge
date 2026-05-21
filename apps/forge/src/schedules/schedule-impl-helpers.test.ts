@@ -8,7 +8,6 @@ import {
   requireScheduleDeleter,
 } from './schedule-impl-helpers';
 
-
 const makeSchedule = (overrides: any = {}): any =>
   ({
     scheduleId: 'sched-001',
@@ -165,7 +164,12 @@ describe('updateScheduleSchema', () => {
   });
 
   test('accepts update with only isActive toggle', () => {
-    const input = { scheduleType: 'cron' as const, name: 'Updated via toggle', content: 'Test content', isActive: true };
+    const input = {
+      scheduleType: 'cron' as const,
+      name: 'Updated via toggle',
+      content: 'Test content',
+      isActive: true,
+    };
     const result = updateScheduleSchema.safeParse(input);
     expect(result.success).toBe(true);
   });

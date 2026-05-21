@@ -12,13 +12,9 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 
-import type {Database} from '../database/schema';
-import {
-  internalChatConversations,
-  internalChatConversationMembers,
-} from '../database/schema';
+import type { Database } from '../database/schema';
+import { internalChatConversations, internalChatConversationMembers } from '../database/schema';
 import type { InternalChatConversation } from '../database/schema';
-
 
 const logInternalChatConvError = (
   context: string,
@@ -43,7 +39,8 @@ export function createInternalChatConversations(db: Database) {
         conversationId: internalChatConversationMembers.conversationId,
       })
       .from(internalChatConversationMembers)
-      .where(inArray(internalChatConversationMembers.accountId, [leftAccountId, rightAccountId])).all();
+      .where(inArray(internalChatConversationMembers.accountId, [leftAccountId, rightAccountId]))
+      .all();
 
     const counts = new Map<string, number>();
 
@@ -87,7 +84,9 @@ export function createInternalChatConversations(db: Database) {
         updatedAt: now,
       });
     } catch (error) {
-      logInternalChatConvError('ensureDirectConversation insert conversation', error, { conversationId });
+      logInternalChatConvError('ensureDirectConversation insert conversation', error, {
+        conversationId,
+      });
       throw error;
     }
 
@@ -109,7 +108,9 @@ export function createInternalChatConversations(db: Database) {
         },
       ] as any);
     } catch (error) {
-      logInternalChatConvError('ensureDirectConversation insert members', error, { conversationId });
+      logInternalChatConvError('ensureDirectConversation insert members', error, {
+        conversationId,
+      });
       throw error;
     }
 
@@ -126,16 +127,21 @@ export function createInternalChatConversations(db: Database) {
   async function archiveConversationByAccount(input: {
     accountId: string;
     conversationId: string;
-    getRequiredConversationForAccount: (accountId: string, conversationId: string) => Promise<InternalChatConversation>;
+    getRequiredConversationForAccount: (
+      accountId: string,
+      conversationId: string,
+    ) => Promise<InternalChatConversation>;
   }): Promise<{ conversationId: string; archived: true }> {
     await input.getRequiredConversationForAccount(input.accountId, input.conversationId);
 
     await db
       .delete(internalChatConversationMembers)
-      .where(and(
-        eq(internalChatConversationMembers.conversationId, input.conversationId),
-        eq(internalChatConversationMembers.accountId, input.accountId),
-      ));
+      .where(
+        and(
+          eq(internalChatConversationMembers.conversationId, input.conversationId),
+          eq(internalChatConversationMembers.accountId, input.accountId),
+        ),
+      );
 
     let remainingMembers;
     try {
@@ -144,7 +150,9 @@ export function createInternalChatConversations(db: Database) {
         limit: 1,
       });
     } catch (error) {
-      logInternalChatConvError('archiveConversation findMany', error, { conversationId: input.conversationId });
+      logInternalChatConvError('archiveConversation findMany', error, {
+        conversationId: input.conversationId,
+      });
       throw error;
     }
 
@@ -154,7 +162,9 @@ export function createInternalChatConversations(db: Database) {
           .delete(internalChatConversations)
           .where(eq(internalChatConversations.id, input.conversationId));
       } catch (error) {
-        logInternalChatConvError('archiveConversation delete', error, { conversationId: input.conversationId });
+        logInternalChatConvError('archiveConversation delete', error, {
+          conversationId: input.conversationId,
+        });
         throw error;
       }
     }

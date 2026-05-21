@@ -105,12 +105,16 @@ function getLastAssistantText(messages: NativeToolLoopMessage[]): string {
 // buildStepDiagnostics
 // -----------------------------------------------------------------------
 
-function buildStepDiagnostics(messages: Array<{ role: string; content: unknown }>): Array<{ index: number; role: string; hasToolCalls: boolean; textLength: number }> {
+function buildStepDiagnostics(
+  messages: Array<{ role: string; content: unknown }>,
+): Array<{ index: number; role: string; hasToolCalls: boolean; textLength: number }> {
   return messages.map((msg, i) => {
     let hasToolCalls = false;
     let textLength = 0;
     if (msg.role === 'assistant' && Array.isArray(msg.content)) {
-      hasToolCalls = (msg.content as Array<{ type: string }>).some((part) => part && typeof part === 'object' && part.type === 'tool-call');
+      hasToolCalls = (msg.content as Array<{ type: string }>).some(
+        (part) => part && typeof part === 'object' && part.type === 'tool-call',
+      );
       textLength = (msg.content as Array<{ type: string; text?: string }>).reduce((sum, part) => {
         if (part && typeof part === 'object' && part.type === 'text') {
           return sum + String(part.text ?? '').length;
@@ -300,7 +304,7 @@ describe('estimateTextTokens', () => {
   });
 
   it('divides length by 4 and rounds up', () => {
-    expect(estimateTextTokens('abcdef')).toBe(2);  // 6/4 = 1.5 → 2
+    expect(estimateTextTokens('abcdef')).toBe(2); // 6/4 = 1.5 → 2
     expect(estimateTextTokens('abcdefgh')).toBe(2); // 8/4 = 2
     expect(estimateTextTokens('abcdefghi')).toBe(3); // 9/4 = 2.25 → 3
   });
@@ -352,7 +356,7 @@ describe('getLastAssistantText', () => {
   it('skips null messages when finding last assistant', () => {
     const messages = [
       { role: 'user', content: 'hello' },
-            null,
+      null,
       { role: 'assistant', content: 'found' },
     ] as unknown as NativeToolLoopMessage[];
     expect(getLastAssistantText(messages)).toBe('found');
@@ -374,18 +378,30 @@ describe('buildStepDiagnostics', () => {
       { role: 'assistant', content: [{ type: 'text', text: 'hello world' }] },
     ]);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toEqual({ index: 0, role: 'assistant', hasToolCalls: false, textLength: 11 });
+    expect(diagnostics[0]).toEqual({
+      index: 0,
+      role: 'assistant',
+      hasToolCalls: false,
+      textLength: 11,
+    });
   });
 
   it('formats assistant messages with tool-call parts', () => {
     const diagnostics = buildStepDiagnostics([
       {
         role: 'assistant',
-        content: [{ type: 'tool-call', toolName: 'reportHiringState', input: { status: 'working' } }],
+        content: [
+          { type: 'tool-call', toolName: 'reportHiringState', input: { status: 'working' } },
+        ],
       },
     ]);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toEqual({ index: 0, role: 'assistant', hasToolCalls: true, textLength: 0 });
+    expect(diagnostics[0]).toEqual({
+      index: 0,
+      role: 'assistant',
+      hasToolCalls: true,
+      textLength: 0,
+    });
   });
 
   it('formats tool messages with tool-result parts', () => {
@@ -401,13 +417,23 @@ describe('buildStepDiagnostics', () => {
 
   it('returns minimal object for null content', () => {
     const diagnostics = buildStepDiagnostics([{ role: 'assistant', content: null }]);
-    expect(diagnostics[0]).toEqual({ index: 0, role: 'assistant', hasToolCalls: false, textLength: 0 });
+    expect(diagnostics[0]).toEqual({
+      index: 0,
+      role: 'assistant',
+      hasToolCalls: false,
+      textLength: 0,
+    });
   });
 
   it('returns minimal object for unexpected content types', () => {
     // @ts-ignore - testing runtime with unexpected content type
     const diagnostics = buildStepDiagnostics([{ role: 'unknown', content: {} }]);
-    expect(diagnostics[0]).toEqual({ index: 0, role: 'unknown', hasToolCalls: false, textLength: 0 });
+    expect(diagnostics[0]).toEqual({
+      index: 0,
+      role: 'unknown',
+      hasToolCalls: false,
+      textLength: 0,
+    });
   });
 });
 
@@ -483,7 +509,10 @@ describe('buildGeneratedAgentInstructions', () => {
 
 describe('buildHiringPrompt', () => {
   it('includes hiring request', () => {
-    const prompt = buildHiringPrompt({ hiringRequest: 'Hire a senior fullstack developer', existingAgents: [] });
+    const prompt = buildHiringPrompt({
+      hiringRequest: 'Hire a senior fullstack developer',
+      existingAgents: [],
+    });
     expect(prompt).toContain('Hire a senior fullstack developer');
   });
 

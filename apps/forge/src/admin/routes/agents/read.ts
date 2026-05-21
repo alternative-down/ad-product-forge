@@ -21,19 +21,42 @@ interface ReadModel {
   listAgents: () => Promise<unknown>;
   getAgent: (id: string) => Promise<unknown>;
   listAgentRecentConversations: (id: string) => Promise<unknown>;
-  listAgentExecutionSteps: (query: { agentId: string; limit: number; offset: number }) => Promise<unknown>;
-  listAgentThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
-  listAgentLongTermMemoryThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
+  listAgentExecutionSteps: (query: {
+    agentId: string;
+    limit: number;
+    offset: number;
+  }) => Promise<unknown>;
+  listAgentThreadMessages: (params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) => Promise<unknown>;
+  listAgentLongTermMemoryThreadMessages: (params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) => Promise<unknown>;
   getAgentRuntimeMemory: (id: string) => Promise<unknown>;
   getAgentOmDebugExport: (id: string) => Promise<unknown>;
-  debugAgentLongTermMemoryRecallSearch: (agentId: string, opts: { query: string }) => Promise<unknown>;
-  listAgentConversationMessages: (params: { agentId: string; provider: string; targetKey: string; limit: number; offset: number }) => Promise<unknown>;
+  debugAgentLongTermMemoryRecallSearch: (
+    agentId: string,
+    opts: { query: string },
+  ) => Promise<unknown>;
+  listAgentConversationMessages: (params: {
+    agentId: string;
+    provider: string;
+    targetKey: string;
+    limit: number;
+    offset: number;
+  }) => Promise<unknown>;
 }
 import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 export function registerAgentReadRoutes(
-  httpServer: { registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void },
-  readModel: ReadModel
+  httpServer: {
+    registerRoute: (route: { method: string; path: string; handler: HttpHandler }) => void;
+  },
+  readModel: ReadModel,
 ) {
   // GET /admin/agents
   httpServer.registerRoute({
@@ -43,7 +66,12 @@ export function registerAgentReadRoutes(
       try {
         return jsonResponse(await readModel.listAgents());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent list route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent list route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -57,11 +85,17 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const agent = await readModel.getAgent(agentId);
-        if (agent === null || agent === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (agent === null || agent === undefined)
+          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(agent);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent get route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent get route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -75,11 +109,17 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const conversations = await readModel.listAgentRecentConversations(agentId);
-        if (conversations === null || conversations === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (conversations === null || conversations === undefined)
+          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(conversations);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent conversations route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent conversations route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -99,7 +139,12 @@ export function registerAgentReadRoutes(
         return jsonResponse(await readModel.listAgentExecutionSteps(query));
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent execution-steps route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent execution-steps route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -119,7 +164,12 @@ export function registerAgentReadRoutes(
         return jsonResponse(await readModel.listAgentThreadMessages(query));
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent thread-messages route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent thread-messages route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -145,7 +195,12 @@ export function registerAgentReadRoutes(
         );
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-thread-messages route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent ltm-thread-messages route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -159,11 +214,17 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const snapshot = await readModel.getAgentRuntimeMemory(agentId);
-        if (snapshot === null || snapshot === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (snapshot === null || snapshot === undefined)
+          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(snapshot);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent runtime-memory route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent runtime-memory route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -177,11 +238,17 @@ export function registerAgentReadRoutes(
       try {
         const { agentId } = agentIdQuerySchema.parse({ agentId: request.query.get('agentId') });
         const snapshot = await readModel.getAgentOmDebugExport(agentId);
-        if (snapshot === null || snapshot === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
+        if (snapshot === null || snapshot === undefined)
+          return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
         return jsonResponse(snapshot);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent om-debug-export route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent om-debug-export route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -211,7 +278,12 @@ export function registerAgentReadRoutes(
         );
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent conversation-messages route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent conversation-messages route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

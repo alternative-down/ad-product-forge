@@ -22,7 +22,11 @@ import {
   type CheckpointedOmPackageEntry,
 } from './ltm/store';
 import { createAgentContractStore } from './agent-contract-store';
-import { renderCheckpointPackageReadme, renderReflectionFile, renderObservationFile } from './agent-ltm-checkpoint-render';
+import {
+  renderCheckpointPackageReadme,
+  renderReflectionFile,
+  renderObservationFile,
+} from './agent-ltm-checkpoint-render';
 import {
   readLtmState,
   writeLtmState,
@@ -51,7 +55,6 @@ const GENERATE_MAX_ATTEMPTS = 2;
 const GENERATE_RETRY_BACKOFF_MS = 10_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
 
-
 import {
   LtmUsage,
   LtmSnapshot,
@@ -62,7 +65,6 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-
 async function listRelativeFiles(rootPath: string, relativeRoot: string) {
   const absoluteRoot = path.resolve(rootPath, relativeRoot);
   const entries = await fs.readdir(absoluteRoot, { withFileTypes: true });
@@ -72,7 +74,7 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
     const relativePath = path.posix.join(relativeRoot.replace(/\\/g, '/'), entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...await listRelativeFiles(rootPath, relativePath));
+      files.push(...(await listRelativeFiles(rootPath, relativePath)));
       continue;
     }
 
@@ -88,15 +90,22 @@ async function listRelativeFiles(rootPath: string, relativeRoot: string) {
 
 async function snapshotTrackedFiles(agentWorkspacePath: string) {
   const filePaths = [
-    ...await listRelativeFiles(agentWorkspacePath, path.posix.join('workspace', 'memory', MEMORY_DIR)),
-    ...await listRelativeFiles(agentWorkspacePath, SKILLS_DIR.replace(/\\/g, '/')),
+    ...(await listRelativeFiles(
+      agentWorkspacePath,
+      path.posix.join('workspace', 'memory', MEMORY_DIR),
+    )),
+    ...(await listRelativeFiles(agentWorkspacePath, SKILLS_DIR.replace(/\\/g, '/'))),
   ];
   const snapshot = new Map<string, string>();
 
   for (const relativePath of filePaths) {
     const absolutePath = path.resolve(agentWorkspacePath, relativePath);
     let content = '';
-    try { content = await fs.readFile(absolutePath, 'utf8'); } catch { /* file not readable */ }
+    try {
+      content = await fs.readFile(absolutePath, 'utf8');
+    } catch {
+      /* file not readable */
+    }
     snapshot.set(relativePath, content);
   }
 
@@ -225,7 +234,9 @@ export function createAgentLongTermMemory(input: {
 
   async function writeCheckpointPackage(payload: CheckpointedOmCheckpointPackageInput) {
     const state = await readState();
-    const existing = (state.packages ?? []).find((entry: any) => entry.checkpointGeneration === payload.toGeneration);
+    const existing = (state.packages ?? []).find(
+      (entry: any) => entry.checkpointGeneration === payload.toGeneration,
+    );
 
     if (existing) {
       return existing;
@@ -233,40 +244,53 @@ export function createAgentLongTermMemory(input: {
 
     const checkpointTimestamp = computeCheckpointTimestamp(payload);
     const dayKey = new Date(checkpointTimestamp).toISOString().slice(0, 10);
-    const sequence = (state.packages ?? [])
-      .filter((entry: any): boolean => entry.packageId !== null && entry.packageId !== undefined && entry.packageId.startsWith(`${dayKey}_`))
-      .length + 1;
+    const sequence =
+      (state.packages ?? []).filter(
+        (entry: any): boolean =>
+          entry.packageId !== null &&
+          entry.packageId !== undefined &&
+          entry.packageId.startsWith(`${dayKey}_`),
+      ).length + 1;
     const packageId = formatCheckpointPackageId(dayKey, sequence - 1);
     const packagePath = path.resolve(checkpointsPath, packageId);
     const tempPackagePath = getTempPackagePath(packagePath);
 
-    forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write start', context: {
-      agentId: input.agentId,
-      threadId: payload.threadId,
-      packageId,
-      checkpointGeneration: payload.toGeneration,
-      reflectionCount: (payload as any).reflections.length,
-      observationCount: (payload as any).observations.length,
-    } });
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'checkpoint package write start',
+      context: {
+        agentId: input.agentId,
+        threadId: payload.threadId,
+        packageId,
+        checkpointGeneration: payload.toGeneration,
+        reflectionCount: (payload as any).reflections.length,
+        observationCount: (payload as any).observations.length,
+      },
+    });
 
+    const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
 
-      const manifest = buildCheckpointPackageManifest(packageId, payload, checkpointTimestamp);
+    (state.packages ?? []).push(manifest);
+    state.lastWrittenPackageId = packageId;
+    state.lastWrittenAt = new Date(checkpointTimestamp).toISOString();
+    state.lastRunError = null;
+    state.lastRunErrorAt = null;
+    await writeState(state);
+    await markRecallIndexDirty('checkpoint-write');
+    await refreshRecallIndex?.();
 
-      (state.packages ?? []).push(manifest);
-      state.lastWrittenPackageId = packageId;
-      state.lastWrittenAt = new Date(checkpointTimestamp).toISOString();
-      state.lastRunError = null;
-      state.lastRunErrorAt = null;
-      await writeState(state);
-      await markRecallIndexDirty('checkpoint-write');
-      await refreshRecallIndex?.();
-
-    forgeDebug({ scope: 'ltm', level: 'info', message: 'checkpoint package write complete', context: {
-      agentId: input.agentId,
-      threadId: payload.threadId,
-      packageId,
-      checkpointGeneration: payload.toGeneration,
-    } });
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'checkpoint package write complete',
+      context: {
+        agentId: input.agentId,
+        threadId: payload.threadId,
+        packageId,
+        checkpointGeneration: payload.toGeneration,
+      },
+    });
 
     return manifest;
   }
@@ -286,17 +310,17 @@ export function createAgentLongTermMemory(input: {
     if (pricing.modelPrice !== null && pricing.modelPrice !== undefined) {
       const uncachedInputTokens = Math.max(usage.inputTokens - usage.cachedInputTokens, 0);
       costUsd =
-        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-          + (usage.cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-          + (usage.outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-        * pricing.contractCostMultiplier;
+        ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+          (usage.cachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+          (usage.outputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+        pricing.contractCostMultiplier;
     }
 
     await input.contractStore.recordAgentStep({
       agentId: input.agentId,
       contractId: contract.id,
       llmProfileId: input.modelProfileId ?? '',
-      modelKey: (input.pricingModelKey as string),
+      modelKey: input.pricingModelKey as string,
       kind: 'ltm',
       inputTokens: usage.inputTokens,
       cachedInputTokens: usage.cachedInputTokens,
@@ -326,17 +350,35 @@ export function createAgentLongTermMemory(input: {
     }
 
     const averageInputTokens =
-      recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) => total + step.inputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: { inputTokens: number; cachedInputTokens: number; outputTokens: number },
+        ) => total + step.inputTokens,
+        0,
+      ) / recentSteps.length;
     const averageCachedInputTokens =
-      recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) => total + step.cachedInputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: { inputTokens: number; cachedInputTokens: number; outputTokens: number },
+        ) => total + step.cachedInputTokens,
+        0,
+      ) / recentSteps.length;
     const averageOutputTokens =
-      recentSteps.reduce((total: number, step: { inputTokens: number; cachedInputTokens: number; outputTokens: number }) => total + step.outputTokens, 0) / recentSteps.length;
+      recentSteps.reduce(
+        (
+          total: number,
+          step: { inputTokens: number; cachedInputTokens: number; outputTokens: number },
+        ) => total + step.outputTokens,
+        0,
+      ) / recentSteps.length;
     const averageUncachedInputTokens = Math.max(averageInputTokens - averageCachedInputTokens, 0);
     const estimatedStepUsd =
-      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
-        + (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd
-        + (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd)
-      * pricing.contractCostMultiplier;
+      ((averageUncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd +
+        (averageCachedInputTokens / 1_000_000) * pricing.modelPrice.inputCachePerMillionUsd +
+        (averageOutputTokens / 1_000_000) * pricing.modelPrice.outputPerMillionUsd) *
+      pricing.contractCostMultiplier;
 
     if (estimatedStepUsd <= 0) {
       return 0;
@@ -358,7 +400,12 @@ export function createAgentLongTermMemory(input: {
     await ensureInitialized();
 
     if (!memoryAgent) {
-      forgeDebug({ scope: 'ltm', level: 'warn', message: 'initializeLtmSession: runtime not available', context: { agentId: input.agentId } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'warn',
+        message: 'initializeLtmSession: runtime not available',
+        context: { agentId: input.agentId },
+      });
       throw new Error(`LTM runtime session is not available for ${input.agentId}`);
     }
 
@@ -385,12 +432,17 @@ export function createAgentLongTermMemory(input: {
               await recordLtmStep(getUsageFromGenerateResult(stepResult));
             },
             onIterationComplete: async (iteration) => {
-              forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow step complete', context: {
-                agentId: input.agentId,
-                hasToolCalls: iteration.toolCalls.length > 0,
-                outputLength: iteration.text.length,
-                iteration: iteration.iteration,
-              } });
+              forgeDebug({
+                scope: 'ltm',
+                level: 'info',
+                message: 'memory workflow step complete',
+                context: {
+                  agentId: input.agentId,
+                  hasToolCalls: iteration.toolCalls.length > 0,
+                  outputLength: iteration.text.length,
+                  iteration: iteration.iteration,
+                },
+              });
 
               if (iteration.toolCalls.length > 0) {
                 return {
@@ -409,12 +461,17 @@ export function createAgentLongTermMemory(input: {
         );
         break;
       } catch (error) {
-        forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow attempt failed', context: {
-          agentId: input.agentId,
-          attempt,
-          maxAttempts: GENERATE_MAX_ATTEMPTS,
-          error: serializeError(error),
-        } });
+        forgeDebug({
+          scope: 'ltm',
+          level: 'info',
+          message: 'memory workflow attempt failed',
+          context: {
+            agentId: input.agentId,
+            attempt,
+            maxAttempts: GENERATE_MAX_ATTEMPTS,
+            error: serializeError(error),
+          },
+        });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
           throw error;
@@ -427,7 +484,12 @@ export function createAgentLongTermMemory(input: {
     }
 
     if (!result) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'generateLtmSummary: no result produced', context: { agentId: input.agentId } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'generateLtmSummary: no result produced',
+        context: { agentId: input.agentId },
+      });
       throw new Error(`LTM generate produced no result for ${input.agentId}`);
     }
 
@@ -455,17 +517,31 @@ export function createAgentLongTermMemory(input: {
     const beforeSnapshot = await snapshotTrackedFiles(input.agentWorkspacePath);
 
     try {
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow start', context: {
-        agentId: input.agentId,
-        packageIds: availablePackages.map((entry: any) => entry.packageId),
-        packageCount: (state.packages ?? []).length,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'memory workflow start',
+        context: {
+          agentId: input.agentId,
+          packageIds: availablePackages.map((entry: any) => entry.packageId),
+          packageCount: (state.packages ?? []).length,
+        },
+      });
 
       const changedFiles = new Set<string>();
       const nextState = await readState();
 
       if ((nextState.packages ?? []).length > 0) {
-        await generateLtmRun(createMemoryAgentInstructions({ agentId: input.agentId, agentName: input.agentName, agentDescription: input.agentDescription, roleName: input.roleName, roleDescription: input.roleDescription, instructions: input.instructions }));
+        await generateLtmRun(
+          createMemoryAgentInstructions({
+            agentId: input.agentId,
+            agentName: input.agentName,
+            agentDescription: input.agentDescription,
+            roleName: input.roleName,
+            roleDescription: input.roleDescription,
+            instructions: input.instructions,
+          }),
+        );
         const nowIso = new Date().toISOString();
         nextState.lastRunAt = nowIso;
         nextState.lastRunError = null;
@@ -479,11 +555,16 @@ export function createAgentLongTermMemory(input: {
         changedFiles.add(filePath);
       }
 
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow complete', context: {
-        agentId: input.agentId,
-        packageIds: (state.packages ?? []).map((entry: any) => entry.packageId),
-        changedFiles: Array.from(changedFiles).sort(),
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'memory workflow complete',
+        context: {
+          agentId: input.agentId,
+          packageIds: (state.packages ?? []).map((entry: any) => entry.packageId),
+          changedFiles: Array.from(changedFiles).sort(),
+        },
+      });
 
       if (changedFiles.size > 0) {
         await markRecallIndexDirty('ltm-run-complete');
@@ -496,10 +577,15 @@ export function createAgentLongTermMemory(input: {
       state.lastRunError = String(serializeError(error).message);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
-      forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow failed', context: {
-        agentId: input.agentId,
-        error: state.lastRunError,
-      } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'info',
+        message: 'memory workflow failed',
+        context: {
+          agentId: input.agentId,
+          error: state.lastRunError,
+        },
+      });
     } finally {
       running = false;
       snapshot.running = false;
@@ -519,9 +605,7 @@ export function createAgentLongTermMemory(input: {
     },
 
     async onCheckpointAdvanced(payload: CheckpointedOmCheckpointPackageInput) {
-       
-   
-  return await writeCheckpointPackage(payload);
+      return await writeCheckpointPackage(payload);
     },
 
     async onAgentIdle() {
@@ -534,7 +618,9 @@ export function createAgentLongTermMemory(input: {
       idle = false;
       clearTimer();
       snapshot.queued = false;
-      currentAbortController?.abort(new Error('LTM run interrupted because main agent resumed running'));
+      currentAbortController?.abort(
+        new Error('LTM run interrupted because main agent resumed running'),
+      );
     },
 
     getSnapshot() {
@@ -546,11 +632,20 @@ export function createAgentLongTermMemory(input: {
 
       return {
         ...snapshot,
-        lastRunAt: state.lastRunAt !== null && state.lastRunAt !== undefined ? Date.parse(String(state.lastRunAt)) : snapshot.lastRunAt,
+        lastRunAt:
+          state.lastRunAt !== null && state.lastRunAt !== undefined
+            ? Date.parse(String(state.lastRunAt))
+            : snapshot.lastRunAt,
         lastRunError: state.lastRunError,
-        lastRunErrorAt: state.lastRunErrorAt !== null && state.lastRunErrorAt !== undefined ? Date.parse(String(state.lastRunErrorAt)) : null,
+        lastRunErrorAt:
+          state.lastRunErrorAt !== null && state.lastRunErrorAt !== undefined
+            ? Date.parse(String(state.lastRunErrorAt))
+            : null,
         lastWrittenPackageId: state.lastWrittenPackageId,
-        lastWrittenAt: state.lastWrittenAt !== null && state.lastWrittenAt !== undefined ? Date.parse(String(state.lastWrittenAt)) : null,
+        lastWrittenAt:
+          state.lastWrittenAt !== null && state.lastWrittenAt !== undefined
+            ? Date.parse(String(state.lastWrittenAt))
+            : null,
         packageCount: (state.packages ?? []).length,
       };
     },

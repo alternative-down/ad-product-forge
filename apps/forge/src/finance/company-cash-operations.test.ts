@@ -25,9 +25,14 @@ function isArrayChunk(x: unknown): boolean {
 function isColumn(x: unknown): boolean {
   const n = (x as { constructor?: { name?: string } })?.constructor?.name;
   return (
-    n === 'SQLiteText' || n === 'SQLiteInteger' || n === 'SQLiteBlob' || n === 'SQLiteReal' ||
-    n === 'SQLiteTextBuilder' || n === 'SQLiteIntegerBuilder' ||
-    n === 'SQLiteBlobBuilder' || n === 'SQLiteRealBuilder'
+    n === 'SQLiteText' ||
+    n === 'SQLiteInteger' ||
+    n === 'SQLiteBlob' ||
+    n === 'SQLiteReal' ||
+    n === 'SQLiteTextBuilder' ||
+    n === 'SQLiteIntegerBuilder' ||
+    n === 'SQLiteBlobBuilder' ||
+    n === 'SQLiteRealBuilder'
   );
 }
 
@@ -62,7 +67,11 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
       'value' in valChunk
     ) {
       value = (valChunk as { value: unknown }).value;
-    } else if (typeof valChunk === 'string' || typeof valChunk === 'number' || typeof valChunk === 'boolean') {
+    } else if (
+      typeof valChunk === 'string' ||
+      typeof valChunk === 'number' ||
+      typeof valChunk === 'boolean'
+    ) {
       value = valChunk;
     } else {
       i = j;
@@ -117,7 +126,10 @@ function createMockDb(initialRows: CashLedgerRow[] = []) {
   function insert(_table: unknown) {
     return {
       values: (values: Partial<CashLedgerRow>) => {
-        rowStore.push({ ...values, id: values.id ?? `generated-${rowStore.length}` } as CashLedgerRow);
+        rowStore.push({
+          ...values,
+          id: values.id ?? `generated-${rowStore.length}`,
+        } as CashLedgerRow);
         return Promise.resolve({ rowCount: 1 });
       },
     };
@@ -134,7 +146,8 @@ function createMockDb(initialRows: CashLedgerRow[] = []) {
             const idx = rowStore.findIndex((r) =>
               Object.entries(filter).every(([k, v]) => r[k as keyof CashLedgerRow] === v),
             );
-            if (idx !== -1) rowStore[idx] = { ...rowStore[idx], ...capturedValues } as CashLedgerRow;
+            if (idx !== -1)
+              rowStore[idx] = { ...rowStore[idx], ...capturedValues } as CashLedgerRow;
             return Promise.resolve({ rowCount: idx === -1 ? 0 : 1 });
           },
         };

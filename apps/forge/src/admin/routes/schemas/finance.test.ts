@@ -28,8 +28,9 @@ const createInvestmentSchema = z.object({
 
 describe('createInvestmentSchema', () => {
   it('parses valid input', () => {
-    expect(createInvestmentSchema.parse({ amount: 1000.50, description: 'Equipment purchase' }))
-      .toMatchObject({ amount: 1000.50, description: 'Equipment purchase' });
+    expect(
+      createInvestmentSchema.parse({ amount: 1000.5, description: 'Equipment purchase' }),
+    ).toMatchObject({ amount: 1000.5, description: 'Equipment purchase' });
   });
 
   it('rejects zero amount', () => {
@@ -57,18 +58,26 @@ describe('createInvestmentSchema', () => {
 
 describe('createPayableSchema — agent_contract kind', () => {
   it('parses valid agent_contract input', () => {
-    expect(createPayableSchema.parse({
-      kind: 'agent_contract', agentId: 'agent-1', amount: 500, description: 'Monthly fee',
-    })).toMatchObject({ kind: 'agent_contract', agentId: 'agent-1', amount: 500 });
+    expect(
+      createPayableSchema.parse({
+        kind: 'agent_contract',
+        agentId: 'agent-1',
+        amount: 500,
+        description: 'Monthly fee',
+      }),
+    ).toMatchObject({ kind: 'agent_contract', agentId: 'agent-1', amount: 500 });
   });
 
   it('parses without optional description', () => {
-    expect(createPayableSchema.parse({ kind: 'agent_contract', agentId: 'a', amount: 100 }))
-      .toMatchObject({ kind: 'agent_contract' });
+    expect(
+      createPayableSchema.parse({ kind: 'agent_contract', agentId: 'a', amount: 100 }),
+    ).toMatchObject({ kind: 'agent_contract' });
   });
 
   it('rejects non-positive amount', () => {
-    expect(() => createPayableSchema.parse({ kind: 'agent_contract', agentId: 'a', amount: 0 })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({ kind: 'agent_contract', agentId: 'a', amount: 0 }),
+    ).toThrow();
   });
 
   it('rejects missing agentId', () => {
@@ -76,11 +85,15 @@ describe('createPayableSchema — agent_contract kind', () => {
   });
 
   it('rejects empty agentId', () => {
-    expect(() => createPayableSchema.parse({ kind: 'agent_contract', agentId: '', amount: 100 })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({ kind: 'agent_contract', agentId: '', amount: 100 }),
+    ).toThrow();
   });
 
   it('rejects wrong kind', () => {
-    expect(() => createPayableSchema.parse({ kind: 'invoice', agentId: 'a', amount: 100 })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({ kind: 'invoice', agentId: 'a', amount: 100 }),
+    ).toThrow();
   });
 });
 
@@ -88,25 +101,48 @@ describe('createPayableSchema — agent_contract kind', () => {
 
 describe('createPayableSchema — system_expense kind', () => {
   it('parses valid system_expense input', () => {
-    expect(createPayableSchema.parse({
-      kind: 'system_expense', description: 'Hosting cost', amount: 200, category: 'infrastructure',
-    })).toMatchObject({ kind: 'system_expense', amount: 200, category: 'infrastructure' });
+    expect(
+      createPayableSchema.parse({
+        kind: 'system_expense',
+        description: 'Hosting cost',
+        amount: 200,
+        category: 'infrastructure',
+      }),
+    ).toMatchObject({ kind: 'system_expense', amount: 200, category: 'infrastructure' });
   });
 
   it('rejects non-positive amount', () => {
-    expect(() => createPayableSchema.parse({ kind: 'system_expense', description: 'x', amount: 0, category: 'c' })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({
+        kind: 'system_expense',
+        description: 'x',
+        amount: 0,
+        category: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing category', () => {
-    expect(() => createPayableSchema.parse({ kind: 'system_expense', description: 'x', amount: 100 })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({ kind: 'system_expense', description: 'x', amount: 100 }),
+    ).toThrow();
   });
 
   it('rejects empty category', () => {
-    expect(() => createPayableSchema.parse({ kind: 'system_expense', description: 'x', amount: 100, category: '' })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({
+        kind: 'system_expense',
+        description: 'x',
+        amount: 100,
+        category: '',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing description', () => {
-    expect(() => createPayableSchema.parse({ kind: 'system_expense', amount: 100, category: 'c' })).toThrow();
+    expect(() =>
+      createPayableSchema.parse({ kind: 'system_expense', amount: 100, category: 'c' }),
+    ).toThrow();
   });
 });
 
@@ -122,13 +158,20 @@ describe('createPayableSchema — discriminated union edge cases', () => {
   });
 
   it('accepts minimal agent_contract', () => {
-    expect(createPayableSchema.parse({ kind: 'agent_contract', agentId: 'a', amount: 1 }))
-      .toMatchObject({ kind: 'agent_contract' });
+    expect(
+      createPayableSchema.parse({ kind: 'agent_contract', agentId: 'a', amount: 1 }),
+    ).toMatchObject({ kind: 'agent_contract' });
   });
 
   it('accepts minimal system_expense', () => {
-    expect(createPayableSchema.parse({ kind: 'system_expense', description: 'x', amount: 1, category: 'c' }))
-      .toMatchObject({ kind: 'system_expense' });
+    expect(
+      createPayableSchema.parse({
+        kind: 'system_expense',
+        description: 'x',
+        amount: 1,
+        category: 'c',
+      }),
+    ).toMatchObject({ kind: 'system_expense' });
   });
 });
 
@@ -136,13 +179,17 @@ describe('createPayableSchema — discriminated union edge cases', () => {
 
 describe('ledgerEntryActionSchema', () => {
   it('parses approve action', () => {
-    expect(ledgerEntryActionSchema.parse({ entryId: 'entry-1', action: 'approve' }))
-      .toMatchObject({ entryId: 'entry-1', action: 'approve' });
+    expect(ledgerEntryActionSchema.parse({ entryId: 'entry-1', action: 'approve' })).toMatchObject({
+      entryId: 'entry-1',
+      action: 'approve',
+    });
   });
 
   it('parses cancel action', () => {
-    expect(ledgerEntryActionSchema.parse({ entryId: 'entry-1', action: 'cancel' }))
-      .toMatchObject({ entryId: 'entry-1', action: 'cancel' });
+    expect(ledgerEntryActionSchema.parse({ entryId: 'entry-1', action: 'cancel' })).toMatchObject({
+      entryId: 'entry-1',
+      action: 'cancel',
+    });
   });
 
   it('rejects missing entryId', () => {
@@ -166,18 +213,21 @@ describe('ledgerEntryActionSchema', () => {
 
 describe('recurringPayableStatusSchema', () => {
   it('parses isActive true', () => {
-    expect(recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: true }))
-      .toMatchObject({ payableId: 'pay-1', isActive: true });
+    expect(
+      recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: true }),
+    ).toMatchObject({ payableId: 'pay-1', isActive: true });
   });
 
   it('parses isActive false', () => {
-    expect(recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: false }))
-      .toMatchObject({ payableId: 'pay-1', isActive: false });
+    expect(
+      recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: false }),
+    ).toMatchObject({ payableId: 'pay-1', isActive: false });
   });
 
   it('parses isActive null', () => {
-    expect(recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: null }))
-      .toMatchObject({ payableId: 'pay-1', isActive: null });
+    expect(
+      recurringPayableStatusSchema.parse({ payableId: 'pay-1', isActive: null }),
+    ).toMatchObject({ payableId: 'pay-1', isActive: null });
   });
 
   it('rejects missing payableId', () => {
@@ -198,7 +248,11 @@ describe('schema.safeParse', () => {
   });
 
   it('createPayableSchema safeParse returns success true for valid agent_contract', () => {
-    const result = createPayableSchema.safeParse({ kind: 'agent_contract', agentId: 'a', amount: 1 });
+    const result = createPayableSchema.safeParse({
+      kind: 'agent_contract',
+      agentId: 'a',
+      amount: 1,
+    });
     expect(result.success).toBe(true);
   });
 

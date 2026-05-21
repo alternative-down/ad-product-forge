@@ -19,21 +19,25 @@ vi.mock('@forge-runtime/core', () => ({
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
 
-function makeMockCtx(overrides: {
-  getGlobalConfigValue?: unknown;   // what the function resolves to
-  credentialsValue?: unknown;
-  dbFindMany?: ReturnType<typeof vi.fn>;
-  dbDelete?: ReturnType<typeof vi.fn>;
-  nanoid?: ReturnType<typeof vi.fn>;
-  saveCredentials?: ReturnType<typeof vi.fn>;
-  opsRouting?: unknown;
-  normalizeManifestConfig?: (raw: unknown) => unknown;
-} = {}) {
-  const mockGetGlobalConfig = vi.fn().mockResolvedValue(
-    overrides.getGlobalConfigValue !== undefined
-      ? overrides.getGlobalConfigValue
-      : { organization: 'test-org', appHomeUrl: 'http://localhost' },
-  );
+function makeMockCtx(
+  overrides: {
+    getGlobalConfigValue?: unknown; // what the function resolves to
+    credentialsValue?: unknown;
+    dbFindMany?: ReturnType<typeof vi.fn>;
+    dbDelete?: ReturnType<typeof vi.fn>;
+    nanoid?: ReturnType<typeof vi.fn>;
+    saveCredentials?: ReturnType<typeof vi.fn>;
+    opsRouting?: unknown;
+    normalizeManifestConfig?: (raw: unknown) => unknown;
+  } = {},
+) {
+  const mockGetGlobalConfig = vi
+    .fn()
+    .mockResolvedValue(
+      overrides.getGlobalConfigValue !== undefined
+        ? overrides.getGlobalConfigValue
+        : { organization: 'test-org', appHomeUrl: 'http://localhost' },
+    );
   const mockGetCredentials = vi.fn().mockResolvedValue(overrides.credentialsValue ?? null);
   const mockSaveCredentials = overrides.saveCredentials ?? vi.fn();
   const mockNanoid = overrides.nanoid ?? (() => 'mock-state');
@@ -46,9 +50,11 @@ function makeMockCtx(overrides: {
         findMany: overrides.dbFindMany ?? vi.fn().mockResolvedValue([]),
       },
     },
-    delete: overrides.dbDelete ?? vi.fn(() => ({
-      where: vi.fn().mockResolvedValue({}),
-    })),
+    delete:
+      overrides.dbDelete ??
+      vi.fn(() => ({
+        where: vi.fn().mockResolvedValue({}),
+      })),
   };
 
   return {
@@ -82,11 +88,18 @@ function makeMockCtx(overrides: {
       DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { default: true },
       opsRouting: overrides.opsRouting ?? {
         buildProvisioning: vi.fn((agentId: string, creds: unknown) => ({
-          provisioning: true, agentId, status: (creds as any)?.status ?? 'unknown',
+          provisioning: true,
+          agentId,
+          status: (creds as any)?.status ?? 'unknown',
         })),
         registerAgentRoutes: vi.fn(),
       },
-      config: { db: mockDb, httpServer: {}, publicBaseUrl: 'http://localhost', integrations: null as any },
+      config: {
+        db: mockDb,
+        httpServer: {},
+        publicBaseUrl: 'http://localhost',
+        integrations: null as any,
+      },
       notifications: null as any,
     },
   };
@@ -143,8 +156,9 @@ describe('createAppProvisioningOps', () => {
       });
       const ops = createAppProvisioningOps(ctx as any);
 
-      await expect(ops.createAgentApp({ agentId: 'agent-1', agentName: 'My Agent' }))
-        .rejects.toThrow('already has GitHub credentials');
+      await expect(
+        ops.createAgentApp({ agentId: 'agent-1', agentName: 'My Agent' }),
+      ).rejects.toThrow('already has GitHub credentials');
       expect(mockForgeDebug).toHaveBeenCalledWith(
         expect.objectContaining({ level: 'warn', message: 'GitHub App already exists for agent' }),
       );
@@ -181,10 +195,14 @@ describe('createAppProvisioningOps', () => {
       mockGetCredentials.mockRejectedValueOnce(new Error('DB failure'));
       const ops = createAppProvisioningOps(ctx as any);
 
-      await expect(ops.createAgentApp({ agentId: 'agent-1', agentName: 'A' }))
-        .rejects.toThrow('DB failure');
+      await expect(ops.createAgentApp({ agentId: 'agent-1', agentName: 'A' })).rejects.toThrow(
+        'DB failure',
+      );
       expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ level: 'error', message: expect.stringContaining('createAgentApp failed') }),
+        expect.objectContaining({
+          level: 'error',
+          message: expect.stringContaining('createAgentApp failed'),
+        }),
       );
     });
   });
@@ -233,10 +251,12 @@ describe('createAppProvisioningOps', () => {
       const { ctx } = makeMockCtx({ credentialsValue: null });
       const ops = createAppProvisioningOps(ctx as any);
 
-      await expect(ops.updateAgentManifestConfig({
-        agentId: 'agent-1',
-        manifestConfig: { permissions: [] } as any,
-      })).rejects.toThrow('no GitHub credentials to update');
+      await expect(
+        ops.updateAgentManifestConfig({
+          agentId: 'agent-1',
+          manifestConfig: { permissions: [] } as any,
+        }),
+      ).rejects.toThrow('no GitHub credentials to update');
 
       expect(mockForgeDebug).toHaveBeenCalled();
       expect(mockForgeDebug.mock.calls[0][0]).toMatchObject({
@@ -246,7 +266,15 @@ describe('createAppProvisioningOps', () => {
     });
 
     it('saves updated credentials when existing found', async () => {
-      const existing = { status: 'active' as const, appId: 1, installationId: 1, state: 'old', appName: 'Old', manifestConfig: { permissions: [] } as any, createdAt: Date.now() };
+      const existing = {
+        status: 'active' as const,
+        appId: 1,
+        installationId: 1,
+        state: 'old',
+        appName: 'Old',
+        manifestConfig: { permissions: [] } as any,
+        createdAt: Date.now(),
+      };
       const { ctx, mockSaveCredentials } = makeMockCtx({ credentialsValue: existing });
       const ops = createAppProvisioningOps(ctx as any);
 
@@ -255,7 +283,10 @@ describe('createAppProvisioningOps', () => {
         manifestConfig: { permissions: ['repo'] } as any,
       });
 
-      expect(mockSaveCredentials).toHaveBeenCalledWith('agent-1', expect.objectContaining({ status: 'active' }));
+      expect(mockSaveCredentials).toHaveBeenCalledWith(
+        'agent-1',
+        expect.objectContaining({ status: 'active' }),
+      );
     });
 
     it('logs error on failure', async () => {
@@ -263,12 +294,17 @@ describe('createAppProvisioningOps', () => {
       mockGetCredentials.mockRejectedValueOnce(new Error('Config error'));
       const ops = createAppProvisioningOps(ctx as any);
 
-      await expect(ops.updateAgentManifestConfig({
-        agentId: 'agent-1',
-        manifestConfig: {} as any,
-      })).rejects.toThrow('Config error');
+      await expect(
+        ops.updateAgentManifestConfig({
+          agentId: 'agent-1',
+          manifestConfig: {} as any,
+        }),
+      ).rejects.toThrow('Config error');
       expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ level: 'error', message: expect.stringContaining('updateAgentManifestConfig failed') }),
+        expect.objectContaining({
+          level: 'error',
+          message: expect.stringContaining('updateAgentManifestConfig failed'),
+        }),
       );
     });
   });
@@ -283,9 +319,11 @@ describe('createAppProvisioningOps', () => {
 
     it('filters out rows where parseCredentials returns null', async () => {
       const { ctx, mockParseCredentials } = makeMockCtx({
-        dbFindMany: vi.fn().mockResolvedValue([
-          { agentId: 'a1', encryptedCredentials: 'invalid', providerType: 'github' },
-        ]),
+        dbFindMany: vi
+          .fn()
+          .mockResolvedValue([
+            { agentId: 'a1', encryptedCredentials: 'invalid', providerType: 'github' },
+          ]),
       });
       mockParseCredentials.mockReturnValue(null);
       const ops = createAppProvisioningOps(ctx as any);
@@ -297,9 +335,11 @@ describe('createAppProvisioningOps', () => {
     it('includes rows where parseCredentials returns valid credentials', async () => {
       const parsedCreds = { status: 'active', appId: 1, installationId: 1 } as any;
       const { ctx, mockParseCredentials } = makeMockCtx({
-        dbFindMany: vi.fn().mockResolvedValue([
-          { agentId: 'agent-1', encryptedCredentials: 'valid-token', providerType: 'github' },
-        ]),
+        dbFindMany: vi
+          .fn()
+          .mockResolvedValue([
+            { agentId: 'agent-1', encryptedCredentials: 'valid-token', providerType: 'github' },
+          ]),
       });
       mockParseCredentials.mockReturnValue(parsedCreds);
       const ops = createAppProvisioningOps(ctx as any);
@@ -316,7 +356,10 @@ describe('createAppProvisioningOps', () => {
 
       await expect(ops.loadAllAgents()).rejects.toThrow('Query failed');
       expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ level: 'error', message: expect.stringContaining('loadAllAgents failed') }),
+        expect.objectContaining({
+          level: 'error',
+          message: expect.stringContaining('loadAllAgents failed'),
+        }),
       );
     });
   });

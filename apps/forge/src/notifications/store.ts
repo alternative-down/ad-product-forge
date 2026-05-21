@@ -2,8 +2,7 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { agentNotifications } from '../database/schema';
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
@@ -14,7 +13,14 @@ export function createAgentNotificationStore(db: Database) {
     agentId: string;
     content: string;
     createdAt?: number;
-  }): Promise<{ id: string; agentId: string; content: string; createdAt: number; updatedAt: number; readAt: null } | null> {
+  }): Promise<{
+    id: string;
+    agentId: string;
+    content: string;
+    createdAt: number;
+    updatedAt: number;
+    readAt: null;
+  } | null> {
     const now = input.createdAt ?? Date.now();
     const notification = {
       id: createId(),
@@ -32,7 +38,7 @@ export function createAgentNotificationStore(db: Database) {
         scope: 'notifications-store',
         level: 'error',
         runtimeId: input.agentId,
-        message: 'createNotification DB insert failed: ' + (String(serializeError(err))),
+        message: 'createNotification DB insert failed: ' + String(serializeError(err)),
       });
       return null;
     }
@@ -48,37 +54,46 @@ export function createAgentNotificationStore(db: Database) {
     let rows;
     try {
       rows = await db.query.agentNotifications.findMany({
-      where: and(
-        eq(agentNotifications.agentId, input.agentId),
-        input.unreadOnly !== null && input.unreadOnly !== undefined ? isNull(agentNotifications.readAt) : undefined,
-      ),
-      orderBy: desc(agentNotifications.createdAt),
-      limit: input.limit,
+        where: and(
+          eq(agentNotifications.agentId, input.agentId),
+          input.unreadOnly !== null && input.unreadOnly !== undefined
+            ? isNull(agentNotifications.readAt)
+            : undefined,
+        ),
+        orderBy: desc(agentNotifications.createdAt),
+        limit: input.limit,
       });
     } catch (err) {
       forgeDebug({
         scope: 'notifications-store',
         level: 'error',
         runtimeId: input.agentId,
-        message: 'listNotifications DB read failed: ' + (String(serializeError(err))),
+        message: 'listNotifications DB read failed: ' + String(serializeError(err)),
       });
       return [];
     }
 
-    const unreadNotificationIds = rows.filter((row: any) => row.readAt === null).map((row: any) => row.id);
+    const unreadNotificationIds = rows
+      .filter((row: any) => row.readAt === null)
+      .map((row: any) => row.id);
 
     if ((input.markRead ?? true) && unreadNotificationIds.length > 0) {
       try {
         await db
           .update(agentNotifications)
           .set({ readAt: Date.now(), updatedAt: Date.now() })
-          .where(and(eq(agentNotifications.agentId, input.agentId), inArray(agentNotifications.id, unreadNotificationIds)));
+          .where(
+            and(
+              eq(agentNotifications.agentId, input.agentId),
+              inArray(agentNotifications.id, unreadNotificationIds),
+            ),
+          );
       } catch (err) {
         forgeDebug({
           scope: 'notifications-store',
           level: 'error',
           runtimeId: input.agentId,
-          message: 'listNotifications mark-read update failed: ' + (String(serializeError(err))),
+          message: 'listNotifications mark-read update failed: ' + String(serializeError(err)),
         });
       }
     }
@@ -95,14 +110,17 @@ export function createAgentNotificationStore(db: Database) {
     let row;
     try {
       row = await db.query.agentNotifications.findFirst({
-        where: and(eq(agentNotifications.agentId, agentId), eq(agentNotifications.id, notificationId)),
+        where: and(
+          eq(agentNotifications.agentId, agentId),
+          eq(agentNotifications.id, notificationId),
+        ),
       });
     } catch (err) {
       forgeDebug({
         scope: 'notifications-store',
         level: 'error',
         runtimeId: agentId,
-        message: 'getNotification DB read failed: ' + (String(serializeError(err))),
+        message: 'getNotification DB read failed: ' + String(serializeError(err)),
       });
       return null;
     }

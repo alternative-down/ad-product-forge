@@ -9,59 +9,115 @@ import { createMicroErpReadModel } from './read-model';
 //
 
 function makeCashRow(overrides = {}): {
-  id: string; type: string; direction: string;
-  amountUsd: number; status: string;
-  dueAt?: number | null; effectiveAt?: number | null; createdAt: number;
+  id: string;
+  type: string;
+  direction: string;
+  amountUsd: number;
+  status: string;
+  dueAt?: number | null;
+  effectiveAt?: number | null;
+  createdAt: number;
 } {
   const now = Date.now();
   return {
-    id: 'r1', type: 'test', direction: 'in', amountUsd: 100,
-    status: 'posted', effectiveAt: now, createdAt: now,
+    id: 'r1',
+    type: 'test',
+    direction: 'in',
+    amountUsd: 100,
+    status: 'posted',
+    effectiveAt: now,
+    createdAt: now,
     ...overrides,
   };
 }
 
-function makeContractRow(overrides: Partial<{
-  contractId: string; agentId: string; agentName: string;
-  budgetUsd: number; weeklyValueUsd: number; autoRenew: number;
-  startsAt: number; endsAt: number;
-}> = {}): {
-  contractId: string; agentId: string; agentName: string;
-  budgetUsd: number; weeklyValueUsd: number; autoRenew: number;
-  startsAt: number; endsAt: number;
+function makeContractRow(
+  overrides: Partial<{
+    contractId: string;
+    agentId: string;
+    agentName: string;
+    budgetUsd: number;
+    weeklyValueUsd: number;
+    autoRenew: number;
+    startsAt: number;
+    endsAt: number;
+  }> = {},
+): {
+  contractId: string;
+  agentId: string;
+  agentName: string;
+  budgetUsd: number;
+  weeklyValueUsd: number;
+  autoRenew: number;
+  startsAt: number;
+  endsAt: number;
 } {
   const now = Date.now();
   return {
-    contractId: 'c1', agentId: 'a1', agentName: 'Test Agent',
-    budgetUsd: 500, weeklyValueUsd: overrides.budgetUsd ?? 500, autoRenew: 1,
-    startsAt: now - 86_400_000, endsAt: now + 86_400_000 * 30,
+    contractId: 'c1',
+    agentId: 'a1',
+    agentName: 'Test Agent',
+    budgetUsd: 500,
+    weeklyValueUsd: overrides.budgetUsd ?? 500,
+    autoRenew: 1,
+    startsAt: now - 86_400_000,
+    endsAt: now + 86_400_000 * 30,
     ...overrides,
   };
 }
 
-function makeStepRow(overrides: Partial<{
-  id: string; contractId: string; agentId: string;
-  llmProfileId: string; modelKey: string; kind: string;
-  inputTokens: number; cachedInputTokens: number; outputTokens: number;
-  inputPerMillionUsd: number; inputCachePerMillionUsd: number;
-  outputPerMillionUsd: number; contractCostMultiplier: number;
-  costUsd: number; createdAt: number;
-}> = {}): {
-  id: string; contractId: string; agentId: string;
-  llmProfileId: string; modelKey: string; kind: string;
-  inputTokens: number; cachedInputTokens: number; outputTokens: number;
-  inputPerMillionUsd: number; inputCachePerMillionUsd: number;
-  outputPerMillionUsd: number; contractCostMultiplier: number;
-  costUsd: number; createdAt: number;
+function makeStepRow(
+  overrides: Partial<{
+    id: string;
+    contractId: string;
+    agentId: string;
+    llmProfileId: string;
+    modelKey: string;
+    kind: string;
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    inputPerMillionUsd: number;
+    inputCachePerMillionUsd: number;
+    outputPerMillionUsd: number;
+    contractCostMultiplier: number;
+    costUsd: number;
+    createdAt: number;
+  }> = {},
+): {
+  id: string;
+  contractId: string;
+  agentId: string;
+  llmProfileId: string;
+  modelKey: string;
+  kind: string;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
+  contractCostMultiplier: number;
+  costUsd: number;
+  createdAt: number;
 } {
   const now = Date.now();
   return {
-    id: 's1', contractId: 'c1', agentId: 'a1',
-    llmProfileId: 'p1', modelKey: 'gpt-4o', kind: 'chat',
-    inputTokens: 1000, cachedInputTokens: 0, outputTokens: 500,
-    inputPerMillionUsd: 2.5, inputCachePerMillionUsd: 0.5,
-    outputPerMillionUsd: 10, contractCostMultiplier: 1,
-    costUsd: 0.0075, createdAt: now,
+    id: 's1',
+    contractId: 'c1',
+    agentId: 'a1',
+    llmProfileId: 'p1',
+    modelKey: 'gpt-4o',
+    kind: 'chat',
+    inputTokens: 1000,
+    cachedInputTokens: 0,
+    outputTokens: 500,
+    inputPerMillionUsd: 2.5,
+    inputCachePerMillionUsd: 0.5,
+    outputPerMillionUsd: 10,
+    contractCostMultiplier: 1,
+    costUsd: 0.0075,
+    createdAt: now,
     ...overrides,
   };
 }
@@ -83,14 +139,16 @@ function makeSelectChain(rows: unknown[] = []) {
 }
 
 // ─── Mock DB factory ─────────────────────────────────────────────────────────
-function createMockDb(opts: {
-  cashRows?: ReturnType<typeof makeCashRow>[];
-  contracts?: ReturnType<typeof makeContractRow>[];
-  steps?: ReturnType<typeof makeStepRow>[];
-  aggregateInOut?: { totalInUsd: number; totalOutUsd: number };
-  scheduledTotals?: { scheduledInUsd: number; scheduledOutUsd: number };
-  balanceUsd?: number;
-} = {}) {
+function createMockDb(
+  opts: {
+    cashRows?: ReturnType<typeof makeCashRow>[];
+    contracts?: ReturnType<typeof makeContractRow>[];
+    steps?: ReturnType<typeof makeStepRow>[];
+    aggregateInOut?: { totalInUsd: number; totalOutUsd: number };
+    scheduledTotals?: { scheduledInUsd: number; scheduledOutUsd: number };
+    balanceUsd?: number;
+  } = {},
+) {
   const {
     cashRows = [],
     contracts = [],
@@ -101,32 +159,40 @@ function createMockDb(opts: {
   } = opts;
 
   // Build named chains keyed to each unique query pattern.
-  const postedChain      = makeSelectChain([aggregateInOut]);
-  const scheduledChain   = makeSelectChain([scheduledTotals]);
-  const balanceChain     = makeSelectChain([{ total: balanceUsd }]);
-  const contractsChain    = makeSelectChain([...contracts]);
-    // Recursively extract all non-operator string values from a Drizzle expression.
+  const postedChain = makeSelectChain([aggregateInOut]);
+  const scheduledChain = makeSelectChain([scheduledTotals]);
+  const balanceChain = makeSelectChain([{ total: balanceUsd }]);
+  const contractsChain = makeSelectChain([...contracts]);
+  // Recursively extract all non-operator string values from a Drizzle expression.
   function extractVals(expr: any) {
     const vals: any[] = [];
     function go(o: any) {
-      if (typeof o === 'string') { vals.push(o); return; }
-      if (Array.isArray(o)) { o.forEach(go); return; }
+      if (typeof o === 'string') {
+        vals.push(o);
+        return;
+      }
+      if (Array.isArray(o)) {
+        o.forEach(go);
+        return;
+      }
       if (o && typeof o === 'object') {
         if (o.value) go(o.value);
         if (o.queryChunks) go(o.queryChunks);
       }
     }
     go(expr);
-    return vals.filter(v => v.trim().length > 0 && !v.match(/^[\s=<>+\-*()]+$/) && !/^\d+$/.test(v));
+    return vals.filter(
+      (v) => v.trim().length > 0 && !v.match(/^[\s=<>+\-*()]+$/) && !/^\d+$/.test(v),
+    );
   }
   contractsChain.where = vi.fn().mockImplementation((arg) => {
     // Extract string values from Drizzle expression queryChunks.
     const vals = extractVals(arg);
     if (vals.length > 0) {
       // Use the first string value as agentId filter.
-      const agentId = vals.find(v => v.startsWith('a') || v.startsWith('c'));
+      const agentId = vals.find((v) => v.startsWith('a') || v.startsWith('c'));
       if (agentId) {
-        const filtered = contracts.filter(c => c.agentId === agentId);
+        const filtered = contracts.filter((c) => c.agentId === agentId);
         return makeSelectChain(filtered);
       }
     }
@@ -134,10 +200,10 @@ function createMockDb(opts: {
   });
 
   // Spend query: rows with { contractId, total: sum of costUsd per contract }
-  const spendRows = contracts.map(c => ({
+  const spendRows = contracts.map((c) => ({
     contractId: c.contractId,
     total: steps
-      .filter(s => s.contractId === c.contractId)
+      .filter((s) => s.contractId === c.contractId)
       .reduce((sum, s) => sum + s.costUsd, 0),
   }));
   const spendChain = makeSelectChain(spendRows);
@@ -233,7 +299,10 @@ describe('getCompanyCashSummary', () => {
   test('returns summary with period boundaries', async () => {
     const now = Date.now();
     const { model } = createMockDb({ aggregateInOut: { totalInUsd: 500, totalOutUsd: 100 } });
-    const result = await model.getCompanyCashSummary({ periodStart: now - 86_400_000, periodEnd: now });
+    const result = await model.getCompanyCashSummary({
+      periodStart: now - 86_400_000,
+      periodEnd: now,
+    });
     expect(result.periodStart).toBeDefined();
     expect(result.periodEnd).toBeDefined();
   });
@@ -301,7 +370,6 @@ describe('listActiveInternalAgentContracts', () => {
     expect(result.items[0]!.recentSteps).toHaveLength(1);
   });
 
-
   test('budgetUsedPct = (spentUsd / budgetUsd) * 100', async () => {
     const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 200 })];
     const steps = [
@@ -328,7 +396,7 @@ describe('listActiveInternalAgentContracts', () => {
     const now = Date.now();
     const contracts = [makeContractRow({ contractId: 'c1', budgetUsd: 500 })];
     const steps = Array.from({ length: 15 }, (_, i) =>
-      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now + i * 1000 })
+      makeStepRow({ contractId: 'c1', costUsd: 1, createdAt: now + i * 1000 }),
     );
     const { model } = createMockDb({ contracts, steps });
     const result = await model.listActiveInternalAgentContracts();
@@ -407,13 +475,14 @@ describe('getActiveContractMetrics — budget fields', () => {
   });
 });
 
-
 // ─── Error handling ───────────────────────────────────────────────────────────
 
 describe('listCompanyCashMovements — error handling', () => {
   test('throws when findMany fails', async () => {
     const db = {
-      query: { companyCashLedger: { findMany: vi.fn().mockRejectedValue(new Error('db unavailable')) } },
+      query: {
+        companyCashLedger: { findMany: vi.fn().mockRejectedValue(new Error('db unavailable')) },
+      },
     } as never;
     const model = createMicroErpReadModel(db as never);
 
@@ -442,6 +511,8 @@ describe('listActiveInternalAgentContracts — error handling', () => {
     } as never;
     const model = createMicroErpReadModel(db as never);
 
-    await expect(model.listActiveInternalAgentContracts()).rejects.toThrow('contracts query failed');
+    await expect(model.listActiveInternalAgentContracts()).rejects.toThrow(
+      'contracts query failed',
+    );
   });
 });

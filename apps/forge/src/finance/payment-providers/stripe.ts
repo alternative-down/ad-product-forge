@@ -37,9 +37,7 @@ function verifyStripeWebhookSignature(
       message: 'Stripe webhook verification failed',
       context: { error: String(serializeError(err)) },
     });
-    throw new Error(
-      `Stripe webhook signature verification failed: ${String(serializeError(err))}`,
-    );
+    throw new Error(`Stripe webhook signature verification failed: ${String(serializeError(err))}`);
   }
 }
 

@@ -41,7 +41,6 @@ export const HireInternalAgentInputSchema = z.object({
     .custom<{
       installForRepo: (repo: string) => Promise<void>;
       getInstallationId: (repo: string) => Promise<string>;
-       
     }>()
     .optional()
     .default({} as any),
@@ -82,7 +81,7 @@ async function rollbackHire(
   hasLoadAgent: boolean,
   schedules: HireInternalAgentInput['schedules'],
   internalChat: HireInternalAgentInput['internalChat'],
-   
+
   tx: any,
 ) {
   // Undo external resources in reverse order of creation
@@ -124,7 +123,7 @@ async function rollbackHireDbAndEmail(
   agentId: string,
   provisionedMailbox: { address: string } | null,
   emailMailboxes: HireInternalAgentInput['emailMailboxes'],
-   
+
   tx: any,
 ) {
   await tx.delete(agentExecutionContracts).where(eq(agentExecutionContracts.agentId, agentId));
@@ -205,7 +204,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
   // Wrap ALL DB writes inside a single transaction.
   // On any error, the transaction aborts and ALL DB writes roll back automatically.
   // No partial agent records can survive a failure (#1857).
-   
+
   await db.transaction(async (tx) => {
     await tx.insert(agents).values(agentRecord);
     await tx.insert(agentExecutionContracts).values(contractRecord);

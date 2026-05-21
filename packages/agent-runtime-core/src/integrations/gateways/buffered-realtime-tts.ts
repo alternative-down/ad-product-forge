@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import {
-  consumeStreamingTextToSpeech,
-} from './buffered-streaming-tts.js';
+import { consumeStreamingTextToSpeech } from './buffered-streaming-tts.js';
 import type {
   RealtimeTextToSpeechGateway,
   RealtimeTextToSpeechSession,
@@ -42,11 +40,16 @@ export class BufferedRealtimeTextToSpeechGateway implements RealtimeTextToSpeech
     };
   }
 
-  async createSession(options: {
-    voiceId?: string;
-    headers?: Record<string, string>;
-    onAudioChunk?(event: { chunk: { mimeType: string; bytes: Uint8Array }; isFinal?: boolean }): Promise<void> | void;
-  } = {}): Promise<RealtimeTextToSpeechSession> {
+  async createSession(
+    options: {
+      voiceId?: string;
+      headers?: Record<string, string>;
+      onAudioChunk?(event: {
+        chunk: { mimeType: string; bytes: Uint8Array };
+        isFinal?: boolean;
+      }): Promise<void> | void;
+    } = {},
+  ): Promise<RealtimeTextToSpeechSession> {
     return new BufferedRealtimeTextToSpeechSession({
       streamingTts: this.streamingTts,
       voiceId: options.voiceId,
@@ -60,7 +63,10 @@ type BufferedRealtimeTextToSpeechSessionOptions = {
   streamingTts: StreamingTextToSpeechGateway;
   voiceId?: string;
   headers?: Record<string, string>;
-  onAudioChunk?(event: { chunk: { mimeType: string; bytes: Uint8Array }; isFinal?: boolean }): Promise<void> | void;
+  onAudioChunk?(event: {
+    chunk: { mimeType: string; bytes: Uint8Array };
+    isFinal?: boolean;
+  }): Promise<void> | void;
 };
 
 class BufferedRealtimeTextToSpeechSession implements RealtimeTextToSpeechSession {

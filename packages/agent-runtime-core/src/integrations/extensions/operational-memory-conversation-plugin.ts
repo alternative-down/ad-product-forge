@@ -16,7 +16,9 @@ export function createOperationalMemoryConversationPlugin(
   return {
     name: 'operational-memory',
     async provideContext(context) {
-      const threadId = options.selectThreadId?.(context.pendingInputs) ?? selectLatestConversationThreadId(context.pendingInputs);
+      const threadId =
+        options.selectThreadId?.(context.pendingInputs) ??
+        selectLatestConversationThreadId(context.pendingInputs);
 
       if (!threadId) {
         return [];
@@ -24,7 +26,9 @@ export function createOperationalMemoryConversationPlugin(
 
       const currentMessageIds = new Set(
         context.pendingInputs
-          .map((input) => isConversationRuntimeInputPayload(input.payload) ? input.payload.messageId : null)
+          .map((input) =>
+            isConversationRuntimeInputPayload(input.payload) ? input.payload.messageId : null,
+          )
           .filter((messageId): messageId is string => Boolean(messageId)),
       );
       const renderedContext = await options.memory.renderContext();

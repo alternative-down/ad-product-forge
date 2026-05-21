@@ -79,9 +79,11 @@ export function createMessageManager(
     }
   }
 
-  function flushPendingRunMessages(options: {
-    allowOriginIdleOnly?: boolean;
-  } = {}): string | null {
+  function flushPendingRunMessages(
+    options: {
+      allowOriginIdleOnly?: boolean;
+    } = {},
+  ): string | null {
     if (state.pendingRunMessages.size === 0) {
       return null;
     }

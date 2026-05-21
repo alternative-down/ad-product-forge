@@ -123,7 +123,12 @@ function makeMockDb() {
             }
           }
           // If no where, return last inserted profile
-          return Promise.resolve((lastInsertedData.current as any)?.profileId ? profiles.get((lastInsertedData.current as any).profileId) || (lastInsertedData.current as any) : null);
+          return Promise.resolve(
+            (lastInsertedData.current as any)?.profileId
+              ? profiles.get((lastInsertedData.current as any).profileId) ||
+                  (lastInsertedData.current as any)
+              : null,
+          );
         }),
       },
       agentMcpConfigs: {
@@ -141,7 +146,9 @@ function makeMockSystemSettings() {
 
 function makeMockLlmSettings() {
   return {
-    upsertProfile: vi.fn((body) => Promise.resolve({ profileId: body?.profileId || 'profile-default' })),
+    upsertProfile: vi.fn((body) =>
+      Promise.resolve({ profileId: body?.profileId || 'profile-default' }),
+    ),
     deleteProfile: vi.fn().mockResolvedValue(undefined),
     updateDefaults: vi.fn().mockResolvedValue({}),
   };
@@ -224,84 +231,84 @@ describe('registerSystemWriteRoutes', () => {
 
     it('registers settings/upsert as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/settings/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/settings/upsert');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers mcp/upsert as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/upsert');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers mcp/delete as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/delete');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers skills/upload as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/skills/upload');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/skills/upload');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers skills/delete as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/skills/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/skills/delete');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers llm/price/upsert as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/price/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/price/upsert');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers integration/upsert as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/integration/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/integration/upsert');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers integration/delete as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/integration/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/integration/delete');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers llm/profile/upsert as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/profile/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/profile/upsert');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers llm/profile/delete as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/profile/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/profile/delete');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers llm/defaults/update as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/defaults/update');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/defaults/update');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
 
     it('registers oauth/sync as POST', () => {
       registerSystemWriteRoutes(buildInput());
-      const route = mockServer.routes.find(r => r.path === '/admin/system/oauth/sync');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
       expect(route).toBeDefined();
       expect(route!.method).toBe('POST');
     });
@@ -311,13 +318,17 @@ describe('registerSystemWriteRoutes', () => {
     it('calls systemSettings.upsertSettings with parsed body', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/settings/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/settings/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        companyName: ' Acme Corp ',
-        companyContext: ' Testing context ',
-        stepDelayEnabled: true,
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            companyName: ' Acme Corp ',
+            companyContext: ' Testing context ',
+            stepDelayEnabled: true,
+          }),
+        ),
+      );
 
       expect(mockSystemSettings.upsertSettings).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -336,9 +347,13 @@ describe('registerSystemWriteRoutes', () => {
 
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/settings/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/settings/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({ companyName: 'Test', companyContext: 'Test Context', agentConfig: {} })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({ companyName: 'Test', companyContext: 'Test Context', agentConfig: {} }),
+        ),
+      );
 
       expect(mockLoader).toHaveBeenCalledTimes(2);
       expect(mockRegistry.add).toHaveBeenCalledTimes(2);
@@ -347,9 +362,11 @@ describe('registerSystemWriteRoutes', () => {
     it('handles empty body gracefully', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/settings/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/settings/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({ companyName: 'Test', companyContext: 'Test Context' })));
+      await handler(
+        makeMockRequest(JSON.stringify({ companyName: 'Test', companyContext: 'Test Context' })),
+      );
 
       expect(mockSystemSettings.upsertSettings).toHaveBeenCalled();
     });
@@ -359,15 +376,19 @@ describe('registerSystemWriteRoutes', () => {
     it('inserts new MCP server when no serverId provided', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest(JSON.stringify({
-        name: 'Test MCP Server',
-        transport: 'stdio',
-        command: 'npx',
-        args: ['--flag'],
-        isActive: true,
-      }))) as { body: string };
+      const result = (await handler(
+        makeMockRequest(
+          JSON.stringify({
+            name: 'Test MCP Server',
+            transport: 'stdio',
+            command: 'npx',
+            args: ['--flag'],
+            isActive: true,
+          }),
+        ),
+      )) as { body: string };
 
       const parsed = JSON.parse(result.body);
       expect(mockDb.insert).toHaveBeenCalled();
@@ -377,15 +398,19 @@ describe('registerSystemWriteRoutes', () => {
     it('updates existing MCP server when serverId provided', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        serverId: 'existing-server-id',
-        name: 'Updated Server',
-        transport: 'stdio',
-        command: 'node',
-        isActive: false,
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            serverId: 'existing-server-id',
+            name: 'Updated Server',
+            transport: 'stdio',
+            command: 'node',
+            isActive: false,
+          }),
+        ),
+      );
 
       expect(mockDb.update).toHaveBeenCalled();
       expect(mockDb.insert).not.toHaveBeenCalled();
@@ -394,15 +419,19 @@ describe('registerSystemWriteRoutes', () => {
     it('handles http_streamable transport with url and headers', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        name: 'HTTP MCP',
-        transport: 'http_streamable',
-        url: 'https://mcp.example.com',
-        headersText: '{"Authorization": "Bearer token"}',
-        isActive: true,
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            name: 'HTTP MCP',
+            transport: 'http_streamable',
+            url: 'https://mcp.example.com',
+            headersText: '{"Authorization": "Bearer token"}',
+            isActive: true,
+          }),
+        ),
+      );
 
       expect(mockDb.insert).toHaveBeenCalled();
     });
@@ -412,14 +441,19 @@ describe('registerSystemWriteRoutes', () => {
     it('deletes MCP server and returns success', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest(JSON.stringify({
-        serverId: 'server-to-delete',
-      })));
+      const result = await handler(
+        makeMockRequest(
+          JSON.stringify({
+            serverId: 'server-to-delete',
+          }),
+        ),
+      );
 
       expect(mockDb.delete).toHaveBeenCalled();
-      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, serverId: 'server-to-delete' });
+      const parsed = JSON.parse((result as any).body);
+      expect(parsed).toEqual({ success: true, serverId: 'server-to-delete' });
     });
 
     it('deletes linked agent configs and reloads agents', async () => {
@@ -429,11 +463,15 @@ describe('registerSystemWriteRoutes', () => {
 
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/mcp/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/mcp/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        serverId: 'server-with-links',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            serverId: 'server-with-links',
+          }),
+        ),
+      );
 
       expect(mockDb.delete).toHaveBeenCalled(); // agentMcpConfigs
       expect(mockLoader).toHaveBeenCalled();
@@ -447,11 +485,15 @@ describe('registerSystemWriteRoutes', () => {
 
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/skills/upload');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/skills/upload');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        archiveBase64: 'UEsDBBQAAAAAA',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            archiveBase64: 'UEsDBBQAAAAAA',
+          }),
+        ),
+      );
 
       expect(installGlobalSkillsFromZip).toHaveBeenCalledWith({
         workspaceBasePath: '/mock/workspace',
@@ -462,9 +504,9 @@ describe('registerSystemWriteRoutes', () => {
     it('returns 201 status on successful skill upload', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/skills/upload');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/skills/upload');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest('{}')) as { status: number };
+      const result = (await handler(makeMockRequest('{}'))) as { status: number };
 
       expect(result.status).toBe(201);
     });
@@ -476,11 +518,15 @@ describe('registerSystemWriteRoutes', () => {
 
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/skills/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/skills/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        skillName: 'my-test-skill',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            skillName: 'my-test-skill',
+          }),
+        ),
+      );
 
       expect(deleteGlobalSkill).toHaveBeenCalledWith({
         workspaceBasePath: '/mock/workspace',
@@ -491,13 +537,18 @@ describe('registerSystemWriteRoutes', () => {
     it('returns success with skillName', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/skills/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/skills/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest(JSON.stringify({
-        skillName: 'to-delete',
-      })));
+      const result = await handler(
+        makeMockRequest(
+          JSON.stringify({
+            skillName: 'to-delete',
+          }),
+        ),
+      );
 
-      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, skillName: 'to-delete' });
+      const parsed = JSON.parse((result as any).body);
+      expect(parsed).toEqual({ success: true, skillName: 'to-delete' });
     });
   });
 
@@ -505,15 +556,19 @@ describe('registerSystemWriteRoutes', () => {
     it('calls llmModelPrices.upsertPrice with parsed body', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/price/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/price/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        provider: 'openai',
-        modelId: 'gpt-4o-mini',
-        modality: 'text',
-        inputPricePer1mTokens: 0.15,
-        outputPricePer1mTokens: 0.60,
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            provider: 'openai',
+            modelId: 'gpt-4o-mini',
+            modality: 'text',
+            inputPricePer1mTokens: 0.15,
+            outputPricePer1mTokens: 0.6,
+          }),
+        ),
+      );
 
       expect(mockLlmModelPrices.upsertPrice).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -529,14 +584,18 @@ describe('registerSystemWriteRoutes', () => {
     it('calls integrations.upsert with parsed body', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/integration/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/integration/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        integrationType: 'webhook',
-        name: 'Test Webhook',
-        configJson: '{"url":"https://example.com"}',
-        isActive: true,
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            integrationType: 'webhook',
+            name: 'Test Webhook',
+            configJson: '{"url":"https://example.com"}',
+            isActive: true,
+          }),
+        ),
+      );
 
       expect(mockIntegrations.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -551,11 +610,15 @@ describe('registerSystemWriteRoutes', () => {
     it('calls integrations.delete with integrationId', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/integration/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/integration/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        integrationId: 'int-to-delete',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            integrationId: 'int-to-delete',
+          }),
+        ),
+      );
 
       expect(mockIntegrations.delete).toHaveBeenCalledWith({ id: 'int-to-delete' });
     });
@@ -563,13 +626,18 @@ describe('registerSystemWriteRoutes', () => {
     it('returns success', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/integration/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/integration/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest(JSON.stringify({
-        integrationId: 'int-abc',
-      })));
+      const result = await handler(
+        makeMockRequest(
+          JSON.stringify({
+            integrationId: 'int-abc',
+          }),
+        ),
+      );
 
-      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, integrationId: 'int-abc' });
+      const parsed = JSON.parse((result as any).body);
+      expect(parsed).toEqual({ success: true, integrationId: 'int-abc' });
     });
   });
 
@@ -577,16 +645,20 @@ describe('registerSystemWriteRoutes', () => {
     it('calls llmSettings.upsertProfile with parsed body', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/profile/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/profile/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        profileId: 'profile-test',
-        name: 'Test Profile',
-        modelId: 'gpt-4o',
-        temperature: 0.7,
-        maxTokens: 2048,
-        systemPrompt: 'You are a helpful assistant.',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            profileId: 'profile-test',
+            name: 'Test Profile',
+            modelId: 'gpt-4o',
+            temperature: 0.7,
+            maxTokens: 2048,
+            systemPrompt: 'You are a helpful assistant.',
+          }),
+        ),
+      );
 
       expect(mockLlmSettings.upsertProfile).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -600,13 +672,17 @@ describe('registerSystemWriteRoutes', () => {
     it('returns profile with profileId', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/profile/upsert');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/profile/upsert');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest(JSON.stringify({
-        profileId: 'profile-abc',
-        name: 'My Profile',
-        modelId: 'claude-3-5-sonnet',
-      }))) as { body: string; status?: number };
+      const result = (await handler(
+        makeMockRequest(
+          JSON.stringify({
+            profileId: 'profile-abc',
+            name: 'My Profile',
+            modelId: 'claude-3-5-sonnet',
+          }),
+        ),
+      )) as { body: string; status?: number };
 
       const parsed = JSON.parse(result.body);
       expect(parsed.profileId).toBe('profile-abc');
@@ -617,25 +693,36 @@ describe('registerSystemWriteRoutes', () => {
     it('calls llmSettings.deleteProfile with profileId', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/profile/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/profile/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        profileId: 'profile-to-delete',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            profileId: 'profile-to-delete',
+          }),
+        ),
+      );
 
-      expect(mockLlmSettings.deleteProfile).toHaveBeenCalledWith({ profileId: 'profile-to-delete' });
+      expect(mockLlmSettings.deleteProfile).toHaveBeenCalledWith({
+        profileId: 'profile-to-delete',
+      });
     });
 
     it('returns success with profileId', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/profile/delete');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/profile/delete');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const result = await handler(makeMockRequest(JSON.stringify({
-        profileId: 'profile-xyz',
-      })));
+      const result = await handler(
+        makeMockRequest(
+          JSON.stringify({
+            profileId: 'profile-xyz',
+          }),
+        ),
+      );
 
-      const parsed = JSON.parse((result as any).body); expect(parsed).toEqual({ success: true, profileId: 'profile-xyz' });
+      const parsed = JSON.parse((result as any).body);
+      expect(parsed).toEqual({ success: true, profileId: 'profile-xyz' });
     });
   });
 
@@ -643,12 +730,16 @@ describe('registerSystemWriteRoutes', () => {
     it('calls llmSettings.updateDefaults with parsed body', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/llm/defaults/update');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/llm/defaults/update');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        defaultModelId: 'gpt-4o',
-        defaultTemperature: 0.8,
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            defaultModelId: 'gpt-4o',
+            defaultTemperature: 0.8,
+          }),
+        ),
+      );
 
       expect(mockLlmSettings.updateDefaults).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -662,11 +753,15 @@ describe('registerSystemWriteRoutes', () => {
     it('syncs openai-codex when providerId is openai-codex', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/oauth/sync');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        providerId: 'openai-codex',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            providerId: 'openai-codex',
+          }),
+        ),
+      );
 
       expect(vi.mocked(syncOpenAICodexCredential)).toHaveBeenCalled();
     });
@@ -674,11 +769,15 @@ describe('registerSystemWriteRoutes', () => {
     it('syncs anthropic when providerId is anthropic', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/oauth/sync');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        providerId: 'anthropic',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            providerId: 'anthropic',
+          }),
+        ),
+      );
 
       expect(vi.mocked(syncAnthropicCredential)).toHaveBeenCalled();
     });
@@ -686,32 +785,42 @@ describe('registerSystemWriteRoutes', () => {
     it('syncs both providers when providerId is all', async () => {
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/oauth/sync');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      await handler(makeMockRequest(JSON.stringify({
-        providerId: 'all',
-      })));
+      await handler(
+        makeMockRequest(
+          JSON.stringify({
+            providerId: 'all',
+          }),
+        ),
+      );
 
       expect(vi.mocked(syncOpenAICodexCredential)).toHaveBeenCalled();
       expect(vi.mocked(syncAnthropicCredential)).toHaveBeenCalled();
     });
 
     it('returns error in results when sync throws', async () => {
-      vi.mocked(syncOpenAICodexCredential).mockImplementationOnce(
-        () => Promise.reject(new Error('Credential file not found'))
+      vi.mocked(syncOpenAICodexCredential).mockImplementationOnce(() =>
+        Promise.reject(new Error('Credential file not found')),
       );
 
       registerSystemWriteRoutes(buildInput());
 
-      const route = mockServer.routes.find(r => r.path === '/admin/system/oauth/sync');
+      const route = mockServer.routes.find((r) => r.path === '/admin/system/oauth/sync');
       const handler = route!.handler as (req: { bodyText: string }) => Promise<unknown>;
-      const raw = await handler(makeMockRequest(JSON.stringify({
-        providerId: 'openai-codex',
-      }))) as { body: string };
-      const parsed = JSON.parse(raw.body) as { results?: Array<{ providerId: string; synced: boolean; error?: string }> };
+      const raw = (await handler(
+        makeMockRequest(
+          JSON.stringify({
+            providerId: 'openai-codex',
+          }),
+        ),
+      )) as { body: string };
+      const parsed = JSON.parse(raw.body) as {
+        results?: Array<{ providerId: string; synced: boolean; error?: string }>;
+      };
 
       expect(parsed.results).toBeDefined();
-      const openaiResult = parsed.results!.find(r => r.providerId === 'openai-codex');
+      const openaiResult = parsed.results!.find((r) => r.providerId === 'openai-codex');
       expect(openaiResult!.synced).toBe(false);
       expect(openaiResult!.error).toBe('Credential file not found');
     });

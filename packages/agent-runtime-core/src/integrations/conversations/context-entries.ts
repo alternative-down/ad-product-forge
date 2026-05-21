@@ -2,7 +2,9 @@ import type { StepContextEntry, StepContextPart } from '../../core/types.js';
 
 import type { ConversationMessage } from './contracts.js';
 
-export function createConversationMessageContextEntry(message: ConversationMessage): StepContextEntry {
+export function createConversationMessageContextEntry(
+  message: ConversationMessage,
+): StepContextEntry {
   const textSegments = message.parts
     .filter((part) => part.type === 'text')
     .map((part) => part.text.trim())
@@ -16,11 +18,13 @@ export function createConversationMessageContextEntry(message: ConversationMessa
     }
 
     if (part.type === 'image') {
-      return [{
-        type: 'image',
-        mimeType: part.mimeType,
-        bytes: part.bytes,
-      }];
+      return [
+        {
+          type: 'image',
+          mimeType: part.mimeType,
+          bytes: part.bytes,
+        },
+      ];
     }
 
     return [];
@@ -51,11 +55,13 @@ function normalizeConversationMessageData(metadata: ConversationMessage['metadat
 
   const toolInvocations = Array.isArray(metadata.toolInvocations)
     ? metadata.toolInvocations
-        .filter((value): value is { toolName: string; args?: unknown } =>
-          typeof value === 'object'
-          && value !== null
-          && 'toolName' in value
-          && typeof value.toolName === 'string')
+        .filter(
+          (value): value is { toolName: string; args?: unknown } =>
+            typeof value === 'object' &&
+            value !== null &&
+            'toolName' in value &&
+            typeof value.toolName === 'string',
+        )
         .map((toolInvocation) => ({
           toolName: toolInvocation.toolName,
           args: isPlainObject(toolInvocation.args) ? toolInvocation.args : {},
@@ -63,11 +69,13 @@ function normalizeConversationMessageData(metadata: ConversationMessage['metadat
     : [];
   const toolResults = Array.isArray(metadata.toolResults)
     ? metadata.toolResults
-        .filter((value): value is { toolName: string; result?: unknown } =>
-          typeof value === 'object'
-          && value !== null
-          && 'toolName' in value
-          && typeof value.toolName === 'string')
+        .filter(
+          (value): value is { toolName: string; result?: unknown } =>
+            typeof value === 'object' &&
+            value !== null &&
+            'toolName' in value &&
+            typeof value.toolName === 'string',
+        )
         .map((toolResult) => ({
           toolName: toolResult.toolName,
           result: toolResult.result,

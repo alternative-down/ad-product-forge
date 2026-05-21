@@ -94,7 +94,9 @@ describe('createAgentLongTermMemoryStore', () => {
     it('returns a default state and writes when state JSON is invalid', async () => {
       const storeFn = await createTestSubject();
       const mockDb = createMockDb();
-      mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({ state: { bad: 'data' } });
+      mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({
+        state: { bad: 'data' },
+      });
 
       const store = storeFn(mockDb, { agentId: 'agent-123' });
       const result = await store.readState();
@@ -137,7 +139,10 @@ describe('createAgentLongTermMemoryStore', () => {
     it('passes existing recallIndexStamp through to insert', async () => {
       const storeFn = await createTestSubject();
       const mockDb = createMockDb();
-      const existingStamp = JSON.stringify({ updatedAt: '2025-01-01T00:00:00.000Z', reason: 'test' });
+      const existingStamp = JSON.stringify({
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        reason: 'test',
+      });
       mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({
         state: null,
         recallIndexStamp: existingStamp,
@@ -178,7 +183,9 @@ describe('createAgentLongTermMemoryStore', () => {
     it('returns null when recallIndexStamp is null', async () => {
       const storeFn = await createTestSubject();
       const mockDb = createMockDb();
-      mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({ recallIndexStamp: null });
+      mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({
+        recallIndexStamp: null,
+      });
 
       const store = storeFn(mockDb, { agentId: 'agent-123' });
       const result = await store.readRecallIndexStamp();
@@ -205,13 +212,17 @@ describe('createAgentLongTermMemoryStore', () => {
     it('calls insert with onConflictDoUpdate to update recallIndexStamp', async () => {
       const storeFn = await createTestSubject();
       const mockDb = createMockDb();
-      mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({ state: null, createdAt: 1000 });
+      mockDb.query.agentLongTermMemoryStates.findFirst.mockResolvedValue({
+        state: null,
+        createdAt: 1000,
+      });
 
       const store = storeFn(mockDb, { agentId: 'agent-123' });
       await store.writeRecallIndexStamp('periodic-reason');
 
       expect(mockDb.insert).toHaveBeenCalled();
-      const onConflictDoUpdate = mockDb.insert.mock.results[0].value.values.mock.results[0].value.onConflictDoUpdate;
+      const onConflictDoUpdate =
+        mockDb.insert.mock.results[0].value.values.mock.results[0].value.onConflictDoUpdate;
       expect(onConflictDoUpdate).toHaveBeenCalled();
     });
   });
@@ -306,9 +317,9 @@ describe('createAgentLongTermMemoryStore', () => {
       });
 
       expect(mockDb.insert).toHaveBeenCalled();
-      const onConflictDoUpdate = mockDb.insert.mock.results[0].value.values.mock.results[0].value.onConflictDoUpdate;
+      const onConflictDoUpdate =
+        mockDb.insert.mock.results[0].value.values.mock.results[0].value.onConflictDoUpdate;
       expect(onConflictDoUpdate).toHaveBeenCalled();
     });
   });
-
 });

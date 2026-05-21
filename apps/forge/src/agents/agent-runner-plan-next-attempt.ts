@@ -45,9 +45,7 @@ export interface PlanNextAttemptDeps {
   calculateBudgetDelayMs?: typeof calculateBudgetDelayMs;
 }
 
-export async function planNextAttempt(
-  deps: PlanNextAttemptDeps,
-): Promise<PlanNextAttemptResult> {
+export async function planNextAttempt(deps: PlanNextAttemptDeps): Promise<PlanNextAttemptResult> {
   const {
     runtimeId,
     store,

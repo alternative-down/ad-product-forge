@@ -12,8 +12,8 @@ export class InMemoryBlobStore implements BlobStore {
   }
 
   async list(): Promise<BlobRecord[]> {
-    return Array.from(this.records.values()).sort((left, right) => (
-      left.createdAt.localeCompare(right.createdAt)
-    ));
+    return Array.from(this.records.values()).sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt),
+    );
   }
 }

@@ -174,14 +174,16 @@ describe('communication', () => {
         unreadCount: 0,
         name: 'General',
         participants: ['user-1', 'user-2'],
-        messages: [{
-          messageId: 'm1',
-          provider: 'slack',
-          content: 'Hello',
-          attachments: [],
-          unread: false,
-          createdAt: '2024-01-06T00:00:00Z',
-        }],
+        messages: [
+          {
+            messageId: 'm1',
+            provider: 'slack',
+            content: 'Hello',
+            attachments: [],
+            unread: false,
+            createdAt: '2024-01-06T00:00:00Z',
+          },
+        ],
       };
       expect(conv.messages).toHaveLength(1);
     });

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createLlmSettingsStore } from './settings-store';
 
-import type {Database} from '../database/client';
-type LlmProfile=any;
-type SystemLlmDefaults=any;
+import type { Database } from '../database/client';
+type LlmProfile = any;
+type SystemLlmDefaults = any;
 
 // ─── mock db factory ─────────────────────────────────────────────────────────
 
@@ -37,9 +37,7 @@ function createMockDb(overrides?: Partial<Database>): Database {
 
 // ─── mock row helpers ─────────────────────────────────────────────────────────
 
-function createMockProfileRow(
-  overrides?: Partial<LlmProfile>,
-): LlmProfile {
+function createMockProfileRow(overrides?: Partial<LlmProfile>): LlmProfile {
   return {
     id: 'profile-1',
     name: 'Test Profile',
@@ -54,9 +52,7 @@ function createMockProfileRow(
   } as LlmProfile;
 }
 
-function createMockDefaultsRow(
-  overrides?: Partial<SystemLlmDefaults>,
-): SystemLlmDefaults {
+function createMockDefaultsRow(overrides?: Partial<SystemLlmDefaults>): SystemLlmDefaults {
   return {
     id: 'default',
     primaryProfileId: 'profile-1',

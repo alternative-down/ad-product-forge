@@ -1,8 +1,5 @@
-import type {Database} from '../../database/client'
-import {
-  createAgentLongTermMemoryStore,
-  type LongTermMemoryState,
-} from '../../agents/ltm/store';
+import type { Database } from '../../database/client';
+import { createAgentLongTermMemoryStore, type LongTermMemoryState } from '../../agents/ltm/store';
 import { forgeDebug } from '@forge-runtime/core';
 import { serializeError } from '../../agents/agent-runner-error-formatting';
 
@@ -21,7 +18,12 @@ export async function readLongTermMemoryRecallSnapshot(
 
     return state.snapshot;
   } catch (err) {
-    forgeDebug({ scope: 'helpers-ltm', level: 'error', message: '[helpers-ltm] readLongTermMemoryRecallSnapshot failed', context: { err: String(serializeError(err)) } });
+    forgeDebug({
+      scope: 'helpers-ltm',
+      level: 'error',
+      message: '[helpers-ltm] readLongTermMemoryRecallSnapshot failed',
+      context: { err: String(serializeError(err)) },
+    });
     throw err;
   }
 }
@@ -37,7 +39,12 @@ export async function readLongTermMemoryState(
 
     return state;
   } catch (err) {
-    forgeDebug({ scope: 'helpers-ltm', level: 'error', message: '[helpers-ltm] readLongTermMemoryState failed', context: { err: String(serializeError(err)) } });
+    forgeDebug({
+      scope: 'helpers-ltm',
+      level: 'error',
+      message: '[helpers-ltm] readLongTermMemoryState failed',
+      context: { err: String(serializeError(err)) },
+    });
     throw err;
   }
 }

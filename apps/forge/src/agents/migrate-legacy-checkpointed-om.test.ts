@@ -30,25 +30,28 @@ const mockDb = {
   }),
 };
 
-const createMockConversationStore = () => ({
-  listMessages: mockListMessages,
-  appendMessage: mockAppendMessage,
-  updateMessageReplacement: mockUpdateMessageReplacement,
-  getThread: vi.fn(),
-  listThreads: vi.fn(),
-  updateMessage: vi.fn(),
-  updateMessageMetadata: vi.fn(),
-  listOperationalMemoryMessages: vi.fn(),
-  upsertThread: vi.fn(),
-} as any);
+const createMockConversationStore = () =>
+  ({
+    listMessages: mockListMessages,
+    appendMessage: mockAppendMessage,
+    updateMessageReplacement: mockUpdateMessageReplacement,
+    getThread: vi.fn(),
+    listThreads: vi.fn(),
+    updateMessage: vi.fn(),
+    updateMessageMetadata: vi.fn(),
+    listOperationalMemoryMessages: vi.fn(),
+    upsertThread: vi.fn(),
+  }) as any;
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(mockDb.query.agentCheckpointedOmStates.findFirst).mockReset();
-  vi.mocked(mockDb.delete).mockReset().mockReturnValue({
-    where: vi.fn().mockResolvedValue(undefined),
-  });
-  vi.mocked(eq).mockImplementation((field: any, value: any) => ({ field, value } as any));
+  vi.mocked(mockDb.delete)
+    .mockReset()
+    .mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    });
+  vi.mocked(eq).mockImplementation((field: any, value: any) => ({ field, value }) as any);
 });
 
 describe('migrateLegacyCheckpointedOmState', () => {
@@ -104,14 +107,16 @@ describe('migrateLegacyCheckpointedOmState', () => {
         conversationStore,
       });
 
-      expect(mockAppendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'checkpoint-summary:agent-1:5',
-        threadId: 'thread-1',
-        role: 'assistant',
-        operationalMemoryType: 'checkpoint-summary',
-        operationalMemoryGeneration: 5,
-        parts: [{ type: 'text', text: 'checkpoint text' }],
-      }));
+      expect(mockAppendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'checkpoint-summary:agent-1:5',
+          threadId: 'thread-1',
+          role: 'assistant',
+          operationalMemoryType: 'checkpoint-summary',
+          operationalMemoryGeneration: 5,
+          parts: [{ type: 'text', text: 'checkpoint text' }],
+        }),
+      );
     });
 
     it('skips checkpoint summary when it already exists in messages', async () => {
@@ -184,14 +189,16 @@ describe('migrateLegacyCheckpointedOmState', () => {
         conversationStore,
       });
 
-      expect(mockAppendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'ref-1',
-        threadId: 'thread-1',
-        role: 'assistant',
-        operationalMemoryType: 'reflection',
-        operationalMemoryGeneration: 2,
-        parts: [{ type: 'text', text: 'reflection text' }],
-      }));
+      expect(mockAppendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'ref-1',
+          threadId: 'thread-1',
+          role: 'assistant',
+          operationalMemoryType: 'reflection',
+          operationalMemoryGeneration: 2,
+          parts: [{ type: 'text', text: 'reflection text' }],
+        }),
+      );
     });
 
     it('skips reflection when already in messages', async () => {
@@ -268,11 +275,13 @@ describe('migrateLegacyCheckpointedOmState', () => {
         conversationStore,
       });
 
-      expect(mockAppendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'obs-1',
-        operationalMemoryType: 'observation',
-        parts: [{ type: 'text', text: 'observed something' }],
-      }));
+      expect(mockAppendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'obs-1',
+          operationalMemoryType: 'observation',
+          parts: [{ type: 'text', text: 'observed something' }],
+        }),
+      );
     });
 
     it('maps source message replacements', async () => {
@@ -580,9 +589,11 @@ describe('migrateLegacyCheckpointedOmState', () => {
         conversationStore,
       });
 
-      expect(mockAppendMessage).toHaveBeenCalledWith(expect.objectContaining({
-        parts: [{ type: 'text', text: 'lots of space' }],
-      }));
+      expect(mockAppendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parts: [{ type: 'text', text: 'lots of space' }],
+        }),
+      );
     });
   });
 });

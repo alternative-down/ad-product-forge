@@ -11,31 +11,27 @@ interface ObservationItem {
 export function renderCheckpointPackageReadme(input: {
   payload: CheckpointedOmCheckpointPackageInput;
 }) {
-  return [(input.payload.checkpointSummary?.text ?? "").trim(), ''].join('\n');
+  return [(input.payload.checkpointSummary?.text ?? '').trim(), ''].join('\n');
 }
 
-export function renderReflectionFile(
-  reflection: ReflectionItem,
-) {
+export function renderReflectionFile(reflection: ReflectionItem) {
   return [
     '---',
     `createdAt: ${reflection.createdAt}`,
     '---',
     '',
-    (reflection as { text?: string }).text?.trim() ?? "",
+    (reflection as { text?: string }).text?.trim() ?? '',
     '',
   ].join('\n');
 }
 
-export function renderObservationFile(
-  observation: ObservationItem,
-) {
+export function renderObservationFile(observation: ObservationItem) {
   return [
     '---',
     `createdAt: ${observation.createdAt}`,
     '---',
     '',
-    (observation as { text?: string }).text?.trim() ?? "",
+    (observation as { text?: string }).text?.trim() ?? '',
     '',
   ].join('\n');
 }

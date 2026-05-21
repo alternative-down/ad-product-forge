@@ -54,42 +54,60 @@ describe('ForgeMcpToolset', () => {
     });
 
     it('accepts valid stdio server config', () => {
-      expect(() => new ForgeMcpToolset({
-        servers: [{
-          id: 'server-1',
-          name: 'TestServer',
-          transport: 'stdio',
-          command: 'node',
-          args: ['./server.js'],
-        }],
-      })).not.toThrow();
+      expect(
+        () =>
+          new ForgeMcpToolset({
+            servers: [
+              {
+                id: 'server-1',
+                name: 'TestServer',
+                transport: 'stdio',
+                command: 'node',
+                args: ['./server.js'],
+              },
+            ],
+          }),
+      ).not.toThrow();
     });
 
     it('accepts valid streamable-http server config', () => {
-      expect(() => new ForgeMcpToolset({
-        servers: [{
-          id: 'server-1',
-          name: 'HttpServer',
-          transport: 'http-stream',
-          url: 'https://example.com/mcp',
-        }],
-      })).not.toThrow();
+      expect(
+        () =>
+          new ForgeMcpToolset({
+            servers: [
+              {
+                id: 'server-1',
+                name: 'HttpServer',
+                transport: 'http-stream',
+                url: 'https://example.com/mcp',
+              },
+            ],
+          }),
+      ).not.toThrow();
     });
 
     it('throws for missing required server fields', () => {
-      expect(() => new ForgeMcpToolset({
-        servers: [{ id: 's1' }] as never,
-      })).toThrow();
+      expect(
+        () =>
+          new ForgeMcpToolset({
+            servers: [{ id: 's1' }] as never,
+          }),
+      ).toThrow();
     });
 
     it('throws for invalid transport type', () => {
-      expect(() => new ForgeMcpToolset({
-        servers: [{
-          id: 's1',
-          name: 'Bad',
-          transport: 'invalid' as never,
-        }],
-      })).toThrow();
+      expect(
+        () =>
+          new ForgeMcpToolset({
+            servers: [
+              {
+                id: 's1',
+                name: 'Bad',
+                transport: 'invalid' as never,
+              },
+            ],
+          }),
+      ).toThrow();
     });
   });
 
@@ -102,13 +120,15 @@ describe('ForgeMcpToolset', () => {
 
     it('registers a session for each server', async () => {
       const ts = new ForgeMcpToolset({
-        servers: [{
-          id: 's1',
-          name: 'ServerOne',
-          transport: 'stdio',
-          command: 'node',
-          args: [],
-        }],
+        servers: [
+          {
+            id: 's1',
+            name: 'ServerOne',
+            transport: 'stdio',
+            command: 'node',
+            args: [],
+          },
+        ],
       });
       await ts.createRuntimeActions();
       expect(mockMcpSessionRegistry).toHaveBeenCalled();
@@ -124,13 +144,15 @@ describe('ForgeMcpToolset', () => {
 
     it('resolves to empty record when server has no tools', async () => {
       const ts = new ForgeMcpToolset({
-        servers: [{
-          id: 's1',
-          name: 'EmptyServer',
-          transport: 'stdio',
-          command: 'node',
-          args: [],
-        }],
+        servers: [
+          {
+            id: 's1',
+            name: 'EmptyServer',
+            transport: 'stdio',
+            command: 'node',
+            args: [],
+          },
+        ],
       });
       const result = await ts.createTools();
       expect(result).toEqual({});
@@ -147,27 +169,31 @@ describe('ForgeMcpToolset', () => {
   describe('mapServerToTransport', () => {
     it('maps stdio transport with env', async () => {
       const ts = new ForgeMcpToolset({
-        servers: [{
-          id: 's1',
-          name: 'StdioWithEnv',
-          transport: 'stdio',
-          command: 'node',
-          args: ['./server.js'],
-          env: { DEBUG: '1' },
-        }],
+        servers: [
+          {
+            id: 's1',
+            name: 'StdioWithEnv',
+            transport: 'stdio',
+            command: 'node',
+            args: ['./server.js'],
+            env: { DEBUG: '1' },
+          },
+        ],
       });
       await expect(ts.createRuntimeActions()).resolves.toBeDefined();
     });
 
     it('maps streamable-http transport with headers', async () => {
       const ts = new ForgeMcpToolset({
-        servers: [{
-          id: 's1',
-          name: 'HttpWithHeaders',
-          transport: 'http-stream',
-          url: 'https://example.com/mcp',
-          headers: { Authorization: 'Bearer token' },
-        }],
+        servers: [
+          {
+            id: 's1',
+            name: 'HttpWithHeaders',
+            transport: 'http-stream',
+            url: 'https://example.com/mcp',
+            headers: { Authorization: 'Bearer token' },
+          },
+        ],
       });
       await expect(ts.createRuntimeActions()).resolves.toBeDefined();
     });

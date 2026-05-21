@@ -1,8 +1,4 @@
-import type {
-  BrowserGateway,
-  BrowserSession,
-  BrowserSessionOptions,
-} from './browser.js';
+import type { BrowserGateway, BrowserSession, BrowserSessionOptions } from './browser.js';
 
 export type ConfiguredBrowserGatewayOptions = {
   base: BrowserGateway;

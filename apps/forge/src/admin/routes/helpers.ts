@@ -2,8 +2,6 @@ import { forgeDebug } from './debug';
 import { access } from 'node:fs/promises';
 import { z } from 'zod';
 
-
-
 export function normalizeOptionalText(value?: string): string | null {
   const normalized: string | null = value?.trim() ?? null;
   return (normalized ?? '') !== '' ? normalized : null;
@@ -28,7 +26,12 @@ export function normalizeJsonText(
       : typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
 
   if (!valid) {
-    forgeDebug({ scope: 'admin-routes-helpers', level: 'warn', message: 'validateJsonBody: invalid shape', context: { fieldName, expectedShape } });
+    forgeDebug({
+      scope: 'admin-routes-helpers',
+      level: 'warn',
+      message: 'validateJsonBody: invalid shape',
+      context: { fieldName, expectedShape },
+    });
     throw new Error(`${fieldName} must be a JSON ${expectedShape}`);
   }
 
@@ -61,25 +64,37 @@ export function summarizeHealthcheckThreadMessage(message: {
   type: string | null;
   content?: unknown;
 }) {
-  const content = message.content !== undefined && message.content !== null && typeof message.content === 'object'
-    ? message.content as {
-        content?: unknown;
-        reasoning?: unknown;
-        parts?: unknown;
-      }
-    : null;
+  const content =
+    message.content !== undefined && message.content !== null && typeof message.content === 'object'
+      ? (message.content as {
+          content?: unknown;
+          reasoning?: unknown;
+          parts?: unknown;
+        })
+      : null;
   const parts = Array.isArray(content?.parts) ? content.parts : [];
   const partTypes = parts
     .flatMap((part) =>
-      part !== null && part !== undefined && typeof part === 'object' && 'type' in part && typeof part.type === 'string'
+      part !== null &&
+      part !== undefined &&
+      typeof part === 'object' &&
+      'type' in part &&
+      typeof part.type === 'string'
         ? [part.type]
-        : [])
+        : [],
+    )
     .slice(0, 20);
   const preview = extractLatestHealthcheckMessagePreview(message.content);
   const hasReasoning =
-    typeof content?.reasoning === 'string' && content.reasoning.trim().length > 0
-    || parts.some((part) =>
-      part !== null && part !== undefined && typeof part === 'object' && 'type' in part && part.type === 'reasoning');
+    (typeof content?.reasoning === 'string' && content.reasoning.trim().length > 0) ||
+    parts.some(
+      (part) =>
+        part !== null &&
+        part !== undefined &&
+        typeof part === 'object' &&
+        'type' in part &&
+        part.type === 'reasoning',
+    );
 
   return {
     id: message.id,
@@ -105,18 +120,16 @@ export function extractLatestHealthcheckMessagePreview(content: unknown): string
   const parts = Array.isArray(record.parts) ? record.parts : [];
 
   for (const part of [...parts].reverse()) {
-     
     if (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      part
-       
-      && typeof part === 'object'
-      && 'type' in part
-      && 'text' in part
-      && (part.type === 'text' || part.type === 'reasoning')
-      && typeof part.text === 'string'
+      part &&
+      typeof part === 'object' &&
+      'type' in part &&
+      'text' in part &&
+      (part.type === 'text' || part.type === 'reasoning') &&
+      typeof part.text === 'string' &&
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      && (part.text?.trim() ?? false)
+      (part.text?.trim() ?? false)
     ) {
       return part.text.trim().slice(0, 280);
     }
@@ -137,9 +150,10 @@ export function summarizeActiveItems(items: unknown[]): Array<{ name: string; co
   const summary = new Map<string, number>();
 
   for (const item of items) {
-    const name = typeof item === 'object' && item !== null && 'constructor' in item
-      ? (item as { constructor?: { name?: string } }).constructor?.name ?? 'unknown'
-      : typeof item;
+    const name =
+      typeof item === 'object' && item !== null && 'constructor' in item
+        ? ((item as { constructor?: { name?: string } }).constructor?.name ?? 'unknown')
+        : typeof item;
 
     summary.set(name, (summary.get(name) ?? 0) + 1);
   }
@@ -154,7 +168,12 @@ export async function fsPathExists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch (err) {
-    forgeDebug({ scope: 'admin-routes-helpers', level: 'warn', message: '[helpers] fsPathExists failed', context: { error: String(serializeError(err)) }});
+    forgeDebug({
+      scope: 'admin-routes-helpers',
+      level: 'warn',
+      message: '[helpers] fsPathExists failed',
+      context: { error: String(serializeError(err)) },
+    });
     // Safe: path does not exist — return false to signal absence
     return false;
   }

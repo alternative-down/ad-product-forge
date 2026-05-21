@@ -33,9 +33,9 @@ describe('oauth-gateway', () => {
     it('rejects unsupported provider key format', async () => {
       const { createOAuthGateway } = await import('./oauth-gateway.js');
       const gateway = createOAuthGateway();
-      await expect(
-        gateway.getApiKey('unknown/provider'),
-      ).rejects.toThrow('Unsupported OAuth provider key');
+      await expect(gateway.getApiKey('unknown/provider')).rejects.toThrow(
+        'Unsupported OAuth provider key',
+      );
     });
 
     it('parses openai-codex key format', async () => {

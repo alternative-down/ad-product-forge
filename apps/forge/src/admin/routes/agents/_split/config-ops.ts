@@ -7,11 +7,16 @@ import { sql } from 'drizzle-orm';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import { reloadAgentIfLoaded } from '../../../../capabilities/runtime';
-import { updateAgentGitHubManifestConfigSchema, updateAgentConfigSchema } from '../../schemas/agents';
+import {
+  updateAgentGitHubManifestConfigSchema,
+  updateAgentConfigSchema,
+} from '../../schemas/agents';
 import type { HttpHandler } from '../../../../http/server';
 
 export function registerConfigOps(
-  httpServer: { registerRoute: (route: { method: "POST"; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
+  },
   db: any,
   input: {
     githubApps?: any;
@@ -34,7 +39,15 @@ export function registerConfigOps(
         });
         return jsonResponse({ success: true, agentId: body.agentId, provisioning });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/github-manifest-config/update route handler failed', context: { path: '/admin/agent/github-manifest-config/update', error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/github-manifest-config/update route handler failed',
+          context: {
+            path: '/admin/agent/github-manifest-config/update',
+            error: String(serializeError(err)),
+          },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -69,7 +82,12 @@ export function registerConfigOps(
         await reloadAgentIfLoaded(db, input.loaderConfig as any, body.agentId);
         return jsonResponse({ success: true, agentId: body.agentId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/update-config route handler failed', context: { path: '/admin/agent/update-config', error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/agent/update-config route handler failed',
+          context: { path: '/admin/agent/update-config', error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

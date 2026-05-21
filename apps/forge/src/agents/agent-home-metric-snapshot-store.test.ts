@@ -139,15 +139,22 @@ describe('createAgentHomeMetricSnapshotStore', () => {
     });
 
     it('re-throws when db insert fails', async () => {
-      const db = { insert: vi.fn(() => ({ values: vi.fn(() => Promise.reject(new Error('DB write failed'))) })), query: {} } as unknown as Database;
+      const db = {
+        insert: vi.fn(() => ({
+          values: vi.fn(() => Promise.reject(new Error('DB write failed'))),
+        })),
+        query: {},
+      } as unknown as Database;
       const store = createAgentHomeMetricSnapshotStore(db);
 
-      await expect(store.recordSnapshot({
-        agentId: 'agent-42',
-        stepId: 'step-1',
-        stepCreatedAt: Date.now(),
-        snapshot: {},
-      })).rejects.toThrow('DB write failed');
+      await expect(
+        store.recordSnapshot({
+          agentId: 'agent-42',
+          stepId: 'step-1',
+          stepCreatedAt: Date.now(),
+          snapshot: {},
+        }),
+      ).rejects.toThrow('DB write failed');
     });
 
     it('works with empty snapshot object', async () => {

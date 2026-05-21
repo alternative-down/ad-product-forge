@@ -14,7 +14,13 @@ function isSQL(x: unknown): x is { queryChunks: unknown[] } {
 }
 
 function isStringChunk(x: unknown): boolean {
-  return typeof x === 'object' && x !== null && !Array.isArray(x) && 'value' in x && Array.isArray((x as { value: unknown }).value);
+  return (
+    typeof x === 'object' &&
+    x !== null &&
+    !Array.isArray(x) &&
+    'value' in x &&
+    Array.isArray((x as { value: unknown }).value)
+  );
 }
 
 function extractConditions(sql: unknown): Array<{ colName: string; value: unknown }> {
@@ -58,8 +64,11 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
     } else if (typeof valChunk === 'number') {
       value = valChunk;
     } else if (
-      typeof valChunk === 'object' && valChunk !== null &&
-      !isSQL(valChunk) && !isStringChunk(valChunk) && 'value' in valChunk
+      typeof valChunk === 'object' &&
+      valChunk !== null &&
+      !isSQL(valChunk) &&
+      !isStringChunk(valChunk) &&
+      'value' in valChunk
     ) {
       value = (valChunk as { value: unknown }).value;
       if (value === undefined) value = String(valChunk);
@@ -85,9 +94,7 @@ function extractWhere(where: unknown): Record<string, unknown> {
 }
 
 function createMockDb(initial: NotificationRow[] = []) {
-  const notifications = new Map<string, NotificationRow>(
-    initial.map((n) => [n.id, n]),
-  );
+  const notifications = new Map<string, NotificationRow>(initial.map((n) => [n.id, n]));
 
   return {
     notifications,

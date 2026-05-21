@@ -39,12 +39,14 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
       return resolved.error;
     }
 
-    return this.waitForProcess(this.spawnProcess({
-      command: request.command,
-      cwd: resolved.cwd,
-      env: resolved.env,
-      timeoutMs: request.timeoutMs,
-    }));
+    return this.waitForProcess(
+      this.spawnProcess({
+        command: request.command,
+        cwd: resolved.cwd,
+        env: resolved.env,
+        timeoutMs: request.timeoutMs,
+      }),
+    );
   }
 
   async startBackground(
@@ -70,7 +72,9 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     };
   }
 
-  async getProcessOutput(request: WorkspaceProcessOutputRequest): Promise<WorkspaceProcessOutputResult> {
+  async getProcessOutput(
+    request: WorkspaceProcessOutputRequest,
+  ): Promise<WorkspaceProcessOutputResult> {
     const processState = this.backgroundProcesses.get(request.pid);
 
     if (!processState) {
@@ -115,15 +119,17 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     };
   }
 
-  private resolveRequest(request: WorkspaceCommandRequest): {
-    cwd: string;
-    env: Record<string, string>;
-    error?: undefined;
-  } | {
-    cwd?: undefined;
-    env?: undefined;
-    error: WorkspaceCommandResult;
-  } {
+  private resolveRequest(request: WorkspaceCommandRequest):
+    | {
+        cwd: string;
+        env: Record<string, string>;
+        error?: undefined;
+      }
+    | {
+        cwd?: undefined;
+        env?: undefined;
+        error: WorkspaceCommandResult;
+      } {
     let cwd: string;
 
     try {
@@ -171,16 +177,16 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     };
     const timeout = input.timeoutMs
       ? setTimeout(() => {
-        this.killChild(child);
-      }, input.timeoutMs)
+          this.killChild(child);
+        }, input.timeoutMs)
       : undefined;
 
-      child.stdout!.on('data', (chunk: Buffer | string) => {
-        processState.stdout += chunk.toString();
-      });
-      child.stderr!.on('data', (chunk: Buffer | string) => {
-        processState.stderr += chunk.toString();
-      });
+    child.stdout!.on('data', (chunk: Buffer | string) => {
+      processState.stdout += chunk.toString();
+    });
+    child.stderr!.on('data', (chunk: Buffer | string) => {
+      processState.stderr += chunk.toString();
+    });
     processState.completion = new Promise<void>((resolve) => {
       child.on('error', (error) => {
         if (timeout) {
@@ -208,7 +214,9 @@ export class LocalBashWorkspaceGateway implements WorkspaceGateway {
     return processState;
   }
 
-  private async waitForProcess(processState: BackgroundProcessState): Promise<WorkspaceCommandResult> {
+  private async waitForProcess(
+    processState: BackgroundProcessState,
+  ): Promise<WorkspaceCommandResult> {
     await processState.completion;
 
     return {
@@ -269,7 +277,9 @@ function buildBaseProcessEnv(shellPath: string) {
       LANG: process.env.LANG,
       TMPDIR: process.env.TMPDIR,
       TERM: process.env.TERM,
-    }).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0),
+    }).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0,
+    ),
   );
 }
 

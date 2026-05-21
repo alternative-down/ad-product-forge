@@ -1,8 +1,4 @@
-import type {
-  TextToSpeechGateway,
-  TextToSpeechRequest,
-  TextToSpeechResponse,
-} from './speech.js';
+import type { TextToSpeechGateway, TextToSpeechRequest, TextToSpeechResponse } from './speech.js';
 
 export type SpeechSynthesisEvent = {
   text: string;

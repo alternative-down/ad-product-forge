@@ -34,8 +34,7 @@ export async function topUpActiveAgentContract(
       scope: 'top-up-agent-contract',
       level: 'error',
       runtimeId: input.agentId,
-      message:
-        'Failed to find active contract: ' + String(serializeError(err).message),
+      message: 'Failed to find active contract: ' + String(serializeError(err).message),
     });
     throw err;
   }
@@ -59,8 +58,7 @@ export async function topUpActiveAgentContract(
       scope: 'top-up-agent-contract',
       level: 'error',
       runtimeId: input.agentId,
-      message:
-        'Failed to get company cash balance: ' + String(serializeError(err).message),
+      message: 'Failed to get company cash balance: ' + String(serializeError(err).message),
     });
     throw err;
   }
@@ -98,8 +96,7 @@ export async function topUpActiveAgentContract(
       level: 'error',
       runtimeId: input.agentId,
       message:
-        'Failed to record cash out or update contract: ' +
-        String(serializeError(err).message),
+        'Failed to record cash out or update contract: ' + String(serializeError(err).message),
     });
     throw err;
   }

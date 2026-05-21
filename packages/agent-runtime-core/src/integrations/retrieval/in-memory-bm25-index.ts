@@ -17,11 +17,13 @@ export class InMemoryBm25Index implements KeywordIndex {
   private readonly documentFrequency = new Map<string, number>();
   private averageDocumentLength = 0;
 
-  async index(documents: Array<{
-    id: string;
-    text: string;
-    metadata?: Record<string, unknown>;
-  }>): Promise<void> {
+  async index(
+    documents: Array<{
+      id: string;
+      text: string;
+      metadata?: Record<string, unknown>;
+    }>,
+  ): Promise<void> {
     for (const document of documents) {
       const terms = tokenize(document.text);
 
@@ -45,12 +47,12 @@ export class InMemoryBm25Index implements KeywordIndex {
       }
     }
 
-    const totalLength = Array.from(this.documents.values())
-      .reduce((sum, document) => sum + document.length, 0);
+    const totalLength = Array.from(this.documents.values()).reduce(
+      (sum, document) => sum + document.length,
+      0,
+    );
 
-    this.averageDocumentLength = this.documents.size === 0
-      ? 0
-      : totalLength / this.documents.size;
+    this.averageDocumentLength = this.documents.size === 0 ? 0 : totalLength / this.documents.size;
   }
 
   async search(query: string, options: { topK?: number } = {}): Promise<RetrievedDocument[]> {
@@ -76,15 +78,14 @@ export class InMemoryBm25Index implements KeywordIndex {
 
           const documentFrequency = this.documentFrequency.get(term) ?? 0;
           const inverseDocumentFrequency = Math.log(
-            1 + ((totalDocuments - documentFrequency + 0.5) / (documentFrequency + 0.5)),
+            1 + (totalDocuments - documentFrequency + 0.5) / (documentFrequency + 0.5),
           );
-          const normalizedLength = this.averageDocumentLength === 0
-            ? 1
-            : document.length / this.averageDocumentLength;
-          const bm25 = inverseDocumentFrequency * (
-            (termFrequency * (BM25_K1 + 1))
-            / (termFrequency + BM25_K1 * (1 - BM25_B + BM25_B * normalizedLength))
-          );
+          const normalizedLength =
+            this.averageDocumentLength === 0 ? 1 : document.length / this.averageDocumentLength;
+          const bm25 =
+            inverseDocumentFrequency *
+            ((termFrequency * (BM25_K1 + 1)) /
+              (termFrequency + BM25_K1 * (1 - BM25_B + BM25_B * normalizedLength)));
 
           return score + bm25;
         }, 0),

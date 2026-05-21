@@ -21,9 +21,15 @@ export function normalizeMcpServerRecord(body: {
     transport: body.transport,
     command: body.transport === 'stdio' ? body.command : null,
     args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-    envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+    envVars:
+      body.transport === 'stdio'
+        ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
+        : null,
     url: body.transport === 'http_streamable' ? body.url : null,
-    headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+    headers:
+      body.transport === 'http_streamable'
+        ? normalizeJsonText(body.headersText, 'headersText', 'object')
+        : null,
   };
 }
 
@@ -84,16 +90,22 @@ export async function updateAgentMcpServer(
   const now = Date.now();
   const record = normalizeMcpServerRecord({ ...body, isActive: body.isActive ?? false });
 
-  await db.update(mcpServerConfigs).set({
-    ...record,
-    isActive: body.isActive !== undefined ? (body.isActive ? 1 : 0) : undefined,
-    updatedAt: now,
-  }).where(eq(mcpServerConfigs.id, body.serverId));
+  await db
+    .update(mcpServerConfigs)
+    .set({
+      ...record,
+      isActive: body.isActive !== undefined ? (body.isActive ? 1 : 0) : undefined,
+      updatedAt: now,
+    })
+    .where(eq(mcpServerConfigs.id, body.serverId));
 
-  await db.update(agentMcpConfigs).set({
-    isActive: body.isActive !== undefined ? (body.isActive ? 1 : 0) : undefined,
-    updatedAt: now,
-  }).where(eq(agentMcpConfigs.id, body.configId));
+  await db
+    .update(agentMcpConfigs)
+    .set({
+      isActive: body.isActive !== undefined ? (body.isActive ? 1 : 0) : undefined,
+      updatedAt: now,
+    })
+    .where(eq(agentMcpConfigs.id, body.configId));
 }
 
 export async function deleteAgentMcpServer(
@@ -102,9 +114,9 @@ export async function deleteAgentMcpServer(
   agentId: string,
   serverId: string,
 ) {
-  await db.delete(agentMcpConfigs).where(
-    and(eq(agentMcpConfigs.id, configId), eq(agentMcpConfigs.agentId, agentId)),
-  );
+  await db
+    .delete(agentMcpConfigs)
+    .where(and(eq(agentMcpConfigs.id, configId), eq(agentMcpConfigs.agentId, agentId)));
 
   const remainingLinks = await db.query.agentMcpConfigs.findMany({
     where: eq(agentMcpConfigs.serverId, serverId),

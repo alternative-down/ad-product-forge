@@ -5,20 +5,25 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { InMemoryConversationStore } from '../integrations/conversations/in-memory-conversation-store.js';
-import type { ConversationMessage, ConversationMessagePart } from '../integrations/conversations/contracts.js';
+import type {
+  ConversationMessage,
+  ConversationMessagePart,
+} from '../integrations/conversations/contracts.js';
 import { OperationalMemoryConversationMemory } from '../integrations/memory/operational-memory-conversation-memory.js';
 import { FilesystemOperationalMemoryConversationStateStore } from '../integrations/persistence/filesystem-operational-memory-conversation-state-store.js';
 
 const tempPaths: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempPaths.splice(0).map((tempPath) => rm(tempPath, { recursive: true, force: true })));
+  await Promise.all(
+    tempPaths.splice(0).map((tempPath) => rm(tempPath, { recursive: true, force: true })),
+  );
 });
 
 function getText(message: ConversationMessage) {
   return message.parts
     .filter((part: ConversationMessagePart) => part.type === 'text' || part.type === 'reasoning')
-    .map((part: ConversationMessagePart) => part.type === 'text' ? part.text.trim() : '')
+    .map((part: ConversationMessagePart) => (part.type === 'text' ? part.text.trim() : ''))
     .filter(Boolean)
     .join('\n');
 }
@@ -151,11 +156,13 @@ describe('OperationalMemoryConversationMemory', () => {
         role: 'tool',
         parts: [{ type: 'text', text: 'result' }],
         metadata: {
-          toolResults: [{
-            toolCallId: 'call-1',
-            toolName: 'test',
-            result: { output: 'result' },
-          }],
+          toolResults: [
+            {
+              toolCallId: 'call-1',
+              toolName: 'test',
+              result: { output: 'result' },
+            },
+          ],
         },
         createdAt: '2026-01-01T00:00:02Z',
       });
@@ -174,8 +181,9 @@ describe('OperationalMemoryConversationMemory', () => {
 
       const state = await memory.getState();
       // Tool result should be included somewhere (in recent or overflow)
-      const toolResultIncluded = (state.recentMessageIds ?? []).includes('tool-result')
-        || (state.overflowMessageIds ?? []).includes('tool-result');
+      const toolResultIncluded =
+        (state.recentMessageIds ?? []).includes('tool-result') ||
+        (state.overflowMessageIds ?? []).includes('tool-result');
       expect(toolResultIncluded).toBe(true);
     });
 
@@ -324,11 +332,13 @@ describe('OperationalMemoryConversationMemory', () => {
         role: 'assistant',
         parts: [{ type: 'text', text: 'result' }],
         metadata: {
-          toolResults: [{
-            toolCallId: 'call-1',
-            toolName: 'test',
-            result: { output: 'output' },
-          }],
+          toolResults: [
+            {
+              toolCallId: 'call-1',
+              toolName: 'test',
+              result: { output: 'output' },
+            },
+          ],
         },
         createdAt: '2026-01-01T00:00:01Z',
       });
@@ -356,7 +366,9 @@ describe('OperationalMemoryConversationMemory', () => {
 
   describe('filesystem state persistence', () => {
     it('saves and loads checkpointed state', async () => {
-      const tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-runtime-core-checkpointed-conversation-'));
+      const tempDir = await mkdtemp(
+        path.join(os.tmpdir(), 'agent-runtime-core-checkpointed-conversation-'),
+      );
       tempPaths.push(tempDir);
 
       const stateStore = new FilesystemOperationalMemoryConversationStateStore({
@@ -388,7 +400,9 @@ describe('OperationalMemoryConversationMemory', () => {
     });
 
     it('loads returns null for non-existent thread', async () => {
-      const tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-runtime-core-checkpointed-conversation-'));
+      const tempDir = await mkdtemp(
+        path.join(os.tmpdir(), 'agent-runtime-core-checkpointed-conversation-'),
+      );
       tempPaths.push(tempDir);
 
       const stateStore = new FilesystemOperationalMemoryConversationStateStore({

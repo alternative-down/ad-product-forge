@@ -18,12 +18,20 @@ const agentExecutionContracts = 'agentExecutionContracts';
 
 function createMockDb(contract?: Record<string, unknown> | null) {
   const tx = {
-    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+    update: vi
+      .fn()
+      .mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      }),
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
   };
   return {
     query: { agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract ?? null) } },
-    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+    update: vi
+      .fn()
+      .mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      }),
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
     transaction: vi.fn().mockImplementation(async (cb) => cb(tx)),
     _tx: tx,
@@ -31,7 +39,14 @@ function createMockDb(contract?: Record<string, unknown> | null) {
 }
 
 function mockContract(overrides: Record<string, unknown> = {}) {
-  return { id: 'contract-1', agentId: 'agent-1', budgetUsd: 100, startsAt: Date.now() - 86400000, endsAt: Date.now() + 86400000, ...overrides };
+  return {
+    id: 'contract-1',
+    agentId: 'agent-1',
+    budgetUsd: 100,
+    startsAt: Date.now() - 86400000,
+    endsAt: Date.now() + 86400000,
+    ...overrides,
+  };
 }
 
 describe('topUpActiveAgentContract', () => {
@@ -42,22 +57,29 @@ describe('topUpActiveAgentContract', () => {
 
   it('throws when no active contract exists', async () => {
     const db = createMockDb(null);
-    await expect(topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 }))
-      .rejects.toThrow('No active contract for agent: agent-1');
+    await expect(
+      topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 }),
+    ).rejects.toThrow('No active contract for agent: agent-1');
   });
 
   it('throws when insufficient company cash', async () => {
     mockGetCurrentBalanceUsd.mockResolvedValue(20);
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
-    await expect(topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 }))
-      .rejects.toThrow('Insufficient company cash for contract top-up');
+    await expect(
+      topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 }),
+    ).rejects.toThrow('Insufficient company cash for contract top-up');
   });
 
   it('records cash out for top-up amount', async () => {
     const db = createMockDb(mockContract({ id: 'c-1', budgetUsd: 100 }));
     await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50 });
     expect(mockRecordCashOut).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'agent-contract-topup', amountUsd: 50, referenceType: 'agent-execution-contract', referenceId: 'c-1' }),
+      expect.objectContaining({
+        type: 'agent-contract-topup',
+        amountUsd: 50,
+        referenceType: 'agent-execution-contract',
+        referenceId: 'c-1',
+      }),
       expect.any(Object),
     );
   });
@@ -92,13 +114,19 @@ describe('topUpActiveAgentContract', () => {
   it('handles large top-up amount with sufficient cash', async () => {
     mockGetCurrentBalanceUsd.mockResolvedValue(100000);
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
-    const result = await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 50000 });
+    const result = await topUpActiveAgentContract(db as any, {
+      agentId: 'agent-1',
+      amountUsd: 50000,
+    });
     expect(result.budgetUsd).toBe(50100);
   });
 
   it('works with tiny top-up amount', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100 }));
-    const result = await topUpActiveAgentContract(db as any, { agentId: 'agent-1', amountUsd: 0.01 });
+    const result = await topUpActiveAgentContract(db as any, {
+      agentId: 'agent-1',
+      amountUsd: 0.01,
+    });
     expect(result.budgetUsd).toBeCloseTo(100.01);
   });
 });

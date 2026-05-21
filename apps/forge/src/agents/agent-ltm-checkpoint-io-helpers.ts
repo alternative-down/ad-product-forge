@@ -13,15 +13,16 @@ import { createId } from '../utils/id';
  * Bugfix #1098: uses the earliest reflection or observation createdAt,
  * not the summary.updatedAt. This preserves temporal ordering.
  */
-export function computeCheckpointTimestamp(
-  payload: CheckpointedOmCheckpointPackageInput,
-): number {
+export function computeCheckpointTimestamp(payload: CheckpointedOmCheckpointPackageInput): number {
   const allCreatedAts = [
     ...payload.reflections.map((r) => r.createdAt ?? r.generatedAt ?? 0),
     ...payload.observations.map((o) => o.createdAt ?? o.generatedAt ?? 0),
   ];
   if (allCreatedAts.length > 0) {
-    return allCreatedAts.reduce((earliest, ts) => Math.min(Number(earliest), Number(ts)), Number(allCreatedAts[0]!));
+    return allCreatedAts.reduce(
+      (earliest, ts) => Math.min(Number(earliest), Number(ts)),
+      Number(allCreatedAts[0]!),
+    );
   }
   return payload.checkpointSummary.updatedAt;
 }
@@ -30,10 +31,7 @@ export function computeCheckpointTimestamp(
  * Computes the package ID for a checkpoint package.
  * Format: YYYY-MM-DD_NNN (zero-padded sequence)
  */
-export function formatCheckpointPackageId(
-  dayKey: string,
-  existingPackageCount: number,
-): string {
+export function formatCheckpointPackageId(dayKey: string, existingPackageCount: number): string {
   return `${dayKey}_${String(existingPackageCount + 1).padStart(3, '0')}`;
 }
 
@@ -56,7 +54,11 @@ export async function writeCheckpointFiles(
   }
   for (const [index, reflection] of payload.reflections.entries()) {
     await fs.writeFile(
-      path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
+      path.resolve(
+        tempPackagePath,
+        'reflections',
+        `reflection_${String(index + 1).padStart(3, '0')}.md`,
+      ),
       renderReflectionFile(reflection),
     );
   }
@@ -66,7 +68,11 @@ export async function writeCheckpointFiles(
   }
   for (const [index, observation] of payload.observations.entries()) {
     await fs.writeFile(
-      path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
+      path.resolve(
+        tempPackagePath,
+        'observations',
+        `observation_${String(index + 1).padStart(4, '0')}.md`,
+      ),
       renderObservationFile(observation),
     );
   }

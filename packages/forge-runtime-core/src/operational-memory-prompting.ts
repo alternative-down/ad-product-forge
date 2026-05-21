@@ -28,17 +28,24 @@ function normalizeCreatedAt(createdAt: string | undefined) {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-function formatObserverPartLine(title: string, body: string, time: string | undefined, previousTime: string | undefined) {
+function formatObserverPartLine(
+  title: string,
+  body: string,
+  time: string | undefined,
+  previousTime: string | undefined,
+) {
   const timeLabel = time && time !== previousTime ? ` (${time})` : '';
   return `${title}${timeLabel}: ${body}`;
 }
 
-function formatObserverLines(lines: Array<{
-  date: string;
-  time: string;
-  title: string;
-  body: string;
-}>) {
+function formatObserverLines(
+  lines: Array<{
+    date: string;
+    time: string;
+    title: string;
+    body: string;
+  }>,
+) {
   const output: string[] = [];
   let previousDate: string | undefined;
   let previousTime: string | undefined;
@@ -162,10 +169,10 @@ export function buildObserverSystemPrompt() {
     '</current-task>',
     '',
     '<suggested-response>',
-    'Hint for the agent\'s next message',
+    "Hint for the agent's next message",
     '</suggested-response>',
     '',
-    'Remember: these observations are the assistant\'s only memory. Make them count.',
+    "Remember: these observations are the assistant's only memory. Make them count.",
   ].join('\n');
 }
 
@@ -200,7 +207,10 @@ function _buildObserverTaskUserMessage(existingObservations?: string) {
   return buildObserverTaskPrompt(existingObservations);
 }
 
-export function buildObserverPrompt(existingObservations: string | undefined, messagesToObserve: ConversationMessage[]) {
+export function buildObserverPrompt(
+  existingObservations: string | undefined,
+  messagesToObserve: ConversationMessage[],
+) {
   return [
     '## New Message History to Observe',
     '',
@@ -223,15 +233,20 @@ export function parseObserverOutput(output: string) {
     };
   }
 
-  const observationsMatches = [...output.matchAll(/^[ \t]*<observations>([\s\S]*?)^[ \t]*<\/observations>/gim)];
+  const observationsMatches = [
+    ...output.matchAll(/^[ \t]*<observations>([\s\S]*?)^[ \t]*<\/observations>/gim),
+  ];
   const currentTaskMatch = output.match(/^[ \t]*<current-task>([\s\S]*?)^[ \t]*<\/current-task>/im);
-  const suggestedResponseMatch = output.match(/^[ \t]*<suggested-response>([\s\S]*?)^[ \t]*<\/suggested-response>/im);
-  const observations = observationsMatches.length > 0
-    ? observationsMatches
-      .map((match) => match[1]?.trim() ?? '')
-      .filter(Boolean)
-      .join('\n')
-    : extractListItemsOnly(output);
+  const suggestedResponseMatch = output.match(
+    /^[ \t]*<suggested-response>([\s\S]*?)^[ \t]*<\/suggested-response>/im,
+  );
+  const observations =
+    observationsMatches.length > 0
+      ? observationsMatches
+          .map((match) => match[1]?.trim() ?? '')
+          .filter(Boolean)
+          .join('\n')
+      : extractListItemsOnly(output);
 
   return {
     observations: sanitizeObservationLines(observations),

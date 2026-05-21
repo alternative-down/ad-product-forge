@@ -19,7 +19,10 @@ export function resolveAgentSkillsRoot(
   workspaceFilesystem: WorkspaceFilesystemConfig | null | undefined,
   agentId: string,
 ) {
-  return path.resolve(resolveAgentWorkspaceRoot(workspaceBasePath, workspaceFilesystem, agentId), 'skills');
+  return path.resolve(
+    resolveAgentWorkspaceRoot(workspaceBasePath, workspaceFilesystem, agentId),
+    'skills',
+  );
 }
 
 export function resolveAgentSkillRoot(input: {

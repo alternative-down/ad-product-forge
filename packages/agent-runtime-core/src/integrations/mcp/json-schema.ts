@@ -27,19 +27,17 @@ export function mcpJsonSchemaToZod(schema: McpJsonSchema | undefined): z.ZodType
     });
   }
 
-  const typeValues = Array.isArray(schema.type)
-    ? schema.type
-    : schema.type
-      ? [schema.type]
-      : [];
+  const typeValues = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
 
   if (typeValues.length > 1) {
-    return z.union(typeValues.map((typeValue) => {
-      return mcpJsonSchemaToZod({
-        ...schema,
-        type: typeValue,
-      });
-    }) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+    return z.union(
+      typeValues.map((typeValue) => {
+        return mcpJsonSchemaToZod({
+          ...schema,
+          type: typeValue,
+        });
+      }) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]],
+    );
   }
 
   const typeValue = typeValues[0];
@@ -72,9 +70,11 @@ function buildObjectSchema(schema: Exclude<McpJsonSchema, boolean>) {
     return [key, mcpJsonSchemaToZod(value)] as const;
   });
   const required = new Set(schema.required ?? []);
-  const shape = Object.fromEntries(propertyEntries.map(([key, value]) => {
-    return [key, required.has(key) ? value : value.optional()];
-  }));
+  const shape = Object.fromEntries(
+    propertyEntries.map(([key, value]) => {
+      return [key, required.has(key) ? value : value.optional()];
+    }),
+  );
   let objectSchema = z.object(shape);
 
   if (schema.additionalProperties === true || schema.additionalProperties === undefined) {

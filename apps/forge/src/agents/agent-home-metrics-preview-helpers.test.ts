@@ -15,7 +15,6 @@ describe('truncatePreview', () => {
     const long = 'a'.repeat(300);
     const result = truncatePreview(long);
     expect(result.length).toBe(220);
-;
   });
 
   it('handles exactly 220 chars unchanged', () => {
@@ -31,7 +30,6 @@ describe('truncatePreview', () => {
     const justOver = 'a'.repeat(221);
     const result = truncatePreview(justOver);
     expect(result.length).toBe(220);
-;
   });
 });
 
@@ -115,7 +113,6 @@ describe('extractLatestMessagePreview', () => {
     const result = extractLatestMessagePreview(content);
     expect(result).not.toBeNull();
     expect(result!.length).toBeLessThanOrEqual(220);
-;
   });
 });
 

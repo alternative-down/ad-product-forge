@@ -3,7 +3,6 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
-
 import { getDatabase } from '../database/client';
 import { runMigrations } from '../database/migrate';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
@@ -30,11 +29,21 @@ async function fundCompanyCash() {
     description: input.description ?? 'Manual company cash funding',
   });
 
-  forgeDebug({ scope: 'fund-cash', level: 'info', message: 'Added company cash', context: { amountUsd: input.amountUsd } });
+  forgeDebug({
+    scope: 'fund-cash',
+    level: 'info',
+    message: 'Added company cash',
+    context: { amountUsd: input.amountUsd },
+  });
 }
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
 fundCompanyCash().catch((error) => {
-  forgeDebug({ scope: 'fund-cash', level: 'error', message: 'Failed to fund company cash', context: { error: String(serializeError(error)) } });
+  forgeDebug({
+    scope: 'fund-cash',
+    level: 'error',
+    message: 'Failed to fund company cash',
+    context: { error: String(serializeError(error)) },
+  });
   process.exit(1);
 });

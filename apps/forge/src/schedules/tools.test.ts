@@ -4,12 +4,15 @@ import { z } from 'zod';
 // ---------------------------------------------------------------------------
 // Hoisted mock state — must be declared BEFORE vi.mock calls
 // ---------------------------------------------------------------------------
-const mockCreateTool = vi.hoisted(() => vi.fn((tool) => {
-  // Guard: if called with undefined/null (module-init), return a safe dummy
-  if (!tool) return { id: 'mocked', description: '', inputSchema: z.object({}), execute: vi.fn() };
-  const { execute, inputSchema, id = 'mocked' } = tool;
-  return { id, description: '', inputSchema: inputSchema ?? z.object({}), execute };
-}));
+const mockCreateTool = vi.hoisted(() =>
+  vi.fn((tool) => {
+    // Guard: if called with undefined/null (module-init), return a safe dummy
+    if (!tool)
+      return { id: 'mocked', description: '', inputSchema: z.object({}), execute: vi.fn() };
+    const { execute, inputSchema, id = 'mocked' } = tool;
+    return { id, description: '', inputSchema: inputSchema ?? z.object({}), execute };
+  }),
+);
 
 const mockHasToolPermission = vi.hoisted(() => vi.fn(() => true));
 
@@ -60,11 +63,36 @@ function validateCreateTiming(input: {
   scheduledDate?: string | null;
   content?: string | null;
 }) {
-  if (!input.name) return { valid: false as const, error: 'name is required when action is create', hint: 'Create calls must send a real name, not null.' };
-  if (!input.scheduleType) return { valid: false as const, error: 'scheduleType is required when action is create', hint: 'Create calls must send scheduleType as "cron" or "date".' };
-  if (input.scheduleType === 'cron' && !input.cronExpression) return { valid: false as const, error: 'cronExpression is required when scheduleType is cron', hint: 'Send cronExpression such as "0 * * * *".' };
-  if (input.scheduleType === 'date' && !input.scheduledDate) return { valid: false as const, error: 'scheduledDate is required when scheduleType is date', hint: 'Provide an ISO date string.' };
-  if (!input.content) return { valid: false as const, error: 'content is required when action is create', hint: 'Create calls must send the cron content, not null.' };
+  if (!input.name)
+    return {
+      valid: false as const,
+      error: 'name is required when action is create',
+      hint: 'Create calls must send a real name, not null.',
+    };
+  if (!input.scheduleType)
+    return {
+      valid: false as const,
+      error: 'scheduleType is required when action is create',
+      hint: 'Create calls must send scheduleType as "cron" or "date".',
+    };
+  if (input.scheduleType === 'cron' && !input.cronExpression)
+    return {
+      valid: false as const,
+      error: 'cronExpression is required when scheduleType is cron',
+      hint: 'Send cronExpression such as "0 * * * *".',
+    };
+  if (input.scheduleType === 'date' && !input.scheduledDate)
+    return {
+      valid: false as const,
+      error: 'scheduledDate is required when scheduleType is date',
+      hint: 'Provide an ISO date string.',
+    };
+  if (!input.content)
+    return {
+      valid: false as const,
+      error: 'content is required when action is create',
+      hint: 'Create calls must send the cron content, not null.',
+    };
   return null;
 }
 
@@ -74,7 +102,11 @@ function normalizeCronId(input: { cronId?: string }) {
 
 function validateDelegatedCronCreateTarget(input: { targetAgentId?: string }) {
   if (input.targetAgentId) return null;
-  return { valid: false as const, error: 'targetAgentId is required when action is create', hint: 'Provide the agentId that should receive the delegated cron.' };
+  return {
+    valid: false as const,
+    error: 'targetAgentId is required when action is create',
+    hint: 'Provide the agentId that should receive the delegated cron.',
+  };
 }
 
 function normalizeOptionalText(value?: string) {
@@ -85,7 +117,7 @@ function normalizeOptionalText(value?: string) {
 
 function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value: T) {
   const cronId = value.scheduleId ?? value.taskId;
-   
+
   const { scheduleId: _s, taskId: _t, ...rest } = value;
   return { ...rest, cronId };
 }
@@ -95,22 +127,45 @@ function toCronOutput<T extends { scheduleId?: string; taskId?: string }>(value:
 // ---------------------------------------------------------------------------
 describe('validateCreateTiming', () => {
   it('returns null for valid cron input', () => {
-    expect(validateCreateTiming({ name: 'Nightly', scheduleType: 'cron', cronExpression: '0 2 * * *', content: 'Run' })).toBeNull();
+    expect(
+      validateCreateTiming({
+        name: 'Nightly',
+        scheduleType: 'cron',
+        cronExpression: '0 2 * * *',
+        content: 'Run',
+      }),
+    ).toBeNull();
   });
 
   it('returns null for valid date input', () => {
-    expect(validateCreateTiming({ name: 'One-time', scheduleType: 'date', scheduledDate: '2026-06-01T10:00:00Z', content: 'Deploy' })).toBeNull();
+    expect(
+      validateCreateTiming({
+        name: 'One-time',
+        scheduleType: 'date',
+        scheduledDate: '2026-06-01T10:00:00Z',
+        content: 'Deploy',
+      }),
+    ).toBeNull();
   });
 
   it('returns error when name is missing', () => {
-    const r = validateCreateTiming({ scheduleType: 'cron', cronExpression: '0 * * * *', content: 'x' });
+    const r = validateCreateTiming({
+      scheduleType: 'cron',
+      cronExpression: '0 * * * *',
+      content: 'x',
+    });
     expect(r).not.toBeNull();
     expect(r!.valid).toBe(false);
     expect(r!.error).toBe('name is required when action is create');
   });
 
   it('returns error when name is null', () => {
-    const r = validateCreateTiming({ name: null, scheduleType: 'cron', cronExpression: '0 * * * *', content: 'x' });
+    const r = validateCreateTiming({
+      name: null,
+      scheduleType: 'cron',
+      cronExpression: '0 * * * *',
+      content: 'x',
+    });
     expect(r).not.toBeNull();
     expect(r!.valid).toBe(false);
   });
@@ -140,13 +195,22 @@ describe('validateCreateTiming', () => {
   });
 
   it('returns error when content is missing', () => {
-    const r = validateCreateTiming({ name: 'Cron', scheduleType: 'cron', cronExpression: '0 * * * *' });
+    const r = validateCreateTiming({
+      name: 'Cron',
+      scheduleType: 'cron',
+      cronExpression: '0 * * * *',
+    });
     expect(r).not.toBeNull();
     expect(r!.error).toBe('content is required when action is create');
   });
 
   it('returns error when content is null', () => {
-    const r = validateCreateTiming({ name: 'Cron', scheduleType: 'cron', cronExpression: '0 * * * *', content: null });
+    const r = validateCreateTiming({
+      name: 'Cron',
+      scheduleType: 'cron',
+      cronExpression: '0 * * * *',
+      content: null,
+    });
     expect(r).not.toBeNull();
     expect(r!.error).toBe('content is required when action is create');
   });
@@ -249,7 +313,17 @@ describe('toCronOutput', () => {
   });
 
   it('spreads all other properties', () => {
-    const r = toCronOutput({ scheduleId: 'crn_001', name: 'Report', description: 'Daily', content: 'Run it', scheduleType: 'cron' as const, cronExpression: '0 9 * * *', timezone: 'UTC', wakeWhenRunning: true, isActive: true });
+    const r = toCronOutput({
+      scheduleId: 'crn_001',
+      name: 'Report',
+      description: 'Daily',
+      content: 'Run it',
+      scheduleType: 'cron' as const,
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      wakeWhenRunning: true,
+      isActive: true,
+    });
     expect(r.name).toBe('Report');
     expect(r.description).toBe('Daily');
     expect(r.content).toBe('Run it');
@@ -286,40 +360,68 @@ describe('createAgentScheduleTools', () => {
   });
 
   it('creates manage_self_crons when permission granted', () => {
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['manage_self_crons']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['manage_self_crons']),
+    );
     expect(tools).toHaveProperty('manage_self_crons');
   });
 
   it('omits manage_self_crons when permission denied', () => {
     mockHasToolPermission.mockReturnValue(false);
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['other_tool']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['other_tool']),
+    );
     expect(tools).not.toHaveProperty('manage_self_crons');
   });
 
   it('creates list_crons when permission granted', () => {
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['list_crons']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['list_crons']),
+    );
     expect(tools).toHaveProperty('list_crons');
   });
 
   it('omits list_crons when permission denied', () => {
     mockHasToolPermission.mockReturnValue(false);
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['other_tool']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['other_tool']),
+    );
     expect(tools).not.toHaveProperty('list_crons');
   });
 
   it('creates manage_crons when permission granted', () => {
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['manage_crons']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['manage_crons']),
+    );
     expect(tools).toHaveProperty('manage_crons');
   });
 
   it('omits manage_crons when permission denied', () => {
     mockHasToolPermission.mockReturnValue(false);
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['other_tool']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['other_tool']),
+    );
     expect(tools).not.toHaveProperty('manage_crons');
   });
 
   it('returns all four tools when all permissions granted', () => {
-    const tools = toolsModule.createAgentScheduleTools('ag_test', {} as never, new Set(['manage_self_crons', 'list_crons', 'manage_crons']));
+    const tools = toolsModule.createAgentScheduleTools(
+      'ag_test',
+      {} as never,
+      new Set(['manage_self_crons', 'list_crons', 'manage_crons']),
+    );
     expect(tools).toHaveProperty('list_self_crons');
     expect(tools).toHaveProperty('manage_self_crons');
     expect(tools).toHaveProperty('list_crons');

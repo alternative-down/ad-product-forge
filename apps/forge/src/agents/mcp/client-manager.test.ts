@@ -14,12 +14,11 @@ import type { McpServerConfig, AgentMcpConfig } from './store';
 
 // ─── Hoisted mocks (must be defined before vi.mock runs) ─────────────────────
 
-const {
-  mockCreateRuntimeActions,
-  mockDisposeAll,
-  MockForgeMcpToolset,
-} = vi.hoisted(() => {
-  const mockCreateRuntimeActions = vi.fn<(opts: unknown) => Promise<Array<{ name: string; description: string; inputSchema: object }>>>();
+const { mockCreateRuntimeActions, mockDisposeAll, MockForgeMcpToolset } = vi.hoisted(() => {
+  const mockCreateRuntimeActions =
+    vi.fn<
+      (opts: unknown) => Promise<Array<{ name: string; description: string; inputSchema: object }>>
+    >();
   const mockDisposeAll = vi.fn().mockResolvedValue(undefined);
 
   class MockForgeMcpToolset {
@@ -48,7 +47,8 @@ vi.mock('agent-runtime-core/integrations', async (original) => {
   };
 });
 
-const mockGetAgentMcpServers = vi.fn<(agentId: string) => Promise<Array<{ config: AgentMcpConfig; server: McpServerConfig }>>>();
+const mockGetAgentMcpServers =
+  vi.fn<(agentId: string) => Promise<Array<{ config: AgentMcpConfig; server: McpServerConfig }>>>();
 vi.mock('./store.js', () => ({
   getAgentMcpServers: mockGetAgentMcpServers,
 }));
@@ -158,7 +158,10 @@ describe('createAgentMcpRuntimeActionSource', () => {
       .mockResolvedValueOnce([toolB, toolC]);
     mockGetAgentMcpServers.mockResolvedValue([
       { config: makeConfig({ id: 'cfg-1' }), server: makeServer({ id: 'srv-1' }) },
-      { config: makeConfig({ id: 'cfg-2', serverId: 'srv-2' }), server: makeServer({ id: 'srv-2' }) },
+      {
+        config: makeConfig({ id: 'cfg-2', serverId: 'srv-2' }),
+        server: makeServer({ id: 'srv-2' }),
+      },
     ]);
     const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
     const source = createAgentMcpRuntimeActionSource('agent-1');
@@ -227,8 +230,12 @@ describe('refreshNow error handling', () => {
 
   test('removes stale servers that are no longer in store', async () => {
     // First: connect a server
-    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool-a', description: '', inputSchema: {} }]);
-    mockGetAgentMcpServers.mockResolvedValueOnce([{ config: makeConfig(), server: makeServer({ id: 'srv-stale' }) }]);
+    mockCreateRuntimeActions.mockResolvedValue([
+      { name: 'tool-a', description: '', inputSchema: {} },
+    ]);
+    mockGetAgentMcpServers.mockResolvedValueOnce([
+      { config: makeConfig(), server: makeServer({ id: 'srv-stale' }) },
+    ]);
     const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
     const source = createAgentMcpRuntimeActionSource('agent-1');
     source.start();
@@ -337,7 +344,9 @@ describe('dispose', () => {
   });
 
   test('prevents further scheduleRefresh after dispose', async () => {
-    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool', description: '', inputSchema: {} }]);
+    mockCreateRuntimeActions.mockResolvedValue([
+      { name: 'tool', description: '', inputSchema: {} },
+    ]);
     mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
     const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
     const source = createAgentMcpRuntimeActionSource('agent-1');
@@ -419,7 +428,9 @@ describe('fingerprintServerConfig', () => {
     const source = createAgentMcpRuntimeActionSource('agent-1');
     // Two connects with identical config should be detected as no-change
     mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
-    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool', description: '', inputSchema: {} }]);
+    mockCreateRuntimeActions.mockResolvedValue([
+      { name: 'tool', description: '', inputSchema: {} },
+    ]);
     source.start();
     await vi.advanceTimersByTimeAsync(1);
 
@@ -434,7 +445,9 @@ describe('fingerprintServerConfig', () => {
 
   test('different config triggers reconnection', async () => {
     mockGetAgentMcpServers.mockResolvedValue([{ config: makeConfig(), server: makeServer() }]);
-    mockCreateRuntimeActions.mockResolvedValue([{ name: 'tool', description: '', inputSchema: {} }]);
+    mockCreateRuntimeActions.mockResolvedValue([
+      { name: 'tool', description: '', inputSchema: {} },
+    ]);
     const { createAgentMcpRuntimeActionSource } = await import('./client-manager.js');
     const source = createAgentMcpRuntimeActionSource('agent-1');
     source.start();

@@ -143,14 +143,16 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 export function createAppName(agentName: string, agentId: string): string {
   const suffix = nanoid(GITHUB_APP_NAME_SUFFIX_LENGTH).toLowerCase();
   const fallbackBaseName = agentId.slice(0, 15);
-  const normalizedBaseName = agentName
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || fallbackBaseName;
+  const normalizedBaseName =
+    agentName
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || fallbackBaseName;
   const maxBaseLength = GITHUB_APP_NAME_MAX_LENGTH - suffix.length - 1;
-  const baseName = normalizedBaseName.slice(0, maxBaseLength).replace(/-+$/g, '') || fallbackBaseName;
+  const baseName =
+    normalizedBaseName.slice(0, maxBaseLength).replace(/-+$/g, '') || fallbackBaseName;
   return `${baseName}-${suffix}`;
 }
 
@@ -185,7 +187,10 @@ export function getWebhookPath(agentId: string): string {
 /**
  * Extracts a header value from a headers record, handling both single values and arrays.
  */
-export function getHeader(headers: Record<string, string | string[] | undefined>, name: string): string | undefined {
+export function getHeader(
+  headers: Record<string, string | string[] | undefined>,
+  name: string,
+): string | undefined {
   const value = headers[name];
   if (Array.isArray(value)) {
     return value[0];
@@ -318,7 +323,15 @@ function formatIssueRef(
 ) {
   const { number, title } = extractIssueRef(issue);
   const titlePart = (title ?? '') !== '' ? ' ' + title : '';
-  return (prefix + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + suffix.senderText).trim();
+  return (
+    prefix +
+    suffix.actionText +
+    suffix.repositoryText +
+    ': #' +
+    (number ?? '?') +
+    titlePart +
+    suffix.senderText
+  ).trim();
 }
 
 function formatPullRequestRef(
@@ -328,7 +341,15 @@ function formatPullRequestRef(
   if (!isRecord(pullRequest)) return null;
   const { number, title } = extractIssueRef(pullRequest);
   const titlePart = (title ?? '') !== '' ? ' ' + title : '';
-  return ('Pull request' + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + suffix.senderText).trim();
+  return (
+    'Pull request' +
+    suffix.actionText +
+    suffix.repositoryText +
+    ': #' +
+    (number ?? '?') +
+    titlePart +
+    suffix.senderText
+  ).trim();
 }
 
 type EventFormatter = (
@@ -337,14 +358,12 @@ type EventFormatter = (
 ) => string | null;
 
 const eventFormatters: Record<string, EventFormatter> = {
-  issues: (payloadRecord, suffix) =>
-    formatIssueRef('Issue', payloadRecord.issue, suffix),
+  issues: (payloadRecord, suffix) => formatIssueRef('Issue', payloadRecord.issue, suffix),
 
   issue_comment: (payloadRecord, suffix) =>
     formatIssueRef('Issue comment', payloadRecord.issue, suffix),
 
-  pull_request: (payloadRecord, suffix) =>
-    formatPullRequestRef(payloadRecord.pull_request, suffix),
+  pull_request: (payloadRecord, suffix) => formatPullRequestRef(payloadRecord.pull_request, suffix),
 
   pull_request_review: (payloadRecord, suffix) => {
     if (!isRecord(payloadRecord.pull_request)) return null;
@@ -355,28 +374,43 @@ const eventFormatters: Record<string, EventFormatter> = {
         ? ' (' + review.state.toLowerCase() + ')'
         : '';
     const titlePart = (title ?? '') !== '' ? ' ' + title : '';
-    return ('Pull request review' + suffix.actionText + suffix.repositoryText + ': #' + (number ?? '?') + titlePart + reviewState + suffix.senderText).trim();
+    return (
+      'Pull request review' +
+      suffix.actionText +
+      suffix.repositoryText +
+      ': #' +
+      (number ?? '?') +
+      titlePart +
+      reviewState +
+      suffix.senderText
+    ).trim();
   },
 
   push: (payloadRecord, suffix) => {
     const ref =
-      typeof payloadRecord.ref === 'string'
-        ? payloadRecord.ref.replace('refs/heads/', '')
-        : null;
+      typeof payloadRecord.ref === 'string' ? payloadRecord.ref.replace('refs/heads/', '') : null;
     const refPart = (ref ?? '') !== '' ? ' on ' + ref : '';
     return ('Push' + suffix.repositoryText + refPart + suffix.senderText).trim();
   },
 
   create: (payloadRecord, suffix) => {
-    const refType =
-      typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
-    return ((refType ?? 'ref') + suffix.actionText + suffix.repositoryText + suffix.senderText).trim();
+    const refType = typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
+    return (
+      (refType ?? 'ref') +
+      suffix.actionText +
+      suffix.repositoryText +
+      suffix.senderText
+    ).trim();
   },
 
   delete: (payloadRecord, suffix) => {
-    const refType =
-      typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
-    return ((refType ?? 'ref') + suffix.actionText + suffix.repositoryText + suffix.senderText).trim();
+    const refType = typeof payloadRecord.ref_type === 'string' ? payloadRecord.ref_type : null;
+    return (
+      (refType ?? 'ref') +
+      suffix.actionText +
+      suffix.repositoryText +
+      suffix.senderText
+    ).trim();
   },
 
   check_run: (_payloadRecord, suffix) =>

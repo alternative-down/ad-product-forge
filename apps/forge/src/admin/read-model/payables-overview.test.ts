@@ -42,10 +42,12 @@ describe('getRecurringPayables', () => {
     };
 
     await expect(getRecurringPayables(payables as any)).rejects.toThrow('DB read error');
-    expect(forgeDebug).toHaveBeenCalledWith(expect.objectContaining({
-      scope: 'admin-read-model',
-      level: 'error',
-      message: 'getRecurringPayables failed',
-    }));
+    expect(forgeDebug).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'admin-read-model',
+        level: 'error',
+        message: 'getRecurringPayables failed',
+      }),
+    );
   });
 });

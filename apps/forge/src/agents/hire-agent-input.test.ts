@@ -27,7 +27,7 @@ describe('HireInternalAgentInputSchema', () => {
     });
 
     it('rejects an empty string name', () => {
-      const input = { ...validBaseInput() as any, name: '' };
+      const input = { ...(validBaseInput() as any), name: '' };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
 
@@ -46,24 +46,24 @@ describe('HireInternalAgentInputSchema', () => {
     });
 
     it('rejects an empty string instructions', () => {
-      const input = { ...validBaseInput() as any, instructions: '' };
+      const input = { ...(validBaseInput() as any), instructions: '' };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
   });
 
   describe('weeklyBudgetUsd', () => {
     it('accepts a positive budget', () => {
-      const input = { ...validBaseInput() as any, weeklyBudgetUsd: 50 };
+      const input = { ...(validBaseInput() as any), weeklyBudgetUsd: 50 };
       expect(HireInternalAgentInputSchema.parse(input)).toMatchObject({ weeklyBudgetUsd: 50 });
     });
 
     it('accepts 0 budget', () => {
-      const input = { ...validBaseInput() as any, weeklyBudgetUsd: 0 };
+      const input = { ...(validBaseInput() as any), weeklyBudgetUsd: 0 };
       expect(HireInternalAgentInputSchema.parse(input)).toMatchObject({ weeklyBudgetUsd: 0 });
     });
 
     it('rejects a negative budget', () => {
-      const input = { ...validBaseInput() as any, weeklyBudgetUsd: -10 };
+      const input = { ...(validBaseInput() as any), weeklyBudgetUsd: -10 };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
   });
@@ -75,46 +75,55 @@ describe('HireInternalAgentInputSchema', () => {
     });
 
     it('rejects an empty string roleId', () => {
-      const input = { ...validBaseInput() as any, roleId: '' };
+      const input = { ...(validBaseInput() as any), roleId: '' };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
   });
 
   describe('modelProfileId', () => {
     it('rejects an empty string modelProfileId', () => {
-      const input = { ...validBaseInput() as any, modelProfileId: '' };
+      const input = { ...(validBaseInput() as any), modelProfileId: '' };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
   });
 
   describe('omModelProfileId', () => {
     it('rejects an empty string omModelProfileId', () => {
-      const input = { ...validBaseInput() as any, omModelProfileId: '' };
+      const input = { ...(validBaseInput() as any), omModelProfileId: '' };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
   });
 
   describe('workspaceBasePath', () => {
     it('rejects an empty string workspaceBasePath', () => {
-      const input = { ...validBaseInput() as any, workspaceBasePath: '' };
+      const input = { ...(validBaseInput() as any), workspaceBasePath: '' };
       expect(() => HireInternalAgentInputSchema.parse(input)).toThrow(ZodError);
     });
   });
 
   describe('optional fields', () => {
     it('accepts missing optional fields', () => {
-      const { roleName, roleDescription, description, providerCredentials, agentId, workspaceFilesystem, workspaceSandbox, ...input } = validBaseInput() as any;
+      const {
+        roleName,
+        roleDescription,
+        description,
+        providerCredentials,
+        agentId,
+        workspaceFilesystem,
+        workspaceSandbox,
+        ...input
+      } = validBaseInput() as any;
       const parsed = HireInternalAgentInputSchema.parse(input);
       expect(parsed.roleId).toBe('role-1');
     });
 
     it('accepts provided optional fields', () => {
       const input = {
-        ...validBaseInput() as any,
+        ...(validBaseInput() as any),
         agentId: 'agent-custom-id',
         roleName: 'My Role',
         description: 'A helpful agent',
-        providerCredentials: { 'anthropic': { apiKey: 'sk-test' } },
+        providerCredentials: { anthropic: { apiKey: 'sk-test' } },
       };
       const parsed = HireInternalAgentInputSchema.parse(input);
       expect(parsed.agentId).toBe('agent-custom-id');

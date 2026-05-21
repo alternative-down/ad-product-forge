@@ -55,8 +55,12 @@ describe('embedder', () => {
   describe('resolveWorkspaceEmbedderId', () => {
     it('returns the given ID when valid', () => {
       expect(resolveWorkspaceEmbedderId('fastembed')).toBe('fastembed');
-      expect(resolveWorkspaceEmbedderId('transformers-multilingual-e5-small')).toBe('transformers-multilingual-e5-small');
-      expect(resolveWorkspaceEmbedderId('transformers-multilingual-e5-small-cpu')).toBe('transformers-multilingual-e5-small-cpu');
+      expect(resolveWorkspaceEmbedderId('transformers-multilingual-e5-small')).toBe(
+        'transformers-multilingual-e5-small',
+      );
+      expect(resolveWorkspaceEmbedderId('transformers-multilingual-e5-small-cpu')).toBe(
+        'transformers-multilingual-e5-small-cpu',
+      );
     });
 
     it('falls back to fastembed for invalid ID', () => {

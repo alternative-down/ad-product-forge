@@ -36,7 +36,9 @@ async function makeRawRequest(
     };
     const req = http.request(opts, (res) => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
         resolve({ status: res.statusCode ?? 0, headers: res.headers, body: data });
       });
@@ -190,7 +192,13 @@ describe('X-RateLimit-* response headers', () => {
       });
       await smallBodyServer.start();
 
-      const res = await makeRawRequest('POST', '/upload', 'this is way too large', undefined, smallBodyServer.port);
+      const res = await makeRawRequest(
+        'POST',
+        '/upload',
+        'this is way too large',
+        undefined,
+        smallBodyServer.port,
+      );
       await smallBodyServer.stop();
 
       expect(res.status).toBe(413);

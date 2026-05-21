@@ -6,7 +6,12 @@ describe('realtime speech runtime bridge', () => {
   it('dispatches final transcription events into the runtime target', async () => {
     const dispatched: Array<{ type: string; payload: Record<string, unknown> }> = [];
     let transcriptionHandler:
-      | ((event: { id: string; text: string; isFinal: boolean; language?: string }) => Promise<void> | void)
+      | ((event: {
+          id: string;
+          text: string;
+          isFinal: boolean;
+          language?: string;
+        }) => Promise<void> | void)
       | undefined;
     const bridge = new RealtimeSpeechRuntimeBridge({
       runtime: {

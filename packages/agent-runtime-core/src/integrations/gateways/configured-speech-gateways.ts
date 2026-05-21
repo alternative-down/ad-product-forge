@@ -90,11 +90,13 @@ export class ConfiguredRealtimeTextToSpeechGateway implements RealtimeTextToSpee
     this.headers = options.headers ?? {};
   }
 
-  async createSession(options: {
-    voiceId?: string;
-    headers?: Record<string, string>;
-    onAudioChunk?(event: RealtimeSpeechSynthesisAudioEvent): Promise<void> | void;
-  } = {}): Promise<RealtimeTextToSpeechSession> {
+  async createSession(
+    options: {
+      voiceId?: string;
+      headers?: Record<string, string>;
+      onAudioChunk?(event: RealtimeSpeechSynthesisAudioEvent): Promise<void> | void;
+    } = {},
+  ): Promise<RealtimeTextToSpeechSession> {
     return this.base.createSession({
       ...options,
       voiceId: options.voiceId ?? this.voiceId,
@@ -152,11 +154,13 @@ export class ConfiguredRealtimeSpeechToTextGateway implements RealtimeSpeechToTe
     this.headers = options.headers ?? {};
   }
 
-  async createSession(options: {
-    language?: string;
-    headers?: Record<string, string>;
-    onTranscription?(event: RealtimeTranscriptionEvent): Promise<void> | void;
-  } = {}): Promise<RealtimeSpeechToTextSession> {
+  async createSession(
+    options: {
+      language?: string;
+      headers?: Record<string, string>;
+      onTranscription?(event: RealtimeTranscriptionEvent): Promise<void> | void;
+    } = {},
+  ): Promise<RealtimeSpeechToTextSession> {
     return this.base.createSession({
       ...options,
       language: options.language ?? this.language,

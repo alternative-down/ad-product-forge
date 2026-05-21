@@ -6,7 +6,6 @@
 import { z } from 'zod';
 import { vi, describe, it, expect } from 'vitest';
 
-
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
 }));
@@ -39,13 +38,29 @@ vi.mock('../index', () => ({
   // Schemas
   agentActionSchema: z.object({ agentId: z.string() }),
   topUpAgentContractSchema: z.object({ agentId: z.string(), amountUsd: z.number().positive() }),
-  adjustAgentContractBudgetSchema: z.object({ agentId: z.string(), newBudgetUsd: z.number().positive() }),
+  adjustAgentContractBudgetSchema: z.object({
+    agentId: z.string(),
+    newBudgetUsd: z.number().positive(),
+  }),
   renewAgentContractSchema: z.object({ agentId: z.string(), newBudgetUsd: z.number().positive() }),
-  hireAgentSchema: z.object({ hiringRequest: z.string(), additionalContext: z.string().optional(), weeklyBudgetUsd: z.number().positive() }),
+  hireAgentSchema: z.object({
+    hiringRequest: z.string(),
+    additionalContext: z.string().optional(),
+    weeklyBudgetUsd: z.number().positive(),
+  }),
   terminateAgentSchema: z.object({ agentId: z.string() }),
   changeAgentRoleSchema: z.object({ agentId: z.string(), roleId: z.string() }),
   updateAgentGitHubManifestConfigSchema: z.object({ agentId: z.string() }),
-  updateAgentConfigSchema: z.object({ agentId: z.string(), name: z.string().optional(), description: z.string().optional(), instructions: z.string().optional(), workspaceAutoSync: z.boolean().optional(), workspaceBm25: z.boolean().optional(), modelProfileId: z.string().optional(), omModelProfileId: z.string().optional() }),
+  updateAgentConfigSchema: z.object({
+    agentId: z.string(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+    instructions: z.string().optional(),
+    workspaceAutoSync: z.boolean().optional(),
+    workspaceBm25: z.boolean().optional(),
+    modelProfileId: z.string().optional(),
+    omModelProfileId: z.string().optional(),
+  }),
 }));
 
 vi.mock('../helpers', () => ({
@@ -105,7 +120,7 @@ function createOps() {
     encryptSecret: vi.fn((v: unknown) => v),
     parseProviderCredentials: vi.fn((_t: string, c: unknown) => c),
     createId: vi.fn(() => 'test-id'),
-    normalizeOptionalText: vi.fn((v?: string) => (v ?? null)),
+    normalizeOptionalText: vi.fn((v?: string) => v ?? null),
     normalizeJsonText: vi.fn(() => null),
     createCapabilityStore: vi.fn(),
     reloadAgentsForRole: vi.fn(),
@@ -121,7 +136,10 @@ describe('Agent Read Routes', () => {
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
-    registerAgentReadRoutes(httpServer as any, { listAgents: vi.fn().mockResolvedValue([]) } as any);
+    registerAgentReadRoutes(
+      httpServer as any,
+      { listAgents: vi.fn().mockResolvedValue([]) } as any,
+    );
     expect(routes.find((r) => r.path === '/admin/agents' && r.method === 'GET')).toBeDefined();
   });
 
@@ -130,9 +148,12 @@ describe('Agent Read Routes', () => {
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
-    registerAgentReadRoutes(httpServer as any, {
-      getAgent: vi.fn().mockResolvedValue({ id: 'test-agent', name: 'Test' }),
-    } as any);
+    registerAgentReadRoutes(
+      httpServer as any,
+      {
+        getAgent: vi.fn().mockResolvedValue({ id: 'test-agent', name: 'Test' }),
+      } as any,
+    );
     expect(routes.find((r) => r.path === '/admin/agent' && r.method === 'GET')).toBeDefined();
   });
 
@@ -143,17 +164,20 @@ describe('Agent Read Routes', () => {
         if (path === '/admin/agent') capturedHandler = handler;
       },
     };
-    registerAgentReadRoutes(httpServer as any, {
-      getAgent: vi.fn().mockResolvedValue(null),
-      getAgentRuntimeMemory: vi.fn().mockResolvedValue(null),
-      getAgentOmDebugExport: vi.fn().mockResolvedValue(null),
-      listAgentConversationMessages: vi.fn().mockResolvedValue([]),
-      listAgentLongTermMemoryThreadMessages: vi.fn().mockResolvedValue([]),
-      listAgentExecutionSteps: vi.fn().mockResolvedValue([]),
-      listAgentThreadMessages: vi.fn().mockResolvedValue([]),
-      listAgentRecentConversations: vi.fn().mockResolvedValue([]),
-      listAgents: vi.fn().mockResolvedValue([]),
-    } as any);
+    registerAgentReadRoutes(
+      httpServer as any,
+      {
+        getAgent: vi.fn().mockResolvedValue(null),
+        getAgentRuntimeMemory: vi.fn().mockResolvedValue(null),
+        getAgentOmDebugExport: vi.fn().mockResolvedValue(null),
+        listAgentConversationMessages: vi.fn().mockResolvedValue([]),
+        listAgentLongTermMemoryThreadMessages: vi.fn().mockResolvedValue([]),
+        listAgentExecutionSteps: vi.fn().mockResolvedValue([]),
+        listAgentThreadMessages: vi.fn().mockResolvedValue([]),
+        listAgentRecentConversations: vi.fn().mockResolvedValue([]),
+        listAgents: vi.fn().mockResolvedValue([]),
+      } as any,
+    );
     expect(capturedHandler).toBeTruthy();
     const response = await capturedHandler!({
       query: new Map([
@@ -170,17 +194,20 @@ describe('Agent Read Routes', () => {
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
-    registerAgentReadRoutes(httpServer as any, {
-      listAgents: vi.fn().mockResolvedValue([]),
-      getAgent: vi.fn().mockResolvedValue(null),
-      listAgentRecentConversations: vi.fn().mockResolvedValue([]),
-      listAgentExecutionSteps: vi.fn().mockResolvedValue([]),
-      listAgentThreadMessages: vi.fn().mockResolvedValue([]),
-      listAgentLongTermMemoryThreadMessages: vi.fn().mockResolvedValue([]),
-      getAgentRuntimeMemory: vi.fn().mockResolvedValue(null),
-      getAgentOmDebugExport: vi.fn().mockResolvedValue(null),
-      listAgentConversationMessages: vi.fn().mockResolvedValue([]),
-    } as any);
+    registerAgentReadRoutes(
+      httpServer as any,
+      {
+        listAgents: vi.fn().mockResolvedValue([]),
+        getAgent: vi.fn().mockResolvedValue(null),
+        listAgentRecentConversations: vi.fn().mockResolvedValue([]),
+        listAgentExecutionSteps: vi.fn().mockResolvedValue([]),
+        listAgentThreadMessages: vi.fn().mockResolvedValue([]),
+        listAgentLongTermMemoryThreadMessages: vi.fn().mockResolvedValue([]),
+        getAgentRuntimeMemory: vi.fn().mockResolvedValue(null),
+        getAgentOmDebugExport: vi.fn().mockResolvedValue(null),
+        listAgentConversationMessages: vi.fn().mockResolvedValue([]),
+      } as any,
+    );
     expect(routes).toHaveLength(9);
   });
 });
@@ -196,7 +223,9 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(routes.find((r) => r.path === '/admin/agent/clear-history' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/clear-history' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register POST /admin/agent/ltm-recall-search', () => {
@@ -209,7 +238,9 @@ describe('Agent Write Routes (clear-history, ltm-recall-search)', () => {
       workspaceBasePath: '/tmp',
       loaderConfig: {} as any,
     });
-    expect(routes.find((r) => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/ltm-recall-search' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should have exactly 2 write routes', () => {
@@ -232,7 +263,11 @@ describe('Agent Operation Routes (wake, internal-chat)', () => {
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
-    registerAgentOperationRoutes(httpServer as any, { internalChat: createInternalChat() }, new Map());
+    registerAgentOperationRoutes(
+      httpServer as any,
+      { internalChat: createInternalChat() },
+      new Map(),
+    );
     expect(routes.find((r) => r.path === '/admin/agent/wake' && r.method === 'POST')).toBeDefined();
   });
 
@@ -241,8 +276,14 @@ describe('Agent Operation Routes (wake, internal-chat)', () => {
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
-    registerAgentOperationRoutes(httpServer as any, { internalChat: createInternalChat() }, new Map());
-    expect(routes.find((r) => r.path === '/admin/agent/internal-chat/send' && r.method === 'POST')).toBeDefined();
+    registerAgentOperationRoutes(
+      httpServer as any,
+      { internalChat: createInternalChat() },
+      new Map(),
+    );
+    expect(
+      routes.find((r) => r.path === '/admin/agent/internal-chat/send' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should have exactly 2 operation routes', () => {
@@ -250,7 +291,11 @@ describe('Agent Operation Routes (wake, internal-chat)', () => {
     const httpServer = {
       registerRoute: (route: { method: string; path: string }) => routes.push(route),
     };
-    registerAgentOperationRoutes(httpServer as any, { internalChat: createInternalChat() }, new Map());
+    registerAgentOperationRoutes(
+      httpServer as any,
+      { internalChat: createInternalChat() },
+      new Map(),
+    );
     expect(routes).toHaveLength(2);
   });
 });
@@ -263,11 +308,17 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
-    expect(routes.find((r) => r.path === '/admin/agent/reload' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/reload' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register POST /admin/agent/force-idle', () => {
@@ -277,11 +328,17 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
-    expect(routes.find((r) => r.path === '/admin/agent/force-idle' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/force-idle' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register POST /admin/agent/rewakeup', () => {
@@ -291,11 +348,17 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
-    expect(routes.find((r) => r.path === '/admin/agent/rewakeup' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/rewakeup' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register contract routes', () => {
@@ -305,13 +368,23 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
-    expect(routes.find((r) => r.path === '/admin/agent/contract/top-up' && r.method === 'POST')).toBeDefined();
-    expect(routes.find((r) => r.path === '/admin/agent/contract/adjust-budget' && r.method === 'POST')).toBeDefined();
-    expect(routes.find((r) => r.path === '/admin/agent/contract/renew' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/contract/top-up' && r.method === 'POST'),
+    ).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/contract/adjust-budget' && r.method === 'POST'),
+    ).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/contract/renew' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register hire and terminate routes', () => {
@@ -321,13 +394,21 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
     expect(routes.find((r) => r.path === '/admin/agent/hire' && r.method === 'POST')).toBeDefined();
-    expect(routes.find((r) => r.path === '/admin/agent/terminate' && r.method === 'POST')).toBeDefined();
-    expect(routes.find((r) => r.path === '/admin/agent/change-role' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/terminate' && r.method === 'POST'),
+    ).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/change-role' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register config update routes', () => {
@@ -337,12 +418,22 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
-    expect(routes.find((r) => r.path === '/admin/agent/github-manifest-config/update' && r.method === 'POST')).toBeDefined();
-    expect(routes.find((r) => r.path === '/admin/agent/update-config' && r.method === 'POST')).toBeDefined();
+    expect(
+      routes.find(
+        (r) => r.path === '/admin/agent/github-manifest-config/update' && r.method === 'POST',
+      ),
+    ).toBeDefined();
+    expect(
+      routes.find((r) => r.path === '/admin/agent/update-config' && r.method === 'POST'),
+    ).toBeDefined();
   });
 
   it('should register exactly 10 write ops routes', () => {
@@ -352,7 +443,11 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       createOps(),
     ) as any;
@@ -368,12 +463,20 @@ describe('Agent Write Ops Routes', () => {
       },
     };
     const registry = {
-      get(id: string) { return id === 'test-agent' ? { runner: { forceIdle, notifyExternalEvent: vi.fn() } } : null; },
-      add: vi.fn(), list: () => [], remove: vi.fn(),
+      get(id: string) {
+        return id === 'test-agent' ? { runner: { forceIdle, notifyExternalEvent: vi.fn() } } : null;
+      },
+      add: vi.fn(),
+      list: () => [],
+      remove: vi.fn(),
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       registry as any,
       createOps(),
     );
@@ -389,12 +492,20 @@ describe('Agent Write Ops Routes', () => {
       },
     };
     const registry = {
-      get(id: string) { return id === 'test-agent' ? { runner: { notifyExternalEvent, forceIdle: vi.fn() } } : null; },
-      add: vi.fn(), list: () => [], remove: vi.fn(),
+      get(id: string) {
+        return id === 'test-agent' ? { runner: { notifyExternalEvent, forceIdle: vi.fn() } } : null;
+      },
+      add: vi.fn(),
+      list: () => [],
+      remove: vi.fn(),
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       registry as any,
       createOps(),
     );
@@ -420,7 +531,9 @@ describe('Agent Write Ops Routes', () => {
     // Use a proper fake registry object instead of Map with added methods
     const fakeRegistry = {
       _map: new Map<string, { runner: unknown }>(),
-      get(id: string) { return this._map.get(id); },
+      get(id: string) {
+        return this._map.get(id);
+      },
       add(_db: unknown, runtime: unknown) {
         this._map.set('new-agent', { runner: (runtime as { runner: unknown }).runner });
       },
@@ -428,7 +541,11 @@ describe('Agent Write Ops Routes', () => {
     const ops = { ...createOps(), loadAgent: mockLoadAgent };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       fakeRegistry as any,
       ops,
     );
@@ -448,7 +565,11 @@ describe('Agent Write Ops Routes', () => {
     };
     registerAgentWriteOpsRoutes(
       httpServer as any,
-      { db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } }, workspaceBasePath: '/tmp', loaderConfig: {} as any } as any,
+      {
+        db: { query: { agents: { findFirst: vi.fn() }, agentRoles: { findFirst: vi.fn() } } },
+        workspaceBasePath: '/tmp',
+        loaderConfig: {} as any,
+      } as any,
       new Map() as any,
       { ...createOps(), topUpActiveAgentContract: mockTopUp },
     );

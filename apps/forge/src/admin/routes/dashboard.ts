@@ -48,12 +48,15 @@ export function registerDashboardRoutes({
             loadedAgents,
             idleAgents,
             runningAgents,
-            absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent').length,
+            absentAgents: rows.filter((r) => !r.executionState || r.executionState === 'absent')
+              .length,
             roles: new Set(rows.map((r: any) => r.role).filter(Boolean)).size,
-            activeContracts: (await db.query.agentExecutionContracts.findMany({
-              where: (fields: any) => eq(fields.isActive, true),
-              columns: { id: true },
-            })).length,
+            activeContracts: (
+              await db.query.agentExecutionContracts.findMany({
+                where: (fields: any) => eq(fields.isActive, true),
+                columns: { id: true },
+              })
+            ).length,
           },
           cash: {
             balanceUsd: balanceResult.balanceUsd,
@@ -62,7 +65,12 @@ export function registerDashboardRoutes({
           },
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Dashboard overview failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Dashboard overview failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -76,7 +84,12 @@ export function registerDashboardRoutes({
       try {
         return jsonResponse(await systemRM.listRoles());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/roles',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

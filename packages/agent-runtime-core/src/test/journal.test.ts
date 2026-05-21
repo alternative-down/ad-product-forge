@@ -20,9 +20,11 @@ describe('runtime journal', () => {
       })),
     });
 
-    runtime.use(createRuntimeJournalPlugin({
-      journal,
-    }));
+    runtime.use(
+      createRuntimeJournalPlugin({
+        journal,
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',
@@ -48,9 +50,11 @@ describe('runtime journal', () => {
       })),
     });
 
-    writerRuntime.use(createRuntimeJournalPlugin({
-      journal,
-    }));
+    writerRuntime.use(
+      createRuntimeJournalPlugin({
+        journal,
+      }),
+    );
 
     await writerRuntime.dispatch({
       id: 'writer-input-1',
@@ -77,9 +81,11 @@ describe('runtime journal', () => {
       }),
     });
 
-    readerRuntime.use(createJournalHistoryPlugin({
-      journal,
-    }));
+    readerRuntime.use(
+      createJournalHistoryPlugin({
+        journal,
+      }),
+    );
 
     await readerRuntime.dispatch({
       id: 'reader-input-1',
@@ -102,9 +108,11 @@ describe('runtime journal', () => {
       })),
     });
 
-    writerRuntime.use(createRuntimeJournalPlugin({
-      journal,
-    }));
+    writerRuntime.use(
+      createRuntimeJournalPlugin({
+        journal,
+      }),
+    );
 
     await writerRuntime.dispatch({
       id: 'writer-input-1',
@@ -117,7 +125,9 @@ describe('runtime journal', () => {
     const readerRuntime = new AgentRuntime({
       runtimeId: 'shared-input-runtime',
       model: new FakeStepModelAdapter((request) => {
-        const historyEntry = request.context.find((entry) => entry.kind === 'journal-input-history');
+        const historyEntry = request.context.find(
+          (entry) => entry.kind === 'journal-input-history',
+        );
 
         if (historyEntry) {
           seenHistoryInputTexts.push(getStepContextText(historyEntry));
@@ -131,9 +141,11 @@ describe('runtime journal', () => {
       }),
     });
 
-    readerRuntime.use(createJournalInputHistoryPlugin({
-      journal,
-    }));
+    readerRuntime.use(
+      createJournalInputHistoryPlugin({
+        journal,
+      }),
+    );
 
     await readerRuntime.dispatch({
       id: 'reader-input-1',

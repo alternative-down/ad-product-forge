@@ -26,7 +26,7 @@ const fsMocks = {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  
+
   const fs = await import('node:fs/promises');
   fsMocks.statMock.mockRejectedValue(new Error('ENOENT'));
   fsMocks.mkdirMock.mockResolvedValue(undefined);
@@ -34,11 +34,13 @@ beforeEach(async () => {
 });
 
 function createZipArchive(entries: Record<string, string | null>) {
-  const buffer = Buffer.from(zipSync(
-    Object.fromEntries(
-      Object.entries(entries).map(([k, v]) => [k, v ? Buffer.from(v) : Buffer.from([])])
-    )
-  ));
+  const buffer = Buffer.from(
+    zipSync(
+      Object.fromEntries(
+        Object.entries(entries).map(([k, v]) => [k, v ? Buffer.from(v) : Buffer.from([])]),
+      ),
+    ),
+  );
   return buffer.toString('base64');
 }
 
@@ -52,7 +54,7 @@ describe('installAgentWorkspaceSkillsArchive', () => {
     it('extracts files from archive and returns skill names', async () => {
       const fs = await import('node:fs/promises');
       fsMocks.mkdirMock.mockResolvedValue(undefined);
-      
+
       const zipBase64 = createZipArchive({
         'skills/test-skill/readme.md': '# Test Skill',
         'skills/test-skill/skill.json': '{"name": "test-skill"}',
@@ -72,11 +74,13 @@ describe('installAgentWorkspaceSkillsArchive', () => {
         'skills/empty-skill/': null,
       });
 
-      await expect(installAgentWorkspaceSkillsArchive({
-        workspaceBasePath: '/workspace',
-        agent: mockAgent,
-        zipBase64,
-      })).rejects.toThrow('Skill archive did not contain any files');
+      await expect(
+        installAgentWorkspaceSkillsArchive({
+          workspaceBasePath: '/workspace',
+          agent: mockAgent,
+          zipBase64,
+        }),
+      ).rejects.toThrow('Skill archive did not contain any files');
     });
 
     it('handles Windows-style path separators', async () => {
@@ -142,11 +146,13 @@ describe('installAgentWorkspaceSkillsArchive', () => {
         '../../etc/passwd': 'malicious',
       });
 
-      await expect(installAgentWorkspaceSkillsArchive({
-        workspaceBasePath: '/workspace',
-        agent: mockAgent,
-        zipBase64,
-      })).rejects.toThrow('Invalid skill archive entry');
+      await expect(
+        installAgentWorkspaceSkillsArchive({
+          workspaceBasePath: '/workspace',
+          agent: mockAgent,
+          zipBase64,
+        }),
+      ).rejects.toThrow('Invalid skill archive entry');
     });
 
     it('rejects paths with embedded parent traversal', async () => {
@@ -154,11 +160,13 @@ describe('installAgentWorkspaceSkillsArchive', () => {
         'skills/../../../etc/passwd': 'malicious',
       });
 
-      await expect(installAgentWorkspaceSkillsArchive({
-        workspaceBasePath: '/workspace',
-        agent: mockAgent,
-        zipBase64,
-      })).rejects.toThrow('Invalid skill archive entry');
+      await expect(
+        installAgentWorkspaceSkillsArchive({
+          workspaceBasePath: '/workspace',
+          agent: mockAgent,
+          zipBase64,
+        }),
+      ).rejects.toThrow('Invalid skill archive entry');
     });
 
     it('rejects directory path outside skills folder', async () => {
@@ -166,11 +174,13 @@ describe('installAgentWorkspaceSkillsArchive', () => {
         'skills/': null, // directory at top level - should fail validation
       });
 
-      await expect(installAgentWorkspaceSkillsArchive({
-        workspaceBasePath: '/workspace',
-        agent: mockAgent,
-        zipBase64,
-      })).rejects.toThrow('Invalid skill archive entry');
+      await expect(
+        installAgentWorkspaceSkillsArchive({
+          workspaceBasePath: '/workspace',
+          agent: mockAgent,
+          zipBase64,
+        }),
+      ).rejects.toThrow('Invalid skill archive entry');
     });
   });
 });

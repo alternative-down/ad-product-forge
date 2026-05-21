@@ -26,9 +26,7 @@ describe('githubAppManifestPermissionsSchema', () => {
   });
 
   it('throws when a field is missing', () => {
-    expect(() =>
-      githubAppManifestPermissionsSchema.parse({ contents: true }),
-    )
+    expect(() => githubAppManifestPermissionsSchema.parse({ contents: true }));
   });
 
   it('throws when a field has wrong type', () => {
@@ -43,7 +41,7 @@ describe('githubAppManifestPermissionsSchema', () => {
         repository_projects: false,
         workflows: false,
       }),
-    )
+    );
   });
 
   it('allows extra fields by default', () => {
@@ -59,7 +57,7 @@ describe('githubAppManifestPermissionsSchema', () => {
         workflows: false,
         extra: true,
       }),
-    )
+    );
   });
 });
 
@@ -79,9 +77,7 @@ describe('githubAppManifestEventsSchema', () => {
   });
 
   it('throws when a field is missing', () => {
-    expect(() =>
-      githubAppManifestEventsSchema.parse({ push: true }),
-    )
+    expect(() => githubAppManifestEventsSchema.parse({ push: true }));
   });
 
   it('throws when a field is not boolean', () => {
@@ -95,7 +91,7 @@ describe('githubAppManifestEventsSchema', () => {
         repository: false,
         workflow_run: false,
       }),
-    )
+    );
   });
 });
 
@@ -130,9 +126,7 @@ describe('githubAppManifestConfigSchema', () => {
   });
 
   it('throws when permissions is missing', () => {
-    expect(() =>
-      githubAppManifestConfigSchema.parse({ events: validEvents }),
-    )
+    expect(() => githubAppManifestConfigSchema.parse({ events: validEvents }));
   });
 
   it('throws when events is invalid', () => {
@@ -141,7 +135,7 @@ describe('githubAppManifestConfigSchema', () => {
         permissions: validPermissions,
         events: { push: 'yes' },
       }),
-    )
+    );
   });
 });
 
@@ -152,8 +146,25 @@ describe('githubAppPendingCredentialsSchema', () => {
       state: 'installation-123',
       appName: 'My App',
       manifestConfig: {
-        permissions: { administration: true, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-        events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: true,
+          contents: false,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: false,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
       createdAt: 1710000000000,
     });
@@ -168,12 +179,29 @@ describe('githubAppPendingCredentialsSchema', () => {
         state: 'x',
         appName: 'x',
         manifestConfig: {
-          permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-          events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+          permissions: {
+            administration: false,
+            contents: false,
+            issues: false,
+            metadata: false,
+            organization_projects: false,
+            pull_requests: false,
+            repository_projects: false,
+            workflows: false,
+          },
+          events: {
+            push: false,
+            pull_request: false,
+            pull_request_review: false,
+            issues: false,
+            issue_comment: false,
+            repository: false,
+            workflow_run: false,
+          },
         },
         createdAt: 1710000000000,
       }),
-    )
+    );
   });
 
   it('throws when createdAt is not an integer', () => {
@@ -183,12 +211,29 @@ describe('githubAppPendingCredentialsSchema', () => {
         state: 'x',
         appName: 'x',
         manifestConfig: {
-          permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-          events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+          permissions: {
+            administration: false,
+            contents: false,
+            issues: false,
+            metadata: false,
+            organization_projects: false,
+            pull_requests: false,
+            repository_projects: false,
+            workflows: false,
+          },
+          events: {
+            push: false,
+            pull_request: false,
+            pull_request_review: false,
+            issues: false,
+            issue_comment: false,
+            repository: false,
+            workflow_run: false,
+          },
         },
         createdAt: 1710000000000.5,
       }),
-    )
+    );
   });
 });
 
@@ -202,8 +247,25 @@ describe('githubAppCreatedCredentialsSchema', () => {
       appSlug: 'my-app',
       appName: 'My App',
       manifestConfig: {
-        permissions: { administration: true, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-        events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: true,
+          contents: false,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: false,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
       createdAt: 1710000000000,
     });
@@ -221,12 +283,29 @@ describe('githubAppCreatedCredentialsSchema', () => {
         appSlug: 'app',
         appName: 'App',
         manifestConfig: {
-          permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-          events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+          permissions: {
+            administration: false,
+            contents: false,
+            issues: false,
+            metadata: false,
+            organization_projects: false,
+            pull_requests: false,
+            repository_projects: false,
+            workflows: false,
+          },
+          events: {
+            push: false,
+            pull_request: false,
+            pull_request_review: false,
+            issues: false,
+            issue_comment: false,
+            repository: false,
+            workflow_run: false,
+          },
         },
         createdAt: 1710000000000,
       }),
-    )
+    );
   });
 });
 
@@ -241,8 +320,25 @@ describe('githubAppActiveCredentialsSchema', () => {
       appSlug: 'prod-app',
       appName: 'Production App',
       manifestConfig: {
-        permissions: { administration: false, contents: true, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-        events: { push: true, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: false,
+          contents: true,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: true,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
       createdAt: 1710000000000,
     });
@@ -260,12 +356,29 @@ describe('githubAppActiveCredentialsSchema', () => {
         appSlug: 'app',
         appName: 'App',
         manifestConfig: {
-          permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-          events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+          permissions: {
+            administration: false,
+            contents: false,
+            issues: false,
+            metadata: false,
+            organization_projects: false,
+            pull_requests: false,
+            repository_projects: false,
+            workflows: false,
+          },
+          events: {
+            push: false,
+            pull_request: false,
+            pull_request_review: false,
+            issues: false,
+            issue_comment: false,
+            repository: false,
+            workflow_run: false,
+          },
         },
         createdAt: 1710000000000,
       }),
-    )
+    );
   });
 });
 
@@ -276,8 +389,25 @@ describe('githubAppCredentialsSchema - discriminated union', () => {
       state: 'x',
       appName: 'x',
       manifestConfig: {
-        permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-        events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: false,
+          contents: false,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: false,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
       createdAt: 1710000000000,
     });
@@ -293,8 +423,25 @@ describe('githubAppCredentialsSchema - discriminated union', () => {
       appSlug: 'app',
       appName: 'App',
       manifestConfig: {
-        permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-        events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: false,
+          contents: false,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: false,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
       createdAt: 1710000000000,
     });
@@ -311,8 +458,25 @@ describe('githubAppCredentialsSchema - discriminated union', () => {
       appSlug: 'app',
       appName: 'App',
       manifestConfig: {
-        permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-        events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+        permissions: {
+          administration: false,
+          contents: false,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
+        },
+        events: {
+          push: false,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
+        },
       },
       createdAt: 1710000000000,
     });
@@ -326,11 +490,28 @@ describe('githubAppCredentialsSchema - discriminated union', () => {
         state: 'x',
         appName: 'x',
         manifestConfig: {
-          permissions: { administration: false, contents: false, issues: false, metadata: false, organization_projects: false, pull_requests: false, repository_projects: false, workflows: false },
-          events: { push: false, pull_request: false, pull_request_review: false, issues: false, issue_comment: false, repository: false, workflow_run: false },
+          permissions: {
+            administration: false,
+            contents: false,
+            issues: false,
+            metadata: false,
+            organization_projects: false,
+            pull_requests: false,
+            repository_projects: false,
+            workflows: false,
+          },
+          events: {
+            push: false,
+            pull_request: false,
+            pull_request_review: false,
+            issues: false,
+            issue_comment: false,
+            repository: false,
+            workflow_run: false,
+          },
         },
         createdAt: 1710000000000,
       }),
-    )
+    );
   });
 });

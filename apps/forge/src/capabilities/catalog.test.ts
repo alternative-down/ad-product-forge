@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import {
-  hasToolPermission,
-  normalizeToolPermissionIds,
-  forgeCustomToolIds,
-} from './catalog';
+import { hasToolPermission, normalizeToolPermissionIds, forgeCustomToolIds } from './catalog';
 
 describe('hasToolPermission', () => {
   test('returns true when allowedToolIds is null', () => {
@@ -19,7 +15,6 @@ describe('hasToolPermission', () => {
     expect(hasToolPermission(allowed, 'send_message')).toBe(false);
   });
 });
-
 
 describe('normalizeToolPermissionIds', () => {
   test('removes duplicates', () => {

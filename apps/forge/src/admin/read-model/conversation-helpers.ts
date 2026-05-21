@@ -58,7 +58,11 @@ async function listRecentConversations(
     .slice(0, RECENT_CONVERSATION_LIMIT);
 }
 
-async function listRecentExternalConversations(_workspaceBasePath: string, _agentId: string, _agentName: string) {
+async function listRecentExternalConversations(
+  _workspaceBasePath: string,
+  _agentId: string,
+  _agentName: string,
+) {
   const runtime = getInternalAgentRegistry().get(_agentId)?.runtime;
 
   if (!runtime) {
@@ -71,7 +75,10 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
     });
 
     return rows
-      .filter((conversation): conversation is (typeof rows)[number] => conversation.provider !== 'internal-chat')
+      .filter(
+        (conversation): conversation is (typeof rows)[number] =>
+          conversation.provider !== 'internal-chat',
+      )
       .map((conversation: (typeof rows)[number]) => {
         const participants = collectConversationParticipants({
           name: conversation.name,
@@ -99,7 +106,12 @@ async function listRecentExternalConversations(_workspaceBasePath: string, _agen
         };
       });
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load external conversations', context: { agentId: _agentId, err: String(serializeError(err)) } });
+    forgeDebug({
+      scope: 'admin-read-model',
+      level: 'error',
+      message: 'Failed to load external conversations',
+      context: { agentId: _agentId, err: String(serializeError(err)) },
+    });
     return [];
   }
 }
@@ -112,37 +124,51 @@ async function listRecentInternalChatConversations(
   try {
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
-    return await Promise.all(rows.map(async (conversation) => {
-      const c = conversation as ConversationListingOutput;
-      const internalConversation = await internalChat.getConversationForAgent(agentId, c.targetKey);
-      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, c.targetKey);
-      const participants = collectConversationParticipants({
-        name: c.name,
-        participants: groupParticipants.length > 0 ? groupParticipants : c.participants,
-        messages: c.messages.map((message: LocalMessageListItem) => ({
-          authorDisplayName: message.authorDisplayName ?? agentName,
-        })),
-      });
+    return await Promise.all(
+      rows.map(async (conversation) => {
+        const c = conversation as ConversationListingOutput;
+        const internalConversation = await internalChat.getConversationForAgent(
+          agentId,
+          c.targetKey,
+        );
+        const groupParticipants = await listInternalChatGroupParticipants(
+          internalChat,
+          agentId,
+          c.targetKey,
+        );
+        const participants = collectConversationParticipants({
+          name: c.name,
+          participants: groupParticipants.length > 0 ? groupParticipants : c.participants,
+          messages: c.messages.map((message: LocalMessageListItem) => ({
+            authorDisplayName: message.authorDisplayName ?? agentName,
+          })),
+        });
 
-      return {
-        conversationId: c.targetKey,
-        conversationKey: c.targetKey,
-        provider: c.provider,
-        type: internalConversation?.type === 'group' ? 'group' : 'dm',
-        name: c.name ?? undefined,
-        participants,
-        updatedAt: Date.parse(c.latestMessageAt) || 0,
-        messages: c.messages.map((message: LocalMessageListItem) => ({
-          messageId: message.messageId,
-          content: message.content,
-          unread: message.unread,
-          authorDisplayName: message.authorDisplayName ?? agentName,
-          createdAt: Date.parse(message.createdAt) || 0,
-        })),
-      };
-    }));
+        return {
+          conversationId: c.targetKey,
+          conversationKey: c.targetKey,
+          provider: c.provider,
+          type: internalConversation?.type === 'group' ? 'group' : 'dm',
+          name: c.name ?? undefined,
+          participants,
+          updatedAt: Date.parse(c.latestMessageAt) || 0,
+          messages: c.messages.map((message: LocalMessageListItem) => ({
+            messageId: message.messageId,
+            content: message.content,
+            unread: message.unread,
+            authorDisplayName: message.authorDisplayName ?? agentName,
+            createdAt: Date.parse(message.createdAt) || 0,
+          })),
+        };
+      }),
+    );
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load internal chat conversations', context: { agentId, err: String(serializeError(err)) } });
+    forgeDebug({
+      scope: 'admin-read-model',
+      level: 'error',
+      message: 'Failed to load internal chat conversations',
+      context: { agentId, err: String(serializeError(err)) },
+    });
     return [];
   }
 }
@@ -160,10 +186,18 @@ async function listInternalChatGroupParticipants(
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const members = await (internalChat as any).listGroupMembersOrDmPeers(_agentId, conversationKey) as ConversationParticipant[];
+    const members = (await (internalChat as any).listGroupMembersOrDmPeers(
+      _agentId,
+      conversationKey,
+    )) as ConversationParticipant[];
     return members.map((member) => member.displayName ?? 'Unknown participant');
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, err: String(serializeError(err)) } });
+    forgeDebug({
+      scope: 'admin-read-model',
+      level: 'error',
+      message: 'Failed to load group participants',
+      context: { conversationKey, err: String(serializeError(err)) },
+    });
     return [];
   }
 }
@@ -194,7 +228,7 @@ async function listThreadMessages(
     try {
       const messages = await conversationStore.listMessages({
         threadId,
-        limit: (input.perPage * (input.page + 1)) + 1,
+        limit: input.perPage * (input.page + 1) + 1,
         order: 'desc',
       });
       const pageStart = input.page * input.perPage;
@@ -203,9 +237,7 @@ async function listThreadMessages(
       const mergedMessages = mergeToolLogMessages([...pagedMessages].reverse() as any[]);
 
       return {
-        items: mergedMessages
-        .reverse()
-        .map((message) => ({
+        items: mergedMessages.reverse().map((message) => ({
           id: message.id,
           role: message.role,
           createdAt: new Date(message.createdAt).getTime(),
@@ -220,7 +252,8 @@ async function listThreadMessages(
                       type: part.type,
                       text: part.text,
                     }
-                  : part),
+                  : part,
+              ),
               ...buildThreadToolInvocationParts(message.metadata),
             ],
             ...(Array.isArray(message.metadata?.toolInvocations)
@@ -236,7 +269,12 @@ async function listThreadMessages(
       await closeLibsqlClient(client);
     }
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load recent thread messages', context: { agentId, err: String(serializeError(err)) } });
+    forgeDebug({
+      scope: 'admin-read-model',
+      level: 'error',
+      message: 'Failed to load recent thread messages',
+      context: { agentId, err: String(serializeError(err)) },
+    });
     return {
       items: [],
       hasMore: false,
@@ -247,11 +285,11 @@ async function listThreadMessages(
 export {
   closeLibsqlClient,
   listRecentConversations,
-// fallow-ignore-next-line unused-export
+  // fallow-ignore-next-line unused-export
   listRecentExternalConversations,
-// fallow-ignore-next-line unused-export
+  // fallow-ignore-next-line unused-export
   listRecentInternalChatConversations,
-// fallow-ignore-next-line unused-export
+  // fallow-ignore-next-line unused-export
   listInternalChatGroupParticipants,
   listThreadMessages,
 };

@@ -1,10 +1,7 @@
 import type { AgentRuntime } from '../../core/runtime.js';
 import type { RuntimeSnapshot, StepExecutionResult, StepRecord } from '../../core/types.js';
 
-export type RuntimeRunLoopStopReason =
-  | 'idle'
-  | 'max-steps'
-  | 'aborted';
+export type RuntimeRunLoopStopReason = 'idle' | 'max-steps' | 'aborted';
 
 export type RuntimeRunLoopResult = {
   steps: StepRecord[];
@@ -19,10 +16,7 @@ export type RuntimeRunControllerOptions = {
 export type RuntimeRunLoopOptions = {
   maxSteps?: number;
   signal?: AbortSignal;
-  resolveDelayMs?(context: {
-    completedSteps: StepRecord[];
-    latestStep: StepRecord;
-  }): number;
+  resolveDelayMs?(context: { completedSteps: StepRecord[]; latestStep: StepRecord }): number;
   beforeStep?(context: {
     completedSteps: StepRecord[];
     nextStepNumber: number;
@@ -102,10 +96,11 @@ export class RuntimeRunController {
 
       this.runtime.requestContinuation();
 
-      const delayMs = options.resolveDelayMs?.({
-        completedSteps: [...steps],
-        latestStep: result.record,
-      }) ?? 0;
+      const delayMs =
+        options.resolveDelayMs?.({
+          completedSteps: [...steps],
+          latestStep: result.record,
+        }) ?? 0;
 
       if (delayMs > 0) {
         await options.beforeDelay?.({

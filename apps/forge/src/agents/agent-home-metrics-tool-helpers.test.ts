@@ -105,8 +105,16 @@ describe('mergeToolLogMessages', () => {
       role: 'assistant',
       metadata: { toolInvocations: [{ toolName: 'a' }] },
     });
-    const tool1 = makeMsg({ id: 'msg-2', role: 'tool', metadata: { toolResults: [{ toolCallId: 'a-tc', result: 1 }] } });
-    const tool2 = makeMsg({ id: 'msg-3', role: 'tool', metadata: { toolResults: [{ toolCallId: 'b-tc', result: 2 }] } });
+    const tool1 = makeMsg({
+      id: 'msg-2',
+      role: 'tool',
+      metadata: { toolResults: [{ toolCallId: 'a-tc', result: 1 }] },
+    });
+    const tool2 = makeMsg({
+      id: 'msg-3',
+      role: 'tool',
+      metadata: { toolResults: [{ toolCallId: 'b-tc', result: 2 }] },
+    });
 
     const result = mergeToolLogMessages([assistant, tool1, tool2]);
 
@@ -140,9 +148,17 @@ describe('buildThreadToolInvocationParts', () => {
     });
 
     expect(parts).toHaveLength(2);
-    expect(parts[0]).toMatchObject({ type: 'tool-call', toolCallId: 'tc-1', toolName: 'send_message' });
+    expect(parts[0]).toMatchObject({
+      type: 'tool-call',
+      toolCallId: 'tc-1',
+      toolName: 'send_message',
+    });
     expect(parts[0].args).toEqual({ text: 'hello' });
-    expect(parts[1]).toMatchObject({ type: 'tool-call', toolCallId: 'tc-2', toolName: 'workspace_write_file' });
+    expect(parts[1]).toMatchObject({
+      type: 'tool-call',
+      toolCallId: 'tc-2',
+      toolName: 'workspace_write_file',
+    });
   });
 
   it('attaches result to tool-call when matching toolResult found', () => {
@@ -153,7 +169,10 @@ describe('buildThreadToolInvocationParts', () => {
 
     expect(parts).toHaveLength(1);
     expect(parts[0]).toHaveProperty('result');
-    expect((parts[0] as any).result).toEqual({ toolCallId: 'tc-1', result: { messageId: 'msg-123' } });
+    expect((parts[0] as any).result).toEqual({
+      toolCallId: 'tc-1',
+      result: { messageId: 'msg-123' },
+    });
   });
 
   it('does not attach result when toolCallId does not match', () => {
@@ -200,9 +219,7 @@ describe('buildThreadToolInvocationParts', () => {
   it('appends unmatched tool results as tool-result parts', () => {
     const parts = buildThreadToolInvocationParts({
       toolInvocations: [],
-      toolResults: [
-        { toolCallId: 'orphan-tc', result: { data: 'x' } },
-      ],
+      toolResults: [{ toolCallId: 'orphan-tc', result: { data: 'x' } }],
     });
 
     expect(parts).toHaveLength(1);

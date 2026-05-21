@@ -109,16 +109,15 @@ type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
 };
 
-export function createAgentsRuntimeMemoryReadModel(
-  deps: AgentsRuntimeMemoryDeps,
-): { getAgentRuntimeMemory: (agentId: string) => Promise<AgentRuntimeMemoryOutput | null> } {
-
+export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps): {
+  getAgentRuntimeMemory: (agentId: string) => Promise<AgentRuntimeMemoryOutput | null>;
+} {
   async function getAgentRuntimeMemory(agentId: string): Promise<AgentRuntimeMemoryOutput | null> {
     const { db, registry, workspaceBasePath } = deps;
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (!agent) return null;
 
-    const loadedAgent = registry.get((agentId as string));
+    const loadedAgent = registry.get(agentId as string);
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
     const client: ClosableLibsqlClient = createClient({ url: `file:${agentDatabasePath}` });
@@ -126,22 +125,36 @@ export function createAgentsRuntimeMemoryReadModel(
     const conversationStore = new LibsqlConversationStore({ client, tablePrefix: mastraAgentId });
 
     try {
-      await migrateLegacyCheckpointedOmState({ db, agentId, threadId: mastraAgentId, conversationStore });
+      await migrateLegacyCheckpointedOmState({
+        db,
+        agentId,
+        threadId: mastraAgentId,
+        conversationStore,
+      });
 
       const agentWorkspaceRoot = resolve(workspaceBasePath, agentId);
-      const agentWorkspaceDir = ((agent.workspaceFilesystem as any)?.basePath ?? '') !== ''
-        ? resolve(agentWorkspaceRoot, (agent.workspaceFilesystem as any).basePath)
-        : resolve(agentWorkspaceRoot, 'workspace');
+      const agentWorkspaceDir =
+        ((agent.workspaceFilesystem as any)?.basePath ?? '') !== ''
+          ? resolve(agentWorkspaceRoot, (agent.workspaceFilesystem as any).basePath)
+          : resolve(agentWorkspaceRoot, 'workspace');
 
       let agentContext: string | null = null;
       try {
-        agentContext = (await readFile(resolve(agentWorkspaceDir, 'context.txt'), 'utf8')).trim() ?? null;
+        agentContext =
+          (await readFile(resolve(agentWorkspaceDir, 'context.txt'), 'utf8')).trim() ?? null;
       } catch (err) {
-        forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin-read-model',
+          level: 'error',
+          message: '[safe-catch]',
+          context: { err: String(serializeError(err)) },
+        });
         agentContext = null;
       }
 
-      const workingMemory = (await conversationStore.read({ threadId: mastraAgentId, resourceId: mastraAgentId }))?.workingMemory ?? null;
+      const workingMemory =
+        (await conversationStore.read({ threadId: mastraAgentId, resourceId: mastraAgentId }))
+          ?.workingMemory ?? null;
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
       const systemSettings = (createSystemSettingsStore as any)(db);
       const settings = await systemSettings.getSettings();
@@ -153,11 +166,12 @@ export function createAgentsRuntimeMemoryReadModel(
       });
 
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
-      const checkpointSummaryText = (checkpointSummaryMessage as any)?.parts
-        ?.filter(isTextPart as any)
-        ?.map((part: any) => part.text?.trim() ?? '')
-        .filter(Boolean)
-        .join('\n') ?? null;
+      const checkpointSummaryText =
+        (checkpointSummaryMessage as any)?.parts
+          ?.filter(isTextPart as any)
+          ?.map((part: any) => part.text?.trim() ?? '')
+          .filter(Boolean)
+          .join('\n') ?? null;
 
       const reflection = operationalMemoryState.reflectionMessages
         .map((message: any) =>
@@ -165,7 +179,8 @@ export function createAgentsRuntimeMemoryReadModel(
             ?.filter(isTextPart as any)
             ?.map((part: any) => part.text?.trim() ?? '')
             .filter(Boolean)
-            .join('\n'))
+            .join('\n'),
+        )
         .filter(Boolean)
         .join('\n');
 
@@ -175,51 +190,79 @@ export function createAgentsRuntimeMemoryReadModel(
             ?.filter(isTextPart as any)
             ?.map((part: any) => part.text?.trim() ?? '')
             .filter(Boolean)
-            .join('\n'))
+            .join('\n'),
+        )
         .filter(Boolean)
         .join('\n');
 
       const generationCount = checkpointSummaryMessage?.operationalMemoryGeneration ?? 0;
-      const updatedAt = ((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string) !== ''
-        ? Date.parse((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string)
-        : null;
+      const updatedAt =
+        ((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string) !== ''
+          ? Date.parse((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string)
+          : null;
       const lastObservedAt = operationalMemoryState.observationMessages.length
         ? Date.parse(operationalMemoryState.observationMessages.at(-1)?.createdAt ?? '')
         : null;
 
       const runtimeLtmSnapshot: any = loadedAgent?.runtime?.longTermMemory
         ? await withTimeout(
-
             (loadedAgent.runtime.longTermMemory as any).readSnapshot(),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-          ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: String(serializeError(err)) } }); return null; })
+          ).catch((err) => {
+            forgeDebug({
+              scope: 'admin-read-model',
+              level: 'error',
+              message: '[safe-catch]',
+              context: { err: String(serializeError(err)) },
+            });
+            return null;
+          })
         : null;
 
       const persistedLtmState = await withTimeout(
         readLongTermMemoryState(db, agentId),
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
-      ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: String(serializeError(err)) } }); return null; });
+      ).catch((err) => {
+        forgeDebug({
+          scope: 'admin-read-model',
+          level: 'error',
+          message: '[safe-catch]',
+          context: { err: String(serializeError(err)) },
+        });
+        return null;
+      });
 
-      const ltm = (runtimeLtmSnapshot !== null
-        ? {
-            ...runtimeLtmSnapshot,
-            running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
-            queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
-          }
-        : null) ?? (persistedLtmState
-        ? {
-            running: false,
-            queued: false,
-            lastRunAt: ((persistedLtmState.lastRunAt ?? '') as string) !== '' ? Date.parse((persistedLtmState.lastRunAt ?? '') as string) : null,
-            lastRunError: persistedLtmState.lastRunError,
-            lastRunErrorAt: ((persistedLtmState.lastRunErrorAt ?? '') as string) !== '' ? Date.parse((persistedLtmState.lastRunErrorAt ?? '') as string) : null,
-            lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
-            lastWrittenAt: ((persistedLtmState.lastWrittenAt ?? '') as string) !== '' ? Date.parse((persistedLtmState.lastWrittenAt ?? '') as string) : null,
-            packageCount: persistedLtmState.packages.length,
-          }
-        : null) as any;
+      const ltm =
+        (runtimeLtmSnapshot !== null
+          ? {
+              ...runtimeLtmSnapshot,
+              running: agent.executionState === 'idle' ? runtimeLtmSnapshot.running : false,
+              queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
+            }
+          : null) ??
+        ((persistedLtmState
+          ? {
+              running: false,
+              queued: false,
+              lastRunAt:
+                ((persistedLtmState.lastRunAt ?? '') as string) !== ''
+                  ? Date.parse((persistedLtmState.lastRunAt ?? '') as string)
+                  : null,
+              lastRunError: persistedLtmState.lastRunError,
+              lastRunErrorAt:
+                ((persistedLtmState.lastRunErrorAt ?? '') as string) !== ''
+                  ? Date.parse((persistedLtmState.lastRunErrorAt ?? '') as string)
+                  : null,
+              lastWrittenPackageId: persistedLtmState.lastWrittenPackageId,
+              lastWrittenAt:
+                ((persistedLtmState.lastWrittenAt ?? '') as string) !== ''
+                  ? Date.parse((persistedLtmState.lastWrittenAt ?? '') as string)
+                  : null,
+              packageCount: persistedLtmState.packages.length,
+            }
+          : null) as any);
 
       return {
         workingMemory: formatWorkingMemoryValue(workingMemory),
@@ -235,9 +278,10 @@ export function createAgentsRuntimeMemoryReadModel(
         checkpointMessageId: checkpointSummaryMessage?.id ?? null,
         checkpointGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
         checkpointSummary: checkpointSummaryText,
-        checkpointUpdatedAt: (checkpointSummaryMessage?.createdAt ?? '') !== ''
-          ? Date.parse((checkpointSummaryMessage as any)?.createdAt ?? '')
-          : null,
+        checkpointUpdatedAt:
+          (checkpointSummaryMessage?.createdAt ?? '') !== ''
+            ? Date.parse((checkpointSummaryMessage as any)?.createdAt ?? '')
+            : null,
         ltmRecall: ltmRecall
           ? {
               status: ltmRecall.status,
@@ -266,16 +310,18 @@ export function createAgentsRuntimeMemoryReadModel(
           reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
           reflectionBudget: Math.max(
             0,
-            settings.checkpointedOmTotalContextTokens
-              - settings.checkpointedOmRecentRawTokens
-              - settings.checkpointedOmRawObservationBatchTokens
-              - settings.checkpointedOmObservationReflectionBatchTokens,
+            settings.checkpointedOmTotalContextTokens -
+              settings.checkpointedOmRecentRawTokens -
+              settings.checkpointedOmRawObservationBatchTokens -
+              settings.checkpointedOmObservationReflectionBatchTokens,
           ),
           checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
-          checkpointSummaryUpToGeneration: checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
-          latestThreadMessageAt: (operationalMemoryState.metrics.latestThreadMessageAt ?? '') !== ''
-            ? Date.parse((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string)
-            : null,
+          checkpointSummaryUpToGeneration:
+            checkpointSummaryMessage?.operationalMemoryGeneration ?? null,
+          latestThreadMessageAt:
+            (operationalMemoryState.metrics.latestThreadMessageAt ?? '') !== ''
+              ? Date.parse((operationalMemoryState.metrics.latestThreadMessageAt ?? '') as string)
+              : null,
         },
       };
     } finally {

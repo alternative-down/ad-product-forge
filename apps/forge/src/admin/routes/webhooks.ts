@@ -28,7 +28,9 @@ export function registerWebhookRoutes({ httpServer, db, registry }: WebhookRoute
     store: webhookStore as any,
     notifyAgent(input) {
       const entry = registry.get(input.agentId);
-      if (!entry) { return; }
+      if (!entry) {
+        return;
+      }
       entry.runner?.notifyExternalEvent({
         type: input.type,
         groupKey: input.groupKey,

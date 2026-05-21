@@ -10,7 +10,7 @@ import { vi } from 'vitest';
 vi.mock('node:path', async () => {
   const actual = await vi.importActual('node:path');
   return {
-    ...actual as object,
+    ...(actual as object),
     resolve: vi.fn((...segments: string[]) => {
       // Simple mock: join all segments with '/'
       return '/' + segments.filter(Boolean).join('/');
@@ -38,20 +38,12 @@ describe('resolveAgentWorkspaceRoot', () => {
   });
 
   it('appends basePath to agent workspace when provided', () => {
-    const result = resolveAgentWorkspaceRoot(
-      '/base',
-      { basePath: 'custom' },
-      'agent-42',
-    );
+    const result = resolveAgentWorkspaceRoot('/base', { basePath: 'custom' }, 'agent-42');
     expect(result).toMatch(/\/agent-42\/custom$/);
   });
 
   it('appends nested basePath correctly', () => {
-    const result = resolveAgentWorkspaceRoot(
-      '/base',
-      { basePath: 'data/workspace' },
-      'agent-42',
-    );
+    const result = resolveAgentWorkspaceRoot('/base', { basePath: 'data/workspace' }, 'agent-42');
     expect(result).toMatch(/\/agent-42\/data\/workspace$/);
   });
 

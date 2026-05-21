@@ -25,7 +25,13 @@ function formatLog(entry: LogEntry): string {
   return `[${entry.level}] [forge:${entry.scope}] ${entry.message}`;
 }
 
-function log(level: LogLevel, levelStr: string, scope: string, message: string, context?: LogContext) {
+function log(
+  level: LogLevel,
+  levelStr: string,
+  scope: string,
+  message: string,
+  context?: LogContext,
+) {
   if (level < currentLevel) return;
 
   const entry: LogEntry = {

@@ -37,27 +37,44 @@ describe('adminInternalChatSendSchema', () => {
   });
 
   it('rejects missing agentId', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      targetKey: 'u', provider: 'p', content: 'c',
-    })).toThrow();
+    expect(() =>
+      adminInternalChatSendSchema.parse({
+        targetKey: 'u',
+        provider: 'p',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects empty agentId', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      agentId: '', targetKey: 'u', provider: 'p', content: 'c',
-    })).toThrow();
+    expect(() =>
+      adminInternalChatSendSchema.parse({
+        agentId: '',
+        targetKey: 'u',
+        provider: 'p',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing content', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      agentId: 'a', targetKey: 'u', provider: 'p',
-    })).toThrow();
+    expect(() =>
+      adminInternalChatSendSchema.parse({
+        agentId: 'a',
+        targetKey: 'u',
+        provider: 'p',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing targetKey', () => {
-    expect(() => adminInternalChatSendSchema.parse({
-      agentId: 'a', provider: 'p', content: 'c',
-    })).toThrow();
+    expect(() =>
+      adminInternalChatSendSchema.parse({
+        agentId: 'a',
+        provider: 'p',
+        content: 'c',
+      }),
+    ).toThrow();
   });
 });
 
@@ -75,7 +92,9 @@ describe('createExternalInternalChatAccountSchema', () => {
 
   it('parses with optional name', () => {
     const result = createExternalInternalChatAccountSchema.parse({
-      provider: 'ic', targetKey: 'u', name: 'My Account',
+      provider: 'ic',
+      targetKey: 'u',
+      name: 'My Account',
     });
     expect(result.name).toBe('My Account');
   });
@@ -85,7 +104,9 @@ describe('createExternalInternalChatAccountSchema', () => {
   });
 
   it('rejects empty provider', () => {
-    expect(() => createExternalInternalChatAccountSchema.parse({ provider: '', targetKey: 'u' })).toThrow();
+    expect(() =>
+      createExternalInternalChatAccountSchema.parse({ provider: '', targetKey: 'u' }),
+    ).toThrow();
   });
 });
 
@@ -98,28 +119,36 @@ describe('updateExternalInternalChatAccountSchema', () => {
   });
 
   it('parses with optional name', () => {
-    const result = updateExternalInternalChatAccountSchema.parse({ accountId: 'a', name: 'New Name' });
+    const result = updateExternalInternalChatAccountSchema.parse({
+      accountId: 'a',
+      name: 'New Name',
+    });
     expect(result.name).toBe('New Name');
   });
 
   it('parses with valid webhookUrl', () => {
     const result = updateExternalInternalChatAccountSchema.parse({
-      accountId: 'a', webhookUrl: 'https://example.com/webhook',
+      accountId: 'a',
+      webhookUrl: 'https://example.com/webhook',
     });
     expect(result.webhookUrl).toBe('https://example.com/webhook');
   });
 
   it('accepts null webhookUrl', () => {
     const result = updateExternalInternalChatAccountSchema.parse({
-      accountId: 'a', webhookUrl: null,
+      accountId: 'a',
+      webhookUrl: null,
     });
     expect(result.webhookUrl).toBeNull();
   });
 
   it('rejects invalid webhookUrl format', () => {
-    expect(() => updateExternalInternalChatAccountSchema.parse({
-      accountId: 'a', webhookUrl: 'not-a-url',
-    })).toThrow();
+    expect(() =>
+      updateExternalInternalChatAccountSchema.parse({
+        accountId: 'a',
+        webhookUrl: 'not-a-url',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing accountId', () => {
@@ -131,7 +160,9 @@ describe('updateExternalInternalChatAccountSchema', () => {
 
 describe('deleteExternalInternalChatAccountSchema', () => {
   it('parses with accountId', () => {
-    expect(deleteExternalInternalChatAccountSchema.parse({ accountId: 'acc-1' })).toMatchObject({ accountId: 'acc-1' });
+    expect(deleteExternalInternalChatAccountSchema.parse({ accountId: 'acc-1' })).toMatchObject({
+      accountId: 'acc-1',
+    });
   });
 
   it('rejects missing accountId', () => {
@@ -147,7 +178,9 @@ describe('deleteExternalInternalChatAccountSchema', () => {
 
 describe('internalChatAccountIdQuerySchema', () => {
   it('parses with accountId', () => {
-    expect(internalChatAccountIdQuerySchema.parse({ accountId: 'acc-1' })).toMatchObject({ accountId: 'acc-1' });
+    expect(internalChatAccountIdQuerySchema.parse({ accountId: 'acc-1' })).toMatchObject({
+      accountId: 'acc-1',
+    });
   });
 
   it('rejects missing accountId', () => {
@@ -165,13 +198,16 @@ describe('internalChatMessagesQuerySchema', () => {
     });
     expect(result.accountId).toBe('acc-1');
     expect(result.conversationId).toBe('conv-1');
-    expect(result.limit).toBe(20);    // default
-    expect(result.offset).toBe(0);    // default
+    expect(result.limit).toBe(20); // default
+    expect(result.offset).toBe(0); // default
   });
 
   it('parses with explicit limit and offset', () => {
     const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: 50, offset: 10,
+      accountId: 'a',
+      conversationId: 'c',
+      limit: 50,
+      offset: 10,
     });
     expect(result.limit).toBe(50);
     expect(result.offset).toBe(10);
@@ -179,34 +215,50 @@ describe('internalChatMessagesQuerySchema', () => {
 
   it('coerces string limit to number', () => {
     const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: '25',
+      accountId: 'a',
+      conversationId: 'c',
+      limit: '25',
     });
     expect(result.limit).toBe(25);
   });
 
   it('coerces string offset to number', () => {
     const result = internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', offset: '5',
+      accountId: 'a',
+      conversationId: 'c',
+      offset: '5',
     });
     expect(result.offset).toBe(5);
   });
 
   it('rejects limit less than 1', () => {
-    expect(() => internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: 0,
-    })).toThrow();
+    expect(() =>
+      internalChatMessagesQuerySchema.parse({
+        accountId: 'a',
+        conversationId: 'c',
+        limit: 0,
+      }),
+    ).toThrow();
   });
 
   it('rejects limit greater than 100', () => {
-    expect(() => internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', limit: 101,
-    })).toThrow();
+    expect(() =>
+      internalChatMessagesQuerySchema.parse({
+        accountId: 'a',
+        conversationId: 'c',
+        limit: 101,
+      }),
+    ).toThrow();
   });
 
   it('rejects negative offset', () => {
-    expect(() => internalChatMessagesQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', offset: -1,
-    })).toThrow();
+    expect(() =>
+      internalChatMessagesQuerySchema.parse({
+        accountId: 'a',
+        conversationId: 'c',
+        offset: -1,
+      }),
+    ).toThrow();
   });
 
   it('rejects missing conversationId', () => {
@@ -228,15 +280,24 @@ describe('internalChatMessageAttachmentQuerySchema', () => {
   });
 
   it('rejects missing attachmentName', () => {
-    expect(() => internalChatMessageAttachmentQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', messageId: 'm',
-    })).toThrow();
+    expect(() =>
+      internalChatMessageAttachmentQuerySchema.parse({
+        accountId: 'a',
+        conversationId: 'c',
+        messageId: 'm',
+      }),
+    ).toThrow();
   });
 
   it('rejects empty attachmentName', () => {
-    expect(() => internalChatMessageAttachmentQuerySchema.parse({
-      accountId: 'a', conversationId: 'c', messageId: 'm', attachmentName: '',
-    })).toThrow();
+    expect(() =>
+      internalChatMessageAttachmentQuerySchema.parse({
+        accountId: 'a',
+        conversationId: 'c',
+        messageId: 'm',
+        attachmentName: '',
+      }),
+    ).toThrow();
   });
 });
 
@@ -253,15 +314,20 @@ describe('createInternalChatConversationSchema', () => {
 
   it('parses with optional name', () => {
     const result = createInternalChatConversationSchema.parse({
-      accountId: 'a', name: 'Team Chat', memberKeys: ['u1'],
+      accountId: 'a',
+      name: 'Team Chat',
+      memberKeys: ['u1'],
     });
     expect(result.name).toBe('Team Chat');
   });
 
   it('rejects empty memberKeys array', () => {
-    expect(() => createInternalChatConversationSchema.parse({
-      accountId: 'a', memberKeys: [],
-    })).toThrow();
+    expect(() =>
+      createInternalChatConversationSchema.parse({
+        accountId: 'a',
+        memberKeys: [],
+      }),
+    ).toThrow();
   });
 
   it('rejects missing memberKeys', () => {
@@ -283,7 +349,9 @@ describe('sendInternalChatConversationMessageSchema', () => {
 
   it('parses with optional parentMessageId', () => {
     const result = sendInternalChatConversationMessageSchema.parse({
-      conversationId: 'c', content: 'msg', parentMessageId: 'parent-1',
+      conversationId: 'c',
+      content: 'msg',
+      parentMessageId: 'parent-1',
     });
     expect(result.parentMessageId).toBe('parent-1');
   });
@@ -293,9 +361,12 @@ describe('sendInternalChatConversationMessageSchema', () => {
   });
 
   it('rejects empty content', () => {
-    expect(() => sendInternalChatConversationMessageSchema.parse({
-      conversationId: 'c', content: '',
-    })).toThrow();
+    expect(() =>
+      sendInternalChatConversationMessageSchema.parse({
+        conversationId: 'c',
+        content: '',
+      }),
+    ).toThrow();
   });
 });
 
@@ -309,14 +380,16 @@ describe('updateInternalChatConversationSchema', () => {
 
   it('parses with optional name', () => {
     const result = updateInternalChatConversationSchema.parse({
-      conversationId: 'c', name: 'New Name',
+      conversationId: 'c',
+      name: 'New Name',
     });
     expect(result.name).toBe('New Name');
   });
 
   it('parses with optional archive flag', () => {
     const result = updateInternalChatConversationSchema.parse({
-      conversationId: 'c', archive: true,
+      conversationId: 'c',
+      archive: true,
     });
     expect(result.archive).toBe(true);
   });
@@ -330,8 +403,9 @@ describe('updateInternalChatConversationSchema', () => {
 
 describe('archiveInternalChatConversationSchema', () => {
   it('parses with conversationId', () => {
-    expect(archiveInternalChatConversationSchema.parse({ conversationId: 'conv-1' }))
-      .toMatchObject({ conversationId: 'conv-1' });
+    expect(archiveInternalChatConversationSchema.parse({ conversationId: 'conv-1' })).toMatchObject(
+      { conversationId: 'conv-1' },
+    );
   });
 
   it('rejects missing conversationId', () => {
@@ -343,8 +417,9 @@ describe('archiveInternalChatConversationSchema', () => {
 
 describe('internalChatGroupMembersQuerySchema', () => {
   it('parses with conversationId', () => {
-    expect(internalChatGroupMembersQuerySchema.parse({ conversationId: 'conv-1' }))
-      .toMatchObject({ conversationId: 'conv-1' });
+    expect(internalChatGroupMembersQuerySchema.parse({ conversationId: 'conv-1' })).toMatchObject({
+      conversationId: 'conv-1',
+    });
   });
 
   it('rejects missing conversationId', () => {
@@ -366,15 +441,21 @@ describe('addInternalChatGroupMemberSchema', () => {
 
   it('parses with explicit admin role', () => {
     const result = addInternalChatGroupMemberSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'admin',
+      conversationId: 'c',
+      participantKey: 'p',
+      role: 'admin',
     });
     expect(result.role).toBe('admin');
   });
 
   it('rejects invalid role', () => {
-    expect(() => addInternalChatGroupMemberSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'moderator',
-    })).toThrow();
+    expect(() =>
+      addInternalChatGroupMemberSchema.parse({
+        conversationId: 'c',
+        participantKey: 'p',
+        role: 'moderator',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing conversationId', () => {
@@ -387,28 +468,39 @@ describe('addInternalChatGroupMemberSchema', () => {
 describe('updateInternalChatGroupMemberRoleSchema', () => {
   it('parses with admin role', () => {
     const result = updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'conv-1', participantKey: 'user-1', role: 'admin',
+      conversationId: 'conv-1',
+      participantKey: 'user-1',
+      role: 'admin',
     });
     expect(result.role).toBe('admin');
   });
 
   it('parses with normal role', () => {
     const result = updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'normal',
+      conversationId: 'c',
+      participantKey: 'p',
+      role: 'normal',
     });
     expect(result.role).toBe('normal');
   });
 
   it('rejects invalid role', () => {
-    expect(() => updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'c', participantKey: 'p', role: 'guest',
-    })).toThrow();
+    expect(() =>
+      updateInternalChatGroupMemberRoleSchema.parse({
+        conversationId: 'c',
+        participantKey: 'p',
+        role: 'guest',
+      }),
+    ).toThrow();
   });
 
   it('rejects missing role', () => {
-    expect(() => updateInternalChatGroupMemberRoleSchema.parse({
-      conversationId: 'c', participantKey: 'p',
-    })).toThrow();
+    expect(() =>
+      updateInternalChatGroupMemberRoleSchema.parse({
+        conversationId: 'c',
+        participantKey: 'p',
+      }),
+    ).toThrow();
   });
 });
 
@@ -416,9 +508,12 @@ describe('updateInternalChatGroupMemberRoleSchema', () => {
 
 describe('removeInternalChatGroupMemberSchema', () => {
   it('parses valid input', () => {
-    expect(removeInternalChatGroupMemberSchema.parse({
-      conversationId: 'conv-1', participantKey: 'user-1',
-    })).toMatchObject({ conversationId: 'conv-1', participantKey: 'user-1' });
+    expect(
+      removeInternalChatGroupMemberSchema.parse({
+        conversationId: 'conv-1',
+        participantKey: 'user-1',
+      }),
+    ).toMatchObject({ conversationId: 'conv-1', participantKey: 'user-1' });
   });
 
   it('rejects missing conversationId', () => {
@@ -439,13 +534,17 @@ describe('schema.safeParse', () => {
   });
 
   it('createInternalChatConversationSchema safeParse returns success false for empty members', () => {
-    const result = createInternalChatConversationSchema.safeParse({ accountId: 'a', memberKeys: [] });
+    const result = createInternalChatConversationSchema.safeParse({
+      accountId: 'a',
+      memberKeys: [],
+    });
     expect(result.success).toBe(false);
   });
 
   it('sendInternalChatConversationMessageSchema safeParse returns success true for valid input', () => {
     const result = sendInternalChatConversationMessageSchema.safeParse({
-      conversationId: 'c', content: 'Hello',
+      conversationId: 'c',
+      content: 'Hello',
     });
     expect(result.success).toBe(true);
     expect(result.data?.content).toBe('Hello');

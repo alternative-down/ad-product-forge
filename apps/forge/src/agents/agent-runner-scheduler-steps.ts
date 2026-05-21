@@ -53,11 +53,7 @@ export type SchedulerSteps = {
 const RUNNER_AWAIT_TIMEOUT_MS = 60_000;
 
 export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
-
-  async function beginRun(
-    runEpoch: number,
-    input: BeginRunInput,
-  ): Promise<void> {
+  async function beginRun(runEpoch: number, input: BeginRunInput): Promise<void> {
     const { isStopped, getStartingRun, setStartingRun } = deps;
     if (isStopped() || getStartingRun().running) {
       return;
@@ -103,8 +99,18 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
   }
 
   async function queueNextStep(): Promise<void> {
-    const { isStopped, getExecuting, isTimerActive, isStaleRun, getActiveRunEpoch,
-            getRunnableContract, runtimeId, scheduleNextStep, planNextStepDelay, advanceStepEpoch } = deps;
+    const {
+      isStopped,
+      getExecuting,
+      isTimerActive,
+      isStaleRun,
+      getActiveRunEpoch,
+      getRunnableContract,
+      runtimeId,
+      scheduleNextStep,
+      planNextStepDelay,
+      advanceStepEpoch,
+    } = deps;
 
     if (isStopped() || getExecuting() || isTimerActive() || isStaleRun(getActiveRunEpoch())) {
       return;
@@ -112,7 +118,7 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
 
     const executionState = await withTimeout(
       getRunnableContract(runtimeId)
-        .then(c => c !== null && c !== undefined ? 'running' : 'idle')
+        .then((c) => (c !== null && c !== undefined ? 'running' : 'idle'))
         .catch(() => 'idle'),
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state lookup timed out for ${runtimeId}`,

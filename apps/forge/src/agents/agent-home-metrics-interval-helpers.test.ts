@@ -39,11 +39,7 @@ describe('computeIntervalConsistencyScore', () => {
   });
 
   it('returns 100 for steps with identical timestamps', () => {
-    const steps = [
-      { createdAt: 100 },
-      { createdAt: 100 },
-      { createdAt: 100 },
-    ];
+    const steps = [{ createdAt: 100 }, { createdAt: 100 }, { createdAt: 100 }];
     expect(computeIntervalConsistencyScore(steps)).toBe(100);
   });
 
@@ -86,17 +82,12 @@ describe('buildAverageStepIntervalMs (re-exported)', () => {
   });
 
   it('computes average from 2 steps', () => {
-    expect(buildAverageStepIntervalMs([
-      { createdAt: 200 },
-      { createdAt: 100 },
-    ])).toBe(100);
+    expect(buildAverageStepIntervalMs([{ createdAt: 200 }, { createdAt: 100 }])).toBe(100);
   });
 
   it('handles unsorted input', () => {
-    expect(buildAverageStepIntervalMs([
-      { createdAt: 1000 },
-      { createdAt: 500 },
-      { createdAt: 800 },
-    ])).toBe(250);
+    expect(
+      buildAverageStepIntervalMs([{ createdAt: 1000 }, { createdAt: 500 }, { createdAt: 800 }]),
+    ).toBe(250);
   });
 });

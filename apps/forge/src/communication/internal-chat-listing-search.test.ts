@@ -92,14 +92,31 @@ function makeMockDb(rows: unknown[] = []) {
 describe('createInternalChatListing — getMessages keyword search', () => {
   it('filters messages by keyword when query param is provided', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Hello world', createdAt: 1000, authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Hello world',
+        createdAt: 1000,
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, query: 'world' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'world',
+    });
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('Hello world');
@@ -108,25 +125,58 @@ describe('createInternalChatListing — getMessages keyword search', () => {
   it('returns no messages when keyword does not match any message', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, query: 'nonexistent' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'nonexistent',
+    });
 
     expect(result).toHaveLength(0);
   });
 
   it('returns all messages when query is not provided — no LIKE filter applied', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Alpha', createdAt: 1001, authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
-      { messageId: 'msg-2', content: 'Beta', createdAt: 1000, authorAccountId: 'acct-2', authorDisplayName: 'Bob', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Alpha',
+        createdAt: 1001,
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
+      {
+        messageId: 'msg-2',
+        content: 'Beta',
+        createdAt: 1000,
+        authorAccountId: 'acct-2',
+        authorDisplayName: 'Bob',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0 });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+    });
 
     expect(result).toHaveLength(2);
   });
@@ -134,24 +184,51 @@ describe('createInternalChatListing — getMessages keyword search', () => {
   it('SQL LIKE is case-sensitive — "HELLO" does not match "hello"', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, query: 'HELLO' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'HELLO',
+    });
 
     expect(result).toHaveLength(0);
   });
 
   it('matches partial words — "wor" matches "world"', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'world of testing', createdAt: 1000, authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'world of testing',
+        createdAt: 1000,
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, query: 'wor' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'wor',
+    });
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('world of testing');
@@ -163,14 +240,31 @@ describe('createInternalChatListing — getMessages keyword search', () => {
 describe('createInternalChatListing — getMessages date range filters', () => {
   it('returns messages created on or after dateFrom', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Message 1', createdAt: new Date('2026-01-01').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Message 1',
+        createdAt: new Date('2026-01-01').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateFrom: '2025-12-01' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: '2025-12-01',
+    });
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('Message 1');
@@ -179,24 +273,51 @@ describe('createInternalChatListing — getMessages date range filters', () => {
   it('returns no messages when all messages are before dateFrom', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateFrom: '2027-01-01' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: '2027-01-01',
+    });
 
     expect(result).toHaveLength(0);
   });
 
   it('returns messages created on or before dateTo', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Message 1', createdAt: new Date('2026-01-01').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Message 1',
+        createdAt: new Date('2026-01-01').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateTo: '2026-12-31' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateTo: '2026-12-31',
+    });
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('Message 1');
@@ -205,26 +326,51 @@ describe('createInternalChatListing — getMessages date range filters', () => {
   it('returns no messages when all messages are after dateTo', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateTo: '2020-01-01' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateTo: '2020-01-01',
+    });
 
     expect(result).toHaveLength(0);
   });
 
   it('combines dateFrom and dateTo — returns messages within the range', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Within range', createdAt: new Date('2026-06-15').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Within range',
+        createdAt: new Date('2026-06-15').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessages({
-      agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      dateFrom: '2026-01-01', dateTo: '2026-12-31',
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: '2026-01-01',
+      dateTo: '2026-12-31',
     });
 
     expect(result).toHaveLength(1);
@@ -233,12 +379,20 @@ describe('createInternalChatListing — getMessages date range filters', () => {
   it('returns empty when dateFrom > dateTo — no messages in inverted range', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessages({
-      agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      dateFrom: '2026-12-31', dateTo: '2026-01-01',
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: '2026-12-31',
+      dateTo: '2026-01-01',
     });
 
     expect(result).toHaveLength(0);
@@ -246,14 +400,31 @@ describe('createInternalChatListing — getMessages date range filters', () => {
 
   it('ignores invalid dateFrom (NaN) — returns messages without date filter', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Any date', createdAt: 9999999999999, authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Any date',
+        createdAt: 9999999999999,
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessages({ agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateFrom: 'not-a-date' });
+    const result = await listing.getMessages({
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: 'not-a-date',
+    });
 
     expect(result).toHaveLength(1);
   });
@@ -264,14 +435,31 @@ describe('createInternalChatListing — getMessages date range filters', () => {
 describe('createInternalChatListing — getMessagesByAccount keyword search', () => {
   it('filters by keyword when query param is provided', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Find this keyword', createdAt: 1000, authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Find this keyword',
+        createdAt: 1000,
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessagesByAccount({ accountId: 'acct-1', conversationKey: 'conv-1', limit: 50, offset: 0, query: 'keyword' });
+    const result = await listing.getMessagesByAccount({
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'keyword',
+    });
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('Find this keyword');
@@ -280,25 +468,58 @@ describe('createInternalChatListing — getMessagesByAccount keyword search', ()
   it('returns no results when keyword does not match', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessagesByAccount({ accountId: 'acct-1', conversationKey: 'conv-1', limit: 50, offset: 0, query: 'missing' });
+    const result = await listing.getMessagesByAccount({
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'missing',
+    });
 
     expect(result).toHaveLength(0);
   });
 
   it('returns all messages when query is absent — no LIKE filter applied', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Message A', createdAt: 1001, authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
-      { messageId: 'msg-2', content: 'Message B', createdAt: 1000, authorAccountId: 'acct-2', authorDisplayName: 'Bob', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Message A',
+        createdAt: 1001,
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
+      {
+        messageId: 'msg-2',
+        content: 'Message B',
+        createdAt: 1000,
+        authorAccountId: 'acct-2',
+        authorDisplayName: 'Bob',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessagesByAccount({ accountId: 'acct-1', conversationKey: 'conv-1', limit: 50, offset: 0 });
+    const result = await listing.getMessagesByAccount({
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+    });
 
     expect(result).toHaveLength(2);
   });
@@ -309,28 +530,62 @@ describe('createInternalChatListing — getMessagesByAccount keyword search', ()
 describe('createInternalChatListing — getMessagesByAccount date range filters', () => {
   it('applies dateFrom — returns messages at or after the date', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'In range', createdAt: new Date('2026-03-15').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'In range',
+        createdAt: new Date('2026-03-15').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessagesByAccount({ accountId: 'acct-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateFrom: '2026-01-01' });
+    const result = await listing.getMessagesByAccount({
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: '2026-01-01',
+    });
 
     expect(result).toHaveLength(1);
   });
 
   it('applies dateTo — returns messages at or before the date', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'In range', createdAt: new Date('2026-03-15').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'In range',
+        createdAt: new Date('2026-03-15').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
-    const result = await listing.getMessagesByAccount({ accountId: 'acct-1', conversationKey: 'conv-1', limit: 50, offset: 0, dateTo: '2026-12-31' });
+    const result = await listing.getMessagesByAccount({
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateTo: '2026-12-31',
+    });
 
     expect(result).toHaveLength(1);
   });
@@ -338,12 +593,20 @@ describe('createInternalChatListing — getMessagesByAccount date range filters'
   it('returns empty when dateFrom and dateTo exclude all messages', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-1', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessagesByAccount({
-      accountId: 'acct-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      dateFrom: '2030-01-01', dateTo: '2030-12-31',
+      accountId: 'acct-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      dateFrom: '2030-01-01',
+      dateTo: '2030-12-31',
     });
 
     expect(result).toHaveLength(0);
@@ -355,16 +618,31 @@ describe('createInternalChatListing — getMessagesByAccount date range filters'
 describe('createInternalChatListing — getMessages combined filters', () => {
   it('applies keyword AND dateFrom simultaneously', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Important update about delivery', createdAt: new Date('2026-05-01').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Important update about delivery',
+        createdAt: new Date('2026-05-01').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessages({
-      agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      query: 'update', dateFrom: '2026-04-01',
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'update',
+      dateFrom: '2026-04-01',
     });
 
     expect(result).toHaveLength(1);
@@ -373,16 +651,31 @@ describe('createInternalChatListing — getMessages combined filters', () => {
 
   it('applies keyword AND dateTo simultaneously', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Status update', createdAt: new Date('2026-05-15').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Status update',
+        createdAt: new Date('2026-05-15').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessages({
-      agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      query: 'update', dateTo: '2026-05-31',
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'update',
+      dateTo: '2026-05-31',
     });
 
     expect(result).toHaveLength(1);
@@ -390,16 +683,32 @@ describe('createInternalChatListing — getMessages combined filters', () => {
 
   it('applies all three filters — query, dateFrom, and dateTo', async () => {
     const rows = [
-      { messageId: 'msg-1', content: 'Deployment update for production', createdAt: new Date('2026-05-10').getTime(), authorAccountId: 'acct-1', authorDisplayName: 'Alice', replyToMessageId: null },
+      {
+        messageId: 'msg-1',
+        content: 'Deployment update for production',
+        createdAt: new Date('2026-05-10').getTime(),
+        authorAccountId: 'acct-1',
+        authorDisplayName: 'Alice',
+        replyToMessageId: null,
+      },
     ];
     const { db, membershipFindFirst } = makeMockDb(rows);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessages({
-      agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      query: 'deployment', dateFrom: '2026-05-01', dateTo: '2026-05-31',
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'deployment',
+      dateFrom: '2026-05-01',
+      dateTo: '2026-05-31',
     });
 
     expect(result).toHaveLength(1);
@@ -409,12 +718,20 @@ describe('createInternalChatListing — getMessages combined filters', () => {
   it('returns empty when keyword matches but date range excludes all messages', async () => {
     const { db, membershipFindFirst } = makeMockDb([]);
     const deps = makeMockDeps();
-    membershipFindFirst.mockResolvedValue({ accountId: 'acct-agent', conversationId: 'conv-1', role: 'admin' });
+    membershipFindFirst.mockResolvedValue({
+      accountId: 'acct-agent',
+      conversationId: 'conv-1',
+      role: 'admin',
+    });
 
     const listing = createInternalChatListing(db as never, deps);
     const result = await listing.getMessages({
-      agentId: 'agent-1', conversationKey: 'conv-1', limit: 50, offset: 0,
-      query: 'update', dateFrom: '2030-01-01',
+      agentId: 'agent-1',
+      conversationKey: 'conv-1',
+      limit: 50,
+      offset: 0,
+      query: 'update',
+      dateFrom: '2030-01-01',
     });
 
     expect(result).toHaveLength(0);
@@ -431,7 +748,12 @@ describe('createInternalChatListing — getMessages error handling', () => {
 
     const listing = createInternalChatListing(db as never, deps);
     await expect(
-      listing.getMessages({ agentId: 'agent-1', conversationKey: 'nonexistent', limit: 50, offset: 0 }),
+      listing.getMessages({
+        agentId: 'agent-1',
+        conversationKey: 'nonexistent',
+        limit: 50,
+        offset: 0,
+      }),
     ).rejects.toThrow('Conversation not found');
   });
 
@@ -442,7 +764,12 @@ describe('createInternalChatListing — getMessages error handling', () => {
 
     const listing = createInternalChatListing(db as never, deps);
     await expect(
-      listing.getMessagesByAccount({ accountId: 'acct-1', conversationKey: 'nonexistent', limit: 50, offset: 0 }),
+      listing.getMessagesByAccount({
+        accountId: 'acct-1',
+        conversationKey: 'nonexistent',
+        limit: 50,
+        offset: 0,
+      }),
     ).rejects.toThrow('Conversation not found');
   });
 });

@@ -26,7 +26,9 @@ describe('partitionRecallResults', () => {
       graph: { hit: true, context: ctx },
       results: [{ id: 'res-1', content: 'content-1' }],
       // The fingerprint here uses the same algorithm the production code uses
-      recentFingerprints: [`graph:${require('node:crypto').createHash('sha1').update(ctx).digest('hex')}`],
+      recentFingerprints: [
+        `graph:${require('node:crypto').createHash('sha1').update(ctx).digest('hex')}`,
+      ],
     };
 
     const output = partitionRecallResults(input);
@@ -53,7 +55,10 @@ describe('partitionRecallResults', () => {
   it('returns only workspace results when graph hit is false', () => {
     const input: PartitionRecallResultsInput = {
       graph: { hit: false },
-      results: [{ id: 'res-1', content: 'content-1' }, { id: 'res-2', content: 'content-2' }],
+      results: [
+        { id: 'res-1', content: 'content-1' },
+        { id: 'res-2', content: 'content-2' },
+      ],
       recentFingerprints: [],
     };
 
@@ -66,7 +71,10 @@ describe('partitionRecallResults', () => {
   it('deduplicates workspace results whose fingerprints are in recentFingerprints', () => {
     const input: PartitionRecallResultsInput = {
       graph: { hit: false },
-      results: [{ id: 'res-seen', content: 'already seen' }, { id: 'res-new', content: 'new' }],
+      results: [
+        { id: 'res-seen', content: 'already seen' },
+        { id: 'res-new', content: 'new' },
+      ],
       recentFingerprints: ['workspace:res-seen'],
     };
 
@@ -280,7 +288,10 @@ describe('buildLtmRecallSnapshot', () => {
     const deps: LtmSnapshotDeps = { ...minimalDeps };
     const err = new Error('search failed');
 
-    const result = buildLtmRecallSnapshot(deps, minimalContext, { status: 'error', error: err as any });
+    const result = buildLtmRecallSnapshot(deps, minimalContext, {
+      status: 'error',
+      error: err as any,
+    });
 
     expect(result.status).toBe('error');
     expect(result.error).toBe(err);

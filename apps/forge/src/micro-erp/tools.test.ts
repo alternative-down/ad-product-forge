@@ -4,7 +4,8 @@ import type { Tool } from '@forge-runtime/core';
 const mocks = vi.hoisted(() => ({
   readModel: {
     getCompanyCashBalance: vi.fn<() => Promise<{ balanceUsd: number }>>(),
-    listCompanyCashMovements: vi.fn<() => Promise<{ items: unknown[]; summary: { totalIn: number; totalOut: number } }>>(),
+    listCompanyCashMovements:
+      vi.fn<() => Promise<{ items: unknown[]; summary: { totalIn: number; totalOut: number } }>>(),
     listActiveInternalAgentContracts: vi.fn<() => Promise<{ items: unknown[] }>>(),
   },
   cashOps: {
@@ -16,7 +17,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@forge-runtime/core', () => ({
-  createTool: vi.fn(({ id, description, inputSchema, execute }) => ({ id, description, inputSchema, execute })),
+  createTool: vi.fn(({ id, description, inputSchema, execute }) => ({
+    id,
+    description,
+    inputSchema,
+    execute,
+  })),
   forgeDebug: vi.fn(),
 }));
 
@@ -34,7 +40,10 @@ describe('createMicroErpTools', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.readModel.getCompanyCashBalance.mockResolvedValue({ balanceUsd: 1000 });
-    mocks.readModel.listCompanyCashMovements.mockResolvedValue({ items: [], summary: { totalIn: 0, totalOut: 0 } });
+    mocks.readModel.listCompanyCashMovements.mockResolvedValue({
+      items: [],
+      summary: { totalIn: 0, totalOut: 0 },
+    });
     mocks.readModel.listActiveInternalAgentContracts.mockResolvedValue({ items: [] });
     mocks.cashOps.recordCashIn.mockResolvedValue({ movementId: 'mov_1' });
     mocks.cashOps.recordCashOut.mockResolvedValue({ movementId: 'mov_2' });
@@ -65,7 +74,10 @@ describe('createMicroErpTools', () => {
   });
 
   test('creates multiple allowed tools', () => {
-    const tools = createMicroErpTools({} as any, new Set(['get_company_cash', 'list_company_cash']));
+    const tools = createMicroErpTools(
+      {} as any,
+      new Set(['get_company_cash', 'list_company_cash']),
+    );
     expect(Object.keys(tools)).toContain('get_company_cash');
     expect(Object.keys(tools)).toContain('list_company_cash');
     expect(Object.keys(tools)).not.toContain('list_internal_agent_contracts');

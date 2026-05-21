@@ -20,31 +20,37 @@ export type TodoItemInput = {
   status?: TodoItemStatus;
 };
 
-const todoItemInputSchema = z.union([
-  z.object({
-    items: z.union([
+const todoItemInputSchema = z
+  .union(
+    [
       z.object({
-        id: z.string().optional(),
-        title: z.string().min(1),
-        status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+        items: z.union([
+          z.object({
+            id: z.string().optional(),
+            title: z.string().min(1),
+            status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+          }),
+          z.array(
+            z.object({
+              id: z.string().optional(),
+              title: z.string().min(1),
+              status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+            }),
+          ),
+        ]),
       }),
-      z.array(z.object({
-        id: z.string().optional(),
-        title: z.string().min(1),
-        status: z.enum(['pending', 'in_progress', 'completed']).optional(),
-      })),
-    ]),
-  }),
-] as any /* eslint-disable-line @typescript-eslint/no-explicit-any */).transform((val: any) => {
-  if ('items' in val) {
-    const items = val.items;
-    if (Array.isArray(items)) {
-      return { items } as { items: TodoItemInput[] };
+    ] as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
+  )
+  .transform((val: any) => {
+    if ('items' in val) {
+      const items = val.items;
+      if (Array.isArray(items)) {
+        return { items } as { items: TodoItemInput[] };
+      }
+      return { items: [items] as TodoItemInput[] };
     }
-    return { items: [items] as TodoItemInput[] };
-  }
-  return { items: [] as TodoItemInput[] };
-});
+    return { items: [] as TodoItemInput[] };
+  });
 
 export type LibsqlTodoStoreOptions = {
   client: Client;
@@ -202,8 +208,10 @@ export function createUpdateTodosAction(
 ) {
   return {
     name: 'updateTodos',
-    description: 'Create, update, complete, or clear operational todo items. Items without id are created; items with id are updated. Empty array clears all.',
-    inputSchema: todoItemInputSchema as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
+    description:
+      'Create, update, complete, or clear operational todo items. Items without id are created; items with id are updated. Empty array clears all.',
+    inputSchema:
+      todoItemInputSchema as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
     execute: async (rawInput: unknown): Promise<unknown> => {
       const { items } = todoItemInputSchema.parse(rawInput) as { items: TodoItemInput[] };
 

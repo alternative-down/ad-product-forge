@@ -98,7 +98,9 @@ export function createAgentWakeQueue(config: {
       return;
     }
 
-    const queuedEvents = Array.from(readyEvents.values()).sort((left, right) => left.timestamp - right.timestamp);
+    const queuedEvents = Array.from(readyEvents.values()).sort(
+      (left, right) => left.timestamp - right.timestamp,
+    );
 
     pending = false;
     firstPendingAt = null;
@@ -155,7 +157,7 @@ export function createAgentWakeQueue(config: {
       const remainingAccumulationMs = wakeWindow.maxAccumulationMs - accumulatedMs;
       scheduleTrigger(Math.min(wakeWindow.debounceMs, remainingAccumulationMs));
     },
-      // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await
     async onRunnerIdle() {
       if (idleEvents.size > 0) {
         for (const event of idleEvents.values()) {

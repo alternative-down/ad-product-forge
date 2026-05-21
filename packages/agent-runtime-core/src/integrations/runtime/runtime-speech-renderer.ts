@@ -1,8 +1,6 @@
 import { getStepMessageText } from '../../core/step-output.js';
 import type { StepRecord } from '../../core/types.js';
-import {
-  BufferedStreamingTextToSpeechGateway,
-} from '../gateways/buffered-streaming-tts.js';
+import { BufferedStreamingTextToSpeechGateway } from '../gateways/buffered-streaming-tts.js';
 import type {
   StreamingTextToSpeechGateway,
   StreamingTextToSpeechResponse,
@@ -22,8 +20,9 @@ export class RuntimeSpeechRenderer {
 
   constructor(options: RuntimeSpeechRendererOptions) {
     this.tts = options.tts ?? null;
-    this.streamingTts = options.streamingTts
-      ?? (options.tts ? new BufferedStreamingTextToSpeechGateway({ tts: options.tts }) : null);
+    this.streamingTts =
+      options.streamingTts ??
+      (options.tts ? new BufferedStreamingTextToSpeechGateway({ tts: options.tts }) : null);
   }
 
   async renderText(

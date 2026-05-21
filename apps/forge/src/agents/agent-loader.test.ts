@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import type {Database} from '../database/client';
+import type { Database } from '../database/client';
 import { loadAgent, loadAgents } from './agent-loader';
 import type { SingleAgentLoaderConfig, AgentLoaderConfig } from './agent-loader-types';
 
@@ -111,7 +111,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockLoadAgentRuntimeData.mockResolvedValue(mockRuntimeData);
   mockLoadAgentToolset.mockResolvedValue(mockToolset);
-  mockCreateSystemSettingsStore.mockReturnValue({ getSettings: vi.fn().mockResolvedValue(makeSettings()) });
+  mockCreateSystemSettingsStore.mockReturnValue({
+    getSettings: vi.fn().mockResolvedValue(makeSettings()),
+  });
   mockCreateAgentRuntime.mockResolvedValue({ id: 'runtime-1' } as any);
   mockCreateAgentContractStore.mockReturnValue({});
 });
@@ -170,7 +172,9 @@ describe('loadAgent', () => {
 
   it('passes system settings to runtime memory settings', async () => {
     const settings = makeSettings({ ltmRecallSearchMode: 'hybrid' });
-    mockCreateSystemSettingsStore.mockReturnValue({ getSettings: vi.fn().mockResolvedValue(settings) });
+    mockCreateSystemSettingsStore.mockReturnValue({
+      getSettings: vi.fn().mockResolvedValue(settings),
+    });
     const config = makeConfig();
 
     await loadAgent(mockDb, config);
@@ -247,9 +251,7 @@ describe('loadAgent', () => {
 
     await loadAgent(mockDb, config);
 
-    const loadCall = mockForgeDebug.mock.calls.find(
-      (c) => c[0].message === 'Loading agent',
-    );
+    const loadCall = mockForgeDebug.mock.calls.find((c) => c[0].message === 'Loading agent');
     expect(loadCall?.[0].agentId).toBe('agent-1');
     expect(loadCall?.[0].agentName).toBe('Test Agent');
   });
@@ -261,10 +263,7 @@ describe('loadAgents', () => {
     const dbWithAgents = {
       query: {
         agents: {
-          findMany: vi.fn().mockResolvedValue([
-            { id: 'agent-1' },
-            { id: 'agent-2' },
-          ]),
+          findMany: vi.fn().mockResolvedValue([{ id: 'agent-1' }, { id: 'agent-2' }]),
         },
       },
     } as unknown as Database;

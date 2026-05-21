@@ -41,7 +41,9 @@ describe('forgeMcpStdioServerSchema', () => {
   it('rejects missing required fields', () => {
     expect(() => forgeMcpStdioServerSchema.parse({ name: 'x' })).toThrow(z.ZodError);
     expect(() => forgeMcpStdioServerSchema.parse({ id: 'x' })).toThrow(z.ZodError);
-    expect(() => forgeMcpStdioServerSchema.parse({ id: '', name: 'x', transport: 'stdio', command: 'c' })).toThrow();
+    expect(() =>
+      forgeMcpStdioServerSchema.parse({ id: '', name: 'x', transport: 'stdio', command: 'c' }),
+    ).toThrow();
   });
 
   it('rejects non-stdio transport', () => {

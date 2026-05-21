@@ -13,9 +13,7 @@ export type WorkspaceAgentApplicationOptions = {
   skillBasePath?: string;
 };
 
-export function createWorkspaceAgentApplication(
-  options: WorkspaceAgentApplicationOptions,
-) {
+export function createWorkspaceAgentApplication(options: WorkspaceAgentApplicationOptions) {
   const host = createRuntimeHost({
     runtime: options.runtime,
   });
@@ -25,9 +23,8 @@ export function createWorkspaceAgentApplication(
     env: z.record(z.string(), z.string()).optional(),
     timeoutMs: z.number().int().positive().optional(),
   });
-  const executeWorkspaceCommand = (input: z.infer<typeof workspaceCommandSchema>) => (
-    options.workspace.execute(input)
-  );
+  const executeWorkspaceCommand = (input: z.infer<typeof workspaceCommandSchema>) =>
+    options.workspace.execute(input);
 
   host.runtime.registerAction({
     name: 'workspace_execute',
@@ -52,11 +49,7 @@ export function createWorkspaceAgentApplication(
     runtime: host.runtime,
     journal: host.journal,
     notes: host.notes,
-    async queueTask(task: {
-      id: string;
-      text: string;
-      cwd?: string;
-    }) {
+    async queueTask(task: { id: string; text: string; cwd?: string }) {
       await host.runtime.dispatch({
         id: task.id,
         type: 'workspace-task',
@@ -79,8 +72,8 @@ export function createWorkspaceAgentApplication(
       const skills = options.skills
         ? await options.skills.list()
         : await loadSkillsFromDirectory({
-          basePath: options.skillBasePath as string,
-        });
+            basePath: options.skillBasePath as string,
+          });
       const runtimeId = host.runtime.getSnapshot().runtimeId;
 
       for (const skill of skills) {

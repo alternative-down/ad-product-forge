@@ -32,7 +32,10 @@ const registry = {
   get: vi.fn((id: string) => registryState.get(id)),
   add: vi.fn(async (_db: unknown, runtime: { id: string } | undefined) => {
     if (!runtime) return;
-    registryState.set(runtime.id, { id: runtime.id, runner: mockRunnerInstances.get(runtime.id) ?? vi.fn() });
+    registryState.set(runtime.id, {
+      id: runtime.id,
+      runner: mockRunnerInstances.get(runtime.id) ?? vi.fn(),
+    });
   }),
   delete: vi.fn((id: string) => registryState.delete(id)),
 };
@@ -61,7 +64,7 @@ import {
   changeAgentRoleFromAdmin,
   updateInternalChatProviderProfile,
 } from './runtime';
-import type {Database} from '../database/client'
+import type { Database } from '../database/client';
 import type { InternalChatService } from '../communication/internal-chat-service';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -162,7 +165,11 @@ describe('capabilities/runtime', () => {
     it('loads and re-adds the agent when it is in the registry', async () => {
       registryState.set('ag_001', { id: 'ag_001', runner: vi.fn() });
       const { loadAgent } = await import('../agents/agent-loader');
-      (loadAgent as any).mockResolvedValue({ id: 'ag_001', name: 'Test', dispose: vi.fn() } as never);
+      (loadAgent as any).mockResolvedValue({
+        id: 'ag_001',
+        name: 'Test',
+        dispose: vi.fn(),
+      } as never);
 
       const db = makeDb();
       const config = makeConfig();
@@ -178,10 +185,7 @@ describe('capabilities/runtime', () => {
   describe('reloadAgentsForRole', () => {
     it('queries agents by roleId and reloads each', async () => {
       const db = makeDb();
-      db.query.agents.findMany = vi.fn().mockResolvedValue([
-        { id: 'ag_001' },
-        { id: 'ag_002' },
-      ]);
+      db.query.agents.findMany = vi.fn().mockResolvedValue([{ id: 'ag_001' }, { id: 'ag_002' }]);
       registryState.set('ag_001', { id: 'ag_001', runner: vi.fn() });
       registryState.set('ag_002', { id: 'ag_002', runner: vi.fn() });
 
@@ -227,7 +231,8 @@ describe('capabilities/runtime', () => {
 
     it('throws when target agent is not found', async () => {
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
+      db.query.agents.findFirst = vi
+        .fn()
         .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor'))
         .mockResolvedValueOnce(null);
 
@@ -244,7 +249,8 @@ describe('capabilities/runtime', () => {
 
     it('throws when role is not found', async () => {
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
+      db.query.agents.findFirst = vi
+        .fn()
         .mockResolvedValueOnce(makeAgent('ag_actor', 'Actor'))
         .mockResolvedValueOnce(makeAgent('ag_target', 'Target'))
         .mockResolvedValueOnce(null);
@@ -260,22 +266,21 @@ describe('capabilities/runtime', () => {
       ).rejects.toThrow('Role not found');
     });
 
-      it('updates agent role, notifies, reloads, and returns the result', async () => {
+    it('updates agent role, notifies, reloads, and returns the result', async () => {
       const actor = makeAgent('ag_actor', 'Actor');
       const target = makeAgent('ag_target', 'Target', 'role_dev');
       const role = makeRole('role_dev', 'Developer', 'Developer description');
 
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
+      db.query.agents.findFirst = vi
+        .fn()
         .mockResolvedValueOnce(actor)
         .mockResolvedValueOnce(target)
         .mockResolvedValueOnce(role);
-      db.query.agentRoles.findFirst = vi.fn()
-        .mockResolvedValueOnce(role);
+      db.query.agentRoles.findFirst = vi.fn().mockResolvedValueOnce(role);
 
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
       (db.query as any).agentProviders = { findFirst: vi.fn().mockResolvedValue(null) };
-
 
       const { createAgentNotificationStore } = await import('../notifications/store');
       const { loadAgent } = await import('../agents/agent-loader');
@@ -298,7 +303,9 @@ describe('capabilities/runtime', () => {
         changedByAgentId: 'ag_actor',
       });
       expect(db.update).toHaveBeenCalled();
-      expect(vi.mocked(createAgentNotificationStore).mock.results[0]?.value.createNotification).toHaveBeenCalledWith(
+      expect(
+        vi.mocked(createAgentNotificationStore).mock.results[0]?.value.createNotification,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           agentId: 'ag_target',
           content: expect.stringContaining('Agent role assignment changed'),
@@ -312,11 +319,8 @@ describe('capabilities/runtime', () => {
       const role = makeRole('role_dev', 'Developer');
 
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
-        .mockResolvedValueOnce(agent)
-        .mockResolvedValueOnce(agent);
-      db.query.agentRoles.findFirst = vi.fn()
-        .mockResolvedValueOnce(role);
+      db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(agent).mockResolvedValueOnce(agent);
+      db.query.agentRoles.findFirst = vi.fn().mockResolvedValueOnce(role);
 
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
 
@@ -346,9 +350,7 @@ describe('capabilities/runtime', () => {
   describe('changeAgentRoleFromAdmin', () => {
     it('throws when target agent is not found', async () => {
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
+      db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null);
 
       await expect(
         changeAgentRoleFromAdmin({
@@ -362,7 +364,8 @@ describe('capabilities/runtime', () => {
 
     it('throws when role is not found', async () => {
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
+      db.query.agents.findFirst = vi
+        .fn()
         .mockResolvedValueOnce(makeAgent('ag_001', 'Target'))
         .mockResolvedValueOnce(null);
 
@@ -381,10 +384,8 @@ describe('capabilities/runtime', () => {
       const role = makeRole('role_qa', 'QA Engineer', 'QA role description');
 
       const db = makeDb();
-      db.query.agents.findFirst = vi.fn()
-        .mockResolvedValueOnce(target);
-      db.query.agentRoles.findFirst = vi.fn()
-        .mockResolvedValueOnce(role);
+      db.query.agents.findFirst = vi.fn().mockResolvedValueOnce(target);
+      db.query.agentRoles.findFirst = vi.fn().mockResolvedValueOnce(role);
 
       db.update = vi.fn().mockReturnValue(makeUpdateChain());
 

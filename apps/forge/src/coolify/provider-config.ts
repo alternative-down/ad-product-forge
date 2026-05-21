@@ -25,7 +25,11 @@ export async function getProviderConfig(
   const integration = await integrations.getCoolifyConfig();
 
   if (!integration) {
-  forgeDebug({ scope: 'coolify-provider-config', level: 'error', message: 'coolify-provider-config: configuration check failed' });
+    forgeDebug({
+      scope: 'coolify-provider-config',
+      level: 'error',
+      message: 'coolify-provider-config: configuration check failed',
+    });
     throw new Error(
       'Coolify integration requires a configured admin connection in system integrations',
     );
@@ -50,9 +54,10 @@ export async function getApplicationsBaseDomain(
   serverUuid?: string,
 ): Promise<string> {
   try {
-    const server = serverUuid !== null && serverUuid !== undefined
-      ? extractServer(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`))
-      : await getDefaultServer();
+    const server =
+      serverUuid !== null && serverUuid !== undefined
+        ? extractServer(await requestJson('GET', `/servers/${encodeURIComponent(serverUuid)}`))
+        : await getDefaultServer();
     const wildcardDomain = normalizeDomainHost(server.wildcard_domain);
 
     if (wildcardDomain === null || wildcardDomain === undefined) {
@@ -63,11 +68,14 @@ export async function getApplicationsBaseDomain(
 
     return wildcardDomain;
   } catch (error) {
-    forgeDebug({ scope: 'coolify-provider-config', level: 'error', message: 'Coolify provider config failed', context: { error: String(serializeError(error)) } });
+    forgeDebug({
+      scope: 'coolify-provider-config',
+      level: 'error',
+      message: 'Coolify provider config failed',
+      context: { error: String(serializeError(error)) },
+    });
     throw new Error(
-      `Failed to resolve Coolify applications base domain: ${
-        String(serializeError(error))
-      }`,
+      `Failed to resolve Coolify applications base domain: ${String(serializeError(error))}`,
     );
   }
 }

@@ -18,10 +18,7 @@ const stepContextImagePartSchema = z.object({
   bytes: z.instanceof(Uint8Array),
 });
 
-const stepContextPartSchema = z.union([
-  stepContextTextPartSchema,
-  stepContextImagePartSchema,
-]);
+const stepContextPartSchema = z.union([stepContextTextPartSchema, stepContextImagePartSchema]);
 
 const stepContextEntrySchema = z.object({
   id: z.string().min(1),

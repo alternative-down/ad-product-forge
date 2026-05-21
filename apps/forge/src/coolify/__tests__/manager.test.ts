@@ -54,8 +54,13 @@ const PROJECTS = { data: [{ uuid: 'proj-1', name: 'forge-default' }] };
 const ENVIRONMENTS = { data: [{ uuid: 'env-1', name: 'production', project_uuid: 'proj-1' }] };
 const SERVERS = { uuid: 'srv-1', name: 'main', wildcard_domain: '.example.com' };
 const APP = {
-  uuid: 'app-1', name: 'MyApp', fqdn: 'myapp.example.com',
-  status: 'running', repository: 'org/repo', git_branch: 'main', ports_exposes: '3000',
+  uuid: 'app-1',
+  name: 'MyApp',
+  fqdn: 'myapp.example.com',
+  status: 'running',
+  repository: 'org/repo',
+  git_branch: 'main',
+  ports_exposes: '3000',
 };
 
 function buildManager() {
@@ -98,7 +103,18 @@ describe('createCoolifyManager', () => {
 
   describe('listGitHubApps', () => {
     it('returns list of GitHub apps with mapped fields', async () => {
-      nextResponse({ data: [{ id: 1, uuid: 'gu-1', name: 'GH App', organization: 'acme', api_url: 'https://api.gh.com', html_url: 'https://github.com/apps/gh' }] });
+      nextResponse({
+        data: [
+          {
+            id: 1,
+            uuid: 'gu-1',
+            name: 'GH App',
+            organization: 'acme',
+            api_url: 'https://api.gh.com',
+            html_url: 'https://github.com/apps/gh',
+          },
+        ],
+      });
       const manager = buildManager();
       const apps = await manager.listGitHubApps();
       expect(apps).toHaveLength(1);
@@ -127,8 +143,11 @@ describe('createCoolifyManager', () => {
       nextResponse({ uuid: 'new-gu-1' });
       const manager = buildManager();
       const result = await manager.createGitHubApp({
-        name: 'New App', organization: 'acme',
-        appId: '123', installationId: '456', webhookSecret: 'secret',
+        name: 'New App',
+        organization: 'acme',
+        appId: '123',
+        installationId: '456',
+        webhookSecret: 'secret',
       });
       expect(result.githubAppUuid).toBe('new-gu-1');
     });
@@ -136,13 +155,25 @@ describe('createCoolifyManager', () => {
     it('throws on API error', async () => {
       nextErrorResponse(400, { message: 'Bad request' });
       const manager = buildManager();
-      await expect(manager.createGitHubApp({ name: 'Bad', organization: 'o', appId: '1', installationId: '1', webhookSecret: 'x' })).rejects.toThrow();
+      await expect(
+        manager.createGitHubApp({
+          name: 'Bad',
+          organization: 'o',
+          appId: '1',
+          installationId: '1',
+          webhookSecret: 'x',
+        }),
+      ).rejects.toThrow();
     });
   });
 
   describe('listGitHubAppRepositories', () => {
     it('returns repository list with mapped fields', async () => {
-      nextResponse({ data: [{ id: 1, name: 'repo1', full_name: 'org/repo1', default_branch: 'main', private: true }] });
+      nextResponse({
+        data: [
+          { id: 1, name: 'repo1', full_name: 'org/repo1', default_branch: 'main', private: true },
+        ],
+      });
       const manager = buildManager();
       const repos = await manager.listGitHubAppRepositories({ githubAppId: '1' });
       expect(repos).toHaveLength(1);
@@ -159,16 +190,27 @@ describe('createCoolifyManager', () => {
 
   describe('listGitHubAppRepositoryBranches', () => {
     it('returns branch list with names', async () => {
-      nextResponse({ data: [{ name: 'main', commit: { sha: 'abc' } }, { name: 'develop', commit: { sha: 'def' } }] });
+      nextResponse({
+        data: [
+          { name: 'main', commit: { sha: 'abc' } },
+          { name: 'develop', commit: { sha: 'def' } },
+        ],
+      });
       const manager = buildManager();
-      const branches = await manager.listGitHubAppRepositoryBranches({ githubAppId: '1', repository: 'my-repo' });
+      const branches = await manager.listGitHubAppRepositoryBranches({
+        githubAppId: '1',
+        repository: 'my-repo',
+      });
       expect(branches.map((b: { name: string }) => b.name)).toEqual(['main', 'develop']);
     });
 
     it('returns empty when no branches', async () => {
       nextResponse({ data: [] });
       const manager = buildManager();
-      const branches = await manager.listGitHubAppRepositoryBranches({ githubAppId: '1', repository: 'empty' });
+      const branches = await manager.listGitHubAppRepositoryBranches({
+        githubAppId: '1',
+        repository: 'empty',
+      });
       expect(branches).toHaveLength(0);
     });
   });
@@ -224,7 +266,14 @@ describe('createCoolifyManager', () => {
       nextResponse(PROJECTS);
       nextResponse(ENVIRONMENTS);
       nextResponse(SERVERS);
-      nextResponse({ data: { uuid: 'new-app-1', name: 'CreatedApp', fqdn: 'created.example.com', status: 'deploying' } });
+      nextResponse({
+        data: {
+          uuid: 'new-app-1',
+          name: 'CreatedApp',
+          fqdn: 'created.example.com',
+          status: 'deploying',
+        },
+      });
       const manager = buildManager();
       const app = await manager.createApplication({
         name: 'CreatedApp',
@@ -243,7 +292,9 @@ describe('createCoolifyManager', () => {
       nextResponse(PROJECTS);
       nextResponse(ENVIRONMENTS);
       nextResponse(SERVERS);
-      nextResponse({ data: { uuid: 'minimal-1', name: 'MinimalApp', fqdn: null, status: 'deploying' } });
+      nextResponse({
+        data: { uuid: 'minimal-1', name: 'MinimalApp', fqdn: null, status: 'deploying' },
+      });
       const manager = buildManager();
       const app = await manager.createApplication({ name: 'MinimalApp' });
       expect(app.applicationUuid).toBe('minimal-1');
@@ -253,9 +304,14 @@ describe('createCoolifyManager', () => {
       nextResponse(PROJECTS);
       nextResponse(ENVIRONMENTS);
       nextResponse(SERVERS);
-      nextResponse({ data: { uuid: 'explicit-env-1', name: 'ExplicitEnv', fqdn: null, status: 'deploying' } });
+      nextResponse({
+        data: { uuid: 'explicit-env-1', name: 'ExplicitEnv', fqdn: null, status: 'deploying' },
+      });
       const manager = buildManager();
-      const app = await manager.createApplication({ name: 'ExplicitEnv', environmentUuid: 'env-explicit' });
+      const app = await manager.createApplication({
+        name: 'ExplicitEnv',
+        environmentUuid: 'env-explicit',
+      });
       expect(app.applicationUuid).toBe('explicit-env-1');
     });
   });
@@ -271,14 +327,20 @@ describe('createCoolifyManager', () => {
     it('updates multiple fields', async () => {
       nextResponse({ data: { ...APP, name: 'MultiApp', build_command: 'npm run build' } });
       const manager = buildManager();
-      const app = await manager.updateApplication({ applicationUuid: 'app-1', name: 'MultiApp', buildCommand: 'npm run build' });
+      const app = await manager.updateApplication({
+        applicationUuid: 'app-1',
+        name: 'MultiApp',
+        buildCommand: 'npm run build',
+      });
       expect(app.name).toBe('MultiApp');
     });
 
     it('throws on 404', async () => {
       nextErrorResponse(404);
       const manager = buildManager();
-      await expect(manager.updateApplication({ applicationUuid: 'nonexistent', name: 'X' })).rejects.toThrow();
+      await expect(
+        manager.updateApplication({ applicationUuid: 'nonexistent', name: 'X' }),
+      ).rejects.toThrow();
     });
   });
 
@@ -351,7 +413,10 @@ describe('createCoolifyManager', () => {
       nextResponse({ logs: 'Build started...\nBuild completed.' });
       const manager = buildManager();
       const result = await manager.getApplicationLogs({ applicationUuid: 'app-1' });
-      expect(result).toMatchObject({ applicationUuid: 'app-1', logs: 'Build started...\nBuild completed.' });
+      expect(result).toMatchObject({
+        applicationUuid: 'app-1',
+        logs: 'Build started...\nBuild completed.',
+      });
     });
 
     it('returns empty logs when no data', async () => {
@@ -370,10 +435,12 @@ describe('createCoolifyManager', () => {
 
   describe('listApplicationDeployments', () => {
     it('returns deployment list', async () => {
-      nextResponse({ data: [
-        { uuid: 'dep-1', status: 'success', commit: 'abc123', branch: 'main' },
-        { uuid: 'dep-2', status: 'failed', commit: 'def456', branch: 'develop' },
-      ] });
+      nextResponse({
+        data: [
+          { uuid: 'dep-1', status: 'success', commit: 'abc123', branch: 'main' },
+          { uuid: 'dep-2', status: 'failed', commit: 'def456', branch: 'develop' },
+        ],
+      });
       const manager = buildManager();
       const deployments = await manager.listApplicationDeployments({ applicationUuid: 'app-1' });
       expect(deployments).toHaveLength(2);
@@ -393,21 +460,34 @@ describe('createCoolifyManager', () => {
     it('returns deployment log object', async () => {
       nextResponse({ uuid: 'dep-1', status: 'success', logs: 'Deploying...\nDone.' });
       const manager = buildManager();
-      const result = await manager.getDeploymentLogs({ applicationUuid: 'app-1', deploymentUuid: 'dep-1' });
-      expect(result).toMatchObject({ applicationUuid: 'app-1', deploymentUuid: 'dep-1', logs: 'Deploying...\nDone.', status: 'success' });
+      const result = await manager.getDeploymentLogs({
+        applicationUuid: 'app-1',
+        deploymentUuid: 'dep-1',
+      });
+      expect(result).toMatchObject({
+        applicationUuid: 'app-1',
+        deploymentUuid: 'dep-1',
+        logs: 'Deploying...\nDone.',
+        status: 'success',
+      });
     });
 
     it('returns empty logs when no data', async () => {
       nextResponse({ uuid: 'dep-1', status: 'running' });
       const manager = buildManager();
-      const result = await manager.getDeploymentLogs({ applicationUuid: 'app-1', deploymentUuid: 'dep-1' });
+      const result = await manager.getDeploymentLogs({
+        applicationUuid: 'app-1',
+        deploymentUuid: 'dep-1',
+      });
       expect(result.logs).toBe('');
     });
 
     it('throws on API error', async () => {
       nextErrorResponse(500);
       const manager = buildManager();
-      await expect(manager.getDeploymentLogs({ applicationUuid: 'app-1', deploymentUuid: 'dep-1' })).rejects.toThrow();
+      await expect(
+        manager.getDeploymentLogs({ applicationUuid: 'app-1', deploymentUuid: 'dep-1' }),
+      ).rejects.toThrow();
     });
   });
 
@@ -415,10 +495,24 @@ describe('createCoolifyManager', () => {
 
   describe('listApplicationEnvs', () => {
     it('returns env list', async () => {
-      nextResponse({ data: [
-        { uuid: 'env-1', key: 'NODE_ENV', value: 'production', is_build_time: false, is_literal: true },
-        { uuid: 'env-2', key: 'DATABASE_URL', value: 'postgres://...', is_build_time: false, is_literal: false },
-      ] });
+      nextResponse({
+        data: [
+          {
+            uuid: 'env-1',
+            key: 'NODE_ENV',
+            value: 'production',
+            is_build_time: false,
+            is_literal: true,
+          },
+          {
+            uuid: 'env-2',
+            key: 'DATABASE_URL',
+            value: 'postgres://...',
+            is_build_time: false,
+            is_literal: false,
+          },
+        ],
+      });
       const manager = buildManager();
       const envs = await manager.listApplicationEnvs('app-1');
       expect(envs).toHaveLength(2);
@@ -446,14 +540,20 @@ describe('createCoolifyManager', () => {
       // 2. PATCH call to update env
       nextResponse({ data: [{ uuid: 'env-1', key: 'NEW_VAR', value: 'new-value' }] });
       const manager = buildManager();
-      const env = await manager.setApplicationEnv({ applicationUuid: 'app-1', key: 'NEW_VAR', value: 'new-value' });
+      const env = await manager.setApplicationEnv({
+        applicationUuid: 'app-1',
+        key: 'NEW_VAR',
+        value: 'new-value',
+      });
       expect(env).toMatchObject({ key: 'NEW_VAR', value: 'new-value' });
     });
 
     it('throws on API error', async () => {
       nextErrorResponse(500);
       const manager = buildManager();
-      await expect(manager.setApplicationEnv({ applicationUuid: 'app-1', key: 'X', value: 'y' })).rejects.toThrow();
+      await expect(
+        manager.setApplicationEnv({ applicationUuid: 'app-1', key: 'X', value: 'y' }),
+      ).rejects.toThrow();
     });
   });
 
@@ -461,21 +561,29 @@ describe('createCoolifyManager', () => {
     it('deletes env variable and returns deleted:true when removed', async () => {
       nextResponse({ data: [{ key: 'OTHER_VAR' }] });
       const manager = buildManager();
-      const result = await manager.deleteApplicationEnv({ applicationUuid: 'app-1', key: 'OLD_VAR' });
+      const result = await manager.deleteApplicationEnv({
+        applicationUuid: 'app-1',
+        key: 'OLD_VAR',
+      });
       expect(result).toEqual({ deleted: true });
     });
 
     it('returns deleted:false when env is still present', async () => {
       nextResponse({ data: [{ key: 'OLD_VAR' }] });
       const manager = buildManager();
-      const result = await manager.deleteApplicationEnv({ applicationUuid: 'app-1', key: 'OLD_VAR' });
+      const result = await manager.deleteApplicationEnv({
+        applicationUuid: 'app-1',
+        key: 'OLD_VAR',
+      });
       expect(result).toEqual({ deleted: false });
     });
 
     it('throws on API error', async () => {
       nextErrorResponse(500);
       const manager = buildManager();
-      await expect(manager.deleteApplicationEnv({ applicationUuid: 'app-1', key: 'X' })).rejects.toThrow();
+      await expect(
+        manager.deleteApplicationEnv({ applicationUuid: 'app-1', key: 'X' }),
+      ).rejects.toThrow();
     });
   });
 

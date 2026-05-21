@@ -20,13 +20,18 @@ export interface ValidationError {
  */
 export function parseRequest<T>(
   schema: ZodSchema<T>,
-  data: unknown
+  data: unknown,
 ): ValidationResult<T> | ValidationError {
   try {
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (err) {
-    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: String(serializeError(err)) }});
+    forgeDebug({
+      scope: 'validation',
+      level: 'error',
+      message: '[validation] parseRequest failed',
+      context: { error: String(serializeError(err)) },
+    });
     return {
       success: false,
       error: String(serializeError(err)),
@@ -39,7 +44,7 @@ export function parseRequest<T>(
  */
 export function parseQueryParams<T>(
   schema: ZodSchema<T>,
-  searchParams: URLSearchParams
+  searchParams: URLSearchParams,
 ): ValidationResult<T> | ValidationError {
   try {
     const data: Record<string, string> = {};
@@ -49,7 +54,12 @@ export function parseQueryParams<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (err) {
-    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: String(serializeError(err)) }});
+    forgeDebug({
+      scope: 'validation',
+      level: 'error',
+      message: '[validation] parseQueryParams failed',
+      context: { error: String(serializeError(err)) },
+    });
     return {
       success: false,
       error: String(serializeError(err)),

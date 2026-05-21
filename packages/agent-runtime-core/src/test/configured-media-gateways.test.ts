@@ -234,10 +234,12 @@ describe('configured media gateways', () => {
 
     await gateway.analyze({
       prompt: 'describe image',
-      images: [{
-        mimeType: 'image/png',
-        bytes: new Uint8Array([1, 2, 3]),
-      }],
+      images: [
+        {
+          mimeType: 'image/png',
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+      ],
       headers: {
         'x-request': '1',
       },
@@ -245,10 +247,12 @@ describe('configured media gateways', () => {
 
     expect(receivedRequest).toEqual({
       prompt: 'describe image',
-      images: [{
-        mimeType: 'image/png',
-        bytes: new Uint8Array([1, 2, 3]),
-      }],
+      images: [
+        {
+          mimeType: 'image/png',
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+      ],
       headers: {
         'x-default': '1',
         'x-request': '1',

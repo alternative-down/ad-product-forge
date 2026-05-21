@@ -1,11 +1,7 @@
 import { z } from 'zod';
 import { isWorkingMemoryEqual } from './working-memory-equality.js';
 
-const workingMemoryText = (description: string) =>
-  z
-    .string()
-    .optional()
-    .describe(description);
+const workingMemoryText = (description: string) => z.string().optional().describe(description);
 
 export const WORKING_MEMORY_INSTRUCTIONS = [
   'Working memory is your intrinsic operating core, not your notebook.',
@@ -24,57 +20,61 @@ export const WORKING_MEMORY_INSTRUCTIONS = [
   'If you mention or use information from working memory, do not say it came from working memory, memory, or context. Use active language such as "I remember that...", "we already saw that...", or "on day X in the morning I did X" when appropriate.',
 ].join('\n');
 
-export const WORKING_MEMORY_SCHEMA = z.object({
-  identity: z
-    .object({
-      roleCore: workingMemoryText('Role core.'),
-      nonNegotiables: workingMemoryText('Hard rules and prohibitions.'),
-      operatingPrinciples: workingMemoryText('Stable operating principles.'),
-    })
-    .optional()
-    .describe('Identity.'),
-  domain: z
-    .object({
-      scope: workingMemoryText('Role scope.'),
-      activities: workingMemoryText('Typical activities.'),
-      boundaries: workingMemoryText('Role boundaries.'),
-    })
-    .optional()
-    .describe('Domain.'),
-  direction: z
-    .object({
-      currentMission: workingMemoryText('Current mission.'),
-      successDefinition: workingMemoryText('Success definition.'),
-    })
-    .optional()
-    .describe('Direction.'),
-}).describe('Structured working memory.');
+export const WORKING_MEMORY_SCHEMA = z
+  .object({
+    identity: z
+      .object({
+        roleCore: workingMemoryText('Role core.'),
+        nonNegotiables: workingMemoryText('Hard rules and prohibitions.'),
+        operatingPrinciples: workingMemoryText('Stable operating principles.'),
+      })
+      .optional()
+      .describe('Identity.'),
+    domain: z
+      .object({
+        scope: workingMemoryText('Role scope.'),
+        activities: workingMemoryText('Typical activities.'),
+        boundaries: workingMemoryText('Role boundaries.'),
+      })
+      .optional()
+      .describe('Domain.'),
+    direction: z
+      .object({
+        currentMission: workingMemoryText('Current mission.'),
+        successDefinition: workingMemoryText('Success definition.'),
+      })
+      .optional()
+      .describe('Direction.'),
+  })
+  .describe('Structured working memory.');
 
-export const WORKING_MEMORY_UPDATE_SCHEMA = z.object({
-  identity: z
-    .object({
-      roleCore: z.string().optional(),
-      nonNegotiables: z.string().optional(),
-      operatingPrinciples: z.string().optional(),
-    })
-    .partial()
-    .optional(),
-  domain: z
-    .object({
-      scope: z.string().optional(),
-      activities: z.string().optional(),
-      boundaries: z.string().optional(),
-    })
-    .partial()
-    .optional(),
-  direction: z
-    .object({
-      currentMission: z.string().optional(),
-      successDefinition: z.string().optional(),
-    })
-    .partial()
-    .optional(),
-}).describe('Partial working memory update.');
+export const WORKING_MEMORY_UPDATE_SCHEMA = z
+  .object({
+    identity: z
+      .object({
+        roleCore: z.string().optional(),
+        nonNegotiables: z.string().optional(),
+        operatingPrinciples: z.string().optional(),
+      })
+      .partial()
+      .optional(),
+    domain: z
+      .object({
+        scope: z.string().optional(),
+        activities: z.string().optional(),
+        boundaries: z.string().optional(),
+      })
+      .partial()
+      .optional(),
+    direction: z
+      .object({
+        currentMission: z.string().optional(),
+        successDefinition: z.string().optional(),
+      })
+      .partial()
+      .optional(),
+  })
+  .describe('Partial working memory update.');
 
 export type WorkingMemoryAccess = {
   getWorkingMemory(input: {
@@ -119,7 +119,12 @@ export async function sanitizeWorkingMemory(input: {
   // Use property-by-property comparison instead of JSON.stringify to avoid:
   // - False positive writes from JSON.stringify key-ordering differences across runs
   // - Silent skipped writes when a field is set to undefined (JSON.stringify drops it)
-  if (isWorkingMemoryEqual(newData, parsedCurrentWorkingMemory as Parameters<typeof isWorkingMemoryEqual>[0])) {
+  if (
+    isWorkingMemoryEqual(
+      newData,
+      parsedCurrentWorkingMemory as Parameters<typeof isWorkingMemoryEqual>[0],
+    )
+  ) {
     return;
   }
 

@@ -40,9 +40,11 @@ export class MultiAgentScene {
 
     for (const agent of this.agents) {
       await agent.observeWorld(options.observationLimit);
-      results.push(await agent.tick({
-        maxSteps: options.perAgentMaxSteps,
-      }));
+      results.push(
+        await agent.tick({
+          maxSteps: options.perAgentMaxSteps,
+        }),
+      );
     }
 
     return results;

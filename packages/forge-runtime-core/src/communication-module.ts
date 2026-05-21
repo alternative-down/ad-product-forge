@@ -119,20 +119,19 @@ export async function createCommunicationModule(config: {
 
   async function listContacts(filter: 'self' | 'others' | 'all' = 'others') {
     const contacts = await config.contactsStore.listContacts();
-    const self = filter === 'others'
-      ? []
-      : await listSelfContacts(providers);
-    const others = filter === 'self'
-      ? []
-      : contacts.map((contact) => ({
-        targetKey: contact.slug,
-        slug: contact.slug,
-        displayName: contact.displayName,
-        description: contact.description,
-        metadata: {
-          slug: contact.slug,
-        },
-      }));
+    const self = filter === 'others' ? [] : await listSelfContacts(providers);
+    const others =
+      filter === 'self'
+        ? []
+        : contacts.map((contact) => ({
+            targetKey: contact.slug,
+            slug: contact.slug,
+            displayName: contact.displayName,
+            description: contact.description,
+            metadata: {
+              slug: contact.slug,
+            },
+          }));
 
     return {
       self,
@@ -140,11 +139,7 @@ export async function createCommunicationModule(config: {
     };
   }
 
-  async function upsertContact(input: {
-    slug: string;
-    displayName: string;
-    description?: string;
-  }) {
+  async function upsertContact(input: { slug: string; displayName: string; description?: string }) {
     const existingContacts = await config.contactsStore.listContacts();
     const normalized: ContactRecord = {
       slug: input.slug,
@@ -176,7 +171,7 @@ export async function createCommunicationModule(config: {
     for (const provider of selectedProviders) {
       if (!provider.listConversations) {
         if (input.provider) {
-          logger.warn("communication", "listConversations: provider does not support listing");
+          logger.warn('communication', 'listConversations: provider does not support listing');
           throw new Error(`Provider does not support listing conversations: ${provider.id}`);
         }
 
@@ -210,7 +205,7 @@ export async function createCommunicationModule(config: {
     const provider = resolveProvider(providers, input.provider);
 
     if (!provider.getMessages) {
-      logger.warn("communication", "getMessages: provider does not support reading messages");
+      logger.warn('communication', 'getMessages: provider does not support reading messages');
       throw new Error(`Provider does not support reading messages: ${input.provider}`);
     }
 
@@ -223,7 +218,9 @@ export async function createCommunicationModule(config: {
       dateTo: input.dateTo,
     });
 
-    return await Promise.all(messages.map((message) => toAgentMessageView(activeFilesystem, message)));
+    return await Promise.all(
+      messages.map((message) => toAgentMessageView(activeFilesystem, message)),
+    );
   }
 
   async function sendMessage(input: {
@@ -322,7 +319,9 @@ async function getUnreadConversationContext(input: {
     unread: true,
     limit: 100,
   });
-  const unreadConversation = conversations.find((conversation) => conversation.targetKey === input.targetKey);
+  const unreadConversation = conversations.find(
+    (conversation) => conversation.targetKey === input.targetKey,
+  );
 
   if (!unreadConversation) {
     return null;
@@ -342,10 +341,7 @@ async function getUnreadConversationContext(input: {
   };
 }
 
-function resolveProvider(
-  providers: Map<string, CommunicationProvider>,
-  providerId: string,
-) {
+function resolveProvider(providers: Map<string, CommunicationProvider>, providerId: string) {
   const provider = providers.get(providerId);
 
   if (!provider) {
@@ -365,18 +361,18 @@ function buildGroupMetadata(providerId: string, message: CommunicationInboundMes
       : {}),
     ...(Array.isArray(message.metadata?.groupMembers)
       ? {
-        Participants: message.metadata.groupMembers
-          .map((member) =>
-            typeof member === 'object'
-              && member !== null
-              && 'displayName' in member
-              && typeof member.displayName === 'string'
-              ? member.displayName
-              : null,
-          )
-          .filter((value): value is string => Boolean(value))
-          .join(', '),
-      }
+          Participants: message.metadata.groupMembers
+            .map((member) =>
+              typeof member === 'object' &&
+              member !== null &&
+              'displayName' in member &&
+              typeof member.displayName === 'string'
+                ? member.displayName
+                : null,
+            )
+            .filter((value): value is string => Boolean(value))
+            .join(', '),
+        }
       : {}),
   };
 }
@@ -422,7 +418,11 @@ async function toAgentMessageView(
     authorId: message.authorId,
     targetKey: message.targetKey,
     content: message.content,
-    attachments: await materializeInboundAttachments(workspaceFilesystem, message.messageId, message.attachments),
+    attachments: await materializeInboundAttachments(
+      workspaceFilesystem,
+      message.messageId,
+      message.attachments,
+    ),
     unread: message.unread,
     createdAt: message.createdAt,
     authorDisplayName: message.authorDisplayName,
@@ -460,9 +460,8 @@ async function readOutboundAttachments(input: {
     input.attachmentPaths.map(async (attachmentPath) => {
       const workspacePath = resolveWorkspacePath(input.workspaceRoot, attachmentPath);
       const data = await input.workspaceFilesystem.readFile(workspacePath);
-      const buffer = typeof data === 'string'
-        ? new Uint8Array(Buffer.from(data))
-        : new Uint8Array(data);
+      const buffer =
+        typeof data === 'string' ? new Uint8Array(Buffer.from(data)) : new Uint8Array(data);
 
       return {
         name: path.basename(workspacePath),
@@ -496,9 +495,7 @@ function resolveWorkspacePath(workspaceRoot: string, filePath: string) {
 }
 
 function sanitizeFileName(fileName: string) {
-  const value = fileName
-    .replace(/[/\\?%*:|"<>]/g, '-')
-    .trim();
+  const value = fileName.replace(/[/\\?%*:|"<>]/g, '-').trim();
 
   return value || 'attachment';
 }

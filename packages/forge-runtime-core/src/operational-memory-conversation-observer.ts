@@ -1,9 +1,7 @@
 import { generateText, type LanguageModel } from 'ai';
 import type { OperationalMemoryConversationObserver } from 'agent-runtime-core/integrations';
 
-import {
-  normalizeOperationalMemoryText,
-} from './conversation-model-messages.js';
+import { normalizeOperationalMemoryText } from './conversation-model-messages.js';
 import {
   buildObserverPrompt,
   buildObserverSystemPrompt,
@@ -51,9 +49,7 @@ export function createOperationalMemoryConversationObserver(
       const text = normalizeOperationalMemoryText(parsed.observations);
 
       if (!text) {
-        throw new Error(
-          'Operational conversation observer returned no observation text',
-        );
+        throw new Error('Operational conversation observer returned no observation text');
       }
 
       return { text };

@@ -191,61 +191,72 @@ describe('shouldSkipRecallInjection', () => {
   });
 
   it('returns false when rawWindowMessageCount is 0', () => {
-    expect(recall.shouldSkipRecallInjection({
-      graph: { hit: true, sourcesCount: 5 },
-      results: [],
-      rawWindowMessageCount: 0,
-    })).toBe(false);
+    expect(
+      recall.shouldSkipRecallInjection({
+        graph: { hit: true, sourcesCount: 5 },
+        results: [],
+        rawWindowMessageCount: 0,
+      }),
+    ).toBe(false);
   });
 
   it('returns false when both graph and results are empty', () => {
-    expect(recall.shouldSkipRecallInjection({
-      graph: { hit: false, sourcesCount: 0 },
-      results: [],
-      rawWindowMessageCount: 10,
-    })).toBe(false);
+    expect(
+      recall.shouldSkipRecallInjection({
+        graph: { hit: false, sourcesCount: 0 },
+        results: [],
+        rawWindowMessageCount: 10,
+      }),
+    ).toBe(false);
   });
 
   it('returns false when results are empty and sourcesCount is 0', () => {
-    expect(recall.shouldSkipRecallInjection({
-      graph: { hit: true, sourcesCount: 0 },
-      results: [],
-      rawWindowMessageCount: 10,
-    })).toBe(false);
+    expect(
+      recall.shouldSkipRecallInjection({
+        graph: { hit: true, sourcesCount: 0 },
+        results: [],
+        rawWindowMessageCount: 10,
+      }),
+    ).toBe(false);
   });
 
   it('returns false when recall item count is below threshold', () => {
     // rawWindowMessageCount=10, limit=2, results=2 → 2 >= 2 → skips (returns true)
-    expect(recall.shouldSkipRecallInjection({
-      graph: { hit: false, sourcesCount: 0 },
-      results: [{ id: 'a' }, { id: 'b' }],
-      rawWindowMessageCount: 10,
-    })).toBe(true);
+    expect(
+      recall.shouldSkipRecallInjection({
+        graph: { hit: false, sourcesCount: 0 },
+        results: [{ id: 'a' }, { id: 'b' }],
+        rawWindowMessageCount: 10,
+      }),
+    ).toBe(true);
   });
 
   it('returns true when graph sourcesCount exceeds threshold', () => {
     // rawWindowMessageCount=10, limit=2 (ratio=0.25)
     // graph.hit=true, sourcesCount=6 → recallItemCount=6 >= 2 → true
-    expect(recall.shouldSkipRecallInjection({
-      graph: { hit: true, sourcesCount: 6 },
-      results: [],
-      rawWindowMessageCount: 10,
-    })).toBe(true);
+    expect(
+      recall.shouldSkipRecallInjection({
+        graph: { hit: true, sourcesCount: 6 },
+        results: [],
+        rawWindowMessageCount: 10,
+      }),
+    ).toBe(true);
   });
 
   it('returns true when results length exceeds threshold', () => {
-    expect(recall.shouldSkipRecallInjection({
-      graph: { hit: false, sourcesCount: 0 },
-      results: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }],
-      rawWindowMessageCount: 10,
-    })).toBe(true);
+    expect(
+      recall.shouldSkipRecallInjection({
+        graph: { hit: false, sourcesCount: 0 },
+        results: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }],
+        rawWindowMessageCount: 10,
+      }),
+    ).toBe(true);
   });
 });
 
 // =============================================================================
 // countFiles utility
 // =============================================================================
-
 
 // =============================================================================
 // AgentLongTermMemoryRecall instance tests
@@ -259,7 +270,9 @@ describe('AgentLongTermMemoryRecall initialize', () => {
       getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 's1' } }),
     } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
     const persistence = {
-      readRecallState: vi.fn().mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
+      readRecallState: vi
+        .fn()
+        .mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
     } as any;
@@ -277,18 +290,19 @@ describe('AgentLongTermMemoryRecall initialize', () => {
   });
 });
 
-
-
-
 describe('AgentLongTermMemoryRecall refreshIndex', () => {
   it('does not call refresh when stamp unchanged', async () => {
     const retrieval = {
       refresh: vi.fn().mockResolvedValue(undefined),
       dispose: vi.fn(),
-      getStats: vi.fn().mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 'stamp-1' } }),
+      getStats: vi
+        .fn()
+        .mockResolvedValue({ activeIndexStats: { dimension: 128, stamp: 'stamp-1' } }),
     } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
     const persistence = {
-      readRecallState: vi.fn().mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
+      readRecallState: vi
+        .fn()
+        .mockResolvedValue({ recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0 }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('stamp-1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
     } as any;
@@ -309,7 +323,6 @@ describe('AgentLongTermMemoryRecall refreshIndex', () => {
     expect((recall as { lastIndexedStamp: string }).lastIndexedStamp).toBe('stamp-1');
   });
 });
-
 
 describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
   it('starts with zero pending operation count', async () => {
@@ -333,14 +346,11 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation', () => {
       conversationStore: makeMockConversationStore(),
       persistenceStore: makeMockPersistenceStore(),
     }) as any;
-    expect((recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince).toBeNull();
+    expect(
+      (recall as { lingeringRecallOperationSince: number | null }).lingeringRecallOperationSince,
+    ).toBeNull();
   });
 });
-
-
-
-
-
 
 // =============================================================================
 // Critical path: withTimeout — timeout race and behavior
@@ -358,7 +368,9 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -372,12 +384,16 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
-      'test.op',
-      Promise.resolve('fast-result'),
-      5000,
-      'timed out',
-    );
+    const result = await (
+      recall as {
+        runTrackedRecallOperation<T>(
+          label: string,
+          op: Promise<T>,
+          ms: number,
+          msg: string,
+        ): Promise<T>;
+      }
+    ).runTrackedRecallOperation('test.op', Promise.resolve('fast-result'), 5000, 'timed out');
     expect(result).toBe('fast-result');
   });
 
@@ -389,7 +405,9 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -404,12 +422,16 @@ describe('AgentLongTermMemoryRecall runTrackedRecallOperation timeout', () => {
     }) as any;
 
     await expect(
-      (recall as { runTrackedRecallOperation<T>(label: string, op: Promise<T>, ms: number, msg: string): Promise<T> }).runTrackedRecallOperation(
-        'test.op',
-        Promise.reject(new Error('boom')),
-        5000,
-        'timed out',
-      ),
+      (
+        recall as {
+          runTrackedRecallOperation<T>(
+            label: string,
+            op: Promise<T>,
+            ms: number,
+            msg: string,
+          ): Promise<T>;
+        }
+      ).runTrackedRecallOperation('test.op', Promise.reject(new Error('boom')), 5000, 'timed out'),
     ).rejects.toThrow('boom');
   });
 });
@@ -421,7 +443,9 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
   it('throws when readRuntimeMemorySettings is not provided', async () => {
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
     } as any;
@@ -442,7 +466,9 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
   it('throws when readRuntimeMemorySettings returns null', async () => {
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
     } as any;
@@ -464,7 +490,9 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
   it('resolves config when readRuntimeMemorySettings returns valid settings', async () => {
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
     } as any;
@@ -487,7 +515,9 @@ describe('AgentLongTermMemoryRecall resolveRecallConfig', () => {
       }),
     }) as any;
 
-    const config = await (recall as { resolveRecallConfig(): Promise<unknown> }).resolveRecallConfig();
+    const config = await (
+      recall as { resolveRecallConfig(): Promise<unknown> }
+    ).resolveRecallConfig();
     expect(config).toMatchObject({
       searchMode: 'hybrid',
       scoreThreshold: 0.3,
@@ -511,7 +541,9 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -525,10 +557,9 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
-      'test query',
-      { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' },
-    );
+    const result = await (
+      recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }
+    ).searchWorkspace('test query', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' });
     expect(result).toEqual({ formatted: '', results: [] });
   });
 
@@ -541,7 +572,9 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -556,9 +589,15 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
     }) as any;
 
     await expect(
-      (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace('test', {
-        topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid',
-      }),
+      (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
+        'test',
+        {
+          topK: 5,
+          resultCount: 5,
+          scoreThreshold: 0,
+          mode: 'hybrid',
+        },
+      ),
     ).rejects.toThrow('disk full');
   });
 
@@ -571,7 +610,9 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -585,9 +626,9 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
-      'test', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' },
-    );
+    const result = await (
+      recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }
+    ).searchWorkspace('test', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' });
     expect(result).toEqual({ formatted: '', results: [] });
   });
 });
@@ -606,7 +647,9 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -620,11 +663,15 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
-      'test query',
-      [],
-      { topK: 3, threshold: 0.5, randomWalkSteps: 2, includeSources: false, contextResults: [] },
-    );
+    const result = await (
+      recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }
+    ).searchGraph('test query', [], {
+      topK: 3,
+      threshold: 0.5,
+      randomWalkSteps: 2,
+      includeSources: false,
+      contextResults: [],
+    });
     expect(result).toMatchObject({
       hit: false,
       score: null,
@@ -655,7 +702,9 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
     } as unknown as SqliteWorkspaceRetrieval;
     const persistence = {
       readRecallThreadState: vi.fn().mockResolvedValue({
-        recentFingerprints: [], windowSize: 10, rawWindowMessageCount: 0,
+        recentFingerprints: [],
+        windowSize: 10,
+        rawWindowMessageCount: 0,
       }),
       readRecallIndexStamp: vi.fn().mockResolvedValue('s1'),
       persistRecallSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -669,11 +718,15 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph(
-      'test query',
-      [],
-      { topK: 3, threshold: 0.5, randomWalkSteps: 2, includeSources: false, contextResults: [] },
-    );
+    const result = await (
+      recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }
+    ).searchGraph('test query', [], {
+      topK: 3,
+      threshold: 0.5,
+      randomWalkSteps: 2,
+      includeSources: false,
+      contextResults: [],
+    });
     expect(result).toMatchObject({
       hit: true,
       score: 0.87,

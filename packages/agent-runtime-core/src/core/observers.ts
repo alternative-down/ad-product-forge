@@ -9,14 +9,8 @@ import type {
 
 export type RuntimeObserver = {
   name: string;
-  onDispatch?(context: {
-    runtimeId: string;
-    input: RuntimeInput;
-  }): Promise<void> | void;
-  onStatusChanged?(context: {
-    runtimeId: string;
-    status: RuntimeStatus;
-  }): Promise<void> | void;
+  onDispatch?(context: { runtimeId: string; input: RuntimeInput }): Promise<void> | void;
+  onStatusChanged?(context: { runtimeId: string; status: RuntimeStatus }): Promise<void> | void;
   onAfterModel?(context: {
     runtimeId: string;
     stepId: string;

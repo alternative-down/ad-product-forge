@@ -3,18 +3,13 @@ import { MockLanguageModelV3 } from 'ai/test';
 import type { LanguageModelV3CallOptions } from '@ai-sdk/provider-v6';
 import { z } from 'zod';
 
-import {
-  InMemoryConversationStore,
-} from 'agent-runtime-core/integrations';
+import { InMemoryConversationStore } from 'agent-runtime-core/integrations';
 
 import {
   createRuntimeAgentSession,
   type RuntimeAgentSessionIteration,
 } from './runtime-agent-session.js';
-import type {
-  RuntimeWorkingMemoryStore,
-  WorkingMemoryRecord,
-} from './runtime-working-memory.js';
+import type { RuntimeWorkingMemoryStore, WorkingMemoryRecord } from './runtime-working-memory.js';
 
 describe('createRuntimeAgentSession', () => {
   it('persists continued iteration feedback into the conversation thread before the next step', async () => {
@@ -34,10 +29,12 @@ describe('createRuntimeAgentSession', () => {
         const assistantMessages = options.prompt.filter((message) => message.role === 'assistant');
 
         if (assistantMessages.length === 0) {
-          expect(systemMessages).toEqual([{
-            role: 'system',
-            content: 'Base system.\n\nStep system.',
-          }]);
+          expect(systemMessages).toEqual([
+            {
+              role: 'system',
+              content: 'Base system.\n\nStep system.',
+            },
+          ]);
 
           return {
             content: [{ type: 'text', text: 'First step response.' }],
@@ -59,16 +56,20 @@ describe('createRuntimeAgentSession', () => {
           };
         }
 
-        expect(systemMessages).toEqual([{
-          role: 'system',
-          content: 'Base system.',
-        }]);
+        expect(systemMessages).toEqual([
+          {
+            role: 'system',
+            content: 'Base system.',
+          },
+        ]);
         expect(options.prompt.at(-1)).toEqual({
           role: 'user',
-          content: [{
-            type: 'text',
-            text: 'Continue from the previous step.',
-          }],
+          content: [
+            {
+              type: 'text',
+              text: 'Continue from the previous step.',
+            },
+          ],
         });
 
         return {
@@ -136,13 +137,15 @@ describe('createRuntimeAgentSession', () => {
 
       expect(result.text).toBe('Second step response.');
       expect(iterations).toHaveLength(2);
-      expect(messages.map((message) => ({
-        role: message.role,
-        text: message.parts
-          .filter((part) => part.type === 'text')
-          .map((part) => part.text)
-          .join('\n'),
-      }))).toEqual([
+      expect(
+        messages.map((message) => ({
+          role: message.role,
+          text: message.parts
+            .filter((part) => part.type === 'text')
+            .map((part) => part.text)
+            .join('\n'),
+        })),
+      ).toEqual([
         {
           role: 'user',
           text: 'Initial prompt.',
@@ -180,20 +183,24 @@ describe('createRuntimeAgentSession', () => {
           },
           {
             role: 'user',
-            content: [{
-              type: 'text',
-              text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'user',
-            content: [{
-              type: 'text',
-              text: 'Continue.',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'Continue.',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
         ]);
@@ -243,12 +250,14 @@ describe('createRuntimeAgentSession', () => {
       authorId: 'agent-1',
       parts: [],
       metadata: {
-        toolInvocations: [{
-          toolName: 'search_workspace',
-          args: {
-            query: 'design tokens',
+        toolInvocations: [
+          {
+            toolName: 'search_workspace',
+            args: {
+              query: 'design tokens',
+            },
           },
-        }],
+        ],
       },
       createdAt: '2026-04-22T20:00:01.000Z',
     });
@@ -258,13 +267,15 @@ describe('createRuntimeAgentSession', () => {
       role: 'tool',
       parts: [],
       metadata: {
-        toolResults: [{
-          toolCallId: 'call_function_vhsx8981e6sk_1',
-          toolName: 'search_workspace',
-          result: {
-            hits: ['tokens.md'],
+        toolResults: [
+          {
+            toolCallId: 'call_function_vhsx8981e6sk_1',
+            toolName: 'search_workspace',
+            result: {
+              hits: ['tokens.md'],
+            },
           },
-        }],
+        ],
       },
       createdAt: '2026-04-22T20:00:02.000Z',
     });
@@ -272,10 +283,12 @@ describe('createRuntimeAgentSession', () => {
       id: userMessageId,
       threadId: 'thread-1',
       role: 'user',
-      parts: [{
-        type: 'text',
-        text: 'Continue.',
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: 'Continue.',
+        },
+      ],
       createdAt: '2026-04-22T20:00:03.000Z',
     });
     try {
@@ -300,19 +313,23 @@ describe('createRuntimeAgentSession', () => {
           },
           {
             role: 'user',
-            content: [{
-              type: 'text',
-              text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'user',
-            content: [{
-              type: 'text',
-              text: 'Continue.',
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'Continue.',
+              },
+            ],
           },
         ]);
 
@@ -360,13 +377,15 @@ describe('createRuntimeAgentSession', () => {
       role: 'tool',
       parts: [],
       metadata: {
-        toolResults: [{
-          toolCallId,
-          toolName: 'workspace_execute_command',
-          result: {
-            exitCode: 0,
+        toolResults: [
+          {
+            toolCallId,
+            toolName: 'workspace_execute_command',
+            result: {
+              exitCode: 0,
+            },
           },
-        }],
+        ],
       },
       createdAt: '2026-04-23T00:00:01.000Z',
     });
@@ -374,10 +393,12 @@ describe('createRuntimeAgentSession', () => {
       id: 'user-follow-up',
       threadId: 'thread-1',
       role: 'user',
-      parts: [{
-        type: 'text',
-        text: 'Continue.',
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: 'Continue.',
+        },
+      ],
       createdAt: '2026-04-23T00:00:02.000Z',
     });
     try {
@@ -436,56 +457,68 @@ describe('createRuntimeAgentSession', () => {
           },
           {
             role: 'user',
-            content: [{
-              type: 'text',
-              text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'You are an autonomous company agent. Think proactively, decide what to do next inside your role, and continue work without waiting for conversational prompting.',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'assistant',
-            content: [{
-              type: 'text',
-              text: 'checkpoint text',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'checkpoint text',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'assistant',
-            content: [{
-              type: 'text',
-              text: 'reflection one',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'reflection one',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'assistant',
-            content: [{
-              type: 'text',
-              text: 'reflection two',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'reflection two',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'assistant',
-            content: [{
-              type: 'text',
-              text: 'observation one',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'observation one',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
           {
             role: 'user',
-            content: [{
-              type: 'text',
-              text: 'Continue.',
-              providerOptions: undefined,
-            }],
+            content: [
+              {
+                type: 'text',
+                text: 'Continue.',
+                providerOptions: undefined,
+              },
+            ],
             providerOptions: undefined,
           },
         ]);
@@ -532,10 +565,12 @@ describe('createRuntimeAgentSession', () => {
       id: 'user-follow-up',
       threadId: 'thread-1',
       role: 'user',
-      parts: [{
-        type: 'text',
-        text: 'Continue.',
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: 'Continue.',
+        },
+      ],
       createdAt: '2026-04-24T00:00:01.000Z',
     });
 
@@ -563,7 +598,9 @@ describe('createRuntimeAgentSession', () => {
             }
 
             return message.content
-              .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
+              .filter(
+                (part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text',
+              )
               .map((part) => part.text)
               .join('\n');
           });
@@ -612,10 +649,12 @@ describe('createRuntimeAgentSession', () => {
         id: `history-${index}`,
         threadId: 'thread-1',
         role: 'user',
-        parts: [{
-          type: 'text',
-          text: `Historical message ${index}`,
-        }],
+        parts: [
+          {
+            type: 'text',
+            text: `Historical message ${index}`,
+          },
+        ],
         createdAt: `2026-04-25T00:00:0${index}.000Z`,
       });
     }
@@ -763,10 +802,12 @@ describe('createRuntimeAgentSession', () => {
         loadCount += 1;
 
         return {
-          content: [{
-            type: 'text',
-            text: loadCount === 1 ? 'First step response.' : 'Second step response.',
-          }],
+          content: [
+            {
+              type: 'text',
+              text: loadCount === 1 ? 'First step response.' : 'Second step response.',
+            },
+          ],
           finishReason: { raw: 'stop', unified: 'stop' },
           usage: {
             inputTokens: {
@@ -796,16 +837,19 @@ describe('createRuntimeAgentSession', () => {
       conversationStore,
       workingMemoryStore,
       loadRuntimeActions: async () => {
-        const actions = loadCount === 0
-          ? []
-          : [{
-            name: `mcp_tool_${loadCount}`,
-            description: 'MCP tool.',
-            inputSchema: z.object({}).passthrough(),
-            async execute() {
-              return { ok: true };
-            },
-          }];
+        const actions =
+          loadCount === 0
+            ? []
+            : [
+                {
+                  name: `mcp_tool_${loadCount}`,
+                  description: 'MCP tool.',
+                  inputSchema: z.object({}).passthrough(),
+                  async execute() {
+                    return { ok: true };
+                  },
+                },
+              ];
 
         loadedActionNames.push(actions.map((action) => action.name));
         return actions;
@@ -829,10 +873,7 @@ describe('createRuntimeAgentSession', () => {
       });
 
       expect(result.text).toBe('Second step response.');
-      expect(loadedActionNames).toEqual([
-        [],
-        ['mcp_tool_1'],
-      ]);
+      expect(loadedActionNames).toEqual([[], ['mcp_tool_1']]);
     } finally {
       await session.dispose();
     }

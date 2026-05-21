@@ -1,7 +1,5 @@
 import { logger } from './logger.js';
-import type {
-  RuntimeActionDefinition,
-} from 'agent-runtime-core/integrations';
+import type { RuntimeActionDefinition } from 'agent-runtime-core/integrations';
 
 import { createOperationalMemoryConversationObserver } from './operational-memory-conversation-observer.js';
 import { createForgeConversationMemory, type ForgeConversationMemory } from './memory.js';
@@ -32,22 +30,24 @@ export type RuntimeAgentSessionRuntime = {
   }): Promise<void>;
 };
 
-function requireOperationalMemoryOmLimits(
-  input: CreateRuntimeAgentSessionOptions,
-) {
+function requireOperationalMemoryOmLimits(input: CreateRuntimeAgentSessionOptions) {
   if (!input.checkpointedOmLimits) {
-    throw new Error('Operational OM limits are required when conversation overflow consolidation is enabled.');
+    throw new Error(
+      'Operational OM limits are required when conversation overflow consolidation is enabled.',
+    );
   }
 
   return input.checkpointedOmLimits;
 }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function createRuntimeAgentSessionRuntime(
   input: CreateRuntimeAgentSessionOptions,
 ): Promise<RuntimeAgentSessionRuntime> {
   const checkpointedOmEnabled = input.consolidateConversationOverflow === true;
-  const checkpointedOmLimits = checkpointedOmEnabled ? requireOperationalMemoryOmLimits(input) : undefined;
+  const checkpointedOmLimits = checkpointedOmEnabled
+    ? requireOperationalMemoryOmLimits(input)
+    : undefined;
 
   const conversationMemory = createForgeConversationMemory({
     threadId: input.threadId,
@@ -55,33 +55,37 @@ export async function createRuntimeAgentSessionRuntime(
     assistantAuthorId: input.assistantAuthorId,
     observer: checkpointedOmEnabled
       ? createOperationalMemoryConversationObserver({
-        model: input.checkpointedOmModel ?? input.model,
-        agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
-        loadSupportText: checkpointedOmEnabled
-          ? async () => {
-            const state = await readOperationalMemoryState({
-              threadId: input.threadId,
-              store: input.conversationStore,
-              recentTokenLimit: checkpointedOmLimits!.recentRawTokens,
-            });
+          model: input.checkpointedOmModel ?? input.model,
+          agentSystemPrompt: input.checkpointedOmSystemPrompt ?? input.system,
+          loadSupportText: checkpointedOmEnabled
+            ? async () => {
+                const state = await readOperationalMemoryState({
+                  threadId: input.threadId,
+                  store: input.conversationStore,
+                  recentTokenLimit: checkpointedOmLimits!.recentRawTokens,
+                });
 
-            return takeSupportText(
-              state.observationMessages.map((message) =>
-                message.parts
-                  .filter((part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
-                    part.type === 'text' || part.type === 'reasoning')
-                  .map((part) => part.text.trim())
-                  .filter(Boolean)
-                  .join('\n')),
-              checkpointedOmLimits!.observationSupportTokens,
-            );
-          }
-          : undefined,
-      })
+                return takeSupportText(
+                  state.observationMessages.map((message) =>
+                    message.parts
+                      .filter(
+                        (part): part is Extract<typeof part, { type: 'text' | 'reasoning' }> =>
+                          part.type === 'text' || part.type === 'reasoning',
+                      )
+                      .map((part) => part.text.trim())
+                      .filter(Boolean)
+                      .join('\n'),
+                  ),
+                  checkpointedOmLimits!.observationSupportTokens,
+                );
+              }
+            : undefined,
+        })
       : undefined,
     recentTokenLimit: checkpointedOmEnabled ? checkpointedOmLimits!.recentRawTokens : undefined,
-    overflowObservationTokenLimit:
-      checkpointedOmEnabled ? checkpointedOmLimits!.rawObservationBatchTokens : undefined,
+    overflowObservationTokenLimit: checkpointedOmEnabled
+      ? checkpointedOmLimits!.rawObservationBatchTokens
+      : undefined,
     consolidateOverflow: checkpointedOmEnabled,
   });
   const staticRuntimeActions = input.workingMemoryTool
@@ -90,7 +94,10 @@ export async function createRuntimeAgentSessionRuntime(
   let todoUpdateTodosAction: RuntimeActionDefinition<Record<string, unknown>, unknown> | undefined;
   if (input.todoStore) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const todoLib = new LibsqlTodoStore({ client: input.todoStore.client as any, tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime' });
+    const todoLib = new LibsqlTodoStore({
+      client: input.todoStore.client as any,
+      tablePrefix: input.todoStore.tablePrefix ?? 'forge_runtime',
+    });
     todoUpdateTodosAction = createUpdateTodosAction(todoLib, input.threadId, input.resourceId);
   }
 
@@ -101,7 +108,6 @@ export async function createRuntimeAgentSessionRuntime(
     getCurrentStepNumber: () => stepCounter,
   });
 
-
   return {
     model: input.model,
     assistantAuthorId: input.assistantAuthorId,
@@ -109,7 +115,8 @@ export async function createRuntimeAgentSessionRuntime(
     conversationMemory,
     async getRuntimeActions() {
       stepCounter++;
-      let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> = [];
+      let dynamicRuntimeActions: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>> =
+        [];
 
       if (input.loadRuntimeActions) {
         try {
@@ -160,7 +167,6 @@ export async function createRuntimeAgentSessionRuntime(
         });
         return;
       }
-
 
       options?.diagnostics?.record({
         at: Date.now(),

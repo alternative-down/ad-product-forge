@@ -1,8 +1,7 @@
 // fallow-ignore-file circular-dependencies
 import type { ToolsInput } from '@forge-runtime/core';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import type { AgentLoaderConfig } from './agent-loader-types';
 import { createMicroErpTools } from '../micro-erp/tools';
 import { createAgentNotificationTools } from '../notifications/tools';
@@ -26,8 +25,16 @@ export function loadAgentToolset(input: {
   allowedToolIds: Set<string>;
 }) {
   const microErpTools = createMicroErpTools(input.db, input.allowedToolIds);
-  const notificationTools = createAgentNotificationTools(input.db, input.agentId, input.allowedToolIds);
-  const githubTools = createGitHubTools(input.agentId, input.loaderConfig.githubApps, input.allowedToolIds);
+  const notificationTools = createAgentNotificationTools(
+    input.db,
+    input.agentId,
+    input.allowedToolIds,
+  );
+  const githubTools = createGitHubTools(
+    input.agentId,
+    input.loaderConfig.githubApps,
+    input.allowedToolIds,
+  );
   const coolifyTools = input.loaderConfig.coolify
     ? createCoolifyTools(input.loaderConfig.coolify, input.allowedToolIds)
     : {};

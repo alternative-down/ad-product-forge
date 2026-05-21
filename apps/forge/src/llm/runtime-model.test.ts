@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   createAnthropic: vi.fn().mockReturnValue(() => mockModel),
   createOAuthGateway: vi.fn().mockImplementation(() => ({
     getApiKey: vi.fn().mockResolvedValue('oauth-key-123'),
-    resolveLanguageModel: vi.fn().mockResolvedValue({ id: 'claude-sonnet-4-20250514', apiKey: 'oauth-key-123' }),
+    resolveLanguageModel: vi
+      .fn()
+      .mockResolvedValue({ id: 'claude-sonnet-4-20250514', apiKey: 'oauth-key-123' }),
   })),
   wrapAnthropicPromptCacheModel: vi.fn().mockImplementation((m: any) => ({ ...m, cached: true })),
   OAUTH_GATEWAY_ID: 'oauth-gateway',
@@ -42,7 +44,9 @@ describe('resolveProfileRuntimeModel', () => {
     });
 
     const gateway = mocks.createOAuthGateway.mock.results[0].value;
-    expect(gateway.getApiKey).toHaveBeenCalledWith('oauth-gateway/claude-code/claude-sonnet-4-20250514');
+    expect(gateway.getApiKey).toHaveBeenCalledWith(
+      'oauth-gateway/claude-code/claude-sonnet-4-20250514',
+    );
     expect(gateway.resolveLanguageModel).toHaveBeenCalledWith({
       modelId: 'claude-sonnet-4-20250514',
       providerId: 'claude-code',

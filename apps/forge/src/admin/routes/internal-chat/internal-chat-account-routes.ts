@@ -16,7 +16,9 @@ import { withRouteErrorHandler } from './internal-chat-route-helpers';
 
 // ─── Account route handlers ──────────────────────────────────────────────────
 
-function buildListAccountsHandler(internalChat: InternalChatService): () => ReturnType<HttpHandler> {
+function buildListAccountsHandler(
+  internalChat: InternalChatService,
+): () => ReturnType<HttpHandler> {
   return withRouteErrorHandler('admin', '/admin/internal-chat/accounts', async () => {
     const accounts = await internalChat.listAccounts();
     return jsonResponse(
@@ -32,7 +34,9 @@ function buildListAccountsHandler(internalChat: InternalChatService): () => Retu
   });
 }
 
-function buildListContactsHandler(internalChat: InternalChatService): () => ReturnType<HttpHandler> {
+function buildListContactsHandler(
+  internalChat: InternalChatService,
+): () => ReturnType<HttpHandler> {
   return withRouteErrorHandler('admin', '/admin/internal-chat/contacts', async () => {
     const accounts = await internalChat.listAccounts();
     return jsonResponse(
@@ -85,9 +89,29 @@ export function registerAccountRoutes(
   httpServer: InternalChatHttpServer,
   internalChat: InternalChatService,
 ): void {
-  httpServer.registerRoute({ method: 'GET', path: '/admin/internal-chat/accounts', handler: buildListAccountsHandler(internalChat) });
-  httpServer.registerRoute({ method: 'GET', path: '/admin/internal-chat/contacts', handler: buildListContactsHandler(internalChat) });
-  httpServer.registerRoute({ method: 'POST', path: '/admin/internal-chat/account/create', handler: buildCreateAccountHandler(internalChat) });
-  httpServer.registerRoute({ method: 'POST', path: '/admin/internal-chat/account/update', handler: buildUpdateAccountHandler(internalChat) });
-  httpServer.registerRoute({ method: 'POST', path: '/admin/internal-chat/account/delete', handler: buildDeleteAccountHandler(internalChat) });
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/accounts',
+    handler: buildListAccountsHandler(internalChat),
+  });
+  httpServer.registerRoute({
+    method: 'GET',
+    path: '/admin/internal-chat/contacts',
+    handler: buildListContactsHandler(internalChat),
+  });
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/create',
+    handler: buildCreateAccountHandler(internalChat),
+  });
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/update',
+    handler: buildUpdateAccountHandler(internalChat),
+  });
+  httpServer.registerRoute({
+    method: 'POST',
+    path: '/admin/internal-chat/account/delete',
+    handler: buildDeleteAccountHandler(internalChat),
+  });
 }

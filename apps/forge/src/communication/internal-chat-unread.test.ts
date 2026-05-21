@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createInternalChatUnread } from './internal-chat-unread';
 
-const makeDb = () => ({
-  select: vi.fn().mockReturnThis(),
-  from: vi.fn().mockReturnThis(),
-  innerJoin: vi.fn().mockReturnThis(),
-  where: vi.fn().mockResolvedValue([{ unreadMessageCount: 5, unreadConversationCount: 3 }]),
-}) as any;
+const makeDb = () =>
+  ({
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockResolvedValue([{ unreadMessageCount: 5, unreadConversationCount: 3 }]),
+  }) as any;
 
 describe('createInternalChatUnread', () => {
   describe('getUnreadSummary', () => {

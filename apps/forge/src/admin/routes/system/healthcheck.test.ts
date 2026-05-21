@@ -91,19 +91,23 @@ describe('buildSystemHealthcheck', () => {
 
   it('handles multiple agents in registry', async () => {
     const mockRegistry = {
-      list: vi.fn().mockReturnValue([
-        { runtime: { id: 'agent-1' } },
-        { runtime: { id: 'agent-2' } },
-        { runtime: { id: 'agent-3' } },
-      ]),
-      get: vi.fn()
+      list: vi
+        .fn()
+        .mockReturnValue([
+          { runtime: { id: 'agent-1' } },
+          { runtime: { id: 'agent-2' } },
+          { runtime: { id: 'agent-3' } },
+        ]),
+      get: vi
+        .fn()
         .mockResolvedValueOnce({ meta: { name: 'Alice' } })
         .mockResolvedValueOnce({ meta: {} })
         .mockResolvedValueOnce({ meta: { name: 'Bob' } }),
     } as unknown as InternalAgentRegistry;
 
     const mockReadModel = {
-      getAgent: vi.fn()
+      getAgent: vi
+        .fn()
         .mockResolvedValueOnce({ id: 'agent-1', status: 'running' })
         .mockResolvedValueOnce({ id: 'agent-2', status: 'idle' })
         .mockResolvedValueOnce({ id: 'agent-3', status: 'running' }),

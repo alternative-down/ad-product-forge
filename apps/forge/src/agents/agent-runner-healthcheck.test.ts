@@ -84,7 +84,9 @@ describe('runHealthcheck', () => {
         getExecutionState: async () => 'idle',
         isLocallyIdle: () => true,
         getPendingCount: vi.fn<() => number>().mockReturnValue(0),
-        getWakeSnapshot: vi.fn<() => { pending: number; waitingForIdle: boolean }>().mockReturnValue({ pending: 2, waitingForIdle: false }),
+        getWakeSnapshot: vi
+          .fn<() => { pending: number; waitingForIdle: boolean }>()
+          .mockReturnValue({ pending: 2, waitingForIdle: false }),
         onRunnerIdle: vi.fn<() => Promise<void>>(),
       });
 
@@ -167,7 +169,9 @@ describe('runHealthcheck', () => {
       const error = new Error('queue failed');
       const deps = makeDeps({
         getExecutionState: async () => 'running',
-        queueNextStep: async () => { throw error; },
+        queueNextStep: async () => {
+          throw error;
+        },
         notifyError: vi.fn<(e: unknown) => void>(),
       });
 
@@ -179,7 +183,9 @@ describe('runHealthcheck', () => {
     it('does not re-throw on queueNextStep failure', async () => {
       const deps = makeDeps({
         getExecutionState: async () => 'running',
-        queueNextStep: async () => { throw new Error('boom'); },
+        queueNextStep: async () => {
+          throw new Error('boom');
+        },
       });
 
       await expect(runHealthcheck(deps)).resolves.toBeUndefined();
@@ -224,8 +230,8 @@ describe('handleStartingRunTimeout', () => {
   it('calls onStartingRunTimeout before syncing', () => {
     const callOrder: string[] = [];
     const onStartingRunTimeout = vi.fn<() => void>(() => callOrder.push('timeout'));
-    const syncStarterState = vi.fn<(running: boolean, startedAt: number | null) => void>(
-      () => callOrder.push('sync'),
+    const syncStarterState = vi.fn<(running: boolean, startedAt: number | null) => void>(() =>
+      callOrder.push('sync'),
     );
 
     handleStartingRunTimeout({ onStartingRunTimeout, syncStarterState });

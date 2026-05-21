@@ -21,8 +21,6 @@ export function applyStepModelMiddlewares(
   return currentModel;
 }
 
-export function defineStepModelMiddleware(
-  middleware: StepModelMiddleware,
-): StepModelMiddleware {
+export function defineStepModelMiddleware(middleware: StepModelMiddleware): StepModelMiddleware {
   return middleware;
 }

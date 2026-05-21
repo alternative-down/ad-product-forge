@@ -8,7 +8,9 @@ export type DiscordSendableChannel = {
   id: string;
   name?: string | null;
   sendTyping(): Promise<unknown>;
-  send(input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> }): Promise<Message>;
+  send(
+    input: string | { content?: string; files?: Array<{ attachment: Buffer; name: string }> },
+  ): Promise<Message>;
   messages: {
     fetch(messageId: string): Promise<Message>;
     fetch(options: { limit: number; before?: string }): Promise<Collection<string, Message>>;

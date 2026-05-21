@@ -57,13 +57,19 @@ export async function resetAgentEmbedderIndexes(workspaceBasePath: string, agent
   });
 }
 
-async function resetVectorDatabase(input: {
-  databasePath: string;
-}) {
+async function resetVectorDatabase(input: { databasePath: string }) {
   const exists = await fs
     .access(input.databasePath)
     .then(() => true)
-    .catch((err) => { forgeDebug({ scope: 'agent-embedder-maintenance', level: 'error', message: '[safe-catch] access check', context: { error: serializeError(err) } }); return false; });
+    .catch((err) => {
+      forgeDebug({
+        scope: 'agent-embedder-maintenance',
+        level: 'error',
+        message: '[safe-catch] access check',
+        context: { error: serializeError(err) },
+      });
+      return false;
+    });
 
   if (!exists) {
     return;

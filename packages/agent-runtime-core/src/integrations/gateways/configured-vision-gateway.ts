@@ -1,8 +1,4 @@
-import type {
-  VisionGateway,
-  VisionRequest,
-  VisionResponse,
-} from './vision.js';
+import type { VisionGateway, VisionRequest, VisionResponse } from './vision.js';
 
 export type ConfiguredVisionGatewayOptions = {
   base: VisionGateway;

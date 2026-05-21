@@ -130,7 +130,12 @@ describe('agent-runner-scheduler-epoch', () => {
       const state = makeState(1, 0, 5);
       const genCtrl = makeGenCtrl();
       let abortCalled = false;
-      const ctrl = { abort: () => { abortCalled = true; }, signal: { aborted: false } } as unknown as AbortController;
+      const ctrl = {
+        abort: () => {
+          abortCalled = true;
+        },
+        signal: { aborted: false },
+      } as unknown as AbortController;
       startGenerateAttempt(state, genCtrl, ctrl);
       finishGenerateAttempt(state, genCtrl, 6, ctrl);
       expect(abortCalled).toBe(true);
@@ -149,7 +154,12 @@ describe('agent-runner-scheduler-epoch', () => {
       const state = makeState(1, 0, 5);
       const genCtrl = makeGenCtrl();
       let abortCalled = false;
-      const ctrl = { abort: () => { abortCalled = true; }, signal: { aborted: false } } as unknown as AbortController;
+      const ctrl = {
+        abort: () => {
+          abortCalled = true;
+        },
+        signal: { aborted: false },
+      } as unknown as AbortController;
       startGenerateAttempt(state, genCtrl, ctrl);
       state.activeGenerateToken += 1; // another attempt started (now 7)
 
@@ -184,7 +194,9 @@ describe('agent-runner-scheduler-epoch', () => {
       const state = makeState(1, 0, 5);
       let lastAbortError: Error | undefined;
       const ctrl = {
-        abort: (err?: Error) => { lastAbortError = err; },
+        abort: (err?: Error) => {
+          lastAbortError = err;
+        },
         signal: { aborted: false },
       } as unknown as AbortController;
       const genCtrl = makeGenCtrl(ctrl);
@@ -235,11 +247,11 @@ describe('agent-runner-scheduler-epoch', () => {
 
       // startNewRunEpoch increments runEpoch; does NOT touch activeGenerateToken
       const runEpoch = startNewRunEpoch(state);
-      expect(runEpoch).toBe(1000);       // 999 + 1
+      expect(runEpoch).toBe(1000); // 999 + 1
       expect(state.activeGenerateToken).toBe(888); // unchanged
 
       const genToken1 = startGenerateAttempt(state, genCtrl, ctrl);
-      expect(genToken1).toBe(889);       // 888 + 1
+      expect(genToken1).toBe(889); // 888 + 1
       expect(state.activeGenerateToken).toBe(889);
 
       // finishGenerateAttempt does NOT modify activeGenerateToken
@@ -248,7 +260,7 @@ describe('agent-runner-scheduler-epoch', () => {
 
       const ctrl2 = new AbortController();
       const genToken2 = startGenerateAttempt(state, genCtrl, ctrl2);
-      expect(genToken2).toBe(890);       // 889 + 1
+      expect(genToken2).toBe(890); // 889 + 1
       expect(state.activeGenerateToken).toBe(890);
     });
 
@@ -257,14 +269,14 @@ describe('agent-runner-scheduler-epoch', () => {
       const genCtrl = makeGenCtrl(null);
       const ctrl1 = new AbortController();
       const genToken1 = startGenerateAttempt(state, genCtrl, ctrl1);
-      expect(genToken1).toBe(667);        // 666 + 1
+      expect(genToken1).toBe(667); // 666 + 1
 
       invalidateInFlightGenerate(state, genCtrl);
       expect(state.activeGenerateToken).toBe(668); // 667 + 1
 
       const ctrl2 = new AbortController();
       const genToken = startGenerateAttempt(state, genCtrl, ctrl2);
-      expect(genToken).toBe(669);        // 668 + 1
+      expect(genToken).toBe(669); // 668 + 1
       expect(genCtrl.currentAbortController).toBe(ctrl2);
     });
   });

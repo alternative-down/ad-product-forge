@@ -1,29 +1,29 @@
 export type ConversationMessagePart =
   | {
-    type: 'text';
-    text: string;
-  }
+      type: 'text';
+      text: string;
+    }
   | {
-    type: 'reasoning';
-    text: string;
-    providerMetadata?: {
-      anthropic?: {
-        signature?: string;
-        redactedData?: string;
+      type: 'reasoning';
+      text: string;
+      providerMetadata?: {
+        anthropic?: {
+          signature?: string;
+          redactedData?: string;
+        };
       };
+    }
+  | {
+      type: 'image';
+      mimeType: string;
+      bytes: Uint8Array;
+    }
+  | {
+      type: 'file';
+      mimeType: string;
+      name: string;
+      bytes: Uint8Array;
     };
-  }
-  | {
-    type: 'image';
-    mimeType: string;
-    bytes: Uint8Array;
-  }
-  | {
-    type: 'file';
-    mimeType: string;
-    name: string;
-    bytes: Uint8Array;
-  };
 
 export type ConversationThread = {
   id: string;
@@ -34,10 +34,7 @@ export type ConversationThread = {
   updatedAt: string;
 };
 
-export type ConversationOperationalMemoryType =
-  | 'observation'
-  | 'reflection'
-  | 'checkpoint-summary';
+export type ConversationOperationalMemoryType = 'observation' | 'reflection' | 'checkpoint-summary';
 
 export type ConversationMessage = {
   id: string;
@@ -85,7 +82,5 @@ export interface ConversationStore {
     replacedByMessageId: string | null;
   }): Promise<void>;
   listMessages(query: ConversationMessageListQuery): Promise<ConversationMessage[]>;
-  listOperationalMemoryMessages(input: {
-    threadId: string;
-  }): Promise<ConversationMessage[]>;
+  listOperationalMemoryMessages(input: { threadId: string }): Promise<ConversationMessage[]>;
 }

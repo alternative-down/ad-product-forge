@@ -26,7 +26,9 @@ import {
 
 describe('agentIdQuerySchema', () => {
   it('parses valid agentId', () => {
-    expect(agentIdQuerySchema.parse({ agentId: 'agent-123' })).toMatchObject({ agentId: 'agent-123' });
+    expect(agentIdQuerySchema.parse({ agentId: 'agent-123' })).toMatchObject({
+      agentId: 'agent-123',
+    });
   });
 
   it('rejects missing agentId', () => {
@@ -76,12 +78,23 @@ describe('updateAgentGitHubManifestConfigSchema', () => {
       agentId: 'a',
       manifestConfig: {
         permissions: {
-          administration: false, contents: false, issues: false, metadata: false,
-          organization_projects: false, pull_requests: false, repository_projects: false, workflows: false,
+          administration: false,
+          contents: false,
+          issues: false,
+          metadata: false,
+          organization_projects: false,
+          pull_requests: false,
+          repository_projects: false,
+          workflows: false,
         },
         events: {
-          push: false, pull_request: false, pull_request_review: false, issues: false,
-          issue_comment: false, repository: false, workflow_run: false,
+          push: false,
+          pull_request: false,
+          pull_request_review: false,
+          issues: false,
+          issue_comment: false,
+          repository: false,
+          workflow_run: false,
         },
       },
     });
@@ -93,9 +106,11 @@ describe('updateAgentGitHubManifestConfigSchema', () => {
   });
 
   it('rejects missing agentId', () => {
-    expect(() => updateAgentGitHubManifestConfigSchema.parse({
-      manifestConfig: { permissions: {} as never, events: {} as never },
-    })).toThrow();
+    expect(() =>
+      updateAgentGitHubManifestConfigSchema.parse({
+        manifestConfig: { permissions: {} as never, events: {} as never },
+      }),
+    ).toThrow();
   });
 });
 
@@ -172,7 +187,9 @@ describe('agentThreadMessagesQuerySchema', () => {
 describe('agentConversationMessagesQuerySchema', () => {
   it('parses minimal input with defaults', () => {
     const result = agentConversationMessagesQuerySchema.parse({
-      agentId: 'a', provider: 'p', targetKey: 'u@example.com',
+      agentId: 'a',
+      provider: 'p',
+      targetKey: 'u@example.com',
     });
     expect(result.limit).toBe(20);
     expect(result.offset).toBe(0);
@@ -180,24 +197,37 @@ describe('agentConversationMessagesQuerySchema', () => {
 
   it('parses with explicit limit and offset', () => {
     const result = agentConversationMessagesQuerySchema.parse({
-      agentId: 'a', provider: 'p', targetKey: 'u', limit: 30, offset: 5,
+      agentId: 'a',
+      provider: 'p',
+      targetKey: 'u',
+      limit: 30,
+      offset: 5,
     });
     expect(result.limit).toBe(30);
     expect(result.offset).toBe(5);
   });
 
   it('rejects missing provider', () => {
-    expect(() => agentConversationMessagesQuerySchema.parse({ agentId: 'a', targetKey: 'u' })).toThrow();
+    expect(() =>
+      agentConversationMessagesQuerySchema.parse({ agentId: 'a', targetKey: 'u' }),
+    ).toThrow();
   });
 
   it('rejects missing targetKey', () => {
-    expect(() => agentConversationMessagesQuerySchema.parse({ agentId: 'a', provider: 'p' })).toThrow();
+    expect(() =>
+      agentConversationMessagesQuerySchema.parse({ agentId: 'a', provider: 'p' }),
+    ).toThrow();
   });
 
   it('rejects limit less than 1', () => {
-    expect(() => agentConversationMessagesQuerySchema.parse({
-      agentId: 'a', provider: 'p', targetKey: 'u', limit: 0,
-    })).toThrow();
+    expect(() =>
+      agentConversationMessagesQuerySchema.parse({
+        agentId: 'a',
+        provider: 'p',
+        targetKey: 'u',
+        limit: 0,
+      }),
+    ).toThrow();
   });
 });
 
@@ -223,7 +253,10 @@ describe('clearAgentHistorySchema', () => {
   });
 
   it('parses with explicit includeLongTermMemoryThread false', () => {
-    const result = clearAgentHistorySchema.parse({ agentId: 'a', includeLongTermMemoryThread: false });
+    const result = clearAgentHistorySchema.parse({
+      agentId: 'a',
+      includeLongTermMemoryThread: false,
+    });
     expect(result.includeLongTermMemoryThread).toBe(false);
   });
 
@@ -237,21 +270,26 @@ describe('clearAgentHistorySchema', () => {
 describe('agentLongTermMemoryRecallSearchSchema', () => {
   it('parses minimal input with defaults', () => {
     const result = agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'agent-1', query: 'find payments',
+      agentId: 'agent-1',
+      query: 'find payments',
     });
     expect(result.limit).toBe(10);
   });
 
   it('parses with explicit limit', () => {
     const result = agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'a', query: 'q', limit: 25,
+      agentId: 'a',
+      query: 'q',
+      limit: 25,
     });
     expect(result.limit).toBe(25);
   });
 
   it('coerces string limit', () => {
     const result = agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'a', query: 'q', limit: '15',
+      agentId: 'a',
+      query: 'q',
+      limit: '15',
     });
     expect(result.limit).toBe(15);
   });
@@ -261,13 +299,19 @@ describe('agentLongTermMemoryRecallSearchSchema', () => {
   });
 
   it('rejects empty query', () => {
-    expect(() => agentLongTermMemoryRecallSearchSchema.parse({ agentId: 'a', query: '' })).toThrow();
+    expect(() =>
+      agentLongTermMemoryRecallSearchSchema.parse({ agentId: 'a', query: '' }),
+    ).toThrow();
   });
 
   it('rejects limit less than 1', () => {
-    expect(() => agentLongTermMemoryRecallSearchSchema.parse({
-      agentId: 'a', query: 'q', limit: 0,
-    })).toThrow();
+    expect(() =>
+      agentLongTermMemoryRecallSearchSchema.parse({
+        agentId: 'a',
+        query: 'q',
+        limit: 0,
+      }),
+    ).toThrow();
   });
 });
 
@@ -275,7 +319,7 @@ describe('agentLongTermMemoryRecallSearchSchema', () => {
 
 describe('topUpAgentContractSchema', () => {
   it('parses valid input', () => {
-    const result = topUpAgentContractSchema.parse({ agentId: 'a', amountUsd: 50.00 });
+    const result = topUpAgentContractSchema.parse({ agentId: 'a', amountUsd: 50.0 });
     expect(result.amountUsd).toBe(50);
   });
 
@@ -294,11 +338,15 @@ describe('topUpAgentContractSchema', () => {
 
 describe('adjustAgentContractBudgetSchema', () => {
   it('parses valid input', () => {
-    expect(adjustAgentContractBudgetSchema.parse({ agentId: 'a', newBudgetUsd: 200 })).toMatchObject({ newBudgetUsd: 200 });
+    expect(
+      adjustAgentContractBudgetSchema.parse({ agentId: 'a', newBudgetUsd: 200 }),
+    ).toMatchObject({ newBudgetUsd: 200 });
   });
 
   it('rejects zero budget', () => {
-    expect(() => adjustAgentContractBudgetSchema.parse({ agentId: 'a', newBudgetUsd: 0 })).toThrow();
+    expect(() =>
+      adjustAgentContractBudgetSchema.parse({ agentId: 'a', newBudgetUsd: 0 }),
+    ).toThrow();
   });
 
   it('rejects missing newBudgetUsd', () => {
@@ -308,7 +356,9 @@ describe('adjustAgentContractBudgetSchema', () => {
 
 describe('renewAgentContractSchema', () => {
   it('parses valid input', () => {
-    expect(renewAgentContractSchema.parse({ agentId: 'a', newBudgetUsd: 100 })).toMatchObject({ newBudgetUsd: 100 });
+    expect(renewAgentContractSchema.parse({ agentId: 'a', newBudgetUsd: 100 })).toMatchObject({
+      newBudgetUsd: 100,
+    });
   });
 
   it('rejects negative budget', () => {
@@ -330,7 +380,9 @@ describe('hireAgentSchema', () => {
 
   it('parses with optional additionalContext', () => {
     const result = hireAgentSchema.parse({
-      hiringRequest: 'r', weeklyBudgetUsd: 50, additionalContext: 'Use Stripe',
+      hiringRequest: 'r',
+      weeklyBudgetUsd: 50,
+      additionalContext: 'Use Stripe',
     });
     expect(result.additionalContext).toBe('Use Stripe');
   });
@@ -354,7 +406,9 @@ describe('hireAgentSchema', () => {
 
 describe('terminateAgentSchema', () => {
   it('parses with agentId', () => {
-    expect(terminateAgentSchema.parse({ agentId: 'agent-1' })).toMatchObject({ agentId: 'agent-1' });
+    expect(terminateAgentSchema.parse({ agentId: 'agent-1' })).toMatchObject({
+      agentId: 'agent-1',
+    });
   });
 
   it('rejects missing agentId', () => {
@@ -364,7 +418,9 @@ describe('terminateAgentSchema', () => {
 
 describe('changeAgentRoleSchema', () => {
   it('parses valid input', () => {
-    expect(changeAgentRoleSchema.parse({ agentId: 'a', roleId: 'role-1' })).toMatchObject({ roleId: 'role-1' });
+    expect(changeAgentRoleSchema.parse({ agentId: 'a', roleId: 'role-1' })).toMatchObject({
+      roleId: 'role-1',
+    });
   });
 
   it('rejects missing agentId', () => {

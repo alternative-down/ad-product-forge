@@ -100,7 +100,6 @@ describe('upsertAgentProviderSchema', () => {
     }
   });
 
-
   it('rejects non-string credential values', () => {
     const result = upsertAgentProviderSchema.safeParse({
       agentId: 'agent-42',

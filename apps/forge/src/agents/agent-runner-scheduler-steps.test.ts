@@ -12,14 +12,25 @@ import { createSchedulerSteps, BeginRunInput } from './agent-runner-scheduler-st
 
 function makeDeps() {
   let _runEpoch = 1;
-  const state = { instant: false, backoffMs: 0, nextStepAt: null as number | null, activeRunEpoch: 0, activeStepEpoch: 0 };
+  const state = {
+    instant: false,
+    backoffMs: 0,
+    nextStepAt: null as number | null,
+    activeRunEpoch: 0,
+    activeStepEpoch: 0,
+  };
 
   return {
     runtimeId: 'agent-1',
     getRunnableContract: vi.fn().mockResolvedValue({ id: 'contract-1' }),
     onAgentIdle: vi.fn(),
     isStaleRun: vi.fn().mockReturnValue(false),
-    startNewRunEpoch: () => { _runEpoch++; state.activeRunEpoch = _runEpoch; state.activeStepEpoch = 0; return _runEpoch; },
+    startNewRunEpoch: () => {
+      _runEpoch++;
+      state.activeRunEpoch = _runEpoch;
+      state.activeStepEpoch = 0;
+      return _runEpoch;
+    },
     scheduleNextStep: vi.fn(),
     planNextStepDelay: vi.fn().mockResolvedValue(0),
     resetBackoff: vi.fn(),

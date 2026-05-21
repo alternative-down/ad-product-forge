@@ -41,7 +41,10 @@ export function parseSkillMetadata(skillContent: string): { description?: string
     }
 
     const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
+    const value = line
+      .slice(separatorIndex + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
 
     if (key === 'description' && value) {
       description = value;
@@ -75,7 +78,12 @@ export async function countSkillFiles(skillRoot: string): Promise<number> {
 
     return fileCount;
   } catch (err) {
-    forgeDebug({ scope: 'skills-shared', level: 'error', message: 'countSkillFiles failed', context: { error: serializeError(err) }});
+    forgeDebug({
+      scope: 'skills-shared',
+      level: 'error',
+      message: 'countSkillFiles failed',
+      context: { error: serializeError(err) },
+    });
     throw err;
   }
 }

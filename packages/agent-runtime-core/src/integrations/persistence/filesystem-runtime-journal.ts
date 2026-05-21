@@ -59,4 +59,3 @@ export class FilesystemRuntimeJournal implements RuntimeJournal {
     return join(this.basePath, `${runtimeId}.journal.json`);
   }
 }
-

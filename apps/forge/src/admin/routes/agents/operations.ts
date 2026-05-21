@@ -17,57 +17,75 @@ import { agentActionSchema } from '../schemas/agents';
  * senderSlug/senderDisplayName because the sender account is created dynamically
  * from the admin panel rather than pre-registered.
  */
-const adminInternalChatSendFromAdminSchema = z.object({
-  agentId: z.string(),
-  senderSlug: z.string(),
-  senderDisplayName: z.string(),
-  content: z.string(),
-  targetKey: z.string().optional(),
-}).strict();
+const adminInternalChatSendFromAdminSchema = z
+  .object({
+    agentId: z.string(),
+    senderSlug: z.string(),
+    senderDisplayName: z.string(),
+    content: z.string(),
+    targetKey: z.string().optional(),
+  })
+  .strict();
 
 // Widen to accept any object with the required methods (including the full InternalChat from routes.ts)
 type InternalChat = {
-  registerExternalAccount: (input: { slug: string; displayName: string }) => Promise<{ accountId: string }>;
-  sendMessage: (input: { accountId: string; targetKey: string; content: string; attachments: CommunicationFile[] }) => Promise<{ success: boolean;
-    conversationKey: string;
-    messageId: string;
-  }>;
-}
+  registerExternalAccount: (input: {
+    slug: string;
+    displayName: string;
+  }) => Promise<{ accountId: string }>;
+  sendMessage: (input: {
+    accountId: string;
+    targetKey: string;
+    content: string;
+    attachments: CommunicationFile[];
+  }) => Promise<{ success: boolean; conversationKey: string; messageId: string }>;
+};
 import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // Widen to accept both the minimal Registry and the full InternalAgentRegistry
-type RegistryEntry = {
-  runner: {
-    notifyExternalEvent: (event: unknown) => void;
-    forceIdle: () => Promise<void>;
-  };
-} | {
-  loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
-  add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
-  remove: (agentId: string) => void;
-  get: (agentId: string) => unknown;
-  list: () => unknown[];
-} | null;
+type RegistryEntry =
+  | {
+      runner: {
+        notifyExternalEvent: (event: unknown) => void;
+        forceIdle: () => Promise<void>;
+      };
+    }
+  | {
+      loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
+      add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
+      remove: (agentId: string) => void;
+      get: (agentId: string) => unknown;
+      list: () => unknown[];
+    }
+  | null;
 
-type Registry = {
-  get(agentId: string): RegistryEntry;
-} | {
-  loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
-  add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
-  remove: (agentId: string) => void;
-  get: (agentId: string) => unknown;
-  list: () => unknown[];
-};
+type Registry =
+  | {
+      get(agentId: string): RegistryEntry;
+    }
+  | {
+      loadAll: (db: unknown, config: unknown) => Promise<unknown[]>;
+      add: (db: unknown, runtime: unknown, config?: unknown) => Promise<unknown>;
+      remove: (agentId: string) => void;
+      get: (agentId: string) => unknown;
+      list: () => unknown[];
+    };
 
 /**
  * Register routes for agent operations (wake, internal chat)
  */
 export function registerAgentOperationRoutes(
-  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      path: string;
+      handler: HttpHandler;
+    }) => void;
+  },
   input: {
     internalChat: InternalChat;
   },
-  registry: Registry
+  registry: Registry,
 ) {
   // POST /admin/agent/wake
   httpServer.registerRoute({
@@ -96,7 +114,12 @@ export function registerAgentOperationRoutes(
         });
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent wake route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent wake route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -126,7 +149,12 @@ export function registerAgentOperationRoutes(
           messageId: sent.messageId,
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Internal chat send route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Internal chat send route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

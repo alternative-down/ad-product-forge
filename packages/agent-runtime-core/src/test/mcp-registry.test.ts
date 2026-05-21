@@ -10,16 +10,18 @@ describe('McpSessionRegistry', () => {
         const session = {
           closed: false,
           async listTools() {
-            return [{
-              name: 'search',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  query: { type: 'string' },
+            return [
+              {
+                name: 'search',
+                inputSchema: {
+                  type: 'object',
+                  properties: {
+                    query: { type: 'string' },
+                  },
+                  required: ['query'],
                 },
-                required: ['query'],
               },
-            }];
+            ];
           },
           async callTool() {
             return { ok: true };

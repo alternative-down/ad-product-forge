@@ -26,9 +26,11 @@ describe('RuntimePlugin lifecycle hooks', () => {
       const calls: { runtimeId: string; input: unknown }[] = [];
       const plugin = {
         name: 'dispatch-tracker',
-        onDispatch: vi.fn().mockImplementation(async (ctx: { runtimeId: string; input: unknown }) => {
-          calls.push(ctx);
-        }),
+        onDispatch: vi
+          .fn()
+          .mockImplementation(async (ctx: { runtimeId: string; input: unknown }) => {
+            calls.push(ctx);
+          }),
       };
 
       const runtime = new AgentRuntime({
@@ -49,9 +51,11 @@ describe('RuntimePlugin lifecycle hooks', () => {
       const callInputs: unknown[] = [];
       const plugin = {
         name: 'dispatch-tracker',
-        onDispatch: vi.fn().mockImplementation(async (ctx: { runtimeId: string; input: unknown }) => {
-          callInputs.push(ctx.input);
-        }),
+        onDispatch: vi
+          .fn()
+          .mockImplementation(async (ctx: { runtimeId: string; input: unknown }) => {
+            callInputs.push(ctx.input);
+          }),
       };
 
       const runtime = new AgentRuntime({
@@ -91,23 +95,25 @@ describe('RuntimePlugin lifecycle hooks', () => {
     it('contributes additional context entries to step context', async () => {
       const plugin = {
         name: 'context-contributor',
-        provideContext: vi.fn().mockImplementation(async (): Promise<StepContextEntry[]> => [
-          {
-            id: 'context-1',
-            kind: 'context',
-            title: 'injected',
-            text: 'injected: true',
-          },
-        ]),
+        provideContext: vi.fn().mockImplementation(
+          async (): Promise<StepContextEntry[]> => [
+            {
+              id: 'context-1',
+              kind: 'context',
+              title: 'injected',
+              text: 'injected: true',
+            },
+          ],
+        ),
       };
 
       const runtime = new AgentRuntime({
         model: new FakeStepModelAdapter((req) => {
           // Context should contain the injected entry
-          const hasInjection = req.context.some(
-            (e) => e.text === 'injected: true',
-          );
-          return fakeModelResponse({ segments: [{ kind: 'message', text: hasInjection ? 'found' : 'missing' }] });
+          const hasInjection = req.context.some((e) => e.text === 'injected: true');
+          return fakeModelResponse({
+            segments: [{ kind: 'message', text: hasInjection ? 'found' : 'missing' }],
+          });
         }),
       });
       runtime.use(plugin);
@@ -119,7 +125,14 @@ describe('RuntimePlugin lifecycle hooks', () => {
     });
 
     it('receives correct context values including runtimeId, stepId, pendingInputs, lastActionResults, steps', async () => {
-      let receivedContext: { runtimeId: string; stepId: string; stepNumber: number; pendingInputs: unknown[]; lastActionResults: unknown[]; steps: unknown[] } | null = null;
+      let receivedContext: {
+        runtimeId: string;
+        stepId: string;
+        stepNumber: number;
+        pendingInputs: unknown[];
+        lastActionResults: unknown[];
+        steps: unknown[];
+      } | null = null;
       const plugin = {
         name: 'context-inspector',
         provideContext: vi.fn().mockImplementation(async (ctx) => {
@@ -154,20 +167,17 @@ describe('RuntimePlugin lifecycle hooks', () => {
           // Inject a system instruction
           return {
             ...ctx.request,
-            context: [
-              ...ctx.request.context,
-              { role: 'system', content: 'mutated: true' },
-            ],
+            context: [...ctx.request.context, { role: 'system', content: 'mutated: true' }],
           };
         }),
       };
 
       const runtime = new AgentRuntime({
         model: new FakeStepModelAdapter((req) => {
-          const hasMutation = req.context.some(
-            (e) => e.text === 'mutated: true',
-          );
-          return fakeModelResponse({ segments: [{ kind: 'message', text: hasMutation ? 'mutated' : 'original' }] });
+          const hasMutation = req.context.some((e) => e.text === 'mutated: true');
+          return fakeModelResponse({
+            segments: [{ kind: 'message', text: hasMutation ? 'mutated' : 'original' }],
+          });
         }),
       });
       runtime.use(plugin);
@@ -179,7 +189,9 @@ describe('RuntimePlugin lifecycle hooks', () => {
     });
 
     it('receives partial request object with all expected fields', async () => {
-      let receivedRequest: Parameters<NonNullable<(typeof plugin)['resolveModelRequest']>>[0] | null = null;
+      let receivedRequest:
+        | Parameters<NonNullable<(typeof plugin)['resolveModelRequest']>>[0]
+        | null = null;
       const plugin = {
         name: 'request-inspector',
         resolveModelRequest: vi.fn().mockImplementation(async (ctx) => {
@@ -207,7 +219,9 @@ describe('RuntimePlugin lifecycle hooks', () => {
 
   describe('onAfterModel', () => {
     it('fires after model generates a response', async () => {
-      const modelResponse = fakeModelResponse({ segments: [{ kind: 'message', text: 'response' }] });
+      const modelResponse = fakeModelResponse({
+        segments: [{ kind: 'message', text: 'response' }],
+      });
       const callArgs: Array<Parameters<NonNullable<RuntimePlugin['onAfterModel']>>[0]> = [];
       const plugin = {
         name: 'model-observer',
@@ -247,7 +261,9 @@ describe('RuntimePlugin lifecycle hooks', () => {
       await runtime.step();
 
       expect(plugin.onAfterModel).toHaveBeenCalledWith(
-        expect.objectContaining({ response: expect.objectContaining({ continuation: 'continue' }) }),
+        expect.objectContaining({
+          response: expect.objectContaining({ continuation: 'continue' }),
+        }),
       );
     });
   });
@@ -262,9 +278,11 @@ describe('RuntimePlugin lifecycle hooks', () => {
       };
 
       const runtime = new AgentRuntime({
-        model: new FakeStepModelAdapter(() => fakeModelResponse({
-          actionRequests: [{ name: 'test-action', input: {} }],
-        })),
+        model: new FakeStepModelAdapter(() =>
+          fakeModelResponse({
+            actionRequests: [{ name: 'test-action', input: {} }],
+          }),
+        ),
       });
       runtime.registerAction({
         name: 'test-action',
@@ -290,9 +308,11 @@ describe('RuntimePlugin lifecycle hooks', () => {
       };
 
       const runtime = new AgentRuntime({
-        model: new FakeStepModelAdapter(() => fakeModelResponse({
-          actionRequests: [{ name: 'test-action', input: {} }],
-        })),
+        model: new FakeStepModelAdapter(() =>
+          fakeModelResponse({
+            actionRequests: [{ name: 'test-action', input: {} }],
+          }),
+        ),
       });
       runtime.registerAction({
         name: 'test-action',
@@ -332,7 +352,9 @@ describe('RuntimePlugin lifecycle hooks', () => {
     });
 
     it('receives record with id, stepNumber, inputs, modelResponse, actionResults, continuation', async () => {
-      let receivedRecord: Parameters<NonNullable<(typeof plugin)['onAfterStep']>>[0]['record'] | null = null;
+      let receivedRecord:
+        | Parameters<NonNullable<(typeof plugin)['onAfterStep']>>[0]['record']
+        | null = null;
       const plugin = {
         name: 'step-observer',
         onAfterStep: vi.fn().mockImplementation(async (ctx) => {
@@ -359,7 +381,9 @@ describe('RuntimePlugin lifecycle hooks', () => {
     });
 
     it('receives snapshot containing runtimeId and steps', async () => {
-      let receivedSnapshot: Parameters<NonNullable<(typeof plugin)['onAfterStep']>>[0]['snapshot'] | null = null;
+      let receivedSnapshot:
+        | Parameters<NonNullable<(typeof plugin)['onAfterStep']>>[0]['snapshot']
+        | null = null;
       const plugin = {
         name: 'step-observer',
         onAfterStep: vi.fn().mockImplementation(async (ctx) => {
@@ -388,15 +412,27 @@ describe('RuntimePlugin lifecycle hooks', () => {
       const callOrder: string[] = [];
       const pluginA = {
         name: 'plugin-a',
-        onDispatch: vi.fn().mockImplementation(async () => { callOrder.push('a-dispatch'); }),
-        onAfterModel: vi.fn().mockImplementation(async () => { callOrder.push('a-after-model'); }),
-        onAfterStep: vi.fn().mockImplementation(async () => { callOrder.push('a-after-step'); }),
+        onDispatch: vi.fn().mockImplementation(async () => {
+          callOrder.push('a-dispatch');
+        }),
+        onAfterModel: vi.fn().mockImplementation(async () => {
+          callOrder.push('a-after-model');
+        }),
+        onAfterStep: vi.fn().mockImplementation(async () => {
+          callOrder.push('a-after-step');
+        }),
       };
       const pluginB = {
         name: 'plugin-b',
-        onDispatch: vi.fn().mockImplementation(async () => { callOrder.push('b-dispatch'); }),
-        onAfterModel: vi.fn().mockImplementation(async () => { callOrder.push('b-after-model'); }),
-        onAfterStep: vi.fn().mockImplementation(async () => { callOrder.push('b-after-step'); }),
+        onDispatch: vi.fn().mockImplementation(async () => {
+          callOrder.push('b-dispatch');
+        }),
+        onAfterModel: vi.fn().mockImplementation(async () => {
+          callOrder.push('b-after-model');
+        }),
+        onAfterStep: vi.fn().mockImplementation(async () => {
+          callOrder.push('b-after-step');
+        }),
       };
 
       const runtime = new AgentRuntime({
@@ -454,8 +490,6 @@ describe('RuntimePlugin lifecycle hooks', () => {
       expect(stepCount).toHaveBeenCalledTimes(1);
     });
   });
-
-
 
   // ─── Multi-step execution ──────────────────────────────────────────────────
 

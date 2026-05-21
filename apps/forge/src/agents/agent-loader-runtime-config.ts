@@ -3,7 +3,6 @@ import type { AgentToolset } from './agent-loader-tools';
 import type { CreateAgentConfig } from './runtime/types';
 import type { AgentLoaderConfig } from './agent-loader-types';
 
-
 export function buildAgentRuntimeConfig(
   loaderConfig: AgentLoaderConfig,
   runtimeData: AgentRuntimeData,
@@ -23,7 +22,8 @@ export function buildAgentRuntimeConfig(
     companyName: runtimeData.companySettings.companyName,
     companyContext: runtimeData.companySettings.companyContext,
     communicationDmFlushingEnabled: runtimeData.companySettings.communicationDmFlushingEnabled,
-    communicationGroupFlushingEnabled: runtimeData.companySettings.communicationGroupFlushingEnabled,
+    communicationGroupFlushingEnabled:
+      runtimeData.companySettings.communicationGroupFlushingEnabled,
     memoryLastMessagesFullEnabled: runtimeData.companySettings.memoryLastMessagesFullEnabled,
     memoryLastMessagesCount: runtimeData.companySettings.memoryLastMessagesCount,
     tokenCountFilterEnabled: runtimeData.companySettings.tokenCountFilterEnabled,
@@ -46,9 +46,9 @@ export function buildAgentRuntimeConfig(
     tools: toolset.tools,
     providers: runtimeData.providers,
     workspaceBasePath: loaderConfig.workspaceBasePath,
-    workspaceFilesystem: (runtimeData.agent as any).workspaceFilesystem ?? undefined as any,
-    workspaceSandbox: (runtimeData.agent as any).workspaceSandbox ?? undefined as any,
-    workspaceSkills: (runtimeData.agent as any).workspaceSkills ?? undefined as any,
+    workspaceFilesystem: (runtimeData.agent as any).workspaceFilesystem ?? (undefined as any),
+    workspaceSandbox: (runtimeData.agent as any).workspaceSandbox ?? (undefined as any),
+    workspaceSkills: (runtimeData.agent as any).workspaceSkills ?? (undefined as any),
     workspaceEmbedder: (runtimeData.agent as any).workspaceEmbedder as any,
   };
 }

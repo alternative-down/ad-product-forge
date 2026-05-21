@@ -68,7 +68,5 @@ function renderObservationText(text: string) {
 }
 
 function normalizeOmTexts(values: Array<string | null | undefined>) {
-  return values
-    .map((value) => (typeof value === 'string' ? value.trim() : ''))
-    .filter(Boolean);
+  return values.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean);
 }

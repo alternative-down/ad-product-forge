@@ -3,7 +3,12 @@ import type { OpsContext } from './context';
 import type { GitHubAppCredentials } from '../types';
 
 const makeCtx = (): any => ({
-  config: { db: vi.fn() as unknown as OpsContext['config']['db'], httpServer: vi.fn() as unknown as OpsContext['config']['httpServer'], publicBaseUrl: 'https://forge.example.com', integrations: vi.fn() as unknown as OpsContext['config']['integrations'] },
+  config: {
+    db: vi.fn() as unknown as OpsContext['config']['db'],
+    httpServer: vi.fn() as unknown as OpsContext['config']['httpServer'],
+    publicBaseUrl: 'https://forge.example.com',
+    integrations: vi.fn() as unknown as OpsContext['config']['integrations'],
+  },
   notifications: vi.fn() as unknown as OpsContext['notifications'],
   routeCleanups: new Map(),
   GITHUB_PROVIDER_TYPE: 'github',
@@ -32,12 +37,23 @@ const makeCtx = (): any => ({
   normalizeAssignees: (a: string[]) => a,
   toIssueSummary: vi.fn() as unknown as OpsContext['toIssueSummary'],
   toIssueDetails: vi.fn() as unknown as OpsContext['toIssueDetails'],
-  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '', permissions: {}, events: [] },
+  DEFAULT_GITHUB_APP_MANIFEST_CONFIG: {
+    name: 'TestApp',
+    url: '',
+    callbackUrls: [],
+    redirectUrl: '',
+    hookAttributes: {},
+    callbackURL: '',
+    permissions: {},
+    events: [],
+  },
   buildManifestEvents: () => ['issues', 'pull_request'],
   buildManifestPermissions: () => ({ contents: 'read' }),
   createAppName: (n: string, id: string) => `${n}-${id}`,
-  createGitHubInstallWakeContent: vi.fn() as unknown as OpsContext['createGitHubInstallWakeContent'],
-  createGitHubWebhookWakeContent: vi.fn() as unknown as OpsContext['createGitHubWebhookWakeContent'],
+  createGitHubInstallWakeContent:
+    vi.fn() as unknown as OpsContext['createGitHubInstallWakeContent'],
+  createGitHubWebhookWakeContent:
+    vi.fn() as unknown as OpsContext['createGitHubWebhookWakeContent'],
   isGitHubSelfEvent: vi.fn() as unknown as OpsContext['isGitHubSelfEvent'],
   isRecord: vi.fn() as unknown as OpsContext['isRecord'],
   summarizeGitHubEvent: vi.fn() as unknown as OpsContext['summarizeGitHubEvent'],
@@ -45,16 +61,32 @@ const makeCtx = (): any => ({
   normalizeManifestConfig: vi.fn() as unknown as OpsContext['normalizeManifestConfig'],
 });
 
-const manifestConfig = { name: 'TestApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '', permissions: {}, events: [] };
+const manifestConfig = {
+  name: 'TestApp',
+  url: '',
+  callbackUrls: [],
+  redirectUrl: '',
+  hookAttributes: {},
+  callbackURL: '',
+  permissions: {},
+  events: [],
+};
 
 describe('createRoutingOps', () => {
   it('buildProvisioning returns correct structure for active credentials with installUrl', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const routing = createRoutingOps(makeCtx());
-    const result = routing.buildProvisioning('agent-123', { status: 'active', appSlug: 'my-app', manifestConfig: manifestConfig as any, encryptedCredentials: 'x' } as any);
+    const result = routing.buildProvisioning('agent-123', {
+      status: 'active',
+      appSlug: 'my-app',
+      manifestConfig: manifestConfig as any,
+      encryptedCredentials: 'x',
+    } as any);
     expect(result.agentId).toBe('agent-123');
     expect(result.status).toBe('active');
-    expect(result.registrationUrl).toBe('https://forge.example.com/webhook/github/agent-123/register');
+    expect(result.registrationUrl).toBe(
+      'https://forge.example.com/webhook/github/agent-123/register',
+    );
     expect(result.installUrl).toBe('https://github.com/apps/my-app/installations/new');
     expect((result.manifestConfig as any).name).toBe('TestApp');
   });
@@ -62,7 +94,11 @@ describe('createRoutingOps', () => {
   it('buildProvisioning omits installUrl for pending credentials', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const routing = createRoutingOps(makeCtx());
-    const result = routing.buildProvisioning('agent-456', { status: 'pending', manifestConfig: manifestConfig as any, encryptedCredentials: 'x' } as any);
+    const result = routing.buildProvisioning('agent-456', {
+      status: 'pending',
+      manifestConfig: manifestConfig as any,
+      encryptedCredentials: 'x',
+    } as any);
     expect(result.status).toBe('pending');
     expect(result.installUrl).toBeUndefined();
     expect(result.registrationUrl).toContain('agent-456');
@@ -71,7 +107,12 @@ describe('createRoutingOps', () => {
   it('buildProvisioning includes installUrl for created status', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const routing = createRoutingOps(makeCtx());
-    const result = routing.buildProvisioning('agent-789', { status: 'created', appSlug: 'new-app', manifestConfig: manifestConfig as any, encryptedCredentials: 'x' } as any);
+    const result = routing.buildProvisioning('agent-789', {
+      status: 'created',
+      appSlug: 'new-app',
+      manifestConfig: manifestConfig as any,
+      encryptedCredentials: 'x',
+    } as any);
     expect(result.status).toBe('created');
     expect(result.installUrl).toBe('https://github.com/apps/new-app/installations/new');
   });
@@ -93,18 +134,22 @@ describe('createRoutingOps — registerAgentRoutes', () => {
 
   it('registerAgentRoutes uses correct paths', async () => {
     const { createRoutingOps } = await import('./routing.js');
-    const routeCalls: Array<{method: string; path: string}> = [];
+    const routeCalls: Array<{ method: string; path: string }> = [];
     const httpMock = {
-      registerRoute: vi.fn().mockImplementation(({ method, path }: { method: string; path: string; handler: unknown }) => {
-        routeCalls.push({ method, path });
-        return vi.fn();
-      }),
+      registerRoute: vi
+        .fn()
+        .mockImplementation(
+          ({ method, path }: { method: string; path: string; handler: unknown }) => {
+            routeCalls.push({ method, path });
+            return vi.fn();
+          },
+        ),
     };
     const ctx = makeCtx();
     ctx.config.httpServer = httpMock as unknown as OpsContext['config']['httpServer'];
     const routing = createRoutingOps(ctx);
     routing.registerAgentRoutes('agent-x');
-    expect(routeCalls.map(r => `${r.method}:${r.path}`)).toEqual([
+    expect(routeCalls.map((r) => `${r.method}:${r.path}`)).toEqual([
       'GET:/webhook/github/agent-x/register',
       'GET:/webhook/github/agent-x/callback',
       'GET:/webhook/github/agent-x/setup',
@@ -127,10 +172,26 @@ describe('createRoutingOps — handleRegisterPage', () => {
   it('returns 200 with status when credentials are not pending', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getCredentials = vi.fn().mockResolvedValue({ status: 'active', appSlug: 'active-app', manifestConfig: { name: 'App', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, encryptedCredentials: 'x' });
+    ctx.getCredentials = vi
+      .fn()
+      .mockResolvedValue({
+        status: 'active',
+        appSlug: 'active-app',
+        manifestConfig: {
+          name: 'App',
+          url: '',
+          callbackUrls: [],
+          redirectUrl: '',
+          hookAttributes: {},
+          callbackURL: '',
+        },
+        encryptedCredentials: 'x',
+      });
     ctx.buildManifestEvents = vi.fn().mockReturnValue(['issues']);
     ctx.buildManifestPermissions = vi.fn().mockReturnValue({ issues: 'write' });
-    ctx.getGlobalConfig = vi.fn().mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
+    ctx.getGlobalConfig = vi
+      .fn()
+      .mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
     const routing = createRoutingOps(ctx);
     const result = await routing.handleRegisterPage('agent-active');
     expect(result.status).toBe(200);
@@ -142,7 +203,14 @@ describe('createRoutingOps — handleRegisterPage', () => {
     const ctx = makeCtx();
     ctx.getCredentials = vi.fn().mockResolvedValue({
       status: 'pending',
-      manifestConfig: { name: 'PendingApp', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' },
+      manifestConfig: {
+        name: 'PendingApp',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
       appName: 'PendingApp',
       state: 'abc123',
       createdAt: 1700000000000,
@@ -150,7 +218,9 @@ describe('createRoutingOps — handleRegisterPage', () => {
     });
     ctx.buildManifestEvents = vi.fn().mockReturnValue(['issues']);
     ctx.buildManifestPermissions = vi.fn().mockReturnValue({ issues: 'write' });
-    ctx.getGlobalConfig = vi.fn().mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
+    ctx.getGlobalConfig = vi
+      .fn()
+      .mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
     const routing = createRoutingOps(ctx);
     const result = await routing.handleRegisterPage('agent-pending');
     expect(result.status).toBe(200);
@@ -174,7 +244,26 @@ describe('createRoutingOps — handleSetupCallback', () => {
   it('returns 400 when installation_id missing', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getCredentials = vi.fn().mockResolvedValue({ status: 'created', appId: 1, privateKey: 'key', webhookSecret: 'secret', appSlug: 'app', appName: 'App', manifestConfig: { name: 'App', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, createdAt: 1, encryptedCredentials: 'x' });
+    ctx.getCredentials = vi
+      .fn()
+      .mockResolvedValue({
+        status: 'created',
+        appId: 1,
+        privateKey: 'key',
+        webhookSecret: 'secret',
+        appSlug: 'app',
+        appName: 'App',
+        manifestConfig: {
+          name: 'App',
+          url: '',
+          callbackUrls: [],
+          redirectUrl: '',
+          hookAttributes: {},
+          callbackURL: '',
+        },
+        createdAt: 1,
+        encryptedCredentials: 'x',
+      });
     const routing = createRoutingOps(ctx);
     const result = await routing.handleSetupCallback('agent-1', null);
     expect(result.status).toBe(400);
@@ -184,7 +273,26 @@ describe('createRoutingOps — handleSetupCallback', () => {
   it('returns 400 for non-numeric installation_id', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getCredentials = vi.fn().mockResolvedValue({ status: 'created', appId: 1, privateKey: 'key', webhookSecret: 'secret', appSlug: 'app', appName: 'App', manifestConfig: { name: 'App', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, createdAt: 1, encryptedCredentials: 'x' });
+    ctx.getCredentials = vi
+      .fn()
+      .mockResolvedValue({
+        status: 'created',
+        appId: 1,
+        privateKey: 'key',
+        webhookSecret: 'secret',
+        appSlug: 'app',
+        appName: 'App',
+        manifestConfig: {
+          name: 'App',
+          url: '',
+          callbackUrls: [],
+          redirectUrl: '',
+          hookAttributes: {},
+          callbackURL: '',
+        },
+        createdAt: 1,
+        encryptedCredentials: 'x',
+      });
     const routing = createRoutingOps(ctx);
     const result = await routing.handleSetupCallback('agent-1', 'not-a-number');
     expect(result.status).toBe(400);
@@ -197,17 +305,38 @@ describe('createRoutingOps — handleSetupCallback', () => {
     const notifyMock = vi.fn().mockResolvedValue(undefined);
     const ctx = makeCtx();
     ctx.getCredentials = vi.fn().mockResolvedValue({
-      status: 'created', appId: 999, privateKey: 'pk', webhookSecret: 'ws', appSlug: 'my-app', appName: 'My App',
-      manifestConfig: { name: 'App', url: '', callbackUrls: [], redirectUrl: '', hookAttributes: {}, callbackURL: '' }, createdAt: 1, encryptedCredentials: 'x',
+      status: 'created',
+      appId: 999,
+      privateKey: 'pk',
+      webhookSecret: 'ws',
+      appSlug: 'my-app',
+      appName: 'My App',
+      manifestConfig: {
+        name: 'App',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
+      createdAt: 1,
+      encryptedCredentials: 'x',
     });
     ctx.saveCredentials = saveMock;
-    ctx.getGlobalConfig = vi.fn().mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
-    ctx.notifications = { createNotification: notifyMock } as unknown as OpsContext['notifications'];
+    ctx.getGlobalConfig = vi
+      .fn()
+      .mockResolvedValue({ organization: 'my-org', appHomeUrl: 'https://app.example.com' });
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
     ctx.createGitHubInstallWakeContent = vi.fn().mockReturnValue('wake-content');
     const routing = createRoutingOps(ctx);
     const result = await routing.handleSetupCallback('agent-1', '12345');
     expect(result.status).toBe(200);
-    expect(saveMock).toHaveBeenCalledWith('agent-1', expect.objectContaining({ status: 'active', installationId: 12345 }));
+    expect(saveMock).toHaveBeenCalledWith(
+      'agent-1',
+      expect.objectContaining({ status: 'active', installationId: 12345 }),
+    );
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'wake-content' });
   });
 });
@@ -216,7 +345,9 @@ describe('createRoutingOps — handleWebhook', () => {
   it('returns 400 when x-github-event header missing', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getHeader = vi.fn().mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
     const routing = createRoutingOps(ctx);
     const result = await routing.handleWebhook('agent-1', {}, '{}');
     expect(result.status).toBe(400);
@@ -226,10 +357,16 @@ describe('createRoutingOps — handleWebhook', () => {
   it('returns 400 when body is not valid JSON', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getHeader = vi.fn().mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
     ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
     const routing = createRoutingOps(ctx);
-    const result = await routing.handleWebhook('agent-1', { 'x-github-event': 'push', 'x-github-delivery': 'abc' }, 'not json');
+    const result = await routing.handleWebhook(
+      'agent-1',
+      { 'x-github-event': 'push', 'x-github-delivery': 'abc' },
+      'not json',
+    );
     expect(result.status).toBe(400);
     expect(result.body).toContain('Invalid JSON');
   });
@@ -237,11 +374,17 @@ describe('createRoutingOps — handleWebhook', () => {
   it('returns 200 for self events without creating notification', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getHeader = vi.fn().mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
     ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(true);
     ctx.notifications = { createNotification: vi.fn() } as unknown as OpsContext['notifications'];
     const routing = createRoutingOps(ctx);
-    const result = await routing.handleWebhook('agent-1', { 'x-github-event': 'push', 'x-github-delivery': 'xyz' }, '{"ref":"refs/heads/main"}');
+    const result = await routing.handleWebhook(
+      'agent-1',
+      { 'x-github-event': 'push', 'x-github-delivery': 'xyz' },
+      '{"ref":"refs/heads/main"}',
+    );
     expect(result.status).toBe(200);
     expect(result.body).toBe('ok');
   });
@@ -250,15 +393,22 @@ describe('createRoutingOps — handleWebhook', () => {
     const { createRoutingOps } = await import('./routing.js');
     const notifyMock = vi.fn().mockResolvedValue(undefined);
     const ctx = makeCtx();
-    ctx.getHeader = vi.fn().mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
+    ctx.getHeader = vi
+      .fn()
+      .mockImplementation((headers: Record<string, string>, key: string) => headers[key] ?? null);
     ctx.isGitHubSelfEvent = vi.fn().mockReturnValue(false);
-    ctx.notifications = { createNotification: notifyMock } as unknown as OpsContext['notifications'];
+    ctx.notifications = {
+      createNotification: notifyMock,
+    } as unknown as OpsContext['notifications'];
     ctx.createGitHubWebhookWakeContent = vi.fn().mockReturnValue('webhook-wake');
     const routing = createRoutingOps(ctx);
-    const result = await routing.handleWebhook('agent-1', { 'x-github-event': 'issues', 'x-github-delivery': 'def456' }, '{"action":"opened","issue":{"id":1}}');
+    const result = await routing.handleWebhook(
+      'agent-1',
+      { 'x-github-event': 'issues', 'x-github-delivery': 'def456' },
+      '{"action":"opened","issue":{"id":1}}',
+    );
     expect(result.status).toBe(202);
     expect(result.body).toBe('Accepted');
     expect(notifyMock).toHaveBeenCalledWith({ agentId: 'agent-1', content: 'webhook-wake' });
   });
 });
-

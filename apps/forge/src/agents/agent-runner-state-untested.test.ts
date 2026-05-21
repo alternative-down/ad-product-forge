@@ -127,13 +127,13 @@ describe('isStaleRun', () => {
 
   it('returns true after advanceRunEpoch changes activeRunEpoch', () => {
     const state = makeRunState({ activeRunEpoch: 1 });
-    expect(isStaleRun(state, 0)).toBe(true);  // stale: 0 !== 1
+    expect(isStaleRun(state, 0)).toBe(true); // stale: 0 !== 1
     advanceRunEpoch(state); // activeRunEpoch becomes 2
     expect(isStaleRun(state, 2)).toBe(false); // matches current
-    expect(isStaleRun(state, 0)).toBe(true);  // stale (older)
+    expect(isStaleRun(state, 0)).toBe(true); // stale (older)
     advanceRunEpoch(state); // activeRunEpoch becomes 3
     expect(isStaleRun(state, 3)).toBe(false); // matches current
-    expect(isStaleRun(state, 2)).toBe(true);  // stale (previous)
+    expect(isStaleRun(state, 2)).toBe(true); // stale (previous)
   });
 });
 

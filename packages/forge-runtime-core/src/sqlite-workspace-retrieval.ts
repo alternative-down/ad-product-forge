@@ -26,10 +26,13 @@ type SqliteDatabase = {
 };
 
 const { DatabaseSync: NodeDatabaseSync } = require('node:sqlite') as {
-  DatabaseSync: new (path: string, options: {
-    allowExtension: boolean;
-    open: boolean;
-  }) => SqliteDatabase;
+  DatabaseSync: new (
+    path: string,
+    options: {
+      allowExtension: boolean;
+      open: boolean;
+    },
+  ) => SqliteDatabase;
 };
 
 export type SqliteWorkspaceRetrievalOptions = {
@@ -171,7 +174,6 @@ export class SqliteWorkspaceRetrieval {
       db.exec('rollback');
       throw error instanceof Error ? error : new Error(String(error));
     }
-
   }
 
   async search(
@@ -193,9 +195,7 @@ export class SqliteWorkspaceRetrieval {
     const candidates = new Map<number, SearchCandidate>();
     const scoreThreshold = Math.max(0, Math.min(options.scoreThreshold ?? 0, 1));
     const resultLimit = Math.max(1, options.resultLimit ?? options.topK);
-    const queryVector = options.mode === 'bm25'
-      ? []
-      : await this.embedQuery(queryText);
+    const queryVector = options.mode === 'bm25' ? [] : await this.embedQuery(queryText);
 
     if (options.mode !== 'bm25' && queryVector.length > 0 && this.vecReady) {
       for (const row of this.searchVectorRows(db, queryVector, options.topK, scoreThreshold)) {
@@ -224,7 +224,7 @@ export class SqliteWorkspaceRetrieval {
         }
 
         const mergedScore = candidate
-          ? Math.max(candidate.score, (candidate.score * 0.45) + (score * 0.55))
+          ? Math.max(candidate.score, candidate.score * 0.45 + score * 0.55)
           : score;
 
         candidates.set(row.rowid, {
@@ -349,10 +349,14 @@ export class SqliteWorkspaceRetrieval {
       relevantContextRaw: relevantContext,
       sourcesCount: sources.length,
       sourcesJson: input.includeSources ? JSON.stringify(sources, null, 2) : null,
-      rawJson: JSON.stringify({
-        seeds: seedRows,
-        visited: [...visited.entries()].map(([rowid, score]) => ({ rowid, score })),
-      }, null, 2),
+      rawJson: JSON.stringify(
+        {
+          seeds: seedRows,
+          visited: [...visited.entries()].map(([rowid, score]) => ({ rowid, score })),
+        },
+        null,
+        2,
+      ),
     };
   }
 
@@ -361,9 +365,7 @@ export class SqliteWorkspaceRetrieval {
       return [];
     }
 
-    const queryVector = Array.isArray(query)
-      ? query
-      : await this.embedQuery(query);
+    const queryVector = Array.isArray(query) ? query : await this.embedQuery(query);
 
     if (queryVector.length === 0) {
       return [];
@@ -380,22 +382,20 @@ export class SqliteWorkspaceRetrieval {
   // eslint-disable-next-line @typescript-eslint/require-await
   async getStats() {
     const db = this.getDb();
-    const countRow = db.prepare(
-      'select count(*) as count from retrieval_documents',
-    ).get() as { count: number } | undefined;
+    const countRow = db.prepare('select count(*) as count from retrieval_documents').get() as
+      | { count: number }
+      | undefined;
 
     return {
-      availableIndexes: [
-        'sqlite-fts5',
-        this.vecReady ? 'sqlite-vec' : null,
-        'sqlite-graph',
-      ].filter((value): value is string => value !== null),
+      availableIndexes: ['sqlite-fts5', this.vecReady ? 'sqlite-vec' : null, 'sqlite-graph'].filter(
+        (value): value is string => value !== null,
+      ),
       activeIndexStats: this.vecReady
         ? {
-          dimension: this.vectorDimension ?? 0,
-          count: countRow?.count ?? 0,
-          metric: 'cosine',
-        }
+            dimension: this.vectorDimension ?? 0,
+            count: countRow?.count ?? 0,
+            metric: 'cosine',
+          }
         : null,
     };
   }
@@ -468,9 +468,9 @@ export class SqliteWorkspaceRetrieval {
       );
     `);
 
-    const dimensionRow = db.prepare(
-      "select value from retrieval_meta where key = 'vector_dimension'",
-    ).get() as { value: string } | undefined;
+    const dimensionRow = db
+      .prepare("select value from retrieval_meta where key = 'vector_dimension'")
+      .get() as { value: string } | undefined;
 
     if (!dimensionRow) {
       return;
@@ -494,17 +494,21 @@ export class SqliteWorkspaceRetrieval {
         embedding float[${dimension}] distance_metric=cosine
       );
     `);
-    db.prepare(`
+    db.prepare(
+      `
       insert into retrieval_meta (key, value)
       values ('vector_dimension', ?)
       on conflict(key) do update set value = excluded.value
-    `).run(String(dimension));
+    `,
+    ).run(String(dimension));
     this.vectorDimension = dimension;
     this.vecReady = true;
   }
 
   private listStoredDocuments(db: SqliteDatabase) {
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       select
         rowid,
         document_id,
@@ -515,11 +519,15 @@ export class SqliteWorkspaceRetrieval {
         metadata_json
       from retrieval_documents
       order by path asc, rowid asc
-    `).all() as StoredDocumentRow[];
+    `,
+      )
+      .all() as StoredDocumentRow[];
   }
 
   private getStoredDocumentByRowid(db: SqliteDatabase, rowid: number) {
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       select
         rowid,
         document_id,
@@ -530,7 +538,9 @@ export class SqliteWorkspaceRetrieval {
         metadata_json
       from retrieval_documents
       where rowid = ?
-    `).get(rowid) as StoredDocumentRow | undefined;
+    `,
+      )
+      .get(rowid) as StoredDocumentRow | undefined;
   }
 
   private upsertDocument(
@@ -541,7 +551,8 @@ export class SqliteWorkspaceRetrieval {
       metadataJson: string | null;
     },
   ) {
-    db.prepare(`
+    db.prepare(
+      `
       insert into retrieval_documents (
         document_id,
         path,
@@ -558,7 +569,8 @@ export class SqliteWorkspaceRetrieval {
         embedding_json = excluded.embedding_json,
         metadata_json = excluded.metadata_json,
         updated_at = excluded.updated_at
-    `).run(
+    `,
+    ).run(
       document.id,
       document.path,
       document.text,
@@ -567,30 +579,34 @@ export class SqliteWorkspaceRetrieval {
       document.metadataJson,
       Date.now(),
     );
-    const row = db.prepare(
-      'select rowid from retrieval_documents where document_id = ?',
-    ).get(document.id) as { rowid: number };
+    const row = db
+      .prepare('select rowid from retrieval_documents where document_id = ?')
+      .get(document.id) as { rowid: number };
 
-    db.prepare('insert or replace into retrieval_documents_fts (rowid, text, path) values (?, ?, ?)')
-      .run(row.rowid, document.text, document.path);
+    db.prepare(
+      'insert or replace into retrieval_documents_fts (rowid, text, path) values (?, ?, ?)',
+    ).run(row.rowid, document.text, document.path);
 
     return row.rowid;
   }
 
   private replaceVector(db: SqliteDatabase, rowid: number, vector: number[]) {
-    db.prepare(
-      'delete from retrieval_document_embeddings where rowid = ?',
-    ).run(BigInt(rowid));
-    db.prepare(
-      'insert into retrieval_document_embeddings (rowid, embedding) values (?, ?)',
-    ).run(BigInt(rowid), JSON.stringify(vector));
-    db.prepare(
-      'update retrieval_documents set embedding_json = ? where rowid = ?',
-    ).run(JSON.stringify(vector), rowid);
+    db.prepare('delete from retrieval_document_embeddings where rowid = ?').run(BigInt(rowid));
+    db.prepare('insert into retrieval_document_embeddings (rowid, embedding) values (?, ?)').run(
+      BigInt(rowid),
+      JSON.stringify(vector),
+    );
+    db.prepare('update retrieval_documents set embedding_json = ? where rowid = ?').run(
+      JSON.stringify(vector),
+      rowid,
+    );
   }
 
   private deleteDocument(db: SqliteDatabase, rowid: number) {
-    db.prepare('delete from retrieval_graph_edges where from_rowid = ? or to_rowid = ?').run(rowid, rowid);
+    db.prepare('delete from retrieval_graph_edges where from_rowid = ? or to_rowid = ?').run(
+      rowid,
+      rowid,
+    );
     db.prepare('delete from retrieval_documents_fts where rowid = ?').run(rowid);
 
     if (this.vecReady) {
@@ -620,13 +636,17 @@ export class SqliteWorkspaceRetrieval {
         continue;
       }
 
-      const neighbors = db.prepare(`
+      const neighbors = db
+        .prepare(
+          `
         select rowid, distance
         from retrieval_document_embeddings
         where embedding match ?
           and k = ?
         order by distance asc
-      `).all(embeddingJson, this.graphNeighborCount + 1) as Array<{
+      `,
+        )
+        .all(embeddingJson, this.graphNeighborCount + 1) as Array<{
         rowid: number;
         distance: number;
       }>;
@@ -655,22 +675,28 @@ export class SqliteWorkspaceRetrieval {
     weight: number,
     kind: 'directory' | 'semantic',
   ) {
-    db.prepare(`
+    db.prepare(
+      `
       insert into retrieval_graph_edges (from_rowid, to_rowid, weight, kind)
       values (?, ?, ?, ?)
       on conflict(from_rowid, to_rowid, kind) do update set
         weight = excluded.weight
-    `).run(fromRowid, toRowid, weight, kind);
+    `,
+    ).run(fromRowid, toRowid, weight, kind);
   }
 
   private listGraphEdges(db: SqliteDatabase, rowid: number) {
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       select to_rowid, weight
       from retrieval_graph_edges
       where from_rowid = ?
       order by weight desc, to_rowid asc
       limit ?
-    `).all(rowid, this.graphNeighborCount) as GraphEdgeRow[];
+    `,
+      )
+      .all(rowid, this.graphNeighborCount) as GraphEdgeRow[];
   }
 
   private searchVectorRows(
@@ -685,7 +711,9 @@ export class SqliteWorkspaceRetrieval {
 
     const maxDistance = Math.max(0, 1 - scoreThreshold);
 
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       select
         retrieval_documents.rowid as rowid,
         retrieval_documents.document_id as document_id,
@@ -698,7 +726,9 @@ export class SqliteWorkspaceRetrieval {
         and k = ?
         and retrieval_document_embeddings.distance <= ?
       order by retrieval_document_embeddings.distance asc
-    `).all(JSON.stringify(queryVector), topK, maxDistance) as SearchResultRow[];
+    `,
+      )
+      .all(JSON.stringify(queryVector), topK, maxDistance) as SearchResultRow[];
   }
 
   private searchKeywordRows(
@@ -713,7 +743,9 @@ export class SqliteWorkspaceRetrieval {
       return [];
     }
 
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       select
         retrieval_documents.rowid as rowid,
         retrieval_documents.document_id as document_id,
@@ -726,7 +758,9 @@ export class SqliteWorkspaceRetrieval {
         and (1.0 / (2.0 + abs(bm25(retrieval_documents_fts)))) >= ?
       order by rank asc
       limit ?
-    `).all(keywordQuery, scoreThreshold > 0 ? scoreThreshold : 0, topK) as SearchResultRow[];
+    `,
+      )
+      .all(keywordQuery, scoreThreshold > 0 ? scoreThreshold : 0, topK) as SearchResultRow[];
   }
 
   private async embedQuery(queryText: string) {
@@ -739,9 +773,7 @@ export class SqliteWorkspaceRetrieval {
 }
 
 function hashText(text: string) {
-  return createHash('sha256')
-    .update(text)
-    .digest('hex');
+  return createHash('sha256').update(text).digest('hex');
 }
 
 function resolveDocumentPath(document: RetrievalSourceDocument) {
@@ -772,10 +804,11 @@ function distanceToScore(distance: number) {
 }
 
 function buildKeywordMatchQuery(queryText: string) {
-  const tokens = queryText
-    .toLowerCase()
-    .match(/[\p{L}\p{N}_]+/gu)
-    ?.filter((token) => token.length >= 2) ?? [];
+  const tokens =
+    queryText
+      .toLowerCase()
+      .match(/[\p{L}\p{N}_]+/gu)
+      ?.filter((token) => token.length >= 2) ?? [];
 
   if (tokens.length === 0) {
     return null;

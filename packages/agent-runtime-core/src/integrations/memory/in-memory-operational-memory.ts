@@ -90,24 +90,27 @@ export class InMemoryOperationalMemory implements OperationalMemory {
     const context: StepContextEntry[] = [];
 
     for (const observation of snapshot.observations) {
-      context.push(createTextStepContextEntry({
-        id: observation.id,
-        kind: 'operational-observation',
-        title: 'Operational Observation',
-        text: observation.text,
-      }));
+      context.push(
+        createTextStepContextEntry({
+          id: observation.id,
+          kind: 'operational-observation',
+          title: 'Operational Observation',
+          text: observation.text,
+        }),
+      );
     }
 
     for (const entry of snapshot.recentRaw) {
-      context.push(createTextStepContextEntry({
-        id: entry.id,
-        kind: 'operational-raw',
-        title: `Recent ${entry.source}`,
-        text: entry.text,
-      }));
+      context.push(
+        createTextStepContextEntry({
+          id: entry.id,
+          kind: 'operational-raw',
+          title: `Recent ${entry.source}`,
+          text: entry.text,
+        }),
+      );
     }
 
     return context;
   }
 }
-

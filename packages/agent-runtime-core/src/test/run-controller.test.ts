@@ -11,10 +11,12 @@ describe('RuntimeRunController', () => {
     const runtime = new AgentRuntime({
       runtimeId: 'runtime-run-controller',
       model: new FakeStepModelAdapter((request) => ({
-        segments: [{
-          kind: 'message',
-          text: `step-${request.stepNumber}`,
-        }],
+        segments: [
+          {
+            kind: 'message',
+            text: `step-${request.stepNumber}`,
+          },
+        ],
         actionRequests: [],
         continuation: request.stepNumber < 2 ? 'continue' : 'stop',
       })),
