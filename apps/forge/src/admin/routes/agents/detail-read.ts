@@ -12,6 +12,7 @@ import type { ForgeHttpServerAdapter } from '../../../http/server';
 
 import type {Database} from '../../../database/schema';
 import {
+  type McpServerConfig,
   agentExecutionSteps,
   agentSchedules,
   agentNotifications,
@@ -201,21 +202,21 @@ export function registerAgentMcpRoutes(
         where: inArray(mcpServerConfigs.id, serverIds),
       });
 
-      const serverIdToLink = new Map(agentMcpRows.map((link: any) => [link.serverId, link]));
+      const serverIdToLink = new Map(agentMcpRows.map((link: { serverId: string; id: string }) => [link.serverId, link]));
       return jsonResponse({
-        servers: agentMcpServerRows.map((server: any) => {
+        servers: agentMcpServerRows.map((server: McpServerConfig) => {
           const link = serverIdToLink.get(server.id);
           return {
             configId: link?.id ?? null,
             serverId: server.id,
             name: server.name,
             description: server.description ?? undefined,
-            transport: (server as any).transport ?? null,
-            command: (server as any).command ?? '',
-            argsText: (server as any).args ?? '',
-            envVarsText: (server as any).envVars ?? '',
-            url: (server as any).url ?? '',
-            headersText: (server as any).headers ?? '',
+            transport: server.transport ?? null,
+            command: server.command ?? '',
+            argsText: server.args ?? '',
+            envVarsText: server.envVars ?? '',
+            url: server.url ?? '',
+            headersText: server.headers ?? '',
             
           };
         }),
