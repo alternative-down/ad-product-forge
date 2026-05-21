@@ -50,6 +50,23 @@ export interface BrowserAutomationConfig {
   navigationTimeoutMs?: number;
 }
 
+/**
+ * Helper for extracting Playwright accessibility snapshots from a Page.
+ * Typed to avoid (page as any).accessibility.snapshot() casts.
+ */
+export interface A11ySnapshotHelper {
+  snapshot(options?: { interestingOnly?: boolean }): Promise<{
+    name?: string;
+    role?: string;
+    children?: unknown[];
+  } | null>;
+}
+
+/** Wrap a Playwright Page with an A11ySnapshotHelper. */
+function toA11yHelper(page: Page): A11ySnapshotHelper {
+  return page as unknown as A11ySnapshotHelper;
+}
+
 export function createBrowserAutomationService(config: BrowserAutomationConfig = {}) {
   // One Playwright browser instance per agent
   const agentBrowsers = new Map<string, AgentBrowserInstance>();
@@ -123,7 +140,8 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         await page.waitForSelector(String(options.waitForSelector), { timeout: timeout as number });
       }
 
-      const accessibilityTree = await (page as any).accessibility.snapshot();
+      const a11yHelper = toA11yHelper(page);
+      const accessibilityTree = await a11yHelper.snapshot();
 
       const result: BrowserToolResult = {
         pageId,
@@ -167,7 +185,8 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await session.page.click(selector, { timeout: DEFAULT_TIMEOUT_MS });
       session.lastUsedAt = Date.now();
-      const tree = await (session.page as any).accessibility.snapshot();
+      const a11yHelper = toA11yHelper(session.page);
+      const tree = await a11yHelper.snapshot();
       return {
         pageId: session.pageId,
         accessibilityTree: serializeA11yTree(tree),
@@ -200,7 +219,8 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await session.page.fill(selector, value, { timeout: DEFAULT_TIMEOUT_MS });
       session.lastUsedAt = Date.now();
-      const tree = await (session.page as any).accessibility.snapshot();
+      const a11yHelper = toA11yHelper(session.page);
+      const tree = await a11yHelper.snapshot();
       return {
         pageId: session.pageId,
         accessibilityTree: serializeA11yTree(tree),
@@ -312,7 +332,8 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       await session.page.waitForSelector(selector, { timeout });
       session.lastUsedAt = Date.now();
-      const tree = await (session.page as any).accessibility.snapshot();
+      const a11yHelper = toA11yHelper(session.page);
+      const tree = await a11yHelper.snapshot();
       return {
         pageId: session.pageId,
         accessibilityTree: serializeA11yTree(tree),

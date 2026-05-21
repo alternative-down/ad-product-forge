@@ -156,7 +156,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         (await conversationStore.read({ threadId: mastraAgentId, resourceId: mastraAgentId }))
           ?.workingMemory ?? null;
       const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
-      const systemSettings = (createSystemSettingsStore as any)(db);
+      const systemSettings = createSystemSettingsStore(db);
       const settings = await systemSettings.getSettings();
 
       const operationalMemoryState = await readOperationalMemoryState({
