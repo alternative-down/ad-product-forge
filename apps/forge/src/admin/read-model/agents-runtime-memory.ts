@@ -23,6 +23,7 @@ import {
   readOperationalMemoryState,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { formatWorkingMemoryValue, isTextPart } from './helpers';
@@ -136,7 +137,7 @@ export function createAgentsRuntimeMemoryReadModel(
       try {
         agentContext = (await readFile(resolve(agentWorkspaceDir, 'context.txt'), 'utf8')).trim() ?? null;
       } catch (err) {
-        forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: String(serializeError(err)) } });
         agentContext = null;
       }
 
@@ -192,14 +193,14 @@ export function createAgentsRuntimeMemoryReadModel(
             (loadedAgent.runtime.longTermMemory as any).readSnapshot(),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Agent runtime memory LTM snapshot timed out for ${agentId}`,
-          ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: err instanceof Error ? err.message : String(err) } }); return null; })
+          ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: String(serializeError(err)) } }); return null; })
         : null;
 
       const persistedLtmState = await withTimeout(
         readLongTermMemoryState(db, agentId),
         ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
         `Agent runtime memory persisted LTM state timed out for ${agentId}`,
-      ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: err instanceof Error ? err.message : String(err) } }); return null; });
+      ).catch((err) => { forgeDebug({ scope: 'admin-read-model', level: 'error', message: '[safe-catch]', context: { err: String(serializeError(err)) } }); return null; });
 
       const ltm = (runtimeLtmSnapshot !== null
         ? {
