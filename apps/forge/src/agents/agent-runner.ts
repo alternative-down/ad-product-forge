@@ -525,18 +525,19 @@ export function createAgentRunner(
           runtime,
           currentRuntime,
           store,
-          usage: (usage as unknown as any),
+          usage: usage as unknown as import('./agent-runner-usage').AgentRunnerUsage,
           notifications,
           homeMetricSnapshots,
-          messageManager: messageManager as any,
+          messageManager,
           runLastMessages,
           flushPendingRunMessages,
-          scheduler: (scheduler as any),
-          epochState: { activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0 } as any,
-          backoffState: { backoffMs, instant, nextStepAt: _nextStepAt } as any,
-          progressState: { stepsThisRun: 0, tokensThisRun: 0, lastGenerateProgress: null } as any,
-          loopState: { lastLoopSignature: null, repeatedLoopCount: 0 } as any,
-          loopDetector: { register: () => 1, isStuck: () => false, reset: () => {}, getSignatureCount: () => 0, getCurrentSignature: () => null } as any,
+          // @ts-expect-error Scheduler type in GenerateDeps doesn't include all methods from createScheduler return
+          scheduler,
+          epochState: { activeRunEpoch: 0, activeStepEpoch: 0, activeGenerateToken: 0, activeRunId: null },
+          backoffState: { backoffMs, instant, nextStepAt: _nextStepAt },
+          progressState: { lastStepStartedAt: null, lastStepStage: null, lastGenerateProgress: null },
+          loopState: { lastLoopSignature: null, repeatedLoopCount: 0 },
+          loopDetector: loopManager,
           currentGenerateAbortController,
           setCurrentGenerateAbortController: (c) => {
             currentGenerateAbortController = c;
@@ -800,7 +801,7 @@ export function createAgentRunner(
   function startNewRunEpoch() {
     // Advance both local activeRunId and scheduler's epoch state
     activeRunId = createId();
-    advanceGenerateToken(scheduler.getState() as any);
+    advanceGenerateToken(scheduler.getState());
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
     return scheduler.startNewRunEpoch();
@@ -825,7 +826,7 @@ export function createAgentRunner(
     }
 
     clearTimer();
-    advanceGenerateToken(scheduler.getState() as any);
+    advanceGenerateToken(scheduler.getState());
     currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
     currentGenerateAbortController = null;
     applyIdleState(runEpoch);

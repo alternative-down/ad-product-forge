@@ -32,7 +32,6 @@ import type { AgentRunnerUsage } from './agent-runner-usage';
 import type { AgentWakeQueue } from '@forge-runtime/core';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
-import type { LoopDetector } from './agent-runner-loop-detector';
 
 import { delay, withTimeout } from '../utils/async';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -135,7 +134,12 @@ export interface GenerateDeps {
   backoffState: BackoffState;
   progressState: ProgressState;
   loopState: LoopState;
-  loopDetector: LoopDetector;
+  loopDetector: {
+    recordIteration?(iteration: number): boolean;
+    reset(): void;
+    isStuck(): boolean;
+    getSignatureCount(): number;
+  };
 
   // Abort controller ref
   currentGenerateAbortController: AbortController | null;
