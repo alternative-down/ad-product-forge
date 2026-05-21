@@ -12,7 +12,7 @@ import { createGitHubAppManager } from '../github/manager';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
-  runner: InternalAgentRunner;
+  runner: InternalAgentRunner | null;
 };
 
 /**
@@ -104,8 +104,8 @@ function createInternalAgentRegistry() {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents = existingAgent
       ? [
-          ...existingAgent.runner.getSnapshot().wake.events,
-          ...existingAgent.runner.getSnapshot().pendingRunEvents,
+          ...(existingAgent.runner?.getSnapshot()?.wake.events ?? []),
+          ...(existingAgent.runner?.getSnapshot()?.pendingRunEvents ?? []),
         ]
       : [];
 
@@ -159,7 +159,7 @@ function createInternalAgentRegistry() {
 
     // Resume any pending wake events from before the last reload
     for (const wakeEvent of pendingWakeEvents) {
-      runner.wake(wakeEvent);
+      runner.notifyExternalEvent(wakeEvent);
     }
 
     entry.runner = runner;
@@ -169,7 +169,7 @@ function createInternalAgentRegistry() {
   function remove(agentId: string) {
     const entry = agents.get(agentId);
     if (!entry) return;
-    entry.runner.stop();
+    entry.runner?.stop();
     agents.delete(agentId);
   }
 

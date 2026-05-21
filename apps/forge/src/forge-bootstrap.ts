@@ -134,7 +134,7 @@ export async function createForgeBootstrap() {
     notifyAgent: ({ agentId, scheduleId, scheduleKind: _sKind, scheduleName: _sName, content: msg, timestamp, idleOnly }) => {
       const entry = registry.get(agentId);
       if (entry) {
-        entry.runner.notifyExternalEvent({
+        entry.runner?.notifyExternalEvent({
           type: 'schedule:trigger',
           groupKey: agentId,
           idempotencyKey: scheduleId,
