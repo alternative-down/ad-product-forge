@@ -25,6 +25,7 @@ function extractAgentId(path: string): string {
   const match = path.match(/^\/admin\/agents\/([^/]+)/);
   return match ? match[1] : '';
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // ─── Agent Base (basic agent data) ─────────────────────────────────────────
 
@@ -43,8 +44,8 @@ export function registerAgentBaseRoutes(
       if (agent === null || agent === undefined) return jsonResponse({ error: `Agent not found: ${agentId}` }, 404);
       return jsonResponse(agent);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -73,8 +74,8 @@ export function registerAgentStepsRoutes(
       });
       return jsonResponse({ items: rows, hasMore: rows.length === limit });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/steps", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/steps", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -95,8 +96,8 @@ export function registerAgentConversationsRoutes(
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       return jsonResponse(await listAgentRecentConversations(agentId));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/conversations", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/conversations", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -117,8 +118,8 @@ export function registerAgentMemoryRoutes(
       if (!agentId) return jsonResponse({ error: 'Missing agentId' }, 400);
       return jsonResponse(await getAgentRuntimeMemory(agentId));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/memory", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/memory", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -145,8 +146,8 @@ export function registerAgentMetricsRoutes(
       });
       return jsonResponse({ items: rows });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/metrics", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/metrics", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -170,8 +171,8 @@ export function registerAgentContractRoutes(
       });
       return jsonResponse({ items: rows });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/contracts", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/contracts", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -220,8 +221,8 @@ export function registerAgentMcpRoutes(
         }),
       });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/mcp-servers", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/mcp-servers", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -245,8 +246,8 @@ export function registerAgentSchedulesRoutes(
       });
       return jsonResponse({ items: rows });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/schedules", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/schedules", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
@@ -280,8 +281,8 @@ export function registerAgentNotificationsRoutes(
         })),
       });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/notifications", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: "/admin/agents/:agentId/notifications", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     }
   });
