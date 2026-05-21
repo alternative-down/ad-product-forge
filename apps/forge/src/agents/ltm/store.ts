@@ -123,7 +123,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         .insert(agentLongTermMemoryStates)
         .values({
           agentId: input.agentId,
-          state: (nextState as any),
+          state: JSON.stringify(nextState),
           recallIndexStamp: existing?.recallIndexStamp ?? null,
           createdAt: existing?.createdAt ?? now,
           updatedAt: now,
@@ -131,7 +131,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         .onConflictDoUpdate({
           target: agentLongTermMemoryStates.agentId,
           set: {
-            state: (nextState as any),
+            state: JSON.stringify(nextState),
             updatedAt: now,
           },
         });
@@ -181,7 +181,7 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         .insert(agentLongTermMemoryStates)
         .values({
           agentId: input.agentId,
-          state: (state as any),
+          state: JSON.stringify(state),
           recallIndexStamp: JSON.stringify({
             updatedAt: now,
             reason,
@@ -250,8 +250,8 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           agentId: input.agentId,
           threadId: inputState.threadId ?? existing?.threadId ?? null,
           resourceId: inputState.resourceId ?? existing?.resourceId ?? null,
-          snapshot: (inputState.snapshot as any),
-          history: (inputState.history as any),
+          snapshot: JSON.stringify(inputState.snapshot),
+          history: JSON.stringify(inputState.history),
           createdAt: existing?.createdAt ?? now,
           updatedAt: now,
         })
@@ -260,8 +260,8 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           set: {
             threadId: inputState.threadId ?? existing?.threadId ?? null,
             resourceId: inputState.resourceId ?? existing?.resourceId ?? null,
-            snapshot: (inputState.snapshot as any),
-            history: (inputState.history as any),
+            snapshot: JSON.stringify(inputState.snapshot),
+            history: JSON.stringify(inputState.history),
             updatedAt: now,
           },
         });
