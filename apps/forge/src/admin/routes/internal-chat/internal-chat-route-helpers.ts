@@ -14,6 +14,7 @@ export interface InternalChatRequest {
   query: Map<string, string>;
   bodyText: string;
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // ─── Error handling ────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ export function withRouteErrorHandler<Args extends unknown[]>(
     try {
       return handler(...args);
     } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
+      const error = String(serializeError(err));
       forgeDebug({
         scope,
         level: 'error',

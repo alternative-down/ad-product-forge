@@ -12,6 +12,7 @@ export async function reloadAgentMcp(
 ): Promise<void> {
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
 }
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export async function reloadLinkedAgentsForMcpServer(
   db: Database,
@@ -25,7 +26,7 @@ export async function reloadLinkedAgentsForMcpServer(
     await Promise.all(
       linkedConfigs.map((linkedConfig) =>
         reloadAgentMcp(db, loaderConfig, linkedConfig.agentId).catch((err) => {
-          forgeDebug({ scope: 'mcp-helpers', level: 'error', message: 'reloadLinkedAgentsForMcpServer: reload failed', context: { agentId: linkedConfig.agentId, error: err instanceof Error ? err.message : String(err) }});
+          forgeDebug({ scope: 'mcp-helpers', level: 'error', message: 'reloadLinkedAgentsForMcpServer: reload failed', context: { agentId: linkedConfig.agentId, error: String(serializeError(err)) }});
         }),
       ),
     );

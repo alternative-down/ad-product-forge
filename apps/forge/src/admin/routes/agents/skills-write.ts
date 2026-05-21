@@ -55,8 +55,8 @@ export function registerAgentSkillsWriteRoutes(
           installedSkillNames,
         }, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/upload', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/upload', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -90,8 +90,8 @@ export function registerAgentSkillsWriteRoutes(
           skillName: body.skillName,
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/delete', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/delete', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -125,8 +125,8 @@ export function registerAgentSkillsWriteRoutes(
           skillName: body.skillName,
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/install-global', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/install-global', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -160,9 +160,10 @@ export function registerAgentSkillsWriteRoutes(
           publishedSkillName,
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/publish-global', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-skills/publish-global', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';

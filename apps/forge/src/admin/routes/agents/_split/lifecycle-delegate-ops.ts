@@ -46,8 +46,8 @@ export function registerLifecycleDelegateOps(
         });
         return jsonResponse(result, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/hire route handler failed', context: { path: '/admin/agent/hire', error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -69,8 +69,8 @@ export function registerLifecycleDelegateOps(
           internalChat: input.internalChat,
         }));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/terminate route handler failed', context: { path: '/admin/agent/terminate', error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -85,9 +85,10 @@ export function registerLifecycleDelegateOps(
         await ops.changeAgentRoleFromAdmin(input.db, { agentId: body.agentId, roleId: body.roleId });
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/agent/change-role route handler failed', context: { path: '/admin/agent/change-role', error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
 }
+import { serializeError } from '../../../../agents/agent-runner-error-formatting';

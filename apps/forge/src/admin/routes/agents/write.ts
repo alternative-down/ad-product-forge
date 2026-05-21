@@ -17,6 +17,7 @@ import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 interface ReadModel {
   debugAgentLongTermMemoryRecallSearch: (agentId: string, opts: { query: string }) => Promise<unknown>;
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 interface AgentRoutesInput {
   db: Database;
@@ -49,8 +50,8 @@ export function registerAgentWriteRoutes(
         });
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -69,8 +70,8 @@ export function registerAgentWriteRoutes(
         );
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });

@@ -33,6 +33,7 @@ type InternalChat = {
     messageId: string;
   }>;
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // Widen to accept both the minimal Registry and the full InternalAgentRegistry
 type RegistryEntry = {
@@ -95,8 +96,8 @@ export function registerAgentOperationRoutes(
         });
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent wake route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent wake route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -125,8 +126,8 @@ export function registerAgentOperationRoutes(
           messageId: sent.messageId,
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Internal chat send route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Internal chat send route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });

@@ -8,6 +8,7 @@ export function normalizeOptionalText(value?: string): string | null {
   const normalized: string | null = value?.trim() ?? null;
   return (normalized ?? '') !== '' ? normalized : null;
 }
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function normalizeJsonText(
   value: string | undefined,
@@ -153,7 +154,7 @@ export async function fsPathExists(path: string): Promise<boolean> {
     await access(path);
     return true;
   } catch (err) {
-    forgeDebug({ scope: 'admin-routes-helpers', level: 'warn', message: '[helpers] fsPathExists failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'admin-routes-helpers', level: 'warn', message: '[helpers] fsPathExists failed', context: { error: String(serializeError(err)) }});
     // Safe: path does not exist — return false to signal absence
     return false;
   }

@@ -62,8 +62,8 @@ export function registerDashboardRoutes({
           },
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Dashboard overview failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Dashboard overview failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -76,9 +76,10 @@ export function registerDashboardRoutes({
       try {
         return jsonResponse(await systemRM.listRoles());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
 }
+import { serializeError } from '../../agents/agent-runner-error-formatting';
