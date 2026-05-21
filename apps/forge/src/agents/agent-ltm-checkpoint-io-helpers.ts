@@ -17,13 +17,13 @@ export function computeCheckpointTimestamp(
   payload: CheckpointedOmCheckpointPackageInput,
 ): number {
   const allCreatedAts = [
-    ...(payload as any).reflections.map((r: { content: string; generatedAt: number; createdAt?: number }) => r.createdAt ?? r.generatedAt),
-    ...(payload as any).observations.map((o: { createdAt?: string | number }) => o.createdAt),
+    ...payload.reflections.map((r) => r.createdAt ?? r.generatedAt ?? 0),
+    ...payload.observations.map((o) => o.createdAt ?? o.generatedAt ?? 0),
   ];
   if (allCreatedAts.length > 0) {
-    return allCreatedAts.reduce((earliest, ts) => (ts < earliest ? ts : earliest), allCreatedAts[0]);
+    return allCreatedAts.reduce((earliest, ts) => Math.min(Number(earliest), Number(ts)), Number(allCreatedAts[0]!));
   }
-  return (payload as any).checkpointSummary.updatedAt;
+  return payload.checkpointSummary.updatedAt;
 }
 
 /**
@@ -51,20 +51,20 @@ export async function writeCheckpointFiles(
     renderCheckpointPackageReadme({ payload }),
   );
 
-  if ((payload as any).reflections.length > 0) {
+  if (payload.reflections.length > 0) {
     await fs.mkdir(path.resolve(tempPackagePath, 'reflections'), { recursive: true });
   }
-  for (const [index, reflection] of (payload as any).reflections.entries()) {
+  for (const [index, reflection] of payload.reflections.entries()) {
     await fs.writeFile(
       path.resolve(tempPackagePath, 'reflections', `reflection_${String(index + 1).padStart(3, '0')}.md`),
       renderReflectionFile(reflection),
     );
   }
 
-  if ((payload as any).observations.length > 0) {
+  if (payload.observations.length > 0) {
     await fs.mkdir(path.resolve(tempPackagePath, 'observations'), { recursive: true });
   }
-  for (const [index, observation] of (payload as any).observations.entries()) {
+  for (const [index, observation] of payload.observations.entries()) {
     await fs.writeFile(
       path.resolve(tempPackagePath, 'observations', `observation_${String(index + 1).padStart(4, '0')}.md`),
       renderObservationFile(observation),
@@ -84,12 +84,12 @@ export function buildCheckpointPackageManifest(
   return {
     packageId,
     checkpointGeneration: payload.toGeneration,
-    fromGeneration: ((payload as any).fromGeneration ?? null) as number | null,
+    fromGeneration: (payload.fromGeneration ?? null) as number | null,
     toGeneration: payload.toGeneration,
     createdAt: String(checkpointTimestamp),
     checkpointSummaryUpdatedAt: String(checkpointTimestamp),
-    reflectionCount: (payload as any).reflections.length,
-    observationCount: (payload as any).observations.length,
+    reflectionCount: payload.reflections.length,
+    observationCount: payload.observations.length,
   };
 }
 
