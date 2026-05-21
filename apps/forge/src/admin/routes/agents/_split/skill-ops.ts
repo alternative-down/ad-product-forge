@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import { installGlobalSkillsFromZip, deleteGlobalSkill, installGlobalSkillToAgentWorkspace, publishAgentWorkspaceSkillToGlobalCatalog } from '../../../../agents/global-skills';

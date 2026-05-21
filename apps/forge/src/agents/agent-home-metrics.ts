@@ -114,7 +114,7 @@ export async function readAgentHomeMetricSnapshot(input: {
     where: eq(agents.id, input.agentId),
   });
 
-  if (!agent) {
+  if (agent === null || agent === undefined) {
     return null;
   }
 
@@ -231,7 +231,7 @@ export async function readAgentHomeMetricSnapshot(input: {
       lastStepCostUsd: lastStep?.costUsd ?? null,
       averageStepIntervalMs: buildAverageStepIntervalMs(recentSteps),
       unreadNotificationCount: ((unreadNotificationRows as unknown) as { count: number }[])[0]?.count ?? 0,
-      om: runtimeMemory
+      om: runtimeMemory !== null
         ? {
             generationCount: runtimeMemory.generationCount,
             checkpointGeneration: runtimeMemory.checkpointGeneration,

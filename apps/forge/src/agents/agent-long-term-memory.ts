@@ -283,7 +283,7 @@ export function createAgentLongTermMemory(input: {
 
     let costUsd = 0;
 
-    if (pricing.modelPrice) {
+    if (pricing.modelPrice !== null && pricing.modelPrice !== undefined) {
       const uncachedInputTokens = Math.max(usage.inputTokens - usage.cachedInputTokens, 0);
       costUsd =
         ((uncachedInputTokens / 1_000_000) * pricing.modelPrice.inputPerMillionUsd
@@ -321,7 +321,7 @@ export function createAgentLongTermMemory(input: {
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
-    if (recentSteps.length === 0 || !pricing.modelPrice) {
+    if (recentSteps.length === 0 || pricing.modelPrice === null || pricing.modelPrice === undefined) {
       return 0;
     }
 

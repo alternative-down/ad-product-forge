@@ -25,7 +25,7 @@ const deleteRoleSchema = z.object({
   roleId: z.string(),
 }).strict();
 
-const roleCapabilitySchema = z.object({
+const _roleCapabilitySchema = z.object({
   roleId: z.string(),
   capabilityName: z.string(),
   capabilityValue: z.boolean(),
@@ -37,7 +37,7 @@ const roleToolPermissionSchema = z.object({
   allowed: z.boolean(),
 }).strict();
 
-const roleWorkflowPermissionSchema = z.object({
+const _roleWorkflowPermissionSchema = z.object({
   roleId: z.string(),
   workflowName: z.string(),
   allowed: z.boolean(),
@@ -108,7 +108,7 @@ export function registerRoleOps(
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const toolId = resolvePermissionId(body.toolName);
-        if (body.allowed) {
+        if (body.allowed === true) {
           await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
         } else {
           await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });

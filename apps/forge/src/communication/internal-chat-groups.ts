@@ -1,6 +1,5 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import { createId } from '../utils/id';
 import {
   resolveChatGroupMembers,
   createChatGroupIfNeeded,
@@ -11,7 +10,6 @@ import {
 
 import {
   buildGroupRow,
-  buildGroupMemberViews,
   sortParticipantsBySelfFirst,
   type InternalChatGroupMember,
   type InternalChatGroupParticipant,

@@ -85,8 +85,7 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
  */
 export async function loadAgents(db: Database, config: AgentLoaderConfig) {
   // Fetch all agent configurations from database
-  let agentConfigs;
-    agentConfigs = await db.query.agents.findMany();
+  const agentConfigs = await db.query.agents.findMany();
 
   if (agentConfigs.length === 0) {
     forgeDebug({ scope: 'agent-loader', level: 'info', message: 'No agents found in registry' });

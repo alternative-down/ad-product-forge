@@ -69,7 +69,7 @@ export function createLlmSettingsStore(db: Database) {
   async function getResolvedDefaults() {
     const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
 
-    if (!defaults) {
+    if (defaults === null || defaults === undefined) {
       forgeDebug({
         scope: 'llm-settings',
         level: 'warn',

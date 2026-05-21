@@ -21,8 +21,7 @@ export async function adjustAgentContractBudget(
   const now = currentTimeMs();
 
   // Get the active contract
-  let activeContract;
-    activeContract = await db.query.agentExecutionContracts.findFirst({
+  const activeContract = await db.query.agentExecutionContracts.findFirst({
       where: and(
         eq(agentExecutionContracts.agentId, input.agentId),
         lte(agentExecutionContracts.startsAt, now),
@@ -32,7 +31,7 @@ export async function adjustAgentContractBudget(
 
    
    
-    if (!activeContract) {
+    if (activeContract === undefined) {
     forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: no active contract', context: { agentId: input.agentId } });
     throw new Error(`No active contract for agent: ${input.agentId}`);
   }
@@ -54,8 +53,7 @@ export async function adjustAgentContractBudget(
 
   // Upward adjustment (increase budget) - requires company cash
   if (budgetDelta > 0) {
-    let currentBalanceUsd;
-      currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
+    const currentBalanceUsd = await companyCash.getCurrentBalanceUsd();
 
     if (currentBalanceUsd < budgetDelta) {
       forgeDebug({ scope: 'adjust-agent-contract-budget', level: 'warn', message: 'adjustAgentContractBudget: insufficient company cash' });
@@ -102,8 +100,7 @@ export async function adjustAgentContractBudget(
 
   // Downward adjustment (decrease budget) - requires validation
   const contractStore = createAgentContractStore(db);
-  let contractSpend;
-    contractSpend = await contractStore.getContractSpend(activeContract.id);
+  const contractSpend = await contractStore.getContractSpend(activeContract.id);
 
   // New budget cannot be less than what's already spent
   if (input.newBudgetUsd < contractSpend) {

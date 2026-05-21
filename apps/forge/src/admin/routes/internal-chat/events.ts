@@ -65,6 +65,7 @@ export function createInternalChatSseHandler(
       try {
         const payload = `data: ${JSON.stringify(message)}\n\n`;
         controller.enqueue(new TextEncoder().encode(payload));
+        await Promise.resolve();
       } catch {
         // Controller closed — client disconnected; handler will be cleaned
         // up when 'close' fires on the raw request.

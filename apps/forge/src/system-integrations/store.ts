@@ -112,7 +112,7 @@ export function createSystemIntegrationStore(db: Database) {
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('migadu');
-      return row ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig) : null;
+      return row != null ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig) : null;
     } catch (err) {
       forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getMigaduConfig failed', context: { error: String(serializeError(err)) }});
       throw err;
@@ -122,7 +122,7 @@ export function createSystemIntegrationStore(db: Database) {
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('coolify');
-      return row ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig) : null;
+      return row != null ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig) : null;
     } catch (err) {
       forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getCoolifyConfig failed', context: { error: String(serializeError(err)) }});
       throw err;
@@ -132,7 +132,7 @@ export function createSystemIntegrationStore(db: Database) {
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('github');
-      return row ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig) : null;
+      return row != null ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig) : null;
     } catch (err) {
       forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getGitHubConfig failed', context: { error: String(serializeError(err)) }});
       throw err;
@@ -142,7 +142,7 @@ export function createSystemIntegrationStore(db: Database) {
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('minimax');
-      return row ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig) : null;
+      return row != null ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig) : null;
     } catch (err) {
       forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getMinimaxConfig failed', context: { error: String(serializeError(err)) }});
       throw err;
@@ -179,7 +179,7 @@ export function createSystemIntegrationStore(db: Database) {
         where: eq(systemIntegrations.providerType, input.providerType),
       });
 
-      if (existing) {
+      if (existing != null) {
         await db
           .update(systemIntegrations)
           .set({
@@ -223,7 +223,7 @@ export function createSystemIntegrationStore(db: Database) {
       where: eq(systemIntegrations.providerType, providerType),
     });
 
-    if (!row || row.isEnabled !== 1) {
+    if (row === null || row === undefined || row.isEnabled !== 1) {
       return null;
     }
 

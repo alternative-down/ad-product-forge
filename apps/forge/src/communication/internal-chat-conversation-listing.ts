@@ -15,7 +15,6 @@ import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
-  internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';

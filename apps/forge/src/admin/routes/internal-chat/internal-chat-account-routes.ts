@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (account management routes).
  */
 
-import type { HttpHandler, HttpResponse } from '../../../http/server';
+import type { HttpHandler } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
 import {
@@ -12,7 +12,7 @@ import {
   deleteExternalInternalChatAccountSchema,
 } from '../schemas/internal-chat';
 import { jsonResponse, parseJsonBody } from '../index';
-import { withRouteErrorHandler, getQueryParam } from './internal-chat-route-helpers';
+import { withRouteErrorHandler } from './internal-chat-route-helpers';
 
 // ─── Account route handlers ──────────────────────────────────────────────────
 

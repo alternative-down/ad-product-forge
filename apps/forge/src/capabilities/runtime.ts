@@ -46,32 +46,29 @@ export async function changeAgentRole(input: {
   targetAgentId: string;
   roleId: string;
 }) {
-  let actorAgent;
-    actorAgent = await input.db.query.agents.findFirst({
+  const actorAgent = await input.db.query.agents.findFirst({
       where: eq(agents.id, input.actorAgentId),
     });
 
-  if (!actorAgent) {
+  if (actorAgent === undefined) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: actor agent not found', context: { actorAgentId: input.actorAgentId } });
     throw new Error(`Actor agent not found: ${input.actorAgentId}`);
   }
 
-  let targetAgent;
-    targetAgent = await input.db.query.agents.findFirst({
+  const targetAgent = await input.db.query.agents.findFirst({
       where: eq(agents.id, input.targetAgentId),
     });
 
-  if (!targetAgent) {
+  if (targetAgent === undefined) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
-  let agentRole;
-    agentRole = await input.db.query.agentRoles.findFirst({
+  const agentRole = await input.db.query.agentRoles.findFirst({
       where: eq(agentRoles.id, input.roleId),
     });
 
-  if (!agentRole) {
+  if (agentRole === undefined) {
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
@@ -143,7 +140,7 @@ export async function changeAgentRoleFromAdmin(input: {
     where: eq(agents.id, input.targetAgentId),
   });
 
-  if (!targetAgent) {
+  if (targetAgent === undefined) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
@@ -152,7 +149,7 @@ export async function changeAgentRoleFromAdmin(input: {
     where: eq(agentRoles.id, input.roleId),
   });
 
-  if (!agentRole) {
+  if (agentRole === undefined) {
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
@@ -224,7 +221,7 @@ export async function updateInternalChatProviderProfile(
     where: and(eq(agentProviders.agentId, input.agentId), eq(agentProviders.providerType, 'internal-chat')),
   });
 
-  if (!provider) {
+  if (provider === undefined) {
     forgeDebug({ scope: 'capabilities-runtime', level: 'debug', message: 'No internal-chat provider found for agent', context: { agentId: input.agentId } });
     return;
   }

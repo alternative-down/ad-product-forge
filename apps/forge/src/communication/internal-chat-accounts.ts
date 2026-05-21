@@ -24,9 +24,6 @@ import {
   sortParticipantsBySelfFirst,
 } from './internal-chat-helpers';
 import {
-  ChatGroupNotFoundError,
-  ConversationNotFoundError,
-  ExternalAccountNotFoundError,
   InternalChatAccountNotFoundError,
   InternalChatError,
 } from './internal-chat-errors';
@@ -51,12 +48,11 @@ export function createInternalChatAccounts(db: Database) {
         roleName: input.roleName,
         roleDescription: input.roleDescription,
       });
-      let existing;
-      existing = await db.query.internalChatAccounts.findFirst({
+      const existing = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.agentId, input.agentId),
       });
 
-      if (existing) {
+      if (existing != null) {
         await db
           .update(internalChatAccounts)
           .set({
@@ -89,8 +85,7 @@ export function createInternalChatAccounts(db: Database) {
       });
 
       // Create DM conversations with all existing agent accounts
-      let existingAgentAccounts;
-      existingAgentAccounts = await db.query.internalChatAccounts.findMany({
+      const existingAgentAccounts = await db.query.internalChatAccounts.findMany({
         where: and(
           isNotNull(internalChatAccounts.agentId),
           ne(internalChatAccounts.agentId, input.agentId),
@@ -244,8 +239,7 @@ export function createInternalChatAccounts(db: Database) {
   async function getAccountByTargetKey(targetKey: string) {
     try {
       // targetKey is used as a slug or id lookup
-      let account;
-      account =
+      const account =
         (await db.query.internalChatAccounts.findFirst({
           where: eq(internalChatAccounts.slug, targetKey),
         })) ??
@@ -266,11 +260,10 @@ export function createInternalChatAccounts(db: Database) {
 
   async function getRequiredAccount(accountId: string) {
     try {
-      let account;
-      account = await db.query.internalChatAccounts.findFirst({
+      const account = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.id, accountId),
       });
-      if (!account) {
+      if (account == null) {
         forgeDebug({
           scope: 'internal-chat-accounts',
           level: 'warn',
@@ -296,8 +289,7 @@ export function createInternalChatAccounts(db: Database) {
       if (accountIds.length === 0) {
         return new Map();
       }
-      let accounts;
-      accounts = await db.query.internalChatAccounts.findMany({
+      const accounts = await db.query.internalChatAccounts.findMany({
         where:
           accountIds.length === 1
             ? eq(internalChatAccounts.id, accountIds[0])
@@ -317,11 +309,10 @@ export function createInternalChatAccounts(db: Database) {
 
   async function getRequiredAgentAccount(agentId: string) {
     try {
-      let account;
-      account = await db.query.internalChatAccounts.findFirst({
+      const account = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.agentId, agentId),
       });
-      if (!account) {
+      if (account == null) {
         forgeDebug({
           scope: 'internal-chat-accounts',
           level: 'warn',
@@ -347,11 +338,10 @@ export function createInternalChatAccounts(db: Database) {
 
   async function getRequiredAccountBySlug(slug: string) {
     try {
-      let account;
-      account = await db.query.internalChatAccounts.findFirst({
+      const account = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.slug, slug),
       });
-      if (!account) {
+      if (account == null) {
         throw new InternalChatAccountNotFoundError(slug);
       }
       return account;
@@ -368,11 +358,10 @@ export function createInternalChatAccounts(db: Database) {
 
   async function getConversationForAgent(agentId: string, conversationId: string) {
     try {
-      let account;
-      account = await db.query.internalChatAccounts.findFirst({
+      const account = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.agentId, agentId),
       });
-      if (!account) {
+      if (account == null) {
         throw new InternalChatError('account-not-found', `No account found for agent: ${agentId}`);
       }
       const conversation = (await db.query.internalChatConversations.findFirst({

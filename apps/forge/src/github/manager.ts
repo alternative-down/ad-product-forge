@@ -5,8 +5,6 @@ import { App, Octokit } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
-
-
 import type {Database} from '../database/schema';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 import { agentProviders, agents, type NewAgentProvider } from '../database/schema';
@@ -54,10 +52,10 @@ import type { OpsContext } from './ops/context';
 
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
-const INSTALLATION_READY_ATTEMPTS = 10;
-const INSTALLATION_READY_DELAY_MS = 1500;
+const _INSTALLATION_READY_ATTEMPTS = 10;
+const _INSTALLATION_READY_DELAY_MS = 1500;
 
-const manifestConversionSchema = z.object({
+const _manifestConversionSchema = z.object({
   id: z.number().int(),
   pem: z.string(),
   webhook_secret: z.string(),
@@ -156,13 +154,13 @@ export function createGitHubAppManager(config: {
 
   // ── Instantiate ops modules ────────────────────────────────────────────────
   opsCtx.opsRouting = createRoutingOps(opsCtx as unknown as OpsContext);
-  const opsCredentials = createCredentialsOps(opsCtx);
+  const _opsCredentials = createCredentialsOps(opsCtx);
   const opsRepos = createReposOps(opsCtx);
   const opsPullRequests = createPullRequestsOps(opsCtx);
   const opsIssues = createIssuesOps(opsCtx);
   const opsLabels = createLabelsOps(opsCtx);
   const opsMilestones = createMilestonesOps(opsCtx);
-  const opsApps = createAppProvisioningOps(opsCtx);
+  const _opsApps = createAppProvisioningOps(opsCtx);
 
   // ── App Lifecycle ────────────────────────────────────────────────────────
   async function getGlobalConfig() {
@@ -193,7 +191,7 @@ export function createGitHubAppManager(config: {
     await getGlobalConfig();
     const existing = await getCredentials(input.agentId);
 
-    if (existing) {
+    if (existing !== null && existing !== undefined) {
       forgeDebug({ scope: 'github-manager', level: 'warn', message: 'GitHub App already exists for agent', context: { agentId: input?.agentId } });
       throw new Error(`GitHub App already exists for agent ${input.agentId}`);
     }
@@ -226,7 +224,7 @@ export function createGitHubAppManager(config: {
       where: eq(agents.id, agentId),
     });
 
-    if (!agent) {
+    if (agent === null || agent === undefined) {
       return null;
     }
 
@@ -682,7 +680,7 @@ export function createGitHubAppManager(config: {
       where: and(eq(agentProviders.agentId, agentId), eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE)),
     });
 
-    if (!provider) {
+    if (provider === null || provider === undefined) {
       return null;
     }
 
@@ -706,7 +704,7 @@ export function createGitHubAppManager(config: {
     });
     const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
 
-    if (existing) {
+    if (existing !== null && existing !== undefined) {
       await config.db
         .update(agentProviders)
         .set({ encryptedCredentials })
@@ -736,7 +734,7 @@ export function createGitHubAppManager(config: {
     }
   }
 
-  async function getInstallationOctokit(agentId: string) {
+  async function _getInstallationOctokit(agentId: string) {
     const credentials = await getActiveCredentials(agentId);
     return await createInstallationOctokit(credentials);
   }

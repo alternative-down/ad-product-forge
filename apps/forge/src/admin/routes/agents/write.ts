@@ -3,7 +3,7 @@
  * POST routes that perform agent write operations extracted from routes.ts
  */
 
-import { z, ZodError } from 'zod';
+import { ZodError } from 'zod';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 
@@ -11,7 +11,7 @@ import type {Database} from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 // import { clearAgentHistory } from '../helpers'; // TODO: fix missing export in helpers.ts
-import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema, agentActionSchema } from '../schemas/agents';
+import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
 interface ReadModel {

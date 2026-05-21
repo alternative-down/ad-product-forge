@@ -1,11 +1,11 @@
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { forgeDebug } from '@forge-runtime/core';
+import { and as _and, desc as _desc, eq, inArray as _inArray, isNull as _isNull, sql as _sql } from 'drizzle-orm';
+import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 import {
   internalChatAccounts,
   internalChatConversationMembers,
-  internalChatConversations,
-  internalChatMessageReads,
-  internalChatMessages,
+  internalChatConversations as _internalChatConversations,
+  internalChatMessageReads as _internalChatMessageReads,
+  internalChatMessages as _internalChatMessages,
 } from '../database/schema';
 import type {Database} from '../database/client'
 import { sortParticipantsBySelfFirst } from './internal-chat-helpers';

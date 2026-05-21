@@ -3,8 +3,7 @@
 // Tracks active run/step/generate epochs to detect stale runs.
 //
 // This file re-exports from agent-runner-epoch-manager for backward compat.
-// =============================================================================
-
+/* eslint-disable reexport-check/no-unnecessary-reexports */
 export {
   createRunEpochState,
   createBackoffState,
@@ -19,5 +18,5 @@ export {
   type RunEpochState,
   type BackoffState,
   type ProgressState,
-// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+ 
 } from './agent-runner-epoch-manager';

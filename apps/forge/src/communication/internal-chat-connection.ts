@@ -7,7 +7,6 @@ import { forgeDebug } from "@forge-runtime/core";
 import type {Database} from "../database/schema";
 import {
   internalChatAccounts,
-  internalChatConversationMembers,
   internalChatConversations,
   internalChatMessageReads,
   internalChatMessages,

@@ -10,8 +10,7 @@
  *
  * @module
  */
-import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
-import { forgeDebug } from "@forge-runtime/core";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 
 import type {Database} from "../database/schema";
 import {
@@ -48,12 +47,11 @@ export function createInternalChatAdmin(db: Database) {
       roleName: input.roleName,
       roleDescription: input.roleDescription,
     });
-    let existing;
-      existing = await db.query.internalChatAccounts.findFirst({
+    const existing = await db.query.internalChatAccounts.findFirst({
         where: eq(internalChatAccounts.agentId, input.agentId),
       });
 
-    if (existing) {
+    if (existing != null) {
       await db
         .update(internalChatAccounts)
         .set({ displayName: input.displayName, description, updatedAt: now })
@@ -105,7 +103,7 @@ export function createInternalChatAdmin(db: Database) {
       where: eq(internalChatAccounts.slug, input.slug),
     });
 
-    if (existing) {
+    if (existing != null) {
       await db
         .update(internalChatAccounts)
         .set({
@@ -154,7 +152,7 @@ export function createInternalChatAdmin(db: Database) {
       where: eq(internalChatAccounts.id, input.accountId),
     });
 
-    if (!existing) {
+    if (existing === null || existing === undefined) {
       throw new Error("Account not found");
     }
 
@@ -258,14 +256,14 @@ export function createInternalChatAdmin(db: Database) {
     const account = await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.agentId, agentId),
     });
-    if (!account) {
+    if (account === null || account === undefined) {
       throw new Error("Account not found for agent");
     }
 
     const conversation = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, conversationId),
     });
-    if (!conversation) {
+    if (conversation === null || conversation === undefined) {
       throw new Error("Conversation not found");
     }
 
@@ -275,7 +273,7 @@ export function createInternalChatAdmin(db: Database) {
         eq(internalChatConversationMembers.accountId, account.id),
       ),
     });
-    if (!membership) {
+    if (membership === null || membership === undefined) {
       throw new Error("Agent is not a member of this conversation");
     }
 
@@ -315,7 +313,7 @@ export function createInternalChatAdmin(db: Database) {
       ),
     });
 
-    if (existing) {
+    if (existing != null) {
       return existing;
     }
 

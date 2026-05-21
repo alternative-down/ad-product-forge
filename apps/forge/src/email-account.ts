@@ -168,7 +168,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
         if (!participant) continue;
 
         const providerMessageId = parsed.messageId ?? `${uid}-${Date.now()}`;
-        const threadKey = resolveEmailThreadKey(parsed);
+        const _threadKey = resolveEmailThreadKey(parsed);
         const body = extractEmailBody(parsed);
         const attachments = toCommunicationAttachments(parsed, providerMessageId);
 
@@ -283,7 +283,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       if (client) {
         try {
           await client.logout();
-        } catch (_err) {
+        } catch {
           client = null;
         }
       }
@@ -336,7 +336,7 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
 
       const threads: CommunicationProviderConversation[] = [];
       for (const [threadKey, messages] of grouped.entries()) {
-        const ordered = messages.sort(
+        const _ordered = messages.sort(
           (left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt),
         );
         threads.push({

@@ -162,7 +162,7 @@ export async function readAgentRuntimeMemory(
     throw err;
   }
 
-  if (!agent) {
+  if (agent === null || agent === undefined) {
     return null;
   }
 

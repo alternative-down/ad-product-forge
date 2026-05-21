@@ -1,6 +1,5 @@
 // import type { InternalAgentRegistry } from '../../agents/internal-agent-registry'; // TODO: fix missing module
 // import type { AdminReadModel } from '../read-model'; // TODO: fix missing module
-import { forgeDebug } from '../debug';
 
 interface HealthcheckEntry {
   agentId: string;
