@@ -40,6 +40,7 @@ type CompanyCash = {
   postPlannedEntry: (entryId: string, opts?: { effectiveAt?: number }) => Promise<unknown>;
   cancelPlannedEntry: (entryId: string) => Promise<unknown>;
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 type CompanyPayables = {
   createRecurringPayable: (input: { name: string; description?: string; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; dueAt: number }) => Promise<{ payableId: string; entryId: string }>;
@@ -80,8 +81,8 @@ export function registerFinanceWriteRoutes(
       } catch (err) {
         if (err instanceof ZodError) throw err;
         if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -131,8 +132,8 @@ export function registerFinanceWriteRoutes(
       } catch (err) {
         if (err instanceof ZodError) throw err;
         if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -154,8 +155,8 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -176,8 +177,8 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -193,8 +194,8 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });

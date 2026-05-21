@@ -42,8 +42,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         const body = parseJsonBody(request.bodyText, createRoleSchema);
         return jsonResponse(await capabilities.createRole(body), 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to create role', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to create role', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -60,8 +60,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         });
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to update role', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to update role', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -74,8 +74,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         const body = parseJsonBody(request.bodyText, deleteRoleSchema);
         return jsonResponse(await capabilities.deleteRole(body.roleId));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to delete role', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to delete role', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -90,8 +90,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role capability', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role capability', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -106,8 +106,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role capability', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role capability', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -122,8 +122,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role tool permission', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role tool permission', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -138,8 +138,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role workflow permission', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to add role workflow permission', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -154,8 +154,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role workflow permission', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role workflow permission', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -170,8 +170,8 @@ export function registerRoleRoutes({ httpServer, db, loaderConfig }: RoleRoutesD
         await reloadAgentsForRole(db, loaderConfig, body.roleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role tool permission', context: { err: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Failed to remove role tool permission', context: { err: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });

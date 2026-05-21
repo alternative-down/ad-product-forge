@@ -49,6 +49,7 @@ interface SystemWriteRoutesInput {
   registry: ReturnType<typeof getInternalAgentRegistry>;
   loadAgent: typeof loadAgent;
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 
 
@@ -111,8 +112,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/settings/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/settings/upsert', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -179,8 +180,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           updatedAt: server?.updatedAt ?? Date.now(),
         });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/upsert', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -206,8 +207,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
 
         return jsonResponse({ success: true, serverId: body.serverId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/delete', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/mcp/delete', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -224,8 +225,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
         return jsonResponse({ success: true, installedSkillNames }, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/skills/upload', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/skills/upload', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -242,8 +243,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         });
         return jsonResponse({ success: true, skillName: body.skillName });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/skills/delete', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/skills/delete', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -256,8 +257,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, upsertLlmModelPriceSchema);
         return jsonResponse(await (llmModelPrices as any).upsertPrice(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/price/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/price/upsert', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -270,8 +271,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, upsertSystemIntegrationSchema);
         return jsonResponse(await (integrations as any).upsert(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/upsert', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -285,8 +286,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await (integrations as any).delete({ id: (body as any).integrationId });
         return jsonResponse({ success: true, integrationId: (body as any).integrationId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/delete', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/delete', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -299,8 +300,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/upsert', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/upsert', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -314,8 +315,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         await llmSettings.deleteProfile((body as any).profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/delete', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/delete', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -328,8 +329,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
         const body = (parseJsonBody as any)(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/defaults/update', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/defaults/update', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 
@@ -353,19 +354,19 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
             }
             results.push({ providerId, synced: true });
           } catch (err) {
-            forgeDebug({ scope: 'admin', level: 'error', message: 'LLM provider sync failed', context: { error: err instanceof Error ? err.message : String(err) } });
+            forgeDebug({ scope: 'admin', level: 'error', message: 'LLM provider sync failed', context: { error: String(serializeError(err)) } });
             results.push({
               providerId,
               synced: false,
-              error: err instanceof Error ? err.message : String(err),
+              error: String(serializeError(err)),
             });
           }
         }
 
         return jsonResponse({ state: await buildOauthState(), results });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/oauth/sync', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/oauth/sync', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },  });
 }
