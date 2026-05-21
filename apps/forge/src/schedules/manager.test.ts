@@ -402,12 +402,12 @@ describe('createAgentScheduleManager', () => {
     ).rejects.toThrow(/Failed to load created schedule/i);
   });
 
-  // ── getOwnedSchedule ──────────────────────────────────────────────────────
+  // ── getAgentSchedule ──────────────────────────────────────────────────────
 
   test('returns a schedule owned by an agent', async () => {
     const rows = [makeRow({ agentId: 'agent-1', creatorId: 'agent-1' })];
     const manager = makeManager(rows);
-    const result = await manager.getOwnedSchedule('agent-1', 'sid-test-1');
+    const result = await manager.getAgentSchedule('agent-1', 'sid-test-1');
     expect(result).not.toBeNull();
     expect(result!.scheduleId).toBe('sid-test-1');
   });
@@ -415,7 +415,7 @@ describe('createAgentScheduleManager', () => {
   test('returns null for non-owned schedule', async () => {
     const rows = [makeRow({ agentId: 'agent-2', creatorId: 'agent-2' })];
     const manager = makeManager(rows);
-    const result = await manager.getOwnedSchedule('agent-1', 'sid-test-1');
+    const result = await manager.getAgentSchedule('agent-1', 'sid-test-1');
     expect(result).toBeNull();
   });
 
