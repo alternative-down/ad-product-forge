@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import 'node:process';
 import fs from 'node:fs/promises';
@@ -88,7 +89,7 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
       await fs.access(skillFilePath);
       return path.resolve(candidateRoot, sourceDirectoryName);
     } catch (error) {
-      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error: error instanceof Error ? error.message : String(error), skillFilePath } });
+      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error: serializeError(error), skillFilePath } });
       continue;
     }
   }

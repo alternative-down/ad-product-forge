@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug, LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier } from '@forge-runtime/core';
 import path from 'node:path';
 import { createClient } from '@libsql/client';
@@ -105,7 +106,7 @@ export async function readLatestThreadDetails(
       level: 'error',
       agentId,
       message: 'Failed to load latest thread details',
-      context: { error: error instanceof Error ? error.message : String(error) },
+      context: { error: serializeError(error) },
     });
     return { preview: null, toolBadge: null };
   }
@@ -156,7 +157,7 @@ export async function readAgentRuntimeMemory(
       scope: 'agent-home-metrics',
       level: 'error',
       message: 'readAgentRuntimeMemory: read agent failed',
-      context: { agentId, error: err instanceof Error ? err.message : String(err) },
+      context: { agentId, error: serializeError(err) },
     });
     throw err;
   }
@@ -194,7 +195,7 @@ export async function readAgentRuntimeMemory(
         level: 'warn',
         agentId,
         message: 'Legacy checkpointed OM state migration failed',
-        context: { error: error instanceof Error ? error.message : String(error) },
+        context: { error: serializeError(error) },
       });
     }
 

@@ -1,3 +1,4 @@
+import { serializeError } from '../agent-runner-error-formatting';
 import {
   type ConversationStore,
   type WorkspaceEmbedderId,
@@ -63,7 +64,7 @@ export async function createAgentRuntimeMemory(input: {
       longTermMemoryRecall,
     };
   } catch (err) {
-    forgeDebug({ scope: 'runtime-memory', level: 'error', message: 'createAgentRuntimeMemory failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'runtime-memory', level: 'error', message: 'createAgentRuntimeMemory failed', context: { error: serializeError(err) }});
     throw err;
   }
 }

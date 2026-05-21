@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -56,7 +57,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     try {
       decrypted = decryptSecret(providerConfig.encryptedCredentials);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to decrypt credentials for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to decrypt credentials for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: serializeError(error) } });
       throw error;
     }
 
@@ -64,7 +65,7 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     try {
       credentials = JSON.parse(decrypted);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to parse decrypted credentials JSON for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'agent-loader-data', level: 'error', message: 'Failed to parse decrypted credentials JSON for agent ' + config.agentId, context: { provider: providerConfig.providerType, error: serializeError(error) } });
       throw error;
     }
 
