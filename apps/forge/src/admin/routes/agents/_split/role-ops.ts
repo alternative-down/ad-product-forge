@@ -92,10 +92,10 @@ export function registerRoleOps(
         await capabilities.deleteRole(body.roleId);
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
-        const msg = String(serializeError(err));
+        const msg = err instanceof Error ? err.message : String(err);
         forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
         if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
-        throw err;
+        return jsonResponse({ error: msg }, 500);
       }
     },
   });
