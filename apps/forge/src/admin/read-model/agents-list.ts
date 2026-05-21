@@ -7,6 +7,7 @@
  */
 
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import type { Agent, AgentExecutionStep } from '../../database/schema';
 import { resolve } from 'node:path';
 import {
   agentExecutionContracts,
@@ -199,7 +200,7 @@ type RuntimeMemoryOutput = {
 
 export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentListReadModel {
   const { db, registry, workspaceBasePath } = deps;
-  const systemSettings = (createSystemSettingsStore as any)(db);
+  const systemSettings = createSystemSettingsStore(db);
 
   async function getRuntimeMemoryForAgent(agentId: string): Promise<RuntimeMemoryOutput> {
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
@@ -384,7 +385,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
               .slice(0, 6)
               .map((step, index, items) => {
                 if (index === items.length - 1) return null;
-                return Math.max(step.createdAt - (items[index + 1] as { createdAt: number }).createdAt, 0);
+                return Math.max(step.createdAt - (items[index + 1]).createdAt, 0);
               })
               .filter((v) => v !== null)
               .reduce((sum, v, _, arr) => sum + (v as number) / arr.length, 0),
@@ -393,20 +394,20 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
       const firstStep = recentSteps[0] as { createdAt?: number; inputTokens?: number; cachedInputTokens?: number; outputTokens?: number; costUsd?: number | null } | undefined;
       const lastStepTokens = firstStep
-        ? (firstStep.inputTokens ?? 0) + ((firstStep as { cachedInputTokens?: number }).cachedInputTokens ?? 0) + (firstStep.outputTokens ?? 0)
+        ? (firstStep.inputTokens ?? 0) + ((firstStep as AgentExecutionStep).cachedInputTokens ?? 0) + (firstStep.outputTokens ?? 0)
         : null;
 
       return {
         agentId: agent.id,
         name: agent.name ?? '',
         description: agent.description ?? null,
-        role: (agent as { roleId?: string }).roleId ?? null,
+        role: (agent as Agent).roleId ?? null,
         executionState,
         lastExecutionError: agent.lastExecutionError ?? null,
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-        roleName: ((agent as { roleId?: string }).roleId ?? '') !== '' ? (roleMap.get((agent as { roleId: string }).roleId)?.name ?? null) : null,
-        modelProfile: ((agent as { modelProfileId?: string }).modelProfileId ?? '') !== '' ? (profileMap.get((agent as { modelProfileId: string }).modelProfileId)?.name ?? null) : null,
-        omModelProfile: ((agent as { omModelProfileId?: string }).omModelProfileId ?? '') !== '' ? (profileMap.get((agent as { omModelProfileId: string }).omModelProfileId)?.name ?? null) : null,
+        roleName: (agent as Agent).roleId ? (roleMap.get((agent as Agent).roleId as string)?.name ?? null) : null,
+        modelProfile: (agent as Agent).modelProfileId ? (profileMap.get((agent as Agent).modelProfileId as string)?.name ?? null) : null,
+        omModelProfile: (agent as Agent).omModelProfileId ? (profileMap.get((agent as Agent).omModelProfileId as string)?.name ?? null) : null,
         loaded: Boolean(loadedAgent),
         runner: runnerSnapshot,
         providerTypes: [],
@@ -537,9 +538,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
     const roleMap = new Map(allRoles.map((r) => [r.id, r]));
     const profileMap = new Map(allProfiles.map((p) => [p.id, p]));
-    const agentRoleId = (agent as { roleId?: string }).roleId;
-    const agentModelProfileId = (agent as { modelProfileId?: string }).modelProfileId;
-    const agentOmModelProfileId = (agent as { omModelProfileId?: string }).omModelProfileId;
+    const agentRoleId = (agent as Agent).roleId;
+    const agentModelProfileId = (agent as Agent).modelProfileId;
+    const agentOmModelProfileId = (agent as Agent).omModelProfileId;
 
     const activeContractRow = activeContractRows[0] ?? null;
 
@@ -551,7 +552,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       roleName: (agentRoleId ?? '') !== '' ? (roleMap.get(agentRoleId ?? '')?.name ?? null) : null,
       modelProfile: (agentModelProfileId ?? '') !== '' ? (profileMap.get(agentModelProfileId ?? '')?.name ?? null) : null,
       omModelProfile: (agentOmModelProfileId ?? '') !== '' ? (profileMap.get(agentOmModelProfileId ?? '')?.name ?? null) : null,
-      workspaceFilesystem: (agent as { workspaceFilesystem?: { basePath: string } | null }).workspaceFilesystem ?? null,
+      workspaceFilesystem: agent.workspaceFilesystem ?? null,
       lastExecutionError: agent.lastExecutionError ?? null,
       lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
       loaded: Boolean(loadedAgent),
