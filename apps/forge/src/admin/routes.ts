@@ -252,7 +252,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     notifyAgent(input) {
       const entry = registry.get(input.agentId);
       if (!entry) { return; }
-      entry.runner.notifyExternalEvent({
+      entry.runner?.notifyExternalEvent({
         type: input.type,
         groupKey: input.groupKey,
         idempotencyKey: input.idempotencyKey,

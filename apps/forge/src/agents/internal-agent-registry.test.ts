@@ -60,7 +60,7 @@ describe('internal-agent-registry', () => {
   beforeEach(() => {
     // Clear registry state between tests
     for (const entry of registry().list()) {
-      registry().remove(entry.runtime.id);
+      registry().remove(entry.id);
     }
     mockRunnerInstances.clear();
     vi.clearAllMocks();
@@ -81,10 +81,12 @@ describe('internal-agent-registry', () => {
   describe('add', () => {
     it('registers runtime and returns entry', async () => {
       const runtime = makeRuntime('new-agent', 'New Agent');
-      const entry = await registry().add(makeDb(), runtime);
+      await registry().add(makeDb(), runtime);
+      const entry = registry().get('new-agent');
 
-      expect(entry.runtime.id).toBe('new-agent');
-      expect(entry.runner).toBeDefined();
+      expect(entry).not.toBeNull();
+      expect(entry!.runtime.id).toBe('new-agent');
+      expect(entry!.runner).not.toBeNull();
     });
 
     it('calls start on the runner', async () => {
@@ -134,7 +136,10 @@ describe('internal-agent-registry', () => {
 
       const entries = registry().list();
       expect(entries).toHaveLength(2);
-      const ids = entries.map((e) => e.runtime.id).sort();
+      const ids = entries.map((e) => {
+        const entry = registry().get(e.id);
+        return entry!.runtime.id;
+      }).sort();
       expect(ids).toEqual(['list-1', 'list-2']);
     });
   });

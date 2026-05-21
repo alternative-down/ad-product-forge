@@ -111,7 +111,7 @@ export async function changeAgentRole(input: {
   await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
 
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
-  targetEntry?.runner.notifyExternalEvent({
+  targetEntry?.runner?.notifyExternalEvent({
     type: 'role-change',
     groupKey: `role-change:${input.targetAgentId}`,
     groupMetadata: {
@@ -190,7 +190,7 @@ export async function changeAgentRoleFromAdmin(input: {
   await reloadAgentIfLoaded(input.db, input.loaderConfig, input.targetAgentId);
 
   const targetEntry = getInternalAgentRegistry().get(input.targetAgentId);
-  targetEntry?.runner.notifyExternalEvent({
+  targetEntry?.runner?.notifyExternalEvent({
     type: 'role-change',
     groupKey: `role-change:${input.targetAgentId}`,
     groupMetadata: {

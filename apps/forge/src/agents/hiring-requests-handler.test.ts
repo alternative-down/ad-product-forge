@@ -105,27 +105,22 @@ function getLastAssistantText(messages: NativeToolLoopMessage[]): string {
 // buildStepDiagnostics
 // -----------------------------------------------------------------------
 
-function buildStepDiagnostics(messages: any[]): any[] {
-  return messages.map((message) => {
-    if (!message) return { role: 'unknown' };
-    const content = message.content;
-    if (content === null || typeof content !== 'object' || !Array.isArray(content)) {
-      return { role: message.role };
+function buildStepDiagnostics(messages: Array<{ role: string; content: unknown }>): Array<{ index: number; role: string; hasToolCalls: boolean; textLength: number }> {
+  return messages.map((msg, i) => {
+    let hasToolCalls = false;
+    let textLength = 0;
+    if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+      hasToolCalls = (msg.content as Array<{ type: string }>).some((part) => part && typeof part === 'object' && part.type === 'tool-call');
+      textLength = (msg.content as Array<{ type: string; text?: string }>).reduce((sum, part) => {
+        if (part && typeof part === 'object' && part.type === 'text') {
+          return sum + String(part.text ?? '').length;
+        }
+        return sum;
+      }, 0);
+    } else if (typeof msg.content === 'string') {
+      textLength = msg.content.length;
     }
-    const mapped: Array<{ type: string; [key: string]: unknown }> = [];
-    for (const part of content) {
-      if (!part || typeof part !== 'object') continue;
-      const { type, ...rest } = part as { type: string; [key: string]: unknown };
-      if (!type) continue;
-      if (type === 'tool-call') {
-        mapped.push({ type: 'tool-call', ...rest });
-      } else if (type === 'tool-result') {
-        mapped.push({ type: 'tool-result', ...rest });
-      } else if (type === 'text') {
-        mapped.push({ type: 'text', ...rest });
-      }
-    }
-    return { role: message.role, content: mapped };
+    return { index: i, role: msg.role, hasToolCalls, textLength };
   });
 }
 
@@ -379,7 +374,7 @@ describe('buildStepDiagnostics', () => {
       { role: 'assistant', content: [{ type: 'text', text: 'hello world' }] },
     ]);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0].content).toContainEqual({ type: 'text', text: 'hello world' });
+    expect(diagnostics[0]).toEqual({ index: 0, role: 'assistant', hasToolCalls: false, textLength: 11 });
   });
 
   it('formats assistant messages with tool-call parts', () => {
@@ -390,11 +385,7 @@ describe('buildStepDiagnostics', () => {
       },
     ]);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0].content).toContainEqual({
-      type: 'tool-call',
-      toolName: 'reportHiringState',
-      input: { status: 'working' },
-    });
+    expect(diagnostics[0]).toEqual({ index: 0, role: 'assistant', hasToolCalls: true, textLength: 0 });
   });
 
   it('formats tool messages with tool-result parts', () => {
@@ -405,22 +396,18 @@ describe('buildStepDiagnostics', () => {
       },
     ]);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0].content).toContainEqual({
-      type: 'tool-result',
-      toolName: 'reportHiringState',
-      output: 'logged',
-    });
+    expect(diagnostics[0]).toEqual({ index: 0, role: 'tool', hasToolCalls: false, textLength: 0 });
   });
 
   it('returns minimal object for null content', () => {
     const diagnostics = buildStepDiagnostics([{ role: 'assistant', content: null }]);
-    expect(diagnostics[0]).toEqual({ role: 'assistant' });
+    expect(diagnostics[0]).toEqual({ index: 0, role: 'assistant', hasToolCalls: false, textLength: 0 });
   });
 
   it('returns minimal object for unexpected content types', () => {
     // @ts-ignore - testing runtime with unexpected content type
     const diagnostics = buildStepDiagnostics([{ role: 'unknown', content: {} }]);
-    expect(diagnostics[0]).toEqual({ role: 'unknown' });
+    expect(diagnostics[0]).toEqual({ index: 0, role: 'unknown', hasToolCalls: false, textLength: 0 });
   });
 });
 

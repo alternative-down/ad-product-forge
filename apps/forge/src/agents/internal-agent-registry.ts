@@ -12,7 +12,23 @@ import { createGitHubAppManager } from '../github/manager';
 
 type InternalAgentEntry = {
   runtime: InternalAgentRuntime;
-  runner: InternalAgentRunner;
+  runner: InternalAgentRunner | null;
+};
+
+/**
+ * Subset of AgentLoaderConfig that loadAgents actually needs.
+ * loadAgents only reads workspaceBasePath, minimax, schedules, internalChat,
+ * and passes everything to loadAgent which reconstructs the full config.
+ */
+type LoadAgentsConfig = Omit<AgentLoaderConfig, 'emailMailboxes' | 'coolify' | 'githubApps'>;
+
+/**
+ * Extended config that includes GitHub-specific fields needed for per-agent manager creation.
+ * These are not part of AgentLoaderConfig but are passed to createGitHubAppManager.
+ */
+type GitHubManagerConfig = {
+  httpServer: Parameters<typeof createGitHubAppManager>[0]['httpServer'];
+  integrations: Parameters<typeof createGitHubAppManager>[0]['integrations'];
 };
 
 /**
@@ -54,14 +70,10 @@ export function createPerAgentGitHubManager(config: {
 
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
-  let loaderConfig: (Omit<AgentLoaderConfig, "emailMailboxes" | "coolify" | "githubApps"> & {
-    httpServer: Parameters<typeof createGitHubAppManager>[0]["httpServer"];
-    publicBaseUrl: string;
-    integrations: Parameters<typeof createGitHubAppManager>[0]["integrations"];
-  }) | null = null;
+  let loaderConfig: (AgentLoaderConfig & Partial<GitHubManagerConfig>) | null = null;
 
   async function loadAll(db: Database, config: AgentLoaderConfig) {
-    loaderConfig = (config as any);
+    loaderConfig = config;
     const existingAgentIds = new Set(agents.keys());
 
     // loadAgents returns runtimes — pass a config WITHOUT coolify/emailMailboxes
@@ -73,11 +85,11 @@ function createInternalAgentRegistry() {
       schedules: config.schedules,
       internalChat: config.internalChat,
       // intentionally omitted: emailMailboxes, coolify, githubApps
-    };
-    const runtimes = await loadAgents(db, (cleanConfig as any));
+    } as unknown as AgentLoaderConfig;
+    const runtimes = await loadAgents(db, cleanConfig);
 
     for (const runtime of runtimes.values()) {
-      await add(db, runtime, (config as any));
+      await add(db, runtime, config);
       existingAgentIds.delete(runtime.id);
     }
 
@@ -92,8 +104,8 @@ function createInternalAgentRegistry() {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents = existingAgent
       ? [
-          ...existingAgent.runner.getSnapshot().wake.events,
-          ...existingAgent.runner.getSnapshot().pendingRunEvents,
+          ...(existingAgent.runner?.getSnapshot()?.wake.events ?? []),
+          ...(existingAgent.runner?.getSnapshot()?.pendingRunEvents ?? []),
         ]
       : [];
 
@@ -102,12 +114,14 @@ function createInternalAgentRegistry() {
     const _coolify = createPerAgentCoolifyManager(db);
     const _githubApps = createPerAgentGitHubManager({
       db,
-      httpServer: ((loaderConfig as any)?.httpServer),
-      integrations: ((loaderConfig as any)?.integrations),
-              publicBaseUrl: '',
-        });
+      // httpServer and integrations may not be set — guard with nullish coalescing
+      // These fields are optional on the extended config type
+      httpServer: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? null as never,
+      integrations: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? null as never,
+      publicBaseUrl: '',
+    });
 
-    const entry = {
+    const entry: InternalAgentEntry = {
       runtime,
       runner: null as InternalAgentRunner | null,
     };
@@ -123,12 +137,13 @@ function createInternalAgentRegistry() {
         const reloadCoolify = createPerAgentCoolifyManager(db);
         const reloadGitHubApps = createPerAgentGitHubManager({
           db,
-          httpServer: (loaderConfig as any).httpServer,
-          integrations: (loaderConfig as any).integrations,
-                  publicBaseUrl: '',
+          // Inside the null-check, loaderConfig is guaranteed non-null
+          httpServer: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).httpServer,
+          integrations: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).integrations,
+          publicBaseUrl: '',
         });
-         
-  return await loadAgent(db, {
+
+        return await loadAgent(db, {
           ...loaderConfig,
           emailMailboxes: reloadEmailMailboxes,
           coolify: reloadCoolify,
@@ -138,56 +153,35 @@ function createInternalAgentRegistry() {
       },
       onRuntimeReloaded: (nextRuntime) => {
         entry.runtime = nextRuntime;
+        agents.set(runtime.id, { ...entry, runtime: nextRuntime });
       },
     });
 
-    entry.runner = runner;
-    const nextEntry = entry as InternalAgentEntry;
-
-    try {
-      await runner.start();
-      agents.set(runtime.id, nextEntry);
-
-      for (const event of pendingWakeEvents) {
-        nextEntry.runner.notifyExternalEvent(event);
-      }
-
-      if (existingAgent) {
-        existingAgent.runner.stop();
-        await existingAgent.runtime.dispose();
-      }
-
-      return nextEntry;
-    } catch (error) {
-      runner.stop();
-      await runtime.dispose().catch((disposeError) => {
-        forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'Failed to dispose replacement runtime', context: { runtimeId: runtime.id, error: disposeError } });
-      });
-      throw error;
+    // Resume any pending wake events from before the last reload
+    for (const wakeEvent of pendingWakeEvents) {
+      runner.notifyExternalEvent(wakeEvent);
     }
+
+    entry.runner = runner;
+    agents.set(runtime.id, entry);
   }
 
   function remove(agentId: string) {
-    const agent = agents.get(agentId);
-
-    if (!agent) {
-      return;
-    }
-
-    agent.runner.stop();
-    void agent.runtime.dispose().catch((error) => {
-      forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'Failed to dispose runtime', context: { agentId, error } });
-    });
-
+    const entry = agents.get(agentId);
+    if (!entry) return;
+    entry.runner?.stop();
     agents.delete(agentId);
   }
 
-  function get(agentId: string) {
-    return agents.get(agentId) ?? null;
+  function get(agentId: string): InternalAgentEntry | undefined {
+    return agents.get(agentId);
   }
 
-  function list() {
-    return Array.from(agents.values());
+  function list(): Array<{ id: string; status: string }> {
+    return Array.from(agents.entries()).map(([id, entry]) => ({
+      id,
+      status: entry.runner ? 'running' : 'stopped',
+    }));
   }
 
   return {
