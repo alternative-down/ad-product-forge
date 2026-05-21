@@ -13,6 +13,7 @@ import { createId } from '../utils/id';
 import { encryptSecret } from '../encryption/crypto';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { forgeDebug, type WorkspaceEmbedderId } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 import { DEFAULT_WORKSPACE_EMBEDDER } from '../agents/agent-embedder-maintenance';
 
 /**
@@ -205,7 +206,7 @@ async function initAgentRegistry() {
     forgeDebug({ scope: 'init-agent-registry', level: 'info', message: 'Agent registry initialized successfully' });
     process.exit(0);
   } catch (error) {
-    forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'init-agent-registry', level: 'error', message: 'Error initializing agent registry', context: { error: serializeError(error) } });
     process.exit(1);
   }
 }

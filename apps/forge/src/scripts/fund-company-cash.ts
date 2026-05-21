@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 import { z } from 'zod';
 
@@ -34,6 +35,6 @@ async function fundCompanyCash() {
 }
 
 fundCompanyCash().catch((error) => {
-  forgeDebug({ scope: 'fund-cash', level: 'error', message: 'Failed to fund company cash', context: { error: error instanceof Error ? error.message : String(error) } });
+  forgeDebug({ scope: 'fund-cash', level: 'error', message: 'Failed to fund company cash', context: { error: serializeError(error) } });
   process.exit(1);
 });

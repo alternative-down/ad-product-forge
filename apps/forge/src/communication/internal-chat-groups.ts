@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 import {
   resolveChatGroupMembers,
   createChatGroupIfNeeded,
@@ -33,7 +34,7 @@ const logInternalChatError = (
     scope: 'internal-chat-groups',
     level: 'error',
     ...extra,
-    message: `${context} failed: ${error instanceof Error ? error.message : String(error)}`,
+    message: `${context} failed: ${serializeError(error)}`,
   });
 };
 
@@ -211,7 +212,7 @@ export function createInternalChatGroups(
         scope: 'internal-chat-groups',
         level: 'error',
         message: 'Failed to execute requireConversationMembershipByAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: serializeError(err) },
       });
       throw err;
     }

@@ -6,6 +6,7 @@ import { createDiscordProvider } from '../discord-account';
 import { createEmailProvider } from '../email-account';
 import { createInternalChatProvider } from './internal-chat-provider';
 import type { InternalChatService } from './internal-chat-service';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 const internalChatCredentialsSchema = z.object({
   agentId: z.string(),
@@ -132,7 +133,7 @@ export async function loadCommunicationProviders(
 
       providers.push(provider);
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'provider-loader', level: 'warn', message: 'Skipping Discord provider because it failed to start', context: { error: serializeError(error) } });
     }
   }
 
@@ -147,7 +148,7 @@ export async function loadCommunicationProviders(
         })
       );
     } catch (error) {
-      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'Failed to load email provider', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'provider-loader', level: 'error', message: 'Failed to load email provider', context: { error: serializeError(error) } });
       throw error;
     }
   }

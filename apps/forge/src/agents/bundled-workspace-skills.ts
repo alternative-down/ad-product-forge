@@ -3,6 +3,7 @@ import 'node:process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { serializeError } from './agent-runner-error-formatting';
 
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 export const BUNDLED_SKILL_DIRECTORY_NAMES = ['github-api', 'coolify-api', 'skills-creator'] as const;
@@ -88,7 +89,7 @@ export async function resolveBundledSkillRoot(sourceDirectoryName: string) {
       await fs.access(skillFilePath);
       return path.resolve(candidateRoot, sourceDirectoryName);
     } catch (error) {
-      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error: error instanceof Error ? error.message : String(error), skillFilePath } });
+      forgeDebug({ scope: 'bundled-workspace-skills', level: 'debug', message: 'Skill file not accessible', context: { error: serializeError(error), skillFilePath } });
       continue;
     }
   }

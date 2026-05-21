@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 
 import type {Database} from '../database/schema';
+import { serializeError } from './agent-runner-error-formatting';
 import { hasToolPermission } from '../capabilities/catalog';
 import { publishAgentWorkspaceSkillToGlobalCatalog } from './global-skills';
 import { resolveAgentSkillRoot } from './workspace-skill-paths';
@@ -36,7 +37,7 @@ async function readTextFileIfPossible(filePath: string) {
   try {
     return await fs.readFile(filePath, 'utf8');
   } catch (error) {
-    forgeDebug({ scope: 'skills-tools', level: 'warn', message: 'Failed to read file', context: { error: error instanceof Error ? error.message : String(error), filePath } });
+    forgeDebug({ scope: 'skills-tools', level: 'warn', message: 'Failed to read file', context: { error: serializeError(error), filePath } });
     return null;
   }
 }

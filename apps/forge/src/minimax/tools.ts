@@ -1,6 +1,7 @@
 import { createTool, forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
 import { z } from 'zod';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 import type { MiniMaxManager } from './manager';
 
@@ -236,7 +237,7 @@ export function createMiniMaxTools(
             ...result.data,
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: serializeError(error) } });
            return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to list voices',
@@ -301,7 +302,7 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: serializeError(error) } });
            return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate speech',
@@ -377,7 +378,7 @@ export function createMiniMaxTools(
             path: paths[0],
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: serializeError(error) } });
            return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate image',
@@ -447,7 +448,7 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
+           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: serializeError(error) } });
            return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate video',

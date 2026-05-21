@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import type { Agent } from '../database/schema';
+import { serializeError } from './agent-runner-error-formatting';
 import { installAgentWorkspaceSkillsArchive } from './workspace-skill-archive';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
 import { parseSkillMetadata, countSkillFiles } from './skills-shared/index';
@@ -50,7 +51,7 @@ export async function listAgentWorkspaceSkills(
               updatedAt: stat.mtimeMs,
             };
           } catch (error) {
-            forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'Failed to read skill metadata', context: { error: error instanceof Error ? error.message : String(error), skillName } });
+            forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'Failed to read skill metadata', context: { error: serializeError(error), skillName } });
             return null;
           }
         }),
@@ -71,7 +72,7 @@ export async function listAgentWorkspaceSkills(
       return [];
     }
 
-    forgeDebug({ scope: 'workspace-skills', level: 'error', message: 'listAgentWorkspaceSkills failed', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'workspace-skills', level: 'error', message: 'listAgentWorkspaceSkills failed', context: { error: serializeError(error) } });
     throw error;
   }
 }

@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 const MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
 
 export interface MiniMaxConfig {
@@ -61,7 +62,7 @@ export class MiniMaxClient {
             try {
               return JSON.parse(rawBody) as MiniMaxJsonResponse;
             } catch (error) {
-              forgeDebug({ scope: 'minimax', level: 'warn', message: 'Failed to parse MiniMax response', context: { error: error instanceof Error ? error.message : String(error) } });
+              forgeDebug({ scope: 'minimax', level: 'warn', message: 'Failed to parse MiniMax response', context: { error: serializeError(error) } });
               return null;
             }
           })()

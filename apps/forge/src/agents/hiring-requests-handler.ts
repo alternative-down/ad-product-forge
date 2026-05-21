@@ -27,6 +27,7 @@ import {
   validateHireAgentInput,
 } from './hiring-validators';
 import { buildHiringPrompt, estimateTextTokens } from './hiring-prompt';
+import { serializeError } from './agent-runner-error-formatting';
 
 const HIRING_RH_AGENT_ID = 'internal-hiring-rh';
 const HIRING_RH_TOOL_IDS = new Set([
@@ -280,7 +281,7 @@ export async function generateHiredAgentInstructions(
         } catch (error) {
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Try again in a moment. If the problem persists, report the same status in plain text.',
           };
         }
@@ -336,10 +337,10 @@ export async function generateHiredAgentInstructions(
           forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent failure', context: { error: serializeError(error) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Verify the selected role and its permissions, then try again.',
           };
         }

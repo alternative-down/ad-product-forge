@@ -3,6 +3,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { CommunicationFile } from "@forge-runtime/core";
 import { forgeDebug } from "@forge-runtime/core";
 
+import { serializeError } from "../../agents/agent-runner-error-formatting";
+
 
 import type {Database} from "../database/schema";
 import {
@@ -95,7 +97,7 @@ function createConnectionImpl(
         level: "error",
         agentId,
         message: "Failed to replay unread messages",
-        context: { error: error instanceof Error ? error.message : String(error) },
+        context: { error: serializeError(error) },
       });
     });
   }

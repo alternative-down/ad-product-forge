@@ -6,6 +6,7 @@
 
 import { parseJsonBody, jsonResponse } from '../../index';
 import { agentActionSchema } from '../../schemas/agents';
+import { serializeError } from '../../../../agents/agent-runner-error-formatting';
 
 export function registerLifecycleOps(
   httpServer: any,
@@ -33,7 +34,7 @@ export function registerLifecycleOps(
         await ops.registry.add(input.db, runtime);
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: serializeError(error) }, 500);
       }
     },
   });
@@ -52,7 +53,7 @@ export function registerLifecycleOps(
         }
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: serializeError(error) }, 500);
       }
     },
   });
@@ -88,7 +89,7 @@ export function registerLifecycleOps(
 
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
+        return jsonResponse({ error: serializeError(error) }, 500);
       }
     },
   });

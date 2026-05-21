@@ -11,6 +11,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 import type {Database} from '../database/schema';
 import {
@@ -28,7 +29,7 @@ const logInternalChatConvError = (
   forgeDebug({
     scope: 'internal-chat',
     level: 'error',
-    message: `${context} failed: ${error instanceof Error ? error.message : String(error)}`,
+    message: `${context} failed: ${serializeError(error)}`,
     context: extra,
   });
 };

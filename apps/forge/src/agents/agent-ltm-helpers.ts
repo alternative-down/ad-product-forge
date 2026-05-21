@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from './agent-runner-error-formatting';
 
 export type LtmSearchResult = {
   id: string;

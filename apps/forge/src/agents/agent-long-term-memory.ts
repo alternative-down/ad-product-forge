@@ -11,6 +11,7 @@ import {
   type RuntimeActionDefinition,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
+import { serializeError } from './agent-runner-error-formatting';
 import { z } from 'zod';
 
 import {
@@ -412,7 +413,7 @@ export function createAgentLongTermMemory(input: {
           agentId: input.agentId,
           attempt,
           maxAttempts: GENERATE_MAX_ATTEMPTS,
-          error: error instanceof Error ? error.message : String(error),
+          error: serializeError(error),
         } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
@@ -492,7 +493,7 @@ export function createAgentLongTermMemory(input: {
       const nowIso = new Date().toISOString();
 
       state.lastRunAt = nowIso;
-      state.lastRunError = error instanceof Error ? error.message : String(error);
+      state.lastRunError = serializeError(error);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow failed', context: {

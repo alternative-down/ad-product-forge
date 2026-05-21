@@ -19,6 +19,7 @@ import {
   copyDirectoryContents,
   resolveBundledSkillRoot,
 } from './bundled-workspace-skills';
+import { serializeError } from './agent-runner-error-formatting';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
 import {
   parseSkillMetadata as _parseSkillMetadata,
@@ -75,7 +76,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
       scope: 'global-skills',
       level: 'error',
       message: 'loadCustomSkills failed',
-      context: { error: error instanceof Error ? error.message : String(error) },
+      context: { error: serializeError(error) },
     });
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];

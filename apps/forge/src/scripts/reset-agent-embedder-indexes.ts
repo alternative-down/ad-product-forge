@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 import { z } from 'zod';
 
@@ -28,6 +29,6 @@ async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: error instanceof Error ? error.message : String(error) } });
+  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: serializeError(error) } });
   process.exit(1);
 });

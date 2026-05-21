@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 import { z } from 'zod';
 
@@ -30,6 +31,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'top-up-contract', level: 'error', message: 'Failed to top up active contract', context: { error: error instanceof Error ? error.message : String(error) } });
+  forgeDebug({ scope: 'top-up-contract', level: 'error', message: 'Failed to top up active contract', context: { error: serializeError(error) } });
   process.exit(1);
 });

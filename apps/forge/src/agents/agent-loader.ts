@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from './agent-runner-error-formatting';
 
 import type {Database} from '../database/schema';
 import { createInternalAgentRuntime } from './create-forge-agent';
@@ -110,7 +111,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       });
       agents.set(agentConfig.id, runtime);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader', level: 'error', agentId: agentConfig.id, message: 'Failed to load agent', context: { error: error instanceof Error ? error.message : String(error) } });
+      forgeDebug({ scope: 'agent-loader', level: 'error', agentId: agentConfig.id, message: 'Failed to load agent', context: { error: serializeError(error) } });
       // Continue loading other agents even if one fails
     }
   }
