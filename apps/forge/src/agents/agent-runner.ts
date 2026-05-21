@@ -107,13 +107,9 @@ export function createAgentRunner(
   });
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
-  let instant = false;
   let startingRun = false;
   let startingRunStartedAt: number | null = null;
   let executing = false;
-  let backoffMs = ONE_MINUTE_MS;
-  let _nextStepAt: number | null = null;
-  let activeStepEpoch = 0;
   let lastWakeStartedAt: number | null = null;
   let lastStepStartedAt: number | null = null;
   let lastStepStage: string | null = null;
@@ -311,7 +307,7 @@ export function createAgentRunner(
     lastWakeStartedAt = null;
     lastStepStartedAt = null;
     lastStepStage = null;
-    _nextStepAt = null;
+    scheduler.clearTimer();
   }
 
   async function runHealthcheck() {
@@ -489,7 +485,6 @@ export function createAgentRunner(
 
     executing = true;
     scheduler.advanceStepEpoch();
-    activeStepEpoch = scheduler.getActiveStepEpoch();
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
     let prompt = '';
@@ -580,7 +575,7 @@ export function createAgentRunner(
             activeGenerateToken: 0,
             activeRunId: null,
           },
-          backoffState: { backoffMs, instant, nextStepAt: _nextStepAt },
+          backoffState: { backoffMs: scheduler.getState().backoffMs, instant: scheduler.getState().instant, nextStepAt: scheduler.getState().nextStepAt },
           progressState: {
             lastStepStartedAt: null,
             lastStepStage: null,
@@ -593,15 +588,6 @@ export function createAgentRunner(
             currentGenerateAbortController = c;
           },
           markGenerateProgress: () => {},
-          setBackoffMs: (ms) => {
-            backoffMs = ms;
-          },
-          setInstant: (v) => {
-            instant = v;
-          },
-          setNextStepAt: (v) => {
-            _nextStepAt = v;
-          },
           setLoopSignature: (sig) => {
             loopManager.getState().lastLoopSignature = sig;
           },
@@ -626,7 +612,7 @@ export function createAgentRunner(
       const stopRequested = controlDirective === 'stop';
 
       if (stopRequested && messageManager.getPendingCount() === 0) {
-        _nextStepAt = null;
+        scheduler.clearTimer();
         resetLoopDetector();
         await transitionToIdle(runEpoch, {
           deferWakeQueueDrain: true,
@@ -678,14 +664,12 @@ export function createAgentRunner(
           context: { stateError },
         });
       });
-      schedule(nextExponentialBackoffMs(backoffMs).current);
+      schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
     } finally {
       lastStepStartedAt = null;
       lastStepStage = null;
       lastGenerateProgress = null;
-      // scheduler manages its own step epoch
-      if (activeStepEpoch === runEpoch) {
-        activeStepEpoch = 0;
+      if (scheduler.getActiveStepEpoch() === runEpoch) {
         executing = false;
       }
 
