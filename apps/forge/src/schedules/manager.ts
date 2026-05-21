@@ -74,14 +74,15 @@ export function createAgentScheduleManager(input: {
   };
   type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
-  async function getOwnedSchedule(agentId: string, scheduleId: string) {
+
+  async function getAgentSchedule(agentId: string, scheduleId: string) {
     try {
-      return await store.getOwnedSchedule(agentId, scheduleId);
+      return await store.getAgentSchedule(agentId, scheduleId);
     } catch (error) {
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',
-        message: 'getOwnedSchedule failed',
+        message: 'getAgentSchedule failed',
         context: { agentId, scheduleId, error: serializeError(error) },
       });
       throw error;
@@ -306,7 +307,7 @@ export function createAgentScheduleManager(input: {
     rawInput: z.input<typeof updateScheduleSchema>,
   ) {
     const parsed = updateScheduleSchema.parse(rawInput);
-    const existing = await store.getOwnedSchedule(agentId, scheduleId);
+    const existing = await store.getAgentSchedule(agentId, scheduleId);
 
     if (existing === null) {
       throw new Error(`Schedule not found: ${scheduleId}`);
@@ -375,7 +376,7 @@ export function createAgentScheduleManager(input: {
       throw error;
     }
 
-    const reloaded = await store.getOwnedSchedule(agentId, scheduleId);
+    const reloaded = await store.getAgentSchedule(agentId, scheduleId);
 
     if (reloaded === null) {
       forgeDebug({
@@ -651,6 +652,7 @@ export function createAgentScheduleManager(input: {
   }
 
   return {
+    getAgentSchedule,
     loadAll,
     createHeartbeatSchedule,
     createSchedule,
@@ -664,6 +666,5 @@ export function createAgentScheduleManager(input: {
     createScheduleForAgent,
     editCron,
     deleteCron,
-    getOwnedSchedule,
   };
 }

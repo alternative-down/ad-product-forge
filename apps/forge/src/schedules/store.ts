@@ -160,26 +160,6 @@ export function createAgentScheduleStore(db: Database) {
     }
   }
 
-  async function getOwnedSchedule(agentId: string, scheduleId: string) {
-    try {
-      const row = await db.query.agentSchedules.findFirst({
-        where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
-      });
-
-if (row === null || row === undefined || row.kind !== 'agent') {
-        return null;
-      }
-
-      return toScheduleRecord(row);
-    } catch (err) {
-      forgeDebug({
-        scope: 'schedules-store',
-        level: 'error',
-        message: 'getOwnedSchedule DB read failed: ' + String(serializeError(err)),
-      });
-      return null;
-    }
-  }
 
   async function getScheduleByKind(agentId: string, kind: ScheduleKind) {
     try {
@@ -487,7 +467,6 @@ if (row === null || row === undefined || row.kind !== 'agent') {
     listActiveSchedules,
     listCreatedAgentSchedules,
     getAgentSchedule,
-    getOwnedSchedule,
     getScheduleByKind,
     getScheduleById,
     updateAgentSchedule,

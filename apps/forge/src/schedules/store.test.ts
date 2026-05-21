@@ -74,7 +74,6 @@ describe('createAgentScheduleStore', () => {
     expect(store).toHaveProperty('listActiveSchedules');
     expect(store).toHaveProperty('listCreatedAgentSchedules');
     expect(store).toHaveProperty('getAgentSchedule');
-    expect(store).toHaveProperty('getOwnedSchedule');
     expect(store).toHaveProperty('getScheduleByKind');
     expect(store).toHaveProperty('getScheduleById');
     expect(store).toHaveProperty('updateAgentSchedule');
@@ -330,37 +329,6 @@ describe('getScheduleById', () => {
     const result = await store.getScheduleById('sch_001');
     expect(result).not.toBeNull();
     expect(result!.name).toBe('My Schedule');
-  });
-});
-
-describe('getOwnedSchedule', () => {
-  it('returns null when schedule not found', async () => {
-    const db = createMockDb([]);
-    (db.query.agentSchedules as any).findFirst = vi.fn(async () => null);
-    const store = createAgentScheduleStore(db as any);
-
-    const result = await store.getOwnedSchedule('ag_001', 'sch_nonexistent');
-    expect(result).toBeNull();
-  });
-
-  it('returns null for heartbeat kind', async () => {
-    const rows = [createMockRow({ agentId: 'ag_001', kind: 'heartbeat' })];
-    const db = createMockDb(rows);
-    db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
-    const store = createAgentScheduleStore(db as any);
-
-    const result = await store.getOwnedSchedule('ag_001', 'sch_hb');
-    expect(result).toBeNull();
-  });
-
-  it('returns schedule record for agent kind', async () => {
-    const rows = [createMockRow({ agentId: 'ag_001', kind: 'agent' })];
-    const db = createMockDb(rows);
-    db.query.agentSchedules.findFirst = vi.fn(async () => rows[0]);
-    const store = createAgentScheduleStore(db as any);
-
-    const result = await store.getOwnedSchedule('ag_001', 'sch_001');
-    expect(result).not.toBeNull();
   });
 });
 
