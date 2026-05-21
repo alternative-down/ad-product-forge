@@ -56,6 +56,7 @@ export const upsertSystemIntegrationSchema = z.discriminatedUnion('providerType'
 
 export const deleteSystemIntegrationSchema = z.object({
   providerType: systemIntegrationProviderSchema,
+  integrationId: z.string().min(1),
 });
 
 // =============================================================================

@@ -23,7 +23,7 @@ export function createLlmModelPriceStore(db: Database) {
   async function upsertPrice(input: {
     modelKey: string;
     inputPerMillionUsd: number;
-    inputCachePerMillionUsd: number;
+    inputCachePerMillionUsd?: number;
     outputPerMillionUsd: number;
   }) {
     const now = Date.now();
@@ -46,7 +46,7 @@ export function createLlmModelPriceStore(db: Database) {
           await db.insert(llmModelPrices).values({
             modelKey: input.modelKey,
             inputPerMillionUsd: input.inputPerMillionUsd,
-            inputCachePerMillionUsd: input.inputCachePerMillionUsd,
+            inputCachePerMillionUsd: input.inputCachePerMillionUsd ?? 0,
             outputPerMillionUsd: input.outputPerMillionUsd,
             createdAt: now,
             updatedAt: now,

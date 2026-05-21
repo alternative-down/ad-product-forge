@@ -73,34 +73,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/settings/upsert',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody(request.bodyText, upsertSystemSettingsSchema) as any);
-        const result = await systemSettings.upsertSettings({
-          companyName: body.companyName.trim(),
-          companyContext: body.companyContext.trim(),
-          stepDelayEnabled: body.stepDelayEnabled,
-          communicationDmFlushingEnabled: body.communicationDmFlushingEnabled,
-          communicationGroupFlushingEnabled: body.communicationGroupFlushingEnabled,
-          memoryLastMessagesFullEnabled: body.memoryLastMessagesFullEnabled,
-          memoryLastMessagesCount: body.memoryLastMessagesCount,
-          tokenCountFilterEnabled: body.tokenCountFilterEnabled,
-          tokenCountFilterLimit: body.tokenCountFilterLimit,
-          checkpointedOmEnabled: body.checkpointedOmEnabled,
-          checkpointedOmTotalContextTokens: body.checkpointedOmTotalContextTokens,
-          checkpointedOmRecentRawTokens: body.checkpointedOmRecentRawTokens,
-          checkpointedOmRawObservationBatchTokens: body.checkpointedOmRawObservationBatchTokens,
-          checkpointedOmObservationReflectionBatchTokens:
-            body.checkpointedOmObservationReflectionBatchTokens,
-          checkpointedOmObservationSupportTokens: body.checkpointedOmObservationSupportTokens,
-          checkpointedOmReflectionSupportTokens: body.checkpointedOmReflectionSupportTokens,
-          ltmRecallSearchMode: body.ltmRecallSearchMode,
-          ltmRecallWorkspaceTopK: body.ltmRecallWorkspaceTopK,
-          ltmRecallGraphTopK: body.ltmRecallGraphTopK,
-          ltmRecallGraphThreshold: body.ltmRecallGraphThreshold,
-          ltmRecallGraphRandomWalkSteps: body.ltmRecallGraphRandomWalkSteps,
-          ltmRecallGraphIncludeSources: body.ltmRecallGraphIncludeSources,
-          ltmRecallScoreThreshold: body.ltmRecallScoreThreshold,
-          ltmRecallDocumentCount: body.ltmRecallDocumentCount,
-        });
+        const body = parseJsonBody(request.bodyText, upsertSystemSettingsSchema);
+        const result = await systemSettings.upsertSettings(body as Parameters<typeof systemSettings.upsertSettings>[0]);
 
         for (const entry of registry.list()) {
           const agentEntry = registry.get(entry.id);
@@ -252,8 +226,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/price/upsert',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, upsertLlmModelPriceSchema);
-        return jsonResponse(await (llmModelPrices as any).upsertPrice(body));
+        const body = parseJsonBody(request.bodyText, upsertLlmModelPriceSchema);
+        return jsonResponse(await llmModelPrices.upsertPrice(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/price/upsert', context: { error: String(serializeError(err)) } });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
@@ -266,8 +240,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/integration/upsert',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, upsertSystemIntegrationSchema);
-        return jsonResponse(await (integrations as any).upsert(body));
+        const body = parseJsonBody(request.bodyText, upsertSystemIntegrationSchema);
+        return jsonResponse(await integrations.upsertIntegration(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/upsert', context: { error: String(serializeError(err)) } });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
@@ -280,9 +254,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/integration/delete',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, deleteSystemIntegrationSchema);
-        await (integrations as any).delete({ id: (body as any).integrationId });
-        return jsonResponse({ success: true, integrationId: (body as any).integrationId });
+        const body = parseJsonBody(request.bodyText, deleteSystemIntegrationSchema);
+        await integrations.deleteIntegration(body.providerType);
+        return jsonResponse({ success: true, integrationId: body.integrationId });
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/integration/delete', context: { error: String(serializeError(err)) } });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
@@ -295,7 +269,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/profile/upsert',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, upsertLlmProfileSchema);
+        const body = parseJsonBody(request.bodyText, upsertLlmProfileSchema);
         return jsonResponse(await llmSettings.upsertProfile(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/upsert', context: { error: String(serializeError(err)) } });
@@ -309,8 +283,8 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/profile/delete',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, deleteLlmProfileSchema);
-        await llmSettings.deleteProfile((body as any).profileId);
+        const body = parseJsonBody(request.bodyText, deleteLlmProfileSchema);
+        await llmSettings.deleteProfile(body.profileId);
         return jsonResponse({ success: true, profileId: body.profileId });
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/profile/delete', context: { error: String(serializeError(err)) } });
@@ -324,7 +298,7 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/llm/defaults/update',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, updateLlmDefaultsSchema);
+        const body = parseJsonBody(request.bodyText, updateLlmDefaultsSchema);
         return jsonResponse(await llmSettings.updateDefaults(body));
       } catch (err) {
         forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/system/llm/defaults/update', context: { error: String(serializeError(err)) } });
@@ -338,9 +312,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
     path: '/admin/system/oauth/sync',
     handler: async (request) => {
       try {
-        const body = (parseJsonBody as any)(request.bodyText, syncOauthSchema);
+        const body = parseJsonBody(request.bodyText, syncOauthSchema);
         const providerIds: Array<'openai-codex' | 'anthropic'> =
-          body.providerId === 'all' ? ['openai-codex', 'anthropic'] : [body.providerId];
+          body.provider === 'all' ? ['openai-codex', 'anthropic'] : [body.provider];
         const results: Array<{ providerId: 'openai-codex' | 'anthropic'; synced: boolean; error?: string }> = [];
 
         for (const providerId of providerIds) {
