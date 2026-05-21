@@ -28,6 +28,7 @@ import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-ch
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { formatWorkingMemoryValue, isTextPart } from './helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
+import type { SystemSettingsStore } from '../../system-settings/store';
 import { withTimeout } from '../../utils/async';
 import { closeLibsqlClient } from './conversation-helpers';
 import { forgeDebug } from '@forge-runtime/core';
@@ -35,6 +36,7 @@ import type { Database } from '../../database/index';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
+import type { WorkspaceFilesystemConfig } from '../../database/schema';
 
 // ─── Input / Output types ────────────────────────────────────────────────────
 
@@ -134,8 +136,8 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
 
       const agentWorkspaceRoot = resolve(workspaceBasePath, agentId);
       const agentWorkspaceDir =
-        ((agent.workspaceFilesystem as any)?.basePath ?? '') !== ''
-          ? resolve(agentWorkspaceRoot, (agent.workspaceFilesystem as any).basePath)
+        ((agent.workspaceFilesystem ? JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig : null)?.basePath ?? '') !== ''
+          ? resolve(agentWorkspaceRoot, (agent.workspaceFilesystem ? JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig : null)?.basePath ?? '')
           : resolve(agentWorkspaceRoot, 'workspace');
 
       let agentContext: string | null = null;
@@ -167,16 +169,16 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
 
       const checkpointSummaryMessage = operationalMemoryState.checkpointSummaryMessage;
       const checkpointSummaryText =
-        (checkpointSummaryMessage as any)?.parts
-          ?.filter(isTextPart as any)
+        (checkpointSummaryMessage as { parts?: { type?: string; text?: string }[] } | null)?.parts
+          ?.filter(isTextPart)
           ?.map((part: any) => part.text?.trim() ?? '')
           .filter(Boolean)
           .join('\n') ?? null;
 
       const reflection = operationalMemoryState.reflectionMessages
         .map((message: any) =>
-          (message as any).parts
-            ?.filter(isTextPart as any)
+          (message as { parts?: { type?: string; text?: string }[] }).parts
+            ?.filter(isTextPart)
             ?.map((part: any) => part.text?.trim() ?? '')
             .filter(Boolean)
             .join('\n'),
@@ -186,8 +188,8 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
 
       const observations = operationalMemoryState.observationMessages
         .map((message: any) =>
-          (message as any).parts
-            ?.filter(isTextPart as any)
+          (message as { parts?: { type?: string; text?: string }[] }).parts
+            ?.filter(isTextPart)
             ?.map((part: any) => part.text?.trim() ?? '')
             .filter(Boolean)
             .join('\n'),
@@ -206,7 +208,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
 
       const runtimeLtmSnapshot: any = loadedAgent?.runtime?.longTermMemory
         ? await withTimeout(
-            (loadedAgent.runtime.longTermMemory as any).readSnapshot(),
+            loadedAgent.runtime.longTermMemory.readSnapshot(),
             ADMIN_OBSERVABILITY_READ_TIMEOUT_MS,
             `Agent runtime memory LTM snapshot timed out for ${agentId}`,
           ).catch((err) => {
@@ -262,7 +264,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
                   : null,
               packageCount: persistedLtmState.packages.length,
             }
-          : null) as any);
+          : null));
 
       return {
         workingMemory: formatWorkingMemoryValue(workingMemory),
@@ -280,7 +282,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         checkpointSummary: checkpointSummaryText,
         checkpointUpdatedAt:
           (checkpointSummaryMessage?.createdAt ?? '') !== ''
-            ? Date.parse((checkpointSummaryMessage as any)?.createdAt ?? '')
+            ? Date.parse((checkpointSummaryMessage as { createdAt?: string } | null)?.createdAt ?? '')
             : null,
         ltmRecall: ltmRecall
           ? {
