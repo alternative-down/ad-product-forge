@@ -19,6 +19,9 @@ import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
+  type InternalChatConversation,
+  type InternalChatConversationMember,
+  type NewInternalChatConversationMember,
 } from '../database/schema';
 import type { Database } from '../database/client';
 
@@ -224,7 +227,7 @@ export function createInternalChatGroups(
     try {
       const existing = (await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, input.conversationKey),
-      })) as any;
+      })) as InternalChatConversation | null;
 
       if (existing !== null && existing !== undefined) {
         forgeDebug({
@@ -254,7 +257,7 @@ export function createInternalChatGroups(
         role: 'admin',
         createdAt: now,
         updatedAt: now,
-      } as any);
+      } as NewInternalChatConversationMember);
 
       return {
         groupId: input.conversationKey,
@@ -288,7 +291,7 @@ export function createInternalChatGroups(
           eq(internalChatConversationMembers.conversationId, group.id),
           eq(internalChatConversationMembers.accountId, participant.id),
         ),
-      })) as any;
+      })) as InternalChatConversationMember | null;
 
       if (existing !== null && existing !== undefined) {
         throw new Error(`Group member already exists: ${input.participantSlug}`);
@@ -372,7 +375,7 @@ export function createInternalChatGroups(
           eq(internalChatConversationMembers.conversationId, groupId),
           eq(internalChatConversationMembers.accountId, actorAccount.id),
         ),
-      })) as any;
+      })) as InternalChatConversationMember | null;
       if (membership === null || membership === undefined || membership.role !== 'admin') {
         throw new Error('Only admins can update the group.');
       }
@@ -547,7 +550,7 @@ export function createInternalChatGroups(
         )
         .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-      return sortParticipantsBySelfFirst(rows as any, accountId);
+      return sortParticipantsBySelfFirst(rows as unknown as InternalChatGroupParticipant[], accountId);
     } catch (err) {
       logInternalChatError('listGroupMembersOrDmPeersByAccount', err, {
         accountId,
