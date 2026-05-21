@@ -8,6 +8,7 @@ export interface ValidationResult<T> {
   success: true;
   data: T;
 }
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export interface ValidationError {
   success: false;
@@ -25,7 +26,7 @@ export function parseRequest<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (err) {
-    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: String(serializeError(err)) }});
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Validation failed',
@@ -48,7 +49,7 @@ export function parseQueryParams<T>(
     const parsed = schema.parse(data);
     return { success: true, data: parsed };
   } catch (err) {
-    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: err instanceof Error ? err.message : String(err) }});
+    forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: String(serializeError(err)) }});
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Query validation failed',

@@ -13,6 +13,7 @@ type CompanyCash = {
   getOverview: () => Promise<unknown>;
   listContractSummaries: () => Promise<unknown>;
 }
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 type FinanceReadInput = {
   companyCash: CompanyCash;
@@ -34,8 +35,8 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await finance?.companyCash.getOverview());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance overview route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -48,8 +49,8 @@ export function registerFinanceReadRoutes(
       try {
         return jsonResponse(await finance?.companyCash.listContractSummaries());
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance contracts route failed', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });

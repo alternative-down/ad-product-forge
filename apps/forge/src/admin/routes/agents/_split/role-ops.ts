@@ -60,8 +60,8 @@ export function registerRoleOps(
         const result = await capabilities.createRole({ name: body.name, description: body.description });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/create", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/create", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -76,8 +76,8 @@ export function registerRoleOps(
         const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/update", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/update", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -92,7 +92,7 @@ export function registerRoleOps(
         await capabilities.deleteRole(body.roleId);
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = String(serializeError(err));
         forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
         if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
         throw err;
@@ -115,9 +115,10 @@ export function registerRoleOps(
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles/tool-permissions', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles/tool-permissions', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
 }
+import { serializeError } from '../../../../agents/agent-runner-error-formatting';
