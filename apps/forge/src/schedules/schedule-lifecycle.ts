@@ -15,6 +15,7 @@ import {
 import type { Database } from '../database/schema';
 import { createAgentScheduleStore } from './store';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 /** Minimal shape of a schedule record as used by lifecycle operations. */
 export type ScheduleLifecycleRecord = {
@@ -92,7 +93,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
           scope: 'schedules',
           level: 'warn',
           message: 'loadAll: skipped schedule due to registration failure',
-          context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+          context: { scheduleId: record.scheduleId, error: String(serializeError(err)) },
         });
         // Continue loading remaining schedules
       }
@@ -111,7 +112,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
         scope: 'schedules',
         level: 'warn',
         message: 'stop: gracefulShutdown failed',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
     }
   }
@@ -144,7 +145,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
           scope: 'schedules',
           level: 'warn',
           message: 'register: failed to schedule date job',
-          context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+          context: { scheduleId: record.scheduleId, error: String(serializeError(err)) },
         });
         throw err;
       }
@@ -171,7 +172,7 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
         scope: 'schedules',
         level: 'warn',
         message: 'register: failed to schedule cron job',
-        context: { scheduleId: record.scheduleId, error: err instanceof Error ? err.message : String(err) },
+        context: { scheduleId: record.scheduleId, error: String(serializeError(err)) },
       });
       throw err;
     }

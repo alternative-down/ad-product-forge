@@ -12,6 +12,7 @@ import {
 import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type CapabilitySet = {
   toolIds: string[];
@@ -67,7 +68,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listRoles DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listRoles DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -91,7 +92,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'getRole DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'getRole DB read failed: ' + (String(serializeError(err))),
       });
       return null;
     }
@@ -129,7 +130,7 @@ export function createCapabilityStore(db: Database) {
         })),
       );
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'createRole DB write failed', context: { name: input.name, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'createRole DB write failed', context: { name: input.name, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -147,7 +148,7 @@ export function createCapabilityStore(db: Database) {
         where: eq(agentRoles.id, input.roleId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'updateRole DB read failed', context: { roleId: input.roleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'updateRole DB read failed', context: { roleId: input.roleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -166,7 +167,7 @@ export function createCapabilityStore(db: Database) {
         })
         .where(eq(agentRoles.id, input.roleId));
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'updateRole DB write failed', context: { roleId: input.roleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'updateRole DB write failed', context: { roleId: input.roleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -208,7 +209,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listRoleToolPermissions DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listRoleToolPermissions DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -228,7 +229,7 @@ export function createCapabilityStore(db: Database) {
         })
         .onConflictDoNothing();
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'addRoleToolPermission DB write failed', context: { roleId: input.roleId, toolId: input.toolId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'addRoleToolPermission DB write failed', context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -244,7 +245,7 @@ export function createCapabilityStore(db: Database) {
         .delete(roleToolPermissions)
         .where(and(eq(roleToolPermissions.roleId, input.roleId), eq(roleToolPermissions.toolId, input.toolId)));
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'removeRoleToolPermission DB delete failed', context: { roleId: input.roleId, toolId: input.toolId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'removeRoleToolPermission DB delete failed', context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -266,7 +267,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listRoleWorkflowPermissions DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listRoleWorkflowPermissions DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -286,7 +287,7 @@ export function createCapabilityStore(db: Database) {
         })
         .onConflictDoNothing();
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'addRoleWorkflowPermission DB write failed', context: { roleId: input.roleId, workflowId: input.workflowId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'addRoleWorkflowPermission DB write failed', context: { roleId: input.roleId, workflowId: input.workflowId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -302,7 +303,7 @@ export function createCapabilityStore(db: Database) {
         .delete(roleWorkflowPermissions)
         .where(and(eq(roleWorkflowPermissions.roleId, input.roleId), eq(roleWorkflowPermissions.workflowId, input.workflowId)));
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'removeRoleWorkflowPermission DB delete failed', context: { roleId: input.roleId, workflowId: input.workflowId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'removeRoleWorkflowPermission DB delete failed', context: { roleId: input.roleId, workflowId: input.workflowId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -344,7 +345,7 @@ export function createCapabilityStore(db: Database) {
         }),
       ]);
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'listGrantedRoleCapabilitiesBatch DB read failed', context: { roleIdCount: roleIds.length, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'listGrantedRoleCapabilitiesBatch DB read failed', context: { roleIdCount: roleIds.length, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -377,7 +378,7 @@ export function createCapabilityStore(db: Database) {
     try {
       grantedCapabilityIds = new Set(await listGrantedRoleCapabilities(roleId));
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'listRoleCapabilities: listGrantedRoleCapabilities failed', context: { roleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'listRoleCapabilities: listGrantedRoleCapabilities failed', context: { roleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -458,7 +459,7 @@ export function createCapabilityStore(db: Database) {
         where: eq(agents.id, agentId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'getAgentCapabilities DB read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'getAgentCapabilities DB read failed', context: { agentId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -519,7 +520,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listAgentStatuses DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listAgentStatuses DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }

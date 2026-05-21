@@ -5,6 +5,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import type {Database, AgentSchedule} from '../database/schema';
 import { agentSchedules } from '../database/schema';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type ScheduleType = 'cron' | 'date';
 type ScheduleKind = 'agent' | 'heartbeat';
@@ -61,7 +62,7 @@ export function createAgentScheduleStore(db: Database) {
     try {
       await db.insert(agentSchedules).values(record);
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'createSchedule DB insert failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'createSchedule DB insert failed', context: { agentId: input.agentId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -83,7 +84,7 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'listAgentSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listAgentSchedules DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -100,7 +101,7 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'listActiveSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listActiveSchedules DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -120,7 +121,7 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'listCreatedAgentSchedules DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listCreatedAgentSchedules DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -145,7 +146,7 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'getAgentSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'getAgentSchedule DB read failed: ' + (String(serializeError(err))),
       });
       return null;
     }
@@ -166,7 +167,7 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'getOwnedSchedule DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'getOwnedSchedule DB read failed: ' + (String(serializeError(err))),
       });
       return null;
     }
@@ -184,7 +185,7 @@ export function createAgentScheduleStore(db: Database) {
       forgeDebug({
         scope: 'schedules-store',
         level: 'error',
-        message: 'getScheduleByKind DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'getScheduleByKind DB read failed: ' + (String(serializeError(err))),
       });
       return null;
     }
@@ -198,7 +199,7 @@ export function createAgentScheduleStore(db: Database) {
         where: eq(agentSchedules.id, scheduleId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'getScheduleById DB read failed', context: { scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'getScheduleById DB read failed', context: { scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -222,7 +223,7 @@ export function createAgentScheduleStore(db: Database) {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB read failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB read failed', context: { agentId, scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -250,7 +251,7 @@ export function createAgentScheduleStore(db: Database) {
         })
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB write failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: '_applyUpdate DB write failed', context: { agentId, scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -294,7 +295,7 @@ export function createAgentScheduleStore(db: Database) {
         where: and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)),
       });
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteAgentSchedule DB read failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteAgentSchedule DB read failed', context: { agentId, scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
 
@@ -310,7 +311,7 @@ export function createAgentScheduleStore(db: Database) {
     try {
       await db.delete(agentSchedules).where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.id, scheduleId)));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteAgentSchedule DB delete failed', context: { agentId, scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteAgentSchedule DB delete failed', context: { agentId, scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
     return true;
@@ -323,7 +324,7 @@ export function createAgentScheduleStore(db: Database) {
         .set({ isActive: 0, nextTriggerAt: null, updatedAt: Date.now() })
         .where(eq(agentSchedules.id, scheduleId));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deactivateSchedule DB update failed', context: { scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deactivateSchedule DB update failed', context: { scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
   }
@@ -333,7 +334,7 @@ export function createAgentScheduleStore(db: Database) {
         .delete(agentSchedules)
         .where(and(eq(agentSchedules.agentId, agentId), eq(agentSchedules.kind, 'heartbeat')));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteHeartbeatSchedule DB delete failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'deleteHeartbeatSchedule DB delete failed', context: { agentId, error: String(serializeError(err)) } });
       throw err;
     }
   }
@@ -346,7 +347,7 @@ export function createAgentScheduleStore(db: Database) {
         .set({ nextTriggerAt, updatedAt: Date.now() })
         .where(eq(agentSchedules.id, scheduleId));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'setNextTriggerAt DB update failed', context: { scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'setNextTriggerAt DB update failed', context: { scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
   }
@@ -362,7 +363,7 @@ export function createAgentScheduleStore(db: Database) {
         })
         .where(eq(agentSchedules.id, input.scheduleId));
     } catch (err) {
-      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'markTriggered DB update failed', context: { scheduleId: input.scheduleId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'schedules-store', level: 'error', message: 'markTriggered DB update failed', context: { scheduleId: input.scheduleId, error: String(serializeError(err)) } });
       throw err;
     }
   }

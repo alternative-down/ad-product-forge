@@ -4,6 +4,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import type {Database} from '../database/schema';
 import { webhookRoutes, webhookEvents, WebhookRoute } from '../database/schema';
 import { createId } from '../utils/id';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 // WebhookRoute and WebhookEvent types are exported from the database schema
 // Type for webhook event rows
@@ -29,7 +30,7 @@ export function createWebhookStore(db: Database) {
     try {
       await (db.insert(webhookRoutes) as any).values(route as any);
     } catch (err) {
-      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'createRoute: db.insert failed', context: { agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'createRoute: db.insert failed', context: { agentId: input.agentId, error: String(serializeError(err)) } });
       throw err;
     }
     return route as unknown as WebhookRoute;
@@ -43,7 +44,7 @@ export function createWebhookStore(db: Database) {
       forgeDebug({
         scope: 'webhooks-store',
         level: 'error',
-        message: 'getRoute DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'getRoute DB read failed: ' + (String(serializeError(err))),
       });
       return null;
     }
@@ -56,7 +57,7 @@ export function createWebhookStore(db: Database) {
       forgeDebug({
         scope: 'webhooks-store',
         level: 'error',
-        message: 'listRoutesByAgent DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listRoutesByAgent DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -66,7 +67,7 @@ export function createWebhookStore(db: Database) {
     try {
       await (db.update(webhookRoutes) as any).set({ isActive: false, updatedAt: Date.now() }).where(eq(webhookRoutes.routeId, routeId));
     } catch (err) {
-      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'deactivateRoute: db.update failed', context: { routeId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'deactivateRoute: db.update failed', context: { routeId, error: String(serializeError(err)) } });
       throw err;
     }
   }
@@ -95,7 +96,7 @@ export function createWebhookStore(db: Database) {
     try {
       await (db.insert(webhookEvents) as any).values(event as any);
     } catch (err) {
-      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'createEvent: db.insert failed', context: { routeId: input.routeId, agentId: input.agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'createEvent: db.insert failed', context: { routeId: input.routeId, agentId: input.agentId, error: String(serializeError(err)) } });
       throw err;
     }
     return event as unknown as WebhookEvent;
@@ -108,7 +109,7 @@ export function createWebhookStore(db: Database) {
       forgeDebug({
         scope: 'webhooks-store',
         level: 'error',
-        message: 'listEventsByAgent DB read failed: ' + (err instanceof Error ? err.message : String(err)),
+        message: 'listEventsByAgent DB read failed: ' + (String(serializeError(err))),
       });
       return [];
     }
@@ -118,7 +119,7 @@ export function createWebhookStore(db: Database) {
     try {
       await db.update(webhookEvents).set({ status: 'processed', processedAt: Date.now() }).where(eq(webhookEvents.eventId, eventId));
     } catch (err) {
-      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'markProcessed: db.update failed', context: { eventId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'markProcessed: db.update failed', context: { eventId, error: String(serializeError(err)) } });
       throw err;
     }
   }
@@ -127,7 +128,7 @@ export function createWebhookStore(db: Database) {
     try {
       await db.update(webhookEvents).set({ status: 'failed', processedAt: Date.now() }).where(eq(webhookEvents.eventId, eventId));
     } catch (err) {
-      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'markFailed: db.update failed', context: { eventId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'webhooks-store', level: 'error', message: 'markFailed: db.update failed', context: { eventId, error: String(serializeError(err)) } });
       throw err;
     }
   }

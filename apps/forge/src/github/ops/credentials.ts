@@ -7,6 +7,7 @@ import type { Octokit as _Octokit } from 'octokit';
 import type { OpsContext } from './context';
 import type { GitHubAppCredentials } from '../types';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function createCredentialsOps(ctx: OpsContext) {
   async function getCredentials(agentId: string) {
@@ -28,7 +29,7 @@ export function createCredentialsOps(ctx: OpsContext) {
         ) as any,  
       });
     } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getCredentials DB read failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getCredentials DB read failed', context: { agentId, error: String(serializeError(err)) } });
       throw err;
     }
     if (!provider) return null;
@@ -40,7 +41,7 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       credentials = await getCredentials(agentId);
     } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getActiveCredentials failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getActiveCredentials failed', context: { agentId, error: String(serializeError(err)) } });
       throw err;
     }
     if (!credentials || credentials.status !== 'active') {
@@ -63,7 +64,7 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       credentials = await getActiveCredentials(agentId);
     } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: String(serializeError(err)) } });
       throw err;
     }
     return await ctx.createInstallationOctokit(credentials as any);  

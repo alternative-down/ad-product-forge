@@ -29,7 +29,7 @@ export function parseRequest<T>(
     forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseRequest failed', context: { error: String(serializeError(err)) }});
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Validation failed',
+      error: String(serializeError(err)),
     };
   }
 }
@@ -52,7 +52,7 @@ export function parseQueryParams<T>(
     forgeDebug({ scope: 'validation', level: 'error', message: '[validation] parseQueryParams failed', context: { error: String(serializeError(err)) }});
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Query validation failed',
+      error: String(serializeError(err)),
     };
   }
 }

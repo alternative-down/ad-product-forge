@@ -4,6 +4,7 @@ import { createId } from '../utils/id';
 
 import type { Database } from '../database/schema';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
 
@@ -32,7 +33,7 @@ export function createCompanyPayables(db: Database) {
         scope: 'company-payables',
         level: 'error',
         message: 'Failed to list recurring payables',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -92,7 +93,7 @@ export function createCompanyPayables(db: Database) {
         context: {
           payableId,
           name: input.name,
-          error: err instanceof Error ? err.message : String(err),
+          error: String(serializeError(err)),
         },
       });
       throw err;
@@ -132,7 +133,7 @@ export function createCompanyPayables(db: Database) {
         scope: 'company-payables',
         level: 'error',
         message: 'Failed to set recurring payable active',
-        context: { payableId, isActive, error: err instanceof Error ? err.message : String(err) },
+        context: { payableId, isActive, error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -214,7 +215,7 @@ export function createCompanyPayables(db: Database) {
         message: 'Failed to sync recurring payable occurrence',
         context: {
           entryId: input.entryId,
-          error: err instanceof Error ? err.message : String(err),
+          error: String(serializeError(err)),
         },
       });
       throw err;

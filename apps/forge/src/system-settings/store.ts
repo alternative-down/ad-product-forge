@@ -3,6 +3,7 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import { systemSettings } from '../database/schema';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 const SYSTEM_SETTINGS_ID = 'global';
 
@@ -104,7 +105,7 @@ export function createSystemSettingsStore(db: Database) {
       });
       return mapRow(row);
     } catch (err) {
-      forgeDebug({ scope: 'system-settings', level: 'info', message: 'getSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'system-settings', level: 'info', message: 'getSettings failed', context: { error: String(serializeError(err)) } });
       return { ...DEFAULTS, updatedAt: null };
     }
   }
@@ -154,7 +155,7 @@ export function createSystemSettingsStore(db: Database) {
 
       return { ...input, updatedAt: now };
     } catch (err) {
-      forgeDebug({ scope: 'system-settings', level: 'info', message: 'upsertSettings failed', context: { error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'system-settings', level: 'info', message: 'upsertSettings failed', context: { error: String(serializeError(err)) } });
       throw err;
     }
   }

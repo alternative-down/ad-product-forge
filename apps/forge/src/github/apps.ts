@@ -8,6 +8,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import { App } from 'octokit';
 import type { OpsContext } from './ops/context';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from './types';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export interface AppProvisioningOps {
   getGlobalConfig: OpsContext['getGlobalConfig'];
@@ -51,7 +52,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       ctx.opsRouting.registerAgentRoutes(input.agentId);
       return ctx.opsRouting.buildProvisioning(input.agentId, pendingCredentials);
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createAgentApp failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createAgentApp failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -90,7 +91,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       await ctx.saveCredentials(input.agentId, updated);
       return ctx.opsRouting.buildProvisioning(input.agentId, updated);
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] updateAgentManifestConfig failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] updateAgentManifestConfig failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -107,7 +108,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       }
       return result;
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] loadAllAgents failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] loadAllAgents failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -126,7 +127,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         ctx.and(ctx.eq(ctx.agentProviders.agentId, agentId), ctx.eq(ctx.agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE)),
       );
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] deleteAgentApp failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] deleteAgentApp failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -142,7 +143,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     try {
       return await createGitHubApp(credentials).getInstallationOctokit(credentials.installationId);
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createInstallationOctokit failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createInstallationOctokit failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
