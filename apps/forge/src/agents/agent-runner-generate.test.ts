@@ -16,6 +16,8 @@ type IterationArg = Parameters<typeof buildIterationFeedback>[0];
 
 function makeLoopDetector(stuck = false, signatureCount = 0) {
   return {
+    recordIteration: vi.fn<() => boolean>(),
+    reset: vi.fn(),
     isStuck: vi.fn<() => boolean>().mockReturnValue(stuck),
     getSignatureCount: vi.fn<() => number>().mockReturnValue(signatureCount),
   };
