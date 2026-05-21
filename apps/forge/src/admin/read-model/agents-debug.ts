@@ -11,6 +11,7 @@ import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './hel
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import type { Database } from '../../database/index';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 
 export interface AgentDebugReadModelDeps {
@@ -37,14 +38,14 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
     const [agent, runtimeMemory, snapshots] = await Promise.all([
       getAgent(agentId),
       (getAgentRuntimeMemoryFn ?? (async () => null))(agentId).catch((err) => {
-        forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+        forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: String(serializeError(err)) } });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
     ]);
     if (agent === null || agent === undefined) return null;
     const ltm = await readLongTermMemoryState(db, agentId).catch((err) => {
-      forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: LTM recall not available', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: LTM recall not available', context: { agentId, error: String(serializeError(err)) } });
       return null;
     });
     return { agent, runtimeMemory, snapshots, ltm };

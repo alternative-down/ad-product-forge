@@ -11,6 +11,7 @@ import { createSystemSettingsStore } from '../../system-settings/store';
 import type { SystemSettingsValue } from '../../system-settings/store';
 import { forgeCapabilityIds } from '../../capabilities/catalog';
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 import { agents } from '../../database/schema';
 
 import type {Database} from '../../database/schema';
@@ -60,7 +61,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
     try {
       return await fn();
     } catch (err) {
-      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: `${label} failed`, context: { err: err instanceof Error ? err.message : String(err) }});
+      forgeDebug({ scope: 'admin-read-model-system', level: 'error', message: `${label} failed`, context: { err: String(serializeError(err)) }});
       throw err;
     }
   }

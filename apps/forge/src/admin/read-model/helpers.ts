@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 import { decryptSecret } from '../../encryption/crypto';
 
 type RuntimeStoredMessagePart = {
@@ -351,8 +352,8 @@ export function decryptProviderConfig(encryptedCredentials: string) {
   try {
     return JSON.parse(decrypted) as unknown;
   } catch (err) {
-    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to parse credentials JSON: ' + String(err), context: { err: err instanceof Error ? err.message : String(err) } });
-    throw new Error('Failed to parse credentials JSON: ' + (err instanceof Error ? err.message : String(err)));
+    forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to parse credentials JSON: ' + String(err), context: { err: String(serializeError(err)) } });
+    throw new Error('Failed to parse credentials JSON: ' + String(serializeError(err)));
   }
 }
 
