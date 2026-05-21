@@ -339,10 +339,7 @@ export class AgentLongTermMemoryRecall {
         level: 'error',
         message: 'recall failed',
         context: {
-          error:
-            error instanceof Error
-              ? { message: error.message, name: error.name, stack: error.stack }
-              : error,
+          error: serializeError(error),
         },
       });
       forgeDebug({
