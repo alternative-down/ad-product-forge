@@ -8,6 +8,7 @@ import { installAgentWorkspaceSkillsArchive } from './workspace-skill-archive';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
 import { parseSkillMetadata, countSkillFiles } from './skills-shared/index';
 
+
 type AgentSkillSummary = {
   skillName: string;
   description?: string;
@@ -15,16 +16,15 @@ type AgentSkillSummary = {
   updatedAt: number;
 };
 
+
+
+
 export async function listAgentWorkspaceSkills(
   workspaceBasePath: string,
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>,
 ): Promise<AgentSkillSummary[]> {
   // @ts-expect-error TODO: type
-  const skillsRoot = resolveAgentSkillsRoot(
-    workspaceBasePath,
-    agent.workspaceFilesystem ?? undefined,
-    agent.id,
-  );
+  const skillsRoot = resolveAgentSkillsRoot(workspaceBasePath, agent.workspaceFilesystem ?? undefined, agent.id);
 
   try {
     const entries = await fs.readdir(skillsRoot, { withFileTypes: true });
@@ -51,12 +51,7 @@ export async function listAgentWorkspaceSkills(
               updatedAt: stat.mtimeMs,
             };
           } catch (error) {
-            forgeDebug({
-              scope: 'workspace-skills',
-              level: 'warn',
-              message: 'Failed to read skill metadata',
-              context: { error: serializeError(error), skillName },
-            });
+            forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'Failed to read skill metadata', context: { error: serializeError(error), skillName } });
             return null;
           }
         }),
@@ -77,12 +72,7 @@ export async function listAgentWorkspaceSkills(
       return [];
     }
 
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'error',
-      message: 'listAgentWorkspaceSkills failed',
-      context: { error: serializeError(error) },
-    });
+    forgeDebug({ scope: 'workspace-skills', level: 'error', message: 'listAgentWorkspaceSkills failed', context: { error: serializeError(error) } });
     throw error;
   }
 }
@@ -103,12 +93,7 @@ export async function deleteAgentWorkspaceSkill(input: {
   const skillName = input.skillName.trim();
 
   if (!/^[a-z0-9][a-z0-9-]*$/.test(skillName)) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'warn',
-      message: 'deleteAgentWorkspaceSkill: invalid skill name',
-      context: { skillName: input.skillName },
-    });
+    forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'deleteAgentWorkspaceSkill: invalid skill name', context: { skillName: input.skillName } });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
@@ -120,12 +105,7 @@ export async function deleteAgentWorkspaceSkill(input: {
   const relativePath = path.relative(skillsRoot, skillRoot);
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-    forgeDebug({
-      scope: 'workspace-skills',
-      level: 'warn',
-      message: 'deleteAgentWorkspaceSkill: invalid skill name',
-      context: { skillName: input.skillName },
-    });
+    forgeDebug({ scope: 'workspace-skills', level: 'warn', message: 'deleteAgentWorkspaceSkill: invalid skill name', context: { skillName: input.skillName } });
     throw new Error(`Invalid skill name: ${input.skillName}`);
   }
 
