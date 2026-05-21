@@ -1,20 +1,20 @@
 # Agent Context — Aldric
 
-## Current Mission
-Working on `fix/4663-agent-runner-epoch-types` branch. Cleaning up 10 `as any` casts from agent-runner.ts GenerateDeps calls and scheduler state.
-
-## Changes
-- **agent-runner-epoch-manager.ts**: Widened `isStaleRun` and `advanceGenerateToken` to accept `SchedulerState` (has extra fields `nextStepAt`, `backoffMs`, `instant`, `isStopped`)
-- **agent-runner-scheduler.ts**: Widened `Scheduler` type to include all methods from `createScheduler` return (was missing ~40 methods)
-- **agent-runner-generate.ts**: Changed `loopDetector` from `LoopDetector` to union type (accepts both `LoopManager` and `LoopDetector` — latter has `recordIteration`)
-- **agent-runner-feedback.ts**: Changed `loopDetector` in `BuildIterationFeedbackDeps` to a minimal interface `{ isStuck(): boolean; getSignatureCount(): number }`
-- **agent-runner-execute-types.ts**: Changed `loopDetector` from `LoopDetector` to `LoopManager` (has extra `register`, `getCurrentSignature`, `getState`)
-- **agent-runner.ts**: Removed 10 `as any` casts from GenerateDeps block, replaced with proper types or targeted `@ts-expect-error` for Scheduler
-
-## Results
-- TSC: 9 errors (same as baseline — all pre-existing, unrelated to agent-runner)
-- Tests: 173 failed, 1676 passed (identical to baseline — all pre-existing failures)
-- 0 new `as any` casts introduced in modified files
+## Completed PRs (merged into develop)
+- **#4685**: fix(#4663): agent-runner.ts — 10 as any removed, merged
+- **#4687**: fix(#4683,#4684): ltm/recall.ts + ltm/store.ts — 18 as any removed, merged
 
 ## Status
-Ready to commit. Branch: `fix/4663-agent-runner-epoch-types`
+develop is clean. All dispatched issues resolved. Waiting for new assignments.
+
+## Tech Debt (pre-existing, NOT my scope)
+- `agent-long-term-memory.ts:177` — TSC error
+- `stripe.ts:29-30` — TSC error
+- 173 baseline test failures (pre-existing)
+
+## Boundaries
+Do NOT touch: admin/read-model/, agents-conversations.ts, agent-contract-store.ts, agent-runner-generate.ts
+
+## Rules
+- Fresh token before push, correct remote (alternative-down)
+- NEVER prefix imports with _
