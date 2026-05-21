@@ -1,3 +1,4 @@
+import { serializeError } from '../agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { createClient } from '@libsql/client';
 import fs from 'node:fs/promises';
@@ -39,7 +40,7 @@ async function pathExists(targetPath: string) {
     await fs.stat(targetPath);
     return true;
   } catch (error) {
-    forgeDebug({ scope: 'agent-runtime-platform', level: 'warn', message: 'Path does not exist', context: { error: error instanceof Error ? error.message : String(error), path: targetPath } });
+    forgeDebug({ scope: 'agent-runtime-platform', level: 'warn', message: 'Path does not exist', context: { error: serializeError(error), path: targetPath } });
     return false;
   }
 }

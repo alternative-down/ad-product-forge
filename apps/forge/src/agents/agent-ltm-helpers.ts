@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 export type LtmSearchResult = {
@@ -10,7 +11,7 @@ export function safeSerializeRecallSteps(steps: unknown[]) {
   try {
     return JSON.stringify(steps, null, 2);
   } catch (error) {
-    forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize recall steps', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize recall steps', context: { error: serializeError(error) } });
     return '[unserializable steps payload]';
   }
 }
@@ -19,7 +20,7 @@ export function safeSerializeGraphResult(result: unknown) {
   try {
     return JSON.stringify(result, null, 2);
   } catch (error) {
-    forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize graph result', context: { error: error instanceof Error ? error.message : String(error) } });
+    forgeDebug({ scope: 'agent-long-term-memory-recall', level: 'warn', message: 'Failed to serialize graph result', context: { error: serializeError(error) } });
     return '[unserializable graph result]';
   }
 }

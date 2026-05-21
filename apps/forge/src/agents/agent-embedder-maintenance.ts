@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -62,7 +63,7 @@ async function resetVectorDatabase(input: {
   const exists = await fs
     .access(input.databasePath)
     .then(() => true)
-    .catch((err) => { forgeDebug({ scope: 'agent-embedder-maintenance', level: 'error', message: '[safe-catch] access check', context: { error: err instanceof Error ? err.message : String(err) } }); return false; });
+    .catch((err) => { forgeDebug({ scope: 'agent-embedder-maintenance', level: 'error', message: '[safe-catch] access check', context: { error: serializeError(err) } }); return false; });
 
   if (!exists) {
     return;

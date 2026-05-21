@@ -5,6 +5,7 @@
  * Functions for loading agent workspace context and schedule summaries
  */
 
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
@@ -100,7 +101,7 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
       scope: 'agent-runner',
       level: 'warn',
       runtimeId,
-      message: 'Failed to load active schedule summary: ' + (err instanceof Error ? err.message : String(err)),
+      message: 'Failed to load active schedule summary: ' + String(serializeError(err).message),
     });
     return null;
   }
@@ -117,7 +118,7 @@ export async function loadAgentContextContent(
     filesystem.exists(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context existence check timed out for filesystem`,
-  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: err instanceof Error ? err.message : String(err) } }); return false; });
+  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration check', context: { error: serializeError(err) } }); return false; });
 
   if (!exists) {
     return null;
@@ -127,7 +128,7 @@ export async function loadAgentContextContent(
     filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context read timed out for filesystem`,
-  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: err instanceof Error ? err.message : String(err) } }); return null; });
+  ).catch((err) => { forgeDebug({ scope: 'agent-runner', level: 'error', message: '[safe-catch] context decoration read', context: { error: serializeError(err) } }); return null; });
 
   if (data === null || data === undefined) {
     return null;

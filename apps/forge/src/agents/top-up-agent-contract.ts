@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -34,7 +35,7 @@ export async function topUpActiveAgentContract(
       level: 'error',
       runtimeId: input.agentId,
       message:
-        'Failed to find active contract: ' + (err instanceof Error ? err.message : String(err)),
+        'Failed to find active contract: ' + String(serializeError(err).message),
     });
     throw err;
   }
@@ -59,7 +60,7 @@ export async function topUpActiveAgentContract(
       level: 'error',
       runtimeId: input.agentId,
       message:
-        'Failed to get company cash balance: ' + (err instanceof Error ? err.message : String(err)),
+        'Failed to get company cash balance: ' + String(serializeError(err).message),
     });
     throw err;
   }
@@ -98,7 +99,7 @@ export async function topUpActiveAgentContract(
       runtimeId: input.agentId,
       message:
         'Failed to record cash out or update contract: ' +
-        (err instanceof Error ? err.message : String(err)),
+        String(serializeError(err).message),
     });
     throw err;
   }

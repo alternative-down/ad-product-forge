@@ -98,7 +98,7 @@ async function countFiles(rootPath: string, relativePath: string): Promise<numbe
       message: '[safe-catch] readdir',
       context: {
         error:
-          err instanceof Error ? { message: err.message, name: err.name, stack: err.stack } : err,
+          serializeError(err),
       },
     });
     return null;
@@ -340,9 +340,7 @@ export class AgentLongTermMemoryRecall {
         message: 'recall failed',
         context: {
           error:
-            error instanceof Error
-              ? { message: error.message, name: error.name, stack: error.stack }
-              : error,
+            serializeError(error),
         },
       });
       forgeDebug({
@@ -366,7 +364,7 @@ export class AgentLongTermMemoryRecall {
           level: 'warn',
           message: 'snapshotError from error failed',
           context: {
-            error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e,
+            error: serializeError(e),
           },
         });
         snapshotError = String(error);
@@ -385,7 +383,7 @@ export class AgentLongTermMemoryRecall {
           context: {
             threadId: input.threadId,
             resourceId: input.resourceId,
-            error: e instanceof Error ? { message: e.message, name: e.name, stack: e.stack } : e,
+            error: serializeError(e),
           },
         });
       }
