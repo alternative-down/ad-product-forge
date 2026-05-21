@@ -4,14 +4,14 @@
  * createGitHubApp, createInstallationOctokit
  */
 import type { Octokit as _Octokit } from 'octokit';
-import type { OpsContext } from './context';
+import type { OpsContext, GithubOpsDb } from './context';
 import type { GitHubAppCredentials } from '../types';
 import { forgeDebug } from '@forge-runtime/core';
 import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function createCredentialsOps(ctx: OpsContext) {
   async function getCredentials(agentId: string) {
-    const db = ctx.config.db as unknown as {
+    const db = ctx.config.db as unknown as GithubOpsDb & {
       query: {
         agentProviders: {
           findFirst: (opts: { where: unknown }) => Promise<{ encryptedCredentials: string } | null>;
@@ -22,11 +22,9 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       provider = await db.query.agentProviders.findFirst({
         where: ctx.and(
-           
-          ctx.eq((ctx.agentProviders as any).agentId, agentId),
-          ctx.eq((ctx.agentProviders as any).providerType, ctx.GITHUB_PROVIDER_TYPE)  
-         
-        ) as any,  
+          ctx.eq(ctx.agentProviders.agentId, agentId),
+          ctx.eq(ctx.agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE)
+        ),  
       });
     } catch (err) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getCredentials DB read failed', context: { agentId, error: String(serializeError(err)) } });
@@ -67,11 +65,11 @@ export function createCredentialsOps(ctx: OpsContext) {
       forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: String(serializeError(err)) } });
       throw err;
     }
-    return await ctx.createInstallationOctokit(credentials as any);  
+    return await ctx.createInstallationOctokit(credentials as Extract<GitHubAppCredentials, { status: 'active' }>);  
   }
 
   async function createInstallationOctokit(installationId: number) {
-    return await ctx.createInstallationOctokit({ status: "active", installationId } as any);  
+    return await ctx.createInstallationOctokit({ status: "active", installationId } as Extract<GitHubAppCredentials, { status: 'active' }>);  
   }
 
   async function getInstallationToken(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
