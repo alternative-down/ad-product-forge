@@ -51,7 +51,7 @@ function toBool(value: number | null | undefined): boolean {
 
 /** Normalises the LTM recall search mode. */
 function resolveRecallSearchMode(value: string | null | undefined): typeof DEFAULTS.ltmRecallSearchMode {
-  if (value === 'vector' || value === 'bm25') return value as typeof DEFAULTS.ltmRecallSearchMode;
+  if (value === 'vector' || value === 'graph' || value === 'bm25') return value as typeof DEFAULTS.ltmRecallSearchMode;
   return 'hybrid';
 }
 
