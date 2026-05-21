@@ -109,7 +109,7 @@ export interface ExecuteStepDeps {
 
   // ── Stores & managers ─────────────────────────────────────────────────────
   store: AgentContractStore;
-  messageManager: MessageManagerState;
+  messageManager: import('./agent-runner-messages').MessageManager;
   scheduler: Scheduler;
   loopDetector: import('./agent-runner-loop-manager').LoopManager;
 

@@ -221,7 +221,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
 
     // ── Phase 4: interpret result ────────────────────────────────────────────
     progressState.lastStepStage = 'finalizing-run';
-    const controlDirective = extractRunnerControlDirective(result);
+    const controlDirective = result ? extractRunnerControlDirective(result) : null;
     const stopRequested = controlDirective === 'stop';
 
     if (stopRequested) {
