@@ -11,6 +11,7 @@ import {
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
+import { serializeError } from '../agent-runner-error-formatting';
 
 import type {
   LongTermMemoryRecallHistory,
@@ -352,13 +353,13 @@ export class AgentLongTermMemoryRecall {
           agentId: this.agentId,
           threadId: input.threadId,
           durationMs: Date.now() - recallStartedAt,
-          error: error instanceof Error ? error.message : String(error),
+          error: String(serializeError(error)),
         },
       });
       const persistedState = await this.persistenceStore.readRecallState();
       let snapshotError: string | null = null;
       try {
-        snapshotError = error instanceof Error ? error.message : String(error);
+        snapshotError = String(serializeError(error));
       } catch (e) {
         forgeDebug({
           scope: 'ltm-recall',
@@ -720,8 +721,8 @@ export class AgentLongTermMemoryRecall {
       });
       return { formatted: '', results: searchResults };
     } catch (error) {
-      const err = error instanceof Error ? error.message : String(error);
-      if (err.includes('SQLITE_ERROR: no such table') || err.includes('no such table:')) {
+      const errMsg = String(serializeError(error));
+      if (errMsg.includes('SQLITE_ERROR: no such table') || errMsg.includes('no such table:')) {
         return { formatted: '', results: [] };
       }
 
@@ -732,7 +733,7 @@ export class AgentLongTermMemoryRecall {
         context: {
           agentId: this.agentId,
           durationMs: Date.now() - stageStartedAt,
-          error: error instanceof Error ? error.message : String(error),
+          error: String(serializeError(error)),
         },
       });
       throw error;
@@ -827,7 +828,7 @@ export class AgentLongTermMemoryRecall {
         context: {
           agentId: this.agentId,
           durationMs: Date.now() - stageStartedAt,
-          error: error instanceof Error ? error.message : String(error),
+          error: String(serializeError(error)),
         },
       });
 
@@ -842,7 +843,7 @@ export class AgentLongTermMemoryRecall {
         sourcesCount: 0,
         sourcesJson: null,
         rawJson: null,
-        error: error instanceof Error ? error.message : String(error),
+        error: String(serializeError(error)),
       };
     }
   }
@@ -939,7 +940,7 @@ export class AgentLongTermMemoryRecall {
             this.lingeringRecallOperationSince !== undefined
               ? new Date(this.lingeringRecallOperationSince as any).toISOString()
               : null,
-          error: error instanceof Error ? error.message : String(error),
+          error: String(serializeError(error)),
         },
       });
       throw error;
