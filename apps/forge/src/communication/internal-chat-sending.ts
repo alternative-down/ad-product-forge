@@ -12,17 +12,18 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 import type { CommunicationFile } from '@forge-runtime/core';
 
-import type { Database, InternalChatConversation } from '../database/schema';
+import type {
+  Database,
+  InternalChatConversation,
+  NewInternalChatMessageRead,
+} from '../database/schema';
 import {
   internalChatConversations,
   internalChatConversationMembers,
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
-import type {
-  InternalChatGroupMember,
-  InternalChatGroupParticipant,
-} from './internal-chat-helpers';
+import type { InternalChatGroupParticipant } from './internal-chat-helpers';
 
 export interface SendingDeps {
   db: Database;
@@ -55,7 +56,7 @@ export interface SendingDeps {
   connection: {
     deliverToParticipants: (params: {
       excludeAccountId: string;
-      participants: InternalChatGroupMember[];
+      participants: InternalChatGroupParticipant[];
       conversation: { id: string; name: string; type: string };
       messageId: string;
       author: { id: string; displayName: string; slug: string };
@@ -156,9 +157,10 @@ export function createChatSending(deps: SendingDeps) {
         conversationId: conversation.id,
         authorAccountId: input.accountId,
         content: input.content,
-        replyToMessageId: (resolvedReplyTo ?? null) as string,
+        replyToMessageId: resolvedReplyTo,
         createdAt: now,
-      } as any);
+        updatedAt: now,
+      });
       await attachments.storeMessageAttachments(messageId, input.attachments);
 
       const accountIds = members.map((m: any) => m.accountId);
@@ -168,14 +170,16 @@ export function createChatSending(deps: SendingDeps) {
           (memberAccount): boolean =>
             memberAccount.agentId !== null && memberAccount.agentId !== undefined,
         )
-        .map((memberAccount) => ({
+        .map((memberAccount): NewInternalChatMessageRead => ({
           messageId,
           agentId: memberAccount.agentId as string,
           readAt: memberAccount.id === input.accountId ? now : null,
+          createdAt: now,
+          updatedAt: now,
         }));
 
       if (readRows.length > 0) {
-        await db.insert(internalChatMessageReads).values(readRows as any);
+        await db.insert(internalChatMessageReads).values(readRows);
       }
 
       await db
@@ -193,7 +197,7 @@ export function createChatSending(deps: SendingDeps) {
 
       const liveDeliveredAgentIds = connection.deliverToParticipants({
         excludeAccountId: input.accountId,
-        participants: participants as any,
+        participants: participants as InternalChatGroupParticipant[],
         conversation: {
           id: conversation.id,
           name: (conversation.name ?? '') as string,
