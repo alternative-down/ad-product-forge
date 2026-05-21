@@ -3,7 +3,6 @@ import { hasToolPermission } from '../capabilities/catalog';
 import { z } from 'zod';
 
 import type { InternalChatService } from './internal-chat-service';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function createInternalChatTools(
   agentId: string,
@@ -100,10 +99,10 @@ export function createInternalChatTools(
             ...result,
           };
         } catch (error) {
-          forgeDebug({ scope: 'internal-chat', level: 'error', message: 'Internal chat tool failed', context: { error: serializeError(error) } });
+          forgeDebug({ scope: 'internal-chat', level: 'error', message: 'Internal chat tool failed', context: { error: error instanceof Error ? error.message : String(error) } });
           return {
             valid: false,
-            error: serializeError(error),
+            error: error instanceof Error ? error.message : String(error),
             hint: 'Use action create with create.name to create a group. Use action update with update.groupId to update one existing group.',
           };
         }
