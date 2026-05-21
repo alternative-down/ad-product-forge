@@ -31,6 +31,16 @@ const llmDefaultsSchema = z.object({
 const DEFAULTS_ROW_ID = 'default';
 
 export type LlmSettingsStore = Awaited<ReturnType<typeof createLlmSettingsStore>>;
+// Note: resolveProfileRuntimeModel accepts this via 'as RuntimeProfile' cast in agent-loader-data.ts
+export type LlmProfileRecord = {
+  profileId: string;
+  name: string;
+  modelKey: string;
+  baseUrl: string | null;
+  apiKey: string; // decrypted by toProfileRecord
+  contractCostMultiplier?: number;
+  isEnabled: boolean;
+};
 export function createLlmSettingsStore(db: Database) {
   async function listProfiles() {
     try {
@@ -351,14 +361,28 @@ export function createLlmSettingsStore(db: Database) {
   };
 }
 
-function toProfileRecord(row: LlmProfile) {
+function toProfileRecord(row: LlmProfile): LlmProfileRecord {
   const { id, encryptedApiKey, isEnabled, ...rest } = row;
 
+  let apiKey = '';
+  try {
+    apiKey = decryptSecret(encryptedApiKey);
+  } catch {
+    forgeDebug({
+      scope: 'llm-settings',
+      level: 'warn',
+      message: 'Failed to decrypt LLM profile API key',
+      context: { profileId: id },
+    });
+  }
+
   return {
-    ...rest,
     profileId: id,
+    name: rest.name ?? '',
+    modelKey: row.modelKey,
     baseUrl: rest.baseUrl ?? null,
-    apiKey: null,
+    apiKey,
+    contractCostMultiplier: rest.contractCostMultiplier,
     isEnabled: isEnabled === 1,
   };
 }

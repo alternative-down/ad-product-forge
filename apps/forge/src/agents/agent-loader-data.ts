@@ -8,10 +8,15 @@ import { agents, agentProviders } from '../database/schema';
 import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
+import type { RuntimeProfile } from '../llm/runtime-model';
+import type { LlmProfileRecord } from '../llm/settings-store';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createCapabilityStore } from '../capabilities/store';
 import { decryptSecret } from '../encryption/crypto';
 import { loadCommunicationProviders, type ProviderCredentialsMap } from '../communication/provider-loader';
+
+/** Decrypted credentials — JSON-parsed, type depends on provider at runtime. */
+type DecryptedCredentials = ProviderCredentialsMap[keyof ProviderCredentialsMap];
 
 const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
   'internal-chat': true,
@@ -67,7 +72,10 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
       throw error;
     }
 
-    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials as any;
+    // Schema gap: credentials matches union member at runtime,
+    // but ProviderCredentialsMap value type creates static mismatch.
+    // @ts-expect-error: intentional - credentials matches union, not full map value
+    providerCredentials[providerConfig.providerType as keyof ProviderCredentialsMap] = credentials as unknown;
   }
 
   const [primaryProfile, omProfile, companySettings, role, capabilitySet] = await Promise.all([
@@ -78,8 +86,8 @@ export async function loadAgentRuntimeData(db: Database, config: SingleAgentLoad
     capabilities.getAgentCapabilities(agent.id),
   ]);
   const [primaryRuntimeModel, omRuntimeModel] = await Promise.all([
-    resolveProfileRuntimeModel(primaryProfile as any),
-    resolveProfileRuntimeModel(omProfile as any),
+    resolveProfileRuntimeModel(primaryProfile as RuntimeProfile),
+    resolveProfileRuntimeModel(omProfile as RuntimeProfile),
   ]);
 
   const providers = await loadCommunicationProviders(providerCredentials, {
