@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
-    "@ai-sdk/openai": "^3.0.52",
+    "@ai-sdk/openai": "^3.0.64",
     "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.17.2",
     "@mastra/core": "^1.25.0",
