@@ -102,7 +102,7 @@ export function registerAgentProviderMcpRoutes({
           }
         }
 
-        const credentials = parseProviderCredentials((body as any).providerType, body.credentials);
+        const credentials = parseProviderCredentials(body.providerType as Parameters<typeof parseProviderCredentials>[0], body.credentials);
         const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
         const existing = await db.query.agentProviders.findFirst({
           where: and(
@@ -119,7 +119,7 @@ export function registerAgentProviderMcpRoutes({
             })
             .where(eq(agentProviders.id, existing.id));
         } else {
-          await (db.insert(agentProviders) as any).values({
+          await (db as any).insert(agentProviders).values({
             id: createId(),
             agentId: body.agentId,
             providerType: body.providerType,
@@ -253,7 +253,7 @@ export function registerAgentProviderMcpRoutes({
 
         await db
           .delete(agentMcpConfigs)
-          .where(and(eq(agentMcpConfigs.id, (body as any).configId), eq(agentMcpConfigs.agentId, body.agentId)));
+          .where(and(eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId), eq(agentMcpConfigs.agentId, body.agentId)));
 
         const remainingLinks = await db.query.agentMcpConfigs.findMany({
           where: eq(agentMcpConfigs.serverId, body.serverId),
@@ -268,7 +268,7 @@ export function registerAgentProviderMcpRoutes({
 
         await reloadAgentMcp(db, loaderConfig, body.agentId);
 
-        return jsonResponse({ success: true, agentId: (body as any).agentId, configId: (body as any).configId, serverId: body.serverId });
+        return jsonResponse({ success: true, agentId: body.agentId, configId: (body as unknown as { configId: string }).configId, serverId: body.serverId });
       } catch (err) {
         return adminRouteError(err);
       }
@@ -340,13 +340,13 @@ export function registerAgentProviderMcpRoutes({
             isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
-          .where(and(eq(agentMcpConfigs.id, (body as any).configId), eq(agentMcpConfigs.agentId, (body as any).agentId)));
+          .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, (body as unknown as { agentId: string }).agentId)));
 
-        await reloadAgentMcp(db, loaderConfig, (body as any).agentId);
+        await reloadAgentMcp(db, loaderConfig, (body as unknown as { agentId: string }).agentId);
 
         return jsonResponse({
           success: true,
-          agentId: (body as any).agentId,
+          agentId: (body as unknown as { agentId: string }).agentId,
           configId: body.configId,
           isActive: body.isActive,
         });

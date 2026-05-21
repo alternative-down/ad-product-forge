@@ -3,10 +3,17 @@
  * Extracted from internal-chat/index.ts (conversation & message routes).
  */
 
-import type { HttpHandler, HttpResponse } from '../../../http/server';
+import type { HttpHandler } from '../../../http/server';
 import type { InternalChatConversation } from '../../../database/schema';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
+
+interface MessageAttachment {
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  data: string;
+}
 import {
   createInternalChatConversationSchema,
   sendInternalChatConversationMessageSchema,
@@ -20,7 +27,7 @@ import { withRouteErrorHandler, getQueryParam, requireQueryParam } from './inter
 
 function buildListConversationsHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/conversations', async (request: any) => {
     const accountIdOrResponse = requireQueryParam(request, 'accountId');
     if (typeof accountIdOrResponse !== 'string') return accountIdOrResponse;
@@ -49,7 +56,7 @@ function buildListConversationsHandler(
 
 function buildListMessagesHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/messages', async (request: any) => {
     const accountIdOrResponse = requireQueryParam(request, 'accountId');
     if (typeof accountIdOrResponse !== 'string') return accountIdOrResponse;
@@ -74,11 +81,10 @@ function buildListMessagesHandler(
         authorDisplayName: message.authorDisplayName,
         content: message.content,
         createdAt: Date.parse(message.createdAt),
-        attachments: message.attachments?.map((attachment) => ({
-          name: (attachment as { name: string }).name,
-          contentType: (attachment as { contentType: string }).contentType,
-          sizeBytes: (attachment as { sizeBytes: number }).sizeBytes,
-        })) ?? [],
+        attachments: message.attachments?.map((attachment) => {
+          const a = attachment as MessageAttachment;
+          return { name: a.name, contentType: a.contentType, sizeBytes: a.sizeBytes };
+        }) ?? [],
       })),
       hasMore: items.length === limit,
     });
@@ -87,7 +93,7 @@ function buildListMessagesHandler(
 
 function buildGetAttachmentHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/message-attachment', async (request: any) => {
     const accountIdOrResponse = requireQueryParam(request, 'accountId');
     if (typeof accountIdOrResponse !== 'string') return accountIdOrResponse;
@@ -108,7 +114,7 @@ function buildGetAttachmentHandler(
       attachmentName,
     });
     if (attachment === null || attachment === undefined) return { status: 404 };
-    const safeAttachment = attachment as unknown as { name: string; contentType: string; data: string };
+    const safeAttachment = attachment as unknown as MessageAttachment;
     return {
       status: 200,
       headers: {
@@ -123,7 +129,7 @@ function buildGetAttachmentHandler(
 
 function buildCreateConversationHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/conversation/create', async (request: any) => {
     const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
     if (false) { // removed — updateInternalChatConversationSchema has no type field
@@ -152,7 +158,7 @@ function buildCreateConversationHandler(
 
 function buildSendMessageHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/conversation/send', async (request: any) => {
     const body = parseJsonBody(request.bodyText, sendInternalChatConversationMessageSchema);
     return jsonResponse(
@@ -172,7 +178,7 @@ function buildSendMessageHandler(
 
 function buildUpdateConversationHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/conversation/update', async (request: any) => {
     const body = parseJsonBody(request.bodyText, updateInternalChatConversationSchema);
     return jsonResponse(
@@ -183,7 +189,7 @@ function buildUpdateConversationHandler(
 
 function buildArchiveConversationHandler(
   internalChat: InternalChatService,
-): any {
+): HttpHandler {
   return (withRouteErrorHandler as any)('admin', '/admin/internal-chat/conversation/archive', async (request: any) => {
     const body = parseJsonBody(request.bodyText, archiveInternalChatConversationSchema);
     return jsonResponse(await internalChat.archiveConversationByAccount({

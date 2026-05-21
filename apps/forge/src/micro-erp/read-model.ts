@@ -97,7 +97,7 @@ export function createMicroErpReadModel(db: Database) {
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
       })),
-      total: (countRows as any)[0]?.total ?? 0,
+      total: countRows[0]?.total ?? 0,
       summary,
     };
   }
@@ -138,10 +138,10 @@ export function createMicroErpReadModel(db: Database) {
             lte(companyCashLedger.dueAt, periodEnd),
           ),
         );
-    const totalInUsd = (postedTotals as any)[0]?.totalInUsd ?? 0;
-    const totalOutUsd = (postedTotals as any)[0]?.totalOutUsd ?? 0;
-    const scheduledInUsd = (scheduledTotals as any)[0]?.scheduledInUsd ?? 0;
-    const scheduledOutUsd = (scheduledTotals as any)[0]?.scheduledOutUsd ?? 0;
+    const totalInUsd = postedTotals[0]?.totalInUsd ?? 0;
+    const totalOutUsd = postedTotals[0]?.totalOutUsd ?? 0;
+    const scheduledInUsd = scheduledTotals[0]?.scheduledInUsd ?? 0;
+    const scheduledOutUsd = scheduledTotals[0]?.scheduledOutUsd ?? 0;
 
     let balanceUsd;
       balanceUsd = await companyCash.getCurrentBalanceUsd();
@@ -217,8 +217,8 @@ export function createMicroErpReadModel(db: Database) {
         .orderBy(desc(agentExecutionContracts.endsAt))
         .limit(1);
 
-    const contract = (row as any)[0];
-    if (contract === null || contract === undefined) {
+    const contract = row[0];
+    if (contract === null || contract === undefined || contract === undefined) {
       return null;
     }
     let metricsByContractId;
@@ -236,6 +236,10 @@ export function createMicroErpReadModel(db: Database) {
       contractId: string;
       weeklyValueUsd: number;
       endsAt: number;
+      agentId?: string;
+      agentName?: string;
+      startsAt?: number;
+      autoRenew?: number | boolean;
     }>,
     now: number,
   ) {
