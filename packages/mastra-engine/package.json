@@ -23,7 +23,7 @@
     "@ai-sdk/openai": "^3.0.52",
     "@huggingface/transformers": "3.7.5",
     "@libsql/client": "^0.17.2",
-    "@mastra/core": "^1.25.0",
+    "@mastra/core": "^1.36.0",
     "@mastra/fastembed": "^1.0.1",
     "@mastra/libsql": "^1.8.1",
     "@mastra/memory": "^1.15.0",
