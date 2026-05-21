@@ -84,7 +84,10 @@ describe('stuck loop detection', () => {
 
   it('returns continue:false when loop is stuck', async () => {
     const loopDetector = makeLoopDetector(true, 5);
-    const deps = makeDeps();
+    const deps = makeDeps({
+      loopDetector: loopDetector as any,
+      setNextStepAt: setNextStepAt as any,
+    });
 
     const result = await buildIterationFeedback(
       makeArg({ innerIteration: 0 }) as any,
@@ -115,6 +118,7 @@ describe('stuck loop detection', () => {
   it('sets next step to null', async () => {
     const deps = makeDeps({
       loopDetector: makeLoopDetector(true),
+      setNextStepAt: setNextStepAt as any,
     });
 
     await buildIterationFeedback(makeArg({ innerIteration: 0 }) as any, deps);
