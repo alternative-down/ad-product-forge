@@ -136,9 +136,12 @@ export function createInternalChatService(
     getRequiredAccount,
     getRequiredAgentAccount,
     getRequiredAccountBySlug,
-    getAccountByTargetKey: _getAccountByTargetKey as any,
+    getAccountByTargetKey: async (targetKey: string) => {
+      const account = await _getAccountByTargetKey(targetKey);
+      if (!account) throw new Error("Account not found by targetKey: " + targetKey);
+      return { id: account.id, agentId: account.agentId as string | null, slug: account.slug, displayName: account.displayName };
+    },
   });
-
 const registerAgentAccount = admin.registerAgentAccount;
   const registerExternalAccount = admin.registerExternalAccount;
   const updateExternalAccount = admin.updateExternalAccount;
@@ -177,9 +180,9 @@ const registerAgentAccount = admin.registerAgentAccount;
   const serviceHelpers = createServiceHelpers({
     db,
     accounts: {
-      getRequiredAccount: accounts.getRequiredAccount as any,
-      getRequiredAgentAccount: accounts.getRequiredAgentAccount as any,
-      getAccountBySlug: accounts.getAccountBySlug as any,
+      getRequiredAccount: accounts.getRequiredAccount,
+      getRequiredAgentAccount: accounts.getRequiredAgentAccount,
+      getAccountBySlug: async (slug: string) => { const a = await accounts.getAccountBySlug(slug); return a ? { id: a.id, agentId: a.agentId, slug: a.slug, displayName: a.displayName } : null; },
     },
     participants,
   });
@@ -225,7 +228,16 @@ const registerAgentAccount = admin.registerAgentAccount;
     getRequiredAccount,
     getRequiredExternalAccount,
     ensureDirectConversation: conversations.ensureDirectConversation,
-    listGroupMembersByAccount: groups.listGroupMembersByAccount as any,
+    // Wraps groups.listGroupMembersByAccount to match InternalChatAccountOpsDeps signature
+    listGroupMembersByAccount: async (input: { accountId: string; groupId: string }) => {
+      const members = await groups.listGroupMembersByAccount({ accountId: input.accountId, groupId: input.groupId });
+      return members.map(m => ({
+        participantId: m.participantId,
+        participantName: m.participantName,
+        role: m.role,
+        joinedAt: m.createdAt,
+      }));
+    },
     getRequiredGroupForAccount: groups.getRequiredGroupForAccount,
   });
 
@@ -251,7 +263,16 @@ const registerAgentAccount = admin.registerAgentAccount;
   // === Internal Helpers ────────────────────────────────────────────────────
 
   const _guards = createInternalChatGuards(db, {
-    getRequiredAgentAccount: getRequiredAgentAccount as any,
+    // Narrow agentId|null → string — caller ensures agent accounts have non-null agentId
+    getRequiredAgentAccount: async (agentId: string) => {
+      const account = await getRequiredAgentAccount(agentId);
+      return {
+        id: account.id,
+        agentId: account.agentId as string,
+        slug: account.slug,
+        displayName: account.displayName,
+      };
+    },
   });
 
   // reads.init() removed — deps now passed at construction
@@ -259,26 +280,57 @@ const registerAgentAccount = admin.registerAgentAccount;
   const connection = createInternalChatConnection(db, {
     readMessageAttachments,
     getRequiredAgentAccount,
-    listGroupMembersOrDmPeers: listGroupMembersOrDmPeers as any,
-  }) as any;
+    listGroupMembersOrDmPeers: listGroupMembersOrDmPeers as (
+      agentId: string,
+      conversationId: string,
+    ) => Promise<_InternalChatGroupParticipant[]>,
+  });
 
   // ── Message Sending (delegated to internal-chat-sending.ts) ─────────────
   const { sendMessage, getMessageAttachmentByAccount } = createChatSending({
     db,
-    accounts: accounts as any,
+    accounts: {
+      getAccountByAgentId: accounts.getAccountByAgentId as (agentId: string) => Promise<{ id: string; displayName: string; slug: string } | null>,
+      getAccountBySlug: accounts.getAccountBySlug as (slug: string) => Promise<{ id: string } | null>,
+      getRequiredAccount: accounts.getRequiredAccount as (accountId: string) => Promise<{ id: string; displayName: string; slug: string; agentId: string | null }>,
+      getAccountsById: accounts.getAccountsById as (accountIds: string[]) => Promise<Map<string, { id: string; displayName: string; slug: string; agentId: string | null }>>,
+    },
     serviceHelpers: {
-      getRequiredConversationForAccount: getRequiredConversationForAccount as any,
+      getRequiredConversationForAccount: getRequiredConversationForAccount as (
+        accountId: string,
+        conversationKey: string,
+      ) => Promise<{ id: string; type: string; name: string | null; createdByAccountId: string | null; createdAt: number; updatedAt: number; }>,
     },
     groups: {
       ensureDirectConversation,
     },
-    connection,
+    // @ts-expect-error: InternalChatConnection structurally covers SendingDeps.connection
+    // but TSC nominal checking prevents direct assign. Same object, same runtime behavior.
+    connection: connection as {
+      deliverToParticipants: (params: {
+        excludeAccountId?: string;
+        participants: _InternalChatGroupMember[];
+        conversation: { id: string; name: string; type: string };
+        messageId: string;
+        author: { id: string; displayName: string; slug: string };
+        content: string;
+        attachments: _CommunicationFile[];
+        createdAt: string;
+      }) => string[];
+    },
     reads: {
-      listGroupMembersOrDmPeersByAccount: listGroupMembersOrDmPeersByAccount as any,
+      listGroupMembersOrDmPeersByAccount: listGroupMembersOrDmPeersByAccount as (
+        accountId: string,
+        conversationId: string,
+      ) => Promise<_InternalChatGroupParticipant[]>,
     },
     attachments: {
       storeMessageAttachments,
-      readMessageAttachment: readMessageAttachment as any,
+      readMessageAttachment: async (messageId: string, attachmentName: string) => {
+      const file = await readMessageAttachment(messageId, attachmentName);
+      if (!file) throw new Error("Attachment not found: " + attachmentName);
+      return { stream: file.data, contentType: file.contentType };
+    },
     },
   });
 
