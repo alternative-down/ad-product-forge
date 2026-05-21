@@ -14,6 +14,22 @@ import {
 } from '@forge-runtime/core';
 import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import type { InternalChatService } from '../../communication/internal-chat-service';
+import type { ConversationListingOutput } from '../../communication/internal-chat-conversation-listing';
+
+// Mirror of MessageListItem (internal to internal-chat-conversation-listing, not exported)
+interface LocalMessageListItem {
+  messageId: string;
+  provider: string;
+  authorId: string;
+  targetKey: string;
+  content: string;
+  attachments: unknown[];
+  unread: boolean;
+  createdAt: string;
+  authorDisplayName: string;
+  replyToMessageId: string | null;
+}
+import type { ConversationParticipant } from '../../communication/internal-chat-listing-types';
 type ClosableLibsqlClient = ReturnType<typeof createClient> & {
   close?: () => void | Promise<void>;
 };
@@ -96,26 +112,27 @@ async function listRecentInternalChatConversations(
   try {
     const rows = await internalChat.listRecentConversations(agentId, RECENT_CONVERSATION_LIMIT);
 
-    return Promise.all(rows.map(async (conversation) => {
-      const internalConversation = await internalChat.getConversationForAgent(agentId, (conversation as any).targetKey);
-      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, (conversation as any).targetKey);
+    return await Promise.all(rows.map(async (conversation) => {
+      const c = conversation as ConversationListingOutput;
+      const internalConversation = await internalChat.getConversationForAgent(agentId, c.targetKey);
+      const groupParticipants = await listInternalChatGroupParticipants(internalChat, agentId, c.targetKey);
       const participants = collectConversationParticipants({
-        name: (conversation as any).name,
-        participants: groupParticipants.length > 0 ? groupParticipants : (conversation as any).participants,
-        messages: (conversation as any).messages.map((message: any) => ({
+        name: c.name,
+        participants: groupParticipants.length > 0 ? groupParticipants : c.participants,
+        messages: c.messages.map((message: LocalMessageListItem) => ({
           authorDisplayName: message.authorDisplayName ?? agentName,
         })),
       });
 
       return {
-        conversationId: (conversation as any).targetKey,
-        conversationKey: (conversation as any).targetKey,
-        provider: (conversation as any).provider,
+        conversationId: c.targetKey,
+        conversationKey: c.targetKey,
+        provider: c.provider,
         type: internalConversation?.type === 'group' ? 'group' : 'dm',
-        name: (conversation as any).name ?? undefined,
+        name: c.name ?? undefined,
         participants,
-        updatedAt: Date.parse((conversation as any).latestMessageAt) || 0,
-        messages: (conversation as any).messages.map((message: any) => ({
+        updatedAt: Date.parse(c.latestMessageAt) || 0,
+        messages: c.messages.map((message: LocalMessageListItem) => ({
           messageId: message.messageId,
           content: message.content,
           unread: message.unread,
@@ -142,7 +159,9 @@ async function listInternalChatGroupParticipants(
       return [];
     }
 
-    return (conversation as any).participants.map((participant: any) => participant.displayName ?? 'Unknown participant');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const members = await (internalChat as any).listGroupMembersOrDmPeers(_agentId, conversationKey) as ConversationParticipant[];
+    return members.map((member) => member.displayName ?? 'Unknown participant');
   } catch (err) {
     forgeDebug({ scope: 'admin-read-model', level: 'error', message: 'Failed to load group participants', context: { conversationKey, err: String(serializeError(err)) } });
     return [];
