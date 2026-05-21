@@ -20,11 +20,7 @@ export async function listAgentWorkspaceSkills(
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>,
 ): Promise<AgentSkillSummary[]> {
   // @ts-expect-error TODO: type
-  const skillsRoot = resolveAgentSkillsRoot(
-    workspaceBasePath,
-    agent.workspaceFilesystem ?? undefined,
-    agent.id,
-  );
+  const skillsRoot = resolveAgentSkillsRoot(workspaceBasePath, agent.workspaceFilesystem ?? undefined, agent.id);
 
   try {
     const entries = await fs.readdir(skillsRoot, { withFileTypes: true });
