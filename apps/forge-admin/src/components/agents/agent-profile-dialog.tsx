@@ -9,7 +9,13 @@ import {
   AdminTextarea,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import type { AgentProfileForm } from './-agent-detail-helpers';
 
@@ -28,9 +34,11 @@ export function AgentProfileDialog(input: {
   const selectedRoleName =
     input.roles.find((role) => role.roleId === form?.roleId)?.name ?? 'Sem papel';
   const selectedModelProfileName =
-    input.profiles.find((profile) => profile.profileId === form?.modelProfileId)?.name ?? 'Selecione um perfil';
+    input.profiles.find((profile) => profile.profileId === form?.modelProfileId)?.name ??
+    'Selecione um perfil';
   const selectedOmProfileName =
-    input.profiles.find((profile) => profile.profileId === form?.omModelProfileId)?.name ?? 'Selecione um perfil';
+    input.profiles.find((profile) => profile.profileId === form?.omModelProfileId)?.name ??
+    'Selecione um perfil';
 
   return (
     <Dialog open={input.open} onOpenChange={input.onOpenChange}>
@@ -55,7 +63,9 @@ export function AgentProfileDialog(input: {
                 <AdminInput
                   id="agent-name"
                   value={form.name}
-                  onChange={(event) => input.onFormChange((current) => ({ ...current, name: event.target.value }))}
+                  onChange={(event) =>
+                    input.onFormChange((current) => ({ ...current, name: event.target.value }))
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -67,7 +77,10 @@ export function AgentProfileDialog(input: {
                 <Select
                   value={form.roleId || '__none__'}
                   onValueChange={(value) =>
-                    input.onFormChange((current) => ({ ...current, roleId: value === '__none__' ? '' : value }))
+                    input.onFormChange((current) => ({
+                      ...current,
+                      roleId: value === '__none__' ? '' : value,
+                    }))
                   }
                   disabled={input.pending}
                 >
@@ -92,7 +105,12 @@ export function AgentProfileDialog(input: {
                 <AdminTextarea
                   id="agent-description"
                   value={form.description}
-                  onChange={(event) => input.onFormChange((current) => ({ ...current, description: event.target.value }))}
+                  onChange={(event) =>
+                    input.onFormChange((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
                   disabled={input.pending}
                   rows={4}
                 />
@@ -155,13 +173,20 @@ export function AgentProfileDialog(input: {
                 <AdminTextarea
                   id="agent-instructions"
                   value={form.instructions}
-                  onChange={(event) => input.onFormChange((current) => ({ ...current, instructions: event.target.value }))}
+                  onChange={(event) =>
+                    input.onFormChange((current) => ({
+                      ...current,
+                      instructions: event.target.value,
+                    }))
+                  }
                   disabled={input.pending}
                   rows={10}
                 />
               </div>
 
-              {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}
+              {input.errorMessage ? (
+                <div className="text-sm text-destructive">{input.errorMessage}</div>
+              ) : null}
             </AdminDialogBody>
 
             <AdminDialogFooter>

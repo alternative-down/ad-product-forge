@@ -7,7 +7,7 @@ import { ZodError } from 'zod';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 
-import type {Database} from '../../../database/schema';
+import type { Database } from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 // import { clearAgentHistory } from '../helpers'; // TODO: fix missing export in helpers.ts
@@ -15,7 +15,10 @@ import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
 interface ReadModel {
-  debugAgentLongTermMemoryRecallSearch: (agentId: string, opts: { query: string }) => Promise<unknown>;
+  debugAgentLongTermMemoryRecallSearch: (
+    agentId: string,
+    opts: { query: string },
+  ) => Promise<unknown>;
 }
 import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
@@ -29,9 +32,15 @@ interface AgentRoutesInput {
  * Register POST routes for agent write operations
  */
 export function registerAgentWriteRoutes(
-  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      path: string;
+      handler: HttpHandler;
+    }) => void;
+  },
   readModel: ReadModel,
-  input: AgentRoutesInput
+  input: AgentRoutesInput,
 ) {
   // POST /admin/agent/clear-history
   httpServer.registerRoute({
@@ -50,7 +59,12 @@ export function registerAgentWriteRoutes(
         });
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent clear-history route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent clear-history route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -70,7 +84,12 @@ export function registerAgentWriteRoutes(
         );
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Agent ltm-recall-search route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Agent ltm-recall-search route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

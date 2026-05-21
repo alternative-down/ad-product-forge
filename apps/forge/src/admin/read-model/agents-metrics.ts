@@ -26,10 +26,10 @@ export function createAgentMetricsReadModel(deps: AgentMetricsReadModelDeps) {
 
   async function listRecentAgentHomeMetricSnapshots(input: { agentId: string; limit: number }) {
     const rows = await db.query.agentHomeMetricSnapshots.findMany({
-        where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
-        orderBy: desc(agentHomeMetricSnapshots.createdAt),
-        limit: input.limit,
-      });
+      where: eq(agentHomeMetricSnapshots.agentId, input.agentId),
+      orderBy: desc(agentHomeMetricSnapshots.createdAt),
+      limit: input.limit,
+    });
     return rows.map((row) => {
       const { id, ...rest } = row;
       return { ...rest, snapshotId: id };

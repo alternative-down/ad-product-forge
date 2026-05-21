@@ -3,7 +3,7 @@ import path from 'node:path'; /* eslint-disable-line @typescript-eslint/no-unuse
 
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
-import {  forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import {
@@ -19,7 +19,11 @@ import type { InternalAgentRunner } from './agent-runner';
 import type { InternalAgentRuntime } from './runtime/types';
 
 // Imports: extracted async helpers (extracted in phases 2-4)
-import { readLatestThreadDetails, readAgentRuntimeMemory, buildAverageStepIntervalMs } from './agent-home-metrics-thread-helpers';
+import {
+  readLatestThreadDetails,
+  readAgentRuntimeMemory,
+  buildAverageStepIntervalMs,
+} from './agent-home-metrics-thread-helpers';
 
 // Re-exports from helpers for backward compatibility
 
@@ -101,7 +105,7 @@ export type AgentHomeMetricSnapshot = {
   }>;
 };
 
-import { withTimeout } from "../utils/async";
+import { withTimeout } from '../utils/async';
 
 export async function readAgentHomeMetricSnapshot(input: {
   db: Database;
@@ -118,11 +122,22 @@ export async function readAgentHomeMetricSnapshot(input: {
     return null;
   }
 
-  const [role, modelProfile, omModelProfile, providerRows, unreadNotificationRows, recentSteps, runtimeMemory, latestThreadDetails, longTermMemoryState, runtimeLtmSnapshot] = await Promise.all([
+  const [
+    role,
+    modelProfile,
+    omModelProfile,
+    providerRows,
+    unreadNotificationRows,
+    recentSteps,
+    runtimeMemory,
+    latestThreadDetails,
+    longTermMemoryState,
+    runtimeLtmSnapshot,
+  ] = await Promise.all([
     agent.roleId !== null && agent.roleId !== undefined
       ? input.db.query.agentRoles.findFirst({
-        where: eq(agentRoles.id, agent.roleId),
-      })
+          where: eq(agentRoles.id, agent.roleId),
+        })
       : Promise.resolve(null),
     input.db.query.llmProfiles.findFirst({
       where: eq(llmProfiles.id, agent.modelProfileId),
@@ -138,10 +153,9 @@ export async function readAgentHomeMetricSnapshot(input: {
         count: sql<number>`count(*)`,
       })
       .from(agentNotifications)
-      .where(and(
-        eq(agentNotifications.agentId, agent.id),
-        sql`${agentNotifications.readAt} is null`,
-      )),
+      .where(
+        and(eq(agentNotifications.agentId, agent.id), sql`${agentNotifications.readAt} is null`),
+      ),
     input.db.query.agentExecutionSteps.findMany({
       where: and(
         eq(agentExecutionSteps.agentId, agent.id),
@@ -155,7 +169,13 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Agent runtime memory read timed out for ${agent.id}`,
     ).catch((error) => {
-      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime memory', context: { error: serializeError(error) } });
+      forgeDebug({
+        scope: 'agent-home-metrics',
+        level: 'error',
+        agentId: agent.id,
+        message: 'Failed to load runtime memory',
+        context: { error: serializeError(error) },
+      });
       return null;
     }),
     withTimeout(
@@ -163,7 +183,13 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Latest thread details read timed out for ${agent.id}`,
     ).catch((error) => {
-      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load latest thread details', context: { error: serializeError(error) } });
+      forgeDebug({
+        scope: 'agent-home-metrics',
+        level: 'error',
+        agentId: agent.id,
+        message: 'Failed to load latest thread details',
+        context: { error: serializeError(error) },
+      });
       return {
         preview: null,
         toolBadge: null,
@@ -176,18 +202,30 @@ export async function readAgentHomeMetricSnapshot(input: {
       OBSERVABILITY_READ_TIMEOUT_MS,
       `Long-term memory state read timed out for ${agent.id}`,
     ).catch((error) => {
-      forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load LTM state', context: { error: serializeError(error) } });
+      forgeDebug({
+        scope: 'agent-home-metrics',
+        level: 'error',
+        agentId: agent.id,
+        message: 'Failed to load LTM state',
+        context: { error: serializeError(error) },
+      });
       return null;
     }),
     input.runtime?.longTermMemory
       ? withTimeout(
-        Promise.resolve(input.runtime.longTermMemory.readSnapshot()),
-        OBSERVABILITY_READ_TIMEOUT_MS,
-        `Runtime LTM snapshot timed out for ${agent.id}`,
-      ).catch((error) => {
-        forgeDebug({ scope: 'agent-home-metrics', level: 'error', agentId: agent.id, message: 'Failed to load runtime LTM snapshot', context: { error: serializeError(error) } });
-        return null;
-      })
+          Promise.resolve(input.runtime.longTermMemory.readSnapshot()),
+          OBSERVABILITY_READ_TIMEOUT_MS,
+          `Runtime LTM snapshot timed out for ${agent.id}`,
+        ).catch((error) => {
+          forgeDebug({
+            scope: 'agent-home-metrics',
+            level: 'error',
+            agentId: agent.id,
+            message: 'Failed to load runtime LTM snapshot',
+            context: { error: serializeError(error) },
+          });
+          return null;
+        })
       : Promise.resolve(null),
   ]);
 
@@ -225,27 +263,30 @@ export async function readAgentHomeMetricSnapshot(input: {
       lastStepContextTokens: lastStep?.inputTokens ?? null,
       lastStepPreview: latestThreadDetails.preview,
       lastToolBadge: latestThreadDetails.toolBadge,
-      lastStepTokens: lastStep !== null && lastStep !== undefined
-        ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
-        : null,
+      lastStepTokens:
+        lastStep !== null && lastStep !== undefined
+          ? lastStep.inputTokens + lastStep.cachedInputTokens + lastStep.outputTokens
+          : null,
       lastStepCostUsd: lastStep?.costUsd ?? null,
       averageStepIntervalMs: buildAverageStepIntervalMs(recentSteps),
-      unreadNotificationCount: ((unreadNotificationRows as unknown) as { count: number }[])[0]?.count ?? 0,
-      om: runtimeMemory !== null
-        ? {
-            generationCount: runtimeMemory.generationCount,
-            checkpointGeneration: runtimeMemory.checkpointGeneration,
-            recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
-            recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
-            overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
-            overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
-            observationTokenCount: runtimeMemory.metrics.observationTokenCount,
-            reflectionTriggerTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
-            reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
-            reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
-            checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
-          }
-        : null,
+      unreadNotificationCount:
+        (unreadNotificationRows as unknown as { count: number }[])[0]?.count ?? 0,
+      om:
+        runtimeMemory !== null
+          ? {
+              generationCount: runtimeMemory.generationCount,
+              checkpointGeneration: runtimeMemory.checkpointGeneration,
+              recentRawTokenCount: runtimeMemory.metrics.recentRawTokenCount,
+              recentRawTokenLimit: runtimeMemory.metrics.recentRawTokenLimit,
+              overflowTokenCount: runtimeMemory.metrics.overflowTokenCount,
+              overflowTokenLimit: runtimeMemory.metrics.observationTriggerTokenLimit,
+              observationTokenCount: runtimeMemory.metrics.observationTokenCount,
+              reflectionTriggerTokenLimit: runtimeMemory.metrics.reflectionTriggerTokenLimit,
+              reflectionTokenCount: runtimeMemory.metrics.reflectionTokenCount,
+              reflectionTokenLimit: runtimeMemory.metrics.reflectionBudget,
+              checkpointTokenCount: runtimeMemory.metrics.checkpointTokenCount,
+            }
+          : null,
       ltm: {
         running: executionState === 'idle' ? (runtimeLtmSnapshot?.running ?? false) : false,
         queued: executionState === 'idle' ? (runtimeLtmSnapshot?.queued ?? false) : false,
@@ -256,5 +297,3 @@ export async function readAgentHomeMetricSnapshot(input: {
     updatedAt: agent.updatedAt,
   } satisfies AgentHomeMetricSnapshot;
 }
-
-

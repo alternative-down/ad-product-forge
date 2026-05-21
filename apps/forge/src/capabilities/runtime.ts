@@ -1,6 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { and, eq } from 'drizzle-orm';
 
 import { agents, agentProviders, agentRoles } from '../database/schema';
@@ -9,34 +9,53 @@ import { getInternalAgentRegistry } from '../agents/internal-agent-registry';
 import { createAgentNotificationStore } from '../notifications/store';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 
-export async function reloadAgentIfLoaded(db: Database, config: AgentLoaderConfig, agentId: string) {
+export async function reloadAgentIfLoaded(
+  db: Database,
+  config: AgentLoaderConfig,
+  agentId: string,
+) {
   const registry = getInternalAgentRegistry();
 
   if (!registry.get(agentId)) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'debug', message: 'Agent not in registry, skipping reload', context: { agentId } });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'debug',
+      message: 'Agent not in registry, skipping reload',
+      context: { agentId },
+    });
     return;
   }
 
-    const runtime = await loadAgent(db, {
-      ...config,
-      agentId,
-    });
+  const runtime = await loadAgent(db, {
+    ...config,
+    agentId,
+  });
 
-    await registry.add(db, runtime);
-    forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Agent reloaded', context: { agentId } });
+  await registry.add(db, runtime);
+  forgeDebug({
+    scope: 'capabilities-runtime',
+    level: 'info',
+    message: 'Agent reloaded',
+    context: { agentId },
+  });
 }
 
 export async function reloadAgentsForRole(db: Database, config: AgentLoaderConfig, roleId: string) {
-    const assignedAgents = await db.query.agents.findMany({
-      where: eq(agents.roleId, roleId),
-      columns: {
-        id: true,
-      },
-    });
+  const assignedAgents = await db.query.agents.findMany({
+    where: eq(agents.roleId, roleId),
+    columns: {
+      id: true,
+    },
+  });
 
-    forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Reloading agents for role', context: { roleId, agentCount: assignedAgents.length } });
+  forgeDebug({
+    scope: 'capabilities-runtime',
+    level: 'info',
+    message: 'Reloading agents for role',
+    context: { roleId, agentCount: assignedAgents.length },
+  });
 
-    await Promise.all(assignedAgents.map((agent: any) => reloadAgentIfLoaded(db, config, agent.id)));
+  await Promise.all(assignedAgents.map((agent: any) => reloadAgentIfLoaded(db, config, agent.id)));
 }
 
 export async function changeAgentRole(input: {
@@ -47,40 +66,59 @@ export async function changeAgentRole(input: {
   roleId: string;
 }) {
   const actorAgent = await input.db.query.agents.findFirst({
-      where: eq(agents.id, input.actorAgentId),
-    });
+    where: eq(agents.id, input.actorAgentId),
+  });
 
   if (actorAgent === undefined) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: actor agent not found', context: { actorAgentId: input.actorAgentId } });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'warn',
+      message: 'changeAgentRole: actor agent not found',
+      context: { actorAgentId: input.actorAgentId },
+    });
     throw new Error(`Actor agent not found: ${input.actorAgentId}`);
   }
 
   const targetAgent = await input.db.query.agents.findFirst({
-      where: eq(agents.id, input.targetAgentId),
-    });
+    where: eq(agents.id, input.targetAgentId),
+  });
 
   if (targetAgent === undefined) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'warn',
+      message: 'changeAgentRole: target agent not found',
+      context: { targetAgentId: input.targetAgentId },
+    });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
   const agentRole = await input.db.query.agentRoles.findFirst({
-      where: eq(agentRoles.id, input.roleId),
-    });
+    where: eq(agentRoles.id, input.roleId),
+  });
 
   if (agentRole === undefined) {
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
-    await input.db
-      .update(agents)
-      .set({
-        roleId: input.roleId,
-        updatedAt: Date.now(),
-      })
-      .where(eq(agents.id, input.targetAgentId));
+  await input.db
+    .update(agents)
+    .set({
+      roleId: input.roleId,
+      updatedAt: Date.now(),
+    })
+    .where(eq(agents.id, input.targetAgentId));
 
-  forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Changing agent role', context: { actorAgentId: input.actorAgentId, targetAgentId: input.targetAgentId, roleId: input.roleId } });
+  forgeDebug({
+    scope: 'capabilities-runtime',
+    level: 'info',
+    message: 'Changing agent role',
+    context: {
+      actorAgentId: input.actorAgentId,
+      targetAgentId: input.targetAgentId,
+      roleId: input.roleId,
+    },
+  });
 
   await updateInternalChatProviderProfile(input.db, {
     agentId: input.targetAgentId,
@@ -89,7 +127,8 @@ export async function changeAgentRole(input: {
   });
 
   const notifications = createAgentNotificationStore(input.db);
-  const actorLabel = input.actorAgentId === input.targetAgentId ? `${actorAgent.name} (self)` : actorAgent.name;
+  const actorLabel =
+    input.actorAgentId === input.targetAgentId ? `${actorAgent.name} (self)` : actorAgent.name;
   const changeTimestamp = Date.now();
   const eventContent = createRoleChangeContent({
     targetAgentId: input.targetAgentId,
@@ -120,7 +159,12 @@ export async function changeAgentRole(input: {
     timestamp: changeTimestamp,
   });
 
-  forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Agent role changed', context: { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name } });
+  forgeDebug({
+    scope: 'capabilities-runtime',
+    level: 'info',
+    message: 'Agent role changed',
+    context: { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name },
+  });
 
   return {
     agentId: input.targetAgentId,
@@ -141,7 +185,12 @@ export async function changeAgentRoleFromAdmin(input: {
   });
 
   if (targetAgent === undefined) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'warn', message: 'changeAgentRole: target agent not found', context: { targetAgentId: input.targetAgentId } });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'warn',
+      message: 'changeAgentRole: target agent not found',
+      context: { targetAgentId: input.targetAgentId },
+    });
     throw new Error(`Target agent not found: ${input.targetAgentId}`);
   }
 
@@ -153,7 +202,12 @@ export async function changeAgentRoleFromAdmin(input: {
     throw new Error(`Role not found: ${input.roleId}`);
   }
 
-  forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Changing agent role from admin', context: { targetAgentId: input.targetAgentId, roleId: input.roleId } });
+  forgeDebug({
+    scope: 'capabilities-runtime',
+    level: 'info',
+    message: 'Changing agent role from admin',
+    context: { targetAgentId: input.targetAgentId, roleId: input.roleId },
+  });
 
   await input.db
     .update(agents)
@@ -199,7 +253,12 @@ export async function changeAgentRoleFromAdmin(input: {
     timestamp: changeTimestamp,
   });
 
-  forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Agent role changed from admin', context: { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name } });
+  forgeDebug({
+    scope: 'capabilities-runtime',
+    level: 'info',
+    message: 'Agent role changed from admin',
+    context: { targetAgentId: input.targetAgentId, roleId: agentRole.id, roleName: agentRole.name },
+  });
 
   return {
     agentId: input.targetAgentId,
@@ -218,11 +277,19 @@ export async function updateInternalChatProviderProfile(
   },
 ) {
   const provider = await db.query.agentProviders.findFirst({
-    where: and(eq(agentProviders.agentId, input.agentId), eq(agentProviders.providerType, 'internal-chat')),
+    where: and(
+      eq(agentProviders.agentId, input.agentId),
+      eq(agentProviders.providerType, 'internal-chat'),
+    ),
   });
 
   if (provider === undefined) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'debug', message: 'No internal-chat provider found for agent', context: { agentId: input.agentId } });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'debug',
+      message: 'No internal-chat provider found for agent',
+      context: { agentId: input.agentId },
+    });
     return;
   }
 
@@ -235,7 +302,11 @@ export async function updateInternalChatProviderProfile(
       description?: string;
     };
   } catch (err) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${input.agentId}: ${String(err)}` });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'error',
+      message: `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${input.agentId}: ${String(err)}`,
+    });
     return;
   }
 
@@ -253,9 +324,18 @@ export async function updateInternalChatProviderProfile(
         encryptedCredentials: encryptSecret(JSON.stringify(nextCredentials)),
       })
       .where(eq(agentProviders.id, provider.id));
-    forgeDebug({ scope: 'capabilities-runtime', level: 'info', message: 'Internal chat provider profile updated', context: { agentId: input.agentId } });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'info',
+      message: 'Internal chat provider profile updated',
+      context: { agentId: input.agentId },
+    });
   } catch (err) {
-    forgeDebug({ scope: 'capabilities-runtime', level: 'error', message: `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${String(err)}` });
+    forgeDebug({
+      scope: 'capabilities-runtime',
+      level: 'error',
+      message: `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${String(err)}`,
+    });
     return;
   }
 }

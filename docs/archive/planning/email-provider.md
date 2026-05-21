@@ -5,6 +5,7 @@
 Each internal agent gets a dedicated mailbox on the company domain.
 
 The chosen provider is **Migadu**. The runtime direction stays simple:
+
 - inbound email via IMAP
 - outbound email via SMTP
 - mailbox provisioned on hiring
@@ -28,22 +29,22 @@ The real IMAP/SMTP credentials belong in encrypted `agent_providers` storage.
 
 ```typescript
 createEmailProvider({
-  id: 'email',                         // provider id
+  id: 'email', // provider id
   imap: {
-    host: string,                      // e.g. 'imap.migadu.com'
-    port: number,                      // 993 (TLS) or 143 (STARTTLS)
-    secure: boolean,                   // true for port 993
-    user: string,                      // agent's email address
-    password: string,                  // mailbox password
+    host: string, // e.g. 'imap.migadu.com'
+    port: number, // 993 (TLS) or 143 (STARTTLS)
+    secure: boolean, // true for port 993
+    user: string, // agent's email address
+    password: string, // mailbox password
   },
   smtp: {
-    host: string,                      // e.g. 'smtp.migadu.com'
-    port: number,                      // 587 (STARTTLS) or 465 (TLS)
-    secure: boolean,                   // true for port 465
+    host: string, // e.g. 'smtp.migadu.com'
+    port: number, // 587 (STARTTLS) or 465 (TLS)
+    secure: boolean, // true for port 465
     user: string,
     password: string,
   },
-})
+});
 ```
 
 ---
@@ -51,7 +52,9 @@ createEmailProvider({
 ## Provider Contract (CommunicationProvider)
 
 ### `getAccount()`
+
 Returns:
+
 ```typescript
 { externalUserId: string, username: string }
 // externalUserId: the agent's email address
@@ -59,6 +62,7 @@ Returns:
 ```
 
 ### `onMessage(callback)`
+
 - Registers the inbound callback
 - The listener is already started when the provider is created
 - Uses IMAP IDLE for real-time notification of new messages
@@ -81,9 +85,11 @@ Returns:
 **Thread key:** The `providerConversationKey` is resolved from `References`, then `In-Reply-To`, then the message `Message-ID` itself.
 
 ### `syncContacts()`
+
 Not implemented initially. Returns empty array. Future: extract unique senders from INBOX.
 
 ### `sendMessage(input)`
+
 - If `providerConversationKey` is set: reply to that thread
 - Uses `replyToProviderMessageId` as `In-Reply-To` when available
 - Uses `providerConversationKey` and `replyToProviderMessageId` to build `References`

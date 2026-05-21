@@ -55,12 +55,12 @@ O ajuste de orçamento altera o limite máximo do contrato. Você pode aumentar 
 
 ### Regras Importantes
 
-| Situação | Permitido? | Motivo |
-|----------|------------|--------|
-| Aumentar orçamento | ✅ Sim | Sempre permitido |
-| Reduzir orçamento | ⚠️ Com restrições | Não pode ser menor que o valor já gasto |
-| Reduzir se agente está rodando | ❌ Não | Agente em execução não pode ter orçamento reduzido |
-| Reduzir para valor negativo | ❌ Não | Novo orçamento deve ser ≥ valor gasto |
+| Situação                       | Permitido?        | Motivo                                             |
+| ------------------------------ | ----------------- | -------------------------------------------------- |
+| Aumentar orçamento             | ✅ Sim            | Sempre permitido                                   |
+| Reduzir orçamento              | ⚠️ Com restrições | Não pode ser menor que o valor já gasto            |
+| Reduzir se agente está rodando | ❌ Não            | Agente em execução não pode ter orçamento reduzido |
+| Reduzir para valor negativo    | ❌ Não            | Novo orçamento deve ser ≥ valor gasto              |
 
 ### Passo a Passo
 
@@ -76,6 +76,7 @@ O ajuste de orçamento altera o limite máximo do contrato. Você pode aumentar 
 ### Cenários Comuns
 
 **Cenário 1: Aumentar para tarefa grande**
+
 ```
 Situação: Você precisa que o agente faça uma tarefa que custará R$ 200
 Orçamento atual: R$ 100
@@ -86,6 +87,7 @@ Resultado: Novo saldo disponível = R$ 300 - R$ 80 = R$ 220
 ```
 
 **Cenário 2: Reduzir após tarefa concluída**
+
 ```
 Situação: Agente terminou tarefa e não precisa mais de saldo alto
 Orçamento atual: R$ 500
@@ -99,12 +101,14 @@ Resultado: Novo saldo = R$ 200 - R$ 150 = R$ 50
 ### Erros Comuns
 
 **Erro: "Novo orçamento menor que valor gasto"**
+
 ```
 Você tentou ajustar para R$ 100, mas o agente já gastou R$ 150.
 Solução: Aumente o valor para pelo menos R$ 150,00
 ```
 
 **Erro: "Não é possível reduzir enquanto agente está em execução"**
+
 ```
 O agente está fazendo uma tarefa e você tentou reduzir o orçamento.
 Solução: Aguarde o agente finalizar ou use Top-up em vez de ajuste.

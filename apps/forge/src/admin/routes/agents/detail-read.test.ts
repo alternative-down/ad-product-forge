@@ -464,17 +464,15 @@ describe('registerAgentNotificationsRoutes', () => {
     mockDb = {
       query: {
         agentNotifications: {
-          findMany: vi
-            .fn()
-            .mockResolvedValue([
-              {
-                id: 'n1',
-                agentId: 'agent-1',
-                content: 'Hello',
-                createdAt: Date.now(),
-                readAt: null,
-              },
-            ]),
+          findMany: vi.fn().mockResolvedValue([
+            {
+              id: 'n1',
+              agentId: 'agent-1',
+              content: 'Hello',
+              createdAt: Date.now(),
+              readAt: null,
+            },
+          ]),
         },
       },
     };

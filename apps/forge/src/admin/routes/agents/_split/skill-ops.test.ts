@@ -7,7 +7,9 @@ vi.mock('../../../../agents/global-skills', () => ({
   installGlobalSkillsFromZip: vi.fn().mockResolvedValue(['skill-a', 'skill-b']),
   deleteGlobalSkill: vi.fn().mockResolvedValue(undefined),
   installGlobalSkillToAgentWorkspace: vi.fn().mockResolvedValue(undefined),
-  publishAgentWorkspaceSkillToGlobalCatalog: vi.fn().mockResolvedValue({ destPath: '/global/skills/test-skill' }),
+  publishAgentWorkspaceSkillToGlobalCatalog: vi
+    .fn()
+    .mockResolvedValue({ destPath: '/global/skills/test-skill' }),
 }));
 
 interface MockRoute {
@@ -46,7 +48,9 @@ describe('registerSkillOps', () => {
     db = {
       query: {
         agents: {
-          findFirst: vi.fn().mockResolvedValue({ id: 'agent-123', workspaceFilesystem: '/w/agent-123' }),
+          findFirst: vi
+            .fn()
+            .mockResolvedValue({ id: 'agent-123', workspaceFilesystem: '/w/agent-123' }),
         },
       },
     };
@@ -66,9 +70,7 @@ describe('registerSkillOps', () => {
       registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/publish-to-global');
 
-      const response = await handler(
-        makeRequest({ agentId: 'agent-123', skillName: 'my-skill' }),
-      );
+      const response = await handler(makeRequest({ agentId: 'agent-123', skillName: 'my-skill' }));
 
       const body = JSON.parse(response.body);
       expect(response.status).toBe(200);
@@ -85,9 +87,7 @@ describe('registerSkillOps', () => {
       registerSkillOps(httpServer as any, notFoundDb as any, { workspaceBasePath: '/w' });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/publish-to-global');
 
-      const response = await handler(
-        makeRequest({ agentId: 'nonexistent', skillName: 'skill' }),
-      );
+      const response = await handler(makeRequest({ agentId: 'nonexistent', skillName: 'skill' }));
 
       expect(response.status).toBe(404);
       const body = JSON.parse(response.body);
@@ -95,15 +95,16 @@ describe('registerSkillOps', () => {
     });
 
     it('returns 500 on publish error', async () => {
-      const { publishAgentWorkspaceSkillToGlobalCatalog } = await import('../../../../agents/global-skills');
-      vi.mocked(publishAgentWorkspaceSkillToGlobalCatalog).mockRejectedValue(new Error('Publish failed'));
+      const { publishAgentWorkspaceSkillToGlobalCatalog } =
+        await import('../../../../agents/global-skills');
+      vi.mocked(publishAgentWorkspaceSkillToGlobalCatalog).mockRejectedValue(
+        new Error('Publish failed'),
+      );
       const { registerSkillOps } = await import('./skill-ops');
       registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/publish-to-global');
 
-      const response = await handler(
-        makeRequest({ agentId: 'agent-123', skillName: 'skill' }),
-      );
+      const response = await handler(makeRequest({ agentId: 'agent-123', skillName: 'skill' }));
 
       expect(response.status).toBe(500);
     });
@@ -140,9 +141,7 @@ describe('registerSkillOps', () => {
       registerSkillOps(httpServer as any, notFoundDb as any, { workspaceBasePath: '/w' });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/install-global');
 
-      const response = await handler(
-        makeRequest({ agentId: 'nonexistent', skillName: 'skill' }),
-      );
+      const response = await handler(makeRequest({ agentId: 'nonexistent', skillName: 'skill' }));
 
       expect(response.status).toBe(404);
     });
@@ -158,14 +157,11 @@ describe('registerSkillOps', () => {
     });
 
     it('installs skills from base64 zip', async () => {
-      
       const { registerSkillOps } = await import('./skill-ops');
       registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/upload');
 
-      const response = await handler(
-        makeRequest({ skillsZipBase64: 'UEsDBBQACQAAAA==' }),
-      );
+      const response = await handler(makeRequest({ skillsZipBase64: 'UEsDBBQACQAAAA==' }));
 
       // Log raw response before parse
       const body = JSON.parse(response.body);
@@ -191,9 +187,7 @@ describe('registerSkillOps', () => {
       registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/delete');
 
-      const response = await handler(
-        makeRequest({ agentId: 'agent-123', skillName: 'old-skill' }),
-      );
+      const response = await handler(makeRequest({ agentId: 'agent-123', skillName: 'old-skill' }));
 
       const body = JSON.parse(response.body);
       expect(response.status).toBe(200);

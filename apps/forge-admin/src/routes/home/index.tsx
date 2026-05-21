@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  AgentAvatar,
-  AdminButton,
-  AdminLoadingState,
-  HireAgentDialog,
-} from '@/components/admin';
+import { AgentAvatar, AdminButton, AdminLoadingState, HireAgentDialog } from '@/components/admin';
 import { Badge } from '@/components/ui/badge';
 import { getAgents, getSystemSettings } from '@/lib/admin-api/index';
 
@@ -35,11 +30,11 @@ function HomeIndexRoute() {
           <h1 className="text-3xl font-semibold tracking-[-0.06em] sm:text-4xl">
             {settingsQuery.data?.companyName?.trim() || 'Empresa'}
           </h1>
-          {settingsQuery.isLoading && !settingsQuery.data ? <AdminLoadingState label="Carregando empresa..." /> : null}
+          {settingsQuery.isLoading && !settingsQuery.data ? (
+            <AdminLoadingState label="Carregando empresa..." />
+          ) : null}
         </div>
-        <AdminButton onClick={() => setHireOpen(true)}>
-          Contratar
-        </AdminButton>
+        <AdminButton onClick={() => setHireOpen(true)}>Contratar</AdminButton>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -60,12 +55,16 @@ function HomeIndexRoute() {
                 />
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="min-w-0 truncate text-base font-semibold tracking-[-0.03em]">{agent.name}</div>
+                    <div className="min-w-0 truncate text-base font-semibold tracking-[-0.03em]">
+                      {agent.name}
+                    </div>
                     <Badge variant="outline" className="shrink-0 rounded-sm">
                       {humanizeAgentStatus(agent.executionState)}
                     </Badge>
                   </div>
-                  <div className="truncate text-sm text-muted-foreground">{agent.roleName ?? 'Sem papel'}</div>
+                  <div className="truncate text-sm text-muted-foreground">
+                    {agent.roleName ?? 'Sem papel'}
+                  </div>
                   {agent.overview.lastStepPreview ? (
                     <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
                       {agent.overview.lastStepPreview}
@@ -78,7 +77,11 @@ function HomeIndexRoute() {
                 <div className="space-y-1 text-sm">
                   <InfoRow
                     label="Última step"
-                    value={agent.overview.lastStepAt ? `${formatDateTime(agent.overview.lastStepAt)} · ${formatRelativeTime(agent.overview.lastStepAt)}` : '—'}
+                    value={
+                      agent.overview.lastStepAt
+                        ? `${formatDateTime(agent.overview.lastStepAt)} · ${formatRelativeTime(agent.overview.lastStepAt)}`
+                        : '—'
+                    }
                   />
                   <InfoRow
                     label="Contexto da step"
@@ -90,7 +93,13 @@ function HomeIndexRoute() {
                   />
                   <InfoRow
                     label="LTM"
-                    value={agent.overview.ltm.running ? 'Executando' : agent.overview.ltm.queued ? 'Enfileirada' : 'Ociosa'}
+                    value={
+                      agent.overview.ltm.running
+                        ? 'Executando'
+                        : agent.overview.ltm.queued
+                          ? 'Enfileirada'
+                          : 'Ociosa'
+                    }
                   />
                 </div>
 
@@ -124,9 +133,15 @@ function HomeIndexRoute() {
         ))}
       </section>
 
-      {agentsQuery.isLoading && agents.length === 0 ? <AdminLoadingState label="Carregando agentes..." /> : null}
-      {agents.length === 0 ? <div className="text-sm text-muted-foreground">Nenhum agente ainda.</div> : null}
-      {agentsQuery.error ? <div className="text-sm text-destructive">{agentsQuery.error.message}</div> : null}
+      {agentsQuery.isLoading && agents.length === 0 ? (
+        <AdminLoadingState label="Carregando agentes..." />
+      ) : null}
+      {agents.length === 0 ? (
+        <div className="text-sm text-muted-foreground">Nenhum agente ainda.</div>
+      ) : null}
+      {agentsQuery.error ? (
+        <div className="text-sm text-destructive">{agentsQuery.error.message}</div>
+      ) : null}
 
       <HireAgentDialog open={hireOpen} onOpenChange={setHireOpen} />
     </div>
@@ -142,14 +157,11 @@ function InfoRow(input: { label: string; value: string }) {
   );
 }
 
-function OmMetricBar(input: {
-  label: string;
-  current: number;
-  limit: number;
-}) {
-  const percent = input.limit > 0
-    ? Math.max(0, Math.min(100, Math.round((input.current / input.limit) * 100)))
-    : 0;
+function OmMetricBar(input: { label: string; current: number; limit: number }) {
+  const percent =
+    input.limit > 0
+      ? Math.max(0, Math.min(100, Math.round((input.current / input.limit) * 100)))
+      : 0;
 
   return (
     <div className="space-y-1">
@@ -160,7 +172,10 @@ function OmMetricBar(input: {
         </span>
       </div>
       <div className="h-1 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-foreground/70 transition-[width]" style={{ width: `${percent}%` }} />
+        <div
+          className="h-full rounded-full bg-foreground/70 transition-[width]"
+          style={{ width: `${percent}%` }}
+        />
       </div>
     </div>
   );

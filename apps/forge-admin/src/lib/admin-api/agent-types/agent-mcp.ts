@@ -1,7 +1,5 @@
 export type AgentMcpServerInput =
-
   | {
-
       agentId: string;
 
       name: string;
@@ -17,11 +15,8 @@ export type AgentMcpServerInput =
       envVarsText?: string;
 
       isActive: boolean;
-
     }
-
   | {
-
       agentId: string;
 
       name: string;
@@ -35,17 +30,10 @@ export type AgentMcpServerInput =
       headersText?: string;
 
       isActive: boolean;
-
     };
 
-
-
 export type UpdateAgentMcpServerInput = {
-
   configId: string;
 
   serverId: string;
-
 } & AgentMcpServerInput;
-
-

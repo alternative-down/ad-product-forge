@@ -1,13 +1,16 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import {
-  AdminButton,
-  AdminLoadingState,
-  PageHeader,
-} from '@/components/admin';
+import { AdminButton, AdminLoadingState, PageHeader } from '@/components/admin';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   assignAgentMcpServer,
   detachAgentMcpServer,
@@ -67,18 +70,25 @@ function AgentMcpIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {(agentQuery.isLoading && !agentQuery.data) || (systemMcpQuery.isLoading && !systemMcpQuery.data)
-        ? <AdminLoadingState label="Carregando MCP..." />
-        : null}
+      {(agentQuery.isLoading && !agentQuery.data) ||
+      (systemMcpQuery.isLoading && !systemMcpQuery.data) ? (
+        <AdminLoadingState label="Carregando MCP..." />
+      ) : null}
 
       <PageHeader title="MCP" />
 
       <section className="space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="text-lg font-semibold tracking-[-0.03em]">Servidores compartilhados</div>
+            <div className="text-lg font-semibold tracking-[-0.03em]">
+              Servidores compartilhados
+            </div>
             <div className="text-sm text-muted-foreground">
-              Gerencie os servidores em <Link to="/settings/mcp" className="underline underline-offset-4">Configurações &gt; MCP</Link> e apenas habilite aqui os que este agente pode usar.
+              Gerencie os servidores em{' '}
+              <Link to="/settings/mcp" className="underline underline-offset-4">
+                Configurações &gt; MCP
+              </Link>{' '}
+              e apenas habilite aqui os que este agente pode usar.
             </div>
           </div>
         </div>
@@ -97,9 +107,7 @@ function AgentMcpIndexRoute() {
               {servers.map((server) => {
                 const assigned = assignedByServerId.get(server.serverId) ?? null;
                 const busy =
-                  assignMutation.isPending ||
-                  activeMutation.isPending ||
-                  detachMutation.isPending;
+                  assignMutation.isPending || activeMutation.isPending || detachMutation.isPending;
 
                 return (
                   <TableRow key={server.serverId}>
@@ -111,7 +119,9 @@ function AgentMcpIndexRoute() {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3">{server.transport === 'stdio' ? 'stdio' : 'http'}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      {server.transport === 'stdio' ? 'stdio' : 'http'}
+                    </TableCell>
                     <TableCell className="px-4 py-3">
                       <Switch
                         checked={assigned?.isActive ?? false}
@@ -159,8 +169,12 @@ function AgentMcpIndexRoute() {
           </Table>
         </div>
 
-        {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
-        {systemMcpQuery.error ? <div className="text-sm text-destructive">{systemMcpQuery.error.message}</div> : null}
+        {agentQuery.error ? (
+          <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+        ) : null}
+        {systemMcpQuery.error ? (
+          <div className="text-sm text-destructive">{systemMcpQuery.error.message}</div>
+        ) : null}
       </section>
     </div>
   );

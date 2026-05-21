@@ -18,9 +18,12 @@ export function meta() {
         recommended: true,
       },
       messages: {
-        noReExportStar: 'Avoid "export * from" — creates barrel files. Export named items directly.',
-        noUselessNamedExport: 'Re-export "{{ exported }}" directly from its source module instead of passing through here.',
-        noUselessDefaultReexport: 'Re-export "default" directly from its source module instead of passing through here.',
+        noReExportStar:
+          'Avoid "export * from" — creates barrel files. Export named items directly.',
+        noUselessNamedExport:
+          'Re-export "{{ exported }}" directly from its source module instead of passing through here.',
+        noUselessDefaultReexport:
+          'Re-export "default" directly from its source module instead of passing through here.',
       },
     },
     create(context) {
@@ -33,7 +36,7 @@ export function meta() {
         ExportNamedDeclaration(node) {
           if (!node.source || node.source.type !== 'Literal') return;
 
-          for (const spec of (node.specifiers ?? [])) {
+          for (const spec of node.specifiers ?? []) {
             if (spec.type !== 'ExportSpecifier') continue;
 
             // Handle rename case: export { x as y } — allowed

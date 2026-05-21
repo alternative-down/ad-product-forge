@@ -2,17 +2,17 @@
 
 ## Z-Index Scale
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--z-0` | 0 | Base content |
-| `--z-10` | 10 | Sticky elements |
-| `--z-20` | 20 | Fixed elements |
-| `--z-30` | 30 | Dropdowns |
-| `--z-40` | 40 | Sticky headers |
-| `--z-50` | 50 | Modals |
-| `--z-60` | 60 | Popovers |
-| `--z-70` | 70 | Tooltips |
-| `--z-80` | 80 | Toast notifications |
+| Token    | Value | Usage               |
+| -------- | ----- | ------------------- |
+| `--z-0`  | 0     | Base content        |
+| `--z-10` | 10    | Sticky elements     |
+| `--z-20` | 20    | Fixed elements      |
+| `--z-30` | 30    | Dropdowns           |
+| `--z-40` | 40    | Sticky headers      |
+| `--z-50` | 50    | Modals              |
+| `--z-60` | 60    | Popovers            |
+| `--z-70` | 70    | Tooltips            |
+| `--z-80` | 80    | Toast notifications |
 
 ## Layer Order
 
@@ -83,6 +83,7 @@ z-0:  Base content
 ## Layer Stacking Context
 
 ### Modal Example
+
 ```css
 .modal {
   position: fixed;
@@ -104,6 +105,7 @@ z-0:  Base content
 ```
 
 ### Nested Dropdown Example
+
 ```css
 .dropdown {
   position: absolute;
@@ -121,12 +123,14 @@ z-0:  Base content
 ## Layering Guidelines
 
 ### Do
+
 - Use the z-index scale consistently
 - Keep z-index values as low as possible
 - Use `position: fixed` or `position: absolute` with z-index
 - Document custom z-index values
 
 ### Don't
+
 - Don't use z-index values above 100 without documentation
 - Don't create stacking conflicts with fixed elements
 - Don't rely solely on z-index for layering - use position too

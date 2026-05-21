@@ -78,11 +78,10 @@ describe('registerConfigOps', () => {
   describe('POST /admin/agent/github-manifest-config/update', () => {
     it('registers the route', async () => {
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(
-        httpServer as any,
-        db,
-        { githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) }, loaderConfig: {} },
-      );
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) },
+        loaderConfig: {},
+      });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({
           method: 'POST',
@@ -94,10 +93,19 @@ describe('registerConfigOps', () => {
     it('calls githubApps.updateAgentManifestConfig with agentId and manifestConfig', async () => {
       const updateSpy = vi.fn().mockResolvedValue({});
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, db, { githubApps: { updateAgentManifestConfig: updateSpy }, loaderConfig: {} });
-      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-manifest-config/update');
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { updateAgentManifestConfig: updateSpy },
+        loaderConfig: {},
+      });
+      const handler = getRouteHandler(
+        httpServer,
+        'POST',
+        '/admin/agent/github-manifest-config/update',
+      );
 
-      const response = await handler(makeRequest({ agentId: 'agent-123', manifestConfig: validManifestBody }));
+      const response = await handler(
+        makeRequest({ agentId: 'agent-123', manifestConfig: validManifestBody }),
+      );
 
       const body = JSON.parse(response.body);
       expect(response.status).toBe(200);
@@ -111,9 +119,15 @@ describe('registerConfigOps', () => {
     it('returns 503 when githubApps is null', async () => {
       const { registerConfigOps } = await import('./config-ops');
       registerConfigOps(httpServer as any, db, { githubApps: null, loaderConfig: {} });
-      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-manifest-config/update');
+      const handler = getRouteHandler(
+        httpServer,
+        'POST',
+        '/admin/agent/github-manifest-config/update',
+      );
 
-      const response = await handler(makeRequest({ agentId: 'agent-123', manifestConfig: validManifestBody }));
+      const response = await handler(
+        makeRequest({ agentId: 'agent-123', manifestConfig: validManifestBody }),
+      );
 
       expect(response.status).toBe(503);
       const body = JSON.parse(response.body);
@@ -123,10 +137,19 @@ describe('registerConfigOps', () => {
     it('returns 500 on githubApps error', async () => {
       const updateSpy = vi.fn().mockRejectedValue(new Error('GitHub API failure'));
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, db, { githubApps: { updateAgentManifestConfig: updateSpy }, loaderConfig: {} });
-      const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/github-manifest-config/update');
+      registerConfigOps(httpServer as any, db, {
+        githubApps: { updateAgentManifestConfig: updateSpy },
+        loaderConfig: {},
+      });
+      const handler = getRouteHandler(
+        httpServer,
+        'POST',
+        '/admin/agent/github-manifest-config/update',
+      );
 
-      const response = await handler(makeRequest({ agentId: 'agent-123', manifestConfig: validManifestBody }));
+      const response = await handler(
+        makeRequest({ agentId: 'agent-123', manifestConfig: validManifestBody }),
+      );
 
       expect(response.status).toBe(500);
     });
@@ -168,7 +191,9 @@ describe('registerConfigOps', () => {
       registerConfigOps(httpServer as any, notFoundDb as any, { loaderConfig: {} });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/update-config');
 
-      const response = await handler(makeRequest({ agentId: 'nonexistent', name: 'Test', instructions: 'Test' }));
+      const response = await handler(
+        makeRequest({ agentId: 'nonexistent', name: 'Test', instructions: 'Test' }),
+      );
 
       expect(response.status).toBe(404);
       const body = JSON.parse(response.body);
@@ -184,7 +209,9 @@ describe('registerConfigOps', () => {
       registerConfigOps(httpServer as any, errorDb as any, { loaderConfig: {} });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/update-config');
 
-      const response = await handler(makeRequest({ agentId: 'agent-123', name: 'Test', instructions: 'Test' }));
+      const response = await handler(
+        makeRequest({ agentId: 'agent-123', name: 'Test', instructions: 'Test' }),
+      );
 
       expect(response.status).toBe(500);
     });

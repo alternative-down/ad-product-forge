@@ -10,17 +10,20 @@
 Use **GitHub** itself as the work organization system for agents.
 
 The first version should use:
+
 - repositories as the top-level work containers
 - issues for task and ticket tracking
 - comments for discussion and progress updates
 - labels and milestones when useful
 
 This PRD is about:
+
 - organizing agent work through GitHub
 - using the identities and webhooks that already exist in the GitHub integration
 - expanding the GitHub tool surface for issue-centered work
 
 This PRD is not about:
+
 - integrating Linear
 - building a local issue/project system in Forge
 - introducing new project/task tables
@@ -28,12 +31,14 @@ This PRD is not about:
 ## 2. Core Direction
 
 The simplest direction is:
+
 - `1 repository = 1 project`
 - GitHub remains the source of truth for work items
 - agents use their existing GitHub app identity
 - Forge receives GitHub webhook events and wakes the right agent
 
 This keeps the whole flow in the same platform that already owns:
+
 - repositories
 - branches
 - pull requests
@@ -44,11 +49,13 @@ This keeps the whole flow in the same platform that already owns:
 No new identity model is needed.
 
 Agents already have:
+
 - their own GitHub App identity
 - repository access
 - webhook handling
 
 That same identity should now also own:
+
 - issue creation
 - issue updates
 - issue comments
@@ -57,10 +64,12 @@ That same identity should now also own:
 ## 4. Repository Assumption
 
 The first version assumes:
+
 - work is organized per repository
 - each repository is its own project boundary
 
 This means we do not need:
+
 - organization-level project modeling in Forge
 - local mappings between repositories and projects
 
@@ -69,6 +78,7 @@ This means we do not need:
 The first version should use **issues** as the core work item.
 
 Issues should cover:
+
 - research tasks
 - development tasks
 - bugs
@@ -76,6 +86,7 @@ Issues should cover:
 - coordination between agents
 
 Comments on issues should be the main place for:
+
 - updates
 - reasoning summaries
 - handoff notes
@@ -85,6 +96,7 @@ Comments on issues should be the main place for:
 The GitHub surface should be condensed by entity.
 
 Rules:
+
 - `list_*` returns subitems when relevant
 - `get_*` also returns subitems when relevant
 - `manage_*` owns `create | update | delete`
@@ -152,6 +164,7 @@ Planned GitHub surface:
 The existing GitHub adapter-specific webhook model should be reused.
 
 Relevant events for work organization:
+
 - `issues`
 - `issue_comment`
 - `pull_request`
@@ -159,6 +172,7 @@ Relevant events for work organization:
 - `push`
 
 Relevant events should continue to become:
+
 - `agent_notifications`
 - `wakeQueue` triggers
 
@@ -169,6 +183,7 @@ No new webhook system is required for this PRD.
 No new local schema should be introduced for work tracking in the first version.
 
 Forge should not create:
+
 - `projects`
 - `tasks`
 - `issues`
@@ -177,6 +192,7 @@ Forge should not create:
 GitHub already owns this data.
 
 Forge should only:
+
 - expose the operational tools
 - react to webhook events
 - create notifications
@@ -186,10 +202,12 @@ Forge should only:
 As the GitHub tool surface grows, the agent runtime should avoid injecting every tool into every turn upfront.
 
 The recommended direction is to adopt Mastra's `ToolSearchProcessor` so the agent can:
+
 - search tools
 - load the relevant tool on demand
 
 This is a good fit now because the total number of tools across:
+
 - GitHub
 - Coolify
 - communication
@@ -199,6 +217,7 @@ This is a good fit now because the total number of tools across:
 is already becoming large.
 
 Reference:
+
 - [ToolSearchProcessor](https://mastra.ai/reference/processors/tool-search-processor)
 
 ## 10. Design Rules

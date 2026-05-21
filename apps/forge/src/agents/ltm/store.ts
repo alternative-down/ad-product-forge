@@ -2,10 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from '../../database/schema';
-import {
-  agentLongTermMemoryRecallStates,
-  agentLongTermMemoryStates,
-} from '../../database/schema';
+import { agentLongTermMemoryRecallStates, agentLongTermMemoryStates } from '../../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
 const packageManifestSchema = z.object({
@@ -77,9 +74,12 @@ export function createEmptyLongTermMemoryState(): LongTermMemoryState {
   };
 }
 
-export function createAgentLongTermMemoryStore(db: Database, input: {
-  agentId: string;
-}) {
+export function createAgentLongTermMemoryStore(
+  db: Database,
+  input: {
+    agentId: string;
+  },
+) {
   async function readState() {
     try {
       const row = await db.query.agentLongTermMemoryStates.findFirst({
@@ -95,7 +95,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
       await writeState(state);
       return state;
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to read LTM state', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to read LTM state',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
   }
@@ -114,7 +119,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         where: eq(agentLongTermMemoryStates.agentId, input.agentId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to query LTM state for write', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to query LTM state for write',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
 
@@ -136,7 +146,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           },
         });
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to write LTM state', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to write LTM state',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
 
@@ -154,7 +169,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
 
       return row?.recallIndexStamp ?? null;
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to read recall index stamp', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to read recall index stamp',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
   }
@@ -172,7 +192,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         ? longTermMemoryStateSchema.parse(existing?.state)
         : createEmptyLongTermMemoryState();
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to query LTM state for recall index write', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to query LTM state for recall index write',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
 
@@ -200,7 +225,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           },
         });
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to write recall index stamp', context: { agentId: input.agentId, reason, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to write recall index stamp',
+        context: { agentId: input.agentId, reason, error: err },
+      });
       throw err;
     }
   }
@@ -220,7 +250,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         history: history.success ? history.data : null,
       };
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to read recall state', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to read recall state',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
   }
@@ -239,7 +274,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
         where: eq(agentLongTermMemoryRecallStates.agentId, input.agentId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to query LTM recall state for write', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to query LTM recall state for write',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
 
@@ -266,7 +306,12 @@ export function createAgentLongTermMemoryStore(db: Database, input: {
           },
         });
     } catch (err) {
-      forgeDebug({ scope: 'ltm', level: 'error', message: 'Failed to write LTM recall state', context: { agentId: input.agentId, error: err } });
+      forgeDebug({
+        scope: 'ltm',
+        level: 'error',
+        message: 'Failed to write LTM recall state',
+        context: { agentId: input.agentId, error: err },
+      });
       throw err;
     }
   }

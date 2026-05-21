@@ -37,7 +37,11 @@ function AgentLongTermMemoryLogIndexRoute() {
     }
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
+      if (
+        entries[0]?.isIntersecting &&
+        messagesQuery.hasNextPage &&
+        !messagesQuery.isFetchingNextPage
+      ) {
         void messagesQuery.fetchNextPage();
       }
     });
@@ -48,10 +52,7 @@ function AgentLongTermMemoryLogIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader
-        title="Log da LTM"
-        description="Thread própria do agente de memória longa."
-      />
+      <PageHeader title="Log da LTM" description="Thread própria do agente de memória longa." />
 
       <LongTermMemorySection
         ltm={runtimeMemory?.ltm ?? null}

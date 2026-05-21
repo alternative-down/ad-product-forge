@@ -1,4 +1,5 @@
 # Error Recovery UX Wireframes
+
 ## Nielsen's Heuristic #9 - Quick Win Improvement
 
 **Issue Reference:** Issue #241 (UX Review - forge-admin Heuristic Analysis)  
@@ -19,6 +20,7 @@ Current score: **4/10** - Error messages exist but lack actionable recovery path
 ## Problem Analysis
 
 ### Current State Issues:
+
 1. Error messages are generic (e.g., "An error occurred")
 2. No clear recovery actions provided
 3. Users must navigate back manually after errors
@@ -50,6 +52,7 @@ Current score: **4/10** - Error messages exist but lack actionable recovery path
 ```
 
 **Component Props:**
+
 ```typescript
 interface ErrorCardProps {
   title: string;
@@ -96,6 +99,7 @@ interface ErrorCardProps {
 ```
 
 **States:**
+
 - **Recoverable:** Show retry button, data preserved
 - **Non-recoverable:** Show navigation options, offer to report
 - **Partial failure:** Show what worked, what failed
@@ -126,6 +130,7 @@ interface ErrorCardProps {
 ```
 
 **Component Props:**
+
 ```typescript
 interface InlineFieldErrorProps {
   fieldName: string;
@@ -153,6 +158,7 @@ interface InlineFieldErrorProps {
 ```
 
 **Behavior:**
+
 - Auto-dismiss after 10 seconds (longer than success toasts)
 - "Tentar" button triggers retry
 - Click X to dismiss
@@ -203,6 +209,7 @@ interface InlineFieldErrorProps {
 ```
 
 **Recovery Scenarios:**
+
 1. **Timeout errors:** Increase timeout, retry, check connection
 2. **Validation errors:** Highlight fields, show suggestions
 3. **Auth errors:** Redirect to login, preserve form data
@@ -244,6 +251,7 @@ interface InlineFieldErrorProps {
 ```
 
 **Features:**
+
 - Filter by severity, date, error type
 - Click to expand error details
 - Retry action for each error
@@ -316,6 +324,7 @@ interface InlineFieldErrorProps {
 ## Implementation Notes
 
 ### Priority Order:
+
 1. **ErrorCard** - High impact, replaces generic alerts
 2. **InlineFieldError** - Improves form UX significantly
 3. **ErrorToast** - Non-blocking, easy to implement
@@ -325,12 +334,14 @@ interface InlineFieldErrorProps {
 7. **FormRecoveryBanner** - Depends on ErrorCard
 
 ### Tech Stack:
+
 - React Error Boundaries
 - shadcn/ui components (Alert, Card, Button)
 - Toast notifications (existing Toast Patterns)
 - Error context provider for global error state
 
 ### Connected Docs:
+
 - `docs/Error-Message-Dictionary.md` - Error codes and messages
 - `docs/Toast-Patterns.md` - Toast implementation
 - `docs/Loading-States.md` - Loading states during retry
@@ -339,12 +350,12 @@ interface InlineFieldErrorProps {
 
 ## Success Metrics
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Error message clarity | 4/10 | 8/10 |
-| Recovery action click rate | N/A | >60% |
-| Support tickets related to errors | High | -50% |
-| Time to recover from error | Unknown | <30s |
+| Metric                            | Current | Target |
+| --------------------------------- | ------- | ------ |
+| Error message clarity             | 4/10    | 8/10   |
+| Recovery action click rate        | N/A     | >60%   |
+| Support tickets related to errors | High    | -50%   |
+| Time to recover from error        | Unknown | <30s   |
 
 ---
 

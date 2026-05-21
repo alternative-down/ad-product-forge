@@ -136,8 +136,17 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
 
       const agentWorkspaceRoot = resolve(workspaceBasePath, agentId);
       const agentWorkspaceDir =
-        ((agent.workspaceFilesystem ? JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig : null)?.basePath ?? '') !== ''
-          ? resolve(agentWorkspaceRoot, (agent.workspaceFilesystem ? JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig : null)?.basePath ?? '')
+        ((agent.workspaceFilesystem
+          ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
+          : null
+        )?.basePath ?? '') !== ''
+          ? resolve(
+              agentWorkspaceRoot,
+              (agent.workspaceFilesystem
+                ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
+                : null
+              )?.basePath ?? '',
+            )
           : resolve(agentWorkspaceRoot, 'workspace');
 
       let agentContext: string | null = null;
@@ -244,7 +253,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
               queued: agent.executionState === 'idle' ? runtimeLtmSnapshot.queued : false,
             }
           : null) ??
-        ((persistedLtmState
+        (persistedLtmState
           ? {
               running: false,
               queued: false,
@@ -264,7 +273,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
                   : null,
               packageCount: persistedLtmState.packages.length,
             }
-          : null));
+          : null);
 
       return {
         workingMemory: formatWorkingMemoryValue(workingMemory),
@@ -282,7 +291,9 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
         checkpointSummary: checkpointSummaryText,
         checkpointUpdatedAt:
           (checkpointSummaryMessage?.createdAt ?? '') !== ''
-            ? Date.parse((checkpointSummaryMessage as { createdAt?: string } | null)?.createdAt ?? '')
+            ? Date.parse(
+                (checkpointSummaryMessage as { createdAt?: string } | null)?.createdAt ?? '',
+              )
             : null,
         ltmRecall: ltmRecall
           ? {

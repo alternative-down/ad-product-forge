@@ -15,8 +15,21 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   adjustAgentContractBudget,
   getFinanceContracts,
@@ -91,7 +104,9 @@ function FinanceContractsIndexRoute() {
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {contractsQuery.isLoading && !contractsQuery.data ? <AdminLoadingState label="Carregando contratos..." /> : null}
+      {contractsQuery.isLoading && !contractsQuery.data ? (
+        <AdminLoadingState label="Carregando contratos..." />
+      ) : null}
       <PageHeader title="Contratos" />
 
       <section className="space-y-5">
@@ -119,7 +134,9 @@ function FinanceContractsIndexRoute() {
                   <TableCell className="px-4 py-3">{contract.agentName}</TableCell>
                   <TableCell className="px-4 py-3">{formatUsd(contract.weeklyValueUsd)}</TableCell>
                   <TableCell className="px-4 py-3">{formatUsd(contract.spentUsd)}</TableCell>
-                  <TableCell className="px-4 py-3">{formatPercent(contract.spentPercent)}%</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {formatPercent(contract.spentPercent)}%
+                  </TableCell>
                   <TableCell className="px-4 py-3">{formatDate(contract.startsAt)}</TableCell>
                   <TableCell className="px-4 py-3">{formatDate(contract.endsAt)}</TableCell>
                   <TableCell className="px-4 py-3">
@@ -153,8 +170,12 @@ function FinanceContractsIndexRoute() {
           </Table>
         </div>
 
-        {contractsQuery.error ? <div className="text-sm text-destructive">{contractsQuery.error.message}</div> : null}
-        {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+        {contractsQuery.error ? (
+          <div className="text-sm text-destructive">{contractsQuery.error.message}</div>
+        ) : null}
+        {mutation.error ? (
+          <div className="text-sm text-destructive">{mutation.error.message}</div>
+        ) : null}
       </section>
 
       <Dialog
@@ -169,7 +190,9 @@ function FinanceContractsIndexRoute() {
       >
         <AdminDialogContent>
           <AdminDialogHeader>
-            <AdminDialogTitle>{contractForm ? `Alterar contrato · ${contractForm.agentName}` : 'Alterar contrato'}</AdminDialogTitle>
+            <AdminDialogTitle>
+              {contractForm ? `Alterar contrato · ${contractForm.agentName}` : 'Alterar contrato'}
+            </AdminDialogTitle>
           </AdminDialogHeader>
 
           {contractForm ? (
@@ -188,7 +211,9 @@ function FinanceContractsIndexRoute() {
                   <Select
                     value={contractForm.action}
                     onValueChange={(value: ContractForm['action']) =>
-                      setContractForm((current) => (current ? { ...current, action: value } : current))
+                      setContractForm((current) =>
+                        current ? { ...current, action: value } : current,
+                      )
                     }
                     disabled={mutation.isPending}
                   >

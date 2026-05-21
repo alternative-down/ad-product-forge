@@ -22,14 +22,12 @@ describe('createInternalChatGuards', () => {
         accountId: 'acc_1',
       });
       const deps = {
-        getRequiredAgentAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'acc_1',
-            agentId: 'agent_1',
-            slug: 'alice',
-            displayName: 'Alice',
-          }),
+        getRequiredAgentAccount: vi.fn().mockResolvedValue({
+          id: 'acc_1',
+          agentId: 'agent_1',
+          slug: 'alice',
+          displayName: 'Alice',
+        }),
       };
       const { requireConversationMembership } = createInternalChatGuards(db, deps);
       await expect(requireConversationMembership('agent_1', 'conv_1')).resolves.toBeUndefined();
@@ -39,14 +37,12 @@ describe('createInternalChatGuards', () => {
       const db = makeDb();
       db.query.internalChatConversationMembers.findFirst.mockResolvedValueOnce(null);
       const deps = {
-        getRequiredAgentAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'acc_1',
-            agentId: 'agent_1',
-            slug: 'alice',
-            displayName: 'Alice',
-          }),
+        getRequiredAgentAccount: vi.fn().mockResolvedValue({
+          id: 'acc_1',
+          agentId: 'agent_1',
+          slug: 'alice',
+          displayName: 'Alice',
+        }),
       };
       const { requireConversationMembership } = createInternalChatGuards(db, deps);
       await expect(requireConversationMembership('agent_1', 'conv_missing')).rejects.toThrow(
@@ -98,14 +94,12 @@ describe('createInternalChatGuards', () => {
         type: 'direct',
       });
       const deps = {
-        getRequiredAgentAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'acc_1',
-            agentId: 'agent_1',
-            slug: 'alice',
-            displayName: 'Alice',
-          }),
+        getRequiredAgentAccount: vi.fn().mockResolvedValue({
+          id: 'acc_1',
+          agentId: 'agent_1',
+          slug: 'alice',
+          displayName: 'Alice',
+        }),
       };
       const { getRequiredConversationForAgent } = createInternalChatGuards(db, deps);
       const result = await getRequiredConversationForAgent('agent_1', 'conv_1');
@@ -119,14 +113,12 @@ describe('createInternalChatGuards', () => {
       });
       db.query.internalChatConversations.findFirst.mockResolvedValueOnce(null);
       const deps = {
-        getRequiredAgentAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'acc_1',
-            agentId: 'agent_1',
-            slug: 'alice',
-            displayName: 'Alice',
-          }),
+        getRequiredAgentAccount: vi.fn().mockResolvedValue({
+          id: 'acc_1',
+          agentId: 'agent_1',
+          slug: 'alice',
+          displayName: 'Alice',
+        }),
       };
       const { getRequiredConversationForAgent } = createInternalChatGuards(db, deps);
       await expect(getRequiredConversationForAgent('agent_1', 'conv_missing')).rejects.toThrow(
@@ -171,14 +163,12 @@ describe('createInternalChatGuards', () => {
         type: 'group',
       });
       const deps = {
-        getRequiredAgentAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'acc_1',
-            agentId: 'agent_1',
-            slug: 'alice',
-            displayName: 'Alice',
-          }),
+        getRequiredAgentAccount: vi.fn().mockResolvedValue({
+          id: 'acc_1',
+          agentId: 'agent_1',
+          slug: 'alice',
+          displayName: 'Alice',
+        }),
       };
       const { getRequiredGroupForAgent } = createInternalChatGuards(db, deps);
       const result = await getRequiredGroupForAgent('agent_1', 'grp_1');
@@ -195,14 +185,12 @@ describe('createInternalChatGuards', () => {
         type: 'direct',
       });
       const deps = {
-        getRequiredAgentAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'acc_1',
-            agentId: 'agent_1',
-            slug: 'alice',
-            displayName: 'Alice',
-          }),
+        getRequiredAgentAccount: vi.fn().mockResolvedValue({
+          id: 'acc_1',
+          agentId: 'agent_1',
+          slug: 'alice',
+          displayName: 'Alice',
+        }),
       };
       const { getRequiredGroupForAgent } = createInternalChatGuards(db, deps);
       await expect(getRequiredGroupForAgent('agent_1', 'conv_1')).rejects.toThrow(

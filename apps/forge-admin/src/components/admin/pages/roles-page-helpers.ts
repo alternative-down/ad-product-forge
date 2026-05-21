@@ -45,7 +45,9 @@ export function createRoleForm(role: RoleItem): RoleForm {
 }
 
 export function mergeBaseRoleToolIds(toolIds: string[]) {
-  return [...new Set([...BASE_ROLE_TOOL_IDS, ...toolIds])].sort((left, right) => left.localeCompare(right));
+  return [...new Set([...BASE_ROLE_TOOL_IDS, ...toolIds])].sort((left, right) =>
+    left.localeCompare(right),
+  );
 }
 
 function getCapabilityRequiredToolIds(toolIds: string[]) {
@@ -64,13 +66,15 @@ function getCapabilityRequiredToolIds(toolIds: string[]) {
 }
 
 export function getLockedRoleToolIds(toolIds: string[]) {
-  return [...new Set([...BASE_ROLE_TOOL_IDS, ...getCapabilityRequiredToolIds(toolIds)])].sort((left, right) =>
-    left.localeCompare(right),
+  return [...new Set([...BASE_ROLE_TOOL_IDS, ...getCapabilityRequiredToolIds(toolIds)])].sort(
+    (left, right) => left.localeCompare(right),
   );
 }
 
 export function normalizeRoleFormToolIds(toolIds: string[]) {
-  const nextToolIds = [...new Set([...toolIds, ...getLockedRoleToolIds(toolIds)])].sort((left, right) => left.localeCompare(right));
+  const nextToolIds = [...new Set([...toolIds, ...getLockedRoleToolIds(toolIds)])].sort(
+    (left, right) => left.localeCompare(right),
+  );
 
   return nextToolIds;
 }
@@ -109,7 +113,11 @@ function getToolSectionTitle(toolId: string) {
     return 'Pesquisa';
   }
 
-  if (toolId.includes('message') || toolId.includes('conversation') || toolId.includes('notification')) {
+  if (
+    toolId.includes('message') ||
+    toolId.includes('conversation') ||
+    toolId.includes('notification')
+  ) {
     return 'Comunicação';
   }
 
@@ -121,7 +129,12 @@ function getToolSectionTitle(toolId: string) {
     return 'Coolify';
   }
 
-  if (toolId.includes('schedule') || toolId.includes('calendar') || toolId.includes('task') || toolId.includes('cron')) {
+  if (
+    toolId.includes('schedule') ||
+    toolId.includes('calendar') ||
+    toolId.includes('task') ||
+    toolId.includes('cron')
+  ) {
     return 'Agenda & Tarefas';
   }
 

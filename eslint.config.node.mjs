@@ -24,7 +24,8 @@ function makeNoDynamicImportsRule() {
           if (!hasDisable) {
             context.report({
               node,
-              message: 'Dynamic import() is not allowed. If required (CJS/ESM bridge, performance), add: // eslint-disable-next-line no-dynamic-imports — <reason>',
+              message:
+                'Dynamic import() is not allowed. If required (CJS/ESM bridge, performance), add: // eslint-disable-next-line no-dynamic-imports — <reason>',
             });
           }
         },
@@ -79,20 +80,22 @@ function makeKebabCaseFilenameRule() {
   };
 }
 
-
 // Rule creator function: prohibit unnecessary reexports
 function makeNoUnnecessaryReexportsRule() {
   return {
     meta: {
       type: 'suggestion',
       docs: {
-        description: 'Disallow unnecessary re-export statements (bare or simple re-exports that do not add value)',
+        description:
+          'Disallow unnecessary re-export statements (bare or simple re-exports that do not add value)',
         url: 'https://github.com/alternative-down/ad-product-forge/issues/1627',
       },
       schema: [],
       messages: {
-        unnecessaryReexport: 'Unnecessary re-export: "{{source}}" re-exports {{count}} item(s) from "{{specifier}}" with no transformation or aggregation. Either remove the re-export, consolidate it, or add a meaningful comment explaining its purpose.',
-        bareReexport: 'Unnecessary bare re-export: this export simply re-exports everything from "{{specifier}}" without adding any value. Remove it or consolidate imports.',
+        unnecessaryReexport:
+          'Unnecessary re-export: "{{source}}" re-exports {{count}} item(s) from "{{specifier}}" with no transformation or aggregation. Either remove the re-export, consolidate it, or add a meaningful comment explaining its purpose.',
+        bareReexport:
+          'Unnecessary bare re-export: this export simply re-exports everything from "{{specifier}}" without adding any value. Remove it or consolidate imports.',
       },
     },
     create(context) {
@@ -136,7 +139,7 @@ function makeNoUnnecessaryReexportsRule() {
           if (hasDisableComment(node)) return;
           // Type-only re-exports are always allowed — TypeScript best practice,
           // does not pollute the JavaScript runtime namespace
-          if (node.specifiers && node.specifiers.every(s => s.exportKind === 'type')) return;
+          if (node.specifiers && node.specifiers.every((s) => s.exportKind === 'type')) return;
           const source = node.source.value || '';
           const count = countExports(node, source);
           if (count === 'all') {
@@ -188,11 +191,7 @@ export default defineConfig([
   // ── Source files ────────────────────────────────────────────────────────────
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: [
-      'src/**/*.test.ts',
-      'src/**/*.test.tsx',
-      '**/dist/**/*.js',
-    ],
+    ignores: ['src/**/*.test.ts', 'src/**/*.test.tsx', '**/dist/**/*.js'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,

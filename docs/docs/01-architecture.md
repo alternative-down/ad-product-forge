@@ -6,11 +6,11 @@ O Forge é uma plataforma multi-agente construída sobre Node.js + TypeScript. C
 
 ## Stack
 
-| Componente | Tecnologia |
-|------------|------------|
-| Runtime | Node.js + TypeScript |
-| Database | Drizzle ORM + libsql (SQLite/Turso) |
-| Admin UI | React + TypeScript |
+| Componente | Tecnologia                              |
+| ---------- | --------------------------------------- |
+| Runtime    | Node.js + TypeScript                    |
+| Database   | Drizzle ORM + libsql (SQLite/Turso)     |
+| Admin UI   | React + TypeScript                      |
 | Agent Core | Forge Runtime Core + Agent Runtime Core |
 
 ## Estrutura de Diretórios
@@ -45,6 +45,7 @@ ad-product-forge/
 Responsável por todo lifecycle do agente.
 
 **Sub-sistemas:**
+
 - **Runner** (`agent-runner.ts`, `agent-runner-scheduler.ts`) — orquestra execução, timers, healthcheck
 - **Runtime** (`agent-runtime-*.ts`) — executa prompts via LLM
 - **Loader** (`agent-loader*.ts`) — carrega dados do banco
@@ -75,6 +76,7 @@ Providers de comunicação entre agentes e mundo externo.
 Schema Drizzle definindo todas as tabelas do sistema.
 
 **Tabelas principais:**
+
 - `agents` — agentes persistidos
 - `agent_roles` — roles e capabilities
 - `agent_providers` — credenciais de providers
@@ -107,11 +109,11 @@ const agentContracts = createAgentContractStore(db);
 Padrão: `forgeDebug({ scope, level, message, context })`
 
 ```typescript
-forgeDebug({ 
-  scope: 'agent-runner', 
-  level: 'error', 
-  message: 'healthcheck failed', 
-  context: { error } 
+forgeDebug({
+  scope: 'agent-runner',
+  level: 'error',
+  message: 'healthcheck failed',
+  context: { error },
 });
 ```
 
@@ -168,8 +170,8 @@ Scheduler (timer)
 
 ## Estado do Sistema
 
-| Estado | Significado |
-|--------|-------------|
-| `idle` | Agente parado, aguardando próximo step |
-| `running` | Agente executando generate() |
-| `absent` | Agente não está no registry |
+| Estado    | Significado                            |
+| --------- | -------------------------------------- |
+| `idle`    | Agente parado, aguardando próximo step |
+| `running` | Agente executando generate()           |
+| `absent`  | Agente não está no registry            |

@@ -37,13 +37,15 @@ function SettingsGithubRoute() {
       failAdminAction(context, error);
     },
   });
-  const organization = draft?.organization ?? (integration?.config?.organization ?? '');
-  const appHomeUrl = draft?.appHomeUrl ?? (integration?.config?.appHomeUrl ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
+  const organization = draft?.organization ?? integration?.config?.organization ?? '';
+  const appHomeUrl = draft?.appHomeUrl ?? integration?.config?.appHomeUrl ?? '';
+  const isEnabled = draft?.isEnabled ?? integration?.isEnabled ?? false;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando Github..." /> : null}
+      {integrationsQuery.isLoading && !integrationsQuery.data ? (
+        <AdminLoadingState label="Carregando Github..." />
+      ) : null}
       <PageHeader
         title="Github"
         description="Conecta o sistema ao GitHub para provisionar apps e operar os repositórios dos agentes."
@@ -117,10 +119,17 @@ function SettingsGithubRoute() {
               />
             </div>
           </div>
-          {integrationsQuery.error ? <div className="text-sm text-destructive">{integrationsQuery.error.message}</div> : null}
-          {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+          {integrationsQuery.error ? (
+            <div className="text-sm text-destructive">{integrationsQuery.error.message}</div>
+          ) : null}
+          {mutation.error ? (
+            <div className="text-sm text-destructive">{mutation.error.message}</div>
+          ) : null}
           <div className="flex justify-end">
-            <AdminButton type="submit" disabled={mutation.isPending || !organization.trim() || !appHomeUrl.trim()}>
+            <AdminButton
+              type="submit"
+              disabled={mutation.isPending || !organization.trim() || !appHomeUrl.trim()}
+            >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
             </AdminButton>
           </div>

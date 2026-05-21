@@ -8,41 +8,41 @@
 
 ## Table Inventory
 
-| # | Table | Lines | Group | Imported by (non-test) |
-|---|-------|------:|-------|------------------------|
-| 1 | `agents` | ~27 | Agent Core | 48 files |
-| 2 | `agentRoles` | ~10 | Roles/Permissions | 5 files |
-| 3 | `roleToolPermissions` | ~11 | Roles/Permissions | 5 files |
-| 4 | `roleWorkflowPermissions` | ~11 | Roles/Permissions | 5 files |
-| 5 | `systemSettings` | ~35 | System/Config | 15+ files |
-| 6 | `agentExecutionContracts` | ~16 | Agent Contracts | 4 files |
-| 7 | `agentExecutionSteps` | ~29 | Agent Contracts | 2 files |
-| 8 | `agentHomeMetricSnapshots` | ~17 | Agent Metrics | 2 files |
-| 9 | `agentCheckpointedOmStates` | ~13 | Agent LTM | 2 files |
-| 10 | `agentLongTermMemoryStates` | ~10 | Agent LTM | 2 files |
-| 11 | `agentLongTermMemoryRecallStates` | ~12 | Agent LTM | 2 files |
-| 12 | `agentNotifications` | ~17 | Notifications | 2 files |
-| 13 | `agentSchedules` | ~32 | Schedules | 2 files |
-| 14 | `internalChatAccounts` | ~17 | Internal Chat | 6 files |
-| 15 | `internalChatConversations` | ~16 | Internal Chat | 6 files |
-| 16 | `internalChatConversationMembers` | ~17 | Internal Chat | 6 files |
-| 17 | `internalChatMessages` | ~19 | Internal Chat | 6 files |
-| 18 | `internalChatMessageReads` | ~17 | Internal Chat | 6 files |
-| 19 | `internalChatMessageAttachments` | ~19 | Internal Chat | 6 files |
-| 20 | `llmModelPrices` | ~12 | LLM Config | 3 files |
-| 21 | `companyCashLedger` | ~19 | Finance | 4 files |
-| 22 | `companyRecurringPayables` | ~51 | Finance | 3 files |
-| 23 | `systemIntegrations` | ~12 | System/Config | 3 files |
-| 24 | `llmProfiles` | ~19 | LLM Config | 3 files |
-| 25 | `systemLlmDefaults` | ~16 | LLM Config | 3 files |
-| 26 | `agentProviders` | ~188(!) | Agent Core | 5 files |
-| 27 | `mcpServerConfigs` | ~29 | MCP | 4 files |
-| 28 | `agentMcpConfigs` | ~41 | MCP | 4 files |
-| 29 | `webhookRoutes` | ~10 | Webhooks | 2 files |
-| 30 | `webhookEvents` | ~12 | Webhooks | 2 files |
-| 31 | `knowledgeDocuments` | ~13 | Knowledge | 2 files |
-| 32 | `tickets` | ~21 | Ticketing | 2 files |
-| 33 | `ticketMessages` | ~16 | Ticketing | 2 files |
+| #   | Table                             |   Lines | Group             | Imported by (non-test) |
+| --- | --------------------------------- | ------: | ----------------- | ---------------------- |
+| 1   | `agents`                          |     ~27 | Agent Core        | 48 files               |
+| 2   | `agentRoles`                      |     ~10 | Roles/Permissions | 5 files                |
+| 3   | `roleToolPermissions`             |     ~11 | Roles/Permissions | 5 files                |
+| 4   | `roleWorkflowPermissions`         |     ~11 | Roles/Permissions | 5 files                |
+| 5   | `systemSettings`                  |     ~35 | System/Config     | 15+ files              |
+| 6   | `agentExecutionContracts`         |     ~16 | Agent Contracts   | 4 files                |
+| 7   | `agentExecutionSteps`             |     ~29 | Agent Contracts   | 2 files                |
+| 8   | `agentHomeMetricSnapshots`        |     ~17 | Agent Metrics     | 2 files                |
+| 9   | `agentCheckpointedOmStates`       |     ~13 | Agent LTM         | 2 files                |
+| 10  | `agentLongTermMemoryStates`       |     ~10 | Agent LTM         | 2 files                |
+| 11  | `agentLongTermMemoryRecallStates` |     ~12 | Agent LTM         | 2 files                |
+| 12  | `agentNotifications`              |     ~17 | Notifications     | 2 files                |
+| 13  | `agentSchedules`                  |     ~32 | Schedules         | 2 files                |
+| 14  | `internalChatAccounts`            |     ~17 | Internal Chat     | 6 files                |
+| 15  | `internalChatConversations`       |     ~16 | Internal Chat     | 6 files                |
+| 16  | `internalChatConversationMembers` |     ~17 | Internal Chat     | 6 files                |
+| 17  | `internalChatMessages`            |     ~19 | Internal Chat     | 6 files                |
+| 18  | `internalChatMessageReads`        |     ~17 | Internal Chat     | 6 files                |
+| 19  | `internalChatMessageAttachments`  |     ~19 | Internal Chat     | 6 files                |
+| 20  | `llmModelPrices`                  |     ~12 | LLM Config        | 3 files                |
+| 21  | `companyCashLedger`               |     ~19 | Finance           | 4 files                |
+| 22  | `companyRecurringPayables`        |     ~51 | Finance           | 3 files                |
+| 23  | `systemIntegrations`              |     ~12 | System/Config     | 3 files                |
+| 24  | `llmProfiles`                     |     ~19 | LLM Config        | 3 files                |
+| 25  | `systemLlmDefaults`               |     ~16 | LLM Config        | 3 files                |
+| 26  | `agentProviders`                  | ~188(!) | Agent Core        | 5 files                |
+| 27  | `mcpServerConfigs`                |     ~29 | MCP               | 4 files                |
+| 28  | `agentMcpConfigs`                 |     ~41 | MCP               | 4 files                |
+| 29  | `webhookRoutes`                   |     ~10 | Webhooks          | 2 files                |
+| 30  | `webhookEvents`                   |     ~12 | Webhooks          | 2 files                |
+| 31  | `knowledgeDocuments`              |     ~13 | Knowledge         | 2 files                |
+| 32  | `tickets`                         |     ~21 | Ticketing         | 2 files                |
+| 33  | `ticketMessages`                  |     ~16 | Ticketing         | 2 files                |
 
 Plus 24 `Relations` exports (~280 lines) and 3 config schemas at top (~32 lines).
 
@@ -72,6 +72,7 @@ database/
 ## Key Insight: `agentProviders` is the Anomaly
 
 `agentProviders` (lines 545–732) alone is **188 lines** — more than the entire Discord or Email account files. This single table definition has:
+
 - 6 optional `.notNull()` fields (Drizzle requires explicit `.notNull()` when there's no `.default()`)
 - A giant `.$type<ProviderCredentials>()` field with inline type
 - A check constraint
@@ -85,10 +86,13 @@ database/
 ## Implementation Strategy
 
 ### Phase 1: Extract `agentProviders` + relations (~200L removed)
+
 **Risk: Low.** Only 5 non-test files import agentProviders. After extraction, update their imports. Test everything passes.
 
 ### Phase 2: Group tables by domain (~300L removed)
+
 Extract domain groups in order of fewest cross-file dependencies first:
+
 1. **Knowledge** (2 files import) — `knowledgeDocuments`
 2. **Webhooks** (2 files) — `webhookRoutes`, `webhookEvents`
 3. **Ticketing** (2 files) — `tickets`, `ticketMessages`
@@ -96,14 +100,16 @@ Extract domain groups in order of fewest cross-file dependencies first:
 5. **Notifications** (2 files) — `agentNotifications`
 
 ### Phase 3: Group by cross-cutting concerns (~300L removed)
+
 6. **MCP** (4 files) — `mcpServerConfigs`, `agentMcpConfigs`
 7. **Finance** (4 files) — `companyCashLedger`, `companyRecurringPayables`
 8. **LLM Config** (3 files) — `llmProfiles`, `llmModelPrices`, `systemLlmDefaults`
 
 ### Phase 4: Agent Core (~230L remaining)
+
 9. **Agent Core** — `agents`, `agentProviders` (extracted in phase 1), `agentExecutionContracts`, `agentExecutionSteps`, `agentHomeMetricSnapshots`, `agentCheckpointedOmStates`, `agentLongTermMemoryStates`, `agentLongTermMemoryRecallStates`
 10. **Roles/Permissions** — `agentRoles`, `roleToolPermissions`, `roleWorkflowPermissions`
-11. **Internal Chat** — all internalChat* tables
+11. **Internal Chat** — all internalChat\* tables
 12. **System Config** — `systemSettings`, `systemIntegrations`
 
 ---
@@ -111,6 +117,7 @@ Extract domain groups in order of fewest cross-file dependencies first:
 ## Re-export Pattern
 
 Each module exports its tables and types:
+
 ```typescript
 // database/schema-agents.ts
 import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
@@ -123,6 +130,7 @@ export const agentsRelations = relations(agents, ...);
 ```
 
 Main `schema.ts` becomes a thin re-export aggregator:
+
 ```typescript
 // database/schema.ts
 export * from './schema-agents';

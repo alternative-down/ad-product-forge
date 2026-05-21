@@ -9,7 +9,13 @@ import {
   AdminTextarea,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
 import type { ScheduleForm } from './-schedule-helpers';
@@ -28,7 +34,9 @@ export function ScheduleDialog(input: {
     <Dialog open={input.open} onOpenChange={input.onOpenChange}>
       <AdminDialogContent>
         <AdminDialogHeader>
-          <AdminDialogTitle>{input.form.scheduleId ? 'Editar agendamento' : 'Novo agendamento'}</AdminDialogTitle>
+          <AdminDialogTitle>
+            {input.form.scheduleId ? 'Editar agendamento' : 'Novo agendamento'}
+          </AdminDialogTitle>
         </AdminDialogHeader>
 
         <form
@@ -47,7 +55,9 @@ export function ScheduleDialog(input: {
                 <AdminInput
                   id="schedule-name"
                   value={input.form.name}
-                  onChange={(event) => input.onFormChange({ ...input.form, name: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, name: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -60,7 +70,9 @@ export function ScheduleDialog(input: {
                   id="schedule-description"
                   rows={4}
                   value={input.form.description}
-                  onChange={(event) => input.onFormChange({ ...input.form, description: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, description: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -72,11 +84,15 @@ export function ScheduleDialog(input: {
                   </label>
                   <Select
                     value={input.form.scheduleType}
-                    onValueChange={(value: 'cron' | 'date') => input.onFormChange({ ...input.form, scheduleType: value })}
+                    onValueChange={(value: 'cron' | 'date') =>
+                      input.onFormChange({ ...input.form, scheduleType: value })
+                    }
                     disabled={input.pending}
                   >
                     <SelectTrigger id="schedule-type" className="w-full">
-                      <SelectValue>{input.form.scheduleType === 'cron' ? 'Cron' : 'Data'}</SelectValue>
+                      <SelectValue>
+                        {input.form.scheduleType === 'cron' ? 'Cron' : 'Data'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cron">Cron</SelectItem>
@@ -92,7 +108,9 @@ export function ScheduleDialog(input: {
                   <AdminInput
                     id="schedule-timezone"
                     value={input.form.timezone}
-                    onChange={(event) => input.onFormChange({ ...input.form, timezone: event.target.value })}
+                    onChange={(event) =>
+                      input.onFormChange({ ...input.form, timezone: event.target.value })
+                    }
                     disabled={input.pending}
                   />
                 </div>
@@ -107,7 +125,9 @@ export function ScheduleDialog(input: {
                     <AdminInput
                       id="schedule-cron"
                       value={input.form.cronExpression}
-                      onChange={(event) => input.onFormChange({ ...input.form, cronExpression: event.target.value })}
+                      onChange={(event) =>
+                        input.onFormChange({ ...input.form, cronExpression: event.target.value })
+                      }
                       disabled={input.pending}
                     />
                   </div>
@@ -116,12 +136,15 @@ export function ScheduleDialog(input: {
                       <div className="space-y-1">
                         <div className="text-sm font-medium">Wake enquanto executa</div>
                         <div className="text-xs leading-relaxed text-muted-foreground">
-                          Se desligado, o conteúdo deste cron só entra no flushing quando o agente estiver ocioso, como no heartbeat.
+                          Se desligado, o conteúdo deste cron só entra no flushing quando o agente
+                          estiver ocioso, como no heartbeat.
                         </div>
                       </div>
                       <Switch
                         checked={input.form.wakeWhenRunning}
-                        onCheckedChange={(checked) => input.onFormChange({ ...input.form, wakeWhenRunning: checked })}
+                        onCheckedChange={(checked) =>
+                          input.onFormChange({ ...input.form, wakeWhenRunning: checked })
+                        }
                         disabled={input.pending}
                       />
                     </label>
@@ -136,7 +159,9 @@ export function ScheduleDialog(input: {
                     id="schedule-date"
                     type="datetime-local"
                     value={input.form.scheduledDate}
-                    onChange={(event) => input.onFormChange({ ...input.form, scheduledDate: event.target.value })}
+                    onChange={(event) =>
+                      input.onFormChange({ ...input.form, scheduledDate: event.target.value })
+                    }
                     disabled={input.pending}
                   />
                 </div>
@@ -150,7 +175,9 @@ export function ScheduleDialog(input: {
                   id="schedule-content"
                   rows={6}
                   value={input.form.content}
-                  onChange={(event) => input.onFormChange({ ...input.form, content: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, content: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -160,7 +187,9 @@ export function ScheduleDialog(input: {
                   <span className="text-sm font-medium">Ativo</span>
                   <Switch
                     checked={input.form.isActive}
-                    onCheckedChange={(checked) => input.onFormChange({ ...input.form, isActive: checked })}
+                    onCheckedChange={(checked) =>
+                      input.onFormChange({ ...input.form, isActive: checked })
+                    }
                     disabled={input.pending}
                   />
                 </label>
@@ -176,7 +205,9 @@ export function ScheduleDialog(input: {
                 !input.form.name.trim() ||
                 (requiresContent && !input.form.content.trim()) ||
                 !input.form.timezone.trim() ||
-                (input.form.scheduleType === 'cron' ? !input.form.cronExpression.trim() : !input.form.scheduledDate)
+                (input.form.scheduleType === 'cron'
+                  ? !input.form.cronExpression.trim()
+                  : !input.form.scheduledDate)
               }
             >
               {input.pending ? 'Salvando...' : 'Salvar'}

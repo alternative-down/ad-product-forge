@@ -171,13 +171,15 @@ export function createChatSending(deps: SendingDeps) {
           (memberAccount): boolean =>
             memberAccount.agentId !== null && memberAccount.agentId !== undefined,
         )
-        .map((memberAccount): NewInternalChatMessageRead => ({
-          messageId,
-          agentId: memberAccount.agentId as string,
-          readAt: memberAccount.id === input.accountId ? now : null,
-          createdAt: now,
-          updatedAt: now,
-        }));
+        .map(
+          (memberAccount): NewInternalChatMessageRead => ({
+            messageId,
+            agentId: memberAccount.agentId as string,
+            readAt: memberAccount.id === input.accountId ? now : null,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        );
 
       if (readRows.length > 0) {
         await db.insert(internalChatMessageReads).values(readRows);

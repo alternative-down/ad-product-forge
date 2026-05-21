@@ -1,6 +1,10 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { clearAgentHistory, getAgentRuntimeMemory, getAgentThreadMessages } from '@/lib/admin-api/index';
+import {
+  clearAgentHistory,
+  getAgentRuntimeMemory,
+  getAgentThreadMessages,
+} from '@/lib/admin-api/index';
 
 const PAGE_SIZE = 20;
 const LIVE_REFETCH_INTERVAL_MS = 5_000;
@@ -73,14 +77,21 @@ export function useAgentLogData({ agentId }: UseAgentLogDataOptions) {
     queryFn: ({ pageParam }: { pageParam: number }) =>
       getAgentThreadMessages(agentId, pageParam, PAGE_SIZE),
     initialPageParam: 0,
-    getNextPageParam: (lastPage: ThreadMessagesPage, _pages: ThreadMessagesPage[], lastPageParam: number) =>
-      lastPage.hasMore ? lastPageParam + 1 : undefined,
+    getNextPageParam: (
+      lastPage: ThreadMessagesPage,
+      _pages: ThreadMessagesPage[],
+      lastPageParam: number,
+    ) => (lastPage.hasMore ? lastPageParam + 1 : undefined),
     refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
 
   const clearHistoryMutation = useMutation({
     mutationFn: async () => {
-      if (!window.confirm('Limpar o histórico do agente e da LTM? Isso também limpa o estado observado atual.')) {
+      if (
+        !window.confirm(
+          'Limpar o histórico do agente e da LTM? Isso também limpa o estado observado atual.',
+        )
+      ) {
         return null;
       }
 
@@ -96,7 +107,9 @@ export function useAgentLogData({ agentId }: UseAgentLogDataOptions) {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'thread-messages'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'ltm-thread-messages'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['admin', 'agent', agentId, 'ltm-thread-messages'],
+        }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'agent', agentId, 'runtime-memory'] }),
       ]);
     },

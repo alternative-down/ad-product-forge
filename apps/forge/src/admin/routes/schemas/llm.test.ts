@@ -15,19 +15,31 @@ import {
 
 describe('upsertLlmProfileSchema', () => {
   it('parses minimal valid input', () => {
-    const result = upsertLlmProfileSchema.parse({ name: 'GPT-4o', modelKey: 'gpt-4o', apiKey: 'sk-test' });
+    const result = upsertLlmProfileSchema.parse({
+      name: 'GPT-4o',
+      modelKey: 'gpt-4o',
+      apiKey: 'sk-test',
+    });
     expect(result.name).toBe('GPT-4o');
     expect(result.modelKey).toBe('gpt-4o');
   });
 
   it('parses with optional profileId', () => {
-    const result = upsertLlmProfileSchema.parse({ profileId: 'profile-1', name: 'n', modelKey: 'm', apiKey: 'sk-test' });
+    const result = upsertLlmProfileSchema.parse({
+      profileId: 'profile-1',
+      name: 'n',
+      modelKey: 'm',
+      apiKey: 'sk-test',
+    });
     expect(result.profileId).toBe('profile-1');
   });
 
   it('parses with optional tuning fields', () => {
     const result = upsertLlmProfileSchema.parse({
-      name: 'n', modelKey: 'm', apiKey: 'sk-test', contractCostMultiplier: 1.5,
+      name: 'n',
+      modelKey: 'm',
+      apiKey: 'sk-test',
+      contractCostMultiplier: 1.5,
     });
     expect(result.contractCostMultiplier).toBe(1.5);
   });
@@ -37,7 +49,9 @@ describe('upsertLlmProfileSchema', () => {
   });
 
   it('rejects empty name', () => {
-    expect(() => upsertLlmProfileSchema.parse({ name: '', modelKey: 'm', apiKey: 'sk-test' })).toThrow();
+    expect(() =>
+      upsertLlmProfileSchema.parse({ name: '', modelKey: 'm', apiKey: 'sk-test' }),
+    ).toThrow();
   });
 
   it('rejects missing modelKey', () => {
@@ -49,12 +63,22 @@ describe('upsertLlmProfileSchema', () => {
   });
 
   it('rejects negative contractCostMultiplier', () => {
-    expect(() => upsertLlmProfileSchema.parse({ name: 'n', modelKey: 'm', apiKey: 'sk-test', contractCostMultiplier: -0.1 })).toThrow();
+    expect(() =>
+      upsertLlmProfileSchema.parse({
+        name: 'n',
+        modelKey: 'm',
+        apiKey: 'sk-test',
+        contractCostMultiplier: -0.1,
+      }),
+    ).toThrow();
   });
 
   it('parses with optional baseUrl', () => {
     const result = upsertLlmProfileSchema.parse({
-      name: 'n', modelKey: 'm', apiKey: 'sk-test', baseUrl: 'https://api.example.com',
+      name: 'n',
+      modelKey: 'm',
+      apiKey: 'sk-test',
+      baseUrl: 'https://api.example.com',
     });
     expect(result.baseUrl).toBe('https://api.example.com');
   });
@@ -64,8 +88,9 @@ describe('upsertLlmProfileSchema', () => {
 
 describe('deleteLlmProfileSchema', () => {
   it('parses valid profileId', () => {
-    expect(deleteLlmProfileSchema.parse({ profileId: 'profile-1' }))
-      .toMatchObject({ profileId: 'profile-1' });
+    expect(deleteLlmProfileSchema.parse({ profileId: 'profile-1' })).toMatchObject({
+      profileId: 'profile-1',
+    });
   });
 
   it('rejects missing profileId', () => {
@@ -82,7 +107,9 @@ describe('deleteLlmProfileSchema', () => {
 describe('updateLlmDefaultsSchema', () => {
   it('parses valid input with all required fields', () => {
     const result = updateLlmDefaultsSchema.parse({
-      primaryProfileId: 'p1', omProfileId: 'p2', hiringRhProfileId: 'p3',
+      primaryProfileId: 'p1',
+      omProfileId: 'p2',
+      hiringRhProfileId: 'p3',
     });
     expect(result.primaryProfileId).toBe('p1');
     expect(result.omProfileId).toBe('p2');
@@ -90,15 +117,25 @@ describe('updateLlmDefaultsSchema', () => {
   });
 
   it('rejects missing primaryProfileId', () => {
-    expect(() => updateLlmDefaultsSchema.parse({ omProfileId: 'p2', hiringRhProfileId: 'p3' })).toThrow();
+    expect(() =>
+      updateLlmDefaultsSchema.parse({ omProfileId: 'p2', hiringRhProfileId: 'p3' }),
+    ).toThrow();
   });
 
   it('rejects missing omProfileId', () => {
-    expect(() => updateLlmDefaultsSchema.parse({ primaryProfileId: 'p1', hiringRhProfileId: 'p3' })).toThrow();
+    expect(() =>
+      updateLlmDefaultsSchema.parse({ primaryProfileId: 'p1', hiringRhProfileId: 'p3' }),
+    ).toThrow();
   });
 
   it('rejects empty primaryProfileId', () => {
-    expect(() => updateLlmDefaultsSchema.parse({ primaryProfileId: '', omProfileId: 'p2', hiringRhProfileId: 'p3' })).toThrow();
+    expect(() =>
+      updateLlmDefaultsSchema.parse({
+        primaryProfileId: '',
+        omProfileId: 'p2',
+        hiringRhProfileId: 'p3',
+      }),
+    ).toThrow();
   });
 });
 
@@ -106,7 +143,11 @@ describe('updateLlmDefaultsSchema', () => {
 
 describe('upsertLlmModelPriceSchema', () => {
   it('parses minimal valid input', () => {
-    const result = upsertLlmModelPriceSchema.parse({ modelKey: 'gpt-4o', inputPerMillionUsd: 2.5, outputPerMillionUsd: 10 });
+    const result = upsertLlmModelPriceSchema.parse({
+      modelKey: 'gpt-4o',
+      inputPerMillionUsd: 2.5,
+      outputPerMillionUsd: 10,
+    });
     expect(result.modelKey).toBe('gpt-4o');
     expect(result.inputPerMillionUsd).toBe(2.5);
     expect(result.outputPerMillionUsd).toBe(10);
@@ -114,21 +155,38 @@ describe('upsertLlmModelPriceSchema', () => {
 
   it('parses with optional cache pricing', () => {
     const result = upsertLlmModelPriceSchema.parse({
-      modelKey: 'm', inputPerMillionUsd: 1, outputPerMillionUsd: 1, inputCachePerMillionUsd: 0.1,
+      modelKey: 'm',
+      inputPerMillionUsd: 1,
+      outputPerMillionUsd: 1,
+      inputCachePerMillionUsd: 0.1,
     });
     expect(result.inputCachePerMillionUsd).toBe(0.1);
   });
 
   it('rejects missing modelKey', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ inputPerMillionUsd: 1, outputPerMillionUsd: 1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({ inputPerMillionUsd: 1, outputPerMillionUsd: 1 }),
+    ).toThrow();
   });
 
   it('rejects zero input price', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ modelKey: 'm', inputPerMillionUsd: 0, outputPerMillionUsd: 1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({
+        modelKey: 'm',
+        inputPerMillionUsd: 0,
+        outputPerMillionUsd: 1,
+      }),
+    ).toThrow();
   });
 
   it('rejects negative output price', () => {
-    expect(() => upsertLlmModelPriceSchema.parse({ modelKey: 'm', inputPerMillionUsd: 1, outputPerMillionUsd: -1 })).toThrow();
+    expect(() =>
+      upsertLlmModelPriceSchema.parse({
+        modelKey: 'm',
+        inputPerMillionUsd: 1,
+        outputPerMillionUsd: -1,
+      }),
+    ).toThrow();
   });
 });
 

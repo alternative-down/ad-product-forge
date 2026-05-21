@@ -10,11 +10,11 @@ Tools são funções que os agentes podem chamar durante a execução. Cada tool
 
 ```typescript
 interface ToolDefinition {
-  id: string;                    // ex: 'github.create-issue'
-  name: string;                  // ex: 'Create GitHub Issue'
-  description: string;            // descrição para o LLM
-  inputSchema: z.ZodType;        // schema de validação
-  outputSchema?: z.ZodType;      // schema do output
+  id: string; // ex: 'github.create-issue'
+  name: string; // ex: 'Create GitHub Issue'
+  description: string; // descrição para o LLM
+  inputSchema: z.ZodType; // schema de validação
+  outputSchema?: z.ZodType; // schema do output
 }
 ```
 
@@ -354,15 +354,15 @@ await tools.schedules.delete({
 
 ## Tool Permissions Matrix
 
-| Tool | Permission Required |
-|------|---------------------|
-| `github.createIssue` | `github.create-issue` |
-| `github.createPullRequest` | `github.create-pull-request` |
-| `github.commitFile` | `github.commit-file` |
-| `github.mergePullRequest` | `github.merge-pull-request` |
-| `coolify.deployApplication` | `coolify.deploy` |
-| `coolify.listApplications` | `coolify.read` |
-| `discord.sendMessage` | `discord.send-message` |
-| `email.send` | `email.send` |
-| `schedules.create` | `schedules.manage` |
-| `mcp.execute` | `mcp.execute` |
+| Tool                        | Permission Required          |
+| --------------------------- | ---------------------------- |
+| `github.createIssue`        | `github.create-issue`        |
+| `github.createPullRequest`  | `github.create-pull-request` |
+| `github.commitFile`         | `github.commit-file`         |
+| `github.mergePullRequest`   | `github.merge-pull-request`  |
+| `coolify.deployApplication` | `coolify.deploy`             |
+| `coolify.listApplications`  | `coolify.read`               |
+| `discord.sendMessage`       | `discord.send-message`       |
+| `email.send`                | `email.send`                 |
+| `schedules.create`          | `schedules.manage`           |
+| `mcp.execute`               | `mcp.execute`                |

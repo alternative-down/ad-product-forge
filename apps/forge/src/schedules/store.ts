@@ -160,7 +160,6 @@ export function createAgentScheduleStore(db: Database) {
     }
   }
 
-
   async function getScheduleByKind(agentId: string, kind: ScheduleKind) {
     try {
       const row = await db.query.agentSchedules.findFirst({

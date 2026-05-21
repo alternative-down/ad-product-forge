@@ -7,25 +7,14 @@
     "packages/mastra-engine/src/index.{ts,tsx,mts}"
   ],
   "workspaces": {
-    "patterns": [
-      "apps/*",
-      "packages/*"
-    ]
+    "patterns": ["apps/*", "packages/*"]
   },
-  "ignoreDependencies": [
-    "@huggingface/transformers"
-  ],
+  "ignoreDependencies": ["@huggingface/transformers"],
   "duplicates": {
-    "ignore": [
-      "**/dist/**",
-      "**/__generated__/**",
-      "**/generated/**"
-    ]
+    "ignore": ["**/dist/**", "**/__generated__/**", "**/generated/**"]
   },
   "health": {
-    "ignore": [
-      "**/dist/**"
-    ]
+    "ignore": ["**/dist/**"]
   },
   "rules": {},
   "audit": {

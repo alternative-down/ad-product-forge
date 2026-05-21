@@ -172,21 +172,19 @@ describe('createRoutingOps — handleRegisterPage', () => {
   it('returns 200 with status when credentials are not pending', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getCredentials = vi
-      .fn()
-      .mockResolvedValue({
-        status: 'active',
-        appSlug: 'active-app',
-        manifestConfig: {
-          name: 'App',
-          url: '',
-          callbackUrls: [],
-          redirectUrl: '',
-          hookAttributes: {},
-          callbackURL: '',
-        },
-        encryptedCredentials: 'x',
-      });
+    ctx.getCredentials = vi.fn().mockResolvedValue({
+      status: 'active',
+      appSlug: 'active-app',
+      manifestConfig: {
+        name: 'App',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
+      encryptedCredentials: 'x',
+    });
     ctx.buildManifestEvents = vi.fn().mockReturnValue(['issues']);
     ctx.buildManifestPermissions = vi.fn().mockReturnValue({ issues: 'write' });
     ctx.getGlobalConfig = vi
@@ -244,26 +242,24 @@ describe('createRoutingOps — handleSetupCallback', () => {
   it('returns 400 when installation_id missing', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getCredentials = vi
-      .fn()
-      .mockResolvedValue({
-        status: 'created',
-        appId: 1,
-        privateKey: 'key',
-        webhookSecret: 'secret',
-        appSlug: 'app',
-        appName: 'App',
-        manifestConfig: {
-          name: 'App',
-          url: '',
-          callbackUrls: [],
-          redirectUrl: '',
-          hookAttributes: {},
-          callbackURL: '',
-        },
-        createdAt: 1,
-        encryptedCredentials: 'x',
-      });
+    ctx.getCredentials = vi.fn().mockResolvedValue({
+      status: 'created',
+      appId: 1,
+      privateKey: 'key',
+      webhookSecret: 'secret',
+      appSlug: 'app',
+      appName: 'App',
+      manifestConfig: {
+        name: 'App',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
+      createdAt: 1,
+      encryptedCredentials: 'x',
+    });
     const routing = createRoutingOps(ctx);
     const result = await routing.handleSetupCallback('agent-1', null);
     expect(result.status).toBe(400);
@@ -273,26 +269,24 @@ describe('createRoutingOps — handleSetupCallback', () => {
   it('returns 400 for non-numeric installation_id', async () => {
     const { createRoutingOps } = await import('./routing.js');
     const ctx = makeCtx();
-    ctx.getCredentials = vi
-      .fn()
-      .mockResolvedValue({
-        status: 'created',
-        appId: 1,
-        privateKey: 'key',
-        webhookSecret: 'secret',
-        appSlug: 'app',
-        appName: 'App',
-        manifestConfig: {
-          name: 'App',
-          url: '',
-          callbackUrls: [],
-          redirectUrl: '',
-          hookAttributes: {},
-          callbackURL: '',
-        },
-        createdAt: 1,
-        encryptedCredentials: 'x',
-      });
+    ctx.getCredentials = vi.fn().mockResolvedValue({
+      status: 'created',
+      appId: 1,
+      privateKey: 'key',
+      webhookSecret: 'secret',
+      appSlug: 'app',
+      appName: 'App',
+      manifestConfig: {
+        name: 'App',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      },
+      createdAt: 1,
+      encryptedCredentials: 'x',
+    });
     const routing = createRoutingOps(ctx);
     const result = await routing.handleSetupCallback('agent-1', 'not-a-number');
     expect(result.status).toBe(400);

@@ -10,14 +10,14 @@
  *
  * @module
  */
-import { and, eq, isNotNull, ne } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from 'drizzle-orm';
 
-import type {Database} from "../database/schema";
+import type { Database } from '../database/schema';
 import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
-} from "../database/schema";
+} from '../database/schema';
 
 export interface AdminAccountView {
   accountId: string;
@@ -48,8 +48,8 @@ export function createInternalChatAdmin(db: Database) {
       roleDescription: input.roleDescription,
     });
     const existing = await db.query.internalChatAccounts.findFirst({
-        where: eq(internalChatAccounts.agentId, input.agentId),
-      });
+      where: eq(internalChatAccounts.agentId, input.agentId),
+    });
 
     if (existing != null) {
       await db
@@ -153,7 +153,7 @@ export function createInternalChatAdmin(db: Database) {
     });
 
     if (existing === null || existing === undefined) {
-      throw new Error("Account not found");
+      throw new Error('Account not found');
     }
 
     await db
@@ -175,29 +175,24 @@ export function createInternalChatAdmin(db: Database) {
   }
 
   async function deleteExternalAccount(input: { accountId: string }) {
-    await db
-      .delete(internalChatAccounts)
-      .where(eq(internalChatAccounts.id, input.accountId));
+    await db.delete(internalChatAccounts).where(eq(internalChatAccounts.id, input.accountId));
     return { deleted: true };
   }
 
   async function deleteAgentAccount(input: { agentId: string }) {
-    await db
-      .delete(internalChatAccounts)
-      .where(eq(internalChatAccounts.agentId, input.agentId));
+    await db.delete(internalChatAccounts).where(eq(internalChatAccounts.agentId, input.agentId));
     return { deleted: true };
   }
 
   // ── Account listing ────────────────────────────────────────────────────
 
   async function listAccounts(input: { excludeAgentId?: string } = {}) {
-      if (input.excludeAgentId !== null && input.excludeAgentId !== undefined) {
-         
-  return await db.query.internalChatAccounts.findMany({
-          where: ne(internalChatAccounts.agentId, input.excludeAgentId),
-        });
-      }
-      return await db.query.internalChatAccounts.findMany({});
+    if (input.excludeAgentId !== null && input.excludeAgentId !== undefined) {
+      return await db.query.internalChatAccounts.findMany({
+        where: ne(internalChatAccounts.agentId, input.excludeAgentId),
+      });
+    }
+    return await db.query.internalChatAccounts.findMany({});
   }
 
   // ── Admin read-only views ──────────────────────────────────────────────
@@ -213,7 +208,7 @@ export function createInternalChatAdmin(db: Database) {
       agentId: account.agentId,
       slug: account.slug,
       displayName: account.displayName,
-      description: account.description ?? "",
+      description: account.description ?? '',
       isAgent: Boolean(account.agentId),
     }));
   }
@@ -232,7 +227,7 @@ export function createInternalChatAdmin(db: Database) {
         accountId: account.id,
         slug: account.slug,
         displayName: account.displayName,
-        description: account.description ?? "",
+        description: account.description ?? '',
       }));
   }
 
@@ -257,14 +252,14 @@ export function createInternalChatAdmin(db: Database) {
       where: eq(internalChatAccounts.agentId, agentId),
     });
     if (account === null || account === undefined) {
-      throw new Error("Account not found for agent");
+      throw new Error('Account not found for agent');
     }
 
     const conversation = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, conversationId),
     });
     if (conversation === null || conversation === undefined) {
-      throw new Error("Conversation not found");
+      throw new Error('Conversation not found');
     }
 
     const membership = await db.query.internalChatConversationMembers.findFirst({
@@ -274,7 +269,7 @@ export function createInternalChatAdmin(db: Database) {
       ),
     });
     if (membership === null || membership === undefined) {
-      throw new Error("Agent is not a member of this conversation");
+      throw new Error('Agent is not a member of this conversation');
     }
 
     return conversation;
@@ -290,14 +285,19 @@ export function createInternalChatAdmin(db: Database) {
     roleDescription?: string;
   }) {
     let desc = input.agentName;
-    if (input.agentDescription !== null && input.agentDescription !== undefined) desc += ` — ${input.agentDescription}`;
+    if (input.agentDescription !== null && input.agentDescription !== undefined)
+      desc += ` — ${input.agentDescription}`;
     if (input.roleName !== null && input.roleName !== undefined) desc += ` | ${input.roleName}`;
-    if (input.roleDescription !== null && input.roleDescription !== undefined) desc += ` — ${input.roleDescription}`;
+    if (input.roleDescription !== null && input.roleDescription !== undefined)
+      desc += ` — ${input.roleDescription}`;
     return desc;
   }
 
   function createInternalChatSlug(displayName: string) {
-    return displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   function createId() {
@@ -308,7 +308,7 @@ export function createInternalChatAdmin(db: Database) {
     // Find existing DM between these two accounts
     const existing = await db.query.internalChatConversations.findFirst({
       where: and(
-        eq(internalChatConversations.type, "direct"),
+        eq(internalChatConversations.type, 'direct'),
         // isNotNull column removed from schema
       ),
     });
@@ -322,15 +322,15 @@ export function createInternalChatAdmin(db: Database) {
 
     await db.insert(internalChatConversations).values({
       id: convId,
-      type: "direct",
+      type: 'direct',
       // metadata column removed from schema
       createdAt: now,
       updatedAt: now,
     });
 
     await db.insert(internalChatConversationMembers).values([
-      { conversationId: convId, accountId: leftAccountId, role: "member", joinedAt: now },
-      { conversationId: convId, accountId: rightAccountId, role: "member", joinedAt: now },
+      { conversationId: convId, accountId: leftAccountId, role: 'member', joinedAt: now },
+      { conversationId: convId, accountId: rightAccountId, role: 'member', joinedAt: now },
     ] as any);
 
     return await db.query.internalChatConversations.findFirst({

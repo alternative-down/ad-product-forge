@@ -18,20 +18,16 @@ const agentExecutionContracts = 'agentExecutionContracts';
 
 function createMockDb(contract?: Record<string, unknown> | null) {
   const tx = {
-    update: vi
-      .fn()
-      .mockReturnValue({
-        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
-      }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    }),
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
   };
   return {
     query: { agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract ?? null) } },
-    update: vi
-      .fn()
-      .mockReturnValue({
-        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
-      }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    }),
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
     transaction: vi.fn().mockImplementation(async (cb) => cb(tx)),
     _tx: tx,

@@ -3,7 +3,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AdminLoadingState } from '@/components/admin/./system/admin-loading-state';
-import { getSystemLlm, getSystemSettings, updateLlmDefaults, upsertSystemSettings } from '@/lib/admin-api/index';
+import {
+  getSystemLlm,
+  getSystemSettings,
+  updateLlmDefaults,
+  upsertSystemSettings,
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 import type { LlmProfile } from '@/lib/admin-api/index';
 
@@ -78,19 +83,26 @@ function SettingsGeneralRoute() {
 
   const data = settingsQuery.data;
 
-  const companySettings: CompanyDraft | null = companyDraft ?? (data ?? null);
-  const operationsSettings: OperationsDraft | null = operationsDraft ?? (data ? toOperationsDraft(data) : null);
+  const companySettings: CompanyDraft | null = companyDraft ?? data ?? null;
+  const operationsSettings: OperationsDraft | null =
+    operationsDraft ?? (data ? toOperationsDraft(data) : null);
   const runtimeSettings: RuntimeDraft | null = runtimeDraft ?? (data ? toRuntimeDraft(data) : null);
 
   // ── Profile defaults ─────────────────────────────────────────
 
   const enabledProfiles = (llmQuery.data?.profiles ?? []).filter((p: LlmProfile) => p.isEnabled);
-  const primaryProfileId = defaultsDraft?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '';
+  const primaryProfileId =
+    defaultsDraft?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '';
   const omProfileId = defaultsDraft?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '';
-  const hiringRhProfileId = defaultsDraft?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '';
-  const primaryProfileName = enabledProfiles.find((p: LlmProfile) => p.profileId === primaryProfileId)?.name;
+  const hiringRhProfileId =
+    defaultsDraft?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '';
+  const primaryProfileName = enabledProfiles.find(
+    (p: LlmProfile) => p.profileId === primaryProfileId,
+  )?.name;
   const omProfileName = enabledProfiles.find((p: LlmProfile) => p.profileId === omProfileId)?.name;
-  const hiringRhProfileName = enabledProfiles.find((p: LlmProfile) => p.profileId === hiringRhProfileId)?.name;
+  const hiringRhProfileName = enabledProfiles.find(
+    (p: LlmProfile) => p.profileId === hiringRhProfileId,
+  )?.name;
 
   const errorMessage = defaultsMutation.error?.message ?? llmQuery.error?.message;
 
@@ -99,7 +111,8 @@ function SettingsGeneralRoute() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-[-0.04em]">Geral</h1>
         <p className="text-sm text-muted-foreground">
-          Ajuste a identidade da empresa, o comportamento global do runtime e os perfis padrão do sistema.
+          Ajuste a identidade da empresa, o comportamento global do runtime e os perfis padrão do
+          sistema.
         </p>
       </div>
 
@@ -156,19 +169,23 @@ function SettingsGeneralRoute() {
             setDefaultsDraft((current) => ({
               primaryProfileId: value,
               omProfileId: current?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '',
-              hiringRhProfileId: current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
+              hiringRhProfileId:
+                current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
             }))
           }
           onOmProfileChange={(value) =>
             setDefaultsDraft((current) => ({
-              primaryProfileId: current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
+              primaryProfileId:
+                current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
               omProfileId: value,
-              hiringRhProfileId: current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
+              hiringRhProfileId:
+                current?.hiringRhProfileId ?? llmQuery.data?.defaults?.hiringRhProfileId ?? '',
             }))
           }
           onHiringRhProfileChange={(value) =>
             setDefaultsDraft((current) => ({
-              primaryProfileId: current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
+              primaryProfileId:
+                current?.primaryProfileId ?? llmQuery.data?.defaults?.primaryProfileId ?? '',
               omProfileId: current?.omProfileId ?? llmQuery.data?.defaults?.omProfileId ?? '',
               hiringRhProfileId: value,
             }))

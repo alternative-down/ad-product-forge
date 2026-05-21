@@ -12,12 +12,14 @@
 Fornecer serviços de infraestrutura compartilhada que agentes podem usar em suas aplicações criadas:
 
 ### 1. MinIO (S3-like Object Storage)
+
 - Armazenar artefatos (código, documentos, relatórios, imagens, vídeos, etc.)
 - Compartilhado entre aplicações (agentes compartilham a mesma instância)
 - Acesso programático via S3 API
 - Uso: Agentes podem configurar MinIO em suas aplicações
 
 ### 2. BullMQ / trigger.dev (Queue & Async Processing)
+
 - Fila de jobs para processamento assíncrono
 - Retry automático com backoff exponencial
 - Compartilhado entre aplicações ou por aplicação (a definir)

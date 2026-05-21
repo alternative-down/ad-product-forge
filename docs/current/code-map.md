@@ -528,87 +528,59 @@ It does not try to explain every detail. It explains where each main responsibil
 
 ### agent-config.test.ts: `packages/forge-runtime-core/src/agent-config.test.ts/`
 
-
 ### agent-config.ts: `packages/forge-runtime-core/src/agent-config.ts/`
-
 
 ### anthropic-prompt-cache.test.ts: `packages/forge-runtime-core/src/anthropic-prompt-cache.test.ts/`
 
-
 ### anthropic-prompt-cache.ts: `packages/forge-runtime-core/src/anthropic-prompt-cache.ts/`
-
 
 ### assistant-conversation-persistence-plugin.test.ts: `packages/forge-runtime-core/src/assistant-conversation-persistence-plugin.test.ts/`
 
-
 ### assistant-conversation-persistence-plugin.ts: `packages/forge-runtime-core/src/assistant-conversation-persistence-plugin.ts/`
-
 
 ### claude-max.ts: `packages/forge-runtime-core/src/claude-max.ts/`
 
-
 ### communication-module.ts: `packages/forge-runtime-core/src/communication-module.ts/`
-
 
 ### communication-tools.test.ts: `packages/forge-runtime-core/src/communication-tools.test.ts/`
 
-
 ### communication-tools.ts: `packages/forge-runtime-core/src/communication-tools.ts/`
-
 
 ### communication.test.ts: `packages/forge-runtime-core/src/communication.test.ts/`
 
-
 ### communication.ts: `packages/forge-runtime-core/src/communication.ts/`
-
 
 ### contracts.test.ts: `packages/forge-runtime-core/src/contracts.test.ts/`
 
-
 ### contracts.ts: `packages/forge-runtime-core/src/contracts.ts/`
-
 
 ### conversation-model-messages.test.ts: `packages/forge-runtime-core/src/conversation-model-messages.test.ts/`
 
-
 ### conversation-model-messages.ts: `packages/forge-runtime-core/src/conversation-model-messages.ts/`
-
 
 ### conversation-runtime-context-formatter.test.ts: `packages/forge-runtime-core/src/conversation-runtime-context-formatter.test.ts/`
 
-
 ### conversation-runtime-context-formatter.ts: `packages/forge-runtime-core/src/conversation-runtime-context-formatter.ts/`
-
 
 ### debug.test.ts: `packages/forge-runtime-core/src/debug.test.ts/`
 
-
 ### debug.ts: `packages/forge-runtime-core/src/debug.ts/`
-
 
 ### embedder.test.ts: `packages/forge-runtime-core/src/embedder.test.ts/`
 
-
 ### embedder.ts: `packages/forge-runtime-core/src/embedder.ts/`
-
 
 ### index.test.ts: `packages/forge-runtime-core/src/index.test.ts/`
 
-
 ### index.ts: `packages/forge-runtime-core/src/index.ts/`
-
 
 ### libsql-communication-contacts-store.test.ts: `packages/forge-runtime-core/src/libsql-communication-contacts-store.test.ts/`
 
-
 ### libsql-communication-contacts-store.ts: `packages/forge-runtime-core/src/libsql-communication-contacts-store.ts/`
-
 
 ### libsql-conversation-store.test.ts: `packages/forge-runtime-core/src/libsql-conversation-store.test.ts/`
 
-
 ### libsql-conversation-store.ts: `packages/forge-runtime-core/src/libsql-conversation-store.ts/`
-
 
 ### llm: `packages/forge-runtime-core/src/llm/`
 
@@ -624,153 +596,102 @@ It does not try to explain every detail. It explains where each main responsibil
 
 ### logger.test.ts: `packages/forge-runtime-core/src/logger.test.ts/`
 
-
 ### logger.ts: `packages/forge-runtime-core/src/logger.ts/`
-
 
 ### mcp.test.ts: `packages/forge-runtime-core/src/mcp.test.ts/`
 
-
 ### mcp.ts: `packages/forge-runtime-core/src/mcp.ts/`
-
 
 ### memory.test.ts: `packages/forge-runtime-core/src/memory.test.ts/`
 
-
 ### memory.ts: `packages/forge-runtime-core/src/memory.ts/`
-
 
 ### model-ids.test.ts: `packages/forge-runtime-core/src/model-ids.test.ts/`
 
-
 ### model-ids.ts: `packages/forge-runtime-core/src/model-ids.ts/`
-
 
 ### native-tool-loop.test.ts: `packages/forge-runtime-core/src/native-tool-loop.test.ts/`
 
-
 ### native-tool-loop.ts: `packages/forge-runtime-core/src/native-tool-loop.ts/`
-
 
 ### oauth-anthropic.ts: `packages/forge-runtime-core/src/oauth-anthropic.ts/`
 
-
 ### oauth-gateway.test.ts: `packages/forge-runtime-core/src/oauth-gateway.test.ts/`
-
 
 ### oauth-gateway.ts: `packages/forge-runtime-core/src/oauth-gateway.ts/`
 
-
 ### oauth-openai-codex.ts: `packages/forge-runtime-core/src/oauth-openai-codex.ts/`
-
 
 ### oauth-store.ts: `packages/forge-runtime-core/src/oauth-store.ts/`
 
-
 ### openai-codex.ts: `packages/forge-runtime-core/src/openai-codex.ts/`
-
 
 ### operational-memory-conversation-observer.test.ts: `packages/forge-runtime-core/src/operational-memory-conversation-observer.test.ts/`
 
-
 ### operational-memory-conversation-observer.ts: `packages/forge-runtime-core/src/operational-memory-conversation-observer.ts/`
-
 
 ### operational-memory-om-rendering.test.ts: `packages/forge-runtime-core/src/operational-memory-om-rendering.test.ts/`
 
-
 ### operational-memory-om-rendering.ts: `packages/forge-runtime-core/src/operational-memory-om-rendering.ts/`
-
 
 ### operational-memory-om.ts: `packages/forge-runtime-core/src/operational-memory-om.ts/`
 
-
 ### operational-memory-prompting.test.ts: `packages/forge-runtime-core/src/operational-memory-prompting.test.ts/`
-
 
 ### operational-memory-prompting.ts: `packages/forge-runtime-core/src/operational-memory-prompting.ts/`
 
-
 ### operational-memory-state.test.ts: `packages/forge-runtime-core/src/operational-memory-state.test.ts/`
-
 
 ### operational-memory-state.ts: `packages/forge-runtime-core/src/operational-memory-state.ts/`
 
-
 ### runtime-agent-session-generate.ts: `packages/forge-runtime-core/src/runtime-agent-session-generate.ts/`
-
 
 ### runtime-agent-session-iteration.test.ts: `packages/forge-runtime-core/src/runtime-agent-session-iteration.test.ts/`
 
-
 ### runtime-agent-session-iteration.ts: `packages/forge-runtime-core/src/runtime-agent-session-iteration.ts/`
-
 
 ### runtime-agent-session-messages.test.ts: `packages/forge-runtime-core/src/runtime-agent-session-messages.test.ts/`
 
-
 ### runtime-agent-session-messages.ts: `packages/forge-runtime-core/src/runtime-agent-session-messages.ts/`
-
 
 ### runtime-agent-session-runtime.test.ts: `packages/forge-runtime-core/src/runtime-agent-session-runtime.test.ts/`
 
-
 ### runtime-agent-session-runtime.ts: `packages/forge-runtime-core/src/runtime-agent-session-runtime.ts/`
-
 
 ### runtime-agent-session.test.ts: `packages/forge-runtime-core/src/runtime-agent-session.test.ts/`
 
-
 ### runtime-agent-session.ts: `packages/forge-runtime-core/src/runtime-agent-session.ts/`
-
 
 ### runtime-working-memory.test.ts: `packages/forge-runtime-core/src/runtime-working-memory.test.ts/`
 
-
 ### runtime-working-memory.ts: `packages/forge-runtime-core/src/runtime-working-memory.ts/`
-
 
 ### runtime.test.ts: `packages/forge-runtime-core/src/runtime.test.ts/`
 
-
 ### runtime.ts: `packages/forge-runtime-core/src/runtime.ts/`
-
 
 ### safe-identifier.test.ts: `packages/forge-runtime-core/src/safe-identifier.test.ts/`
 
-
 ### safe-identifier.ts: `packages/forge-runtime-core/src/safe-identifier.ts/`
-
 
 ### sqlite-workspace-retrieval.test.ts: `packages/forge-runtime-core/src/sqlite-workspace-retrieval.test.ts/`
 
-
 ### sqlite-workspace-retrieval.ts: `packages/forge-runtime-core/src/sqlite-workspace-retrieval.ts/`
-
 
 ### tool-output-truncation.test.ts: `packages/forge-runtime-core/src/tool-output-truncation.test.ts/`
 
-
 ### tool-output-truncation.ts: `packages/forge-runtime-core/src/tool-output-truncation.ts/`
-
 
 ### tools.test.ts: `packages/forge-runtime-core/src/tools.test.ts/`
 
-
 ### tools.ts: `packages/forge-runtime-core/src/tools.ts/`
-
 
 ### usage.test.ts: `packages/forge-runtime-core/src/usage.test.ts/`
 
-
 ### usage.ts: `packages/forge-runtime-core/src/usage.ts/`
-
 
 ### wake-queue.ts: `packages/forge-runtime-core/src/wake-queue.ts/`
 
-
 ### working-memory.test.ts: `packages/forge-runtime-core/src/working-memory.test.ts/`
 
-
 ### working-memory.ts: `packages/forge-runtime-core/src/working-memory.ts/`
-

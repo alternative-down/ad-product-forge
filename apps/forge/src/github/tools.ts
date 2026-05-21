@@ -6,7 +6,11 @@ import { hasToolPermission } from '../capabilities/catalog';
 import type { GitHubAppProvisioning } from './types';
 import type { GitHubAppManager } from './manager';
 
-export function createGitHubTools(agentId: string, githubApps: GitHubAppManager, allowedToolIds?: Set<string> | null) {
+export function createGitHubTools(
+  agentId: string,
+  githubApps: GitHubAppManager,
+  allowedToolIds?: Set<string> | null,
+) {
   const tools: Record<string, Tool<unknown, unknown>> = {};
 
   if (hasToolPermission(allowedToolIds, 'get_github_git_credentials')) {
@@ -18,20 +22,37 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
         repositoryName: z
           .string()
           .optional()
-          .describe('Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.'),
+          .describe(
+            'Optional repository name if you want credentials for one specific repository. Leave empty to get all available credentials.',
+          ),
       }),
       execute: async (input) => {
-        forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials called', context: { repositoryName: input.repositoryName } });
+        forgeDebug({
+          scope: 'tools:github',
+          level: 'info',
+          message: 'get_github_git_credentials called',
+          context: { repositoryName: input.repositoryName },
+        });
 
         try {
           const result = await githubApps.getGitCredentials({
             agentId,
             repositoryName: input.repositoryName,
           });
-          forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials result', context: { hasCredentials: result !== null && result !== undefined } });
+          forgeDebug({
+            scope: 'tools:github',
+            level: 'info',
+            message: 'get_github_git_credentials result',
+            context: { hasCredentials: result !== null && result !== undefined },
+          });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'tools:github', level: 'info', message: 'get_github_git_credentials error', context: { error: String(error) } });
+          forgeDebug({
+            scope: 'tools:github',
+            level: 'info',
+            message: 'get_github_git_credentials error',
+            context: { error: String(error) },
+          });
           return {
             valid: false,
             error: String(error),
@@ -66,14 +87,20 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
             status: prov.status,
             registrationUrl: provisioning.registrationUrl,
             installUrl: prov.installUrl ?? null,
-            message: prov.status === 'active'
-              ? 'GitHub App is fully provisioned and installed.'
-              : prov.status === 'created'
-              ? 'GitHub App created but not yet installed. Use installUrl to complete installation.'
-              : 'GitHub App provisioning is pending. Use registrationUrl to initiate creation.',
+            message:
+              prov.status === 'active'
+                ? 'GitHub App is fully provisioned and installed.'
+                : prov.status === 'created'
+                  ? 'GitHub App created but not yet installed. Use installUrl to complete installation.'
+                  : 'GitHub App provisioning is pending. Use registrationUrl to initiate creation.',
           };
         } catch (error) {
-          forgeDebug({ scope: 'tools:github', level: 'error', message: 'get_github_provisioning_status: failed to check provisioning status', context: { agentId, error: String(serializeError(error)) } });
+          forgeDebug({
+            scope: 'tools:github',
+            level: 'error',
+            message: 'get_github_provisioning_status: failed to check provisioning status',
+            context: { agentId, error: String(serializeError(error)) },
+          });
           return { valid: false, error: String(error) };
         }
       },
@@ -100,19 +127,28 @@ export function createGitHubTools(agentId: string, githubApps: GitHubAppManager,
 
           // getAgentProvisioning auto-creates if not found
           if (!provisioning) {
-            return { valid: false, error: 'GitHub integration is not configured at the platform level.' };
+            return {
+              valid: false,
+              error: 'GitHub integration is not configured at the platform level.',
+            };
           }
 
           return {
             valid: true,
             status: provisioning.status,
             registrationUrl: provisioning.registrationUrl,
-            message: provisioning.status === 'pending'
-              ? 'GitHub App manifest submitted. Await GitHub callback to complete creation.'
-              : 'Provisioning initiated. Follow registrationUrl to complete GitHub App creation.',
+            message:
+              provisioning.status === 'pending'
+                ? 'GitHub App manifest submitted. Await GitHub callback to complete creation.'
+                : 'Provisioning initiated. Follow registrationUrl to complete GitHub App creation.',
           };
         } catch (error) {
-          forgeDebug({ scope: 'tools:github', level: 'error', message: 'start_github_app_provisioning: failed to start provisioning', context: { agentId, error: String(serializeError(error)) } });
+          forgeDebug({
+            scope: 'tools:github',
+            level: 'error',
+            message: 'start_github_app_provisioning: failed to start provisioning',
+            context: { agentId, error: String(serializeError(error)) },
+          });
           return { valid: false, error: String(error) };
         }
       },

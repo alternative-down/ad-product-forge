@@ -27,9 +27,7 @@ function RuntimeSettingField({ label, description, tooltip, children }: RuntimeS
                 <CircleHelp className="h-4 w-4" />
               </span>
             </TooltipTrigger>
-            <TooltipContent className="max-w-72 text-xs leading-relaxed">
-              {tooltip}
-            </TooltipContent>
+            <TooltipContent className="max-w-72 text-xs leading-relaxed">{tooltip}</TooltipContent>
           </Tooltip>
         ) : null}
       </div>
@@ -94,7 +92,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.memoryLastMessagesCount}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, memoryLastMessagesCount: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  memoryLastMessagesCount: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending || runtimeSettings.memoryLastMessagesFullEnabled}
             />
@@ -123,7 +124,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.tokenCountFilterLimit}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, tokenCountFilterLimit: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  tokenCountFilterLimit: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending || !runtimeSettings.tokenCountFilterEnabled}
             />
@@ -152,7 +156,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.checkpointedOmTotalContextTokens}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmTotalContextTokens: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  checkpointedOmTotalContextTokens: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
@@ -167,7 +174,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.checkpointedOmRecentRawTokens}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmRecentRawTokens: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  checkpointedOmRecentRawTokens: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
@@ -218,7 +228,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.checkpointedOmObservationSupportTokens}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmObservationSupportTokens: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  checkpointedOmObservationSupportTokens: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
@@ -233,7 +246,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.checkpointedOmReflectionSupportTokens}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, checkpointedOmReflectionSupportTokens: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  checkpointedOmReflectionSupportTokens: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending || !runtimeSettings.checkpointedOmEnabled}
             />
@@ -248,7 +264,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.ltmRecallScoreThreshold}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, ltmRecallScoreThreshold: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  ltmRecallScoreThreshold: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending}
             />
@@ -263,7 +282,10 @@ export function RuntimeSettingsSection({
               type="number"
               value={runtimeSettings.ltmRecallDocumentCount}
               onChange={(event) =>
-                onRuntimeDraftChange({ ...runtimeSettings, ltmRecallDocumentCount: event.target.value })
+                onRuntimeDraftChange({
+                  ...runtimeSettings,
+                  ltmRecallDocumentCount: event.target.value,
+                })
               }
               disabled={settingsMutation.isPending}
             />

@@ -9,7 +9,13 @@ import {
   AdminTextarea,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { humanizeRecurrencePeriod } from './finance-accounts-format';
 import type { MovementForm } from './-finance-accounts-types';
@@ -73,9 +79,7 @@ export function MovementDialog(input: {
                   disabled={input.pending}
                 >
                   <SelectTrigger id="finance-entry-direction" className="w-full">
-                    <SelectValue>
-                      {input.form.direction === 'in' ? 'Entrada' : 'Saída'}
-                    </SelectValue>
+                    <SelectValue>{input.form.direction === 'in' ? 'Entrada' : 'Saída'}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="in">Entrada</SelectItem>
@@ -93,7 +97,9 @@ export function MovementDialog(input: {
                 <AdminInput
                   id="finance-entry-name"
                   value={input.form.name}
-                  onChange={(event) => input.onFormChange({ ...input.form, name: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, name: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -127,7 +133,9 @@ export function MovementDialog(input: {
                   id="finance-entry-date"
                   type="datetime-local"
                   value={input.form.date}
-                  onChange={(event) => input.onFormChange({ ...input.form, date: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, date: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -167,7 +175,9 @@ export function MovementDialog(input: {
                 id="finance-entry-description"
                 rows={4}
                 value={input.form.description}
-                onChange={(event) => input.onFormChange({ ...input.form, description: event.target.value })}
+                onChange={(event) =>
+                  input.onFormChange({ ...input.form, description: event.target.value })
+                }
                 disabled={input.pending}
               />
             </div>

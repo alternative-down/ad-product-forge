@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import type {
   CoolifySystemIntegrationConfig,
   GitHubSystemIntegrationConfig,
@@ -71,10 +70,7 @@ export function createSystemIntegrationStore(db: Database) {
       minimaxConfigSchema.parse(JSON.parse(decryptSecret(encryptedConfig))),
   };
 
-  const parseConfigSchemaMap: Record<
-    SystemIntegrationProviderType,
-    z.ZodType<unknown>
-  > = {
+  const parseConfigSchemaMap: Record<SystemIntegrationProviderType, z.ZodType<unknown>> = {
     migadu: migaduConfigSchema,
     coolify: coolifyConfigSchema,
     github: githubConfigSchema,
@@ -104,7 +100,12 @@ export function createSystemIntegrationStore(db: Database) {
         };
       }) as any;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] listIntegrations failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] listIntegrations failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -112,9 +113,16 @@ export function createSystemIntegrationStore(db: Database) {
   async function getMigaduConfig(): Promise<MigaduSystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('migadu');
-      return row != null ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig) : null;
+      return row != null
+        ? (parseMigaduConfig(row.encryptedConfig) as MigaduSystemIntegrationConfig)
+        : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getMigaduConfig failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] getMigaduConfig failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -122,9 +130,16 @@ export function createSystemIntegrationStore(db: Database) {
   async function getCoolifyConfig(): Promise<CoolifySystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('coolify');
-      return row != null ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig) : null;
+      return row != null
+        ? (parseCoolifyConfig(row.encryptedConfig) as CoolifySystemIntegrationConfig)
+        : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getCoolifyConfig failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] getCoolifyConfig failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -132,9 +147,16 @@ export function createSystemIntegrationStore(db: Database) {
   async function getGitHubConfig(): Promise<GitHubSystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('github');
-      return row != null ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig) : null;
+      return row != null
+        ? (parseGitHubConfig(row.encryptedConfig) as GitHubSystemIntegrationConfig)
+        : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getGitHubConfig failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] getGitHubConfig failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -142,9 +164,16 @@ export function createSystemIntegrationStore(db: Database) {
   async function getMinimaxConfig(): Promise<MinimaxSystemIntegrationConfig | null> {
     try {
       const row = await getEnabledIntegration('minimax');
-      return row != null ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig) : null;
+      return row != null
+        ? (parseMinimaxConfig(row.encryptedConfig) as MinimaxSystemIntegrationConfig)
+        : null;
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] getMinimaxConfig failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] getMinimaxConfig failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -204,7 +233,12 @@ export function createSystemIntegrationStore(db: Database) {
         config: parsedConfig,
       };
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] upsertIntegration failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] upsertIntegration failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -213,7 +247,12 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       await db.delete(systemIntegrations).where(eq(systemIntegrations.providerType, providerType));
     } catch (err) {
-      forgeDebug({ scope: 'system-integrations', level: 'error', message: '[system-integrations] deleteIntegration failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'error',
+        message: '[system-integrations] deleteIntegration failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -260,7 +299,12 @@ export function createSystemIntegrationStore(db: Database) {
     try {
       return parseIntegrationConfig(providerType, encryptedConfig);
     } catch (error) {
-      forgeDebug({ scope: 'system-integrations', level: 'info', message: 'Failed to parse integration config', context: { error: String(serializeError(error)) } });
+      forgeDebug({
+        scope: 'system-integrations',
+        level: 'info',
+        message: 'Failed to parse integration config',
+        context: { error: String(serializeError(error)) },
+      });
       return null;
     }
   }
@@ -295,7 +339,11 @@ export function createSystemIntegrationStore(db: Database) {
   ) {
     const schema = parseConfigSchemaMap[providerType];
     if (schema === null || schema === undefined) {
-      forgeDebug({ scope: 'system-integrations-store', level: 'error', message: 'system-integrations-store: validation/requirement failed' });
+      forgeDebug({
+        scope: 'system-integrations-store',
+        level: 'error',
+        message: 'system-integrations-store: validation/requirement failed',
+      });
       throw new Error('Unknown integration provider type');
     }
     return schema.parse(config);

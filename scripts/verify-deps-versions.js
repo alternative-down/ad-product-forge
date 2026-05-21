@@ -20,7 +20,7 @@ function getPackageJson(dir) {
 function collectDependencies(pkgJson, pkgName) {
   const deps = {};
   const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
-  
+
   for (const field of fields) {
     if (pkgJson[field]) {
       for (const [name, version] of Object.entries(pkgJson[field])) {
@@ -35,9 +35,9 @@ function collectDependencies(pkgJson, pkgName) {
 function findPackages(dir) {
   const pkg = getPackageJson(dir);
   if (!pkg) return [];
-  
+
   const packages = [];
-  
+
   // Check apps and packages directories
   const subDirs = ['apps', 'packages'];
   for (const subDir of subDirs) {
@@ -50,7 +50,7 @@ function findPackages(dir) {
       }
     } catch {}
   }
-  
+
   return packages;
 }
 
@@ -70,7 +70,7 @@ packages.push(rootDir); // Include root package
 for (const pkg of packages) {
   const pkgJson = getPackageJson(pkg);
   if (!pkgJson) continue;
-  
+
   const pkgName = pkg.replace(rootDir + '/', '') || 'root';
   const pkgDeps = collectDependencies(pkgJson, pkgName);
   for (const [name, versions] of Object.entries(pkgDeps)) {

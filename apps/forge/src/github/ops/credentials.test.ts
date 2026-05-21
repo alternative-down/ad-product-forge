@@ -15,13 +15,11 @@ const baseCtx = (): any => ({
   routeCleanups: new Map(),
   GITHUB_PROVIDER_TYPE: 'github',
   and: vi.fn().mockImplementation((a: unknown) => a) as unknown as OpsContext['and'],
-  eq: vi
-    .fn()
-    .mockImplementation((a: unknown, b: unknown) => ({
-      type: 'eq',
-      a,
-      b,
-    })) as unknown as OpsContext['eq'],
+  eq: vi.fn().mockImplementation((a: unknown, b: unknown) => ({
+    type: 'eq',
+    a,
+    b,
+  })) as unknown as OpsContext['eq'],
   agentProviders: vi.fn() as unknown as OpsContext['agentProviders'],
   agents: vi.fn() as unknown as OpsContext['agents'],
   createId: () => 'test-id',
@@ -196,20 +194,18 @@ describe('createCredentialsOps — parseCredentials', () => {
 
   it('parseCredentials delegates to ctx.parseCredentials', async () => {
     const { createCredentialsOps } = await import('./credentials.js');
-    const parseMock = vi
-      .fn()
-      .mockReturnValue({
-        status: 'pending',
-        manifestConfig: {
-          name: 'T',
-          url: '',
-          callbackUrls: [],
-          redirectUrl: '',
-          hookAttributes: {},
-          callbackURL: '',
-        } as any,
-        encryptedCredentials: 'x',
-      });
+    const parseMock = vi.fn().mockReturnValue({
+      status: 'pending',
+      manifestConfig: {
+        name: 'T',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      } as any,
+      encryptedCredentials: 'x',
+    });
     const ctx = baseCtx();
     ctx.parseCredentials = parseMock as unknown as OpsContext['parseCredentials'];
     const ops = createCredentialsOps(ctx);
@@ -231,20 +227,18 @@ describe('createCredentialsOps — getInstallationOctokit', () => {
     const createOctoMock = vi.fn().mockResolvedValue(fakeOctokit);
     sharedDb.query.agentProviders.findFirst.mockResolvedValue({ encryptedCredentials: 'e' });
     const ctx = baseCtx();
-    ctx.parseCredentials = vi
-      .fn()
-      .mockReturnValue({
-        status: 'active',
-        manifestConfig: {
-          name: 'T',
-          url: '',
-          callbackUrls: [],
-          redirectUrl: '',
-          hookAttributes: {},
-          callbackURL: '',
-        } as any,
-        encryptedCredentials: 'x',
-      }) as unknown as OpsContext['parseCredentials'];
+    ctx.parseCredentials = vi.fn().mockReturnValue({
+      status: 'active',
+      manifestConfig: {
+        name: 'T',
+        url: '',
+        callbackUrls: [],
+        redirectUrl: '',
+        hookAttributes: {},
+        callbackURL: '',
+      } as any,
+      encryptedCredentials: 'x',
+    }) as unknown as OpsContext['parseCredentials'];
     ctx.createInstallationOctokit =
       createOctoMock as unknown as OpsContext['createInstallationOctokit'];
     const ops = createCredentialsOps(ctx);

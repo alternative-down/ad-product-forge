@@ -1,7 +1,7 @@
 import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { createInternalAgentRuntime } from './create-forge-agent';
 import type { InternalAgentRuntime } from './runtime/types';
 import { loadAgentRuntimeData } from './agent-loader-data';
@@ -11,7 +11,6 @@ export type { AgentLoaderConfig, SingleAgentLoaderConfig };
 import { buildAgentRuntimeConfig } from './agent-loader-runtime-config';
 import { createAgentContractStore } from './agent-contract-store';
 import { createSystemSettingsStore } from '../system-settings/store';
-
 
 /**
  * Load agent configuration from database and create agent instance
@@ -26,11 +25,24 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
   const runtimeData = await loadAgentRuntimeData(db, config);
   const allowedToolIds = new Set(runtimeData.capabilitySet.toolIds);
 
-  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, agentName: runtimeData.agent.name, message: 'Loading agent' });
-  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, message: 'Allowed tool IDs', context: { toolIdCount: allowedToolIds.size } });
+  forgeDebug({
+    scope: 'agent-loader',
+    level: 'info',
+    agentId: runtimeData.agent.id,
+    agentName: runtimeData.agent.name,
+    message: 'Loading agent',
+  });
+  forgeDebug({
+    scope: 'agent-loader',
+    level: 'info',
+    agentId: runtimeData.agent.id,
+    message: 'Allowed tool IDs',
+    context: { toolIdCount: allowedToolIds.size },
+  });
   await config.internalChat.registerAgentAccount({
     agentId: runtimeData.agent.id,
-    displayName: runtimeData.providerCredentials['internal-chat']?.displayName ?? runtimeData.agent.name,
+    displayName:
+      runtimeData.providerCredentials['internal-chat']?.displayName ?? runtimeData.agent.name,
     agentName: runtimeData.agent.name,
     agentDescription: runtimeData.agent.description ?? undefined,
     roleName: runtimeData.role?.name,
@@ -44,35 +56,49 @@ export async function loadAgent(db: Database, config: SingleAgentLoaderConfig) {
     allowedToolIds,
   });
 
-  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, message: 'Tools loaded', context: toolset.breakdown });
-
-  const runtime = await createInternalAgentRuntime(buildAgentRuntimeConfig(config, runtimeData, toolset), {
-    longTermMemory: true,
-    contractStore: createAgentContractStore(db),
-    readRuntimeMemorySettings: async () => {
-      const settings = await systemSettings.getSettings();
-
-      return {
-        checkpointedOmTotalContextTokens: settings.checkpointedOmTotalContextTokens,
-        checkpointedOmRecentRawTokens: settings.checkpointedOmRecentRawTokens,
-        checkpointedOmRawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
-        checkpointedOmObservationReflectionBatchTokens:
-          settings.checkpointedOmObservationReflectionBatchTokens,
-        checkpointedOmObservationSupportTokens: settings.checkpointedOmObservationSupportTokens,
-        checkpointedOmReflectionSupportTokens: settings.checkpointedOmReflectionSupportTokens,
-        ltmRecallSearchMode: settings.ltmRecallSearchMode,
-        ltmRecallWorkspaceTopK: settings.ltmRecallWorkspaceTopK,
-        ltmRecallGraphTopK: settings.ltmRecallGraphTopK,
-        ltmRecallGraphThreshold: settings.ltmRecallGraphThreshold,
-        ltmRecallGraphRandomWalkSteps: settings.ltmRecallGraphRandomWalkSteps,
-        ltmRecallGraphIncludeSources: settings.ltmRecallGraphIncludeSources,
-        ltmRecallScoreThreshold: settings.ltmRecallScoreThreshold,
-        ltmRecallDocumentCount: settings.ltmRecallDocumentCount,
-      };
-    },
+  forgeDebug({
+    scope: 'agent-loader',
+    level: 'info',
+    agentId: runtimeData.agent.id,
+    message: 'Tools loaded',
+    context: toolset.breakdown,
   });
 
-  forgeDebug({ scope: 'agent-loader', level: 'info', agentId: runtimeData.agent.id, message: 'Agent loaded successfully' });
+  const runtime = await createInternalAgentRuntime(
+    buildAgentRuntimeConfig(config, runtimeData, toolset),
+    {
+      longTermMemory: true,
+      contractStore: createAgentContractStore(db),
+      readRuntimeMemorySettings: async () => {
+        const settings = await systemSettings.getSettings();
+
+        return {
+          checkpointedOmTotalContextTokens: settings.checkpointedOmTotalContextTokens,
+          checkpointedOmRecentRawTokens: settings.checkpointedOmRecentRawTokens,
+          checkpointedOmRawObservationBatchTokens: settings.checkpointedOmRawObservationBatchTokens,
+          checkpointedOmObservationReflectionBatchTokens:
+            settings.checkpointedOmObservationReflectionBatchTokens,
+          checkpointedOmObservationSupportTokens: settings.checkpointedOmObservationSupportTokens,
+          checkpointedOmReflectionSupportTokens: settings.checkpointedOmReflectionSupportTokens,
+          ltmRecallSearchMode: settings.ltmRecallSearchMode,
+          ltmRecallWorkspaceTopK: settings.ltmRecallWorkspaceTopK,
+          ltmRecallGraphTopK: settings.ltmRecallGraphTopK,
+          ltmRecallGraphThreshold: settings.ltmRecallGraphThreshold,
+          ltmRecallGraphRandomWalkSteps: settings.ltmRecallGraphRandomWalkSteps,
+          ltmRecallGraphIncludeSources: settings.ltmRecallGraphIncludeSources,
+          ltmRecallScoreThreshold: settings.ltmRecallScoreThreshold,
+          ltmRecallDocumentCount: settings.ltmRecallDocumentCount,
+        };
+      },
+    },
+  );
+
+  forgeDebug({
+    scope: 'agent-loader',
+    level: 'info',
+    agentId: runtimeData.agent.id,
+    message: 'Agent loaded successfully',
+  });
   return runtime;
 }
 
@@ -92,7 +118,12 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
     return new Map<string, InternalAgentRuntime>();
   }
 
-  forgeDebug({ scope: 'agent-loader', level: 'info', message: 'Loading agents from registry', context: { agentCount: agentConfigs.length } });
+  forgeDebug({
+    scope: 'agent-loader',
+    level: 'info',
+    message: 'Loading agents from registry',
+    context: { agentCount: agentConfigs.length },
+  });
 
   const agents = new Map<string, InternalAgentRuntime>();
 
@@ -110,11 +141,22 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
       });
       agents.set(agentConfig.id, runtime);
     } catch (error) {
-      forgeDebug({ scope: 'agent-loader', level: 'error', agentId: agentConfig.id, message: 'Failed to load agent', context: { error: serializeError(error) } });
+      forgeDebug({
+        scope: 'agent-loader',
+        level: 'error',
+        agentId: agentConfig.id,
+        message: 'Failed to load agent',
+        context: { error: serializeError(error) },
+      });
       // Continue loading other agents even if one fails
     }
   }
 
-  forgeDebug({ scope: 'agent-loader', level: 'info', message: 'Successfully loaded agents', context: { agentCount: agents.size } });
+  forgeDebug({
+    scope: 'agent-loader',
+    level: 'info',
+    message: 'Successfully loaded agents',
+    context: { agentCount: agents.size },
+  });
   return agents;
 }

@@ -28,10 +28,12 @@ function SettingsCoolifyRoute() {
 
   const patchLiveDraft = useCallback(
     (partial: Partial<CoolifyFormValues>) => {
-      setLiveDraft((current) => buildCoolifyFormValues(
-        current !== null ? { ...current, ...partial } : partial as CoolifyFormValues,
-        integration,
-      ));
+      setLiveDraft((current) =>
+        buildCoolifyFormValues(
+          current !== null ? { ...current, ...partial } : (partial as CoolifyFormValues),
+          integration,
+        ),
+      );
     },
     [integration],
   );
@@ -135,7 +137,9 @@ function SettingsCoolifyRoute() {
             disabled={mutation.isPending}
           />
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="coolify-status">Ativo</label>
+            <label className="text-sm font-medium" htmlFor="coolify-status">
+              Ativo
+            </label>
             <div className="flex min-h-9 items-center">
               <Switch
                 id="coolify-status"
@@ -174,7 +178,9 @@ interface TextFieldProps {
 function TextField({ id, label, value, onChange, type, disabled }: TextFieldProps) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium" htmlFor={id}>{label}</label>
+      <label className="text-sm font-medium" htmlFor={id}>
+        {label}
+      </label>
       <AdminInput
         id={id}
         type={type}

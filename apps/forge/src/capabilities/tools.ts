@@ -124,7 +124,7 @@ export function createCapabilityTools(
               description: input.create.description,
             });
 
-if ('roleId' in result && result.roleId != null) {
+            if ('roleId' in result && result.roleId != null) {
               await reloadAgentsForRole(db, loaderConfig, result.roleId);
             }
 
@@ -183,19 +183,19 @@ if ('roleId' in result && result.roleId != null) {
           }
 
           if (input.delete.roleId === null || input.delete.roleId === undefined) {
-              return {
-                valid: false,
-                error: 'delete.roleId is required when action is delete',
-                hint: 'Use list_agent_roles to find the roleId you want to delete.',
-              };
-            }
+            return {
+              valid: false,
+              error: 'delete.roleId is required when action is delete',
+              hint: 'Use list_agent_roles to find the roleId you want to delete.',
+            };
+          }
 
-            const result = await capabilities.manageRole({
-              action: 'delete',
-              roleId: input.delete.roleId,
-            });
+          const result = await capabilities.manageRole({
+            action: 'delete',
+            roleId: input.delete.roleId,
+          });
 
-            if ('roleId' in result && result.roleId != null) {
+          if ('roleId' in result && result.roleId != null) {
             await reloadAgentsForRole(db, loaderConfig, result.roleId);
           }
 

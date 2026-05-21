@@ -4,47 +4,60 @@
 
 import { z } from 'zod';
 
-
 import { jsonResponse, parseJsonBody } from '../../index';
 import { createCapabilityStore } from '../../../../capabilities/store';
 import type { HttpHandler } from '../../../../http/server';
 import { forgeDebug } from '../../debug';
 
-const createRoleSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-}).strict();
+const createRoleSchema = z
+  .object({
+    name: z.string(),
+    description: z.string().optional(),
+  })
+  .strict();
 
-const updateRoleSchema = z.object({
-  roleId: z.string(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-}).strict();
+const updateRoleSchema = z
+  .object({
+    roleId: z.string(),
+    name: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .strict();
 
-const deleteRoleSchema = z.object({
-  roleId: z.string(),
-}).strict();
+const deleteRoleSchema = z
+  .object({
+    roleId: z.string(),
+  })
+  .strict();
 
-const _roleCapabilitySchema = z.object({
-  roleId: z.string(),
-  capabilityName: z.string(),
-  capabilityValue: z.boolean(),
-}).strict();
+const _roleCapabilitySchema = z
+  .object({
+    roleId: z.string(),
+    capabilityName: z.string(),
+    capabilityValue: z.boolean(),
+  })
+  .strict();
 
-const roleToolPermissionSchema = z.object({
-  roleId: z.string(),
-  toolName: z.string(),
-  allowed: z.boolean(),
-}).strict();
+const roleToolPermissionSchema = z
+  .object({
+    roleId: z.string(),
+    toolName: z.string(),
+    allowed: z.boolean(),
+  })
+  .strict();
 
-const _roleWorkflowPermissionSchema = z.object({
-  roleId: z.string(),
-  workflowName: z.string(),
-  allowed: z.boolean(),
-}).strict();
+const _roleWorkflowPermissionSchema = z
+  .object({
+    roleId: z.string(),
+    workflowName: z.string(),
+    allowed: z.boolean(),
+  })
+  .strict();
 
 export function registerRoleOps(
-  httpServer: { registerRoute: (route: { method: "POST"; path: string; handler: HttpHandler }) => void },
+  httpServer: {
+    registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
+  },
   db: Parameters<typeof createCapabilityStore>[0],
 ) {
   const capabilities = createCapabilityStore(db);
@@ -57,10 +70,18 @@ export function registerRoleOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, createRoleSchema);
-        const result = await capabilities.createRole({ name: body.name, description: body.description });
+        const result = await capabilities.createRole({
+          name: body.name,
+          description: body.description,
+        });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/create", context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/roles/create',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -73,10 +94,19 @@ export function registerRoleOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, updateRoleSchema);
-        const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
+        const result = await capabilities.updateRole({
+          roleId: body.roleId,
+          name: body.name,
+          description: body.description,
+        });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/update", context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/roles/update',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -115,7 +145,12 @@ export function registerRoleOps(
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles/tool-permissions', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: '/admin/roles/tool-permissions',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

@@ -41,7 +41,11 @@ function makeInput() {
 }
 
 // Ops parameter — typed as any to avoid Mock<Procedure|Constructable> incompatibility with vi.fn()
-function makeOps(overrides?: { runInternalHiring?: unknown; runInternalTermination?: unknown; changeAgentRoleFromAdmin?: unknown }): any {
+function makeOps(overrides?: {
+  runInternalHiring?: unknown;
+  runInternalTermination?: unknown;
+  changeAgentRoleFromAdmin?: unknown;
+}): any {
   return {
     runInternalHiring: overrides?.runInternalHiring ?? vi.fn(),
     runInternalTermination: overrides?.runInternalTermination ?? vi.fn(),
@@ -193,10 +197,10 @@ describe('registerLifecycleDelegateOps', () => {
       expect(response.status).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
-      expect(mockRole).toHaveBeenCalledWith(
-        expect.anything(),
-        { agentId: 'agent-456', roleId: 'role-admin' },
-      );
+      expect(mockRole).toHaveBeenCalledWith(expect.anything(), {
+        agentId: 'agent-456',
+        roleId: 'role-admin',
+      });
     });
 
     it('returns 500 on role change error', async () => {

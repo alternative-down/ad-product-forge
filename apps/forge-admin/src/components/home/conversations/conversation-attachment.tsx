@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { AdminDialogBody, AdminDialogContent, AdminDialogHeader, AdminDialogTitle } from '@/components/admin';
+import {
+  AdminDialogBody,
+  AdminDialogContent,
+  AdminDialogHeader,
+  AdminDialogTitle,
+} from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
 import { getHomeInternalChatAttachmentBlob } from '@/lib/admin-api/index';
 
@@ -47,12 +52,22 @@ export function ConversationAttachment(input: {
         URL.revokeObjectURL(currentUrl);
       }
     };
-  }, [input.accountId, input.attachment.contentType, input.attachment.name, input.conversationId, input.messageId]);
+  }, [
+    input.accountId,
+    input.attachment.contentType,
+    input.attachment.name,
+    input.conversationId,
+    input.messageId,
+  ]);
 
   if (isImageAttachment(input.attachment.contentType) && imageUrl) {
     return (
       <>
-        <button type="button" className="overflow-hidden rounded-sm border border-border" onClick={() => setPreviewOpen(true)}>
+        <button
+          type="button"
+          className="overflow-hidden rounded-sm border border-border"
+          onClick={() => setPreviewOpen(true)}
+        >
           <img src={imageUrl} alt={input.attachment.name} className="h-20 w-20 object-cover" />
         </button>
 
@@ -62,7 +77,11 @@ export function ConversationAttachment(input: {
               <AdminDialogTitle>{input.attachment.name}</AdminDialogTitle>
             </AdminDialogHeader>
             <AdminDialogBody>
-              <img src={imageUrl} alt={input.attachment.name} className="max-h-[70dvh] w-full rounded-sm object-contain" />
+              <img
+                src={imageUrl}
+                alt={input.attachment.name}
+                className="max-h-[70dvh] w-full rounded-sm object-contain"
+              />
             </AdminDialogBody>
           </AdminDialogContent>
         </Dialog>

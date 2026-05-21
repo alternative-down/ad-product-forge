@@ -1,5 +1,4 @@
 export type AgentDetail = {
-
   agentId: string;
 
   name: string;
@@ -11,37 +10,30 @@ export type AgentDetail = {
   executionState: 'idle' | 'running' | 'absent';
 
   modelProfile: {
-
     profileId: string;
 
     name: string;
 
     modelKey: string;
-
   } | null;
 
   omModelProfile: {
-
     profileId: string;
 
     name: string;
 
     modelKey: string;
-
   } | null;
 
   role: {
-
     roleId: string;
 
     name: string;
 
     description?: string | null;
-
   } | null;
 
   workspace: {
-
     autoSync: boolean;
 
     bm25: boolean;
@@ -51,7 +43,6 @@ export type AgentDetail = {
     filesystem: string | null;
 
     sandbox: string | null;
-
   };
 
   loaded: boolean;
@@ -59,7 +50,6 @@ export type AgentDetail = {
   runner: AgentListItem['runner'];
 
   providers: Array<{
-
     providerType: string;
 
     createdAt: number;
@@ -67,11 +57,9 @@ export type AgentDetail = {
     editable: boolean;
 
     credentials: unknown;
-
   }>;
 
   mcpServers: Array<{
-
     configId: string;
 
     serverId: string;
@@ -97,11 +85,9 @@ export type AgentDetail = {
     createdAt: string;
 
     updatedAt: string;
-
   }>;
 
   skills: Array<{
-
     skillName: string;
 
     description?: string;
@@ -109,11 +95,9 @@ export type AgentDetail = {
     fileCount: number;
 
     updatedAt: number;
-
   }>;
 
   githubProvisioning: {
-
     agentId: string;
 
     status: 'pending' | 'created' | 'active';
@@ -123,9 +107,7 @@ export type AgentDetail = {
     installUrl?: string;
 
     manifestConfig: {
-
       permissions: {
-
         administration: boolean;
 
         contents: boolean;
@@ -141,11 +123,9 @@ export type AgentDetail = {
         repository_projects: boolean;
 
         workflows: boolean;
-
       };
 
       events: {
-
         push: boolean;
 
         pull_request: boolean;
@@ -159,15 +139,11 @@ export type AgentDetail = {
         repository: boolean;
 
         workflow_run: boolean;
-
       };
-
     };
-
   } | null;
 
   activeContract: {
-
     contractId: string;
 
     agentId: string;
@@ -185,11 +161,9 @@ export type AgentDetail = {
     spentPercent: number;
 
     autoRenew: boolean;
-
   } | null;
 
   recentExecutionSteps: Array<{
-
     stepId: string;
 
     llmProfileId: string;
@@ -215,7 +189,6 @@ export type AgentDetail = {
     costUsd: number;
 
     createdAt: number;
-
   }>;
 
   schedules: AgentSchedule[];
@@ -223,7 +196,6 @@ export type AgentDetail = {
   heartbeat: AgentSchedule | null;
 
   recentNotifications: Array<{
-
     notificationId: string;
 
     content: string;
@@ -231,9 +203,5 @@ export type AgentDetail = {
     timestamp: number;
 
     read: boolean;
-
   }>;
-
 };
-
-

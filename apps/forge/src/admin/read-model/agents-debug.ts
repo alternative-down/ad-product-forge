@@ -20,12 +20,22 @@ export interface AgentDebugReadModelDeps {
   // Function dependencies (passed as thunks to avoid circular reference issues)
   getAgent: (agentId: string) => Promise<unknown>;
   getAgentRuntimeMemory?: (agentId: string) => Promise<unknown>;
-  listRecentAgentHomeMetricSnapshots: (input: { agentId: string; limit: number }) => Promise<unknown>;
+  listRecentAgentHomeMetricSnapshots: (input: {
+    agentId: string;
+    limit: number;
+  }) => Promise<unknown>;
   registry?: { get(agentId: string): unknown };
 }
 
 export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
-  const { db, workspaceBasePath, getAgent, getAgentRuntimeMemory: getAgentRuntimeMemory_, listRecentAgentHomeMetricSnapshots, registry } = deps;
+  const {
+    db,
+    workspaceBasePath,
+    getAgent,
+    getAgentRuntimeMemory: getAgentRuntimeMemory_,
+    listRecentAgentHomeMetricSnapshots,
+    registry,
+  } = deps;
 
   // Resolve getAgentRuntimeMemory — use provided or lazy-init from agents-runtime-memory
   let getAgentRuntimeMemoryFn = getAgentRuntimeMemory_;
@@ -37,15 +47,31 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
   async function getAgentOmDebugExport(agentId: string) {
     const [agent, runtimeMemory, snapshots] = await Promise.all([
       getAgent(agentId),
-(getAgentRuntimeMemoryFn ?? (async () => { await Promise.resolve(); return null; }))(agentId).catch((err) => {
-        forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: agent not loaded', context: { agentId, error: err instanceof Error ? err.message : String(err) } });
+      (
+        getAgentRuntimeMemoryFn ??
+        (async () => {
+          await Promise.resolve();
+          return null;
+        })
+      )(agentId).catch((err) => {
+        forgeDebug({
+          scope: 'admin-read-model',
+          level: 'warn',
+          message: 'getAgentRuntimeStatus: agent not loaded',
+          context: { agentId, error: err instanceof Error ? err.message : String(err) },
+        });
         return null;
       }),
       listRecentAgentHomeMetricSnapshots({ agentId, limit: 100 }),
     ]);
     if (agent === null || agent === undefined) return null;
     const ltm = await readLongTermMemoryState(db, agentId).catch((err) => {
-      forgeDebug({ scope: 'admin-read-model', level: 'warn', message: 'getAgentRuntimeStatus: LTM recall not available', context: { agentId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'admin-read-model',
+        level: 'warn',
+        message: 'getAgentRuntimeStatus: LTM recall not available',
+        context: { agentId, error: String(serializeError(err)) },
+      });
       return null;
     });
     return { agent, runtimeMemory, snapshots, ltm };
@@ -55,12 +81,15 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
     agentId: string,
     _input: AgentLongTermMemoryRecallDebugSearchInput,
   ) {
-    const agent =
-      await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
+    const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
     if (agent === null || agent === undefined) return null;
     const ltmRecall = await readLongTermMemoryRecallSnapshot(db, agentId);
     return { ltmRecall };
   }
 
-  return { getAgentOmDebugExport, debugAgentLongTermMemoryRecallSearch, getAgentRuntimeMemory: getAgentRuntimeMemoryFn };
+  return {
+    getAgentOmDebugExport,
+    debugAgentLongTermMemoryRecallSearch,
+    getAgentRuntimeMemory: getAgentRuntimeMemoryFn,
+  };
 }

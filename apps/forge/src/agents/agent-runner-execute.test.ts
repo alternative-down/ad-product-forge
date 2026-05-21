@@ -218,13 +218,11 @@ it('returns immediately when contract is null — calls transitionToIdle with de
 it('queues next step when loaded contract id differs from requested contractId', async () => {
   const store = mockStore({
     getExecutionState: vi.fn().mockResolvedValue('running'),
-    getRunnableContract: vi
-      .fn()
-      .mockResolvedValue({
-        id: 'different-contract',
-        budgetUsd: 10,
-        endsAt: Date.now() + 86_400_000,
-      }),
+    getRunnableContract: vi.fn().mockResolvedValue({
+      id: 'different-contract',
+      budgetUsd: 10,
+      endsAt: Date.now() + 86_400_000,
+    }),
   });
   const deps = makeDeps({ store, contractId: 'expected-contract' });
   await executeStep(deps as any);

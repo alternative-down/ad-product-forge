@@ -134,7 +134,10 @@ export function DiscordProviderForm(input: {
 
                 <div className="flex items-center justify-between gap-3">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="discord-new-channel-mentions-only">
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="discord-new-channel-mentions-only"
+                    >
                       Responder só a menções
                     </label>
                     <div className="flex min-h-9 items-center">
@@ -196,7 +199,10 @@ export function DiscordProviderForm(input: {
                       <div className="space-y-3">
                         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
                           <div className="space-y-2">
-                            <label className="text-sm font-medium" htmlFor={`discord-channel-name-${index}`}>
+                            <label
+                              className="text-sm font-medium"
+                              htmlFor={`discord-channel-name-${index}`}
+                            >
                               Nome do canal
                             </label>
                             <AdminInput
@@ -205,7 +211,9 @@ export function DiscordProviderForm(input: {
                               onChange={(event) =>
                                 setDraft((current) => ({
                                   ...(current ?? toDiscordCredentials(input.credentials)),
-                                  channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                  channels: (
+                                    current ?? toDiscordCredentials(input.credentials)
+                                  ).channels.map((value, valueIndex) =>
                                     valueIndex === index
                                       ? { ...value, channelName: event.target.value }
                                       : value,
@@ -217,7 +225,10 @@ export function DiscordProviderForm(input: {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm font-medium" htmlFor={`discord-channel-id-${index}`}>
+                            <label
+                              className="text-sm font-medium"
+                              htmlFor={`discord-channel-id-${index}`}
+                            >
                               Código do canal
                             </label>
                             <AdminInput
@@ -226,7 +237,9 @@ export function DiscordProviderForm(input: {
                               onChange={(event) =>
                                 setDraft((current) => ({
                                   ...(current ?? toDiscordCredentials(input.credentials)),
-                                  channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                  channels: (
+                                    current ?? toDiscordCredentials(input.credentials)
+                                  ).channels.map((value, valueIndex) =>
                                     valueIndex === index
                                       ? { ...value, channelId: event.target.value }
                                       : value,
@@ -240,7 +253,10 @@ export function DiscordProviderForm(input: {
 
                         <div className="flex items-center justify-between gap-3">
                           <div className="space-y-2">
-                            <label className="text-sm font-medium" htmlFor={`discord-mentions-only-${index}`}>
+                            <label
+                              className="text-sm font-medium"
+                              htmlFor={`discord-mentions-only-${index}`}
+                            >
                               Responder só a menções
                             </label>
                             <div className="flex min-h-9 items-center">
@@ -250,7 +266,9 @@ export function DiscordProviderForm(input: {
                                 onCheckedChange={(checked) =>
                                   setDraft((current) => ({
                                     ...(current ?? toDiscordCredentials(input.credentials)),
-                                    channels: (current ?? toDiscordCredentials(input.credentials)).channels.map((value, valueIndex) =>
+                                    channels: (
+                                      current ?? toDiscordCredentials(input.credentials)
+                                    ).channels.map((value, valueIndex) =>
                                       valueIndex === index
                                         ? { ...value, respondToMentionsOnly: checked }
                                         : value,
@@ -271,9 +289,9 @@ export function DiscordProviderForm(input: {
                               onClick={() =>
                                 setDraft((current) => ({
                                   ...(current ?? toDiscordCredentials(input.credentials)),
-                                  channels: (current ?? toDiscordCredentials(input.credentials)).channels.filter(
-                                    (_, valueIndex) => valueIndex !== index,
-                                  ),
+                                  channels: (
+                                    current ?? toDiscordCredentials(input.credentials)
+                                  ).channels.filter((_, valueIndex) => valueIndex !== index),
                                 }))
                               }
                             >
@@ -294,8 +312,12 @@ export function DiscordProviderForm(input: {
             </div>
           </div>
 
-          {saveMutation.error ? <div className="text-sm text-destructive">{saveMutation.error.message}</div> : null}
-          {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
+          {saveMutation.error ? (
+            <div className="text-sm text-destructive">{saveMutation.error.message}</div>
+          ) : null}
+          {deleteMutation.error ? (
+            <div className="text-sm text-destructive">{deleteMutation.error.message}</div>
+          ) : null}
 
           <div className="flex justify-end gap-3">
             {input.configured ? (
@@ -308,7 +330,10 @@ export function DiscordProviderForm(input: {
                 {deleteMutation.isPending ? 'Removendo...' : 'Remover'}
               </AdminButton>
             ) : null}
-            <AdminButton type="submit" disabled={pending || (!input.configured && !credentials.token.trim())}>
+            <AdminButton
+              type="submit"
+              disabled={pending || (!input.configured && !credentials.token.trim())}
+            >
               {deleteMutation.isPending
                 ? 'Removendo...'
                 : saveMutation.isPending

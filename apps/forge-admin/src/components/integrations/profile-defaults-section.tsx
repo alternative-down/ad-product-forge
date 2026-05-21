@@ -1,5 +1,11 @@
 import { AdminButton } from '@/components/admin';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import type { LlmProfile } from '@/lib/admin-api/index';
 
@@ -61,7 +67,9 @@ export function ProfileDefaultsSection(input: {
             onValueChange={input.onHiringRhProfileChange}
           />
         </div>
-        {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}
+        {input.errorMessage ? (
+          <div className="text-sm text-destructive">{input.errorMessage}</div>
+        ) : null}
         <div className="flex justify-end">
           <AdminButton
             type="submit"

@@ -550,7 +550,10 @@ export function createInternalChatGroups(
         )
         .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-      return sortParticipantsBySelfFirst(rows as unknown as InternalChatGroupParticipant[], accountId);
+      return sortParticipantsBySelfFirst(
+        rows as unknown as InternalChatGroupParticipant[],
+        accountId,
+      );
     } catch (err) {
       logInternalChatError('listGroupMembersOrDmPeersByAccount', err, {
         accountId,

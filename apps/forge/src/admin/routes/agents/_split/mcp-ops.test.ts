@@ -52,11 +52,9 @@ describe('registerMcpOps', () => {
   describe('POST /admin/agent/mcp/create', () => {
     it('registers the route', async () => {
       const { registerMcpOps } = await import('./mcp-ops');
-      registerMcpOps(
-        httpServer as Parameters<typeof registerMcpOps>[0],
-        db as any,
-        { loaderConfig: {} },
-      );
+      registerMcpOps(httpServer as Parameters<typeof registerMcpOps>[0], db as any, {
+        loaderConfig: {},
+      });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({
           method: 'POST',

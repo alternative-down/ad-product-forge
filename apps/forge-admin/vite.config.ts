@@ -8,7 +8,8 @@ export default defineConfig({
   plugins: [
     TanStackRouterVite({
       autoCodeSplitting: true,
-      routeFileIgnorePattern: '-section|-helpers|-types|-profile|-llm|-oauth|-build-scene|-finance-accounts|-movements|-use-agent|-use-ltm|-log-metrics|-runtime-memory|\\.types\\.ts',
+      routeFileIgnorePattern:
+        '-section|-helpers|-types|-profile|-llm|-oauth|-build-scene|-finance-accounts|-movements|-use-agent|-use-ltm|-log-metrics|-runtime-memory|\\.types\\.ts',
     }),
     react(),
     tailwindcss(),

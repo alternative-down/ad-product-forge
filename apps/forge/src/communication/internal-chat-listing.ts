@@ -14,35 +14,46 @@ import {
   internalChatMessageReads,
   internalChatMessages,
 } from '../database/schema';
-import type {Database} from '../database/client'
+import type { Database } from '../database/client';
 import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
 import { createInternalChatConversationListing } from './internal-chat-conversation-listing';
 import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 
 async function withChatListingError<T>(operation: string, fn: () => Promise<T>): Promise<T> {
-    return await fn();
+  return await fn();
 }
 
 // =============================================================================
 // ======================================================================
 // Named types to avoid complex inline generics exceeding TS parser limits
 type MessageRowBase = {
-  messageId: string; unread: number; replyToMessageId: string | null;
-  authorAccountId: string; authorDisplayName: string; content: string; createdAt: number;
+  messageId: string;
+  unread: number;
+  replyToMessageId: string | null;
+  authorAccountId: string;
+  authorDisplayName: string;
+  content: string;
+  createdAt: number;
 };
 type _MessageRowFull = MessageRowBase & { conversationId: string };
 
 interface MessageListItem {
-  messageId: string; provider: string; authorId: string; targetKey: string;
-  content: string; attachments: unknown[]; unread: boolean; createdAt: string;
-  authorDisplayName: string; replyToMessageId: string | null;
+  messageId: string;
+  provider: string;
+  authorId: string;
+  targetKey: string;
+  content: string;
+  attachments: unknown[];
+  unread: boolean;
+  createdAt: string;
+  authorDisplayName: string;
+  replyToMessageId: string | null;
 }
 interface _MessageListItemWithConversation extends MessageListItem {
   conversationId: string;
 }
 
 export function createInternalChatListing(db: Database, deps: any) {
-
   async function getMessages(input: {
     agentId: string;
     conversationKey: string;
@@ -51,19 +62,28 @@ export function createInternalChatListing(db: Database, deps: any) {
     dateFrom?: string;
     dateTo?: string;
     query?: string;
-  }): Promise<Array<{
-    messageId: string; provider: string; authorId: string; targetKey: string;
-    content: string; attachments: unknown[]; unread: boolean; createdAt: string; authorDisplayName: string;
-    replyToMessageId: string | null;
-  }>> {
+  }): Promise<
+    Array<{
+      messageId: string;
+      provider: string;
+      authorId: string;
+      targetKey: string;
+      content: string;
+      attachments: unknown[];
+      unread: boolean;
+      createdAt: string;
+      authorDisplayName: string;
+      replyToMessageId: string | null;
+    }>
+  > {
     return await withChatListingError('getMessages', async () => {
       const agentAccount = await deps.getRequiredAgentAccount(input.agentId);
-      const membership = (await db.query.internalChatConversationMembers.findFirst({ 
+      const membership = (await db.query.internalChatConversationMembers.findFirst({
         where: and(
           eq(internalChatConversationMembers.accountId, agentAccount.id),
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
-       })) as any;
+      })) as any;
       if (membership === null || membership === undefined) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
@@ -109,10 +129,7 @@ export function createInternalChatListing(db: Database, deps: any) {
             eq(internalChatConversationMembers.accountId, agentAccount.id),
           ),
         )
-        .where(and(
-          eq(internalChatMessages.conversationId, input.conversationKey),
-          ...conditions,
-        ))
+        .where(and(eq(internalChatMessages.conversationId, input.conversationKey), ...conditions))
         .orderBy(desc(internalChatMessages.createdAt))
         .limit(input.limit)
         .offset(input.offset)
@@ -162,10 +179,12 @@ export function createInternalChatListing(db: Database, deps: any) {
         await db
           .update(internalChatMessageReads)
           .set({ readAt: now })
-          .where(and(
-            eq(internalChatMessageReads.agentId, input.agentId),
-            inArray(internalChatMessageReads.messageId, Array.from(messageIdsToMarkRead)),
-          ));
+          .where(
+            and(
+              eq(internalChatMessageReads.agentId, input.agentId),
+              inArray(internalChatMessageReads.messageId, Array.from(messageIdsToMarkRead)),
+            ),
+          );
       }
 
       return result;
@@ -180,19 +199,28 @@ export function createInternalChatListing(db: Database, deps: any) {
     dateFrom?: string;
     dateTo?: string;
     query?: string;
-  }): Promise<Array<{
-    messageId: string; provider: string; authorId: string; targetKey: string;
-    content: string; attachments: unknown[]; unread: boolean; createdAt: string; authorDisplayName: string;
-    replyToMessageId: string | null;
-  }>> {
+  }): Promise<
+    Array<{
+      messageId: string;
+      provider: string;
+      authorId: string;
+      targetKey: string;
+      content: string;
+      attachments: unknown[];
+      unread: boolean;
+      createdAt: string;
+      authorDisplayName: string;
+      replyToMessageId: string | null;
+    }>
+  > {
     return await withChatListingError('getMessagesByAccount', async () => {
       await deps.getRequiredExternalAccount(input.accountId);
-      const membership = (await db.query.internalChatConversationMembers.findFirst({ 
+      const membership = (await db.query.internalChatConversationMembers.findFirst({
         where: and(
           eq(internalChatConversationMembers.accountId, input.accountId),
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
-       })) as any;
+      })) as any;
       if (membership === null || membership === undefined) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
@@ -230,10 +258,7 @@ export function createInternalChatListing(db: Database, deps: any) {
             eq(internalChatConversationMembers.accountId, input.accountId),
           ),
         )
-        .where(and(
-          eq(internalChatMessages.conversationId, input.conversationKey),
-          ...conditions,
-        ))
+        .where(and(eq(internalChatMessages.conversationId, input.conversationKey), ...conditions))
         .orderBy(desc(internalChatMessages.createdAt))
         .limit(input.limit)
         .offset(input.offset)

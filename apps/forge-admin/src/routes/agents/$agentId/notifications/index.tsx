@@ -21,14 +21,21 @@ function AgentNotificationsIndexRoute() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader title="Notificações" />
 
-      {notifications.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma notificação ainda.</div> : null}
+      {notifications.length === 0 ? (
+        <div className="text-sm text-muted-foreground">Nenhuma notificação ainda.</div>
+      ) : null}
 
       {notifications.map((notification, index) => (
-        <article key={notification.notificationId} className={index > 0 ? 'border-t border-border pt-5' : ''}>
+        <article
+          key={notification.notificationId}
+          className={index > 0 ? 'border-t border-border pt-5' : ''}
+        >
           <div className="space-y-3 pb-5">
             <header className="flex flex-wrap items-center gap-3">
               <Badge variant="outline">{notification.read ? 'Lida' : 'Nova'}</Badge>
-              <div className="text-xs text-muted-foreground">{formatDateTime(notification.timestamp)}</div>
+              <div className="text-xs text-muted-foreground">
+                {formatDateTime(notification.timestamp)}
+              </div>
             </header>
 
             <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
@@ -38,7 +45,9 @@ function AgentNotificationsIndexRoute() {
         </article>
       ))}
 
-      {agentQuery.error ? <div className="text-sm text-destructive">{agentQuery.error.message}</div> : null}
+      {agentQuery.error ? (
+        <div className="text-sm text-destructive">{agentQuery.error.message}</div>
+      ) : null}
     </div>
   );
 }

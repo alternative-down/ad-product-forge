@@ -67,26 +67,22 @@ function createMockInternalChat() {
         ],
       },
     ]),
-    getMessagesByAccount: vi
-      .fn()
-      .mockResolvedValue([
-        {
-          messageId: 'msg-002',
-          authorId: 'acc-001',
-          authorDisplayName: 'Alice',
-          content: 'Hi there',
-          createdAt: '2024-01-01T11:00:00Z',
-          attachments: [],
-        },
-      ]),
-    getMessageAttachmentByAccount: vi
-      .fn()
-      .mockResolvedValue({
-        name: 'file.txt',
-        contentType: 'text/plain',
-        sizeBytes: 100,
-        data: Buffer.from('hello'),
-      }),
+    getMessagesByAccount: vi.fn().mockResolvedValue([
+      {
+        messageId: 'msg-002',
+        authorId: 'acc-001',
+        authorDisplayName: 'Alice',
+        content: 'Hi there',
+        createdAt: '2024-01-01T11:00:00Z',
+        attachments: [],
+      },
+    ]),
+    getMessageAttachmentByAccount: vi.fn().mockResolvedValue({
+      name: 'file.txt',
+      contentType: 'text/plain',
+      sizeBytes: 100,
+      data: Buffer.from('hello'),
+    }),
     ensureDirectConversationByAccount: vi
       .fn()
       .mockResolvedValue({ conversationId: 'dm-001', conversationKey: 'conv-dm-001' }),

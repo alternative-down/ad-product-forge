@@ -3,6 +3,7 @@
 ## Shadow Scale
 
 ### Subtle Shadows
+
 ```css
 /* xs - Minimal elevation */
 --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -12,6 +13,7 @@
 ```
 
 ### Standard Shadows
+
 ```css
 /* md - Default card shadow */
 --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -21,6 +23,7 @@
 ```
 
 ### Strong Shadows
+
 ```css
 /* xl - Modals, dropdowns */
 --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
@@ -30,6 +33,7 @@
 ```
 
 ### Inner Shadows
+
 ```css
 /* Inner shadow for inputs */
 --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
@@ -40,19 +44,20 @@
 
 ## Shadow Usage Guidelines
 
-| Token | Usage |
-|-------|-------|
-| `--shadow-xs` | Tooltips, subtle borders |
-| `--shadow-sm` | Small cards, tags |
-| `--shadow-md` | Default cards, tables |
-| `--shadow-lg` | Modals, dropdowns |
-| `--shadow-xl` | Popovers, floating UI |
-| `--shadow-2xl` | Full-screen overlays |
-| `--shadow-inner` | Pressed states, inputs |
+| Token            | Usage                    |
+| ---------------- | ------------------------ |
+| `--shadow-xs`    | Tooltips, subtle borders |
+| `--shadow-sm`    | Small cards, tags        |
+| `--shadow-md`    | Default cards, tables    |
+| `--shadow-lg`    | Modals, dropdowns        |
+| `--shadow-xl`    | Popovers, floating UI    |
+| `--shadow-2xl`   | Full-screen overlays     |
+| `--shadow-inner` | Pressed states, inputs   |
 
 ## Component Shadow Examples
 
 ### Card
+
 ```css
 .card {
   box-shadow: var(--shadow-sm);
@@ -65,6 +70,7 @@
 ```
 
 ### Button
+
 ```css
 .button {
   box-shadow: var(--shadow-sm);
@@ -80,17 +86,21 @@
 ```
 
 ### Input
+
 ```css
 .input {
   box-shadow: var(--shadow-inner);
 }
 
 .input:focus {
-  box-shadow: var(--shadow-inner), 0 0 0 2px var(--color-brand-primary);
+  box-shadow:
+    var(--shadow-inner),
+    0 0 0 2px var(--color-brand-primary);
 }
 ```
 
 ### Modal
+
 ```css
 .modal-overlay {
   box-shadow: var(--shadow-2xl);
@@ -103,6 +113,7 @@
 ```
 
 ### Dropdown
+
 ```css
 .dropdown {
   box-shadow: var(--shadow-lg);
@@ -111,6 +122,7 @@
 ```
 
 ### Toast
+
 ```css
 .toast {
   box-shadow: var(--shadow-lg);
@@ -120,15 +132,15 @@
 
 ## Elevation Levels
 
-| Level | Shadow | Usage |
-|-------|--------|-------|
-| 0 | none | Flat elements |
-| 1 | `--shadow-xs` | Tags, badges |
-| 2 | `--shadow-sm` | Cards, list items |
-| 3 | `--shadow-md` | Active cards |
-| 4 | `--shadow-lg` | Dropdowns |
-| 5 | `--shadow-xl` | Modals, popovers |
-| 6 | `--shadow-2xl` | Full overlays |
+| Level | Shadow         | Usage             |
+| ----- | -------------- | ----------------- |
+| 0     | none           | Flat elements     |
+| 1     | `--shadow-xs`  | Tags, badges      |
+| 2     | `--shadow-sm`  | Cards, list items |
+| 3     | `--shadow-md`  | Active cards      |
+| 4     | `--shadow-lg`  | Dropdowns         |
+| 5     | `--shadow-xl`  | Modals, popovers  |
+| 6     | `--shadow-2xl` | Full overlays     |
 
 ## Focus Ring
 
@@ -136,12 +148,16 @@
 /* Focus visible */
 .focus-ring {
   outline: none;
-  box-shadow: var(--shadow-sm), 0 0 0 2px var(--color-brand-primary);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 2px var(--color-brand-primary);
 }
 
 /* Focus within (for groups) */
 .focus-within:focus-within {
-  box-shadow: var(--shadow-sm), 0 0 0 2px var(--color-brand-primary);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 2px var(--color-brand-primary);
 }
 ```
 
