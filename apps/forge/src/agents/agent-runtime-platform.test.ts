@@ -21,16 +21,14 @@ vi.mock('@forge-runtime/core', () => {
       return { execute: mockExecute };
     }),
     createCommunicationModule: vi.fn(),
-    createWorkspaceActionDefinitions: vi
-      .fn()
-      .mockReturnValue([
-        {
-          name: 'workspace_execute_command',
-          description: 'Execute a shell command',
-          inputSchema: {},
-          execute: vi.fn(),
-        },
-      ]),
+    createWorkspaceActionDefinitions: vi.fn().mockReturnValue([
+      {
+        name: 'workspace_execute_command',
+        description: 'Execute a shell command',
+        inputSchema: {},
+        execute: vi.fn(),
+      },
+    ]),
     LibsqlCommunicationContactsStore: vi.fn().mockImplementation(function () {
       return {};
     }),

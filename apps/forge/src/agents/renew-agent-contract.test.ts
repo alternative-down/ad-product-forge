@@ -27,21 +27,17 @@ import { renewAgentContract } from './renew-agent-contract';
 const agentExecutionContracts = 'agentExecutionContracts';
 
 function createMockDb(contract?: Record<string, unknown> | null) {
-  const txUpdate = vi
-    .fn()
-    .mockReturnValue({
-      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
-    });
+  const txUpdate = vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+  });
   const txInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
   return {
     query: {
       agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract ?? null) },
     },
-    update: vi
-      .fn()
-      .mockReturnValue({
-        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
-      }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    }),
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
     transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
       await fn({ update: txUpdate, insert: txInsert });

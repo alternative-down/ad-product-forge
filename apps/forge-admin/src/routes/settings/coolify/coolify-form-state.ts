@@ -18,7 +18,8 @@ export function buildCoolifyFormValues(
     adminToken: live?.adminToken ?? saved?.config?.adminToken ?? '',
     serverId: live?.serverId ?? saved?.config?.serverId ?? '',
     destinationId: live?.destinationId ?? saved?.config?.destinationId ?? '',
-    applicationsBaseDomain: live?.applicationsBaseDomain ?? saved?.config?.applicationsBaseDomain ?? '',
+    applicationsBaseDomain:
+      live?.applicationsBaseDomain ?? saved?.config?.applicationsBaseDomain ?? '',
     isEnabled: live?.isEnabled ?? saved?.isEnabled ?? true,
   };
 }

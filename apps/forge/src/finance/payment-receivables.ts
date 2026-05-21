@@ -125,7 +125,9 @@ export function createPaymentReceivablesStore(db: Database) {
           .where(eq(paymentCustomers.id, existing[0].id));
         return existing[0].id;
       }
-      const [inserted] = await (db.insert(paymentCustomers) as unknown as InsertBuilder<{ id: string }>)
+      const [inserted] = await (
+        db.insert(paymentCustomers) as unknown as InsertBuilder<{ id: string }>
+      )
         .values({
           provider: input.provider,
           providerCustomerId: input.providerCustomerId,
@@ -191,7 +193,9 @@ export function createPaymentReceivablesStore(db: Database) {
         return existing[0].id;
       }
 
-      const [inserted] = await (db.insert(paymentSubscriptions) as unknown as InsertBuilder<{ id: string }>)
+      const [inserted] = await (
+        db.insert(paymentSubscriptions) as unknown as InsertBuilder<{ id: string }>
+      )
         .values({
           customerId: input.customerId,
           productId: input.productId,

@@ -11,8 +11,6 @@ import { registerAccountRoutes } from './internal-chat-account-routes';
 import { registerConversationRoutes } from './internal-chat-conversation-routes';
 import { registerGroupMemberRoutes } from './internal-chat-group-member-routes';
 
-
-
 import type { ForgeHttpServer } from '../../../http/server';
 
 /** Type alias so callers can pass ForgeHttpServer directly. */

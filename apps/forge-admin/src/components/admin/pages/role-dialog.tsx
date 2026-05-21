@@ -8,14 +8,21 @@ import {
   AdminInput,
   AdminTextarea,
 } from '@/components/admin';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Dialog } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 
 import { normalizeRoleFormToolIds, type RoleForm } from './roles-page-helpers';
 
 function toggleRoleToolIds(toolIds: string[], toolId: string, checked: boolean) {
-  const nextToolIds = checked ? [...toolIds, toolId] : toolIds.filter((currentToolId) => currentToolId !== toolId);
+  const nextToolIds = checked
+    ? [...toolIds, toolId]
+    : toolIds.filter((currentToolId) => currentToolId !== toolId);
   return normalizeRoleFormToolIds(nextToolIds);
 }
 
@@ -53,7 +60,9 @@ export function RoleDialog(input: {
                 <AdminInput
                   id="role-name"
                   value={input.form.name}
-                  onChange={(event) => input.onFormChange({ ...input.form, name: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, name: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -66,7 +75,9 @@ export function RoleDialog(input: {
                   id="role-description"
                   rows={5}
                   value={input.form.description}
-                  onChange={(event) => input.onFormChange({ ...input.form, description: event.target.value })}
+                  onChange={(event) =>
+                    input.onFormChange({ ...input.form, description: event.target.value })
+                  }
                   disabled={input.pending}
                 />
               </div>
@@ -76,11 +87,17 @@ export function RoleDialog(input: {
 
                 <Accordion className="space-y-3">
                   {input.toolSections.map((section) => (
-                    <AccordionItem key={section.title} value={section.title} className="overflow-hidden rounded-sm border border-border">
+                    <AccordionItem
+                      key={section.title}
+                      value={section.title}
+                      className="overflow-hidden rounded-sm border border-border"
+                    >
                       <AccordionTrigger className="px-4 py-3 hover:no-underline">
                         <div className="flex items-center gap-3">
                           <span>{section.title}</span>
-                          <span className="text-xs text-muted-foreground">{section.toolIds.length}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {section.toolIds.length}
+                          </span>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pb-0">
@@ -96,7 +113,11 @@ export function RoleDialog(input: {
                               >
                                 <div className="min-w-0 space-y-1">
                                   <div className="font-mono text-[13px] break-all">{toolId}</div>
-                                  {locked ? <div className="text-xs text-muted-foreground">Sempre ativo</div> : null}
+                                  {locked ? (
+                                    <div className="text-xs text-muted-foreground">
+                                      Sempre ativo
+                                    </div>
+                                  ) : null}
                                 </div>
                                 <Switch
                                   checked={enabled}
@@ -104,7 +125,11 @@ export function RoleDialog(input: {
                                   onCheckedChange={(checked) =>
                                     input.onFormChange({
                                       ...input.form,
-                                      capabilityIds: toggleRoleToolIds(input.form.capabilityIds, toolId, checked),
+                                      capabilityIds: toggleRoleToolIds(
+                                        input.form.capabilityIds,
+                                        toolId,
+                                        checked,
+                                      ),
                                     })
                                   }
                                 />
@@ -118,7 +143,9 @@ export function RoleDialog(input: {
                 </Accordion>
               </div>
 
-              {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}
+              {input.errorMessage ? (
+                <div className="text-sm text-destructive">{input.errorMessage}</div>
+              ) : null}
             </div>
           </AdminDialogBody>
 

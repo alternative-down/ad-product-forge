@@ -38,14 +38,20 @@ export function OauthSection(input: {
               </div>
             </div>
 
-            <AdminButton variant="outline" disabled={input.pending} onClick={() => input.onSync(provider.providerId)}>
+            <AdminButton
+              variant="outline"
+              disabled={input.pending}
+              onClick={() => input.onSync(provider.providerId)}
+            >
               Sincronizar
             </AdminButton>
           </div>
         ))}
       </div>
 
-      {input.errorMessage ? <div className="text-sm text-destructive">{input.errorMessage}</div> : null}
+      {input.errorMessage ? (
+        <div className="text-sm text-destructive">{input.errorMessage}</div>
+      ) : null}
     </section>
   );
 }

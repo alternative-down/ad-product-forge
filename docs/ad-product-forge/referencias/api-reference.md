@@ -26,6 +26,7 @@ X-Request-Id: <uuid> (opcional)
 Retorna uma visão geral do sistema, incluindo estatísticas de agents, contratos e financeiro.
 
 **Resposta**:
+
 ```json
 {
   "agents": { ... },
@@ -61,6 +62,7 @@ Retorna detalhes de um agent específico.
 | `agentId` | `string` | ID do agent (obrigatório) |
 
 **Resposta**:
+
 ```json
 {
   "id": "agent_xxx",
@@ -97,6 +99,7 @@ Lista todos os roles/papéis configurados.
 Lista todas as integrações configuradas (GitHub, Slack, Migadu, Coolify).
 
 **Resposta**:
+
 ```json
 {
   "github": { ... },
@@ -113,6 +116,7 @@ Lista todas as integrações configuradas (GitHub, Slack, Migadu, Coolify).
 Retorna as configurações gerais do sistema.
 
 **Resposta**:
+
 ```json
 {
   "companyName": "Nome da Empresa",
@@ -127,6 +131,7 @@ Retorna as configurações gerais do sistema.
 Retorna configurações de LLM, incluindo profiles e preços de modelos.
 
 **Resposta**:
+
 ```json
 {
   "profiles": [ ... ],
@@ -150,6 +155,7 @@ Lista migrations pendentes ou já aplicadas.
 Retorna status de OAuth para provedores (openai-codex, anthropic).
 
 **Resposta**:
+
 ```json
 {
   "openai-codex": {
@@ -171,6 +177,7 @@ Retorna status de OAuth para provedores (openai-codex, anthropic).
 Retorna overview financeiro: investimentos, payables, ledger e cash balance.
 
 **Resposta**:
+
 ```json
 {
   "investments": [ ... ],
@@ -191,13 +198,14 @@ Retorna overview financeiro: investimentos, payables, ledger e cash balance.
 Contrata um novo agent no sistema.
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
   "functionId": "func_xxx",
   "name": "Nome do Agent",
   "instructions": "Instruções do agent...",
-  "budget": 1000.00,
+  "budget": 1000.0,
   "modelProfileId": "profile_xxx",
   "workspaceEnabled": true,
   "toolPermissions": ["tool_xxx", "tool_yyy"]
@@ -207,6 +215,7 @@ Contrata um novo agent no sistema.
 **Fluxo interno**: `runInternalHiring()`
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -222,6 +231,7 @@ Contrata um novo agent no sistema.
 Termina o contrato de um agent.
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
@@ -232,10 +242,11 @@ Termina o contrato de um agent.
 **Fluxo interno**: `runInternalTermination()`
 
 **Resposta**:
+
 ```json
 {
   "success": true,
-  "refundAmount": 250.00
+  "refundAmount": 250.0
 }
 ```
 
@@ -246,6 +257,7 @@ Termina o contrato de um agent.
 Acorda um agent manualmente (trigger evento de wake).
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx"
@@ -253,6 +265,7 @@ Acorda um agent manualmente (trigger evento de wake).
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -267,6 +280,7 @@ Acorda um agent manualmente (trigger evento de wake).
 Recarrega as configurações de um agent (inclui registry de agents).
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx"
@@ -274,6 +288,7 @@ Recarrega as configurações de um agent (inclui registry de agents).
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -290,22 +305,25 @@ Recarrega as configurações de um agent (inclui registry de agents).
 Adiciona fundos a um contrato existente (refill).
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
-  "amount": 500.00
+  "amount": 500.0
 }
 ```
 
 **Validações**:
+
 - Amount deve ser > 0
 - Empresa deve ter cash balance suficiente
 
 **Resposta**:
+
 ```json
 {
   "success": true,
-  "newBalance": 1500.00,
+  "newBalance": 1500.0,
   "transactionId": "txn_xxx"
 }
 ```
@@ -317,25 +335,28 @@ Adiciona fundos a um contrato existente (refill).
 Ajusta o budget máximo de um contrato (aumento ou redução).
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
-  "newBudget": 2000.00
+  "newBudget": 2000.0
 }
 ```
 
 **Validações**:
+
 - Se agent estiver em execução: redução não permitida
 - Novo budget deve ser >= valor já gasto
 - Para aumentos: empresa deve ter cash balance suficiente
 
 **Resposta**:
+
 ```json
 {
   "success": true,
-  "previousBudget": 1000.00,
-  "newBudget": 2000.00,
-  "refundAmount": 0.00
+  "previousBudget": 1000.0,
+  "newBudget": 2000.0,
+  "refundAmount": 0.0
 }
 ```
 
@@ -348,6 +369,7 @@ Ajusta o budget máximo de um contrato (aumento ou redução).
 Altera a função de um agent.
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
@@ -356,6 +378,7 @@ Altera a função de um agent.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -371,6 +394,7 @@ Altera a função de um agent.
 Atualiza configurações de um agent.
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
@@ -386,6 +410,7 @@ Atualiza configurações de um agent.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -402,6 +427,7 @@ Atualiza configurações de um agent.
 Adiciona ou atualiza credenciais de provider para agent.
 
 **Body**:
+
 ```json
 {
   "providerType": "discord" | "email",
@@ -415,6 +441,7 @@ Adiciona ou atualiza credenciais de provider para agent.
 **Armazenamento**: Credenciais são criptografadas antes de armazenar
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -429,6 +456,7 @@ Adiciona ou atualiza credenciais de provider para agent.
 Remove credenciais de provider.
 
 **Body**:
+
 ```json
 {
   "providerType": "discord"
@@ -436,6 +464,7 @@ Remove credenciais de provider.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -451,6 +480,7 @@ Remove credenciais de provider.
 Cria um schedule para um agent.
 
 **Body**:
+
 ```json
 {
   "agentId": "agent_xxx",
@@ -465,10 +495,12 @@ Cria um schedule para um agent.
 ```
 
 **Tipos de Schedule**:
+
 - `cron`: Expressão cron (ex: `0 9 * * *` = todo dia às 9h)
 - `date`: Data específica (one-time)
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -483,6 +515,7 @@ Cria um schedule para um agent.
 Atualiza um schedule existente.
 
 **Body**:
+
 ```json
 {
   "scheduleId": "sched_xxx",
@@ -495,6 +528,7 @@ Atualiza um schedule existente.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -508,6 +542,7 @@ Atualiza um schedule existente.
 Deleta um schedule.
 
 **Body**:
+
 ```json
 {
   "scheduleId": "sched_xxx"
@@ -515,6 +550,7 @@ Deleta um schedule.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -530,6 +566,7 @@ Deleta um schedule.
 Cria um novo role.
 
 **Body**:
+
 ```json
 {
   "name": "finance_manager",
@@ -538,6 +575,7 @@ Cria um novo role.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -552,6 +590,7 @@ Cria um novo role.
 Atualiza um role existente.
 
 **Body**:
+
 ```json
 {
   "roleId": "role_xxx",
@@ -561,6 +600,7 @@ Atualiza um role existente.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -574,6 +614,7 @@ Atualiza um role existente.
 Deleta um role.
 
 **Body**:
+
 ```json
 {
   "roleId": "role_xxx"
@@ -581,6 +622,7 @@ Deleta um role.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -596,6 +638,7 @@ Deleta um role.
 Cria uma nova função.
 
 **Body**:
+
 ```json
 {
   "name": "coder",
@@ -606,6 +649,7 @@ Cria uma nova função.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -620,6 +664,7 @@ Cria uma nova função.
 Atualiza uma função existente.
 
 **Body**:
+
 ```json
 {
   "functionId": "func_xxx",
@@ -631,6 +676,7 @@ Atualiza uma função existente.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -644,6 +690,7 @@ Atualiza uma função existente.
 Deleta uma função.
 
 **Body**:
+
 ```json
 {
   "functionId": "func_xxx"
@@ -651,6 +698,7 @@ Deleta uma função.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -666,6 +714,7 @@ Deleta uma função.
 Associa um role a uma função.
 
 **Body**:
+
 ```json
 {
   "functionId": "func_xxx",
@@ -674,6 +723,7 @@ Associa um role a uma função.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -687,6 +737,7 @@ Associa um role a uma função.
 Remove associação de role de uma função.
 
 **Body**:
+
 ```json
 {
   "functionId": "func_xxx",
@@ -695,6 +746,7 @@ Remove associação de role de uma função.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -710,6 +762,7 @@ Remove associação de role de uma função.
 Adiciona permissão de tool a um role.
 
 **Body**:
+
 ```json
 {
   "roleId": "role_xxx",
@@ -718,6 +771,7 @@ Adiciona permissão de tool a um role.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -731,6 +785,7 @@ Adiciona permissão de tool a um role.
 Remove permissão de tool de um role.
 
 **Body**:
+
 ```json
 {
   "roleId": "role_xxx",
@@ -739,6 +794,7 @@ Remove permissão de tool de um role.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -754,6 +810,7 @@ Remove permissão de tool de um role.
 Adiciona permissão de workflow a um role.
 
 **Body**:
+
 ```json
 {
   "roleId": "role_xxx",
@@ -762,10 +819,12 @@ Adiciona permissão de workflow a um role.
 ```
 
 **Workflows disponíveis**:
+
 - `hire_agent`: Permissão para contratar agents
 - `terminate_agent`: Permissão para terminar agents
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -779,6 +838,7 @@ Adiciona permissão de workflow a um role.
 Remove permissão de workflow de um role.
 
 **Body**:
+
 ```json
 {
   "roleId": "role_xxx",
@@ -787,6 +847,7 @@ Remove permissão de workflow de um role.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -802,6 +863,7 @@ Remove permissão de workflow de um role.
 Atualiza configurações do sistema.
 
 **Body**:
+
 ```json
 {
   "companyName": "Alternative Down",
@@ -812,6 +874,7 @@ Atualiza configurações do sistema.
 **Efeito colateral**: Dispara reload do agent registry
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -826,6 +889,7 @@ Atualiza configurações do sistema.
 Adiciona ou atualiza uma integração.
 
 **Body**:
+
 ```json
 {
   "provider": "migadu" | "coolify" | "github" | "slack",
@@ -837,12 +901,14 @@ Adiciona ou atualiza uma integração.
 ```
 
 **Providers suportados**:
+
 - `migadu`: Email provider
 - `coolify`: Deployment platform
 - `github`: GitHub integration
 - `slack`: Slack integration
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -857,6 +923,7 @@ Adiciona ou atualiza uma integração.
 Remove uma integração.
 
 **Body**:
+
 ```json
 {
   "provider": "github"
@@ -864,6 +931,7 @@ Remove uma integração.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -879,6 +947,7 @@ Remove uma integração.
 Cria ou atualiza um LLM profile.
 
 **Body**:
+
 ```json
 {
   "profileId": "profile_xxx",
@@ -892,6 +961,7 @@ Cria ou atualiza um LLM profile.
 **Campo especial**: `contractCostMultiplier` ajusta o custo do contrato baseado no preço do modelo
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -906,6 +976,7 @@ Cria ou atualiza um LLM profile.
 Deleta um LLM profile.
 
 **Body**:
+
 ```json
 {
   "profileId": "profile_xxx"
@@ -913,6 +984,7 @@ Deleta um LLM profile.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -926,6 +998,7 @@ Deleta um LLM profile.
 Atualiza defaults de LLM.
 
 **Body**:
+
 ```json
 {
   "defaultProfileId": "profile_xxx",
@@ -934,6 +1007,7 @@ Atualiza defaults de LLM.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -947,20 +1021,22 @@ Atualiza defaults de LLM.
 Adiciona ou atualiza preço de modelo LLM.
 
 **Body**:
+
 ```json
 {
   "provider": "openai",
   "model": "gpt-4-turbo",
-  "inputPricePerMillion": 10.00,
-  "cacheWritePricePerMillion": 3.50,
-  "cacheReadPricePerMillion": 0.30,
-  "outputPricePerMillion": 30.00
+  "inputPricePerMillion": 10.0,
+  "cacheWritePricePerMillion": 3.5,
+  "cacheReadPricePerMillion": 0.3,
+  "outputPricePerMillion": 30.0
 }
 ```
 
 **Preços**: Por milhão de tokens em USD
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -976,6 +1052,7 @@ Adiciona ou atualiza preço de modelo LLM.
 Sincroniza OAuth para provedores.
 
 **Body**:
+
 ```json
 {
   "providerId": "openai-codex" | "anthropic"
@@ -985,6 +1062,7 @@ Sincroniza OAuth para provedores.
 **Ação**: Atualiza tokens de refresh e status de conexão
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -1002,20 +1080,22 @@ Sincroniza OAuth para provedores.
 Registra um investimento do dono.
 
 **Body**:
+
 ```json
 {
-  "amount": 50000.00,
+  "amount": 50000.0,
   "source": "owner_equity",
   "notes": "Seed round investment"
 }
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
   "investmentId": "inv_xxx",
-  "newCashBalance": 60000.00
+  "newCashBalance": 60000.0
 }
 ```
 
@@ -1026,10 +1106,11 @@ Registra um investimento do dono.
 Cria um payable (单次 ou recorrente).
 
 **Body (单次)**:
+
 ```json
 {
   "type": "single",
-  "amount": 100.00,
+  "amount": 100.0,
   "description": "Invoice #123",
   "agentId": "agent_xxx",
   "dueDate": "2026-04-01"
@@ -1037,10 +1118,11 @@ Cria um payable (单次 ou recorrente).
 ```
 
 **Body (recorrente)**:
+
 ```json
 {
   "type": "recurring",
-  "amount": 50.00,
+  "amount": 50.0,
   "description": "Monthly subscription",
   "frequency": "monthly",
   "startDate": "2026-03-01"
@@ -1048,6 +1130,7 @@ Cria um payable (单次 ou recorrente).
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -1062,10 +1145,11 @@ Cria um payable (单次 ou recorrente).
 Posta uma entrada planejada no ledger.
 
 **Body**:
+
 ```json
 {
   "type": "planned_entry",
-  "amount": -100.00,
+  "amount": -100.0,
   "description": "Planned expense",
   "executeAt": "2026-04-01T00:00:00Z"
 }
@@ -1074,6 +1158,7 @@ Posta uma entrada planejada no ledger.
 **Tipos**: `planned_entry`, `accrual`, `reversal`
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -1088,6 +1173,7 @@ Posta uma entrada planejada no ledger.
 Cancela uma entrada planejada.
 
 **Body**:
+
 ```json
 {
   "ledgerEntryId": "led_xxx",
@@ -1096,6 +1182,7 @@ Cancela uma entrada planejada.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true
@@ -1109,6 +1196,7 @@ Cancela uma entrada planejada.
 Ativa ou desativa um payable recorrente.
 
 **Body**:
+
 ```json
 {
   "payableId": "pay_xxx",
@@ -1117,6 +1205,7 @@ Ativa ou desativa um payable recorrente.
 ```
 
 **Resposta**:
+
 ```json
 {
   "success": true,
@@ -1132,40 +1221,40 @@ Agents possuem acesso a tools baseadas em suas permissões. Consulte [permission
 
 ### Tools de Budget
 
-| Tool | Descrição | Role Requerido |
-|------|-----------|----------------|
-| `adjust_agent_contract_budget` | Ajusta budget de contrato | `finance` |
-| `top_up_agent_contract` | Adiciona fundos a contrato | `finance` |
+| Tool                           | Descrição                  | Role Requerido |
+| ------------------------------ | -------------------------- | -------------- |
+| `adjust_agent_contract_budget` | Ajusta budget de contrato  | `finance`      |
+| `top_up_agent_contract`        | Adiciona fundos a contrato | `finance`      |
 
 ### Tools de Agente
 
-| Tool | Descrição | Role Requerido |
-|------|-----------|----------------|
-| `hire_agent` | Contrata novo agent | `hire_agent` workflow |
-| `terminate_agent` | Termina agent | `terminate_agent` workflow |
-| `update_agent_config` | Atualiza configurações | - |
+| Tool                  | Descrição              | Role Requerido             |
+| --------------------- | ---------------------- | -------------------------- |
+| `hire_agent`          | Contrata novo agent    | `hire_agent` workflow      |
+| `terminate_agent`     | Termina agent          | `terminate_agent` workflow |
+| `update_agent_config` | Atualiza configurações | -                          |
 
 ### Tools de Agendamento
 
-| Tool | Descrição | Role Requerido |
-|------|-----------|----------------|
-| `manage_self_crons` | Cria, atualiza ou deleta cron próprio | `COORDINATOR` |
-| `list_self_crons` | Lista crons próprios | - |
-| `manage_crons` | Cria, atualiza ou deleta cron para outro agent | `COORDINATOR` |
-| `list_crons` | Lista crons criados para outros agents | - |
+| Tool                | Descrição                                      | Role Requerido |
+| ------------------- | ---------------------------------------------- | -------------- |
+| `manage_self_crons` | Cria, atualiza ou deleta cron próprio          | `COORDINATOR`  |
+| `list_self_crons`   | Lista crons próprios                           | -              |
+| `manage_crons`      | Cria, atualiza ou deleta cron para outro agent | `COORDINATOR`  |
+| `list_crons`        | Lista crons criados para outros agents         | -              |
 
 ---
 
 ## Códigos de Erro
 
-| Código | Descrição |
-|--------|-----------|
-| `400` | Request inválido (validation error) |
-| `401` | Não autenticado |
-| `403` | Sem permissão (role/capability) |
-| `404` | Recurso não encontrado |
-| `409` | Conflito (ex: agent já em execução) |
-| `500` | Erro interno do servidor |
+| Código | Descrição                           |
+| ------ | ----------------------------------- |
+| `400`  | Request inválido (validation error) |
+| `401`  | Não autenticado                     |
+| `403`  | Sem permissão (role/capability)     |
+| `404`  | Recurso não encontrado              |
+| `409`  | Conflito (ex: agent já em execução) |
+| `500`  | Erro interno do servidor            |
 
 ---
 

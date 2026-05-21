@@ -45,7 +45,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/contract/top-up' }),
@@ -60,7 +64,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/top-up');
       const response = await handler(makeRequest({ agentId: 'agent-123', amountUsd: 50 }));
@@ -79,7 +87,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/top-up');
       const response = await handler(makeRequest({ agentId: 'agent-123', amountUsd: 50 }));
@@ -99,7 +111,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/contract/adjust-budget' }),
@@ -114,7 +130,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/adjust-budget');
       const response = await handler(makeRequest({ agentId: 'agent-456', newBudgetUsd: 200 }));
@@ -133,7 +153,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/adjust-budget');
       const response = await handler(makeRequest({ agentId: 'agent-456', newBudgetUsd: 200 }));
@@ -151,7 +175,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/contract/renew' }),
@@ -166,7 +194,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/renew');
       const response = await handler(makeRequest({ agentId: 'agent-789', newBudgetUsd: 100 }));
@@ -185,7 +217,11 @@ describe('registerContractOps', () => {
       registerContractOps({
         httpServer: httpServer as any,
         db: {},
-        ops: { topUpActiveAgentContract: topUp, adjustAgentContractBudget: adjust, renewAgentContract: renew },
+        ops: {
+          topUpActiveAgentContract: topUp,
+          adjustAgentContractBudget: adjust,
+          renewAgentContract: renew,
+        },
       });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/contract/renew');
       const response = await handler(makeRequest({ agentId: 'agent-789', newBudgetUsd: 100 }));

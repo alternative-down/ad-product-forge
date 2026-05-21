@@ -1,8 +1,7 @@
 import { createId } from '../utils/id';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import {
   agents,
   agentRoles,
@@ -27,7 +26,8 @@ const roleInspectionToolIds = [
 
 function resolveLoadedToolIds(toolIds: string[]) {
   const resolvedToolIds = new Set(toolIds);
-  const hasCrossAgentCronTools = resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
+  const hasCrossAgentCronTools =
+    resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
   const _hasCrossAgentRoleTool = resolvedToolIds.has('change_agent_role');
   const hasRoleInspectionTool = roleInspectionToolIds.some((toolId) => resolvedToolIds.has(toolId));
 
@@ -45,7 +45,6 @@ function resolveLoadedToolIds(toolIds: string[]) {
     resolvedToolIds.add('manage_self_crons');
     resolvedToolIds.add('list_self_crons');
   }
-
 
   // Cross-agent cron tools replace self-cron tools
   if (hasCrossAgentCronTools) {
@@ -68,7 +67,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listRoles DB read failed: ' + (String(serializeError(err))),
+        message: 'listRoles DB read failed: ' + String(serializeError(err)),
       });
       return [];
     }
@@ -92,7 +91,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'getRole DB read failed: ' + (String(serializeError(err))),
+        message: 'getRole DB read failed: ' + String(serializeError(err)),
       });
       return null;
     }
@@ -124,13 +123,20 @@ export function createCapabilityStore(db: Database) {
       await db.insert(agentRoles).values(record);
 
       await Promise.all(
-        AGENT_BASE_TOOL_IDS.map((toolId) => addRoleToolPermission({
-          roleId: record.id,
-          toolId,
-        })),
+        AGENT_BASE_TOOL_IDS.map((toolId) =>
+          addRoleToolPermission({
+            roleId: record.id,
+            toolId,
+          }),
+        ),
       );
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'createRole DB write failed', context: { name: input.name, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'createRole DB write failed',
+        context: { name: input.name, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
@@ -148,12 +154,22 @@ export function createCapabilityStore(db: Database) {
         where: eq(agentRoles.id, input.roleId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'updateRole DB read failed', context: { roleId: input.roleId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'updateRole DB read failed',
+        context: { roleId: input.roleId, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
     if (existing === null || existing === undefined) {
-      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'requireRole: not found', context: { roleId: input.roleId } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'warn',
+        message: 'requireRole: not found',
+        context: { roleId: input.roleId },
+      });
       throw new Error(`Role not found: ${input.roleId}`);
     }
 
@@ -167,7 +183,12 @@ export function createCapabilityStore(db: Database) {
         })
         .where(eq(agentRoles.id, input.roleId));
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'updateRole DB write failed', context: { roleId: input.roleId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'updateRole DB write failed',
+        context: { roleId: input.roleId, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
@@ -186,7 +207,12 @@ export function createCapabilityStore(db: Database) {
       });
 
       if (assigned !== null && assigned !== undefined) {
-        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'deleteRole: cannot delete role with assigned agents', context: { roleId } });
+        forgeDebug({
+          scope: 'capabilities-store',
+          level: 'warn',
+          message: 'deleteRole: cannot delete role with assigned agents',
+          context: { roleId },
+        });
         throw new Error(`Cannot delete role with assigned agents: ${roleId}`);
       }
 
@@ -209,7 +235,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listRoleToolPermissions DB read failed: ' + (String(serializeError(err))),
+        message: 'listRoleToolPermissions DB read failed: ' + String(serializeError(err)),
       });
       return [];
     }
@@ -229,7 +255,12 @@ export function createCapabilityStore(db: Database) {
         })
         .onConflictDoNothing();
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'addRoleToolPermission DB write failed', context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'addRoleToolPermission DB write failed',
+        context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
@@ -243,9 +274,19 @@ export function createCapabilityStore(db: Database) {
     try {
       await db
         .delete(roleToolPermissions)
-        .where(and(eq(roleToolPermissions.roleId, input.roleId), eq(roleToolPermissions.toolId, input.toolId)));
+        .where(
+          and(
+            eq(roleToolPermissions.roleId, input.roleId),
+            eq(roleToolPermissions.toolId, input.toolId),
+          ),
+        );
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'removeRoleToolPermission DB delete failed', context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'removeRoleToolPermission DB delete failed',
+        context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
@@ -267,7 +308,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listRoleWorkflowPermissions DB read failed: ' + (String(serializeError(err))),
+        message: 'listRoleWorkflowPermissions DB read failed: ' + String(serializeError(err)),
       });
       return [];
     }
@@ -287,7 +328,16 @@ export function createCapabilityStore(db: Database) {
         })
         .onConflictDoNothing();
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'addRoleWorkflowPermission DB write failed', context: { roleId: input.roleId, workflowId: input.workflowId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'addRoleWorkflowPermission DB write failed',
+        context: {
+          roleId: input.roleId,
+          workflowId: input.workflowId,
+          error: String(serializeError(err)),
+        },
+      });
       throw err;
     }
 
@@ -301,9 +351,23 @@ export function createCapabilityStore(db: Database) {
     try {
       await db
         .delete(roleWorkflowPermissions)
-        .where(and(eq(roleWorkflowPermissions.roleId, input.roleId), eq(roleWorkflowPermissions.workflowId, input.workflowId)));
+        .where(
+          and(
+            eq(roleWorkflowPermissions.roleId, input.roleId),
+            eq(roleWorkflowPermissions.workflowId, input.workflowId),
+          ),
+        );
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'removeRoleWorkflowPermission DB delete failed', context: { roleId: input.roleId, workflowId: input.workflowId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'removeRoleWorkflowPermission DB delete failed',
+        context: {
+          roleId: input.roleId,
+          workflowId: input.workflowId,
+          error: String(serializeError(err)),
+        },
+      });
       throw err;
     }
 
@@ -320,7 +384,9 @@ export function createCapabilityStore(db: Database) {
       listRoleWorkflowPermissions(roleId),
     ]);
 
-    return [...new Set([...toolIds, ...workflowIds])].sort((left, right) => left.localeCompare(right));
+    return [...new Set([...toolIds, ...workflowIds])].sort((left, right) =>
+      left.localeCompare(right),
+    );
   }
 
   /**
@@ -328,7 +394,9 @@ export function createCapabilityStore(db: Database) {
    * multiple roles in a single DB roundtrip (N+1 fix).
    * Returns a Map from roleId to sorted capabilityIds array.
    */
-  async function listGrantedRoleCapabilitiesBatch(roleIds: string[]): Promise<Map<string, string[]>> {
+  async function listGrantedRoleCapabilitiesBatch(
+    roleIds: string[],
+  ): Promise<Map<string, string[]>> {
     if (roleIds.length === 0) return new Map();
 
     let toolRows: { roleId: string; toolId: string }[] = [];
@@ -345,7 +413,12 @@ export function createCapabilityStore(db: Database) {
         }),
       ]);
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'listGrantedRoleCapabilitiesBatch DB read failed', context: { roleIdCount: roleIds.length, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'listGrantedRoleCapabilitiesBatch DB read failed',
+        context: { roleIdCount: roleIds.length, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
@@ -367,7 +440,10 @@ export function createCapabilityStore(db: Database) {
 
     // Sort each role's capability list and deduplicate
     for (const [roleId, ids] of result) {
-      result.set(roleId, [...new Set(ids)].sort((a, b) => a.localeCompare(b)));
+      result.set(
+        roleId,
+        [...new Set(ids)].sort((a, b) => a.localeCompare(b)),
+      );
     }
 
     return result;
@@ -378,7 +454,12 @@ export function createCapabilityStore(db: Database) {
     try {
       grantedCapabilityIds = new Set(await listGrantedRoleCapabilities(roleId));
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'listRoleCapabilities: listGrantedRoleCapabilities failed', context: { roleId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'listRoleCapabilities: listGrantedRoleCapabilities failed',
+        context: { roleId, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
@@ -398,20 +479,30 @@ export function createCapabilityStore(db: Database) {
   }) {
     if (input.action === 'create') {
       if (input.name === null || input.name === undefined || !input.name.trim()) {
-        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole create: name required' });
+        forgeDebug({
+          scope: 'capabilities-store',
+          level: 'warn',
+          message: 'manageRole create: name required',
+        });
         throw new Error('Role name is required.');
       }
 
-       
-  return await createRole({
+      return await createRole({
         name: input.name.trim(),
-        description: input.description !== null && input.description !== undefined && input.description.trim() ? input.description.trim() : undefined,
+        description:
+          input.description !== null && input.description !== undefined && input.description.trim()
+            ? input.description.trim()
+            : undefined,
       });
     }
 
     if (input.action === 'delete') {
       if (input.roleId === null || input.roleId === undefined) {
-        forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole delete: roleId required' });
+        forgeDebug({
+          scope: 'capabilities-store',
+          level: 'warn',
+          message: 'manageRole delete: roleId required',
+        });
         throw new Error('roleId is required.');
       }
 
@@ -419,19 +510,30 @@ export function createCapabilityStore(db: Database) {
     }
 
     if (input.roleId === null || input.roleId === undefined) {
-      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: roleId required' });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'warn',
+        message: 'manageRole update: roleId required',
+      });
       throw new Error('roleId is required.');
     }
 
     if ((input.name === null || input.name === undefined) && input.description === undefined) {
-      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'manageRole update: no fields provided' });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'warn',
+        message: 'manageRole update: no fields provided',
+      });
       throw new Error('At least one field besides roleId must be provided.');
     }
 
     return await updateRole({
       roleId: input.roleId,
       name: input.name?.trim(),
-      description: input.description !== null && input.description !== undefined ? (input.description.trim() || null) : undefined,
+      description:
+        input.description !== null && input.description !== undefined
+          ? input.description.trim() || null
+          : undefined,
     });
   }
 
@@ -447,7 +549,10 @@ export function createCapabilityStore(db: Database) {
         : await addRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
     } else {
       return isWorkflow
-        ? await removeRoleWorkflowPermission({ roleId: input.roleId, workflowId: input.capabilityId })
+        ? await removeRoleWorkflowPermission({
+            roleId: input.roleId,
+            workflowId: input.capabilityId,
+          })
         : await removeRoleToolPermission({ roleId: input.roleId, toolId: input.capabilityId });
     }
   }
@@ -459,17 +564,32 @@ export function createCapabilityStore(db: Database) {
         where: eq(agents.id, agentId),
       });
     } catch (err) {
-      forgeDebug({ scope: 'capabilities-store', level: 'error', message: 'getAgentCapabilities DB read failed', context: { agentId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'error',
+        message: 'getAgentCapabilities DB read failed',
+        context: { agentId, error: String(serializeError(err)) },
+      });
       throw err;
     }
 
     if (agent === null || agent === undefined) {
-      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent not found', context: { agentId } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'warn',
+        message: 'assignRoleToAgent: agent not found',
+        context: { agentId },
+      });
       throw new Error(`Agent not found: ${agentId}`);
     }
 
     if (agent.roleId === null || agent.roleId === undefined) {
-      forgeDebug({ scope: 'capabilities-store', level: 'warn', message: 'assignRoleToAgent: agent missing roleId', context: { agentId } });
+      forgeDebug({
+        scope: 'capabilities-store',
+        level: 'warn',
+        message: 'assignRoleToAgent: agent missing roleId',
+        context: { agentId },
+      });
       throw new Error(`Agent is missing roleId: ${agentId}`);
     }
 
@@ -488,7 +608,6 @@ export function createCapabilityStore(db: Database) {
     let rows;
     try {
       rows = await db.query.agents.findMany({
-  
         where: (agent, { and, eq }) => {
           const filters = [];
 
@@ -520,7 +639,7 @@ export function createCapabilityStore(db: Database) {
       forgeDebug({
         scope: 'capabilities-store',
         level: 'error',
-        message: 'listAgentStatuses DB read failed: ' + (String(serializeError(err))),
+        message: 'listAgentStatuses DB read failed: ' + String(serializeError(err)),
       });
       return [];
     }

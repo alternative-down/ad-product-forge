@@ -176,12 +176,10 @@ describe('get_github_provisioning_status', () => {
 
   it('returns pending status with registrationUrl', async () => {
     const mockManager = {
-      getAgentProvisioning: vi
-        .fn()
-        .mockResolvedValue({
-          status: 'pending',
-          registrationUrl: 'https://github.com/apps/register',
-        }),
+      getAgentProvisioning: vi.fn().mockResolvedValue({
+        status: 'pending',
+        registrationUrl: 'https://github.com/apps/register',
+      }),
     } as any;
     const tools = createGitHubTools('agent-1', mockManager);
     const result = await tools.get_github_provisioning_status.execute(
@@ -253,12 +251,10 @@ describe('start_github_app_provisioning', () => {
 
   it('returns registrationUrl for pending provisioning', async () => {
     const mockManager = {
-      getAgentProvisioning: vi
-        .fn()
-        .mockResolvedValue({
-          status: 'pending',
-          registrationUrl: 'https://github.com/apps/register',
-        }),
+      getAgentProvisioning: vi.fn().mockResolvedValue({
+        status: 'pending',
+        registrationUrl: 'https://github.com/apps/register',
+      }),
     } as any;
     const tools = createGitHubTools('agent-1', mockManager);
     const result = await tools.start_github_app_provisioning.execute(

@@ -53,8 +53,11 @@ export function useLtmLogData({ agentId, searchQuery }: UseLtmLogDataOptions) {
     queryFn: ({ pageParam }: { pageParam: number }) =>
       getAgentLongTermMemoryThreadMessages(agentId, pageParam, PAGE_SIZE),
     initialPageParam: 0,
-    getNextPageParam: (lastPage: ThreadMessagesPage, _pages: ThreadMessagesPage[], lastPageParam: number) =>
-      lastPage.hasMore ? lastPageParam + 1 : undefined,
+    getNextPageParam: (
+      lastPage: ThreadMessagesPage,
+      _pages: ThreadMessagesPage[],
+      lastPageParam: number,
+    ) => (lastPage.hasMore ? lastPageParam + 1 : undefined),
     refetchInterval: LIVE_REFETCH_INTERVAL_MS,
   });
 

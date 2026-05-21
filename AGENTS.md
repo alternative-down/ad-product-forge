@@ -1,6 +1,7 @@
 # AGENTS.md
 
 ## Code Style
+
 - Follow [CODE_STYLE.md](./CODE_STYLE.md) as the primary style guide.
 - Optimize for concept, responsibility, boundary, and readable flow.
 - Keep code linear and easy to follow from top to bottom.
@@ -21,6 +22,7 @@
 - Keep naming literal and obvious.
 
 ## Forge Admin Frontend
+
 - Follow [docs/design-system/forge-admin-ui-system.md](./docs/design-system/forge-admin-ui-system.md) as the design source of truth for the new Forge Admin UI.
 - Follow [docs/design-system/forge-admin-implementation.md](./docs/design-system/forge-admin-implementation.md) for route structure, shared primitives, and cleanup rules in the new Forge Admin UI.
 - Avoid cards and technical explanatory text in the admin UI unless they are truly necessary for the task.

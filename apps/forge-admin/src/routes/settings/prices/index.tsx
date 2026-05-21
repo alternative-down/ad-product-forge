@@ -15,8 +15,19 @@ import {
   PageHeader,
 } from '@/components/admin';
 import { Dialog } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getSystemLlm, upsertLlmModelPrice, type UpsertLlmModelPriceInput } from '@/lib/admin-api/index';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  getSystemLlm,
+  upsertLlmModelPrice,
+  type UpsertLlmModelPriceInput,
+} from '@/lib/admin-api/index';
 import { failAdminAction, startAdminAction, succeedAdminAction } from '@/lib/admin-toast';
 
 export const Route = createFileRoute('/settings/prices/')({
@@ -54,13 +65,18 @@ function SettingsPricesRoute() {
     },
   });
   const prices = useMemo(
-    () => [...(llmQuery.data?.prices ?? [])].sort((left, right) => left.modelKey.localeCompare(right.modelKey)),
+    () =>
+      [...(llmQuery.data?.prices ?? [])].sort((left, right) =>
+        left.modelKey.localeCompare(right.modelKey),
+      ),
     [llmQuery.data?.prices],
   );
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {llmQuery.isLoading && !llmQuery.data ? <AdminLoadingState label="Carregando preços..." /> : null}
+      {llmQuery.isLoading && !llmQuery.data ? (
+        <AdminLoadingState label="Carregando preços..." />
+      ) : null}
       <PageHeader title="Preços" />
 
       <div className="flex justify-end">
@@ -121,7 +137,11 @@ function SettingsPricesRoute() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AdminDialogContent>
           <AdminDialogHeader>
-            <AdminDialogTitle>{prices.some((price) => price.modelKey === priceForm.modelKey) ? 'Editar preço' : 'Novo preço'}</AdminDialogTitle>
+            <AdminDialogTitle>
+              {prices.some((price) => price.modelKey === priceForm.modelKey)
+                ? 'Editar preço'
+                : 'Novo preço'}
+            </AdminDialogTitle>
           </AdminDialogHeader>
 
           <form
@@ -137,75 +157,81 @@ function SettingsPricesRoute() {
             }}
           >
             <AdminDialogBody>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="llm-price-model-key">
-                Model key
-              </label>
-              <AdminInput
-                id="llm-price-model-key"
-                value={priceForm.modelKey}
-                onChange={(event) => setPriceForm((current) => ({ ...current, modelKey: event.target.value }))}
-                disabled={mutation.isPending}
-              />
-            </div>
-            <div className="grid gap-4 min-[560px]:grid-cols-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-input-price">
-                  Input / 1M
+                <label className="text-sm font-medium" htmlFor="llm-price-model-key">
+                  Model key
                 </label>
                 <AdminInput
-                  id="llm-input-price"
-                  type="number"
-                  step="0.000001"
-                  value={priceForm.inputPerMillionUsd}
+                  id="llm-price-model-key"
+                  value={priceForm.modelKey}
                   onChange={(event) =>
-                    setPriceForm((current) => ({
-                      ...current,
-                      inputPerMillionUsd: Number(event.target.value) || 0,
-                    }))
+                    setPriceForm((current) => ({ ...current, modelKey: event.target.value }))
                   }
                   disabled={mutation.isPending}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-cache-price">
-                  Cache / 1M
-                </label>
-                <AdminInput
-                  id="llm-cache-price"
-                  type="number"
-                  step="0.000001"
-                  value={priceForm.inputCachePerMillionUsd}
-                  onChange={(event) =>
-                    setPriceForm((current) => ({
-                      ...current,
-                      inputCachePerMillionUsd: Number(event.target.value) || 0,
-                    }))
-                  }
-                  disabled={mutation.isPending}
-                />
+              <div className="grid gap-4 min-[560px]:grid-cols-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="llm-input-price">
+                    Input / 1M
+                  </label>
+                  <AdminInput
+                    id="llm-input-price"
+                    type="number"
+                    step="0.000001"
+                    value={priceForm.inputPerMillionUsd}
+                    onChange={(event) =>
+                      setPriceForm((current) => ({
+                        ...current,
+                        inputPerMillionUsd: Number(event.target.value) || 0,
+                      }))
+                    }
+                    disabled={mutation.isPending}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="llm-cache-price">
+                    Cache / 1M
+                  </label>
+                  <AdminInput
+                    id="llm-cache-price"
+                    type="number"
+                    step="0.000001"
+                    value={priceForm.inputCachePerMillionUsd}
+                    onChange={(event) =>
+                      setPriceForm((current) => ({
+                        ...current,
+                        inputCachePerMillionUsd: Number(event.target.value) || 0,
+                      }))
+                    }
+                    disabled={mutation.isPending}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="llm-output-price">
+                    Output / 1M
+                  </label>
+                  <AdminInput
+                    id="llm-output-price"
+                    type="number"
+                    step="0.000001"
+                    value={priceForm.outputPerMillionUsd}
+                    onChange={(event) =>
+                      setPriceForm((current) => ({
+                        ...current,
+                        outputPerMillionUsd: Number(event.target.value) || 0,
+                      }))
+                    }
+                    disabled={mutation.isPending}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="llm-output-price">
-                  Output / 1M
-                </label>
-                <AdminInput
-                  id="llm-output-price"
-                  type="number"
-                  step="0.000001"
-                  value={priceForm.outputPerMillionUsd}
-                  onChange={(event) =>
-                    setPriceForm((current) => ({
-                      ...current,
-                      outputPerMillionUsd: Number(event.target.value) || 0,
-                    }))
-                  }
-                  disabled={mutation.isPending}
-                />
-              </div>
-            </div>
-            {llmQuery.error ? <div className="text-sm text-destructive">{llmQuery.error.message}</div> : null}
-            {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+              {llmQuery.error ? (
+                <div className="text-sm text-destructive">{llmQuery.error.message}</div>
+              ) : null}
+              {mutation.error ? (
+                <div className="text-sm text-destructive">{mutation.error.message}</div>
+              ) : null}
             </AdminDialogBody>
             <AdminDialogFooter>
               <AdminButton type="submit" disabled={mutation.isPending}>

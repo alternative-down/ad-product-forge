@@ -123,9 +123,7 @@ describe('request', () => {
 
   it('logs non-JSON response body on 4xx', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    globalThis.fetch = buildMockFetch(
-      new Response('Forbidden – access denied', { status: 403 }),
-    );
+    globalThis.fetch = buildMockFetch(new Response('Forbidden – access denied', { status: 403 }));
 
     await expect(request('/admin/agents')).rejects.toThrow('Não foi possível concluir a operação.');
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -177,11 +175,11 @@ describe('requestBlob', () => {
 
   it('throws with default message for non-JSON error body', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    globalThis.fetch = buildMockFetch(
-      new Response('Internal error', { status: 500 }),
-    );
+    globalThis.fetch = buildMockFetch(new Response('Internal error', { status: 500 }));
 
-    await expect(requestBlob('/export/agents')).rejects.toThrow('Não foi possível concluir a operação.');
+    await expect(requestBlob('/export/agents')).rejects.toThrow(
+      'Não foi possível concluir a operação.',
+    );
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toContain('[admin-api]');
     expect(warnSpy.mock.calls[0][0]).toContain('/export/agents');
@@ -223,9 +221,7 @@ describe('validateAdminSecret', () => {
 
   it('returns valid: false with default message for non-JSON 401 body', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    globalThis.fetch = buildMockFetch(
-      new Response('Unauthorized', { status: 401 }),
-    );
+    globalThis.fetch = buildMockFetch(new Response('Unauthorized', { status: 401 }));
     const result = await validateAdminSecret('bad-secret');
     expect(result.valid).toBe(false);
     expect(result.message).toBe('Não foi possível validar a chave.');

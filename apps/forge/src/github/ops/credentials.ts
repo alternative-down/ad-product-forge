@@ -23,7 +23,7 @@ export function createCredentialsOps(ctx: OpsContext) {
       provider = await db.query.agentProviders.findFirst({
         where: ctx.and(
           ctx.eq(ctx.agentProviders.agentId, agentId),
-          ctx.eq(ctx.agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE)
+          ctx.eq(ctx.agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE),
         ),
       });
     } catch (err) {
@@ -85,12 +85,17 @@ export function createCredentialsOps(ctx: OpsContext) {
       });
       throw err;
     }
-    return await ctx.createInstallationOctokit(credentials as Extract<GitHubAppCredentials, { status: 'active' }>);
+    return await ctx.createInstallationOctokit(
+      credentials as Extract<GitHubAppCredentials, { status: 'active' }>,
+    );
   }
 
   async function createInstallationOctokit(installationId: number) {
     type ActiveCredentials = Extract<GitHubAppCredentials, { status: 'active' }>;
-    return await ctx.createInstallationOctokit({ status: 'active', installationId } as ActiveCredentials);
+    return await ctx.createInstallationOctokit({
+      status: 'active',
+      installationId,
+    } as ActiveCredentials);
   }
 
   async function getInstallationToken(

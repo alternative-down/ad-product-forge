@@ -3,9 +3,7 @@ import type { HttpRequest, HttpResponse } from '../http/server';
 import { forgeDebug } from '@forge-runtime/core';
 
 type Store = {
-  getRoute(
-    routeId: string,
-  ): Promise<{
+  getRoute(routeId: string): Promise<{
     routeId: string;
     agentId: string;
     name: string;

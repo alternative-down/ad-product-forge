@@ -36,12 +36,14 @@ function SettingsMinimaxRoute() {
       failAdminAction(context, error);
     },
   });
-  const apiKey = draft?.apiKey ?? (integration?.config?.apiKey ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
+  const apiKey = draft?.apiKey ?? integration?.config?.apiKey ?? '';
+  const isEnabled = draft?.isEnabled ?? integration?.isEnabled ?? false;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando MiniMax..." /> : null}
+      {integrationsQuery.isLoading && !integrationsQuery.data ? (
+        <AdminLoadingState label="Carregando MiniMax..." />
+      ) : null}
       <PageHeader
         title="MiniMax"
         description="Conecta o sistema ao MiniMax para geração de voz, imagem e vídeo usada pelas tools dos agentes."
@@ -62,17 +64,46 @@ function SettingsMinimaxRoute() {
           }}
         >
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="minimax-api-key">API key</label>
-            <AdminInput id="minimax-api-key" type="password" value={apiKey} onChange={(event) => setDraft((current) => ({ apiKey: event.target.value, isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
+            <label className="text-sm font-medium" htmlFor="minimax-api-key">
+              API key
+            </label>
+            <AdminInput
+              id="minimax-api-key"
+              type="password"
+              value={apiKey}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  apiKey: event.target.value,
+                  isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true,
+                }))
+              }
+              disabled={mutation.isPending}
+            />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="minimax-status">Ativo</label>
+            <label className="text-sm font-medium" htmlFor="minimax-status">
+              Ativo
+            </label>
             <div className="flex min-h-9 items-center">
-              <Switch id="minimax-status" checked={isEnabled} onCheckedChange={(checked) => setDraft((current) => ({ apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '', isEnabled: checked }))} disabled={mutation.isPending} />
+              <Switch
+                id="minimax-status"
+                checked={isEnabled}
+                onCheckedChange={(checked) =>
+                  setDraft((current) => ({
+                    apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '',
+                    isEnabled: checked,
+                  }))
+                }
+                disabled={mutation.isPending}
+              />
             </div>
           </div>
-          {integrationsQuery.error ? <div className="text-sm text-destructive">{integrationsQuery.error.message}</div> : null}
-          {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+          {integrationsQuery.error ? (
+            <div className="text-sm text-destructive">{integrationsQuery.error.message}</div>
+          ) : null}
+          {mutation.error ? (
+            <div className="text-sm text-destructive">{mutation.error.message}</div>
+          ) : null}
           <div className="flex justify-end">
             <AdminButton type="submit" disabled={mutation.isPending || !apiKey.trim()}>
               {mutation.isPending ? 'Salvando...' : 'Salvar'}

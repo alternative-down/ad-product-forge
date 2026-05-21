@@ -3,7 +3,13 @@ import { ChevronRight, Pencil, Plus } from 'lucide-react';
 
 import { AdminButton, AdminScrollArea } from '@/components/admin';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { formatRecentMessageTime, getInitials, type LocalConversation } from './context';
 
 export function ConversationListPane(input: {
@@ -19,7 +25,13 @@ export function ConversationListPane(input: {
   onCreateConversation(): void;
 }) {
   return (
-    <div className={input.mobileDetailOpen ? 'hidden h-full min-h-0 flex-col gap-3 md:flex' : 'flex h-full min-h-0 flex-col gap-3'}>
+    <div
+      className={
+        input.mobileDetailOpen
+          ? 'hidden h-full min-h-0 flex-col gap-3 md:flex'
+          : 'flex h-full min-h-0 flex-col gap-3'
+      }
+    >
       <section className="space-y-2">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="home-conversations-account">
@@ -42,7 +54,12 @@ export function ConversationListPane(input: {
                 ))}
               </SelectContent>
             </Select>
-            <AdminButton variant="outline" size="icon-sm" disabled={!input.selectedAccountId} onClick={input.onEditAccount}>
+            <AdminButton
+              variant="outline"
+              size="icon-sm"
+              disabled={!input.selectedAccountId}
+              onClick={input.onEditAccount}
+            >
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Editar conta</span>
             </AdminButton>
@@ -111,7 +128,9 @@ export function ConversationListPane(input: {
                         {latestMessage ? (
                           <div className="space-y-1 pt-2">
                             <div className="truncate text-sm text-foreground">
-                              <span className="text-muted-foreground">{latestMessage.authorDisplayName}: </span>
+                              <span className="text-muted-foreground">
+                                {latestMessage.authorDisplayName}:{' '}
+                              </span>
                               <span>{latestMessage.content}</span>
                             </div>
                           </div>

@@ -41,6 +41,7 @@ const decrypted = decryptSecret(encrypted); // 'dados sensíveis'
 ### ENCRYPTION_KEY
 
 Variável de ambiente obrigatória. Deve ser:
+
 - 32 bytes (256 bits)
 - Base64 encoded
 - Gerada com: `openssl rand -base64 32`
@@ -67,10 +68,12 @@ interface RoleToolPermission {
 
 ```typescript
 // Antes de executar tool
-const permissions = await db.select().from(roleToolPermissions)
+const permissions = await db
+  .select()
+  .from(roleToolPermissions)
   .where(eq(roleToolPermissions.roleId, agentRoleId));
 
-const hasPermission = permissions.some(p => p.toolId === toolId);
+const hasPermission = permissions.some((p) => p.toolId === toolId);
 
 if (!hasPermission) {
   throw new Error('Tool not permitted for this role');
@@ -98,10 +101,12 @@ const schema = z.object({
   providerType: z.enum(['discord', 'internal-chat', 'email']),
   credentials: z.object({
     token: z.string().min(1),
-    channels: z.array(z.object({
-      channelId: z.string(),
-      respondToMentionsOnly: z.boolean(),
-    })),
+    channels: z.array(
+      z.object({
+        channelId: z.string(),
+        respondToMentionsOnly: z.boolean(),
+      }),
+    ),
   }),
 });
 
@@ -130,6 +135,7 @@ if (!parsed.success) {
 ### HTTPS
 
 Produção deve usar HTTPS:
+
 - Terminar TLS no proxy/reverse proxy
 - HTTP/2 para performance
 
@@ -142,13 +148,13 @@ Produção deve usar HTTPS:
 
 ### Eventos Auditados
 
-| Evento | Descrição |
-|--------|-----------|
-| Agent hire | Novo agente criado |
-| Agent termination | Agente removido |
-| Provider update | Credenciais atualizadas |
-| Budget change | Top-up ou ajuste |
-| Permission change | Role modificado |
+| Evento            | Descrição               |
+| ----------------- | ----------------------- |
+| Agent hire        | Novo agente criado      |
+| Agent termination | Agente removido         |
+| Provider update   | Credenciais atualizadas |
+| Budget change     | Top-up ou ajuste        |
+| Permission change | Role modificado         |
 
 ### Log Format
 

@@ -4,20 +4,20 @@
 
 ### Obrigatórias
 
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `ENCRYPTION_KEY` | Chave AES-256 para criptografia (base64, 32 bytes) | `openssl rand -base64 32` |
-| `DATABASE_URL` | URL do banco libsql | `file:./data/forge.db` ou `libsql://xxx.turso.io` |
-| `FORGE_DATA_PATH` | Diretório de dados | `./data` (default) |
-| `WORKSPACE_BASE_PATH` | Diretório dos workspaces dos agentes | `./workspaces` (default) |
+| Variável              | Descrição                                          | Exemplo                                           |
+| --------------------- | -------------------------------------------------- | ------------------------------------------------- |
+| `ENCRYPTION_KEY`      | Chave AES-256 para criptografia (base64, 32 bytes) | `openssl rand -base64 32`                         |
+| `DATABASE_URL`        | URL do banco libsql                                | `file:./data/forge.db` ou `libsql://xxx.turso.io` |
+| `FORGE_DATA_PATH`     | Diretório de dados                                 | `./data` (default)                                |
+| `WORKSPACE_BASE_PATH` | Diretório dos workspaces dos agentes               | `./workspaces` (default)                          |
 
 ### Opcionais
 
-| Variável | Descrição | Default |
-|----------|-----------|---------|
-| `HTTP_PORT` | Porta do servidor HTTP | `3000` |
-| `HTTP_HOST` | Host do servidor | `0.0.0.0` |
-| `LOG_LEVEL` | Nível de log (debug, info, warn, error) | `info` |
+| Variável    | Descrição                               | Default   |
+| ----------- | --------------------------------------- | --------- |
+| `HTTP_PORT` | Porta do servidor HTTP                  | `3000`    |
+| `HTTP_HOST` | Host do servidor                        | `0.0.0.0` |
+| `LOG_LEVEL` | Nível de log (debug, info, warn, error) | `info`    |
 
 ### LLM Providers
 
@@ -64,12 +64,12 @@ interface EnvSchema {
   WORKSPACE_BASE_PATH: string;
   HTTP_PORT: number;
   HTTP_HOST: string;
-  
+
   // LLM
   OPENAI_API_KEY?: string;
   MINIMAX_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
-  
+
   // Integrations
   COOLIFY_API_KEY?: string;
   COOLIFY_BASE_URL?: string;
@@ -143,11 +143,11 @@ curl -X PUT http://localhost:3000/admin/system/settings \
 
 Settings disponíveis:
 
-| Key | Tipo | Descrição |
-|-----|------|-----------|
-| `llm.default_model` | string | Modelo LLM default |
+| Key                                        | Tipo   | Descrição                       |
+| ------------------------------------------ | ------ | ------------------------------- |
+| `llm.default_model`                        | string | Modelo LLM default              |
 | `llm.observation_previous_observer_tokens` | number | Tokens para observação anterior |
-| `checkpointing.om_recent_raw_tokens` | number | Tokens recentes no checkpoint |
+| `checkpointing.om_recent_raw_tokens`       | number | Tokens recentes no checkpoint   |
 
 ## LLM Profiles
 
@@ -175,6 +175,7 @@ POST /admin/llm-profile
 ```
 
 Perfis especiais:
+
 - `primary` — usado para execuções normais
 - `om` — usado para Operational Memory
 

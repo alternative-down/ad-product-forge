@@ -14,6 +14,7 @@ It does not define budgets, pacing, throttling, or other controls derived from t
 ## Scope
 
 This PRD covers:
+
 - financial entries
 - financial outflows
 - future obligations
@@ -22,6 +23,7 @@ This PRD covers:
 - balance snapshots for efficient reads
 
 This PRD does not cover:
+
 - agent contract pacing
 - global LLM usage throttling
 - execution limits
@@ -47,6 +49,7 @@ A chronological record of company financial movements.
 Each record represents one movement that affects or may affect company cash.
 
 Examples:
+
 - incoming payment
 - operating expense
 - salary or contractor payout
@@ -58,10 +61,12 @@ Examples:
 ### Present and Future Records
 
 The ledger must support both:
+
 - movements that already happened
 - movements expected to happen in the future
 
 This allows the system to represent:
+
 - current balance
 - upcoming obligations
 - simple cash projection
@@ -86,6 +91,7 @@ If needed, it must always be possible to recompute balance from the ledger.
 ### `company_cash_ledger`
 
 Suggested fields:
+
 - `id`
 - `type`
 - `direction`
@@ -101,9 +107,11 @@ Suggested fields:
 ### Field Notes
 
 #### `type`
+
 A simple business classification of the movement.
 
 Examples:
+
 - `revenue`
 - `expense`
 - `agent-contract-funding`
@@ -112,21 +120,26 @@ Examples:
 - `manual-adjustment`
 
 #### `direction`
+
 Defines whether the movement adds to or removes from company cash.
 
 Values:
+
 - `in`
 - `out`
 
 #### `amountUsd`
+
 The monetary amount in USD.
 
 All values in this financial model should be stored in USD.
 
 #### `referenceType` and `referenceId`
+
 Optional fields used to connect a cash movement to another business object.
 
 Examples:
+
 - contract
 - invoice
 - subscription
@@ -136,18 +149,22 @@ Examples:
 This keeps the ledger generic while still allowing traceability.
 
 #### `status`
+
 Defines whether the record is only planned or already effective.
 
 Initial simple values:
+
 - `planned`
 - `posted`
 - `canceled`
 
 #### `dueAt`
+
 The expected date/time of the movement.
 Useful for future obligations.
 
 #### `effectiveAt`
+
 The date/time when the movement actually affected company cash.
 Useful for posted records.
 
@@ -156,12 +173,14 @@ Useful for posted records.
 ### Current Balance
 
 Current balance should be derived from ledger entries where:
+
 - `status = posted`
 - and the movement is already effective
 
 ### Future Projection
 
 Projected balance may include:
+
 - `planned` future entries
 - `posted` future-dated entries if that becomes necessary later
 
@@ -172,16 +191,19 @@ For the first version, it is enough to support a simple projection from planned 
 ### `company_cash_balance_snapshot`
 
 Suggested fields:
+
 - `id`
 - `balanceUsd`
 - `asOf`
 - `createdAt`
 
 Purpose:
+
 - speed up reads
 - avoid recalculating the entire ledger every time
 
 Rule:
+
 - snapshot is a cache/optimization
 - ledger remains the source of truth
 
@@ -226,6 +248,7 @@ Rule:
 ## What This Enables
 
 This structure is enough to support later features such as:
+
 - agent contract funding
 - contract renewal
 - contract top-up
@@ -249,6 +272,7 @@ This keeps the financial model simple, extensible, and independent from the exec
 ## Implementation Status
 
 Implemented today:
+
 - `company_cash_ledger` exists in the Forge app database
 - current balance is already derived from posted effective ledger records
 - explicit write operations already exist for:
@@ -265,6 +289,7 @@ Implemented today:
   - manual cash funding
 
 Current implementation fields:
+
 - `id`
 - `type`
 - `direction`
@@ -278,9 +303,11 @@ Current implementation fields:
 - `createdAt`
 
 Operational helpers already exist:
+
 - manual funding script for company cash
 - app-level ledger module used by hiring and contract runtime
 
 Still pending:
+
 - balance snapshot table
 - projected cash helpers built on planned future entries

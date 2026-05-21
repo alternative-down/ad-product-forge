@@ -76,7 +76,11 @@ const ROAM_LANE = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeBubble(agent: AgentListItem, nowMs: number, deadlines: Record<string, number>): string | null {
+function makeBubble(
+  agent: AgentListItem,
+  nowMs: number,
+  deadlines: Record<string, number>,
+): string | null {
   return deadlines[agent.agentId] > nowMs ? agent.overview.lastStepPreview : null;
 }
 
@@ -105,9 +109,7 @@ function buildRunning(input: BuildSceneAgentsInput, running: AgentListItem[]): S
     });
     const forceDeskDefault = ambientDeskPose === null;
     const deskBobOffset =
-      forceDeskDefault && !isRoaming
-        ? Math.sin((input.tick + index * 5) / 1.8) * 0.6
-        : 0;
+      forceDeskDefault && !isRoaming ? Math.sin((input.tick + index * 5) / 1.8) * 0.6 : 0;
 
     result.push({
       agent,
@@ -136,13 +138,8 @@ function buildMemory(input: BuildSceneAgentsInput, memory: AgentListItem[]): Sce
     const variant = hashText(`${agent.agentId}:memory:${bucket}`) % 6;
 
     const dir: SceneAgent['dir'] =
-      variant <= 1 ? slot.dir
-        : variant === 2 ? 'down'
-        : variant === 3 ? 'left'
-        : slot.dir;
-    const frame: number =
-      variant <= 1 ? 5
-        : 1;
+      variant <= 1 ? slot.dir : variant === 2 ? 'down' : variant === 3 ? 'left' : slot.dir;
+    const frame: number = variant <= 1 ? 5 : 1;
 
     result.push({
       agent,
@@ -153,7 +150,7 @@ function buildMemory(input: BuildSceneAgentsInput, memory: AgentListItem[]): Sce
       dir: isAnimating ? (workPhase === 2 ? 'down' : dir) : dir,
       frame: isAnimating
         ? workPhase === 0 || workPhase === 1 || workPhase === 4
-          ? 5 + (input.tick + index) % 2
+          ? 5 + ((input.tick + index) % 2)
           : 1
         : frame,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
@@ -170,7 +167,9 @@ function buildIdle(input: BuildSceneAgentsInput, idle: AgentListItem[]): SceneAg
   for (const [index, agent] of idle.entries()) {
     const seed = hashText(agent.agentId);
     const idleBucket = Math.floor(input.tick / 20);
-    const slot = IDLE_WANDER_PATH[(idleBucket + seed) % IDLE_WANDER_PATH.length] ?? FOCUS_SLOTS[index % FOCUS_SLOTS.length];
+    const slot =
+      IDLE_WANDER_PATH[(idleBucket + seed) % IDLE_WANDER_PATH.length] ??
+      FOCUS_SLOTS[index % FOCUS_SLOTS.length];
     const isAnimating = input.animationDeadlines[agent.agentId] > input.nowMs;
 
     result.push({
@@ -182,7 +181,7 @@ function buildIdle(input: BuildSceneAgentsInput, idle: AgentListItem[]): SceneAg
       dir: isAnimating ? (index % 2 === 0 ? slot.dir : 'right') : slot.dir,
       frame: isAnimating
         ? index % 3 === 0
-          ? 5 + (input.tick + index) % 2
+          ? 5 + ((input.tick + index) % 2)
           : 1 + ((input.tick + index) % 2)
         : 1,
       toolBubble: isAnimating ? agent.overview.lastToolBadge : null,
@@ -214,9 +213,24 @@ function buildHiring(tick: number): SceneAgent {
   const hiringPhase = Math.floor(tick / 10) % 12;
   const hiringWaypoint = hiringPhase < 4 ? 0 : hiringPhase < 8 ? 1 : 2;
   const hiringPositions = [
-    { x: WORLD_OFFSET_X + 13.9 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.3 * TILE_SIZE, dir: 'left' as const, frame: 5 },
-    { x: WORLD_OFFSET_X + 15.4 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.7 * TILE_SIZE, dir: 'right' as const, frame: 1 },
-    { x: WORLD_OFFSET_X + 17.1 * TILE_SIZE, y: WORLD_OFFSET_Y + 4.4 * TILE_SIZE, dir: 'left' as const, frame: 5 },
+    {
+      x: WORLD_OFFSET_X + 13.9 * TILE_SIZE,
+      y: WORLD_OFFSET_Y + 4.3 * TILE_SIZE,
+      dir: 'left' as const,
+      frame: 5,
+    },
+    {
+      x: WORLD_OFFSET_X + 15.4 * TILE_SIZE,
+      y: WORLD_OFFSET_Y + 4.7 * TILE_SIZE,
+      dir: 'right' as const,
+      frame: 1,
+    },
+    {
+      x: WORLD_OFFSET_X + 17.1 * TILE_SIZE,
+      y: WORLD_OFFSET_Y + 4.4 * TILE_SIZE,
+      dir: 'left' as const,
+      frame: 5,
+    },
   ];
   const hiringPosition = hiringPositions[hiringWaypoint];
 
@@ -238,7 +252,9 @@ function buildHiring(tick: number): SceneAgent {
 // ---------------------------------------------------------------------------
 
 export function buildSceneAgents(input: BuildSceneAgentsInput): SceneAgent[] {
-  const running = input.agents.filter((a) => a.executionState === 'running' && !a.overview.ltm.running);
+  const running = input.agents.filter(
+    (a) => a.executionState === 'running' && !a.overview.ltm.running,
+  );
   const memory = input.agents.filter((a) => a.overview.ltm.running);
   const absent = input.agents.filter((a) => a.executionState === 'absent');
   const idle = input.agents.filter((a) => a.executionState === 'idle' && !a.overview.ltm.running);

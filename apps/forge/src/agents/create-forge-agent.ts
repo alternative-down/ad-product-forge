@@ -27,7 +27,6 @@ import type {
   RuntimeAgentSessionGenerateOptions,
 } from '@forge-runtime/core';
 
-
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {
     forgeDebug({

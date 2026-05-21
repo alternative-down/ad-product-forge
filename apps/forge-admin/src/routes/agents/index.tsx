@@ -3,8 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
-import { AgentAvatar, AdminButton, AdminLoadingState, HireAgentDialog, PageHeader } from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AgentAvatar,
+  AdminButton,
+  AdminLoadingState,
+  HireAgentDialog,
+  PageHeader,
+} from '@/components/admin';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { getAgents } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/agents/')({
@@ -23,15 +36,13 @@ function AgentsIndexRoute() {
     <div className="min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         title="Agentes"
-        actions={
-          <AdminButton onClick={() => setHireOpen(true)}>
-            Contratar
-          </AdminButton>
-        }
+        actions={<AdminButton onClick={() => setHireOpen(true)}>Contratar</AdminButton>}
       />
 
       <section className="space-y-5">
-        {agentsQuery.isLoading && agents.length === 0 ? <AdminLoadingState label="Carregando agentes..." /> : null}
+        {agentsQuery.isLoading && agents.length === 0 ? (
+          <AdminLoadingState label="Carregando agentes..." />
+        ) : null}
         <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border">
           <Table className="text-sm">
             <TableHeader className="bg-muted/50 text-left text-muted-foreground">
@@ -74,9 +85,13 @@ function AgentsIndexRoute() {
                     {agent.overview.lastStepAt ? (
                       <div className="space-y-0.5">
                         <div>{formatDateTime(agent.overview.lastStepAt)}</div>
-                        <div className="text-xs text-muted-foreground">{formatRelativeTime(agent.overview.lastStepAt)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatRelativeTime(agent.overview.lastStepAt)}
+                        </div>
                       </div>
-                    ) : '—'}
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     {agent.runner?.wake.pending
@@ -85,7 +100,9 @@ function AgentsIndexRoute() {
                         ? 'Aguardando idle'
                         : 'Limpa'}
                   </TableCell>
-                  <TableCell className="px-4 py-3">{agent.overview.unreadNotificationCount}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {agent.overview.unreadNotificationCount}
+                  </TableCell>
                   <TableCell className="px-4 py-3">
                     {agent.overview.om
                       ? `g${agent.overview.om.generationCount} · raw ${formatNullableNumber(agent.overview.om.recentRawTokenCount)}`
@@ -93,7 +110,13 @@ function AgentsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="space-y-0.5">
-                      <div>{agent.overview.ltm.running ? 'Executando' : agent.overview.ltm.queued ? 'Enfileirada' : 'Ociosa'}</div>
+                      <div>
+                        {agent.overview.ltm.running
+                          ? 'Executando'
+                          : agent.overview.ltm.queued
+                            ? 'Enfileirada'
+                            : 'Ociosa'}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {`${formatNullableNumber(agent.overview.ltm.packageCount)} pacotes`}
                       </div>
@@ -101,11 +124,7 @@ function AgentsIndexRoute() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <AdminButton
-                        asChild
-                        variant="ghost"
-                        size="icon"
-                      >
+                      <AdminButton asChild variant="ghost" size="icon">
                         <Link to="/agents/$agentId" params={{ agentId: agent.agentId }}>
                           <Pencil className="h-4 w-4" />
                           <span className="sr-only">Abrir agente</span>
@@ -126,7 +145,9 @@ function AgentsIndexRoute() {
           </Table>
         </div>
 
-        {agentsQuery.error ? <div className="text-sm text-destructive">{agentsQuery.error.message}</div> : null}
+        {agentsQuery.error ? (
+          <div className="text-sm text-destructive">{agentsQuery.error.message}</div>
+        ) : null}
       </section>
 
       <HireAgentDialog open={hireOpen} onOpenChange={setHireOpen} />

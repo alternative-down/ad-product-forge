@@ -61,9 +61,7 @@ export function HomeConversationsProvider({
   children: React.ReactNode;
 }) {
   return (
-    <HomeConversationsContext.Provider value={value}>
-      {children}
-    </HomeConversationsContext.Provider>
+    <HomeConversationsContext.Provider value={value}>{children}</HomeConversationsContext.Provider>
   );
 }
 

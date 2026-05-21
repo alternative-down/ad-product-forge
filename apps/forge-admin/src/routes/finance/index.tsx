@@ -3,11 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { PageHeader } from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  getFinance,
-  getFinanceContracts,
-} from '@/lib/admin-api/index';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { getFinance, getFinanceContracts } from '@/lib/admin-api/index';
 
 export const Route = createFileRoute('/finance/')({
   component: FinanceIndexRoute,
@@ -42,8 +46,14 @@ function FinanceIndexRoute() {
 
         <dl className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <MetricItem label="Saldo" value={formatUsd(financeQuery.data?.balanceUsd ?? 0)} />
-          <MetricItem label="Entradas" value={formatUsd(financeQuery.data?.summary.totalInUsd ?? 0)} />
-          <MetricItem label="Saídas" value={formatUsd(financeQuery.data?.summary.totalOutUsd ?? 0)} />
+          <MetricItem
+            label="Entradas"
+            value={formatUsd(financeQuery.data?.summary.totalInUsd ?? 0)}
+          />
+          <MetricItem
+            label="Saídas"
+            value={formatUsd(financeQuery.data?.summary.totalOutUsd ?? 0)}
+          />
           <MetricItem label="Saídas previstas" value={formatUsd(scheduledOutUsd)} />
         </dl>
       </section>
@@ -84,9 +94,7 @@ function FinanceIndexRoute() {
             <TableBody>
               {movements.map((movement) => (
                 <TableRow key={movement.id}>
-                  <TableCell className="px-4 py-3">
-                    {humanizeMovementType(movement.type)}
-                  </TableCell>
+                  <TableCell className="px-4 py-3">{humanizeMovementType(movement.type)}</TableCell>
                   <TableCell className="px-4 py-3">
                     {formatUsdSigned(movement.amountUsd, movement.direction)}
                   </TableCell>
@@ -109,17 +117,18 @@ function FinanceIndexRoute() {
           </Table>
         </div>
 
-        {financeQuery.error ? <div className="pt-4 text-sm text-destructive">{financeQuery.error.message}</div> : null}
-        {contractsQuery.error ? <div className="pt-4 text-sm text-destructive">{contractsQuery.error.message}</div> : null}
+        {financeQuery.error ? (
+          <div className="pt-4 text-sm text-destructive">{financeQuery.error.message}</div>
+        ) : null}
+        {contractsQuery.error ? (
+          <div className="pt-4 text-sm text-destructive">{contractsQuery.error.message}</div>
+        ) : null}
       </section>
     </div>
   );
 }
 
-function MetricItem(input: {
-  label: string;
-  value: string;
-}) {
+function MetricItem(input: { label: string; value: string }) {
   return (
     <div className="space-y-1">
       <dt className="text-sm text-muted-foreground">{input.label}</dt>

@@ -1,11 +1,11 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
-import { meta as noUselessReexports } from './src/eslint-rules/no-useless-reexports.mjs'
-import { meta as filenameKebabCase } from './src/eslint-rules/filename-kebab-case.mjs'
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import { meta as noUselessReexports } from './src/eslint-rules/no-useless-reexports.mjs';
+import { meta as filenameKebabCase } from './src/eslint-rules/filename-kebab-case.mjs';
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -24,7 +24,7 @@ export default defineConfig([
     rules: {
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true, allowExportNames: ['Route'], extraHOCs: ['Route'] }
+        { allowConstantExport: true, allowExportNames: ['Route'], extraHOCs: ['Route'] },
       ],
       'no-useless-reexports/no-useless-reexports': 'error',
       'filename-kebab-case/filename-kebab-case': 'warn',
@@ -45,13 +45,9 @@ export default defineConfig([
     },
   },
   {
-    files: [
-      'src/lib/**/*.ts',
-      'src/lib/**/*.tsx',
-      'src/components/admin/index.ts',
-    ],
+    files: ['src/lib/**/*.ts', 'src/lib/**/*.tsx', 'src/components/admin/index.ts'],
     rules: {
       'no-useless-reexports/no-useless-reexports': 'off',
     },
   },
-])
+]);

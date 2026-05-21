@@ -15,25 +15,27 @@ Located in: `packages/mastra-engine/src/agent/memory/memory.ts`
 **Created by:** `createAgentMemory({ storage, vector })`
 
 **Mastra Memory configuration:**
+
 ```typescript
 new Memory({
-  embedder: fastembed,  // unified instance
+  embedder: fastembed, // unified instance
   storage: config.storage,
   vector: config.vector,
   options: {
-    lastMessages: Number.MAX_SAFE_INTEGER,  // unlimited
-    semanticRecall: false,  // disabled, we use LTM
-    observationalMemory: false,  // custom OM instead
+    lastMessages: Number.MAX_SAFE_INTEGER, // unlimited
+    semanticRecall: false, // disabled, we use LTM
+    observationalMemory: false, // custom OM instead
     workingMemory: {
       enabled: true,
       scope: 'thread',
       template: WORKING_MEMORY_TEMPLATE,
     },
   },
-})
+});
 ```
 
 **Purpose:**
+
 - Persists raw message history for the current thread
 - Provides working memory template injection
 - Manages thread-scoped context
@@ -49,22 +51,25 @@ Located in: `packages/mastra-engine/src/agent/memory/observational-memory.ts`
 **Created by:** `createObservationalMemory({ storage, model })`
 
 **Mastra ObservationalMemory configuration:**
+
 ```typescript
 new ObservationalMemory({
   storage: config.storage.stores.memory!,
   model: config.model,
   scope: 'thread',
-  observation: { messageTokens: 15000 },  // compression budget
-  reflection: { observationTokens: 20000 },  // reflection budget
-})
+  observation: { messageTokens: 15000 }, // compression budget
+  reflection: { observationTokens: 20000 }, // reflection budget
+});
 ```
 
 **Lifecycle:**
+
 - **On every input step:** Processor adds OM to inputProcessors
 - **On every output step:** Processor adds OM to outputProcessors
 - **Automatic execution:** Mastra's processor system invokes `observe()` and `reflect()`
 
 **Purpose:**
+
 - Compress past interactions into observations
 - Generate reflections from observations
 - Store with thread and resource metadata
@@ -72,6 +77,7 @@ new ObservationalMemory({
 **Storage:** LibSQLStore (memory table)
 
 **Integration:** Registered in `createAgent()`:
+
 ```typescript
 const om = createObservationalMemory({ storage, model });
 const inputProcessors = [om];
@@ -87,6 +93,7 @@ Located in: `packages/mastra-engine/src/agent/memory/long-term-memory.ts`
 **Created by:** `LongTermMemory.create({ agentId, om })`
 
 **Activation:**
+
 - Optional in `createAgent()` via `options.longTermMemory = true`
 - Automatic in `createForgeAgent()` (which wraps `createAgent({ options: { longTermMemory: true } })`)
 
@@ -94,8 +101,8 @@ Located in: `packages/mastra-engine/src/agent/memory/long-term-memory.ts`
 
 ```typescript
 class LongTermMemory implements Processor<'long-term-memory'> {
-  async processInputStep(args: ProcessInputStepArgs): Promise<void>
-  async processOutputStep(args: ProcessOutputStepArgs): Promise<void>
+  async processInputStep(args: ProcessInputStepArgs): Promise<void>;
+  async processOutputStep(args: ProcessOutputStepArgs): Promise<void>;
 }
 ```
 
@@ -104,10 +111,11 @@ class LongTermMemory implements Processor<'long-term-memory'> {
 **Trigger:** Every agent input step
 
 **Process:**
+
 1. Extract query from last 8 messages in thread
 2. Hybrid-search workspace observations:
    ```typescript
-   const workspaceResults = await workspace.search(queryText, { mode: 'hybrid' })
+   const workspaceResults = await workspace.search(queryText, { mode: 'hybrid' });
    // mode: 'hybrid' = BM25 + semantic similarity
    ```
 3. Graph-search via GraphRAG:
@@ -115,7 +123,7 @@ class LongTermMemory implements Processor<'long-term-memory'> {
    const graphResults = await this.graphTool.execute({
      query: queryText,
      topK: 5,
-   })
+   });
    ```
 4. Inject results as system message via `args.messageList.addSystem()`
 
@@ -126,6 +134,7 @@ class LongTermMemory implements Processor<'long-term-memory'> {
 **Trigger:** Every agent output step
 
 **Process:**
+
 1. Fetch pending observations from OM
 2. Group observations by date (YYYY-MM-DD)
 3. Write to workspace:
@@ -139,6 +148,7 @@ class LongTermMemory implements Processor<'long-term-memory'> {
 ### 3.3 Storage & Search
 
 **Workspace structure:**
+
 ```
 .forge-memory/
   {agentId}/
@@ -151,6 +161,7 @@ class LongTermMemory implements Processor<'long-term-memory'> {
 **Vector index:** LibSQLVector (same database as agent storage)
 
 **Search modes:**
+
 - **Workspace:** BM25 + semantic hybrid
 - **Graph:** GraphRAG semantic with relationship awareness
 
@@ -165,6 +176,7 @@ Located in: `packages/mastra-engine/src/agent/memory/storage.ts`
 **Database:** LibSQL (file-based SQLite)
 
 **Structure:**
+
 ```typescript
 {
   client: LibSQLClient,  // connection to {agentId}.db
@@ -178,12 +190,14 @@ Located in: `packages/mastra-engine/src/agent/memory/storage.ts`
 ```
 
 **Embeddings:**
+
 - **Model:** fastembed (all-minilm-l6-v2)
 - **Unified instance:** Single embedder shared across all agent stores
 - **Dimension:** 384
 - **Storage:** LibSQLVector (same database)
 
 **Consistency:**
+
 - All stores reference the same LibSQL client
 - Unified embedder prevents embedding inconsistency
 - Per-agent database provides isolation
@@ -263,14 +277,14 @@ interface CreateForgeAgentConfig {
   description?: string;
   instructions: string;
   model: string;
-  omModel?: string;  // separate model for OM (optional)
+  omModel?: string; // separate model for OM (optional)
   tools?: ToolsInput;
   providers?: CommunicationProvider[];
   // ... Mastra config
 }
 
 interface CreateAgentOptions {
-  longTermMemory?: boolean;  // default: false
+  longTermMemory?: boolean; // default: false
 }
 ```
 
@@ -288,15 +302,15 @@ export async function createForgeAgent<...>(config, options = {}) {
 
 ## 7. Key Design Decisions
 
-| Decision | Rationale |
-| --- | --- |
-| **Per-agent database** | Isolation, simpler backup/migration, no multi-tenant complexity |
-| **Unified embedder** | Consistency across all vectors, no drift in semantic search |
-| **Fastembed locally** | No API calls, fast embedding, good quality for agent use cases |
-| **Optional long-term memory** | Not all agents need full hybrid search; reduces overhead |
-| **Workspace as source of truth** | Durably stored markdown enables auditing, re-indexing, human review |
-| **LibSQL for everything** | Single technology, no dependency complexity, works locally |
-| **Processor pattern** | Leverages Mastra's standard system, easier to understand and maintain |
+| Decision                         | Rationale                                                             |
+| -------------------------------- | --------------------------------------------------------------------- |
+| **Per-agent database**           | Isolation, simpler backup/migration, no multi-tenant complexity       |
+| **Unified embedder**             | Consistency across all vectors, no drift in semantic search           |
+| **Fastembed locally**            | No API calls, fast embedding, good quality for agent use cases        |
+| **Optional long-term memory**    | Not all agents need full hybrid search; reduces overhead              |
+| **Workspace as source of truth** | Durably stored markdown enables auditing, re-indexing, human review   |
+| **LibSQL for everything**        | Single technology, no dependency complexity, works locally            |
+| **Processor pattern**            | Leverages Mastra's standard system, easier to understand and maintain |
 
 ---
 

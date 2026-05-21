@@ -37,13 +37,15 @@ function SettingsMigaduRoute() {
       failAdminAction(context, error);
     },
   });
-  const apiUser = draft?.apiUser ?? (integration?.config?.apiUser ?? '');
-  const apiKey = draft?.apiKey ?? (integration?.config?.apiKey ?? '');
-  const isEnabled = draft?.isEnabled ?? (integration?.isEnabled ?? false);
+  const apiUser = draft?.apiUser ?? integration?.config?.apiUser ?? '';
+  const apiKey = draft?.apiKey ?? integration?.config?.apiKey ?? '';
+  const isEnabled = draft?.isEnabled ?? integration?.isEnabled ?? false;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {integrationsQuery.isLoading && !integrationsQuery.data ? <AdminLoadingState label="Carregando Migadu..." /> : null}
+      {integrationsQuery.isLoading && !integrationsQuery.data ? (
+        <AdminLoadingState label="Carregando Migadu..." />
+      ) : null}
       <PageHeader
         title="Migadu"
         description="Conecta o sistema ao Migadu para provisionar e administrar caixas de e-mail."
@@ -65,23 +67,70 @@ function SettingsMigaduRoute() {
           }}
         >
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="migadu-api-user">API user</label>
-            <AdminInput id="migadu-api-user" value={apiUser} onChange={(event) => setDraft((current) => ({ apiUser: event.target.value, apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '', isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
+            <label className="text-sm font-medium" htmlFor="migadu-api-user">
+              API user
+            </label>
+            <AdminInput
+              id="migadu-api-user"
+              value={apiUser}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  apiUser: event.target.value,
+                  apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '',
+                  isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true,
+                }))
+              }
+              disabled={mutation.isPending}
+            />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="migadu-api-key">API key</label>
-            <AdminInput id="migadu-api-key" type="password" value={apiKey} onChange={(event) => setDraft((current) => ({ apiUser: current?.apiUser ?? integration?.config?.apiUser ?? '', apiKey: event.target.value, isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true }))} disabled={mutation.isPending} />
+            <label className="text-sm font-medium" htmlFor="migadu-api-key">
+              API key
+            </label>
+            <AdminInput
+              id="migadu-api-key"
+              type="password"
+              value={apiKey}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  apiUser: current?.apiUser ?? integration?.config?.apiUser ?? '',
+                  apiKey: event.target.value,
+                  isEnabled: current?.isEnabled ?? integration?.isEnabled ?? true,
+                }))
+              }
+              disabled={mutation.isPending}
+            />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="migadu-status">Ativo</label>
+            <label className="text-sm font-medium" htmlFor="migadu-status">
+              Ativo
+            </label>
             <div className="flex min-h-9 items-center">
-              <Switch id="migadu-status" checked={isEnabled} onCheckedChange={(checked) => setDraft((current) => ({ apiUser: current?.apiUser ?? integration?.config?.apiUser ?? '', apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '', isEnabled: checked }))} disabled={mutation.isPending} />
+              <Switch
+                id="migadu-status"
+                checked={isEnabled}
+                onCheckedChange={(checked) =>
+                  setDraft((current) => ({
+                    apiUser: current?.apiUser ?? integration?.config?.apiUser ?? '',
+                    apiKey: current?.apiKey ?? integration?.config?.apiKey ?? '',
+                    isEnabled: checked,
+                  }))
+                }
+                disabled={mutation.isPending}
+              />
             </div>
           </div>
-          {integrationsQuery.error ? <div className="text-sm text-destructive">{integrationsQuery.error.message}</div> : null}
-          {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+          {integrationsQuery.error ? (
+            <div className="text-sm text-destructive">{integrationsQuery.error.message}</div>
+          ) : null}
+          {mutation.error ? (
+            <div className="text-sm text-destructive">{mutation.error.message}</div>
+          ) : null}
           <div className="flex justify-end">
-            <AdminButton type="submit" disabled={mutation.isPending || !apiUser.trim() || !apiKey.trim()}>
+            <AdminButton
+              type="submit"
+              disabled={mutation.isPending || !apiUser.trim() || !apiKey.trim()}
+            >
               {mutation.isPending ? 'Salvando...' : 'Salvar'}
             </AdminButton>
           </div>

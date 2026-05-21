@@ -8,17 +8,17 @@ This PR is the **analysis phase** for issue #678. It documents the current state
 
 Updated after #1300 dedup (-1277 LOC removed):
 
-| File | Lines | Domain | Split Difficulty |
-|------|-------|--------|-------------------|
-| `github/manager.ts` | 1543 | GitHub App provisioning + API operations | Medium — many shared closures |
-| `communication/internal-chat-service.ts` | 1387 | Internal chat messaging | Low — clear domain boundaries |
-| `agents/agent-runner.ts` | 1314 | Agent execution + scheduling | High — tight state coupling |
-| `agents/ltm/recall.ts` | 1220 | LTM recall search (canonical — dedup done in #1300) | Medium — search/retrieval layers |
-| `database/schema.ts` | 887 | DB schema definitions | N/A — single schema file |
-| `admin/routes.ts` | 815 | Admin HTTP routes | Low — pure routing/handler wiring |
-| `forge-runtime-core/src/sqlite-workspace-retrieval.ts` | 800 | Workspace retrieval + embedding | Medium — retrieval pipeline |
-| `admin/read-model/agents.ts` | 772 | Admin read model | Medium — query grouping possible |
-| `coolify/manager.ts` | 742 | Coolify API operations | Medium — operation grouping |
+| File                                                   | Lines | Domain                                              | Split Difficulty                  |
+| ------------------------------------------------------ | ----- | --------------------------------------------------- | --------------------------------- |
+| `github/manager.ts`                                    | 1543  | GitHub App provisioning + API operations            | Medium — many shared closures     |
+| `communication/internal-chat-service.ts`               | 1387  | Internal chat messaging                             | Low — clear domain boundaries     |
+| `agents/agent-runner.ts`                               | 1314  | Agent execution + scheduling                        | High — tight state coupling       |
+| `agents/ltm/recall.ts`                                 | 1220  | LTM recall search (canonical — dedup done in #1300) | Medium — search/retrieval layers  |
+| `database/schema.ts`                                   | 887   | DB schema definitions                               | N/A — single schema file          |
+| `admin/routes.ts`                                      | 815   | Admin HTTP routes                                   | Low — pure routing/handler wiring |
+| `forge-runtime-core/src/sqlite-workspace-retrieval.ts` | 800   | Workspace retrieval + embedding                     | Medium — retrieval pipeline       |
+| `admin/read-model/agents.ts`                           | 772   | Admin read model                                    | Medium — query grouping possible  |
+| `coolify/manager.ts`                                   | 742   | Coolify API operations                              | Medium — operation grouping       |
 
 Note: `agents/agent-long-term-memory-recall.ts` was **removed in #1300** as a duplicate of `ltm/recall.ts` (-1277 LOC).
 
@@ -86,11 +86,11 @@ PR #1300 removed the duplicate `agent-long-term-memory-recall.ts` (-1277 LOC). T
 
 ## Files: Do Not Split (High Risk / Low Value)
 
-| File | Reason |
-|------|--------|
-| `database/schema.ts` | Single coherent schema, splitting adds no value |
-| `forge-runtime-core/src/sqlite-workspace-retrieval.ts` | Cohesive retrieval pipeline — split would break abstraction |
-| `agents/agent-runner.ts` | Tight state coupling across runtime lifecycle — premature split would entangle dependencies |
+| File                                                   | Reason                                                                                      |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `database/schema.ts`                                   | Single coherent schema, splitting adds no value                                             |
+| `forge-runtime-core/src/sqlite-workspace-retrieval.ts` | Cohesive retrieval pipeline — split would break abstraction                                 |
+| `agents/agent-runner.ts`                               | Tight state coupling across runtime lifecycle — premature split would entangle dependencies |
 
 ## Files: Monitor
 
@@ -106,6 +106,7 @@ PR #1300 removed the duplicate `agent-long-term-memory-recall.ts` (-1277 LOC). T
 ## Verification
 
 All follow-up PRs should:
+
 - Keep tests green
 - Preserve existing function signatures (no breaking changes to callers)
 - Not increase total line count across the split files beyond the original

@@ -13,7 +13,10 @@ import {
   updateHomeInternalChatGroupMemberRole,
   type HomeInternalChatConversationMessage,
 } from '@/lib/admin-api/index';
-import { formatRecentMessageTime, useHomeConversations } from '@/components/home/conversations/context';
+import {
+  formatRecentMessageTime,
+  useHomeConversations,
+} from '@/components/home/conversations/context';
 import { ConversationComposer } from '@/components/home/conversations/conversation-composer';
 import { ConversationHeader } from '@/components/home/conversations/conversation-header';
 import { ConversationMessagesPane } from '@/components/home/conversations/conversation-messages-pane';
@@ -48,12 +51,16 @@ function HomeConversationDetailIndexRoute() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [availableParticipantId, setAvailableParticipantId] = useState('');
-  const [availableParticipantRole, setAvailableParticipantRole] = useState<'admin' | 'normal'>('normal');
+  const [availableParticipantRole, setAvailableParticipantRole] = useState<'admin' | 'normal'>(
+    'normal',
+  );
   const [messageDraft, setMessageDraft] = useState('');
   const [attachmentDrafts, setAttachmentDrafts] = useState<File[]>([]);
   const [messages, setMessages] = useState<HomeInternalChatConversationMessage[]>([]);
   const [members, setMembers] = useState<HomeInternalChatGroupMember[]>([]);
-  const selectedConversation = conversations.find((conversation) => conversation.id === decodeURIComponent(conversationId)) ?? null;
+  const selectedConversation =
+    conversations.find((conversation) => conversation.id === decodeURIComponent(conversationId)) ??
+    null;
   const selectedAccountId = selectedAccount?.accountId ?? '';
   const selectedConversationId = selectedConversation?.id ?? '';
   const selectedConversationType = selectedConversation?.type ?? 'dm';
@@ -69,9 +76,10 @@ function HomeConversationDetailIndexRoute() {
   }, [contacts, members]);
 
   useEffect(() => {
-    activeConversationKeyRef.current = selectedAccountId && selectedConversationId
-      ? `${selectedAccountId}:${selectedConversationId}`
-      : '';
+    activeConversationKeyRef.current =
+      selectedAccountId && selectedConversationId
+        ? `${selectedAccountId}:${selectedConversationId}`
+        : '';
   }, [selectedAccountId, selectedConversationId]);
 
   useEffect(() => {
@@ -173,7 +181,9 @@ function HomeConversationDetailIndexRoute() {
 
         if (autoScrollEnabled) {
           requestAnimationFrame(() => {
-            const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+            const viewport = scrollAreaRef.current?.querySelector(
+              '[data-slot=scroll-area-viewport]',
+            );
             if (viewport instanceof HTMLDivElement) {
               viewport.scrollTop = 0; // Newest message at top → scroll to 0.
             }
@@ -211,7 +221,11 @@ function HomeConversationDetailIndexRoute() {
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
 
-    if (!(viewport instanceof HTMLDivElement) || initialScrollDoneRef.current || messages.length === 0) {
+    if (
+      !(viewport instanceof HTMLDivElement) ||
+      initialScrollDoneRef.current ||
+      messages.length === 0
+    ) {
       return;
     }
 
@@ -259,7 +273,9 @@ function HomeConversationDetailIndexRoute() {
           formatRecentMessageTime={formatRecentMessageTime}
           autoScrollEnabled={autoScrollEnabled}
           onScrollToBottom={() => {
-            const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+            const viewport = scrollAreaRef.current?.querySelector(
+              '[data-slot=scroll-area-viewport]',
+            );
 
             if (!(viewport instanceof HTMLDivElement)) {
               return;
@@ -309,7 +325,9 @@ function HomeConversationDetailIndexRoute() {
               setAttachmentDrafts([]);
               setAutoScrollEnabled(true);
               requestAnimationFrame(() => {
-                const viewport = scrollAreaRef.current?.querySelector('[data-slot=scroll-area-viewport]');
+                const viewport = scrollAreaRef.current?.querySelector(
+                  '[data-slot=scroll-area-viewport]',
+                );
 
                 if (viewport instanceof HTMLDivElement) {
                   viewport.scrollTop = viewport.scrollHeight;

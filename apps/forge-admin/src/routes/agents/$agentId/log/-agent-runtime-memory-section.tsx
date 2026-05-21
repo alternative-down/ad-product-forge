@@ -93,7 +93,9 @@ export function AgentRuntimeMemorySection({
           {lastObservedAt ? <span>Última observação: {formatDateTime(lastObservedAt)}</span> : null}
           {checkpointMessageId ? <span>Checkpoint message: {checkpointMessageId}</span> : null}
           {checkpointGeneration !== null ? <span>Checkpoint: {checkpointGeneration}</span> : null}
-          {checkpointUpdatedAt ? <span>Checkpoint atualizado: {formatDateTime(checkpointUpdatedAt)}</span> : null}
+          {checkpointUpdatedAt ? (
+            <span>Checkpoint atualizado: {formatDateTime(checkpointUpdatedAt)}</span>
+          ) : null}
         </div>
       </header>
 
@@ -124,26 +126,11 @@ export function AgentRuntimeMemorySection({
         }
       />
 
-      <MemoryDisclosure
-        title="Working Memory"
-        value={workingMemory}
-      />
-      <MemoryDisclosure
-        title="AGENT_CONTEXT.md"
-        value={agentContext}
-      />
-      <MemoryDisclosure
-        title="Checkpoint Summary"
-        value={checkpointSummary}
-      />
-      <MemoryDisclosure
-        title="Observations"
-        value={observations}
-      />
-      <MemoryDisclosure
-        title="Reflection"
-        value={reflection}
-      />
+      <MemoryDisclosure title="Working Memory" value={workingMemory} />
+      <MemoryDisclosure title="AGENT_CONTEXT.md" value={agentContext} />
+      <MemoryDisclosure title="Checkpoint Summary" value={checkpointSummary} />
+      <MemoryDisclosure title="Observations" value={observations} />
+      <MemoryDisclosure title="Reflection" value={reflection} />
     </section>
   );
 }

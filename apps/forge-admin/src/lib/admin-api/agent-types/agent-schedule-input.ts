@@ -1,5 +1,4 @@
 export type CreateScheduleInput = {
-
   agentId: string;
 
   name: string;
@@ -17,13 +16,9 @@ export type CreateScheduleInput = {
   content: string;
 
   wakeWhenRunning?: boolean;
-
 };
 
-
-
 export type UpdateScheduleInput = {
-
   agentId: string;
 
   scheduleId: string;
@@ -45,7 +40,4 @@ export type UpdateScheduleInput = {
   wakeWhenRunning?: boolean;
 
   isActive?: boolean;
-
 };
-
-

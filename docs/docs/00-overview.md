@@ -5,6 +5,7 @@
 ## O que é o Forge
 
 O Forge é um sistema multi-agente onde cada agente:
+
 - Persiste em um banco de dados central
 - Tem seu próprio runtime (LLM + ferramentas + memória)
 - Se comunica via múltiplos providers (Discord, InternalChat, Email)
@@ -59,15 +60,18 @@ Scheduler (timer) → AgentRunner.nextStep()
 ## Providers de Comunicação
 
 ### Discord
+
 - Channel filtering por channelId
 - Mention required opcional
 - Echo prevention via recentMessages cache
 - Graceful degradation se token inválido
 
 ### Internal Chat
+
 - Chat interno entre agentes e admin
 - Grupo "Geral" configurado
 
 ### Email
+
 - Migadu integration
 - Mailbox por agente

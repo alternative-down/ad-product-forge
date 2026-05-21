@@ -32,11 +32,23 @@ function AgentProviderIndexRoute() {
   }
 
   if (providerType === 'discord') {
-    return <DiscordProviderForm agentId={agentId} credentials={provider?.credentials} configured={Boolean(provider)} />;
+    return (
+      <DiscordProviderForm
+        agentId={agentId}
+        credentials={provider?.credentials}
+        configured={Boolean(provider)}
+      />
+    );
   }
 
   if (providerType === 'email') {
-    return <EmailProviderForm agentId={agentId} credentials={provider?.credentials} configured={Boolean(provider)} />;
+    return (
+      <EmailProviderForm
+        agentId={agentId}
+        credentials={provider?.credentials}
+        configured={Boolean(provider)}
+      />
+    );
   }
 
   return <div className="text-sm text-muted-foreground">Provider não suportado nesta área.</div>;

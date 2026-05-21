@@ -86,8 +86,8 @@ export function LongTermMemorySection({
               ltm.running
                 ? 'workflow em execução'
                 : ltm.queued
-                ? 'execução enfileirada'
-                : 'workflow ocioso'
+                  ? 'execução enfileirada'
+                  : 'workflow ocioso'
             }
           />
           <MetricTile
@@ -150,10 +150,7 @@ export function LongTermMemorySection({
         }
       />
 
-      <MemoryDisclosure
-        title="LTM Recall Steps JSON"
-        value={ltmRecall?.stepsJson ?? null}
-      />
+      <MemoryDisclosure title="LTM Recall Steps JSON" value={ltmRecall?.stepsJson ?? null} />
 
       <LtmRecallSearchForm
         searchQuery={searchQuery}

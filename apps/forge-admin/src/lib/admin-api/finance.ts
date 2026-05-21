@@ -32,10 +32,13 @@ export function createPayable(input: CreatePayableInput) {
 }
 
 export function postPlannedLedgerEntry(entryId: string, effectiveAt?: string) {
-  return request<{ entryId: string; status: 'posted'; effectiveAt: number }>('/admin/finance/ledger/post', {
-    method: 'POST',
-    body: JSON.stringify({ entryId, effectiveAt }),
-  });
+  return request<{ entryId: string; status: 'posted'; effectiveAt: number }>(
+    '/admin/finance/ledger/post',
+    {
+      method: 'POST',
+      body: JSON.stringify({ entryId, effectiveAt }),
+    },
+  );
 }
 
 export function cancelPlannedLedgerEntry(entryId: string) {
@@ -46,8 +49,11 @@ export function cancelPlannedLedgerEntry(entryId: string) {
 }
 
 export function setRecurringPayableActive(payableId: string, isActive: boolean) {
-  return request<{ payableId: string; isActive: boolean }>('/admin/finance/recurring-payable/set-active', {
-    method: 'POST',
-    body: JSON.stringify({ payableId, isActive }),
-  });
+  return request<{ payableId: string; isActive: boolean }>(
+    '/admin/finance/recurring-payable/set-active',
+    {
+      method: 'POST',
+      body: JSON.stringify({ payableId, isActive }),
+    },
+  );
 }

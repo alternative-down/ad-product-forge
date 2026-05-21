@@ -52,12 +52,14 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem princípios KISS 
 ### Características Core
 
 **FR1: Geração de Imagem**
+
 - Gerar imagens de prompts de texto usando serviço externo (ex: Nanobanana)
 - Especificar: prompt, estilo, resolução, formato
 - Retornar: URL de imagem, metadados (tamanho, resolução)
 - Cache de resultados para evitar regeneração de mesmo prompt
 
 **FR2: Text-to-Speech (TTS)**
+
 - Converter texto em áudio usando serviço externo
 - Especificar: texto, tipo de voz, idioma, velocidade
 - Retornar: URL de áudio, duração
@@ -65,12 +67,14 @@ Este é um projeto de desenvolvimento pessoal. Recursos seguem princípios KISS 
 - Cache de resultados para evitar regeneração de mesmo texto
 
 **FR3: Speech-to-Text (STT)**
+
 - Transcrever arquivos de áudio usando serviço externo
 - Especificar: URL de áudio, idioma
 - Retornar: texto transcrito, score de confiança
 - Suportar transcrição em lote com limites de concorrência
 
 **FR4: Armazenamento & Rastreamento de Artefato**
+
 - Armazenar metadados de artefato em banco de dados (tipo, URL, fonte, ID de agente, timestamp de criação)
 - Consultar artefatos por agente e tipo
 - Deletar artefatos
@@ -102,16 +106,19 @@ deleteArtifact(artifactId: string): Promise<void>
 ## 6. Requisitos Não-Funcionais
 
 **Performance:**
+
 - Geração de imagem: <30 segundos
 - Síntese de áudio: <10 segundos
 - Lookup de artefato: rápido o suficiente para um desenvolvedor
 
 **Confiabilidade:**
+
 - Chamadas de API falhadas não crasheam agente
 - Lógica de retry básica para falhas transitórias
 - Mensagens de erro claras
 
 **Segurança:**
+
 - Credenciais de API armazenadas em variáveis de ambiente
 - Nenhuma vazão de credencial em logs
 
@@ -120,6 +127,7 @@ deleteArtifact(artifactId: string): Promise<void>
 ## 7. Escopo
 
 ### Incluído
+
 - Geração de imagem via API externa
 - Síntese text-to-speech
 - Transcrição speech-to-text
@@ -127,6 +135,7 @@ deleteArtifact(artifactId: string): Promise<void>
 - Cache simples para prevenir geração duplicada
 
 ### Não Incluído
+
 - Geração ou hosting de vídeo
 - Edição avançada de imagem
 - Treinamento de voz customizado
@@ -141,6 +150,7 @@ deleteArtifact(artifactId: string): Promise<void>
 ### Schema do Banco de Dados
 
 **`forge_artifacts` table:**
+
 ```
 - artifact_id (UUID, chave primária)
 - agent_id (UUID)
@@ -162,4 +172,3 @@ deleteArtifact(artifactId: string): Promise<void>
 - **Speech-to-Text:** OpenAI Whisper, Google Cloud STT, ou AWS Transcribe
 
 Todas credenciais armazenadas em variáveis de ambiente e criptografadas em banco de dados.
-

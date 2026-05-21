@@ -5,7 +5,13 @@ import { XIcon } from 'lucide-react';
 
 import { AdminButton } from '@/components/admin/forms/admin-button';
 import { AdminScrollArea } from '@/components/admin/system/admin-scroll-area';
-import { DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 export function AdminDialogContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
@@ -24,16 +30,26 @@ export function AdminDialogContent({ className, ...props }: ComponentProps<typeo
 export function AdminDialogFooter({ className, ...props }: ComponentProps<typeof DialogFooter>) {
   return (
     <DialogFooter
-      className={cn('shrink-0 flex-row justify-end gap-2 rounded-b-lg bg-muted/50 px-4 py-3', className)}
+      className={cn(
+        'shrink-0 flex-row justify-end gap-2 rounded-b-lg bg-muted/50 px-4 py-3',
+        className,
+      )}
       {...props}
     />
   );
 }
 
-export function AdminDialogHeader({ className, children, ...props }: ComponentProps<typeof DialogHeader>) {
+export function AdminDialogHeader({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof DialogHeader>) {
   return (
     <DialogHeader
-      className={cn('relative -mx-4 -mt-4 shrink-0 items-center rounded-t-lg border-b bg-muted/60 px-4 py-4 text-center', className)}
+      className={cn(
+        'relative -mx-4 -mt-4 shrink-0 items-center rounded-t-lg border-b bg-muted/60 px-4 py-4 text-center',
+        className,
+      )}
       {...props}
     >
       {children}
@@ -71,12 +87,16 @@ export function AdminDialogBody({ className, children, ...props }: ComponentProp
         return;
       }
 
-      const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      const rootFontSize =
+        Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
       const viewportHeight = window.innerHeight;
       const maxBodyHeight = window.matchMedia('(min-width: 640px)').matches
         ? viewportHeight * 0.8 - rootFontSize * 11
         : viewportHeight - rootFontSize * 11;
-      const nextHeight = Math.min(contentRef.current.scrollHeight + rootFontSize * 2, maxBodyHeight);
+      const nextHeight = Math.min(
+        contentRef.current.scrollHeight + rootFontSize * 2,
+        maxBodyHeight,
+      );
 
       setBodyHeight(Math.max(nextHeight, 0));
     };

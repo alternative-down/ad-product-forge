@@ -10,4 +10,4 @@ export default defineConfig({
   platform: 'node',
   outDir: 'dist',
   skipNodeModulesBundle: true,
-})
+});

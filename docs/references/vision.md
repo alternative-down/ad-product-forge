@@ -101,11 +101,11 @@ Ou eles vão instalar por aplicação (talvez o storage seja único, mas outros 
 
 Base de conhecimento para os agentes pode estar no próprio ERP (usando workspace do mastra para fazer embeddings e Search com semântico fulltext e GraphRAG) usando algo similar com oque já foi desenvolvido pra memória de longo prazo do agente.
 
-* gestão se Secrets (talvez) (ou seja, um vault para o agente)
-* CRM além do ERP
-* Biling foi falado previamente no template de aplicação, ele deve ser integrado a plataforma (assas, stripe)
-* Sistema de projetos/tarefas
-* Sistema de assinatura eletrônica
+- gestão se Secrets (talvez) (ou seja, um vault para o agente)
+- CRM além do ERP
+- Biling foi falado previamente no template de aplicação, ele deve ser integrado a plataforma (assas, stripe)
+- Sistema de projetos/tarefas
+- Sistema de assinatura eletrônica
 
 ---
 
@@ -123,9 +123,9 @@ Estruturar uma plataforma em que agentes possam operar como uma empresa digital:
 
 Hoje os agentes são criados de forma fixa, o que atende à validação inicial. Para a evolução da aplicação, os agentes precisam passar a ser:
 
-* persistidos em banco de dados;
-* carregados dinamicamente em tempo de execução;
-* configuráveis sem depender de definição fixa em código.
+- persistidos em banco de dados;
+- carregados dinamicamente em tempo de execução;
+- configuráveis sem depender de definição fixa em código.
 
 Também será necessário persistir as configurações de ambiente dos providers de comunicação associados a cada agente.
 
@@ -133,10 +133,10 @@ Também será necessário persistir as configurações de ambiente dos providers
 
 A base deve utilizar **SQLite com Drizzle**, incluindo:
 
-* definição de schemas;
-* uso de migrations;
-* execução das migrations;
-* refatoração dos módulos que hoje usam `sqlclient` diretamente para também utilizarem Drizzle.
+- definição de schemas;
+- uso de migrations;
+- execução das migrations;
+- refatoração dos módulos que hoje usam `sqlclient` diretamente para também utilizarem Drizzle.
 
 ### 1.3 Proteção de dados sensíveis
 
@@ -154,8 +154,8 @@ A plataforma deve possuir um schema de **papéis** e **funções** para determin
 
 Conceitos:
 
-* **Função**: agrupador organizacional ao qual o agente está vinculado.
-* **Papel**: definição efetiva de permissões e capacidades, como acesso a Tools, Providers, Workflows e demais recursos.
+- **Função**: agrupador organizacional ao qual o agente está vinculado.
+- **Papel**: definição efetiva de permissões e capacidades, como acesso a Tools, Providers, Workflows e demais recursos.
 
 Isso representa a definição do agente dentro da empresa.
 
@@ -163,9 +163,9 @@ Isso representa a definição do agente dentro da empresa.
 
 Agentes com permissão devem poder:
 
-* criar e alterar papéis e funções;
-* ajustar permissões;
-* estruturar a organização interna da empresa digital.
+- criar e alterar papéis e funções;
+- ajustar permissões;
+- estruturar a organização interna da empresa digital.
 
 Deve existir também um **agent master**, com permissão irrestrita, responsável por iniciar a configuração da plataforma e liberar acessos para os demais agentes conforme contratações, mudanças de função e demais necessidades.
 
@@ -173,16 +173,16 @@ Deve existir também um **agent master**, com permissão irrestrita, responsáve
 
 Além dos agentes internos da empresa, será necessário suportar **agentes externos**, usados como:
 
-* consultores especialistas;
-* público-alvo/personas;
-* interlocutores temporários para entrevistas, validações e explicações.
+- consultores especialistas;
+- público-alvo/personas;
+- interlocutores temporários para entrevistas, validações e explicações.
 
 Esses agentes:
 
-* serão criados sob demanda;
-* não terão as mesmas permissões nem acessos dos agentes internos;
-* poderão apenas enviar e receber mensagens;
-* só serão acordados quando receberem mensagens direcionadas a eles.
+- serão criados sob demanda;
+- não terão as mesmas permissões nem acessos dos agentes internos;
+- poderão apenas enviar e receber mensagens;
+- só serão acordados quando receberem mensagens direcionadas a eles.
 
 ---
 
@@ -194,10 +194,10 @@ Deve ser criado um workflow para permitir que agentes possam iniciar e executar 
 
 Esse workflow deve permitir definir, entre outras coisas:
 
-* criação da conta do novo agente;
-* provider de comunicação que será disponibilizado;
-* configurações iniciais de operação;
-* demais parâmetros necessários para o ingresso do agente na empresa.
+- criação da conta do novo agente;
+- provider de comunicação que será disponibilizado;
+- configurações iniciais de operação;
+- demais parâmetros necessários para o ingresso do agente na empresa.
 
 ### 3.2 Workflow de demissão
 
@@ -215,8 +215,8 @@ Hoje o módulo de comunicação interno permite apenas mensagens diretas. Será 
 
 Após esse suporte existir no chat interno, a mesma lógica deve servir de base para outros providers, como:
 
-* e-mail, com múltiplos destinatários e CC;
-* Discord, com criação de canais e interações em grupo.
+- e-mail, com múltiplos destinatários e CC;
+- Discord, com criação de canais e interações em grupo.
 
 ### 4.3 E-mail organizacional por agente
 
@@ -224,10 +224,10 @@ Cada agente deverá possuir seu próprio e-mail institucional.
 
 Para isso será necessário:
 
-* definir o serviço de e-mail que será utilizado;
-* configurar o domínio para suportar e-mail organizacional;
-* garantir acesso à caixa de entrada e envio de e-mails por agente;
-* integrar isso com o provider SMTP/IMAP já existente.
+- definir o serviço de e-mail que será utilizado;
+- configurar o domínio para suportar e-mail organizacional;
+- garantir acesso à caixa de entrada e envio de e-mails por agente;
+- integrar isso com o provider SMTP/IMAP já existente.
 
 ### 4.4 Sistema de chamados como canal de comunicação
 
@@ -235,10 +235,10 @@ Além do ERP, a plataforma também precisará de um **sistema de chamados**, que
 
 Esse sistema permitirá que agentes:
 
-* recebam tickets abertos nos sistemas criados por eles;
-* atendam usuários;
-* prestem suporte;
-* usem esse canal de forma integrada com outros meios como Discord e e-mail.
+- recebam tickets abertos nos sistemas criados por eles;
+- atendam usuários;
+- prestem suporte;
+- usem esse canal de forma integrada com outros meios como Discord e e-mail.
 
 ---
 
@@ -250,9 +250,9 @@ Será necessário criar um mecanismo de **heartbeat agendado** para acordar agen
 
 Objetivos:
 
-* verificar pendências;
-* retomar trabalho interrompido;
-* evitar abandono prematuro de execução.
+- verificar pendências;
+- retomar trabalho interrompido;
+- evitar abandono prematuro de execução.
 
 ### 5.2 Criação de crons pelos próprios agentes
 
@@ -260,14 +260,14 @@ Os próprios agentes devem receber uma Tool para criação de **crons/agendament
 
 Esse recurso deve permitir informar:
 
-* configuração do agendamento e repetição;
-* uma mensagem associada ao evento.
+- configuração do agendamento e repetição;
+- uma mensagem associada ao evento.
 
 Fluxo esperado:
 
-* a mensagem será registrada em `agent_notifications`;
-* esse registro irá acionar o `wakeQueue`;
-* o agente receberá a instrução criada por ele próprio e poderá executá-la.
+- a mensagem será registrada em `agent_notifications`;
+- esse registro irá acionar o `wakeQueue`;
+- o agente receberá a instrução criada por ele próprio e poderá executá-la.
 
 ---
 
@@ -283,14 +283,14 @@ Deve ser estudada e implementada uma forma de os agentes poderem criar Tools par
 
 Isso pode ocorrer, por exemplo, por meio de:
 
-* Skills;
-* uma Tool própria para criação e execução de Tools definidas pelos agentes.
+- Skills;
+- uma Tool própria para criação e execução de Tools definidas pelos agentes.
 
 Objetivo:
 
-* permitir autoevolução da plataforma;
-* permitir criação de integrações e utilidades sob demanda;
-* ampliar a autonomia operacional dos agentes.
+- permitir autoevolução da plataforma;
+- permitir criação de integrações e utilidades sob demanda;
+- ampliar a autonomia operacional dos agentes.
 
 ### 6.3 Subagentes para tarefas internas
 
@@ -298,8 +298,8 @@ Existe a possibilidade de fornecer aos agentes um **subagente** com modelo LLM m
 
 A ideia seria manter o agente principal como supervisor/orquestrador. No entanto, isso deve ser avaliado com cuidado, pois pode:
 
-* encaixar bem em alguns cenários;
-* gerar confusão conceitual ou operacional em outros.
+- encaixar bem em alguns cenários;
+- gerar confusão conceitual ou operacional em outros.
 
 ---
 
@@ -311,11 +311,11 @@ A plataforma precisa de uma camada para receber eventos externos e encaminhá-lo
 
 Isso inclui integrações criadas pelos próprios agentes ou pré-configuradas, como:
 
-* eventos do GitHub;
-* eventos do Coolify;
-* pagamentos recebidos;
-* anúncios e plataformas de ads;
-* outros gatilhos externos.
+- eventos do GitHub;
+- eventos do Coolify;
+- pagamentos recebidos;
+- anúncios e plataformas de ads;
+- outros gatilhos externos.
 
 Esses eventos devem entrar no sistema de forma roteada, gerando wake-up dos agentes para tomada de ação.
 
@@ -323,9 +323,9 @@ Esses eventos devem entrar no sistema de forma roteada, gerando wake-up dos agen
 
 Os agentes devem ter acesso a uma organização do GitHub para:
 
-* criar repositórios;
-* manipular repositórios Git;
-* operar fluxos relacionados ao ciclo de desenvolvimento.
+- criar repositórios;
+- manipular repositórios Git;
+- operar fluxos relacionados ao ciclo de desenvolvimento.
 
 Também será necessário definir como escutar os eventos do GitHub para acionar agentes automaticamente.
 
@@ -333,16 +333,16 @@ Também será necessário definir como escutar os eventos do GitHub para acionar
 
 Será necessário estudar e implementar integrações com:
 
-* redes sociais;
-* fóruns;
-* outros sites e canais públicos.
+- redes sociais;
+- fóruns;
+- outros sites e canais públicos.
 
 Objetivos:
 
-* divulgar o que os agentes criam;
-* interagir com a comunidade;
-* identificar oportunidades;
-* captar sinais externos relevantes ao negócio.
+- divulgar o que os agentes criam;
+- interagir com a comunidade;
+- identificar oportunidades;
+- captar sinais externos relevantes ao negócio.
 
 ### 7.4 Plataformas de marketing
 
@@ -358,17 +358,17 @@ A plataforma deve fornecer **templates base** para aplicações web, já contend
 
 Exemplos:
 
-* autenticação;
-* gateway de pagamento;
-* integração com sistema de chamados;
-* demais componentes recorrentes.
+- autenticação;
+- gateway de pagamento;
+- integração com sistema de chamados;
+- demais componentes recorrentes.
 
 ### 8.2 Billing integrado à plataforma
 
 O billing, citado anteriormente nos templates, deve ser tratado como parte integrada da plataforma, com suporte a serviços como:
 
-* Asaas;
-* Stripe.
+- Asaas;
+- Stripe.
 
 ### 8.3 Deploy automatizado via Coolify
 
@@ -376,22 +376,22 @@ Os agentes devem ser capazes de fazer deploy das aplicações criadas por eles.
 
 Infraestrutura disponível atualmente:
 
-* uma máquina na Hetzner;
-* Coolify rodando nessa máquina.
+- uma máquina na Hetzner;
+- Coolify rodando nessa máquina.
 
 Direcionamento inicial:
 
-* usar essa infraestrutura como base de deploy;
-* permitir que os agentes configurem a aplicação no Coolify;
-* tornar o sistema acessível após a configuração.
+- usar essa infraestrutura como base de deploy;
+- permitir que os agentes configurem a aplicação no Coolify;
+- tornar o sistema acessível após a configuração.
 
 ### 8.4 Domínio e DNS
 
 Também será necessário organizar a configuração do domínio para suportar:
 
-* wildcard apontando para a máquina;
-* flexibilidade de DNS para deploy das aplicações;
-* criação de e-mail organizacional.
+- wildcard apontando para a máquina;
+- flexibilidade de DNS para deploy das aplicações;
+- criação de e-mail organizacional.
 
 Como o Registro.br não oferece a flexibilidade desejada hoje, será necessário migrar o controle do domínio para um serviço que permita configurações mais avançadas.
 
@@ -401,9 +401,9 @@ Os agentes também precisarão de acesso a um navegador.
 
 Há tentativa prévia de uso com `playwright-cli` no Mastra, mas houve problema no reconhecimento do navegador após instalação, possivelmente relacionado a:
 
-* path de filesystem;
-* sandbox;
-* forma de execução no ambiente.
+- path de filesystem;
+- sandbox;
+- forma de execução no ambiente.
 
 Diante disso, pode ser mais adequado disponibilizar um **serviço externo de browser**, em vez de depender da sandbox local do agente.
 
@@ -411,18 +411,18 @@ Diante disso, pode ser mais adequado disponibilizar um **serviço externo de bro
 
 Também será necessário disponibilizar infraestrutura complementar para os agentes, incluindo:
 
-* **MinIO** como storage;
-* **BullMQ** e/ou **trigger.dev** para filas e execução assíncrona.
+- **MinIO** como storage;
+- **BullMQ** e/ou **trigger.dev** para filas e execução assíncrona.
 
 Ainda precisa ser definido se esses recursos serão:
 
-* compartilhados entre aplicações;
-* ou instalados de forma isolada por aplicação.
+- compartilhados entre aplicações;
+- ou instalados de forma isolada por aplicação.
 
 Uma possibilidade considerada é:
 
-* storage único;
-* demais componentes variando por app conforme necessidade.
+- storage único;
+- demais componentes variando por app conforme necessidade.
 
 ---
 
@@ -432,10 +432,10 @@ Uma possibilidade considerada é:
 
 Será necessário desenvolver um **controle de fluxo de caixa** que possa:
 
-* limitar ações dos agentes;
-* controlar o fluxo operacional;
-* influenciar a priorização de atividades;
-* servir como mecanismo de governança da execução.
+- limitar ações dos agentes;
+- controlar o fluxo operacional;
+- influenciar a priorização de atividades;
+- servir como mecanismo de governança da execução.
 
 ### 9.2 Micro ERP para agentes
 
@@ -443,11 +443,11 @@ Os agentes também precisarão de um **micro ERP** para tocar a empresa virtual.
 
 Esse ERP deve permitir, no mínimo:
 
-* registrar gastos;
-* registrar recebimentos;
-* trabalhar com previsões;
-* contabilizar folha de pagamento;
-* refletir o custo de cada agente em valor monetário.
+- registrar gastos;
+- registrar recebimentos;
+- trabalhar com previsões;
+- contabilizar folha de pagamento;
+- refletir o custo de cada agente em valor monetário.
 
 Além do uso administrativo, os próprios agentes devem ter acesso a esses dados para orientar suas decisões.
 
@@ -469,9 +469,9 @@ A plataforma deverá prever integração com **sistema de assinatura eletrônica
 
 A base de conhecimento dos agentes pode ficar dentro do próprio ERP, usando o workspace do Mastra para:
 
-* embeddings;
-* busca semântica e full-text;
-* GraphRAG.
+- embeddings;
+- busca semântica e full-text;
+- GraphRAG.
 
 A ideia é aproveitar algo semelhante ao que já foi desenvolvido para a memória de longo prazo dos agentes.
 
@@ -481,17 +481,17 @@ A ideia é aproveitar algo semelhante ao que já foi desenvolvido para a memóri
 
 Os agentes devem receber Tools para criação de artefatos de marketing, incluindo:
 
-* imagens;
-* animações;
-* vídeos;
-* voz e áudio.
+- imagens;
+- animações;
+- vídeos;
+- voz e áudio.
 
 Exemplos citados:
 
-* nanobanana;
-* Vimeo;
-* TTS;
-* STT.
+- nanobanana;
+- Vimeo;
+- TTS;
+- STT.
 
 ---
 

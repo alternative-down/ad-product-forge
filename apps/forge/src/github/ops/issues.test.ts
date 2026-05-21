@@ -42,18 +42,14 @@ function makeCtx(): OpsContext {
     getWebhookPath: (id: string) => `/w/${id}`,
     escapeHtml: (s: string) => s,
     normalizeAssignees: ((a: string[]) => a) as any,
-    toIssueSummary: vi
-      .fn()
-      .mockImplementation((p: unknown) => ({
-        id: (p as { id: number }).id,
-        title: (p as { title: string }).title,
-      })) as unknown as OpsContext['toIssueSummary'],
-    toIssueDetails: vi
-      .fn()
-      .mockImplementation((p: unknown) => ({
-        id: (p as { id: number }).id,
-        body: '',
-      })) as unknown as OpsContext['toIssueDetails'],
+    toIssueSummary: vi.fn().mockImplementation((p: unknown) => ({
+      id: (p as { id: number }).id,
+      title: (p as { title: string }).title,
+    })) as unknown as OpsContext['toIssueSummary'],
+    toIssueDetails: vi.fn().mockImplementation((p: unknown) => ({
+      id: (p as { id: number }).id,
+      body: '',
+    })) as unknown as OpsContext['toIssueDetails'],
     DEFAULT_GITHUB_APP_MANIFEST_CONFIG: {
       url: '',
       callbackUrls: [],
@@ -144,12 +140,10 @@ describe('createIssuesOps', () => {
     octokitMock.request.mockResolvedValue({ data: testData });
 
     // Create a fresh ctx with a tracking toIssueSummary
-    const trackingToIssue = vi
-      .fn()
-      .mockImplementation((p: unknown) => ({
-        id: (p as { id: number }).id,
-        title: (p as { title: string }).title,
-      }));
+    const trackingToIssue = vi.fn().mockImplementation((p: unknown) => ({
+      id: (p as { id: number }).id,
+      title: (p as { title: string }).title,
+    }));
     const ctx = makeCtx();
     ctx.toIssueSummary = trackingToIssue as unknown as OpsContext['toIssueSummary'];
 

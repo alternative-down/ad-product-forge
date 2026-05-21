@@ -42,7 +42,6 @@ export async function terminateInternalAgent(
     throw err;
   }
 
-   
   if (agent === null || agent === undefined) {
     forgeDebug({
       scope: 'terminate-agent',
@@ -62,8 +61,7 @@ export async function terminateInternalAgent(
       level: 'warn',
       context: { agentId: input.agentId },
       message:
-        'refundActiveContractBalance failed (non-fatal): ' +
-        String(serializeError(err).message),
+        'refundActiveContractBalance failed (non-fatal): ' + String(serializeError(err).message),
     });
   }
 
@@ -86,8 +84,7 @@ export async function terminateInternalAgent(
         level: 'warn',
         context: { agentId: input.agentId },
         message:
-          'internal chat cleanup failed (non-fatal): ' +
-          String(serializeError(chatErr).message),
+          'internal chat cleanup failed (non-fatal): ' + String(serializeError(chatErr).message),
       });
     }
   } catch (err) {
@@ -95,9 +92,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'error',
       context: { agentId: input.agentId },
-      message:
-        'external cleanup failed during terminate: ' +
-        String(serializeError(err).message),
+      message: 'external cleanup failed during terminate: ' + String(serializeError(err).message),
     });
 
     // Compensating transaction: attempt cleanup of whatever succeeded before the failure.
@@ -145,9 +140,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'warn',
       context: { agentId: input.agentId },
-      message:
-        'internal chat cleanup failed (non-fatal): ' +
-        String(serializeError(err).message),
+      message: 'internal chat cleanup failed (non-fatal): ' + String(serializeError(err).message),
     });
   }
 
@@ -173,9 +166,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'warn',
       context: { agentId: input.agentId },
-      message:
-        'workspace rm failed (non-fatal): ' +
-        String(serializeError(rmErr).message),
+      message: 'workspace rm failed (non-fatal): ' + String(serializeError(rmErr).message),
     });
   }
 

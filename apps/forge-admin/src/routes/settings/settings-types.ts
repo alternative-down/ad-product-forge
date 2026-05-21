@@ -11,9 +11,7 @@ export type CompanyDraft = Pick<SystemSettings, 'companyName' | 'companyContext'
 
 export type OperationsDraft = Pick<
   SystemSettings,
-  | 'stepDelayEnabled'
-  | 'communicationDmFlushingEnabled'
-  | 'communicationGroupFlushingEnabled'
+  'stepDelayEnabled' | 'communicationDmFlushingEnabled' | 'communicationGroupFlushingEnabled'
 >;
 
 export type RuntimeDraft = Pick<
@@ -69,7 +67,9 @@ export function toRuntimeDraft(data: SystemSettings): RuntimeDraft {
     checkpointedOmTotalContextTokens: str(data.checkpointedOmTotalContextTokens),
     checkpointedOmRecentRawTokens: str(data.checkpointedOmRecentRawTokens),
     checkpointedOmRawObservationBatchTokens: str(data.checkpointedOmRawObservationBatchTokens),
-    checkpointedOmObservationReflectionBatchTokens: str(data.checkpointedOmObservationReflectionBatchTokens),
+    checkpointedOmObservationReflectionBatchTokens: str(
+      data.checkpointedOmObservationReflectionBatchTokens,
+    ),
     checkpointedOmObservationSupportTokens: str(data.checkpointedOmObservationSupportTokens),
     checkpointedOmReflectionSupportTokens: str(data.checkpointedOmReflectionSupportTokens),
     ltmRecallScoreThreshold: str(data.ltmRecallScoreThreshold),
@@ -88,7 +88,9 @@ export function fromRuntimeDraft(draft: RuntimeDraft, base: SystemSettings): Sys
     checkpointedOmTotalContextTokens: Number(draft.checkpointedOmTotalContextTokens),
     checkpointedOmRecentRawTokens: Number(draft.checkpointedOmRecentRawTokens),
     checkpointedOmRawObservationBatchTokens: Number(draft.checkpointedOmRawObservationBatchTokens),
-    checkpointedOmObservationReflectionBatchTokens: Number(draft.checkpointedOmObservationReflectionBatchTokens),
+    checkpointedOmObservationReflectionBatchTokens: Number(
+      draft.checkpointedOmObservationReflectionBatchTokens,
+    ),
     checkpointedOmObservationSupportTokens: Number(draft.checkpointedOmObservationSupportTokens),
     checkpointedOmReflectionSupportTokens: Number(draft.checkpointedOmReflectionSupportTokens),
     ltmRecallScoreThreshold: Number(draft.ltmRecallScoreThreshold),
@@ -103,4 +105,3 @@ export function toOperationsDraft(data: SystemSettings): OperationsDraft {
     communicationGroupFlushingEnabled: data.communicationGroupFlushingEnabled,
   };
 }
-

@@ -50,8 +50,11 @@ function toBool(value: number | null | undefined): boolean {
 }
 
 /** Normalises the LTM recall search mode. */
-function resolveRecallSearchMode(value: string | null | undefined): typeof DEFAULTS.ltmRecallSearchMode {
-  if (value === 'vector' || value === 'graph' || value === 'bm25') return value as typeof DEFAULTS.ltmRecallSearchMode;
+function resolveRecallSearchMode(
+  value: string | null | undefined,
+): typeof DEFAULTS.ltmRecallSearchMode {
+  if (value === 'vector' || value === 'graph' || value === 'bm25')
+    return value as typeof DEFAULTS.ltmRecallSearchMode;
   return 'hybrid';
 }
 
@@ -79,7 +82,8 @@ function mapRow(row: any | null): SystemSettingsValue {
     checkpointedOmTotalContextTokens: row.checkpointedOmTotalContextTokens,
     checkpointedOmRecentRawTokens: row.checkpointedOmRecentRawTokens,
     checkpointedOmRawObservationBatchTokens: row.checkpointedOmRawObservationBatchTokens,
-    checkpointedOmObservationReflectionBatchTokens: row.checkpointedOmObservationReflectionBatchTokens,
+    checkpointedOmObservationReflectionBatchTokens:
+      row.checkpointedOmObservationReflectionBatchTokens,
     checkpointedOmObservationSupportTokens: row.checkpointedOmObservationSupportTokens,
     checkpointedOmReflectionSupportTokens: row.checkpointedOmReflectionSupportTokens,
     ltmRecallSearchMode: resolveRecallSearchMode(row.ltmRecallSearchMode),
@@ -105,7 +109,12 @@ export function createSystemSettingsStore(db: Database) {
       });
       return mapRow(row);
     } catch (err) {
-      forgeDebug({ scope: 'system-settings', level: 'info', message: 'getSettings failed', context: { error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'system-settings',
+        level: 'info',
+        message: 'getSettings failed',
+        context: { error: String(serializeError(err)) },
+      });
       return { ...DEFAULTS, updatedAt: null };
     }
   }
@@ -132,7 +141,8 @@ export function createSystemSettingsStore(db: Database) {
         checkpointedOmTotalContextTokens: input.checkpointedOmTotalContextTokens,
         checkpointedOmRecentRawTokens: input.checkpointedOmRecentRawTokens,
         checkpointedOmRawObservationBatchTokens: input.checkpointedOmRawObservationBatchTokens,
-        checkpointedOmObservationReflectionBatchTokens: input.checkpointedOmObservationReflectionBatchTokens,
+        checkpointedOmObservationReflectionBatchTokens:
+          input.checkpointedOmObservationReflectionBatchTokens,
         checkpointedOmObservationSupportTokens: input.checkpointedOmObservationSupportTokens,
         checkpointedOmReflectionSupportTokens: input.checkpointedOmReflectionSupportTokens,
         ltmRecallSearchMode: input.ltmRecallSearchMode,
@@ -155,7 +165,12 @@ export function createSystemSettingsStore(db: Database) {
 
       return { ...input, updatedAt: now };
     } catch (err) {
-      forgeDebug({ scope: 'system-settings', level: 'info', message: 'upsertSettings failed', context: { error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'system-settings',
+        level: 'info',
+        message: 'upsertSettings failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }

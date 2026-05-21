@@ -120,23 +120,19 @@ function makeMockFinance() {
 
 function makeMockInternalChat() {
   return {
-    registerAgentAccount: vi
-      .fn()
-      .mockResolvedValue({
-        id: 'a1',
-        agentId: 'a1',
-        displayName: 'Test Agent',
-        providerType: 'internal-chat',
-        createdAt: Date.now(),
-      }),
-    registerExternalAccount: vi
-      .fn()
-      .mockResolvedValue({
-        id: 'e1',
-        displayName: 'Ext',
-        providerType: 'email',
-        createdAt: Date.now(),
-      }),
+    registerAgentAccount: vi.fn().mockResolvedValue({
+      id: 'a1',
+      agentId: 'a1',
+      displayName: 'Test Agent',
+      providerType: 'internal-chat',
+      createdAt: Date.now(),
+    }),
+    registerExternalAccount: vi.fn().mockResolvedValue({
+      id: 'e1',
+      displayName: 'Ext',
+      providerType: 'email',
+      createdAt: Date.now(),
+    }),
     updateExternalAccount: vi.fn().mockResolvedValue({ id: 'e1' }),
     deleteExternalAccount: vi.fn().mockResolvedValue(undefined),
     deleteAgentAccount: vi.fn().mockResolvedValue(undefined),

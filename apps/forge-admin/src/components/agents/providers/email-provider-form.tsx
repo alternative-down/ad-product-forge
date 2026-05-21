@@ -91,8 +91,12 @@ export function EmailProviderForm(input: {
             }
           />
 
-          {saveMutation.error ? <div className="text-sm text-destructive">{saveMutation.error.message}</div> : null}
-          {deleteMutation.error ? <div className="text-sm text-destructive">{deleteMutation.error.message}</div> : null}
+          {saveMutation.error ? (
+            <div className="text-sm text-destructive">{saveMutation.error.message}</div>
+          ) : null}
+          {deleteMutation.error ? (
+            <div className="text-sm text-destructive">{deleteMutation.error.message}</div>
+          ) : null}
 
           <div className="flex justify-end gap-3">
             {input.configured ? (
@@ -143,7 +147,9 @@ function EmailConnectionFields(input: {
           id={`${input.prefix}-port`}
           type="number"
           value={String(input.value.port)}
-          onChange={(event) => input.onChange({ ...input.value, port: Number(event.target.value || 0) })}
+          onChange={(event) =>
+            input.onChange({ ...input.value, port: Number(event.target.value || 0) })
+          }
           disabled={input.disabled}
         />
       </div>
@@ -190,8 +196,6 @@ function EmailConnectionFields(input: {
   );
 }
 
-function ProviderSectionTitle(input: {
-  title: string;
-}) {
+function ProviderSectionTitle(input: { title: string }) {
   return <div className="text-sm font-medium text-foreground">{input.title}</div>;
 }

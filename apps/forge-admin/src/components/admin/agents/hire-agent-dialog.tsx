@@ -150,12 +150,17 @@ export function HireAgentDialog(input: HireAgentDialogProps) {
                 />
               </div>
 
-              {mutation.error ? <div className="text-sm text-destructive">{mutation.error.message}</div> : null}
+              {mutation.error ? (
+                <div className="text-sm text-destructive">{mutation.error.message}</div>
+              ) : null}
             </div>
           </AdminDialogBody>
 
           <AdminDialogFooter>
-            <AdminButton type="submit" disabled={mutation.isPending || !form.hiringRequest.trim() || !validBudget}>
+            <AdminButton
+              type="submit"
+              disabled={mutation.isPending || !form.hiringRequest.trim() || !validBudget}
+            >
               {mutation.isPending ? 'Contratando...' : 'Contratar'}
             </AdminButton>
           </AdminDialogFooter>

@@ -23,12 +23,10 @@ function makeCtx(): OpsContext {
     createId: () => 'test-id',
     nanoid: () => 'nano-id',
     forgeDebug: vi.fn(),
-    getGlobalConfig: vi
-      .fn()
-      .mockResolvedValue({
-        organization: 'acme',
-        appHomeUrl: 'https://github.com/apps/test',
-      }) as unknown as OpsContext['getGlobalConfig'],
+    getGlobalConfig: vi.fn().mockResolvedValue({
+      organization: 'acme',
+      appHomeUrl: 'https://github.com/apps/test',
+    }) as unknown as OpsContext['getGlobalConfig'],
     getDefaultOwner: vi.fn().mockResolvedValue('acme') as unknown as OpsContext['getDefaultOwner'],
     getInstallationOctokit: vi
       .fn()

@@ -1,7 +1,14 @@
 import { Check, Power, PowerOff, X } from 'lucide-react';
 
 import { AdminButton } from '@/components/admin';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export type AgendaRow =
   | {
@@ -93,7 +100,11 @@ export function MovementAgendaTable(input: {
                       disabled={input.pending}
                       onClick={() => input.onToggleRecurring(item.id, !item.isActive)}
                     >
-                      {item.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                      {item.isActive ? (
+                        <PowerOff className="h-4 w-4" />
+                      ) : (
+                        <Power className="h-4 w-4" />
+                      )}
                       <span className="sr-only">{item.isActive ? 'Inativar' : 'Ativar'}</span>
                     </AdminButton>
                   ) : null}

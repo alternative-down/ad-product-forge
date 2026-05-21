@@ -1,6 +1,4 @@
-import {
-  and, desc, eq, gte, inArray, like, lte, sql,
-} from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, like, lte, sql } from 'drizzle-orm';
 
 import { forgeDebug as _forgeDebug } from '@forge-runtime/core';
 import type { CommunicationProviderMessage } from '@forge-runtime/core';
@@ -14,8 +12,7 @@ import {
 } from '../database/schema';
 import { parseFilterDate } from './internal-chat-helpers';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 
 /**
  * Internal Chat — Messages Module
@@ -47,12 +44,13 @@ export interface InternalChatMessagesDeps {
   readMessageAttachments(messageId: string): Promise<unknown[]>;
 }
 
-export function createInternalChatMessages(
-  db: Database,
-  deps: InternalChatMessagesDeps,
-) {
-  const { requireConversationMembership, requireConversationMembershipByAccount,
-    getRequiredConversationForAccount, readMessageAttachments } = deps;
+export function createInternalChatMessages(db: Database, deps: InternalChatMessagesDeps) {
+  const {
+    requireConversationMembership,
+    requireConversationMembershipByAccount,
+    getRequiredConversationForAccount,
+    readMessageAttachments,
+  } = deps;
 
   // === Message Retrieval ──────────────────────────────────────────────────
   async function getMessages(input: {
@@ -69,7 +67,7 @@ export function createInternalChatMessages(
     const dateTo = parseFilterDate(input.dateTo, 'dateTo');
     const filters = [
       eq(internalChatMessages.conversationId, input.conversationKey),
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
       ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
       ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
@@ -99,18 +97,23 @@ export function createInternalChatMessages(
       .where(and(...filters))
       .orderBy(desc(internalChatMessages.createdAt))
       .offset(input.offset)
-      .limit(input.limit).all();
+      .limit(input.limit)
+      .all();
 
-    const unreadMessageIds = rows.filter((row: any) => row.unread === 1).map((row: any) => row.messageId);
+    const unreadMessageIds = rows
+      .filter((row: any) => row.unread === 1)
+      .map((row: any) => row.messageId);
 
     if (unreadMessageIds.length > 0) {
       await db
         .update(internalChatMessageReads)
         .set({ readAt: Date.now() })
-        .where(and(
-          eq(internalChatMessageReads.agentId, input.agentId),
-          inArray(internalChatMessageReads.messageId, unreadMessageIds),
-        ));
+        .where(
+          and(
+            eq(internalChatMessageReads.agentId, input.agentId),
+            inArray(internalChatMessageReads.messageId, unreadMessageIds),
+          ),
+        );
     }
 
     return (await Promise.all(
@@ -124,7 +127,7 @@ export function createInternalChatMessages(
         unread: row.unread === 1,
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
-      }))
+      })),
     )) as any as CommunicationProviderMessage[];
   }
 
@@ -145,7 +148,7 @@ export function createInternalChatMessages(
     const dateTo = parseFilterDate(input.dateTo, 'dateTo');
     const filters = [
       eq(internalChatMessages.conversationId, input.conversationKey),
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       ...(input.query ? [like(internalChatMessages.content, `%${input.query}%`)] : []),
       ...(dateFrom !== null ? [gte(internalChatMessages.createdAt, dateFrom)] : []),
       ...(dateTo !== null ? [lte(internalChatMessages.createdAt, dateTo)] : []),
@@ -167,7 +170,8 @@ export function createInternalChatMessages(
       .where(and(...filters))
       .orderBy(desc(internalChatMessages.createdAt))
       .offset(input.offset)
-      .limit(input.limit).all();
+      .limit(input.limit)
+      .all();
 
     return (await Promise.all(
       rows.reverse().map(async (row: any) => ({
@@ -180,7 +184,7 @@ export function createInternalChatMessages(
         unread: false,
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
-      }))
+      })),
     )) as any;
   }
 
@@ -194,20 +198,22 @@ export function createInternalChatMessages(
 
     await db
       .delete(internalChatConversationMembers)
-      .where(and(
-        eq(internalChatConversationMembers.conversationId, input.conversationId),
-        eq(internalChatConversationMembers.accountId, input.accountId),
-      ));
+      .where(
+        and(
+          eq(internalChatConversationMembers.conversationId, input.conversationId),
+          eq(internalChatConversationMembers.accountId, input.accountId),
+        ),
+      );
 
     const remainingMembers = await db.query.internalChatConversationMembers.findMany({
-        where: eq(internalChatConversationMembers.conversationId, input.conversationId),
-        limit: 1,
-      });
+      where: eq(internalChatConversationMembers.conversationId, input.conversationId),
+      limit: 1,
+    });
 
     if (remainingMembers.length === 0) {
-        await db
-          .delete(internalChatConversations)
-          .where(eq(internalChatConversations.id, input.conversationId));
+      await db
+        .delete(internalChatConversations)
+        .where(eq(internalChatConversations.id, input.conversationId));
     }
 
     return {

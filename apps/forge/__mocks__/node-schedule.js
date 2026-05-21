@@ -4,8 +4,12 @@
  * without needing a timer environment.
  */
 const mockJob = {
-  cancel: function () { /* noop */ },
-  nextInvocation: function () { return null; },
+  cancel: function () {
+    /* noop */
+  },
+  nextInvocation: function () {
+    return null;
+  },
 };
 
 function scheduleJob(id, spec, fn) {

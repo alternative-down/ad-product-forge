@@ -74,7 +74,6 @@ export function createAgentScheduleManager(input: {
   };
   type StoredSchedule = NonNullable<Awaited<ReturnType<typeof store.getScheduleByKind>>>;
 
-
   async function getAgentSchedule(agentId: string, scheduleId: string) {
     try {
       return await store.getAgentSchedule(agentId, scheduleId);

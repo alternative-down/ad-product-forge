@@ -3,6 +3,7 @@
 ## Variants
 
 ### Primary
+
 Primary actions - most important actions on a page.
 
 ```css
@@ -12,7 +13,7 @@ color: white;
 box-shadow: var(--shadow-sm);
 
 /* Hover */
-background: #5558E3;
+background: #5558e3;
 box-shadow: var(--shadow-md);
 
 /* Active */
@@ -26,6 +27,7 @@ cursor: not-allowed;
 ```
 
 ### Secondary
+
 Secondary actions - less prominent actions.
 
 ```css
@@ -39,6 +41,7 @@ border-color: var(--color-gray-400);
 ```
 
 ### Ghost
+
 Minimal actions - tertiary options.
 
 ```css
@@ -51,6 +54,7 @@ color: var(--color-gray-900);
 ```
 
 ### Destructive
+
 Dangerous actions - delete, terminate, etc.
 
 ```css
@@ -63,15 +67,16 @@ background: var(--color-error-600);
 
 ## Sizes
 
-| Size | Height | Padding | Font | Border Radius |
-|------|--------|---------|------|---------------|
-| `sm` | 32px | 8px 12px | text-sm | radius-md |
-| `md` | 40px | 8px 16px | text-sm | radius-md |
-| `lg` | 48px | 12px 24px | text-base | radius-md |
+| Size | Height | Padding   | Font      | Border Radius |
+| ---- | ------ | --------- | --------- | ------------- |
+| `sm` | 32px   | 8px 12px  | text-sm   | radius-md     |
+| `md` | 40px   | 8px 16px  | text-sm   | radius-md     |
+| `lg` | 48px   | 12px 24px | text-base | radius-md     |
 
 ## States
 
 ### Loading State
+
 ```css
 .button-loading {
   position: relative;
@@ -95,6 +100,7 @@ background: var(--color-error-600);
 ```
 
 ### Disabled State
+
 ```css
 .button:disabled {
   background: var(--color-gray-200);
@@ -107,6 +113,7 @@ background: var(--color-error-600);
 ## With Icons
 
 ### Icon Only
+
 ```css
 .button-icon {
   width: 40px;
@@ -119,6 +126,7 @@ background: var(--color-error-600);
 ```
 
 ### Icon + Text
+
 ```css
 .button-with-icon {
   display: inline-flex;
@@ -166,12 +174,14 @@ background: var(--color-error-600);
 ## Do's and Don'ts
 
 ### Do
+
 - Use Primary for the single most important action
 - Use consistent button hierarchy across pages
 - Provide loading states for async actions
 - Use descriptive button text
 
 ### Don't
+
 - Don't use multiple Primary buttons in the same area
 - Don't use destructive buttons for reversible actions
 - Don't use vague labels like "Click here" or "Submit"

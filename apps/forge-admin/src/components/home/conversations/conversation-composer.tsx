@@ -25,7 +25,9 @@ export function ConversationComposer(input: {
             type="file"
             multiple
             className="hidden"
-            onChange={(event) => input.onAttachmentDraftsChange(Array.from(event.target.files ?? []))}
+            onChange={(event) =>
+              input.onAttachmentDraftsChange(Array.from(event.target.files ?? []))
+            }
           />
           <span className="cursor-pointer">Adicionar anexos</span>
         </label>

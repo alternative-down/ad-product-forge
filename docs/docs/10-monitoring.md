@@ -99,16 +99,16 @@ const steps = await db.select().from(agentExecutionSteps)
 
 ### Step Fields
 
-| Campo | Descrição |
-|-------|-----------|
-| `id` | UUID do step |
-| `contractId` | Contrato usado |
-| `llmProfileId` | Perfil LLM |
-| `stepType` | tipo do step |
-| `inputTokens` | Tokens de entrada |
-| `outputTokens` | Tokens de saída |
-| `durationMs` | Duração |
-| `createdAt` | Timestamp |
+| Campo          | Descrição         |
+| -------------- | ----------------- |
+| `id`           | UUID do step      |
+| `contractId`   | Contrato usado    |
+| `llmProfileId` | Perfil LLM        |
+| `stepType`     | tipo do step      |
+| `inputTokens`  | Tokens de entrada |
+| `outputTokens` | Tokens de saída   |
+| `durationMs`   | Duração           |
+| `createdAt`    | Timestamp         |
 
 ## Log de Mensagens
 
@@ -169,27 +169,27 @@ O sistema loga eventos importantes via `forgeDebug`:
 
 ```typescript
 // Agente começando step
-forgeDebug({ 
-  scope: 'agent-runner', 
-  level: 'info', 
-  message: 'executing step', 
-  context: { runtimeId: agentId } 
+forgeDebug({
+  scope: 'agent-runner',
+  level: 'info',
+  message: 'executing step',
+  context: { runtimeId: agentId },
 });
 
 // Erro de healthcheck
-forgeDebug({ 
-  scope: 'agent-runner', 
-  level: 'error', 
-  message: 'healthcheck failed', 
-  context: { error } 
+forgeDebug({
+  scope: 'agent-runner',
+  level: 'error',
+  message: 'healthcheck failed',
+  context: { error },
 });
 
 // Budget crítico
-forgeDebug({ 
-  scope: 'finance', 
-  level: 'warn', 
-  message: 'Budget low', 
-  context: { agentId, remainingUsd } 
+forgeDebug({
+  scope: 'finance',
+  level: 'warn',
+  message: 'Budget low',
+  context: { agentId, remainingUsd },
 });
 ```
 
@@ -197,11 +197,15 @@ forgeDebug({
 
 ```typescript
 // Hook para monitorar budget
-const budgetAlerts = await db.select().from(agentExecutionContracts)
-  .where(and(
-    eq(agentExecutionContracts.status, 'active'),
-    lt(agentExecutionContracts.budgetUsd, 100) // < $100 remaining
-  ));
+const budgetAlerts = await db
+  .select()
+  .from(agentExecutionContracts)
+  .where(
+    and(
+      eq(agentExecutionContracts.status, 'active'),
+      lt(agentExecutionContracts.budgetUsd, 100), // < $100 remaining
+    ),
+  );
 ```
 
 ## Metrics Collection
@@ -225,11 +229,11 @@ await db.insert(agentHomeMetricSnapshots).values({
 
 ## Dashboard Metrics
 
-| Métrica | Descrição | Frequência |
-|---------|-----------|------------|
-| `totalAgents` | Count de agentes | real-time |
-| `activeAgents` | Agentes em execução | real-time |
-| `steps` | Steps executados | real-time |
-| `tokens` | Tokens consumidos | real-time |
-| `budget` | Budget usado/restante | real-time |
-| `conversations` | Mensagens processadas | real-time |
+| Métrica         | Descrição             | Frequência |
+| --------------- | --------------------- | ---------- |
+| `totalAgents`   | Count de agentes      | real-time  |
+| `activeAgents`  | Agentes em execução   | real-time  |
+| `steps`         | Steps executados      | real-time  |
+| `tokens`        | Tokens consumidos     | real-time  |
+| `budget`        | Budget usado/restante | real-time  |
+| `conversations` | Mensagens processadas | real-time  |

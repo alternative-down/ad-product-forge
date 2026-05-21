@@ -345,7 +345,11 @@ export function createAgentLongTermMemory(input: {
 
     const recentSteps = await input.contractStore.listRecentSteps(input.agentId, 10);
 
-    if (recentSteps.length === 0 || pricing.modelPrice === null || pricing.modelPrice === undefined) {
+    if (
+      recentSteps.length === 0 ||
+      pricing.modelPrice === null ||
+      pricing.modelPrice === undefined
+    ) {
       return 0;
     }
 

@@ -6,12 +6,12 @@ on:
       cmd:
         required: true
         type: string
-        description: "Command to run after setup"
+        description: 'Command to run after setup'
       node-version:
         required: false
         type: string
-        default: "22"
-        description: "Node version"
+        default: '22'
+        description: 'Node version'
 
 jobs:
   run:
