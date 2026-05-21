@@ -99,12 +99,24 @@ function _getLastAssistantText(messages: NativeToolLoopMessage[]): string | null
 }
 
 function buildStepDiagnostics(messages: NativeToolLoopMessage[]) {
-  return messages.map((msg, i) => ({
-    index: i,
-    role: msg.role,
-    hasToolCalls: msg.role === 'assistant' && Array.isArray((msg as unknown as { tool_calls?: unknown[] }).tool_calls) && ((msg as unknown as { tool_calls: unknown[] }).tool_calls).length > 0,
-    textLength: typeof msg.content === 'string' ? msg.content.length : 0,
-  }));
+  return messages.map((msg, i) => {
+    let hasToolCalls = false;
+    let textLength = 0;
+    if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+      hasToolCalls = msg.content.some(
+        (part) => part && typeof part === 'object' && (part as { type: string }).type === 'tool-call',
+      );
+      textLength = msg.content.reduce((sum, part) => {
+        if (part && typeof part === 'object' && (part as { type: string }).type === 'text') {
+          return sum + String((part as { text?: string }).text ?? '').length;
+        }
+        return sum;
+      }, 0);
+    } else if (typeof msg.content === 'string') {
+      textLength = msg.content.length;
+    }
+    return { index: i, role: msg.role, hasToolCalls, textLength };
+  });
 }
 
 function buildGeneratedAgentInstructions(profile: z.infer<typeof generatedAgentProfileSchema>) {
