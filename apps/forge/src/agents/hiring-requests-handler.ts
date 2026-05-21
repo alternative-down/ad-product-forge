@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
 
@@ -280,7 +281,7 @@ export async function generateHiredAgentInstructions(
         } catch (error) {
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Try again in a moment. If the problem persists, report the same status in plain text.',
           };
         }
@@ -336,10 +337,10 @@ export async function generateHiredAgentInstructions(
           forgeDebug({ scope: 'hiring-requests-handler', level: 'info', message: 'hireAgent success', context: { agentName: result.agentName, roleName: result.roleName } });
           return result;
         } catch (error) {
-          forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent failure', context: { error: error instanceof Error ? error.message : String(error) } });
+          forgeDebug({ scope: 'hiring-requests-handler', level: 'error', message: 'hireAgent failure', context: { error: serializeError(error) } });
           return {
             valid: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: serializeError(error),
             hint: 'Verify the selected role and its permissions, then try again.',
           };
         }

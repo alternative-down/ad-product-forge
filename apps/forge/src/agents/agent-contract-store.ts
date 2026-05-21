@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
@@ -39,7 +40,7 @@ export function createAgentContractStore(
       scope: 'agent-contract-store',
       level: 'error',
       runtimeId,
-      message: context + ' failed: ' + (error instanceof Error ? error.message : String(error)),
+      message: context + ' failed: ' + String(serializeError(error).message),
     });
   };
 
@@ -209,7 +210,7 @@ export function createAgentContractStore(
         }),
       ]);
     } catch (err) {
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: parallel db read failed', context: { pricingModelKey: input.pricingModelKey, profileId: input.profileId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'getUsagePricing: parallel db read failed', context: { pricingModelKey: input.pricingModelKey, profileId: input.profileId, error: serializeError(err) } });
       throw err;
     }
 
@@ -281,7 +282,7 @@ export function createAgentContractStore(
       });
     } catch (err) {
       logContractError('recordAgentStep', input.agentId, err);
-      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'recordAgentStep: db.transaction failed', context: { agentId: input.agentId, contractId: input.contractId, error: err instanceof Error ? err.message : String(err) } });
+      forgeDebug({ scope: 'agent-contract-store', level: 'error', message: 'recordAgentStep: db.transaction failed', context: { agentId: input.agentId, contractId: input.contractId, error: serializeError(err) } });
       throw err;
     }
 
