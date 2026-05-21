@@ -4,21 +4,9 @@ import { getInternalAgentRegistry } from '../../agents/internal-agent-registry';
 import {
   agentExecutionContracts,
   agentExecutionSteps,
-  agentHomeMetricSnapshots,
-  agentMcpConfigs,
-  agentRoles,
-  agentSchedules,
-  agents,
-  llmProfiles,
-  mcpServerConfigs,
 } from '../../database/schema';
-import {
-  extractLatestMessagePreview,
-  extractLatestMessageToolBadge,
-} from './helpers';
 
 import type {Database} from '../../database/index';
-import { createMicroErpReadModel } from '../../micro-erp/read-model';
 import type { MicroErpReadModel } from '../../micro-erp/read-model';
 import type { SystemSettingsStore } from '../../system-settings/store';
 import type { CapabilityStore } from '../../capabilities/store';
@@ -26,13 +14,6 @@ import type { LlmSettingsStore } from '../../llm/settings-store';
 import type { AgentNotificationStore } from '../../notifications/store';
 import type { GitHubAppManager } from '../../github/manager';
 import type { InternalChatService } from '../../communication/internal-chat-service';
-import {
-  toMastraSafeIdentifier,
-  LibsqlConversationStore,
-  readOperationalMemoryState,
-  type CommunicationMessageView,
-  type CommunicationProviderMessage,
-} from '@forge-runtime/core';
 
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 const RECENT_STEP_LIMIT = 10;
