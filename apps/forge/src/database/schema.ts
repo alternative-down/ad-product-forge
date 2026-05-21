@@ -878,6 +878,9 @@ export type WebhookRoute = InferModel<typeof webhookRoutes>;
 export type NewWebhookRoute = InferModel<typeof webhookRoutes, 'insert'>;
 
 
+// Inferred type for webhook event rows
+export type WebhookEvent = InferModel<typeof webhookEvents>;
+
 export const webhookEvents = sqliteTable('webhook_events', {
   eventId: text('event_id').primaryKey(),
   routeId: text('route_id').notNull().references(() => webhookRoutes.routeId, { onDelete: 'cascade' }),
