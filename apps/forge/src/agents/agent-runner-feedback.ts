@@ -30,7 +30,10 @@ export interface BuildIterationFeedbackDeps {
   suppressNoToolCallReminderForRun: boolean;
   setSuppressNoToolCallReminder: (val: boolean) => void;
   setNextStepAt: ((val: number | null) => void) | undefined;
-  loopDetector: LoopDetector;
+  loopDetector: {
+    isStuck(): boolean;
+    getSignatureCount(): number;
+  };
   loopSignature: string;
   runtime: { id: string };
   notifications: { createNotification: (n: { agentId: string; content: string }) => Promise<unknown> };

@@ -29,7 +29,10 @@ export function advanceRunEpoch(state: RunEpochState): number {
 }
 
 /** Returns true if the given runEpoch is older than the current active run. */
-export function isStaleRun(state: RunEpochState, runEpoch: number): boolean {
+export function isStaleRun(
+  state: RunEpochState | { activeRunEpoch: number },
+  runEpoch: number,
+): boolean {
   return runEpoch !== state.activeRunEpoch;
 }
 
@@ -41,7 +44,13 @@ export function advanceStepEpoch(state: RunEpochState): number {
 }
 
 /** Advances the generate token counter. */
-export function advanceGenerateToken(state: RunEpochState): number {
+export function advanceGenerateToken(
+  state: {
+    activeGenerateToken: number;
+    activeRunEpoch?: number;
+    activeStepEpoch?: number;
+  },
+): number {
   state.activeGenerateToken += 1;
   return state.activeGenerateToken;
 }

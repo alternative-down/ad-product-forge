@@ -23,7 +23,6 @@ import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-
 import type { AgentRunnerUsage } from './agent-runner-usage';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManagerState } from './agent-runner-messages';
-import type { LoopDetector } from './agent-runner-loop-detector';
 import type { GenerateDeps } from './agent-runner-generate';
 
 // ─── State types ────────────────────────────────────────────────────────────────
@@ -112,7 +111,7 @@ export interface ExecuteStepDeps {
   store: AgentContractStore;
   messageManager: MessageManagerState;
   scheduler: Scheduler;
-  loopDetector: LoopDetector;
+  loopDetector: import('./agent-runner-loop-manager').LoopManager;
 
   // ── Wake-queue boundary ───────────────────────────────────────────────────
   /** Called when the runner becomes idle and the wake queue should be drained. */
