@@ -260,9 +260,9 @@ export async function generateWithTimeoutRetries(
 
       const result = await (Promise.race([
         (deps.currentRuntime as any).generate(
-          systemPrompt,
           effectivePromptText,
           {
+            system: systemPrompt,
             abortSignal: controller.signal,
             maxSteps: GENERATE_MAX_STEPS_PER_RUN,
             runId: deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`,
@@ -330,7 +330,10 @@ export async function generateWithTimeoutRetries(
           loopSignature: deps.loopSignature,
           runtime: deps.runtime,
           notifications: deps.notifications,
-          currentRuntime: deps.currentRuntime as any,
+          currentRuntime: {
+    mastraId: deps.currentRuntime.mastraId,
+    longTermMemoryRecall: deps.currentRuntime.longTermMemoryRecall,
+  },
           flushPendingRunMessages: deps.flushPendingRunMessages,
           markGenerateProgress: deps.markGenerateProgress,
           controller,
