@@ -25,7 +25,7 @@ const deleteRoleSchema = z.object({
   roleId: z.string(),
 }).strict();
 
-const roleCapabilitySchema = z.object({
+const _roleCapabilitySchema = z.object({
   roleId: z.string(),
   capabilityName: z.string(),
   capabilityValue: z.boolean(),
@@ -37,7 +37,7 @@ const roleToolPermissionSchema = z.object({
   allowed: z.boolean(),
 }).strict();
 
-const roleWorkflowPermissionSchema = z.object({
+const _roleWorkflowPermissionSchema = z.object({
   roleId: z.string(),
   workflowName: z.string(),
   allowed: z.boolean(),
@@ -60,8 +60,8 @@ export function registerRoleOps(
         const result = await capabilities.createRole({ name: body.name, description: body.description });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/create", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/create", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -76,8 +76,8 @@ export function registerRoleOps(
         const result = await capabilities.updateRole({ roleId: body.roleId, name: body.name, description: body.description });
         return jsonResponse({ success: true, roleId: result.roleId, name: result.name });
       } catch (err) {
-        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/update", context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: "admin", level: "error", message: "/admin/roles/update", context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
@@ -95,7 +95,7 @@ export function registerRoleOps(
         const msg = err instanceof Error ? err.message : String(err);
         forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err}` });
         if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
-        throw err;
+        return jsonResponse({ error: msg }, 500);
       }
     },
   });
@@ -108,16 +108,17 @@ export function registerRoleOps(
       try {
         const body = parseJsonBody(request.bodyText, roleToolPermissionSchema);
         const toolId = resolvePermissionId(body.toolName);
-        if (body.allowed) {
+        if (body.allowed === true) {
           await capabilities.addRoleToolPermission({ roleId: body.roleId, toolId });
         } else {
           await capabilities.removeRoleToolPermission({ roleId: body.roleId, toolId });
         }
         return jsonResponse({ success: true, roleId: body.roleId, toolId, allowed: body.allowed });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles/tool-permissions', context: { error: err instanceof Error ? err.message : String(err) } });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 500);
+        forgeDebug({ scope: 'admin', level: 'error', message: '/admin/roles/tool-permissions', context: { error: String(serializeError(err)) } });
+        return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
   });
 }
+import { serializeError } from '../../../../agents/agent-runner-error-formatting';
