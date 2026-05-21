@@ -142,10 +142,6 @@ export function createAgentRunner(
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
 
-  // epochState removed — schedulerState is the single source of truth
-  // backoffState removed — scheduler manages backoff; let vars hold current values
-  // backoffState removed — scheduler manages backoff; let vars hold current values
-
   async function reloadRuntimeForNewRun(runEpoch: number) {
     if (!options.reloadRuntime) {
       return;
