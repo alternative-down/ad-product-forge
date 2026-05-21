@@ -212,7 +212,7 @@ export function createInternalChatGroups(
         scope: 'internal-chat-groups',
         level: 'error',
         message: 'Failed to execute requireConversationMembershipByAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }

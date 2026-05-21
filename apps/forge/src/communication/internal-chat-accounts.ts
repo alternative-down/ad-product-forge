@@ -113,7 +113,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute registerAgentAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -141,7 +141,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute registerExternalAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -167,7 +167,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute updateExternalAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -181,7 +181,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute deleteExternalAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -203,7 +203,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute listAccounts',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -219,7 +219,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getAccountBySlug',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -235,7 +235,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getAccountByAgentId',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -258,7 +258,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getAccountByTargetKey',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -285,7 +285,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getRequiredAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -309,7 +309,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getAccountsById',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -339,7 +339,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getRequiredAgentAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -360,7 +360,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getRequiredAccountBySlug',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -393,7 +393,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute getConversationForAgent',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -464,7 +464,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute ensureDirectConversation',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -492,7 +492,7 @@ export function createInternalChatAccounts(db: Database) {
         scope: 'internal-chat-accounts',
         level: 'error',
         message: 'Failed to execute listGroupMembersOrDmPeersByAccount',
-        context: { error: err instanceof Error ? err.message : String(err) },
+        context: { error: String(serializeError(err)) },
       });
       throw err;
     }
@@ -517,3 +517,4 @@ export function createInternalChatAccounts(db: Database) {
     listGroupMembersOrDmPeersByAccount,
   };
 }
+import { serializeError } from '../agents/agent-runner-error-formatting';
