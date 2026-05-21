@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { Database } from '../database/schema';
 import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
-import { createScheduleLifecycle } from './schedule-lifecycle';
+import { createScheduleLifecycle, type ScheduleLifecycleRecord } from './schedule-lifecycle';
 import {
   parseScheduleDate,
   validateScheduleShape,
@@ -111,7 +111,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: false,
     });
     try {
-      await getLifecycle().register(record as any);
+      await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
     } catch (error) {
       forgeDebug({
         scope: 'schedules',
@@ -152,7 +152,7 @@ export function createAgentScheduleManager(input: {
       wakeWhenRunning: parsed.scheduleType === 'cron' ? parsed.wakeWhenRunning !== false : true,
     });
     try {
-      await getLifecycle().register(record as any);
+      await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(agentId, record.id);
       forgeDebug({
@@ -262,7 +262,7 @@ export function createAgentScheduleManager(input: {
 
     try {
       if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
-        await getLifecycle().register(updated as any);
+        await getLifecycle().register(updated as unknown as ScheduleLifecycleRecord);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -279,7 +279,7 @@ export function createAgentScheduleManager(input: {
         isActiveSchedule(existing as unknown as StoredSchedule) === true &&
         isActiveSchedule(restored as unknown as StoredSchedule) === true
       ) {
-        await getLifecycle().register(restored as any);
+        await getLifecycle().register(restored as unknown as ScheduleLifecycleRecord);
       }
 
       throw error;
@@ -348,7 +348,7 @@ export function createAgentScheduleManager(input: {
 
     try {
       if (isActiveSchedule(updated as unknown as StoredSchedule) === true) {
-        await getLifecycle().register(updated as any);
+        await getLifecycle().register(updated as unknown as ScheduleLifecycleRecord);
       } else {
         await store.setNextTriggerAt(scheduleId, null);
       }
@@ -369,7 +369,7 @@ export function createAgentScheduleManager(input: {
         isActiveSchedule(existing as unknown as StoredSchedule) === true &&
         isActiveSchedule(restored as unknown as StoredSchedule) === true
       ) {
-        await getLifecycle().register(restored as any);
+        await getLifecycle().register(restored as unknown as ScheduleLifecycleRecord);
       }
 
       throw error;
@@ -453,7 +453,7 @@ export function createAgentScheduleManager(input: {
     }
 
     try {
-      await getLifecycle().register(scheduleRecord as any);
+      await getLifecycle().register(scheduleRecord as unknown as ScheduleLifecycleRecord);
     } catch (error) {
       await store.deleteAgentSchedule(parsed.targetAgentId, record.id);
       forgeDebug({
@@ -558,7 +558,7 @@ export function createAgentScheduleManager(input: {
   async function __registerSchedule(record: StoredSchedule | null) {
     if (isActiveSchedule(record as unknown as StoredSchedule) !== true) return;
 
-    await getLifecycle().register(record as any);
+    await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
   }
 
   async function triggerSchedule(
