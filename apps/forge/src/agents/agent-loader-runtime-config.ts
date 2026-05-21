@@ -1,6 +1,8 @@
 import type { AgentRuntimeData } from './agent-loader-data';
 import type { AgentToolset } from './agent-loader-tools';
 import type { CreateAgentConfig } from './runtime/types';
+import type { WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from '../database/schema';
+import type { WorkspaceEmbedderId } from '@forge-runtime/core';
 import type { AgentLoaderConfig } from './agent-loader-types';
 
 
@@ -46,9 +48,9 @@ export function buildAgentRuntimeConfig(
     tools: toolset.tools,
     providers: runtimeData.providers,
     workspaceBasePath: loaderConfig.workspaceBasePath,
-    workspaceFilesystem: (runtimeData.agent as any).workspaceFilesystem ?? undefined as any,
-    workspaceSandbox: (runtimeData.agent as any).workspaceSandbox ?? undefined as any,
-    workspaceSkills: (runtimeData.agent as any).workspaceSkills ?? undefined as any,
-    workspaceEmbedder: (runtimeData.agent as any).workspaceEmbedder as any,
+    workspaceFilesystem: runtimeData.agent.workspaceFilesystem as unknown as WorkspaceFilesystemConfig | undefined,
+    workspaceSandbox: runtimeData.agent.workspaceSandbox as unknown as WorkspaceSandboxConfig | undefined,
+    workspaceSkills: runtimeData.agent.workspaceSkills as unknown as WorkspaceSkillsConfig | undefined,
+    workspaceEmbedder: runtimeData.agent.workspaceEmbedder as unknown as WorkspaceEmbedderId,
   };
 }
