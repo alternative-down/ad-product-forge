@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
+import { serializeError } from './agent-runner-error-formatting';
 import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -412,7 +413,7 @@ export function createAgentLongTermMemory(input: {
           agentId: input.agentId,
           attempt,
           maxAttempts: GENERATE_MAX_ATTEMPTS,
-          error: error instanceof Error ? error.message : String(error),
+          error: serializeError(error),
         } });
 
         if (attempt >= GENERATE_MAX_ATTEMPTS) {
@@ -492,7 +493,7 @@ export function createAgentLongTermMemory(input: {
       const nowIso = new Date().toISOString();
 
       state.lastRunAt = nowIso;
-      state.lastRunError = error instanceof Error ? error.message : String(error);
+      state.lastRunError = String(serializeError(error).message);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
       forgeDebug({ scope: 'ltm', level: 'info', message: 'memory workflow failed', context: {

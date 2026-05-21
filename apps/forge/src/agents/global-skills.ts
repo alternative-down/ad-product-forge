@@ -1,3 +1,4 @@
+import { serializeError } from './agent-runner-error-formatting';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
@@ -75,7 +76,7 @@ async function listCustomGlobalSkills(workspaceBasePath: string): Promise<Global
       scope: 'global-skills',
       level: 'error',
       message: 'loadCustomSkills failed',
-      context: { error: error instanceof Error ? error.message : String(error) },
+      context: { error: serializeError(error) },
     });
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
