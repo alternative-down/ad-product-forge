@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * agent-runner-scheduler-steps.ts
  *
@@ -9,9 +8,7 @@
  * so the module always reads current values without needing explicit rebinding.
  */
 
-import {  } from '../utils/id';
 import { withTimeout } from '../utils/async';
-import {  } from './agent-runner-scheduler';
 
 export interface BeginRunInput {
   reloadRuntime: boolean;
