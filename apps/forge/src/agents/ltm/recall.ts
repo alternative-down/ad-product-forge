@@ -18,6 +18,7 @@ import type {
   LongTermMemoryRecallSnapshot,
   createAgentLongTermMemoryStore,
 } from './store';
+import type { LtmSnapshotDeps } from '../agent-ltm-snapshot';
 import { withTimeout } from '../../utils/async';
 
 import { buildRecallSystemMessage, type LtmSearchResult } from '../agent-ltm-helpers';
@@ -183,8 +184,8 @@ export class AgentLongTermMemoryRecall {
     this.conversationStore = input.conversationStore;
     this.recentRawTokens = input.recentRawTokens ?? 0;
     this.persistenceStore = input.persistenceStore;
-    if ((input as any).retrievalWorkspace !== undefined) {
-      this.retrievalWorkspace = (input as any).retrievalWorkspace;
+    if ('retrievalWorkspace' in input && input.retrievalWorkspace !== undefined) {
+      this.retrievalWorkspace = input.retrievalWorkspace as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
     } else {
       this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
         databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
@@ -200,7 +201,7 @@ export class AgentLongTermMemoryRecall {
               ),
             ),
           }),
-        } as any,
+        } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval['embedder'],
       });
     }
   }
@@ -225,7 +226,7 @@ export class AgentLongTermMemoryRecall {
             pendingRecallOperationCount: this.pendingRecallOperationCount,
             lingeringRecallOperationSince:
               this.lingeringRecallOperationSince !== undefined
-                ? new Date(this.lingeringRecallOperationSince as any).toISOString()
+                ? new Date(this.lingeringRecallOperationSince!).toISOString()
                 : null,
           },
         });
@@ -250,7 +251,7 @@ export class AgentLongTermMemoryRecall {
           status: 'miss',
           history: {
             recentFingerprints: recallThreadState.recentFingerprints,
-            updatedAt: String(Date.now()) as any,
+            updatedAt: String(Date.now()),
           },
         });
         return null;
@@ -936,7 +937,7 @@ export class AgentLongTermMemoryRecall {
           pendingRecallOperationCount: this.pendingRecallOperationCount,
           lingeringRecallOperationSince:
             this.lingeringRecallOperationSince !== undefined
-              ? new Date(this.lingeringRecallOperationSince as any).toISOString()
+              ? new Date(this.lingeringRecallOperationSince!).toISOString()
               : null,
           error: String(serializeError(error)),
         },
@@ -1112,10 +1113,10 @@ export class AgentLongTermMemoryRecall {
     input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
     deps: {
       queryText?: string;
-      recallConfig?: unknown;
-      indexStats?: unknown;
-      dedupedGraph?: unknown;
-      filteredResults?: unknown[];
+      recallConfig?: LtmSnapshotDeps['recallConfig'];
+      indexStats?: LtmSnapshotDeps['indexStats'];
+      dedupedGraph?: LtmSnapshotDeps['dedupedGraph'];
+      filteredResults?: LtmSnapshotDeps['filteredResults'];
       history?: LongTermMemoryRecallHistory;
       status: 'miss' | 'hit' | 'error';
       error?: string;
@@ -1130,14 +1131,10 @@ export class AgentLongTermMemoryRecall {
         lastInitAt: this.lastInitAt,
         steps: input.steps,
         queryText: deps.queryText,
-        recallConfig: deps.recallConfig as any as {
-          searchMode: string;
-          documentCount: number;
-          graphRandomWalkSteps: number;
-        },
-        indexStats: deps.indexStats as any,
-        dedupedGraph: deps.dedupedGraph as any,
-        filteredResults: deps.filteredResults as any,
+        recallConfig: deps.recallConfig,
+        indexStats: deps.indexStats,
+        dedupedGraph: deps.dedupedGraph,
+        filteredResults: deps.filteredResults,
       },
       threadContext,
       { status: deps.status, error: deps.error },
