@@ -116,7 +116,7 @@ export function createAgentsRuntimeMemoryReadModel(
   async function getAgentRuntimeMemory(agentId: string): Promise<AgentRuntimeMemoryOutput | null> {
     const { db, registry, workspaceBasePath } = deps;
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (agent === null) return null;
+    if (!agent) return null;
 
     const loadedAgent = registry.get((agentId as string));
     const mastraAgentId = toMastraSafeIdentifier(agentId);

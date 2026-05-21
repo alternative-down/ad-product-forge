@@ -3,14 +3,18 @@
  * Routes extracted from routes.ts for better maintainability
  */
 
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { forgeDebug } from '../debug';
-import { jsonResponse } from '../index';
+import type { HttpHandler } from '../../../http/server';
+import { jsonResponse, parseJsonBody } from '../index';
 import {
   agentIdQuerySchema,
   agentExecutionStepsQuerySchema,
   agentThreadMessagesQuerySchema,
   agentConversationMessagesQuerySchema,
+  clearAgentHistorySchema,
+  agentLongTermMemoryRecallSearchSchema,
+  agentActionSchema,
 } from '../schemas/agents';
 
 interface ReadModel {

@@ -9,6 +9,9 @@
  *
  * Security: requires X-FORGE-ADMIN-API-KEY header (enforced by http/server.ts).
  */
+import type http from 'node:http';
+import { Readable } from 'node:stream';
+
 import type { HttpHandler, HttpResponse } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatDeliveryMessage } from '../../../communication/internal-chat-connection';
@@ -22,7 +25,7 @@ const KEEPALIVE_INTERVAL_MS = 25_000;
 export function createInternalChatSseHandler(
   internalChat: InternalChatService,
 ): HttpHandler {
-  return function handleSseEvents(request): HttpResponse {
+  return async function handleSseEvents(request): Promise<HttpResponse> {
     const accountId = request.query.get('accountId');
     if (accountId === null || accountId === undefined) {
       return {

@@ -12,6 +12,7 @@ import type { InternalChatService } from '../../communication/internal-chat-serv
 
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
 
+import type { AgentListItem, AgentReadModel } from './agents-types';
 import { createAgentConversationsReadModel } from './agents-conversations';
 import { createAgentMetricsReadModel } from './agents-metrics';
 import { createAgentDetailReadModel } from './agents-detail';

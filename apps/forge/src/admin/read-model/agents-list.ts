@@ -204,7 +204,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
 
   async function getRuntimeMemoryForAgent(agentId: string): Promise<RuntimeMemoryOutput> {
     const agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (agent === null) return null;
+    if (!agent) return null;
 
     const loadedAgent = registry.get(agentId) as { runtime?: { longTermMemory?: { readSnapshot: () => Promise<unknown> } } } | undefined;
     const mastraAgentId = toMastraSafeIdentifier(agentId);
@@ -353,7 +353,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       : null;
 
     const longTermMemoryStateByAgentId = new Map<string, LongTermMemoryState | null>();
-    if (ltmStateRows !== null && ltmStateRows !== undefined) {
+    if (ltmStateRows) {
       for (const row of ltmStateRows) {
         try {
           const parsed = longTermMemoryStateSchema.safeParse(JSON.parse(row.state));
@@ -451,7 +451,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     let agent;
     // eslint-disable-next-line prefer-const
       agent = await db.query.agents.findFirst({ where: eq(agents.id, agentId) });
-    if (agent === null) return null;
+    if (!agent) return null;
 
     const loadedAgent = registry.get(agentId) as { runner?: { getSnapshot: () => unknown } } | undefined;
     const runnerSnapshot = loadedAgent?.runner?.getSnapshot?.() ?? null;
@@ -577,7 +577,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       schedules: agentScheduleRows
         .filter((schedule) => schedule.kind === 'agent')
         .map(toScheduleSummaryHelper),
-      heartbeat: heartbeat !== null ? toScheduleSummaryHelper(heartbeat) as unknown : null,
+      heartbeat: heartbeat ? toScheduleSummaryHelper(heartbeat) as unknown : null,
     } as unknown as AgentDetail;
   }
 

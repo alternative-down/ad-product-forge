@@ -11,7 +11,7 @@ import type {Database} from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
 // import { clearAgentHistory } from '../helpers'; // TODO: fix missing export in helpers.ts
-import { clearAgentHistorySchema } from '../schemas/agents';
+import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
 interface ReadModel {

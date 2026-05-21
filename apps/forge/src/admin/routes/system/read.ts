@@ -6,6 +6,11 @@
  *
  * Stores are passed directly instead of via a read-model wrapper.
  */
+import { forgeDebug } from '../debug';
+import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { sql } from 'drizzle-orm';
+
 import { mcpServerConfigs } from '../../../database/schema';
 
 import type {Database} from '../../../database/schema';
@@ -41,7 +46,7 @@ import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
   const { httpServer, db, registry, workspaceBasePath,
-         integrations, llmSettings, llmModelPrices,
+         capabilities, integrations, llmSettings, llmModelPrices,
          systemSettings, readModel } = input;
 
   // GET /admin/system/healthcheck
