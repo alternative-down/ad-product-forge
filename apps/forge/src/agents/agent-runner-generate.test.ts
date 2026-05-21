@@ -5,8 +5,7 @@
  * No prior coverage — new module extracted from agent-runner.ts (#1718).
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import * as agentRunnerGenerate from './agent-runner-generate';
-const buildIterationFeedback = (agentRunnerGenerate as any).buildIterationFeedback;
+import { buildIterationFeedback } from './agent-runner-feedback';
 import { RUN_STOP_REMINDER } from './agent-runner-wake';
 
 const MOCK_RUNTIME_ID = 'agent-42';
@@ -17,6 +16,8 @@ type IterationArg = Parameters<typeof buildIterationFeedback>[0];
 
 function makeLoopDetector(stuck = false, signatureCount = 0) {
   return {
+    recordIteration: vi.fn<() => boolean>(),
+    reset: vi.fn(),
     isStuck: vi.fn<() => boolean>().mockReturnValue(stuck),
     getSignatureCount: vi.fn<() => number>().mockReturnValue(signatureCount),
   };

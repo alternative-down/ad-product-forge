@@ -44,9 +44,9 @@ export interface BuildIterationFeedbackDeps {
         step: unknown;
         steps: unknown[];
         threadId: string;
-        resourceId: string;
+        resourceId?: string;
       }) => Promise<string | null>;
-    };
+    } | null;
   };
   flushPendingRunMessages: (opts: { allowOriginIdleOnly: boolean }) => string | null;
   markGenerateProgress: (
