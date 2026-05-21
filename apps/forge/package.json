@@ -30,7 +30,7 @@
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.5",
     "octokit": "^5.0.3",
-    "onnxruntime-node": "1.21.0",
+    "onnxruntime-node": "1.26.0",
     "postal-mime": "^2.7.4",
     "zod": "^3.25.76"
   },
