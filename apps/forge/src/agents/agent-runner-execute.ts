@@ -156,7 +156,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         usage,
         notifications,
         homeMetricSnapshots,
-        messageManager: (messageManager as any),
+        messageManager: messageManager,
         runLastMessages,
         flushPendingRunMessages,
         scheduler,
@@ -185,14 +185,14 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
 
     // ── Phase 4: interpret result ────────────────────────────────────────────
     progressState.lastStepStage = 'finalizing-run';
-    const controlDirective = extractRunnerControlDirective(result as any);
+    const controlDirective = extractRunnerControlDirective(result);
     const stopRequested = controlDirective === 'stop';
 
     if (stopRequested) {
       // Signal the finally block to drain the wake queue.
       // Only call transitionToIdle when there are no pending messages.
       // With pending messages, we stop generating but stay available.
-      if ((messageManager as any).getPendingCount() === 0) {
+      if (messageManager.getPendingCount() === 0) {
         backoffState.nextStepAt = null;
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (loopDetector?.reset) {
@@ -204,8 +204,8 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       return;
     }
 
-    (scheduler as any).resetBackoff();
-    continueRunning = (messageManager as any).getPendingCount() > 0;
+    scheduler.resetBackoff();
+    continueRunning = messageManager.getPendingCount() > 0;
   } catch (error) {
     if (isStaleRun(runEpoch)) {
       return;
@@ -238,7 +238,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     ).catch((stateError) => {
       forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: deps.runtimeId, message: 'failed to set absent state', context: { stateError } });
     });
-    (scheduler as any).scheduleNext(
+    scheduler.scheduleNextStep(
       nextExponentialBackoffMs(backoffState.backoffMs).current,
       () => executeStep({ ...deps, stopped: false, executingRef: { value: false } }),
     );
