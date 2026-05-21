@@ -22,6 +22,12 @@ import type {
   RuntimeAgent,
 } from './runtime/types';
 
+import type {
+  CreateRuntimeAgentSessionOptions,
+  RuntimeAgentSessionGenerateOptions,
+} from '@forge-runtime/core';
+
+
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
   if (config.checkpointedOmTotalContextTokens === undefined) {
     forgeDebug({
@@ -225,7 +231,7 @@ export async function createInternalAgentRuntime<
     runtimeActions: [...platform.workspaceActions, ...toolsToRuntimeActions(allAgentTools)],
     loadRuntimeActions: () => mcpRuntimeActionSource.getActions(),
     consolidateConversationOverflow: config.checkpointedOmEnabled === true,
-  } as any);
+  } satisfies CreateRuntimeAgentSessionOptions);
 
   await longTermMemory?.start();
 
@@ -239,8 +245,9 @@ export async function createInternalAgentRuntime<
     agent,
     workspace: platform.workspace,
     communication: platform.communication as CommunicationModule,
-    longTermMemoryRecall: runtimeMemory.longTermMemoryRecall as any,
-    longTermMemory: longTermMemory as any,
+    // @ts-expect-error: AgentLongTermMemoryRecall shape vs InternalAgentRuntime["longTermMemoryRecall"]
+    longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
+    longTermMemory: longTermMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,
     async dispose() {
       const cleanupResults = await Promise.allSettled([
