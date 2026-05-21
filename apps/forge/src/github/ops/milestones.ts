@@ -2,6 +2,7 @@
  * Milestones Ops — listMilestones, createMilestone, updateMilestone, deleteMilestone
  */
 import type { OpsContext } from './context';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function createMilestonesOps(ctx: OpsContext) {
   async function listMilestones(agentId: string, input: {
@@ -29,7 +30,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         closedIssues: milestone.closed_issues,
       }));
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] listMilestones failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] listMilestones failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -61,7 +62,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         dueOn: response.data.due_on,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] createMilestone failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] createMilestone failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -95,7 +96,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         dueOn: response.data.due_on,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] updateMilestone failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] updateMilestone failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }
@@ -115,7 +116,7 @@ export function createMilestonesOps(ctx: OpsContext) {
       });
       return { success: true };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] deleteMilestone failed', context: { error: err instanceof Error ? err.message : String(err) }});
+      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] deleteMilestone failed', context: { error: String(serializeError(err)) }});
       throw err;
     }
   }

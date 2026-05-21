@@ -5,6 +5,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { PaymentProviderType } from '../payment-schema';
+import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export type StripeWebhookPayload = {
   id: string;
@@ -34,10 +35,10 @@ function verifyStripeWebhookSignature(
       scope: 'stripe',
       level: 'error',
       message: 'Stripe webhook verification failed',
-      context: { error: err instanceof Error ? err.message : String(err) },
+      context: { error: String(serializeError(err)) },
     });
     throw new Error(
-      `Stripe webhook signature verification failed: ${err instanceof Error ? err.message : err}`,
+      `Stripe webhook signature verification failed: ${String(serializeError(err))}`,
     );
   }
 }

@@ -80,7 +80,7 @@ export function parseBody<T extends z.ZodTypeAny>(
     return parseJsonBody(request.bodyText, schema);
   } catch (err) {
     // Re-throw as plain Error so withRouteErrorHandler can catch it
-    throw new Error(err instanceof Error ? err.message : 'Invalid request body');
+    throw new Error(String(serializeError(err)));
   }
 }
 

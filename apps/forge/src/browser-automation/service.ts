@@ -13,6 +13,7 @@
 import { chromium } from 'playwright';
 import { forgeDebug } from '@forge-runtime/core';
 import type { Browser, BrowserContext, Page } from 'playwright';
+import { serializeError } from '../agents/agent-runner-error-formatting';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const _IDLE_BROWSER_CLEANUP_MS = 30 * 60 * 1_000; // 30 min
@@ -70,7 +71,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `chromium.launch failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `chromium.launch failed: ${String(serializeError(err))}`,
       });
       throw err;
     }
@@ -106,7 +107,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `newContext failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `newContext failed: ${String(serializeError(err))}`,
         context: { url },
       });
       return { pageId: 'unknown', error: String(err) };
@@ -145,7 +146,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `navigate failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `navigate failed: ${String(serializeError(err))}`,
         context: { url, timeout, waitForSelector: options.waitForSelector },
       });
       await context.close();
@@ -177,7 +178,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `click failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `click failed: ${String(serializeError(err))}`,
         context: { selector, pageId: session.pageId },
       });
       return { pageId: session.pageId, error: String(err) };
@@ -210,7 +211,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `fill failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `fill failed: ${String(serializeError(err))}`,
         context: { selector, valueLength: value.length, pageId: session.pageId },
       });
       return { pageId: session.pageId, error: String(err) };
@@ -237,7 +238,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `screenshot failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `screenshot failed: ${String(serializeError(err))}`,
         context: { pageId: session.pageId },
       });
       return { pageId: session.pageId, error: String(err) };
@@ -285,7 +286,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `query failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `query failed: ${String(serializeError(err))}`,
         context: { selector, pageId: session.pageId },
       });
       return { pageId: session.pageId, error: String(err) };
@@ -322,7 +323,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `wait failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `wait failed: ${String(serializeError(err))}`,
         context: { selector, timeout, pageId: session.pageId },
       });
       return { pageId: session.pageId, error: String(err) };
@@ -343,7 +344,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `closePage failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `closePage failed: ${String(serializeError(err))}`,
         context: { pageId },
       });
       instance?.sessions.delete(pageId);
@@ -364,7 +365,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         scope: 'browser-automation-service',
         level: 'error',
         agentId,
-        message: `closeAgentBrowser failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: `closeAgentBrowser failed: ${String(serializeError(err))}`,
       });
       agentBrowsers.delete(agentId);
       agentLastAccess.delete(agentId);
