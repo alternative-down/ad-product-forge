@@ -6,7 +6,11 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Database } from '../../database';
-import type { LongTermMemoryState, LongTermMemoryRecallSnapshot, LongTermMemoryRecallHistory } from './store';
+import type {
+  LongTermMemoryState,
+  LongTermMemoryRecallSnapshot,
+  LongTermMemoryRecallHistory,
+} from './store';
 
 // ─── Mock @forge-runtime/core ────────────────────────────────────────────────
 
@@ -116,7 +120,9 @@ describe('createAgentLongTermMemoryStore', () => {
   beforeEach(() => {
     mockDb = createDrizzleMock();
     mockForgeDebug.mockImplementation(() => {});
-    store = createAgentLongTermMemoryStore(mockDb.db as unknown as Database, { agentId: 'agent-test' });
+    store = createAgentLongTermMemoryStore(mockDb.db as unknown as Database, {
+      agentId: 'agent-test',
+    });
   });
 
   afterEach(() => {
@@ -160,7 +166,11 @@ describe('createAgentLongTermMemoryStore', () => {
 
       await expect(store.readState()).rejects.toThrow('DB error');
       expect(mockForgeDebug).toHaveBeenCalledWith(
-        expect.objectContaining({ scope: 'ltm', level: 'info', message: 'Failed to read LTM state' }),
+        expect.objectContaining({
+          scope: 'ltm',
+          level: 'info',
+          message: 'Failed to read LTM state',
+        }),
       );
     });
   });
@@ -371,10 +381,12 @@ describe('createAgentLongTermMemoryStore', () => {
     it('throws on query error and logs with the query error message', async () => {
       mockDb.recallStatesFindFirst.mockRejectedValue(new Error('Query error'));
 
-      await expect(store.writeRecallState({
-        threadId: null,
-        snapshot: SAMPLE_SNAPSHOT,
-      })).rejects.toThrow('Query error');
+      await expect(
+        store.writeRecallState({
+          threadId: null,
+          snapshot: SAMPLE_SNAPSHOT,
+        }),
+      ).rejects.toThrow('Query error');
       // The query error is caught by the first catch block
       expect(mockForgeDebug).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Failed to query LTM recall state for write' }),

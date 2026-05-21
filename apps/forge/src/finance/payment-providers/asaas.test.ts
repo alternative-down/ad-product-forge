@@ -15,7 +15,9 @@ describe('asaas adapter', () => {
   describe('verifyAsaasWebhookRequest', () => {
     it('parses a valid payload with correct Bearer token', () => {
       const payload = JSON.stringify(makePayload('PAYMENT_RECEIVED'));
-      expect(() => verifyAsaasWebhookRequest(payload, 'my-api-key', 'Bearer my-api-key')).not.toThrow();
+      expect(() =>
+        verifyAsaasWebhookRequest(payload, 'my-api-key', 'Bearer my-api-key'),
+      ).not.toThrow();
     });
 
     it('throws for missing auth header', () => {
@@ -23,11 +25,15 @@ describe('asaas adapter', () => {
     });
 
     it('throws for incorrect API key', () => {
-      expect(() => verifyAsaasWebhookRequest('{}', 'correct-key', 'Bearer wrong-key')).toThrow('invalid API key');
+      expect(() => verifyAsaasWebhookRequest('{}', 'correct-key', 'Bearer wrong-key')).toThrow(
+        'invalid API key',
+      );
     });
 
     it('throws for invalid JSON payload', () => {
-      expect(() => verifyAsaasWebhookRequest('not-json', 'key', 'Bearer key')).toThrow('parse JSON');
+      expect(() => verifyAsaasWebhookRequest('not-json', 'key', 'Bearer key')).toThrow(
+        'parse JSON',
+      );
     });
   });
 
@@ -56,7 +62,7 @@ describe('asaas adapter', () => {
     });
 
     it('normalizes PAYMENT_CONFIRMED event', () => {
-      const payload = makePayload('PAYMENT_CONFIRMED', { value: 149.50 });
+      const payload = makePayload('PAYMENT_CONFIRMED', { value: 149.5 });
       const result = normalizeAsaasPaymentConfirmed(payload);
       expect(result).not.toBeNull();
       expect(result!.status).toBe('completed');
@@ -71,7 +77,7 @@ describe('asaas adapter', () => {
     });
 
     it('normalizes PAYMENT_AWAITING_RISK_ANALYSIS as failed', () => {
-      const payload = makePayload('PAYMENT_AWAITING_RISK_ANALYSIS', { value: 50.00 });
+      const payload = makePayload('PAYMENT_AWAITING_RISK_ANALYSIS', { value: 50.0 });
       const result = normalizeAsaasPaymentFailed(payload);
       expect(result).not.toBeNull();
       expect(result!.status).toBe('failed');

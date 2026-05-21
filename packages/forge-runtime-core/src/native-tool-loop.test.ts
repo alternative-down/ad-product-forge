@@ -34,12 +34,14 @@ describe('native-tool-loop', () => {
     it('accepts assistant message with tool-call part', () => {
       const msg: NativeToolLoopMessage = {
         role: 'assistant',
-        content: [{
-          type: 'tool-call',
-          toolCallId: 'call-1',
-          toolName: 'my-tool',
-          input: { arg: 'value' },
-        }],
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'call-1',
+            toolName: 'my-tool',
+            input: { arg: 'value' },
+          },
+        ],
       };
       expect(msg.content[0].type).toBe('tool-call');
     });
@@ -47,12 +49,14 @@ describe('native-tool-loop', () => {
     it('accepts tool result message', () => {
       const msg: NativeToolLoopMessage = {
         role: 'tool',
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'call-1',
-          toolName: 'my-tool',
-          output: 'result',
-        }],
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'call-1',
+            toolName: 'my-tool',
+            output: 'result',
+          },
+        ],
       };
       expect(msg.role).toBe('tool');
     });

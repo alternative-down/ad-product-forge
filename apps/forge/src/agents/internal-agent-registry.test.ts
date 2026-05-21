@@ -30,7 +30,7 @@ vi.mock('./agent-loader', () => ({
 import { getInternalAgentRegistry } from './internal-agent-registry';
 import type { InternalAgentRuntime } from './runtime/types';
 
-import type {Database} from '../database/client';
+import type { Database } from '../database/client';
 
 function makeRuntime(id = 'agent-test-1', name = 'Test Agent'): InternalAgentRuntime {
   return {
@@ -136,10 +136,12 @@ describe('internal-agent-registry', () => {
 
       const entries = registry().list();
       expect(entries).toHaveLength(2);
-      const ids = entries.map((e) => {
-        const entry = registry().get(e.id);
-        return entry!.runtime.id;
-      }).sort();
+      const ids = entries
+        .map((e) => {
+          const entry = registry().get(e.id);
+          return entry!.runtime.id;
+        })
+        .sort();
       expect(ids).toEqual(['list-1', 'list-2']);
     });
   });

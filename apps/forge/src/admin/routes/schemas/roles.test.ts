@@ -44,8 +44,10 @@ const deleteRoleSchema = z.object({
 
 describe('roleToolPermissionSchema', () => {
   it('parses valid input', () => {
-    expect(roleToolPermissionSchema.parse({ roleId: 'role-1', toolId: 'tool-1' }))
-      .toMatchObject({ roleId: 'role-1', toolId: 'tool-1' });
+    expect(roleToolPermissionSchema.parse({ roleId: 'role-1', toolId: 'tool-1' })).toMatchObject({
+      roleId: 'role-1',
+      toolId: 'tool-1',
+    });
   });
 
   it('rejects missing roleId', () => {
@@ -69,8 +71,9 @@ describe('roleToolPermissionSchema', () => {
 
 describe('roleWorkflowPermissionSchema', () => {
   it('parses valid input', () => {
-    expect(roleWorkflowPermissionSchema.parse({ roleId: 'role-1', workflowId: 'wf-1' }))
-      .toMatchObject({ roleId: 'role-1', workflowId: 'wf-1' });
+    expect(
+      roleWorkflowPermissionSchema.parse({ roleId: 'role-1', workflowId: 'wf-1' }),
+    ).toMatchObject({ roleId: 'role-1', workflowId: 'wf-1' });
   });
 
   it('rejects missing roleId', () => {
@@ -86,8 +89,10 @@ describe('roleWorkflowPermissionSchema', () => {
 
 describe('roleCapabilitySchema', () => {
   it('parses valid input', () => {
-    expect(roleCapabilitySchema.parse({ roleId: 'role-1', capabilityId: 'cap-1' }))
-      .toMatchObject({ roleId: 'role-1', capabilityId: 'cap-1' });
+    expect(roleCapabilitySchema.parse({ roleId: 'role-1', capabilityId: 'cap-1' })).toMatchObject({
+      roleId: 'role-1',
+      capabilityId: 'cap-1',
+    });
   });
 
   it('rejects missing roleId', () => {
@@ -157,8 +162,7 @@ describe('updateRoleSchema', () => {
 
 describe('deleteRoleSchema', () => {
   it('parses valid input', () => {
-    expect(deleteRoleSchema.parse({ roleId: 'role-1' }))
-      .toMatchObject({ roleId: 'role-1' });
+    expect(deleteRoleSchema.parse({ roleId: 'role-1' })).toMatchObject({ roleId: 'role-1' });
   });
 
   it('rejects missing roleId', () => {

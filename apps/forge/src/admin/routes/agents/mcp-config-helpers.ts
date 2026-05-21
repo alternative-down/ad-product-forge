@@ -15,10 +15,7 @@ export async function assignAgentMcpServer(
   isActive: boolean = true,
 ): Promise<AssignAgentMcpServerResult> {
   const existing = await db.query.agentMcpConfigs.findFirst({
-    where: and(
-      eq(agentMcpConfigs.agentId, agentId),
-      eq(agentMcpConfigs.serverId, serverId),
-    ),
+    where: and(eq(agentMcpConfigs.agentId, agentId), eq(agentMcpConfigs.serverId, serverId)),
   });
 
   if (existing) {

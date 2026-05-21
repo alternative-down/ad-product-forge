@@ -119,17 +119,25 @@ describe('normalizeArchiveEntryPath', () => {
   it('does NOT throw for path containing /../ (path.posix.normalize resolves it)', () => {
     // path.posix.normalize('src/lib/../agent.ts') = 'src/agent.ts' — no /../ remains → passes
     expect(() => normalizeArchiveEntryPath('src/lib/../agent.ts')).not.toThrow();
-    expect(normalizeArchiveEntryPath('src/lib/../agent.ts')).toEqual({ safePath: 'src/agent.ts', isDirectory: false });
+    expect(normalizeArchiveEntryPath('src/lib/../agent.ts')).toEqual({
+      safePath: 'src/agent.ts',
+      isDirectory: false,
+    });
   });
 
   it('does NOT throw for absolute-looking paths (leading slashes are stripped)', () => {
     // All leading slashes are stripped → '/etc/passwd' → 'etc/passwd' → valid
     expect(() => normalizeArchiveEntryPath('/etc/passwd')).not.toThrow();
-    expect(normalizeArchiveEntryPath('/etc/passwd')).toEqual({ safePath: 'etc/passwd', isDirectory: false });
+    expect(normalizeArchiveEntryPath('/etc/passwd')).toEqual({
+      safePath: 'etc/passwd',
+      isDirectory: false,
+    });
   });
 
   it('throws for skills/../ (directory traversal via skills prefix)', () => {
-    expect(() => normalizeArchiveEntryPath('skills/../secrets')).toThrow('Invalid skill archive entry');
+    expect(() => normalizeArchiveEntryPath('skills/../secrets')).toThrow(
+      'Invalid skill archive entry',
+    );
   });
 
   it('throws for empty path after stripping skills/ prefix', () => {

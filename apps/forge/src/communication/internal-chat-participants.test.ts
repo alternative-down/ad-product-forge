@@ -135,9 +135,9 @@ describe('createInternalChatParticipants — listGroupMembersOrDmPeers', () => {
     const db = makeMockDb({ accountFindFirstError: new Error('account lookup failed') });
     const participants = createInternalChatParticipants(db as never);
 
-    await expect(
-      participants.listGroupMembersOrDmPeers('agent-1', 'conv-1'),
-    ).rejects.toThrow('account lookup failed');
+    await expect(participants.listGroupMembersOrDmPeers('agent-1', 'conv-1')).rejects.toThrow(
+      'account lookup failed',
+    );
   });
 
   it('returns empty list when agent has an account but no members', async () => {

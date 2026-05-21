@@ -37,13 +37,17 @@ function createMemoryAgentInstructions(input: {
       '<owner_agent_profile>',
       `- Agent id: ${input.agentId}`,
       `- Agent name: ${input.agentName}`,
-      input.agentDescription?.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
+      input.agentDescription?.trim()
+        ? `- Agent description: ${input.agentDescription.trim()}`
+        : null,
       input.roleName?.trim() ? `- Role name: ${input.roleName.trim()}` : null,
       input.roleDescription?.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
       '- Assigned instructions:',
       input.instructions.trim(),
       '</owner_agent_profile>',
-    ].filter(Boolean).join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
     'You are free to explore the workspace broadly and decide for yourself what deserves consolidation, restructuring, rewriting, splitting, merging, or expansion.',
     'Do not be lazy. Take as much time as needed for the activity, inspect things carefully, revisit relationships between documents, compare evidence from different places, and try better structures when the current one looks weak.',
     'The directory `checkpoints` is not a place to edit. Treat it as unstable input: anything written there may be rewritten later and your changes there would be lost.',
@@ -57,7 +61,9 @@ function createMemoryAgentInstructions(input: {
     'Do not create files outside `memory` and `workspace/skills`.',
     'When repeated procedures justify a reusable skill, use the `skill-creator` skill to create or update it.',
     'A skill is only valid if the skill folder name matches the skill name declared inside its `SKILL.md` file.',
-  ].filter(Boolean).join('\n\n');
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 function buildMemoryAgentPrompt() {
@@ -77,17 +83,19 @@ function buildMemoryAgentPrompt() {
 }
 
 function getUsageFromGenerateResult(result: { usage?: unknown }) {
-  const usage = result.usage as {
-    inputTokens?: number;
-    outputTokens?: number;
-    promptTokens?: number;
-    completionTokens?: number;
-    cachedInputTokens?: number;
-    inputTokenDetails?: {
-      noCacheTokens?: number;
-      cacheReadTokens?: number;
-    };
-  } | undefined;
+  const usage = result.usage as
+    | {
+        inputTokens?: number;
+        outputTokens?: number;
+        promptTokens?: number;
+        completionTokens?: number;
+        cachedInputTokens?: number;
+        inputTokenDetails?: {
+          noCacheTokens?: number;
+          cacheReadTokens?: number;
+        };
+      }
+    | undefined;
   const cachedInputTokens =
     usage?.inputTokenDetails?.cacheReadTokens ?? usage?.cachedInputTokens ?? 0;
   const promptTokens = usage?.inputTokens ?? usage?.promptTokens ?? 0;
@@ -183,11 +191,13 @@ function renderCheckpointPackageReadme(input: {
   const { payload } = input;
   const packageId = payload.packageId ?? 'unknown';
 
-  const reflectionLines = payload.reflections.map((r, i) =>
-    `  ${i + 1}. **${r.id}** — ${r.content.slice(0, 80)}${r.content.length > 80 ? '…' : ''}`,
+  const reflectionLines = payload.reflections.map(
+    (r, i) =>
+      `  ${i + 1}. **${r.id}** — ${r.content.slice(0, 80)}${r.content.length > 80 ? '…' : ''}`,
   );
-  const observationLines = payload.observations.map((o, i) =>
-    `  ${i + 1}. **${o.id}** — ${o.content.slice(0, 80)}${o.content.length > 80 ? '…' : ''}`,
+  const observationLines = payload.observations.map(
+    (o, i) =>
+      `  ${i + 1}. **${o.id}** — ${o.content.slice(0, 80)}${o.content.length > 80 ? '…' : ''}`,
   );
 
   return [
@@ -209,7 +219,9 @@ function renderCheckpointPackageReadme(input: {
     ...(payload.observations.length > 0 ? ['', ...observationLines] : ['_No observations._']),
     '',
     `Generated at: ${payload.checkpointSummary.updatedAt}`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -427,8 +439,14 @@ describe('getUsageFromGenerateResult', () => {
 
 describe('diffTrackedFiles', () => {
   it('returns empty diffs when maps are identical', () => {
-    const before = new Map([['a.txt', 'hash-a'], ['b.txt', 'hash-b']]);
-    const after = new Map([['a.txt', 'hash-a'], ['b.txt', 'hash-b']]);
+    const before = new Map([
+      ['a.txt', 'hash-a'],
+      ['b.txt', 'hash-b'],
+    ]);
+    const after = new Map([
+      ['a.txt', 'hash-a'],
+      ['b.txt', 'hash-b'],
+    ]);
     const result = diffTrackedFiles(before, after);
     expect(result.added).toEqual([]);
     expect(result.removed).toEqual([]);
@@ -437,7 +455,10 @@ describe('diffTrackedFiles', () => {
 
   it('identifies newly added files', () => {
     const before = new Map([['a.txt', 'hash-a']]);
-    const after = new Map([['a.txt', 'hash-a'], ['b.txt', 'hash-b']]);
+    const after = new Map([
+      ['a.txt', 'hash-a'],
+      ['b.txt', 'hash-b'],
+    ]);
     const result = diffTrackedFiles(before, after);
     expect(result.added).toEqual(['b.txt']);
     expect(result.removed).toEqual([]);
@@ -445,7 +466,10 @@ describe('diffTrackedFiles', () => {
   });
 
   it('identifies removed files', () => {
-    const before = new Map([['a.txt', 'hash-a'], ['b.txt', 'hash-b']]);
+    const before = new Map([
+      ['a.txt', 'hash-a'],
+      ['b.txt', 'hash-b'],
+    ]);
     const after = new Map([['a.txt', 'hash-a']]);
     const result = diffTrackedFiles(before, after);
     expect(result.added).toEqual([]);
@@ -616,11 +640,13 @@ describe('renderCheckpointPackageReadme', () => {
   it('truncates long content in listing', () => {
     const longPayload = {
       ...SAMPLE_PAYLOAD,
-      reflections: [{
-        ...SAMPLE_REFLECTION,
-        id: 'ref-long',
-        content: 'A'.repeat(200),
-      }],
+      reflections: [
+        {
+          ...SAMPLE_REFLECTION,
+          id: 'ref-long',
+          content: 'A'.repeat(200),
+        },
+      ],
     };
     const result = renderCheckpointPackageReadme({ payload: longPayload });
     expect(result).toContain('…'); // truncation marker

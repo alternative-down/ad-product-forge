@@ -8,14 +8,26 @@ import { createChatSending } from './internal-chat-sending';
 
 // ─── Mock factories ────────────────────────────────────────────────────────────
 
-function makeMockAccounts(overrides: {
-  getAccountByAgentIdResult?: { id: string; displayName: string; slug: string } | null;
-  getAccountBySlugResult?: { id: string } | null;
-  getRequiredAccountResult?: { id: string; displayName: string; slug: string; agentId: string | null };
-  getRequiredAccountError?: Error;
-} = {}) {
+function makeMockAccounts(
+  overrides: {
+    getAccountByAgentIdResult?: { id: string; displayName: string; slug: string } | null;
+    getAccountBySlugResult?: { id: string } | null;
+    getRequiredAccountResult?: {
+      id: string;
+      displayName: string;
+      slug: string;
+      agentId: string | null;
+    };
+    getRequiredAccountError?: Error;
+  } = {},
+) {
   const getAccountsById = async (accountIds: string[]) => {
-    const result = overrides.getRequiredAccountResult ?? { id: accountIds[0] ?? 'acct_1', displayName: 'User', slug: 'user', agentId: 'agent-1' };
+    const result = overrides.getRequiredAccountResult ?? {
+      id: accountIds[0] ?? 'acct_1',
+      displayName: 'User',
+      slug: 'user',
+      agentId: 'agent-1',
+    };
     return new Map(accountIds.map((id) => [id, result]));
   };
   return {
@@ -23,32 +35,54 @@ function makeMockAccounts(overrides: {
     getAccountBySlug: vi.fn().mockResolvedValue(overrides.getAccountBySlugResult ?? null),
     getRequiredAccount: vi.fn().mockImplementation(async (id: string) => {
       if (overrides.getRequiredAccountError) throw overrides.getRequiredAccountError;
-      return overrides.getRequiredAccountResult ?? { id, displayName: 'User', slug: 'user', agentId: 'agent-1' };
+      return (
+        overrides.getRequiredAccountResult ?? {
+          id,
+          displayName: 'User',
+          slug: 'user',
+          agentId: 'agent-1',
+        }
+      );
     }),
     getAccountsById: vi.fn().mockImplementation(getAccountsById),
   };
 }
 
-function makeMockServiceHelpers(overrides: {
-  getRequiredConversationForAccountError?: Error;
-  getRequiredConversationForAccountResult?: { id: string; name: string; type: string };
-} = {}) {
+function makeMockServiceHelpers(
+  overrides: {
+    getRequiredConversationForAccountError?: Error;
+    getRequiredConversationForAccountResult?: { id: string; name: string; type: string };
+  } = {},
+) {
   return {
-    getRequiredConversationForAccount: vi.fn().mockImplementation(async (accountId: string, convKey: string) => {
-      if (overrides.getRequiredConversationForAccountError) throw overrides.getRequiredConversationForAccountError;
-      return overrides.getRequiredConversationForAccountResult ?? { id: convKey, name: 'Conv', type: 'dm' };
-    }),
+    getRequiredConversationForAccount: vi
+      .fn()
+      .mockImplementation(async (accountId: string, convKey: string) => {
+        if (overrides.getRequiredConversationForAccountError)
+          throw overrides.getRequiredConversationForAccountError;
+        return (
+          overrides.getRequiredConversationForAccountResult ?? {
+            id: convKey,
+            name: 'Conv',
+            type: 'dm',
+          }
+        );
+      }),
   };
 }
 
-function makeMockGroups(overrides: {
-  ensureDirectConversationError?: Error;
-  ensureDirectConversationResult?: { id: string; name: string; type: string };
-} = {}) {
+function makeMockGroups(
+  overrides: {
+    ensureDirectConversationError?: Error;
+    ensureDirectConversationResult?: { id: string; name: string; type: string };
+  } = {},
+) {
   return {
     ensureDirectConversation: vi.fn().mockImplementation(async (left: string, right: string) => {
       if (overrides.ensureDirectConversationError) throw overrides.ensureDirectConversationError;
-      return overrides.ensureDirectConversationResult ?? { id: `conv-${right}`, name: 'DM', type: 'dm' };
+      return (
+        overrides.ensureDirectConversationResult ?? { id: `conv-${right}`, name: 'DM', type: 'dm' }
+      );
     }),
   };
 }
@@ -61,15 +95,17 @@ function makeMockConnection() {
 
 function makeMockReads() {
   return {
-    listGroupMembersOrDmPeersByAccount: vi.fn().mockResolvedValue([
-      { participantKey: 'agent-2', displayName: 'Bob', role: 'normal' },
-    ]),
+    listGroupMembersOrDmPeersByAccount: vi
+      .fn()
+      .mockResolvedValue([{ participantKey: 'agent-2', displayName: 'Bob', role: 'normal' }]),
   };
 }
 
-function makeMockAttachments(overrides: {
-  storeError?: Error;
-} = {}) {
+function makeMockAttachments(
+  overrides: {
+    storeError?: Error;
+  } = {},
+) {
   return {
     storeMessageAttachments: vi.fn().mockImplementation(async () => {
       if (overrides.storeError) throw overrides.storeError;
@@ -78,12 +114,14 @@ function makeMockAttachments(overrides: {
   };
 }
 
-function makeMockDb(overrides: {
-  findManyMembers?: unknown[];
-  findManyError?: Error;
-  updateRowsAffected?: number;
-  updateError?: Error;
-} = {}) {
+function makeMockDb(
+  overrides: {
+    findManyMembers?: unknown[];
+    findManyError?: Error;
+    updateRowsAffected?: number;
+    updateError?: Error;
+  } = {},
+) {
   return {
     query: {
       internalChatConversationMembers: {
@@ -111,16 +149,33 @@ function makeMockDb(overrides: {
 
 describe('createChatSending — sendMessage', () => {
   it('resolves conversation via ensureDirectConversation when targetKey is an agentId', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-abc', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-abc', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    const result = await sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Hello', attachments: [] });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Hello',
+      attachments: [],
+    });
 
     expect(groups.ensureDirectConversation).toHaveBeenCalledWith('acc-1', 'acc-2');
     expect(result.conversationKey).toBe('conv-abc');
@@ -129,54 +184,112 @@ describe('createChatSending — sendMessage', () => {
   it('resolves conversation via getRequiredConversationForAccount when targetKey is a conversation key', async () => {
     const accounts = makeMockAccounts();
     const groups = makeMockGroups();
-    const serviceHelpers = makeMockServiceHelpers({ getRequiredConversationForAccountResult: { id: 'conv-existing', name: 'Group', type: 'group' } });
+    const serviceHelpers = makeMockServiceHelpers({
+      getRequiredConversationForAccountResult: {
+        id: 'conv-existing',
+        name: 'Group',
+        type: 'group',
+      },
+    });
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    const result = await sending.sendMessage({ accountId: 'acc-1', targetKey: 'conv-existing', content: 'Hi', attachments: [] });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'conv-existing',
+      content: 'Hi',
+      attachments: [],
+    });
 
-    expect(serviceHelpers.getRequiredConversationForAccount).toHaveBeenCalledWith('acc-1', 'conv-existing');
+    expect(serviceHelpers.getRequiredConversationForAccount).toHaveBeenCalledWith(
+      'acc-1',
+      'conv-existing',
+    );
     expect(result.conversationKey).toBe('conv-existing');
   });
 
   it('throws when getRequiredConversationForAccount fails', async () => {
     const accounts = makeMockAccounts();
     const groups = makeMockGroups();
-    const serviceHelpers = makeMockServiceHelpers({ getRequiredConversationForAccountError: new Error('conv not found') });
+    const serviceHelpers = makeMockServiceHelpers({
+      getRequiredConversationForAccountError: new Error('conv not found'),
+    });
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
 
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'conv-missing', content: 'Hi', attachments: [] }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'conv-missing',
+        content: 'Hi',
+        attachments: [],
+      }),
     ).rejects.toThrow('conv not found');
   });
 
   it('throws when findMany members fails', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb({ findManyError: new Error('findMany failed') });
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
 
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Hi', attachments: [] }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'agent-bob',
+        content: 'Hi',
+        attachments: [],
+      }),
     ).rejects.toThrow('findMany failed');
   });
 
   it('throws when insert messages fails', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
@@ -188,24 +301,54 @@ describe('createChatSending — sendMessage', () => {
       }),
     });
 
-    const sending = createChatSending({ db, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
 
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Hi', attachments: [] }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'agent-bob',
+        content: 'Hi',
+        attachments: [],
+      }),
     ).rejects.toThrow('insert failed');
   });
 
   it('returns success with messageId and conversationKey', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-xyz', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-xyz', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    const result = await sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Hello', attachments: [] });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    const result = await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Hello',
+      attachments: [],
+    });
 
     expect(result.success).toBe(true);
     expect(result.messageId).toBeTruthy();
@@ -213,31 +356,65 @@ describe('createChatSending — sendMessage', () => {
   });
 
   it('calls storeMessageAttachments', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    await sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Hi', attachments: [] });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Hi',
+      attachments: [],
+    });
 
     expect(attachments.storeMessageAttachments).toHaveBeenCalled();
   });
 
   it('calls deliverToParticipants with correct conversation data', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'Team Chat', type: 'group' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'Team Chat', type: 'group' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    await sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Test message', attachments: [] });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'Test message',
+      attachments: [],
+    });
 
     expect(connection.deliverToParticipants).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -249,18 +426,35 @@ describe('createChatSending — sendMessage', () => {
   });
 
   it('rethrows when storeMessageAttachments fails', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments({ storeError: new Error('storage failed') });
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
 
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'Hi', attachments: [] }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'agent-bob',
+        content: 'Hi',
+        attachments: [],
+      }),
     ).rejects.toThrow('storage failed');
   });
 });
@@ -277,8 +471,21 @@ describe('createChatSending — getMessageAttachmentByAccount', () => {
     const attachments = makeMockAttachments();
     const db = makeMockDb();
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    const result = await sending.getMessageAttachmentByAccount({ accountId: 'acc-1', conversationId: 'conv-1', messageId: 'msg-1', attachmentName: 'file.txt' });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    const result = await sending.getMessageAttachmentByAccount({
+      accountId: 'acc-1',
+      conversationId: 'conv-1',
+      messageId: 'msg-1',
+      attachmentName: 'file.txt',
+    });
 
     expect(attachments.readMessageAttachment).toHaveBeenCalledWith('msg-1', 'file.txt');
     expect(result).toEqual({ stream: null, contentType: 'text/plain' });
@@ -286,13 +493,15 @@ describe('createChatSending — getMessageAttachmentByAccount', () => {
 });
 // ─── replyToMessageId support ─────────────────────────────────────────────────
 
-function makeMockDbWithReplySupport(overrides: {
-  findManyMembers?: unknown[];
-  findManyError?: Error;
-  parentMessage?: { id: string; conversationId: string } | null;
-  parentMessageError?: Error;
-  updateRowsAffected?: number;
-} = {}) {
+function makeMockDbWithReplySupport(
+  overrides: {
+    findManyMembers?: unknown[];
+    findManyError?: Error;
+    parentMessage?: { id: string; conversationId: string } | null;
+    parentMessageError?: Error;
+    updateRowsAffected?: number;
+  } = {},
+) {
   return {
     query: {
       internalChatConversationMembers: {
@@ -321,8 +530,12 @@ function makeMockDbWithReplySupport(overrides: {
 
 describe('createChatSending — sendMessage with replyToMessageId', () => {
   it('accepts replyToMessageId and stores it in the database', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
@@ -331,9 +544,20 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       parentMessage: { id: 'msg-parent', conversationId: 'conv-1' },
     });
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
     const result = await sending.sendMessage({
-      accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply message', attachments: [],
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'reply message',
+      attachments: [],
       replyToMessageId: 'msg-parent',
     });
 
@@ -344,38 +568,79 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
   });
 
   it('stores null when replyToMessageId is not provided', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
-    const db = makeMockDbWithReplySupport({ parentMessage: { id: 'msg-parent', conversationId: 'conv-1' } });
+    const db = makeMockDbWithReplySupport({
+      parentMessage: { id: 'msg-parent', conversationId: 'conv-1' },
+    });
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
-    await sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'plain message', attachments: [] });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
+    await sending.sendMessage({
+      accountId: 'acc-1',
+      targetKey: 'agent-bob',
+      content: 'plain message',
+      attachments: [],
+    });
 
     expect(db.query.internalChatMessages.findFirst).not.toHaveBeenCalled();
   });
 
   it('throws when replyToMessageId references a non-existent message', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
     const attachments = makeMockAttachments();
     const db = makeMockDbWithReplySupport({ parentMessage: null });
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply', attachments: [], replyToMessageId: 'msg-nonexistent' }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'agent-bob',
+        content: 'reply',
+        attachments: [],
+        replyToMessageId: 'msg-nonexistent',
+      }),
     ).rejects.toThrow('Reply target message not found');
   });
 
   it('throws when replyToMessageId belongs to a different conversation', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
@@ -384,15 +649,33 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       parentMessage: { id: 'msg-parent', conversationId: 'conv-other' },
     });
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply', attachments: [], replyToMessageId: 'msg-parent' }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'agent-bob',
+        content: 'reply',
+        attachments: [],
+        replyToMessageId: 'msg-parent',
+      }),
     ).rejects.toThrow('Reply target belongs to a different conversation');
   });
 
   it('rethrows when parent message lookup fails', async () => {
-    const accounts = makeMockAccounts({ getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' } });
-    const groups = makeMockGroups({ ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' } });
+    const accounts = makeMockAccounts({
+      getAccountByAgentIdResult: { id: 'acc-2', displayName: 'Bob', slug: 'bob' },
+    });
+    const groups = makeMockGroups({
+      ensureDirectConversationResult: { id: 'conv-1', name: 'DM', type: 'dm' },
+    });
     const serviceHelpers = makeMockServiceHelpers();
     const connection = makeMockConnection();
     const reads = makeMockReads();
@@ -401,9 +684,23 @@ describe('createChatSending — sendMessage with replyToMessageId', () => {
       parentMessageError: new Error('DB lookup failed'),
     });
 
-    const sending = createChatSending({ db: db as never, accounts, serviceHelpers, groups, connection, reads, attachments });
+    const sending = createChatSending({
+      db: db as never,
+      accounts,
+      serviceHelpers,
+      groups,
+      connection,
+      reads,
+      attachments,
+    });
     await expect(
-      sending.sendMessage({ accountId: 'acc-1', targetKey: 'agent-bob', content: 'reply', attachments: [], replyToMessageId: 'msg-parent' }),
+      sending.sendMessage({
+        accountId: 'acc-1',
+        targetKey: 'agent-bob',
+        content: 'reply',
+        attachments: [],
+        replyToMessageId: 'msg-parent',
+      }),
     ).rejects.toThrow('DB lookup failed');
   });
 });

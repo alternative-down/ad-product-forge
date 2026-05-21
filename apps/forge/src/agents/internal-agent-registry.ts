@@ -1,6 +1,6 @@
 import { forgeDebug } from '@forge-runtime/core';
 
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import type { AgentLoaderConfig } from './agent-loader';
 import type { InternalAgentRuntime } from './runtime/types';
 import { createAgentRunner, type InternalAgentRunner } from './agent-runner';
@@ -66,8 +66,6 @@ export function createPerAgentGitHubManager(config: {
   return createGitHubAppManager(config);
 }
 
-
-
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
   let loaderConfig: (AgentLoaderConfig & Partial<GitHubManagerConfig>) | null = null;
@@ -116,8 +114,10 @@ function createInternalAgentRegistry() {
       db,
       // httpServer and integrations may not be set — guard with nullish coalescing
       // These fields are optional on the extended config type
-      httpServer: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? null as never,
-      integrations: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? null as never,
+      httpServer:
+        (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? (null as never),
+      integrations:
+        (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? (null as never),
       publicBaseUrl: '',
     });
 
@@ -130,7 +130,11 @@ function createInternalAgentRegistry() {
       workspaceBasePath: loaderConfig?.workspaceBasePath,
       reloadRuntime: async () => {
         if (!loaderConfig) {
-          forgeDebug({ scope: 'internal-agent-registry', level: 'error', message: 'internal-agent-registry: validation/requirement failed' });
+          forgeDebug({
+            scope: 'internal-agent-registry',
+            level: 'error',
+            message: 'internal-agent-registry: validation/requirement failed',
+          });
           throw new Error('Agent loader config is not available for runtime reload');
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);

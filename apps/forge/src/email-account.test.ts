@@ -3,8 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createEmailProvider } from './email-account';
 
 const validConfig = {
-  imap: { host: 'imap.test.com', port: 993, secure: true, user: 'test@example.com', password: 'secret' },
-  smtp: { host: 'smtp.test.com', port: 587, secure: false, user: 'test@example.com', password: 'secret' },
+  imap: {
+    host: 'imap.test.com',
+    port: 993,
+    secure: true,
+    user: 'test@example.com',
+    password: 'secret',
+  },
+  smtp: {
+    host: 'smtp.test.com',
+    port: 587,
+    secure: false,
+    user: 'test@example.com',
+    password: 'secret',
+  },
 };
 
 // Shared mock objects created via vi.hoisted so they're available to vi.mock factories
@@ -153,22 +165,34 @@ describe('email-account', () => {
     });
 
     it('should accept imap config with secure true', () => {
-      const provider = createEmailProvider({ ...validConfig, imap: { ...validConfig.imap, secure: true } });
+      const provider = createEmailProvider({
+        ...validConfig,
+        imap: { ...validConfig.imap, secure: true },
+      });
       expect(provider).toBeDefined();
     });
 
     it('should accept imap config with secure false', () => {
-      const provider = createEmailProvider({ ...validConfig, imap: { ...validConfig.imap, secure: false } });
+      const provider = createEmailProvider({
+        ...validConfig,
+        imap: { ...validConfig.imap, secure: false },
+      });
       expect(provider).toBeDefined();
     });
 
     it('should accept smtp config with secure true', () => {
-      const provider = createEmailProvider({ ...validConfig, smtp: { ...validConfig.smtp, secure: true } });
+      const provider = createEmailProvider({
+        ...validConfig,
+        smtp: { ...validConfig.smtp, secure: true },
+      });
       expect(provider).toBeDefined();
     });
 
     it('should accept smtp config with secure false', () => {
-      const provider = createEmailProvider({ ...validConfig, smtp: { ...validConfig.smtp, secure: false } });
+      const provider = createEmailProvider({
+        ...validConfig,
+        smtp: { ...validConfig.smtp, secure: false },
+      });
       expect(provider).toBeDefined();
     });
 
@@ -202,40 +226,64 @@ describe('email-account', () => {
 
     it('should call on("close") on the IMAP client during sendMessage', async () => {
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.client.on).toHaveBeenCalledWith('close', expect.any(Function));
     });
 
     it('should call imap connect on first async op', async () => {
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.client.connect).toHaveBeenCalled();
     });
 
     it('should call imap mailboxOpen with INBOX', async () => {
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.client.mailboxOpen).toHaveBeenCalledWith('INBOX');
     });
 
     it('sendMessage throws without targetKey', async () => {
       const provider = createEmailProvider(validConfig);
-      await expect(provider.sendMessage({ targetKey: '', content: 'hello' } as any)).rejects.toThrow(
-        '[email] Cannot send without a targetKey',
-      );
+      await expect(
+        provider.sendMessage({ targetKey: '', content: 'hello' } as any),
+      ).rejects.toThrow('[email] Cannot send without a targetKey');
     });
 
     it('sendMessage calls transporter with correct from/to/text', async () => {
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.transporter.sendMail).toHaveBeenCalledWith(
-        expect.objectContaining({ from: 'test@example.com', to: 'recipient@test.com', text: 'hello' }),
+        expect.objectContaining({
+          from: 'test@example.com',
+          to: 'recipient@test.com',
+          text: 'hello',
+        }),
       );
     });
 
     it('sendMessage includes bcc when configured', async () => {
       const provider = createEmailProvider({ ...validConfig, bcc: 'bcc@example.com' });
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.transporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({ bcc: 'bcc@example.com' }),
       );
@@ -243,7 +291,11 @@ describe('email-account', () => {
 
     it('sendMessage calls transporter.close after sending', async () => {
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.transporter.close).toHaveBeenCalled();
     });
 
@@ -251,7 +303,11 @@ describe('email-account', () => {
       mockState.transporter.sendMail.mockRejectedValue(new Error('SMTP error'));
       const provider = createEmailProvider(validConfig);
       await expect(
-        provider.sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any),
+        provider.sendMessage({
+          targetKey: 'recipient@test.com',
+          content: 'hello',
+          attachments: [],
+        } as any),
       ).rejects.toThrow('SMTP error');
       expect(mockState.transporter.close).toHaveBeenCalled();
     });
@@ -272,7 +328,11 @@ describe('email-account', () => {
       mockState.transporter.sendMail.mockResolvedValue({ messageId: 'msg-123' });
       const provider = createEmailProvider(validConfig);
       const attachments = [
-        { name: 'report.pdf', data: new Uint8Array([0x25, 0x50, 0x44, 0x46]), contentType: 'application/pdf' },
+        {
+          name: 'report.pdf',
+          data: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+          contentType: 'application/pdf',
+        },
       ];
       await (provider as any).sendMessage({
         targetKey: 'recipient@test.com',
@@ -281,7 +341,9 @@ describe('email-account', () => {
       } as any);
       expect(mockState.transporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
-          attachments: expect.arrayContaining([expect.objectContaining({ filename: 'report.pdf' })]),
+          attachments: expect.arrayContaining([
+            expect.objectContaining({ filename: 'report.pdf' }),
+          ]),
         }),
       );
     });
@@ -290,7 +352,11 @@ describe('email-account', () => {
       mockState.client.search.mockResolvedValue([{ uid: 1 }]);
       mockState.client.fetch.mockReturnValue(makeMockFetchGenerator());
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.transporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({ subject: 'Message from test@example.com' }),
       );
@@ -302,13 +368,21 @@ describe('email-account', () => {
       mockState.client.fetch.mockReturnValue(emptyFetch());
       mockState.transporter.sendMail.mockResolvedValue({ messageId: 'msg-no-source' });
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.transporter.sendMail).toHaveBeenCalled();
     });
 
     it('sendMessage calls imap logout after sendMessage completes', async () => {
       const provider = createEmailProvider(validConfig);
-      await (provider as any).sendMessage({ targetKey: 'recipient@test.com', content: 'hello', attachments: [] } as any);
+      await (provider as any).sendMessage({
+        targetKey: 'recipient@test.com',
+        content: 'hello',
+        attachments: [],
+      } as any);
       expect(mockState.client.logout).toHaveBeenCalled();
     });
   });

@@ -25,21 +25,19 @@ export type ToolLogMessage = {
  *
  * Pure function — no I/O, no side effects.
  */
-export function mergeToolLogMessages(
-  messages: ToolLogMessage[],
-): ToolLogMessage[] {
+export function mergeToolLogMessages(messages: ToolLogMessage[]): ToolLogMessage[] {
   const merged: ToolLogMessage[] = [];
 
   for (const message of messages) {
     const previousMessage = merged[merged.length - 1];
 
     if (
-      previousMessage?.role === 'assistant'
-      && message.role === 'tool'
-      && Array.isArray(previousMessage.metadata?.toolInvocations)
-      && previousMessage.metadata.toolInvocations.length > 0
-      && Array.isArray(message.metadata?.toolResults)
-      && message.metadata.toolResults.length > 0
+      previousMessage?.role === 'assistant' &&
+      message.role === 'tool' &&
+      Array.isArray(previousMessage.metadata?.toolInvocations) &&
+      previousMessage.metadata.toolInvocations.length > 0 &&
+      Array.isArray(message.metadata?.toolResults) &&
+      message.metadata.toolResults.length > 0
     ) {
       merged[merged.length - 1] = {
         ...previousMessage,
@@ -95,9 +93,9 @@ export function buildThreadToolInvocationParts(
   const resultIndexesByToolCallId = new Map<string, number>();
   for (const [index, toolResult] of toolResults.entries()) {
     if (
-      typeof toolResult !== 'object'
-      || toolResult === null
-      || typeof toolResult.toolCallId !== 'string'
+      typeof toolResult !== 'object' ||
+      toolResult === null ||
+      typeof toolResult.toolCallId !== 'string'
     ) {
       continue;
     }
@@ -110,24 +108,20 @@ export function buildThreadToolInvocationParts(
 
   for (const toolInvocation of toolInvocations) {
     if (
-      typeof toolInvocation !== 'object'
-      || toolInvocation === null
-      || typeof toolInvocation.toolName !== 'string'
+      typeof toolInvocation !== 'object' ||
+      toolInvocation === null ||
+      typeof toolInvocation.toolName !== 'string'
     ) {
       continue;
     }
 
     const toolCallId =
-      typeof toolInvocation.toolCallId === 'string'
-        ? toolInvocation.toolCallId
-        : null;
-    const toolResultIndex = toolCallId !== null && toolCallId !== undefined
-      ? resultIndexesByToolCallId.get(toolCallId)
-      : undefined;
-    const toolResult =
-      typeof toolResultIndex === 'number'
-        ? toolResults[toolResultIndex]
-        : null;
+      typeof toolInvocation.toolCallId === 'string' ? toolInvocation.toolCallId : null;
+    const toolResultIndex =
+      toolCallId !== null && toolCallId !== undefined
+        ? resultIndexesByToolCallId.get(toolCallId)
+        : undefined;
+    const toolResult = typeof toolResultIndex === 'number' ? toolResults[toolResultIndex] : null;
 
     if (typeof toolResultIndex === 'number') {
       matchedResultIndexes.add(toolResultIndex);

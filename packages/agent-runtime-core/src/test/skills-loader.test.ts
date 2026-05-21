@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { InMemorySkillRegistry } from '../integrations/skills/in-memory-skill-registry.js';
-import { loadSkillsFromDirectory, loadSkillsIntoRegistry } from '../integrations/skills/filesystem-skill-loader.js';
+import {
+  loadSkillsFromDirectory,
+  loadSkillsIntoRegistry,
+} from '../integrations/skills/filesystem-skill-loader.js';
 
 describe('filesystem skill loader', () => {
   it('loads skill definitions from SKILL.md files', async () => {
@@ -40,11 +43,9 @@ describe('filesystem skill loader', () => {
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       join(skillDir, 'SKILL.md'),
-      [
-        '# Workspace Review',
-        '',
-        'Review workspace changes and summarize important issues.',
-      ].join('\n'),
+      ['# Workspace Review', '', 'Review workspace changes and summarize important issues.'].join(
+        '\n',
+      ),
       'utf8',
     );
 

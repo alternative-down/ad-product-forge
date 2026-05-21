@@ -26,27 +26,39 @@ describe('conversation-model-messages', () => {
     });
 
     it('strips Checkpoint summary: prefix', () => {
-      expect(normalizeOperationalMemoryText('Checkpoint summary: some summary')).toBe('some summary');
+      expect(normalizeOperationalMemoryText('Checkpoint summary: some summary')).toBe(
+        'some summary',
+      );
     });
 
     it('strips Active reflection: prefix', () => {
-      expect(normalizeOperationalMemoryText('Active reflection: my reflection')).toBe('my reflection');
+      expect(normalizeOperationalMemoryText('Active reflection: my reflection')).toBe(
+        'my reflection',
+      );
     });
 
     it('strips Active observation: prefix', () => {
-      expect(normalizeOperationalMemoryText('Active observation: my observation')).toBe('my observation');
+      expect(normalizeOperationalMemoryText('Active observation: my observation')).toBe(
+        'my observation',
+      );
     });
 
     it('strips <observations> envelope', () => {
-      expect(normalizeOperationalMemoryText('<observations>inner text</observations>')).toBe('inner text');
+      expect(normalizeOperationalMemoryText('<observations>inner text</observations>')).toBe(
+        'inner text',
+      );
     });
 
     it('strips nested <observations> after prefix removal', () => {
-      expect(normalizeOperationalMemoryText('Checkpoint summary: <observations>A</observations>')).toBe('A');
+      expect(
+        normalizeOperationalMemoryText('Checkpoint summary: <observations>A</observations>'),
+      ).toBe('A');
     });
 
     it('returns original if no envelope match', () => {
-      expect(normalizeOperationalMemoryText('plain text <no match> here')).toBe('plain text <no match> here');
+      expect(normalizeOperationalMemoryText('plain text <no match> here')).toBe(
+        'plain text <no match> here',
+      );
     });
 
     it('is case-insensitive for prefix and envelope', () => {
@@ -119,17 +131,21 @@ describe('conversation-model-messages', () => {
     });
 
     it('maps system message text parts joined as string', () => {
-      const msgs = [makeMessage({ role: 'system', parts: [{ type: 'text', text: 'System prompt' }] })];
+      const msgs = [
+        makeMessage({ role: 'system', parts: [{ type: 'text', text: 'System prompt' }] }),
+      ];
       const result = createConversationModelMessages(msgs);
       expect(result[0].role).toBe('system');
       expect(result[0].content).toBe('System prompt');
     });
 
     it('maps image part to base64 data URL', () => {
-      const msgs = [makeMessage({
-        role: 'user',
-        parts: [{ type: 'image', mimeType: 'image/png', bytes: new Uint8Array([0, 255, 128]) }],
-      })];
+      const msgs = [
+        makeMessage({
+          role: 'user',
+          parts: [{ type: 'image', mimeType: 'image/png', bytes: new Uint8Array([0, 255, 128]) }],
+        }),
+      ];
       const result = createConversationModelMessages(msgs);
       const content = result[0].content as Array<Record<string, unknown>>;
       expect(content[0].type).toBe('image');
@@ -137,10 +153,19 @@ describe('conversation-model-messages', () => {
     });
 
     it('maps file part', () => {
-      const msgs = [makeMessage({
-        role: 'user',
-        parts: [{ type: 'file', mimeType: 'text/plain', name: 'readme.txt', bytes: new Uint8Array([65]) }],
-      })];
+      const msgs = [
+        makeMessage({
+          role: 'user',
+          parts: [
+            {
+              type: 'file',
+              mimeType: 'text/plain',
+              name: 'readme.txt',
+              bytes: new Uint8Array([65]),
+            },
+          ],
+        }),
+      ];
       const result = createConversationModelMessages(msgs);
       const content = result[0].content as Array<Record<string, unknown>>;
       expect(content[0].type).toBe('file');
@@ -148,13 +173,15 @@ describe('conversation-model-messages', () => {
     });
 
     it('maps assistant text and reasoning parts', () => {
-      const msgs = [makeMessage({
-        role: 'assistant',
-        parts: [
-          { type: 'text', text: 'Hello' },
-          { type: 'reasoning', text: 'Thinking...' },
-        ],
-      })];
+      const msgs = [
+        makeMessage({
+          role: 'assistant',
+          parts: [
+            { type: 'text', text: 'Hello' },
+            { type: 'reasoning', text: 'Thinking...' },
+          ],
+        }),
+      ];
       const result = createConversationModelMessages(msgs);
       expect(result).toHaveLength(1);
       expect(result[0].role).toBe('assistant');
@@ -165,13 +192,15 @@ describe('conversation-model-messages', () => {
     });
 
     it('maps tool-call from metadata.toolInvocations', () => {
-      const msgs = [makeMessage({
-        role: 'assistant',
-        parts: [{ type: 'text', text: 'Calling tool' }],
-        metadata: {
-          toolInvocations: [{ toolCallId: 'tc1', toolName: 'search', args: { query: 'test' } }],
-        },
-      })];
+      const msgs = [
+        makeMessage({
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'Calling tool' }],
+          metadata: {
+            toolInvocations: [{ toolCallId: 'tc1', toolName: 'search', args: { query: 'test' } }],
+          },
+        }),
+      ];
       const result = createConversationModelMessages(msgs);
       const content = result[0].content as Array<Record<string, unknown>>;
       const toolCall = content.find((p) => p.type === 'tool-call') as Record<string, unknown>;
@@ -181,11 +210,13 @@ describe('conversation-model-messages', () => {
     });
 
     it('skips tool-call without toolCallId', () => {
-      const msgs = [makeMessage({
-        role: 'assistant',
-        parts: [{ type: 'text', text: 'Call' }],
-        metadata: { toolInvocations: [{ toolName: 'search', args: {} }] },
-      })];
+      const msgs = [
+        makeMessage({
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'Call' }],
+          metadata: { toolInvocations: [{ toolName: 'search', args: {} }] },
+        }),
+      ];
       const result = createConversationModelMessages(msgs);
       const content = result[0].content as Array<Record<string, unknown>>;
       expect(content.find((p) => p.type === 'tool-call')).toBeUndefined();

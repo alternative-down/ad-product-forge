@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
-
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
-  createTool: vi.fn((config) => ({ name: config.id, inputSchema: config.inputSchema, type: 'tool' })),
+  createTool: vi.fn((config) => ({
+    name: config.id,
+    inputSchema: config.inputSchema,
+    type: 'tool',
+  })),
   toolsToRuntimeActions: vi.fn((tools) =>
-    Object.values(tools).map((t: any) => ({ name: t.name, inputSchema: t.inputSchema }))
+    Object.values(tools).map((t: any) => ({ name: t.name, inputSchema: t.inputSchema })),
   ),
 }));
 
@@ -47,14 +50,17 @@ describe('createInternalAgentTools', () => {
       hireAction?.inputSchema.parse({
         hiringRequest: 'Hire a backend engineer focused on reliability.',
         weeklyBudgetUsd: 250,
-      })).not.toThrow();
+      }),
+    ).not.toThrow();
     expect(() =>
       terminateAction?.inputSchema.parse({
         agentId: 'agent-1',
-      })).not.toThrow();
+      }),
+    ).not.toThrow();
     expect(() =>
       hireAction?.inputSchema.parse({
         weeklyBudgetUsd: 250,
-      })).toThrow();
+      }),
+    ).toThrow();
   });
 });

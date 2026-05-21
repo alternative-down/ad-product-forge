@@ -78,8 +78,17 @@ export interface InternalChatConversationListingDeps {
 export function createInternalChatConversationListing(
   db: Database,
   deps: InternalChatConversationListingDeps,
-): { listConversations: (input: { agentId: string; unread?: boolean; limit: number }) => Promise<ConversationListingOutput[]>; listConversationsByAccount: (input: { accountId: string; limit: number }) => Promise<ConversationListingOutput[]> } {
-
+): {
+  listConversations: (input: {
+    agentId: string;
+    unread?: boolean;
+    limit: number;
+  }) => Promise<ConversationListingOutput[]>;
+  listConversationsByAccount: (input: {
+    accountId: string;
+    limit: number;
+  }) => Promise<ConversationListingOutput[]>;
+} {
   // ── listConversations ───────────────────────────────────────────────────────
 
   async function listConversations(input: {
@@ -103,7 +112,8 @@ export function createInternalChatConversationListing(
       )
       .where(eq(internalChatConversationMembers.accountId, agentAccount.id))
       .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit).all();
+      .limit(input.limit)
+      .all();
 
     const conversationIds = conversationRows.map((row) => row.id);
     if (conversationIds.length === 0) return [];
@@ -127,9 +137,13 @@ export function createInternalChatConversationListing(
           eq(internalChatMessageReads.agentId, input.agentId),
         ),
       )
-      .innerJoin(internalChatAccounts, eq(internalChatAccounts.id, internalChatMessages.authorAccountId))
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
       .where(inArray(internalChatMessages.conversationId, conversationIds))
-      .orderBy(desc(internalChatMessages.createdAt)).all();
+      .orderBy(desc(internalChatMessages.createdAt))
+      .all();
 
     const messageIdsToMarkRead = new Set<string>();
     const messagesByConversationId = new Map<string, MessageListItem[]>();
@@ -141,7 +155,8 @@ export function createInternalChatConversationListing(
         (unreadCountByConversationId.get(row.conversationId) ?? 0) + (row.unread === 1 ? 1 : 0),
       );
       const existing = messagesByConversationId.get(row.conversationId) ?? [];
-      const shouldInclude = input.unread !== null && input.unread !== undefined ? row.unread === 1 : true;
+      const shouldInclude =
+        input.unread !== null && input.unread !== undefined ? row.unread === 1 : true;
       if (shouldInclude && existing.length < 5) {
         existing.push({
           messageId: row.messageId,
@@ -165,10 +180,12 @@ export function createInternalChatConversationListing(
       await db
         .update(internalChatMessageReads)
         .set({ readAt: now })
-        .where(and(
-          eq(internalChatMessageReads.agentId, input.agentId),
-          inArray(internalChatMessageReads.messageId, Array.from(messageIdsToMarkRead)),
-        ));
+        .where(
+          and(
+            eq(internalChatMessageReads.agentId, input.agentId),
+            inArray(internalChatMessageReads.messageId, Array.from(messageIdsToMarkRead)),
+          ),
+        );
     }
 
     const memberRows = await db.query.internalChatConversationMembers.findMany({
@@ -176,21 +193,43 @@ export function createInternalChatConversationListing(
       with: { account: true },
     });
 
-    const membersByConversationId = new Map<string, Array<{
-      accountId: string;
-      displayName: string;
-      role: string;
-      agentId: string | null;
-      slug: string;
-    }>>();
+    const membersByConversationId = new Map<
+      string,
+      Array<{
+        accountId: string;
+        displayName: string;
+        role: string;
+        agentId: string | null;
+        slug: string;
+      }>
+    >();
 
     for (const row of memberRows as Array<{
-      conversationId: string; accountId: string; role: string;
-      createdAt: number; updatedAt: number;
-      displayName: string; agentId: string | null; slug: string;
-      account: { id: string; slug: string; description: string | null; displayName: string; createdAt: number; updatedAt: number; agentId: string | null; };
+      conversationId: string;
+      accountId: string;
+      role: string;
+      createdAt: number;
+      updatedAt: number;
+      displayName: string;
+      agentId: string | null;
+      slug: string;
+      account: {
+        id: string;
+        slug: string;
+        description: string | null;
+        displayName: string;
+        createdAt: number;
+        updatedAt: number;
+        agentId: string | null;
+      };
     }>) {
-      const entry: { accountId: string; displayName: string; role: string; agentId: string | null; slug: string } = {
+      const entry: {
+        accountId: string;
+        displayName: string;
+        role: string;
+        agentId: string | null;
+        slug: string;
+      } = {
         accountId: row.accountId,
         displayName: row.displayName,
         role: row.role,
@@ -204,8 +243,10 @@ export function createInternalChatConversationListing(
 
     return conversationRows.map((conversation) => {
       const participants = membersByConversationId.get(conversation.id) ?? [];
-      const conversationName = conversation.name
-        ?? (participants.find((p) => p.accountId !== agentAccount.id)?.displayName ?? participants[0]?.displayName);
+      const conversationName =
+        conversation.name ??
+        participants.find((p) => p.accountId !== agentAccount.id)?.displayName ??
+        participants[0]?.displayName;
       return {
         targetKey: conversation.id,
         provider: 'internal-chat',
@@ -240,7 +281,8 @@ export function createInternalChatConversationListing(
       )
       .where(eq(internalChatConversationMembers.accountId, input.accountId))
       .orderBy(desc(internalChatConversations.updatedAt))
-      .limit(input.limit).all();
+      .limit(input.limit)
+      .all();
 
     const conversationIds = conversationRows.map((row) => row.id);
     if (conversationIds.length === 0) return [];
@@ -256,9 +298,13 @@ export function createInternalChatConversationListing(
         replyToMessageId: internalChatMessages.replyToMessageId,
       })
       .from(internalChatMessages)
-      .innerJoin(internalChatAccounts, eq(internalChatAccounts.id, internalChatMessages.authorAccountId))
+      .innerJoin(
+        internalChatAccounts,
+        eq(internalChatAccounts.id, internalChatMessages.authorAccountId),
+      )
       .where(inArray(internalChatMessages.conversationId, conversationIds))
-      .orderBy(desc(internalChatMessages.createdAt)).all();
+      .orderBy(desc(internalChatMessages.createdAt))
+      .all();
 
     const messagesByConversationId = new Map<string, MessageListItem[]>();
 
@@ -286,21 +332,43 @@ export function createInternalChatConversationListing(
       with: { account: true },
     });
 
-    const membersByConversationId = new Map<string, Array<{
-      accountId: string;
-      displayName: string;
-      role: string;
-      agentId: string | null;
-      slug: string;
-    }>>();
+    const membersByConversationId = new Map<
+      string,
+      Array<{
+        accountId: string;
+        displayName: string;
+        role: string;
+        agentId: string | null;
+        slug: string;
+      }>
+    >();
 
     for (const row of memberRows as Array<{
-      conversationId: string; accountId: string; role: string;
-      createdAt: number; updatedAt: number;
-      displayName: string; agentId: string | null; slug: string;
-      account: { id: string; slug: string; description: string | null; displayName: string; createdAt: number; updatedAt: number; agentId: string | null; };
+      conversationId: string;
+      accountId: string;
+      role: string;
+      createdAt: number;
+      updatedAt: number;
+      displayName: string;
+      agentId: string | null;
+      slug: string;
+      account: {
+        id: string;
+        slug: string;
+        description: string | null;
+        displayName: string;
+        createdAt: number;
+        updatedAt: number;
+        agentId: string | null;
+      };
     }>) {
-      const entry: { accountId: string; displayName: string; role: string; agentId: string | null; slug: string } = {
+      const entry: {
+        accountId: string;
+        displayName: string;
+        role: string;
+        agentId: string | null;
+        slug: string;
+      } = {
         accountId: row.accountId,
         displayName: row.displayName,
         role: row.role,
@@ -314,8 +382,10 @@ export function createInternalChatConversationListing(
 
     return conversationRows.map((conversation) => {
       const participants = membersByConversationId.get(conversation.id) ?? [];
-      const conversationName = conversation.name
-        ?? (participants.find((p) => p.accountId !== input.accountId)?.displayName ?? participants[0]?.displayName);
+      const conversationName =
+        conversation.name ??
+        participants.find((p) => p.accountId !== input.accountId)?.displayName ??
+        participants[0]?.displayName;
       return {
         targetKey: conversation.id,
         provider: 'internal-chat',

@@ -68,6 +68,6 @@ describe('buildOauthState', () => {
       anthropic: { accountId: 'b', refresh: 'r', expires: 2 },
     });
     const result = await buildOauthState();
-    expect(result.providers.map(p => p.providerId)).toEqual(['openai', 'anthropic']);
+    expect(result.providers.map((p) => p.providerId)).toEqual(['openai', 'anthropic']);
   });
 });

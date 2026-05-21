@@ -14,7 +14,9 @@ export function normalizeOperationalMemoryText(text: string) {
   return (envelopeMatch?.[1] ?? withoutLegacyPrefix).trim();
 }
 
-export function normalizeOperationalMemoryMessage(message: ConversationMessage): ConversationMessage {
+export function normalizeOperationalMemoryMessage(
+  message: ConversationMessage,
+): ConversationMessage {
   if (!message.operationalMemoryType) {
     return message;
   }
@@ -34,7 +36,11 @@ export function createConversationModelMessages(messages: ConversationMessage[])
 
   for (const message of normalizedMessages) {
     if (message.role === 'assistant') {
-      const assistantParts = createAssistantContentParts(message, availableToolCallIds, fulfilledToolCallIds);
+      const assistantParts = createAssistantContentParts(
+        message,
+        availableToolCallIds,
+        fulfilledToolCallIds,
+      );
 
       if (assistantParts.length > 0) {
         modelMessages.push({
@@ -87,8 +93,9 @@ export function createConversationModelMessages(messages: ConversationMessage[])
       return true;
     }
 
-    return message.content.every((part) =>
-      part.type !== 'tool-result' || fulfilledToolCallIds.has(part.toolCallId));
+    return message.content.every(
+      (part) => part.type !== 'tool-result' || fulfilledToolCallIds.has(part.toolCallId),
+    );
   });
 }
 
@@ -236,7 +243,8 @@ function extractTextParts(parts: ConversationMessagePart[]) {
   return parts.flatMap((part) =>
     (part.type === 'text' || part.type === 'reasoning') && typeof part.text === 'string'
       ? [part.text]
-      : []);
+      : [],
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

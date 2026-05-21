@@ -31,7 +31,14 @@ vi.mock('./store', () => ({
 }));
 
 vi.mock('./catalog', () => ({
-  forgeCapabilityIds: ['list_agent_roles', 'manage_agent_role', 'change_agent_role', 'list_agent_statuses', 'list_role_capabilities', 'manage_role_capabilities'],
+  forgeCapabilityIds: [
+    'list_agent_roles',
+    'manage_agent_role',
+    'change_agent_role',
+    'list_agent_statuses',
+    'list_role_capabilities',
+    'manage_role_capabilities',
+  ],
   hasToolPermission: vi.fn(),
 }));
 
@@ -75,14 +82,19 @@ describe('createCapabilityTools', () => {
       const result = await (tools.list_agent_roles as any).execute({});
       expect(result.valid).toBe(false);
       expect(result.error).toBe('DB unavailable');
-      expect(result.hint).toBe('Try again in a moment. If the problem persists, verify the capability store is available.');
+      expect(result.hint).toBe(
+        'Try again in a moment. If the problem persists, verify the capability store is available.',
+      );
     });
   });
 
   describe('manage_agent_role', () => {
     it('returns error when create.name missing', async () => {
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
-      const result = await (tools.manage_agent_role as any).execute({ action: 'create', create: {} });
+      const result = await (tools.manage_agent_role as any).execute({
+        action: 'create',
+        create: {},
+      });
       expect(result.valid).toBe(false);
       expect(result.error).toContain('create.name is required');
     });
@@ -105,14 +117,20 @@ describe('createCapabilityTools', () => {
 
     it('returns error when update.roleId missing', async () => {
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
-      const result = await (tools.manage_agent_role as any).execute({ action: 'update', update: {} });
+      const result = await (tools.manage_agent_role as any).execute({
+        action: 'update',
+        update: {},
+      });
       expect(result.valid).toBe(false);
       expect(result.error).toContain('update.roleId is required');
     });
 
     it('returns error when delete.roleId missing', async () => {
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
-      const result = await (tools.manage_agent_role as any).execute({ action: 'delete', delete: {} });
+      const result = await (tools.manage_agent_role as any).execute({
+        action: 'delete',
+        delete: {},
+      });
       expect(result.valid).toBe(false);
       expect(result.error).toContain('delete.roleId is required');
     });
@@ -213,7 +231,10 @@ describe('createCapabilityTools', () => {
 
   describe('manage_role_capabilities', () => {
     it('calls manageRoleCapability with add action and reloads agents', async () => {
-      mocks.manageRoleCapability.mockResolvedValue({ roleId: 'role-1', capabilityId: 'manage_agent_role' });
+      mocks.manageRoleCapability.mockResolvedValue({
+        roleId: 'role-1',
+        capabilityId: 'manage_agent_role',
+      });
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
       const result = await (tools.manage_role_capabilities as any).execute({
         roleId: 'role-1',
@@ -225,12 +246,19 @@ describe('createCapabilityTools', () => {
         roleId: 'role-1',
         capabilityId: 'manage_agent_role',
       });
-      expect(mocks.reloadAgentsForRole).toHaveBeenCalledWith(mockDb(), mockLoaderConfig(), 'role-1');
+      expect(mocks.reloadAgentsForRole).toHaveBeenCalledWith(
+        mockDb(),
+        mockLoaderConfig(),
+        'role-1',
+      );
       expect(result.valid).toBe(true);
     });
 
     it('calls manageRoleCapability with remove action', async () => {
-      mocks.manageRoleCapability.mockResolvedValue({ roleId: 'role-1', capabilityId: 'manage_agent_role' });
+      mocks.manageRoleCapability.mockResolvedValue({
+        roleId: 'role-1',
+        capabilityId: 'manage_agent_role',
+      });
       const tools = createCapabilityTools(mockDb(), mockLoaderConfig(), 'agent-1', null);
       const result = await (tools.manage_role_capabilities as any).execute({
         roleId: 'role-1',

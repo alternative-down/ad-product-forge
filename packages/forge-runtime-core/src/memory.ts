@@ -30,9 +30,7 @@ export type ForgeConversationMemoryOptions = {
 
 export type ForgeConversationMemory = {
   memory: OperationalMemoryConversationMemory;
-  captureRunHistoryWindow(input: {
-    lastMessages: number;
-  }): Promise<{
+  captureRunHistoryWindow(input: { lastMessages: number }): Promise<{
     historyStartMessageId: string | null;
     historyEndMessageId: string | null;
   }>;
@@ -46,7 +44,9 @@ export type ForgeConversationMemory = {
   observers: RuntimeObserver[];
 };
 
-export function createForgeConversationMemory(input: ForgeConversationMemoryOptions): ForgeConversationMemory {
+export function createForgeConversationMemory(
+  input: ForgeConversationMemoryOptions,
+): ForgeConversationMemory {
   const memory = new OperationalMemoryConversationMemory({
     threadId: input.threadId,
     store: input.conversationStore,
@@ -61,9 +61,8 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
       const activeMessages = await input.conversationStore.listOperationalMemoryMessages({
         threadId: input.threadId,
       });
-      const visibleHistory = options.lastMessages > 0
-        ? activeMessages.slice(-options.lastMessages)
-        : [];
+      const visibleHistory =
+        options.lastMessages > 0 ? activeMessages.slice(-options.lastMessages) : [];
 
       return {
         historyStartMessageId: visibleHistory[0]?.id ?? null,
@@ -82,10 +81,12 @@ export function createForgeConversationMemory(input: ForgeConversationMemoryOpti
       return [
         {
           role: 'user',
-          content: [{
-            type: 'text' as const,
-            text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: AUTONOMOUS_CONTEXT_USER_MESSAGE_TEXT,
+            },
+          ],
         } as ModelMessage,
         ...createConversationModelMessages(scopedMessages),
       ];
@@ -120,13 +121,19 @@ function selectRunScopedMessages(
   }
 
   if (!historyWindow.historyEndMessageId) {
-    const startIndex = activeMessages.findIndex((message) => message.id === historyWindow.historyStartMessageId);
+    const startIndex = activeMessages.findIndex(
+      (message) => message.id === historyWindow.historyStartMessageId,
+    );
 
     return startIndex >= 0 ? activeMessages.slice(startIndex) : activeMessages;
   }
 
-  const historyStartIndex = activeMessages.findIndex((message) => message.id === historyWindow.historyStartMessageId);
-  const historyEndIndex = activeMessages.findIndex((message) => message.id === historyWindow.historyEndMessageId);
+  const historyStartIndex = activeMessages.findIndex(
+    (message) => message.id === historyWindow.historyStartMessageId,
+  );
+  const historyEndIndex = activeMessages.findIndex(
+    (message) => message.id === historyWindow.historyEndMessageId,
+  );
 
   if (historyStartIndex < 0 || historyEndIndex < historyStartIndex) {
     return activeMessages;

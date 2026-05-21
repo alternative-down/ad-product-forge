@@ -1,18 +1,22 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const { mockRecordCashIn, mockRecordCashOut, mockGetCurrentBalanceUsd, mockGetContractSpend } = vi.hoisted(() => ({
-  mockRecordCashIn: vi.fn().mockResolvedValue(undefined),
-  mockRecordCashOut: vi.fn().mockResolvedValue(undefined),
-  mockGetCurrentBalanceUsd: vi.fn().mockResolvedValue(200),
-  mockGetContractSpend: vi.fn().mockResolvedValue(30),
-}));
+const { mockRecordCashIn, mockRecordCashOut, mockGetCurrentBalanceUsd, mockGetContractSpend } =
+  vi.hoisted(() => ({
+    mockRecordCashIn: vi.fn().mockResolvedValue(undefined),
+    mockRecordCashOut: vi.fn().mockResolvedValue(undefined),
+    mockGetCurrentBalanceUsd: vi.fn().mockResolvedValue(200),
+    mockGetContractSpend: vi.fn().mockResolvedValue(30),
+  }));
 
 vi.mock('../finance/company-cash-ledger', () => ({
   createCompanyCashLedger: vi.fn(() => ({ getCurrentBalanceUsd: mockGetCurrentBalanceUsd })),
 }));
 
 vi.mock('../finance/company-cash-operations', () => ({
-  createCompanyCashOperations: vi.fn(() => ({ recordCashIn: mockRecordCashIn, recordCashOut: mockRecordCashOut })),
+  createCompanyCashOperations: vi.fn(() => ({
+    recordCashIn: mockRecordCashIn,
+    recordCashOut: mockRecordCashOut,
+  })),
 }));
 
 vi.mock('./agent-contract-store', () => ({
@@ -23,13 +27,21 @@ import { renewAgentContract } from './renew-agent-contract';
 const agentExecutionContracts = 'agentExecutionContracts';
 
 function createMockDb(contract?: Record<string, unknown> | null) {
-  const txUpdate = vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) });
+  const txUpdate = vi
+    .fn()
+    .mockReturnValue({
+      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    });
   const txInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
   return {
     query: {
       agentExecutionContracts: { findFirst: vi.fn().mockResolvedValue(contract ?? null) },
     },
-    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }) }),
+    update: vi
+      .fn()
+      .mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      }),
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
     transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
       await fn({ update: txUpdate, insert: txInsert });
@@ -38,7 +50,16 @@ function createMockDb(contract?: Record<string, unknown> | null) {
 }
 
 function mockContract(overrides: Record<string, unknown> = {}) {
-  return { id: 'contract-1', agentId: 'agent-1', budgetUsd: 100, fundedAt: Date.now() - 100000, autoRenew: false, startsAt: Date.now() - 86400000, endsAt: Date.now() + 86400000, ...overrides };
+  return {
+    id: 'contract-1',
+    agentId: 'agent-1',
+    budgetUsd: 100,
+    fundedAt: Date.now() - 100000,
+    autoRenew: false,
+    startsAt: Date.now() - 86400000,
+    endsAt: Date.now() + 86400000,
+    ...overrides,
+  };
 }
 
 describe('renewAgentContract', () => {
@@ -50,21 +71,28 @@ describe('renewAgentContract', () => {
 
   it('throws when no active contract exists', async () => {
     const db = createMockDb(null);
-    await expect(renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 })).rejects.toThrow('No active contract for agent: agent-1');
+    await expect(
+      renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 }),
+    ).rejects.toThrow('No active contract for agent: agent-1');
   });
 
   it('throws when insufficient cash for new budget', async () => {
     mockGetCurrentBalanceUsd.mockResolvedValue(50);
     mockGetContractSpend.mockResolvedValue(80);
     const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
-    await expect(renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 })).rejects.toThrow('Insufficient company cash to renew this contract');
+    await expect(
+      renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 200 }),
+    ).rejects.toThrow('Insufficient company cash to renew this contract');
   });
 
   it('records cash in for refundable amount when fundedAt exists', async () => {
     const db = createMockDb(mockContract({ budgetUsd: 100, fundedAt: Date.now() }));
     await renewAgentContract(db as any, { agentId: 'agent-1', newBudgetUsd: 150 });
     expect(mockRecordCashIn).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'agent-contract-renewal-refund', referenceType: 'agent-execution-contract' }),
+      expect.objectContaining({
+        type: 'agent-contract-renewal-refund',
+        referenceType: 'agent-execution-contract',
+      }),
       expect.any(Object),
     );
   });

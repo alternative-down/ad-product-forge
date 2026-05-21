@@ -56,9 +56,16 @@ function mockAgent(overrides: Record<string, unknown> = {}) {
 }
 
 const mockSchedules = { removeAgent: mockRemoveSchedule };
-const mockEmail = { deleteAgentMailbox: mockDeleteMailbox, isConfigured: vi.fn().mockResolvedValue(true) } as unknown as AgentEmailManager;
+const mockEmail = {
+  deleteAgentMailbox: mockDeleteMailbox,
+  isConfigured: vi.fn().mockResolvedValue(true),
+} as unknown as AgentEmailManager;
 const mockCoolify = { deleteAgentApp: mockDeleteApp } as unknown as CoolifyManager;
-const mockGitHubApps = { deleteAgentApp: mockDeleteApp } as unknown as ReturnType<AgentEmailManager['deleteAgentMailbox']> extends never ? object : any;
+const mockGitHubApps = { deleteAgentApp: mockDeleteApp } as unknown as ReturnType<
+  AgentEmailManager['deleteAgentMailbox']
+> extends never
+  ? object
+  : any;
 
 const defaultInput = () => ({
   agentId: 'agent-1',
@@ -70,11 +77,15 @@ const defaultInput = () => ({
 });
 
 describe('terminateInternalAgent', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('throws when agent not found', async () => {
     const db = createMockDb(null);
-    await expect(terminateInternalAgent(db as any, defaultInput() as any)).rejects.toThrow('Agent not found: agent-1');
+    await expect(terminateInternalAgent(db as any, defaultInput() as any)).rejects.toThrow(
+      'Agent not found: agent-1',
+    );
   });
 
   it('refunds active contract balance', async () => {
@@ -129,7 +140,10 @@ describe('terminateInternalAgent', () => {
 
   it('returns object with agentId', async () => {
     const db = createMockDb(mockAgent({ id: 'agent-xyz' }));
-    const result = await terminateInternalAgent(db as any, { ...defaultInput(), agentId: 'agent-xyz' } as any);
+    const result = await terminateInternalAgent(
+      db as any,
+      { ...defaultInput(), agentId: 'agent-xyz' } as any,
+    );
     expect(result.agentId).toBe('agent-xyz');
   });
 });

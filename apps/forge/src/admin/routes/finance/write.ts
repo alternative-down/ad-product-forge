@@ -9,57 +9,106 @@ import type { HttpRequest, HttpHandler } from '../../../http/server';
 import { jsonResponse, parseJsonBody } from '../index';
 import { createId } from '../../../utils/id';
 
-const createInvestmentSchema = z.object({
-  amountUsd: z.number().positive(),
-  description: z.string().optional(),
-  effectiveAt: z.string().optional(),
-}).strict();
+const createInvestmentSchema = z
+  .object({
+    amountUsd: z.number().positive(),
+    description: z.string().optional(),
+    effectiveAt: z.string().optional(),
+  })
+  .strict();
 
-const createPayableSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  amountUsd: z.number().positive(),
-  dueAt: z.string(),
-  kind: z.enum(['single', 'recurring']),
-  recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
-}).strict();
+const createPayableSchema = z
+  .object({
+    name: z.string(),
+    description: z.string().optional(),
+    amountUsd: z.number().positive(),
+    dueAt: z.string(),
+    kind: z.enum(['single', 'recurring']),
+    recurrencePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
+  })
+  .strict();
 
-const ledgerEntryActionSchema = z.object({
-  entryId: z.string().min(1),
-  effectiveAt: z.string().optional(),
-}).strict();
+const ledgerEntryActionSchema = z
+  .object({
+    entryId: z.string().min(1),
+    effectiveAt: z.string().optional(),
+  })
+  .strict();
 
-const recurringPayableStatusSchema = z.object({
-  payableId: z.string(),
-  isActive: z.boolean(),
-}).strict();
+const recurringPayableStatusSchema = z
+  .object({
+    payableId: z.string(),
+    isActive: z.boolean(),
+  })
+  .strict();
 
 type CompanyCash = {
-  recordCashIn: (input: { type: string; amountUsd: number; description: string; effectiveAt?: number }) => Promise<{ entryId: string }>;
-  scheduleCashOut: (input: { type: string; amountUsd: number; description: string; referenceType: string; referenceId: string; dueAt: number }) => Promise<{ entryId: string }>;
+  recordCashIn: (input: {
+    type: string;
+    amountUsd: number;
+    description: string;
+    effectiveAt?: number;
+  }) => Promise<{ entryId: string }>;
+  scheduleCashOut: (input: {
+    type: string;
+    amountUsd: number;
+    description: string;
+    referenceType: string;
+    referenceId: string;
+    dueAt: number;
+  }) => Promise<{ entryId: string }>;
   postPlannedEntry: (entryId: string, opts?: { effectiveAt?: number }) => Promise<unknown>;
   cancelPlannedEntry: (entryId: string) => Promise<unknown>;
-}
+};
 import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 type CompanyPayables = {
-  createRecurringPayable: (input: { name: string; description?: string; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; dueAt: number }) => Promise<{ payableId: string; entryId: string }>;
-  syncRecurringPayableOccurrence: (input: { entryId: string }) => Promise<{ payableId: string; nextDueAt: number } | null>;
-  listRecurringPayables: () => Promise<{ payableId: string; name: string; description: string | undefined; amountUsd: number; recurrencePeriod: "weekly" | "monthly" | "yearly"; isActive: boolean; createdAt: number; updatedAt: number; nextDueAt: number }[]>;
-  setRecurringPayableActive: (payableId: string, isActive: boolean) => Promise<{ payableId: string }>;
-}
+  createRecurringPayable: (input: {
+    name: string;
+    description?: string;
+    amountUsd: number;
+    recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+    dueAt: number;
+  }) => Promise<{ payableId: string; entryId: string }>;
+  syncRecurringPayableOccurrence: (input: {
+    entryId: string;
+  }) => Promise<{ payableId: string; nextDueAt: number } | null>;
+  listRecurringPayables: () => Promise<
+    {
+      payableId: string;
+      name: string;
+      description: string | undefined;
+      amountUsd: number;
+      recurrencePeriod: 'weekly' | 'monthly' | 'yearly';
+      isActive: boolean;
+      createdAt: number;
+      updatedAt: number;
+      nextDueAt: number;
+    }[]
+  >;
+  setRecurringPayableActive: (
+    payableId: string,
+    isActive: boolean,
+  ) => Promise<{ payableId: string }>;
+};
 
 type FinanceWriteInput = {
   companyCash: CompanyCash;
   companyPayables: CompanyPayables;
-}
+};
 
 /**
  * Register POST routes for finance write operations
  */
 export function registerFinanceWriteRoutes(
-  httpServer: { registerRoute: (route: { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; handler: HttpHandler }) => void },
-  input: FinanceWriteInput
+  httpServer: {
+    registerRoute: (route: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      path: string;
+      handler: HttpHandler;
+    }) => void;
+  },
+  input: FinanceWriteInput,
 ) {
   // POST /admin/finance/investment/create
   httpServer.registerRoute({
@@ -68,7 +117,10 @@ export function registerFinanceWriteRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, createInvestmentSchema);
-        const effectiveAt = body.effectiveAt !== null && body.effectiveAt !== undefined ? new Date(body.effectiveAt).getTime() : Date.now();
+        const effectiveAt =
+          body.effectiveAt !== null && body.effectiveAt !== undefined
+            ? new Date(body.effectiveAt).getTime()
+            : Date.now();
 
         await input.companyCash.recordCashIn({
           type: 'owner-investment',
@@ -81,7 +133,12 @@ export function registerFinanceWriteRoutes(
       } catch (err) {
         if (err instanceof ZodError) throw err;
         if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance investment/create route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance investment/create route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -110,10 +167,13 @@ export function registerFinanceWriteRoutes(
             dueAt,
           });
 
-          return jsonResponse({
-            kind: body.kind,
-            entryId: result.entryId,
-          }, 201);
+          return jsonResponse(
+            {
+              kind: body.kind,
+              entryId: result.entryId,
+            },
+            201,
+          );
         }
 
         const result = await input.companyPayables.createRecurringPayable({
@@ -124,15 +184,23 @@ export function registerFinanceWriteRoutes(
           dueAt,
         });
 
-        return jsonResponse({
-          kind: body.kind,
-          payableId: result.payableId,
-          entryId: result.entryId,
-        }, 201);
+        return jsonResponse(
+          {
+            kind: body.kind,
+            payableId: result.payableId,
+            entryId: result.entryId,
+          },
+          201,
+        );
       } catch (err) {
         if (err instanceof ZodError) throw err;
         if (err instanceof Error && err.message.startsWith('Invalid')) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance payable/create route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance payable/create route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -145,7 +213,10 @@ export function registerFinanceWriteRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, ledgerEntryActionSchema);
-        const effectiveAt = body.effectiveAt !== null && body.effectiveAt !== undefined ? new Date(body.effectiveAt).getTime() : undefined;
+        const effectiveAt =
+          body.effectiveAt !== null && body.effectiveAt !== undefined
+            ? new Date(body.effectiveAt).getTime()
+            : undefined;
         const result = await input.companyCash.postPlannedEntry(body.entryId, { effectiveAt });
 
         await input.companyPayables.syncRecurringPayableOccurrence({
@@ -155,7 +226,12 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/post route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance ledger/post route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -177,7 +253,12 @@ export function registerFinanceWriteRoutes(
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance ledger/cancel route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance ledger/cancel route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -190,11 +271,19 @@ export function registerFinanceWriteRoutes(
     handler: async (request: HttpRequest) => {
       try {
         const body = parseJsonBody(request.bodyText, recurringPayableStatusSchema);
-        const result = await input.companyPayables.setRecurringPayableActive(body.payableId, body.isActive);
+        const result = await input.companyPayables.setRecurringPayableActive(
+          body.payableId,
+          body.isActive,
+        );
         return jsonResponse(result);
       } catch (err) {
         if (err instanceof ZodError) throw err;
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Finance recurring-payable/set-active route failed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Finance recurring-payable/set-active route failed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

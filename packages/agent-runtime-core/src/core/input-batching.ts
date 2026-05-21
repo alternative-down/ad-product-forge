@@ -20,9 +20,7 @@ export function createConsumeAllInputBatchingStrategy(): InputBatchingStrategy {
   };
 }
 
-export function createFixedSizeInputBatchingStrategy(
-  size: number,
-): InputBatchingStrategy {
+export function createFixedSizeInputBatchingStrategy(size: number): InputBatchingStrategy {
   return {
     select(pendingInputs) {
       return {

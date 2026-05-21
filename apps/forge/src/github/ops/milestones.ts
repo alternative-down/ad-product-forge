@@ -5,12 +5,15 @@ import type { OpsContext } from './context';
 import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function createMilestonesOps(ctx: OpsContext) {
-  async function listMilestones(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-    state?: 'open' | 'closed' | 'all';
-    limit?: number;
-  }) {
+  async function listMilestones(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+      state?: 'open' | 'closed' | 'all';
+      limit?: number;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
@@ -30,19 +33,27 @@ export function createMilestonesOps(ctx: OpsContext) {
         closedIssues: milestone.closed_issues,
       }));
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] listMilestones failed', context: { error: String(serializeError(err)) }});
+      ctx.forgeDebug({
+        scope: 'github-milestones',
+        level: 'error',
+        message: '[github-milestones] listMilestones failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
 
-  async function createMilestone(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-    title: string;
-    description?: string;
-    state?: 'open' | 'closed';
-    dueOn?: string;
-  }) {
+  async function createMilestone(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+      title: string;
+      description?: string;
+      state?: 'open' | 'closed';
+      dueOn?: string;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
@@ -62,32 +73,43 @@ export function createMilestonesOps(ctx: OpsContext) {
         dueOn: response.data.due_on,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] createMilestone failed', context: { error: String(serializeError(err)) }});
+      ctx.forgeDebug({
+        scope: 'github-milestones',
+        level: 'error',
+        message: '[github-milestones] createMilestone failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
 
-  async function updateMilestone(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-    milestoneNumber: number;
-    title?: string;
-    description?: string;
-    state?: 'open' | 'closed';
-    dueOn?: string | null;
-  }) {
+  async function updateMilestone(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+      milestoneNumber: number;
+      title?: string;
+      description?: string;
+      state?: 'open' | 'closed';
+      dueOn?: string | null;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
-      const response = await octokit.request('PATCH /repos/{owner}/{repo}/milestones/{milestone_number}', {
-        owner,
-        repo: input.repositoryName,
-        milestone_number: input.milestoneNumber,
-        title: input.title,
-        description: input.description,
-        state: input.state,
-        due_on: input.dueOn ?? undefined,
-      });
+      const response = await octokit.request(
+        'PATCH /repos/{owner}/{repo}/milestones/{milestone_number}',
+        {
+          owner,
+          repo: input.repositoryName,
+          milestone_number: input.milestoneNumber,
+          title: input.title,
+          description: input.description,
+          state: input.state,
+          due_on: input.dueOn ?? undefined,
+        },
+      );
       return {
         number: response.data.number,
         title: response.data.title,
@@ -96,16 +118,24 @@ export function createMilestonesOps(ctx: OpsContext) {
         dueOn: response.data.due_on,
       };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] updateMilestone failed', context: { error: String(serializeError(err)) }});
+      ctx.forgeDebug({
+        scope: 'github-milestones',
+        level: 'error',
+        message: '[github-milestones] updateMilestone failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
 
-  async function deleteMilestone(agentId: string, input: {
-    owner?: string;
-    repositoryName: string;
-    milestoneNumber: number;
-  }) {
+  async function deleteMilestone(
+    agentId: string,
+    input: {
+      owner?: string;
+      repositoryName: string;
+      milestoneNumber: number;
+    },
+  ) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
@@ -116,7 +146,12 @@ export function createMilestonesOps(ctx: OpsContext) {
       });
       return { success: true };
     } catch (err) {
-      ctx.forgeDebug({ scope: 'github-milestones', level: 'error', message: '[github-milestones] deleteMilestone failed', context: { error: String(serializeError(err)) }});
+      ctx.forgeDebug({
+        scope: 'github-milestones',
+        level: 'error',
+        message: '[github-milestones] deleteMilestone failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }

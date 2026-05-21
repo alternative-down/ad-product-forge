@@ -24,15 +24,9 @@ import {
   updateInternalChatGroupMemberRoleSchema,
   removeInternalChatGroupMemberSchema,
 } from './schemas/internal-chat';
-import {
-  upsertSystemIntegrationSchema,
-} from './schemas/providers';
-import {
-  createAgentMcpServerSchema,
-} from './schemas/mcp';
-import {
-  createPayableSchema,
-} from './schemas/finance';
+import { upsertSystemIntegrationSchema } from './schemas/providers';
+import { createAgentMcpServerSchema } from './schemas/mcp';
+import { createPayableSchema } from './schemas/finance';
 
 describe('Admin Route Schemas', () => {
   describe('agentIdQuerySchema', () => {
@@ -404,9 +398,7 @@ describe('Admin Route Schemas', () => {
       expect(() =>
         addInternalChatGroupMemberSchema.parse({ conversationId: 'conv-123' }),
       ).toThrow();
-      expect(() =>
-        addInternalChatGroupMemberSchema.parse({ participantKey: 'u-1' }),
-      ).toThrow();
+      expect(() => addInternalChatGroupMemberSchema.parse({ participantKey: 'u-1' })).toThrow();
     });
   });
 

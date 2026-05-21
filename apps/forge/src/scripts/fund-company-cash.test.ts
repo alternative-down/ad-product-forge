@@ -63,10 +63,12 @@ describe('fund-company-cash script', () => {
         amountUsd: 50,
       });
 
-      expect(ops.recordCashIn).toHaveBeenCalledWith(expect.objectContaining({
-        type: 'manual-adjustment',
-        amountUsd: 50,
-      }));
+      expect(ops.recordCashIn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'manual-adjustment',
+          amountUsd: 50,
+        }),
+      );
     });
 
     it('rejects negative amounts', async () => {

@@ -15,16 +15,12 @@ interface ForgeDebugOptions {
   [key: string]: unknown;
 }
 
-export function forgeDebug(
-  scope: string,
-  message: string,
-  data?: LogContext
-): void;
+export function forgeDebug(scope: string, message: string, data?: LogContext): void;
 export function forgeDebug(options: ForgeDebugOptions): void;
 export function forgeDebug(
   scopeOrOptions: string | ForgeDebugOptions,
   messageOrUndefined?: string,
-  data?: LogContext
+  data?: LogContext,
 ): void {
   if (!isForgeDebugEnabled()) return;
 
@@ -32,7 +28,11 @@ export function forgeDebug(
   let message: string;
   let context: LogContext | undefined;
 
-  if (typeof scopeOrOptions === 'object' && scopeOrOptions !== null && !Array.isArray(scopeOrOptions)) {
+  if (
+    typeof scopeOrOptions === 'object' &&
+    scopeOrOptions !== null &&
+    !Array.isArray(scopeOrOptions)
+  ) {
     const opts = scopeOrOptions as Record<string, unknown>;
     scope = (opts.scope as string) ?? 'unknown';
     message = (opts.message as string) ?? '';

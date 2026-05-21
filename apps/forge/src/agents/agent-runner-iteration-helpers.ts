@@ -9,9 +9,7 @@
  *
  * No external dependencies — fully testable in isolation.
  */
-import {
-  collectStepTextParts,
-} from './agent-runner-control-directives';
+import { collectStepTextParts } from './agent-runner-control-directives';
 
 export { collectStepTextParts };
 

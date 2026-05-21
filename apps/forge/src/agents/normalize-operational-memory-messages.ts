@@ -3,7 +3,8 @@ import type { ConversationStore } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 
 function stripOperationalMemoryPrefix(text: string) {
-  return text.trim()
+  return text
+    .trim()
     .replace(/^Checkpoint summary:\s*/i, '')
     .replace(/^Active reflection:\s*/i, '')
     .replace(/^Active observation:\s*/i, '')
@@ -50,7 +51,12 @@ export async function normalizeOperationalMemoryMessages(input: {
       });
     }
   } catch (err) {
-    forgeDebug({ scope: 'normalize-opmem', level: 'error', message: 'normalizeOperationalMemoryMessages failed', context: { error: serializeError(err) }});
+    forgeDebug({
+      scope: 'normalize-opmem',
+      level: 'error',
+      message: 'normalizeOperationalMemoryMessages failed',
+      context: { error: serializeError(err) },
+    });
     throw err;
   }
 }

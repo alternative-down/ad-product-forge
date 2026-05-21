@@ -23,23 +23,18 @@
  *   module and the agent-runner orchestration layer.
  */
 import { withTimeout } from '../utils/async';
-import {
-  extractRunnerControlDirective,
-} from './agent-runner-control-directives';
-import {
-  serializeError,
-  formatAbsentExecutionError,
-} from './agent-runner-error-formatting';
+import { extractRunnerControlDirective } from './agent-runner-control-directives';
+import { serializeError, formatAbsentExecutionError } from './agent-runner-error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
-import type { /*unused*/ } from '../database/schema';
-import type { /*unused*/ } from './runtime/types';
-import type { /*unused*/ } from './agent-contract-store';
-import type { /*unused*/ } from '../notifications/store';
-import type { /*unused*/ } from './agent-home-metric-snapshot-store';
+import type {} from /*unused*/ '../database/schema';
+import type {} from /*unused*/ './runtime/types';
+import type {} from /*unused*/ './agent-contract-store';
+import type {} from /*unused*/ '../notifications/store';
+import type {} from /*unused*/ './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage as _AgentRunnerUsage } from './agent-runner-usage';
 import type { Scheduler as _Scheduler } from './agent-runner-scheduler';
-import type { /*unused*/ } from './agent-runner-messages';
+import type {} from /*unused*/ './agent-runner-messages';
 import type { LoopDetector as _LoopDetector } from './agent-runner-loop-detector';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import type {
@@ -52,21 +47,51 @@ import type {
 } from './agent-runner-execute-types';
 
 // Re-export types for consumers of this module
-export type { ExecuteStepDeps, ExecuteEpochState, ExecuteBackoffState, ExecuteProgressState, ExecuteLoopState, GenerateResult };
+export type {
+  ExecuteStepDeps,
+  ExecuteEpochState,
+  ExecuteBackoffState,
+  ExecuteProgressState,
+  ExecuteLoopState,
+  GenerateResult,
+};
 
 // ─── Implementation ───────────────────────────────────────────────────────────
 
 export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
   const {
-    contractId, runEpoch, stopped, executingRef, isStaleRun,
-    epochState, backoffState, progressState, loopState,
-    store, messageManager, scheduler, loopDetector, onRunnerIdle,
-    transitionToIdle, queueNextStep, generateWithTimeoutRetries,
-    markGenerateProgress, setLoopSignature, loopSignature,
-    loadAgentContextInstructions, currentRuntime, db,
-    forgeDebug, runtime, usage, notifications, homeMetricSnapshots,
-    runLastMessages, flushPendingRunMessages,
-    currentGenerateAbortController, setCurrentGenerateAbortController,
+    contractId,
+    runEpoch,
+    stopped,
+    executingRef,
+    isStaleRun,
+    epochState,
+    backoffState,
+    progressState,
+    loopState,
+    store,
+    messageManager,
+    scheduler,
+    loopDetector,
+    onRunnerIdle,
+    transitionToIdle,
+    queueNextStep,
+    generateWithTimeoutRetries,
+    markGenerateProgress,
+    setLoopSignature,
+    loopSignature,
+    loadAgentContextInstructions,
+    currentRuntime,
+    db,
+    forgeDebug,
+    runtime,
+    usage,
+    notifications,
+    homeMetricSnapshots,
+    runLastMessages,
+    flushPendingRunMessages,
+    currentGenerateAbortController,
+    setCurrentGenerateAbortController,
     pendingLongTermMemoryRecallSystemText,
   } = deps;
 
@@ -139,7 +164,12 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     progressState.lastStepStage = 'flushing-pending-run-messages';
     prompt = flushPendingRunMessages({ allowOriginIdleOnly: true }) ?? '';
 
-    forgeDebug({ scope: 'agent-runner', level: 'debug', runtimeId: deps.runtimeId, message: 'executing step' });
+    forgeDebug({
+      scope: 'agent-runner',
+      level: 'debug',
+      runtimeId: deps.runtimeId,
+      message: 'executing step',
+    });
 
     progressState.lastStepStage = 'agent-generate';
     const result = await generateWithTimeoutRetries(
@@ -156,7 +186,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         usage,
         notifications,
         homeMetricSnapshots,
-        messageManager: (messageManager as any),
+        messageManager: messageManager as any,
         runLastMessages,
         flushPendingRunMessages,
         scheduler,
@@ -168,9 +198,15 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         currentGenerateAbortController,
         setCurrentGenerateAbortController,
         markGenerateProgress,
-        setBackoffMs: (ms: number) => { backoffState.backoffMs = ms; },
-        setInstant: (v: boolean) => { backoffState.instant = v; },
-        setNextStepAt: (v: number | null) => { backoffState.nextStepAt = v; },
+        setBackoffMs: (ms: number) => {
+          backoffState.backoffMs = ms;
+        },
+        setInstant: (v: boolean) => {
+          backoffState.instant = v;
+        },
+        setNextStepAt: (v: number | null) => {
+          backoffState.nextStepAt = v;
+        },
         setLoopSignature,
         loopSignature,
         activeRunId: null,
@@ -195,7 +231,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       if ((messageManager as any).getPendingCount() === 0) {
         backoffState.nextStepAt = null;
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (loopDetector?.reset) {
+        if (loopDetector?.reset) {
           loopDetector.reset();
         }
         await transitionToIdle(runEpoch, { deferWakeQueueDrain: true });
@@ -228,19 +264,27 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
       },
     });
     await withTimeout(
-      store.setExecutionAbsent(deps.runtimeId, formatAbsentExecutionError({
-        stage: progressState.lastStepStage,
-        lastGenerateProgress: progressState.lastGenerateProgress,
-        error,
-      })),
+      store.setExecutionAbsent(
+        deps.runtimeId,
+        formatAbsentExecutionError({
+          stage: progressState.lastStepStage,
+          lastGenerateProgress: progressState.lastGenerateProgress,
+          error,
+        }),
+      ),
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent execution state update timed out for ${deps.runtimeId}`,
     ).catch((stateError) => {
-      forgeDebug({ scope: 'agent-runner', level: 'error', runtimeId: deps.runtimeId, message: 'failed to set absent state', context: { stateError } });
+      forgeDebug({
+        scope: 'agent-runner',
+        level: 'error',
+        runtimeId: deps.runtimeId,
+        message: 'failed to set absent state',
+        context: { stateError },
+      });
     });
-    (scheduler as any).scheduleNext(
-      nextExponentialBackoffMs(backoffState.backoffMs).current,
-      () => executeStep({ ...deps, stopped: false, executingRef: { value: false } }),
+    (scheduler as any).scheduleNext(nextExponentialBackoffMs(backoffState.backoffMs).current, () =>
+      executeStep({ ...deps, stopped: false, executingRef: { value: false } }),
     );
   } finally {
     progressState.lastStepStartedAt = null;
@@ -263,4 +307,3 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
     }
   }
 }
-

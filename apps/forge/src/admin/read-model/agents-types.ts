@@ -1,8 +1,5 @@
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
-import {
-} from '@forge-runtime/core';
-
-
+import {} from '@forge-runtime/core';
 
 export interface AgentListItem {
   agentId: string;
@@ -70,13 +67,31 @@ export interface AgentReadModel {
   listAgents: () => Promise<unknown[]>;
   getAgent: (agentId: string) => Promise<unknown>;
   listAgentRecentConversations: (agentId: string) => Promise<unknown>;
-  listAgentExecutionSteps: (input: { agentId: string; limit: number; offset: number }) => Promise<unknown>;
-  listAgentThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
-  listAgentLongTermMemoryThreadMessages: (params: { agentId: string; page: number; perPage: number }) => Promise<unknown>;
+  listAgentExecutionSteps: (input: {
+    agentId: string;
+    limit: number;
+    offset: number;
+  }) => Promise<unknown>;
+  listAgentThreadMessages: (params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) => Promise<unknown>;
+  listAgentLongTermMemoryThreadMessages: (params: {
+    agentId: string;
+    page: number;
+    perPage: number;
+  }) => Promise<unknown>;
   getAgentRuntimeMemory: (agentId: string) => Promise<unknown>;
-  listRecentAgentHomeMetricSnapshots: (input: { agentId: string; limit: number }) => Promise<unknown[]>;
+  listRecentAgentHomeMetricSnapshots: (input: {
+    agentId: string;
+    limit: number;
+  }) => Promise<unknown[]>;
   getAgentOmDebugExport: (agentId: string) => Promise<unknown>;
-  debugAgentLongTermMemoryRecallSearch: (agentId: string, input: AgentLongTermMemoryRecallDebugSearchInput) => Promise<unknown>;
+  debugAgentLongTermMemoryRecallSearch: (
+    agentId: string,
+    input: AgentLongTermMemoryRecallDebugSearchInput,
+  ) => Promise<unknown>;
   listAgentConversationMessages: (params: {
     agentId: string;
     provider: string;
@@ -91,6 +106,3 @@ export interface AgentReadModel {
   listAgentMcpServers: (agentId: string) => Promise<unknown>;
   listAgentLlmProfiles: (agentId: string) => Promise<unknown>;
 }
-
-
-

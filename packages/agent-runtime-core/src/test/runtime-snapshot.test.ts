@@ -37,7 +37,9 @@ describe('runtime snapshot persistence', () => {
     restoredRuntime.restoreSnapshot(runtime.getSnapshot());
 
     expect(restoredRuntime.getSnapshot().steps).toHaveLength(1);
-    expect(restoredRuntime.getSnapshot().steps[0]?.modelResponse.segments[0]?.text).toBe('first step');
+    expect(restoredRuntime.getSnapshot().steps[0]?.modelResponse.segments[0]?.text).toBe(
+      'first step',
+    );
   });
 
   it('writes and reads snapshots from the filesystem', async () => {

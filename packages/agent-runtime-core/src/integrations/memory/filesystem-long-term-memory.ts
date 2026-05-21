@@ -124,12 +124,14 @@ export class FilesystemLongTermMemory implements LongTermMemoryStore, LongTermMe
         return [];
       }
 
-      return [{
-        id: document.id,
-        text: document.text,
-        metadata: document.metadata,
-        vector,
-      }];
+      return [
+        {
+          id: document.id,
+          text: document.text,
+          metadata: document.metadata,
+          vector,
+        },
+      ];
     });
   }
 }

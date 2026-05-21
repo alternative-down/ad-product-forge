@@ -38,7 +38,9 @@ describe('validateScheduleShape', () => {
   });
 
   test('passes for date with scheduledDate', () => {
-    expect(() => validateScheduleShape({ scheduleType: 'date', scheduledDate: 1717200000000 })).not.toThrow();
+    expect(() =>
+      validateScheduleShape({ scheduleType: 'date', scheduledDate: 1717200000000 }),
+    ).not.toThrow();
   });
 
   test('throws for date without scheduledDate', () => {

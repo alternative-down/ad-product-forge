@@ -54,9 +54,7 @@ describe('runMigrations', () => {
   test('logs database path in context', async () => {
     await runMigrations(mockDb);
 
-    const pathCall = debugCalls.find(
-      (c) => c.message === 'Application database path',
-    );
+    const pathCall = debugCalls.find((c) => c.message === 'Application database path');
     expect(pathCall?.context).toMatchObject({
       databasePath: '/data/app.db',
     });
@@ -72,9 +70,7 @@ describe('runMigrations', () => {
   test('logs applied rows before migrate (calls db.all)', async () => {
     await runMigrations(mockDb);
 
-    const beforeCall = debugCalls.find(
-      (c) => c.message === 'Applied rows before migrate',
-    );
+    const beforeCall = debugCalls.find((c) => c.message === 'Applied rows before migrate');
     expect(beforeCall).toBeDefined();
     // db.all was called to get applied rows
     expect(mockDb.all).toHaveBeenCalled();
@@ -83,9 +79,7 @@ describe('runMigrations', () => {
   test('logs applied rows after migrate', async () => {
     await runMigrations(mockDb);
 
-    const afterCall = debugCalls.find(
-      (c) => c.message === 'Applied rows after migrate',
-    );
+    const afterCall = debugCalls.find((c) => c.message === 'Applied rows after migrate');
     expect(afterCall).toBeDefined();
   });
 
@@ -96,14 +90,10 @@ describe('runMigrations', () => {
 
     await expect(runMigrations(mockDb)).rejects.toThrow('SQLITE_CANTOPEN');
 
-    const errorCall = debugCalls.find(
-      (c) => c.message === 'Failed to run migrations',
-    );
+    const errorCall = debugCalls.find((c) => c.message === 'Failed to run migrations');
     expect(errorCall?.context).toMatchObject({ error });
 
-    const atFailureCall = debugCalls.find(
-      (c) => c.message === 'Applied rows at failure',
-    );
+    const atFailureCall = debugCalls.find((c) => c.message === 'Applied rows at failure');
     expect(atFailureCall).toBeDefined();
   });
 

@@ -40,7 +40,12 @@ async function pathExists(targetPath: string) {
     await fs.stat(targetPath);
     return true;
   } catch (error) {
-    forgeDebug({ scope: 'agent-runtime-platform', level: 'warn', message: 'Path does not exist', context: { error: serializeError(error), path: targetPath } });
+    forgeDebug({
+      scope: 'agent-runtime-platform',
+      level: 'warn',
+      message: 'Path does not exist',
+      context: { error: serializeError(error), path: targetPath },
+    });
     return false;
   }
 }
@@ -86,7 +91,8 @@ function resolveAllowedPaths(input: {
   return (input.workspaceFilesystem?.allowedPaths ?? []).map((allowedPath) =>
     path.isAbsolute(allowedPath)
       ? path.resolve(allowedPath)
-      : path.resolve(input.agentWorkspacePath, allowedPath));
+      : path.resolve(input.agentWorkspacePath, allowedPath),
+  );
 }
 
 export async function createAgentRuntimePlatform(input: {
@@ -103,25 +109,31 @@ export async function createAgentRuntimePlatform(input: {
   const mastraId = toMastraSafeIdentifier(input.agentId);
   const agentWorkspacePath = path.resolve(input.workspaceBasePath, input.agentId);
   const agentDatabasePath = path.resolve(agentWorkspacePath, 'database.db');
-  const agentWorkspaceDir = input.workspaceFilesystem !== null && input.workspaceFilesystem !== undefined && input.workspaceFilesystem.basePath
-    ? path.resolve(agentWorkspacePath, input.workspaceFilesystem.basePath)
-    : path.resolve(agentWorkspacePath, 'workspace');
+  const agentWorkspaceDir =
+    input.workspaceFilesystem !== null &&
+    input.workspaceFilesystem !== undefined &&
+    input.workspaceFilesystem.basePath
+      ? path.resolve(agentWorkspacePath, input.workspaceFilesystem.basePath)
+      : path.resolve(agentWorkspacePath, 'workspace');
   const agentMemoryPath = path.resolve(agentWorkspaceDir, 'memory');
   const legacyAgentMemoryPath = path.resolve(agentWorkspacePath, 'workspace-memory');
   const allowedPaths = resolveAllowedPaths({
     agentWorkspacePath,
     workspaceFilesystem: input.workspaceFilesystem,
   });
-  const sandboxWorkingDirectory = input.workspaceSandbox !== null && input.workspaceSandbox !== undefined && input.workspaceSandbox.workingDirectory
-    ? path.resolve(agentWorkspacePath, input.workspaceSandbox.workingDirectory)
-    : agentWorkspaceDir;
+  const sandboxWorkingDirectory =
+    input.workspaceSandbox !== null &&
+    input.workspaceSandbox !== undefined &&
+    input.workspaceSandbox.workingDirectory
+      ? path.resolve(agentWorkspacePath, input.workspaceSandbox.workingDirectory)
+      : agentWorkspaceDir;
 
   await fs.mkdir(agentWorkspacePath, { recursive: true });
   await fs.mkdir(agentWorkspaceDir, { recursive: true });
   await moveLegacyMemoryDirectory(legacyAgentMemoryPath, agentMemoryPath);
 
   const client = createClient({ url: `file:${agentDatabasePath}` });
-    client.execute('PRAGMA foreign_keys = ON');
+  client.execute('PRAGMA foreign_keys = ON');
   const conversationStore = new LibsqlConversationStore({
     client,
     tablePrefix: mastraId,
@@ -161,14 +173,16 @@ export async function createAgentRuntimePlatform(input: {
     cwd: sandboxWorkingDirectory,
   });
 
-  const communication: CommunicationModule = input.communication ?? await createCommunicationModule({
-    providers: input.providers ?? [],
-    workspace: {
-      filesystem: communicationWorkspaceFilesystem,
-    },
-    workspaceRoot: agentWorkspaceDir,
-    contactsStore: communicationContactsStore,
-  });
+  const communication: CommunicationModule =
+    input.communication ??
+    (await createCommunicationModule({
+      providers: input.providers ?? [],
+      workspace: {
+        filesystem: communicationWorkspaceFilesystem,
+      },
+      workspaceRoot: agentWorkspaceDir,
+      contactsStore: communicationContactsStore,
+    }));
 
   return {
     mastraId,

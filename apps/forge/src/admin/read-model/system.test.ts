@@ -91,7 +91,9 @@ describe('createSystemReadModel', () => {
     test('returns profiles, defaults, and prices in parallel', async () => {
       const profiles = [{ profileId: 'p1', modelKey: 'claude-3-5-sonnet' }];
       const defaults = { modelKey: 'claude-3-5-sonnet', providerId: 'anthropic' };
-      const prices = [{ modelKey: 'claude-3-5-sonnet', inputCostPerMtok: 3, outputCostPerMtok: 15 }];
+      const prices = [
+        { modelKey: 'claude-3-5-sonnet', inputCostPerMtok: 3, outputCostPerMtok: 15 },
+      ];
 
       mocks.llmSettingsStore.listProfiles.mockResolvedValue(profiles);
       mocks.llmSettingsStore.getDefaults.mockResolvedValue(defaults);
@@ -140,15 +142,15 @@ describe('createSystemReadModel', () => {
       const { readFile } = await import('node:fs/promises');
       const { resolve } = await import('node:path');
 
-      vi.mocked(readFile).mockResolvedValue(JSON.stringify({
-        entries: [
-          { idx: 0, when: 1700000000, tag: 'init' },
-          { idx: 1, when: 1700000001, tag: 'add_roles' },
-        ],
-      }));
-      mockDb.all.mockResolvedValue([
-        { id: 1, hash: 'abc123', createdAt: 1700000000 },
-      ]);
+      vi.mocked(readFile).mockResolvedValue(
+        JSON.stringify({
+          entries: [
+            { idx: 0, when: 1700000000, tag: 'init' },
+            { idx: 1, when: 1700000001, tag: 'add_roles' },
+          ],
+        }),
+      );
+      mockDb.all.mockResolvedValue([{ id: 1, hash: 'abc123', createdAt: 1700000000 }]);
 
       const store = createSystemReadModel({ db: mockDb });
       const result = await store.getApplicationMigrations();
@@ -157,21 +159,29 @@ describe('createSystemReadModel', () => {
       expect(result.applied[0]).toMatchObject({ id: 1, hash: 'abc123' });
       expect(result.entries).toHaveLength(2);
       expect(result.entries[0]).toMatchObject({
-        idx: 0, tag: 'init', applied: true, hash: 'abc123', rowId: 1,
+        idx: 0,
+        tag: 'init',
+        applied: true,
+        hash: 'abc123',
+        rowId: 1,
       });
       expect(result.entries[1]).toMatchObject({
-        idx: 1, tag: 'add_roles', applied: false, hash: null, rowId: null,
+        idx: 1,
+        tag: 'add_roles',
+        applied: false,
+        hash: null,
+        rowId: null,
       });
     });
 
     test('marks migration as applied when matching hash found', async () => {
       const { readFile } = await import('node:fs/promises');
-      vi.mocked(readFile).mockResolvedValue(JSON.stringify({
-        entries: [{ idx: 0, when: 1700000005, tag: 'v2' }],
-      }));
-      mockDb.all.mockResolvedValue([
-        { id: 10, hash: 'xyz789', createdAt: 1700000005 },
-      ]);
+      vi.mocked(readFile).mockResolvedValue(
+        JSON.stringify({
+          entries: [{ idx: 0, when: 1700000005, tag: 'v2' }],
+        }),
+      );
+      mockDb.all.mockResolvedValue([{ id: 10, hash: 'xyz789', createdAt: 1700000005 }]);
 
       const store = createSystemReadModel({ db: mockDb });
       const result = await store.getApplicationMigrations();
@@ -194,8 +204,20 @@ describe('createSystemReadModel', () => {
   });
   describe('listRoles', () => {
     const mockRoles = [
-      { roleId: 'role-1', name: 'Admin', description: 'Admin role', createdAt: new Date('2024-01-01'), updatedAt: new Date('2024-01-01') },
-      { roleId: 'role-2', name: 'Viewer', description: 'Read-only role', createdAt: new Date('2024-01-02'), updatedAt: new Date('2024-01-02') },
+      {
+        roleId: 'role-1',
+        name: 'Admin',
+        description: 'Admin role',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      },
+      {
+        roleId: 'role-2',
+        name: 'Viewer',
+        description: 'Read-only role',
+        createdAt: new Date('2024-01-02'),
+        updatedAt: new Date('2024-01-02'),
+      },
     ];
 
     test('returns roles with capabilityIds from batch query', async () => {
@@ -206,7 +228,10 @@ describe('createSystemReadModel', () => {
       mocks.capabilityStore.listGrantedRoleCapabilitiesBatch.mockResolvedValue(mockCapabilitiesMap);
       mocks.capabilityStore.listRoles.mockResolvedValue(mockRoles);
       mockDb.all.mockResolvedValue([]);
-      mockGroupByAll.mockResolvedValue([{ roleId: 'role-1', count: 3 }, { roleId: 'role-2', count: 1 }]);
+      mockGroupByAll.mockResolvedValue([
+        { roleId: 'role-1', count: 3 },
+        { roleId: 'role-2', count: 1 },
+      ]);
 
       const store = createSystemReadModel({ db: mockDb });
       const result = await store.listRoles();
@@ -234,9 +259,7 @@ describe('createSystemReadModel', () => {
     });
 
     test('uses empty capabilityIds when batch returns no match for a role', async () => {
-      const mockCapabilitiesMap = new Map([
-        ['role-1', ['cap:read']],
-      ]);
+      const mockCapabilitiesMap = new Map([['role-1', ['cap:read']]]);
       mocks.capabilityStore.listGrantedRoleCapabilitiesBatch.mockResolvedValue(mockCapabilitiesMap);
       mocks.capabilityStore.listRoles.mockResolvedValue(mockRoles);
       mockDb.all.mockResolvedValue([]);

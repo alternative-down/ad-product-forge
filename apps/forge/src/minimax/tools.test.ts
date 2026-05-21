@@ -210,10 +210,7 @@ describe('createMiniMaxTools', () => {
       });
 
       const tools = createMiniMaxTools(mockMinimaxManager(), null);
-      const result = await (tools.minimax_image as any).execute(
-        { prompt: 'A cat' },
-        mockContext(),
-      );
+      const result = await (tools.minimax_image as any).execute({ prompt: 'A cat' }, mockContext());
       expect(result.valid).toBe(false);
       expect(result.error).toBe('Invalid prompt');
     });
@@ -222,10 +219,7 @@ describe('createMiniMaxTools', () => {
       mocks.generateImage.mockRejectedValue(new Error('Unexpected failure'));
 
       const tools = createMiniMaxTools(mockMinimaxManager(), null);
-      const result = await (tools.minimax_image as any).execute(
-        { prompt: 'A cat' },
-        mockContext(),
-      );
+      const result = await (tools.minimax_image as any).execute({ prompt: 'A cat' }, mockContext());
       expect(result.valid).toBe(false);
       expect(result.error).toBe('Unexpected failure');
     });

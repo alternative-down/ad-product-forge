@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  ForgeConversationMemory,
-  ForgeConversationMemoryOptions,
-} from './memory.js';
+import type { ForgeConversationMemory, ForgeConversationMemoryOptions } from './memory.js';
 
 describe('memory', () => {
   describe('ForgeConversationMemoryOptions', () => {
@@ -61,7 +58,10 @@ describe('memory', () => {
     it('has memory property', () => {
       const mem: ForgeConversationMemory = {
         memory: {} as never,
-        captureRunHistoryWindow: async () => ({ historyStartMessageId: null, historyEndMessageId: null }),
+        captureRunHistoryWindow: async () => ({
+          historyStartMessageId: null,
+          historyEndMessageId: null,
+        }),
         renderModelMessages: async () => [],
         plugins: [],
         observers: [],
@@ -72,7 +72,10 @@ describe('memory', () => {
     it('has plugins and observers arrays', () => {
       const mem: ForgeConversationMemory = {
         memory: {} as never,
-        captureRunHistoryWindow: async () => ({ historyStartMessageId: null, historyEndMessageId: null }),
+        captureRunHistoryWindow: async () => ({
+          historyStartMessageId: null,
+          historyEndMessageId: null,
+        }),
         renderModelMessages: async () => [],
         plugins: [{ name: 'plugin-1' }] as never,
         observers: [{ onStepComplete: async () => {} }] as never,
@@ -84,7 +87,10 @@ describe('memory', () => {
     it('has captureRunHistoryWindow returning promise', () => {
       const mem: ForgeConversationMemory = {
         memory: {} as never,
-        captureRunHistoryWindow: async () => ({ historyStartMessageId: null, historyEndMessageId: null }),
+        captureRunHistoryWindow: async () => ({
+          historyStartMessageId: null,
+          historyEndMessageId: null,
+        }),
         renderModelMessages: async () => [],
         plugins: [],
         observers: [],
@@ -111,7 +117,10 @@ describe('memory', () => {
     it('has renderModelMessages returning promise', () => {
       const mem: ForgeConversationMemory = {
         memory: {} as never,
-        captureRunHistoryWindow: async () => ({ historyStartMessageId: null, historyEndMessageId: null }),
+        captureRunHistoryWindow: async () => ({
+          historyStartMessageId: null,
+          historyEndMessageId: null,
+        }),
         renderModelMessages: async () => [],
         plugins: [],
         observers: [],

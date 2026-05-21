@@ -4,10 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  RuntimePlanMode,
-  createPlanModeActions,
-} from './runtime-plan-mode';
+import { RuntimePlanMode, createPlanModeActions } from './runtime-plan-mode';
 
 const tempDirs: string[] = [];
 
@@ -43,7 +40,7 @@ describe('RuntimePlanMode', () => {
       const { planMode, memoryPath } = await makePlanMode();
       const _plan = await planMode.enterPlanMode('Review auth implementation', 5);
       const planDir = path.join(memoryPath, 'memory', 'plans');
-      const files = await import('node:fs/promises').then(fs => fs.readdir(planDir));
+      const files = await import('node:fs/promises').then((fs) => fs.readdir(planDir));
       expect(files).toHaveLength(1);
       expect(files[0]).toContain(`step-5-plan.md`);
     });
@@ -59,7 +56,9 @@ describe('RuntimePlanMode', () => {
     it('updates plan with plan text and marks completed', async () => {
       const { planMode } = await makePlanMode();
       await planMode.enterPlanMode('Plan refactoring', 1);
-      const completed = await planMode.exitPlanMode('Step 1: extract interfaces\nStep 2: rename modules');
+      const completed = await planMode.exitPlanMode(
+        'Step 1: extract interfaces\nStep 2: rename modules',
+      );
       expect(completed.plan).toBe('Step 1: extract interfaces\nStep 2: rename modules');
       expect(completed.status).toBe('completed');
       expect(planMode.isInPlanMode).toBe(false);
@@ -70,9 +69,10 @@ describe('RuntimePlanMode', () => {
       await planMode.enterPlanMode('Test plan', 2);
       await planMode.exitPlanMode('Final plan text');
       const planDir = path.join(memoryPath, 'memory', 'plans');
-      const files = await import('node:fs/promises').then(fs => fs.readdir(planDir));
-      const content = await import('node:fs/promises').then(fs =>
-        fs.readFile(path.join(planDir, files[0]), 'utf8'));
+      const files = await import('node:fs/promises').then((fs) => fs.readdir(planDir));
+      const content = await import('node:fs/promises').then((fs) =>
+        fs.readFile(path.join(planDir, files[0]), 'utf8'),
+      );
       expect(content).toContain('status: completed');
       expect(content).toContain('Final plan text');
     });
@@ -150,7 +150,7 @@ describe('RuntimePlanMode', () => {
         { name: 'deleteFile', description: 'Delete a file' } as unknown,
       ];
       const filtered = planMode.filterReadOnlyActions(actions);
-      expect(filtered.map(a => a.name)).toEqual(['readFile', 'grep', 'listDirectory']);
+      expect(filtered.map((a) => a.name)).toEqual(['readFile', 'grep', 'listDirectory']);
     });
 
     it('returns only read-only actions regardless of inPlanMode state', async () => {
@@ -162,7 +162,10 @@ describe('RuntimePlanMode', () => {
         { name: 'grep', description: 'Search in files' } as unknown,
       ];
       const filtered = planMode.filterReadOnlyActions(actions);
-      expect(filtered.map((a: unknown) => (a as {name?: string}).name ?? "")).toEqual(['readFile', 'grep']);
+      expect(filtered.map((a: unknown) => (a as { name?: string }).name ?? '')).toEqual([
+        'readFile',
+        'grep',
+      ]);
     });
 
     it('treats mixed-name actions as non-read-only', async () => {

@@ -96,7 +96,7 @@ describe('advanceGenerateToken', () => {
 describe('run epoch state transitions', () => {
   it('step epoch and generate token are independent', () => {
     const state = makeRunEpoch();
-    
+
     advanceStepEpoch(state);
     advanceGenerateToken(state);
     advanceGenerateToken(state);

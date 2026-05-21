@@ -14,9 +14,7 @@ export type AutonomousTickOptions<TPayload> = {
   };
 };
 
-export function createAutonomousAgentApplication(
-  options: AutonomousAgentApplicationOptions,
-) {
+export function createAutonomousAgentApplication(options: AutonomousAgentApplicationOptions) {
   const host = createRuntimeHost({
     runtime: options.runtime,
     scheduler: true,
@@ -32,11 +30,7 @@ export function createAutonomousAgentApplication(
     journal: host.journal,
     notes: host.notes,
     scheduler,
-    async queueInput<TPayload>(input: {
-      id: string;
-      type: string;
-      payload: TPayload;
-    }) {
+    async queueInput<TPayload>(input: { id: string; type: string; payload: TPayload }) {
       await host.runtime.dispatch(input);
     },
     scheduleInput<TPayload>(input: {

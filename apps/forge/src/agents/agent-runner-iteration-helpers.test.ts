@@ -30,7 +30,9 @@ describe('buildIterationLoopSignature', () => {
   });
 
   it('excludes leading/trailing whitespace from text', () => {
-    const result = JSON.parse(buildIterationLoopSignature({ text: '\n\thello\n\t', toolCalls: [] }));
+    const result = JSON.parse(
+      buildIterationLoopSignature({ text: '\n\thello\n\t', toolCalls: [] }),
+    );
     expect(result.text).toBe('hello');
   });
 
@@ -62,9 +64,7 @@ describe('buildIterationLoopSignature', () => {
       text: 'test',
       toolCalls: [{ name: 'search', args: { query: 'x' } }],
     };
-    expect(buildIterationLoopSignature(iteration)).toBe(
-      buildIterationLoopSignature(iteration),
-    );
+    expect(buildIterationLoopSignature(iteration)).toBe(buildIterationLoopSignature(iteration));
   });
 
   it('produces different output for different text', () => {
@@ -187,16 +187,12 @@ describe('didIterationProduceVisibleAssistantText', () => {
   });
 
   it('returns true for assistant message with text part in array content', () => {
-    const messages = [
-      { role: 'assistant', content: [{ type: 'text', text: 'Hello' }] },
-    ];
+    const messages = [{ role: 'assistant', content: [{ type: 'text', text: 'Hello' }] }];
     expect(didIterationProduceVisibleAssistantText({ text: '', messages })).toBe(true);
   });
 
   it('ignores non-text parts in array content', () => {
-    const messages = [
-      { role: 'assistant', content: [{ type: 'tool_call', name: 'search' }] },
-    ];
+    const messages = [{ role: 'assistant', content: [{ type: 'tool_call', name: 'search' }] }];
     expect(didIterationProduceVisibleAssistantText({ text: '', messages })).toBe(false);
   });
 

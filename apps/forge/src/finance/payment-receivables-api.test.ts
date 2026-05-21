@@ -30,7 +30,7 @@ function createMockDb() {
       set: (values: Record<string, unknown>) => ({
         where: (where: unknown) => {
           const conditions = extractWhere(where);
-          const idx = txStore.findIndex(r =>
+          const idx = txStore.findIndex((r) =>
             Object.entries(conditions).every(([k, v]) => r[k] === v),
           );
           if (idx !== -1) Object.assign(txStore[idx], values);
@@ -46,7 +46,7 @@ function createMockDb() {
         return {
           where: (where: unknown) => {
             const conditions = extractWhere(where);
-            const filtered = txStore.filter(r =>
+            const filtered = txStore.filter((r) =>
               Object.entries(conditions).every(([k, v]) => r[k] === v),
             );
             return {
@@ -60,7 +60,12 @@ function createMockDb() {
   }
 
   function transaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T> {
-    return fn({ insert, update, select, query: { paymentTransactions: { findFirst: () => Promise.resolve(null) } } });
+    return fn({
+      insert,
+      update,
+      select,
+      query: { paymentTransactions: { findFirst: () => Promise.resolve(null) } },
+    });
   }
 
   return {
@@ -78,13 +83,29 @@ function isSQL(x: unknown): x is { queryChunks: unknown[] } {
   return typeof x === 'object' && x !== null && !Array.isArray(x) && 'queryChunks' in x;
 }
 function isStringChunk(x: unknown): boolean {
-  return typeof x === 'object' && x !== null && !Array.isArray(x) && 'value' in x && Array.isArray((x as { value: unknown }).value);
+  return (
+    typeof x === 'object' &&
+    x !== null &&
+    !Array.isArray(x) &&
+    'value' in x &&
+    Array.isArray((x as { value: unknown }).value)
+  );
 }
-function isArrayChunk(x: unknown): boolean { return Array.isArray(x); }
+function isArrayChunk(x: unknown): boolean {
+  return Array.isArray(x);
+}
 function isColumn(x: unknown): boolean {
   const n = (x as { constructor?: { name?: string } })?.constructor?.name;
-  return n === 'SQLiteText' || n === 'SQLiteInteger' || n === 'SQLiteBlob' || n === 'SQLiteReal' ||
-    n === 'SQLiteTextBuilder' || n === 'SQLiteIntegerBuilder' || n === 'SQLiteBlobBuilder' || n === 'SQLiteRealBuilder';
+  return (
+    n === 'SQLiteText' ||
+    n === 'SQLiteInteger' ||
+    n === 'SQLiteBlob' ||
+    n === 'SQLiteReal' ||
+    n === 'SQLiteTextBuilder' ||
+    n === 'SQLiteIntegerBuilder' ||
+    n === 'SQLiteBlobBuilder' ||
+    n === 'SQLiteRealBuilder'
+  );
 }
 function extractConditions(sql: unknown): Array<{ colName: string; value: unknown }> {
   if (!isSQL(sql)) return [];
@@ -93,7 +114,11 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     if (isStringChunk(chunk)) continue;
-    if (isSQL(chunk) && (chunk as { queryChunks?: unknown[] }).queryChunks?.length && !isColumn(chunk)) {
+    if (
+      isSQL(chunk) &&
+      (chunk as { queryChunks?: unknown[] }).queryChunks?.length &&
+      !isColumn(chunk)
+    ) {
       result.push(...extractConditions(chunk));
       continue;
     }
@@ -107,9 +132,19 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
     let value: unknown;
     if (isArrayChunk(valChunk) && (valChunk as unknown[]).length === 2) {
       value = (valChunk as unknown[])[1];
-    } else if (typeof valChunk === 'object' && valChunk !== null && !isSQL(valChunk) && !isStringChunk(valChunk) && 'value' in valChunk) {
+    } else if (
+      typeof valChunk === 'object' &&
+      valChunk !== null &&
+      !isSQL(valChunk) &&
+      !isStringChunk(valChunk) &&
+      'value' in valChunk
+    ) {
       value = (valChunk as { value: unknown }).value;
-    } else if (typeof valChunk === 'string' || typeof valChunk === 'number' || typeof valChunk === 'boolean') {
+    } else if (
+      typeof valChunk === 'string' ||
+      typeof valChunk === 'number' ||
+      typeof valChunk === 'boolean'
+    ) {
       value = valChunk;
     } else {
       i = j;
@@ -125,7 +160,9 @@ function snakeToCamel(s: string): string {
 }
 function extractWhere(where: unknown): Record<string, unknown> {
   if (!where) return {};
-  return Object.fromEntries(extractConditions(where).map(({ colName, value }) => [snakeToCamel(colName), value]));
+  return Object.fromEntries(
+    extractConditions(where).map(({ colName, value }) => [snakeToCamel(colName), value]),
+  );
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

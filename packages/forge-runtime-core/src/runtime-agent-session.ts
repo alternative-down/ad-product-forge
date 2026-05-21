@@ -80,24 +80,23 @@ export type RuntimeAgentSessionGenerateOptions = {
   loadTodosText?: () => Promise<string | undefined>;
   loadPlanText?: () => Promise<string | undefined>;
   onStepFinish?: (result: RuntimeAgentSessionStepResult) => Promise<void> | void;
-  onIterationComplete?: (
-    iteration: RuntimeAgentSessionIteration,
-  ) => Promise<{
-      continue?: boolean;
-      feedback?: string;
-      feedbackMessages?: Array<{
-        role: 'assistant' | 'user';
-        content: string;
-      }>;
-    } | void>
+  onIterationComplete?: (iteration: RuntimeAgentSessionIteration) =>
+    | Promise<{
+        continue?: boolean;
+        feedback?: string;
+        feedbackMessages?: Array<{
+          role: 'assistant' | 'user';
+          content: string;
+        }>;
+      } | void>
     | {
-      continue?: boolean;
-      feedback?: string;
-      feedbackMessages?: Array<{
-        role: 'assistant' | 'user';
-        content: string;
-      }>;
-    }
+        continue?: boolean;
+        feedback?: string;
+        feedbackMessages?: Array<{
+          role: 'assistant' | 'user';
+          content: string;
+        }>;
+      }
     | void;
 };
 
@@ -112,10 +111,7 @@ export type RuntimeAgentSession = {
   hasOwnMemory(): boolean;
   // eslint-disable-next-line @typescript-eslint/require-await
   getMemory(): Promise<{
-    getWorkingMemory(input: {
-      threadId: string;
-      resourceId: string;
-    }): Promise<string | null>;
+    getWorkingMemory(input: { threadId: string; resourceId: string }): Promise<string | null>;
     updateWorkingMemory(input: {
       threadId: string;
       resourceId: string;
@@ -174,10 +170,15 @@ export type CreateRuntimeAgentSessionOptions = {
     }>;
   }) => Promise<void>;
   runtimeActions?: Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>;
-  loadRuntimeActions?: () => Promise<Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>>;
+  loadRuntimeActions?: () => Promise<
+    Array<RuntimeActionDefinition<Record<string, unknown>, unknown>>
+  >;
   runtimeObservers?: RuntimeObserver[];
   workingMemoryTool?: Tool<{ workingMemory: string }, { updated: true }>;
-  todoStore?: { client: { execute(sql: string, args?: unknown[]): Promise<{ rows: unknown[] }> }; tablePrefix?: string };
+  todoStore?: {
+    client: { execute(sql: string, args?: unknown[]): Promise<{ rows: unknown[] }> };
+    tablePrefix?: string;
+  };
   planMode?: RuntimePlanMode;
   consolidateConversationOverflow?: boolean;
 };
@@ -199,16 +200,18 @@ export async function createRuntimeAgentSession(
     hasOwnMemory() {
       return true;
     },
-  // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await
     async getMemory() {
       return {
         async getWorkingMemory(value) {
           return (
-            await input.workingMemoryStore!.read({
-              threadId: value.threadId,
-              resourceId: value.resourceId,
-            })
-          )?.workingMemory ?? null;
+            (
+              await input.workingMemoryStore!.read({
+                threadId: value.threadId,
+                resourceId: value.resourceId,
+              })
+            )?.workingMemory ?? null
+          );
         },
         async updateWorkingMemory(value) {
           await input.workingMemoryStore!.write(value);

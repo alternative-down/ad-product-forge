@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  generateTextMock,
-  streamTextMock,
-  toolMock,
-} = vi.hoisted(() => ({
+const { generateTextMock, streamTextMock, toolMock } = vi.hoisted(() => ({
   generateTextMock: vi.fn(),
   streamTextMock: vi.fn(),
   toolMock: vi.fn((definition: unknown) => definition),
@@ -63,7 +59,10 @@ describe('AiSdkStepModelAdapter', () => {
     expect(generateTextMock).toHaveBeenCalledTimes(1);
 
     const request = generateTextMock.mock.calls[0]?.[0];
-    const messages = request?.messages as Array<{ role: string; content: Array<{ type: string; text?: string; image?: string }> }>;
+    const messages = request?.messages as Array<{
+      role: string;
+      content: Array<{ type: string; text?: string; image?: string }>;
+    }>;
 
     expect(messages).toHaveLength(1);
     expect(messages[0]?.role).toBe('user');
@@ -88,9 +87,7 @@ describe('AiSdkStepModelAdapter', () => {
         { type: 'text', text: 'hello world' },
         { type: 'reasoning', text: 'thinking' },
       ]),
-      toolCalls: Promise.resolve([
-        { toolName: 'lookup', input: { query: 'forge' } },
-      ]),
+      toolCalls: Promise.resolve([{ toolName: 'lookup', input: { query: 'forge' } }]),
       usage: Promise.resolve({
         inputTokens: 10,
         outputTokens: 12,
@@ -112,12 +109,14 @@ describe('AiSdkStepModelAdapter', () => {
           text: 'hello',
         }),
       ],
-      actions: [{
-        name: 'lookup',
-        description: 'Lookup information',
-        inputSchema: {} as never,
-        inputSchemaText: '{}',
-      }],
+      actions: [
+        {
+          name: 'lookup',
+          description: 'Lookup information',
+          inputSchema: {} as never,
+          inputSchemaText: '{}',
+        },
+      ],
     });
     const events = [];
 
@@ -145,9 +144,7 @@ describe('AiSdkStepModelAdapter', () => {
       { kind: 'message', text: 'hello world' },
       { kind: 'reasoning', text: 'thinking' },
     ]);
-    expect(response.actionRequests).toEqual([
-      { name: 'lookup', input: { query: 'forge' } },
-    ]);
+    expect(response.actionRequests).toEqual([{ name: 'lookup', input: { query: 'forge' } }]);
     expect(response.continuation).toBe('stop');
     expect(response.usage).toEqual({
       inputTokens: 10,
@@ -223,24 +220,28 @@ describe('AiSdkStepModelAdapter', () => {
       },
       {
         role: 'assistant',
-        content: [{
-          type: 'tool-call',
-          toolCallId: 'action-results:0:0',
-          toolName: 'lookup',
-          input: { query: 'landing page' },
-        }],
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'action-results:0:0',
+            toolName: 'lookup',
+            input: { query: 'landing page' },
+          },
+        ],
       },
       {
         role: 'tool',
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'action-results:0:0',
-          toolName: 'lookup',
-          output: {
-            type: 'json',
-            value: { ok: true },
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'action-results:0:0',
+            toolName: 'lookup',
+            output: {
+              type: 'json',
+              value: { ok: true },
+            },
           },
-        }],
+        ],
       },
       {
         role: 'user',
@@ -270,18 +271,22 @@ describe('AiSdkStepModelAdapter', () => {
           kind: 'conversation-message:assistant',
           title: 'Assistant tool step',
           data: {
-            toolInvocations: [{
-              toolName: 'searchWorkspace',
-              args: {
-                query: 'checkpointed memory',
+            toolInvocations: [
+              {
+                toolName: 'searchWorkspace',
+                args: {
+                  query: 'checkpointed memory',
+                },
               },
-            }],
-            toolResults: [{
-              toolName: 'searchWorkspace',
-              result: {
-                hit: true,
+            ],
+            toolResults: [
+              {
+                toolName: 'searchWorkspace',
+                result: {
+                  hit: true,
+                },
               },
-            }],
+            ],
           },
         },
       ],
@@ -294,28 +299,32 @@ describe('AiSdkStepModelAdapter', () => {
     expect(messages).toEqual([
       {
         role: 'assistant',
-        content: [{
-          type: 'tool-call',
-          toolCallId: 'conversation-message:assistant-tool-step:tool:0',
-          toolName: 'searchWorkspace',
-          input: {
-            query: 'checkpointed memory',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'conversation-message:assistant-tool-step:tool:0',
+            toolName: 'searchWorkspace',
+            input: {
+              query: 'checkpointed memory',
+            },
           },
-        }],
+        ],
       },
       {
         role: 'tool',
-        content: [{
-          type: 'tool-result',
-          toolCallId: 'conversation-message:assistant-tool-step:tool:0',
-          toolName: 'searchWorkspace',
-          output: {
-            type: 'json',
-            value: {
-              hit: true,
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'conversation-message:assistant-tool-step:tool:0',
+            toolName: 'searchWorkspace',
+            output: {
+              type: 'json',
+              value: {
+                hit: true,
+              },
             },
           },
-        }],
+        ],
       },
     ]);
   });
@@ -356,10 +365,12 @@ describe('AiSdkStepModelAdapter', () => {
     const messages = request?.messages as Array<{ role: string; content: unknown }>;
 
     expect(request?.system).toBe('Stay concise.');
-    expect(messages).toEqual([{
-      role: 'user',
-      content: [{ type: 'text', text: 'Reply now.' }],
-    }]);
+    expect(messages).toEqual([
+      {
+        role: 'user',
+        content: [{ type: 'text', text: 'Reply now.' }],
+      },
+    ]);
   });
 
   it('merges adapter system text with context system text into one ai sdk system prompt', async () => {

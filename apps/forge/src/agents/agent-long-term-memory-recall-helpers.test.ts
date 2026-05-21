@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { safeSerializeRecallSteps, safeSerializeGraphResult, escapeXml, buildRecallSystemMessage } from './agent-ltm-helpers';
+import {
+  safeSerializeRecallSteps,
+  safeSerializeGraphResult,
+  escapeXml,
+  buildRecallSystemMessage,
+} from './agent-ltm-helpers';
 
 vi.mock('@forge-runtime/core', () => ({
   forgeDebug: vi.fn(),
@@ -88,7 +93,7 @@ describe('ltm/helpers', () => {
     });
 
     it('escapes all characters in mixed string', () => {
-      const mixed = "A & B < C > D \"E\" 'F'";
+      const mixed = 'A & B < C > D "E" \'F\'';
       const result = escapeXml(mixed);
       expect(result).toContain('&amp;');
       expect(result).toContain('&lt;');
@@ -112,13 +117,15 @@ describe('ltm/helpers', () => {
 
   describe('buildRecallSystemMessage', () => {
     it('returns null when graph hit has empty context and no workspace results', () => {
-      expect(buildRecallSystemMessage({
-        query: 'test',
-        graphHit: true,
-        graphScore: 0.5,
-        graphContext: '',
-        results: [],
-      })).toBeNull();
+      expect(
+        buildRecallSystemMessage({
+          query: 'test',
+          graphHit: true,
+          graphScore: 0.5,
+          graphContext: '',
+          results: [],
+        }),
+      ).toBeNull();
     });
 
     it('returns memory-recall XML with graph item when graph hits', () => {
@@ -164,9 +171,7 @@ describe('ltm/helpers', () => {
         graphHit: false,
         graphScore: null,
         graphContext: '',
-        results: [
-          { id: 'doc-x', content: 'value: "test & <data>"', score: 0.8 },
-        ],
+        results: [{ id: 'doc-x', content: 'value: "test & <data>"', score: 0.8 }],
       });
       // Content escaping: & → &amp; < → &lt; > → &gt; " → &quot;
       expect(result).toContain('&amp;');
@@ -176,13 +181,15 @@ describe('ltm/helpers', () => {
     });
 
     it('returns null when no results and no graph hit', () => {
-      expect(buildRecallSystemMessage({
-        query: 'nothing',
-        graphHit: false,
-        graphScore: null,
-        graphContext: '',
-        results: [],
-      })).toBeNull();
+      expect(
+        buildRecallSystemMessage({
+          query: 'nothing',
+          graphHit: false,
+          graphScore: null,
+          graphContext: '',
+          results: [],
+        }),
+      ).toBeNull();
     });
 
     it('includes instructions tag with remember guidance', () => {

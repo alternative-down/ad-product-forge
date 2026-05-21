@@ -22,9 +22,7 @@ const SCOPE = 'admin-sse-events';
 /** Keep-alive comment sent every 25 s to prevent proxy connection timeouts. */
 const KEEPALIVE_INTERVAL_MS = 25_000;
 
-export function createInternalChatSseHandler(
-  internalChat: InternalChatService,
-): HttpHandler {
+export function createInternalChatSseHandler(internalChat: InternalChatService): HttpHandler {
   return async function handleSseEvents(request): Promise<HttpResponse> {
     const accountId = request.query.get('accountId');
     if (accountId === null || accountId === undefined) {
@@ -40,7 +38,7 @@ export function createInternalChatSseHandler(
     const controller = new ReadableStreamDefaultController();
     // Convert the Web ReadableStream into a Node.js Readable so http.ServerResponse.pipe()
     // can consume it. ReadableStreamDefaultController is available in lib: ES2022 + WebStreams.
-     
+
     const nodeStream = Readable.fromWeb(controller as any);
 
     // Send a welcome comment so the client can confirm the connection before the first event.
@@ -94,7 +92,7 @@ export function createInternalChatSseHandler(
       headers: {
         'content-type': 'text/event-stream; charset=utf-8',
         'cache-control': 'no-store, no-cache, must-revalidate',
-        'connection': 'keep-alive',
+        connection: 'keep-alive',
         'x-accel-buffering': 'no', // prevent nginx from buffering SSE
       },
       stream: nodeStream,

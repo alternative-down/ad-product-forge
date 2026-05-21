@@ -9,7 +9,12 @@ describe('buildScheduleUpdateInput', () => {
   it('uses parsed name and description when provided', () => {
     const result = buildScheduleUpdateInput(
       { name: 'New Name', description: 'New desc' },
-      { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: true },
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: true,
+      },
     );
     expect(result.name).toBe('New Name');
     expect(result.description).toBe('New desc');
@@ -18,7 +23,12 @@ describe('buildScheduleUpdateInput', () => {
   it('defaults name and description to null when not provided', () => {
     const result = buildScheduleUpdateInput(
       {},
-      { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: false },
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: false,
+      },
     );
     expect(result.name).toBe(null);
     expect(result.description).toBe(null);
@@ -27,7 +37,12 @@ describe('buildScheduleUpdateInput', () => {
   it('uses normalized schedule fields regardless of parsed values', () => {
     const result = buildScheduleUpdateInput(
       { scheduleType: 'should-be-ignored' },
-      { scheduleType: 'date', cronExpression: null, scheduledDate: 1700000000, wakeWhenRunning: false },
+      {
+        scheduleType: 'date',
+        cronExpression: null,
+        scheduledDate: 1700000000,
+        wakeWhenRunning: false,
+      },
     );
     expect(result.scheduleType).toBe('date');
     expect(result.cronExpression).toBe(null);
@@ -38,7 +53,12 @@ describe('buildScheduleUpdateInput', () => {
   it('uses parsed timezone when provided', () => {
     const result = buildScheduleUpdateInput(
       { timezone: 'Europe/Lisbon' },
-      { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: true },
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: true,
+      },
     );
     expect(result.timezone).toBe('Europe/Lisbon');
   });
@@ -46,7 +66,12 @@ describe('buildScheduleUpdateInput', () => {
   it('defaults timezone to null when not provided', () => {
     const result = buildScheduleUpdateInput(
       {},
-      { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: true },
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: true,
+      },
     );
     expect(result.timezone).toBe(null);
   });
@@ -54,7 +79,12 @@ describe('buildScheduleUpdateInput', () => {
   it('uses parsed content when provided', () => {
     const result = buildScheduleUpdateInput(
       { content: 'Do the thing' },
-      { scheduleType: 'date', cronExpression: null, scheduledDate: 1700000000, wakeWhenRunning: false },
+      {
+        scheduleType: 'date',
+        cronExpression: null,
+        scheduledDate: 1700000000,
+        wakeWhenRunning: false,
+      },
     );
     expect(result.content).toBe('Do the thing');
   });
@@ -62,16 +92,37 @@ describe('buildScheduleUpdateInput', () => {
   it('defaults content to null when not provided', () => {
     const result = buildScheduleUpdateInput(
       {},
-      { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: true },
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: true,
+      },
     );
     expect(result.content).toBe(null);
   });
 
   it('passes through isActive from parsed input', () => {
-    const active = buildScheduleUpdateInput({}, { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: true });
+    const active = buildScheduleUpdateInput(
+      {},
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: true,
+      },
+    );
     expect(active.isActive).toBe(undefined);
 
-    const withActive = buildScheduleUpdateInput({ isActive: false }, { scheduleType: 'cron', cronExpression: '0 9 * * *', scheduledDate: null, wakeWhenRunning: true });
+    const withActive = buildScheduleUpdateInput(
+      { isActive: false },
+      {
+        scheduleType: 'cron',
+        cronExpression: '0 9 * * *',
+        scheduledDate: null,
+        wakeWhenRunning: true,
+      },
+    );
     expect(withActive.isActive).toBe(false);
   });
 });
@@ -121,7 +172,11 @@ describe('buildScheduleRollbackInput', () => {
   });
 
   it('preserves wakeWhenRunning and isActive flags', () => {
-    const inactive = buildScheduleRollbackInput({ ...base, isActive: false, wakeWhenRunning: false });
+    const inactive = buildScheduleRollbackInput({
+      ...base,
+      isActive: false,
+      wakeWhenRunning: false,
+    });
     expect(inactive.isActive).toBe(false);
     expect(inactive.wakeWhenRunning).toBe(false);
   });

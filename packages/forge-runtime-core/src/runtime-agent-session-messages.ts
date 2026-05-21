@@ -6,38 +6,40 @@ import type { ConversationMessage, ConversationStore } from 'agent-runtime-core/
 export type RuntimeSessionModelMessage =
   | {
       role: 'assistant' | 'system' | 'user';
-      content: string | Array<
-        | {
-            type: 'text';
-            text: string;
-          }
-        | {
-            type: 'reasoning';
-            text: string;
-            providerOptions?: {
-              anthropic?: {
-                signature?: string;
-                redactedData?: string;
-              };
-            };
-            providerMetadata?: {
-              anthropic?: {
-                signature?: string;
-                redactedData?: string;
-              };
-            };
-          }
-        | {
-            type: 'image';
-            image: string;
-          }
-        | {
-            type: 'tool-call';
-            toolCallId: string;
-            toolName: string;
-            input: unknown;
-          }
-      >;
+      content:
+        | string
+        | Array<
+            | {
+                type: 'text';
+                text: string;
+              }
+            | {
+                type: 'reasoning';
+                text: string;
+                providerOptions?: {
+                  anthropic?: {
+                    signature?: string;
+                    redactedData?: string;
+                  };
+                };
+                providerMetadata?: {
+                  anthropic?: {
+                    signature?: string;
+                    redactedData?: string;
+                  };
+                };
+              }
+            | {
+                type: 'image';
+                image: string;
+              }
+            | {
+                type: 'tool-call';
+                toolCallId: string;
+                toolName: string;
+                input: unknown;
+              }
+          >;
     }
   | {
       role: 'tool';
@@ -60,7 +62,9 @@ export async function ensureRuntimeSessionThread(input: {
   if (existingThread) {
     await input.store.upsertThread({
       ...existingThread,
-      participantIds: existingThread.participantIds?.length ? existingThread.participantIds : [input.agentId],
+      participantIds: existingThread.participantIds?.length
+        ? existingThread.participantIds
+        : [input.agentId],
       updatedAt: now,
     });
     return;
@@ -89,10 +93,12 @@ export async function appendRuntimeSessionPromptMessages(input: {
       threadId: input.threadId,
       role: message.role,
       authorId: message.role === 'assistant' ? input.agentId : undefined,
-      parts: [{
-        type: 'text',
-        text: message.content,
-      }],
+      parts: [
+        {
+          type: 'text',
+          text: message.content,
+        },
+      ],
       createdAt: new Date().toISOString(),
     });
   }
@@ -168,7 +174,8 @@ function toConversationMessage(input: {
       }
 
       if (part.type === 'reasoning') {
-        const anthropicReasoningMetadata = part.providerOptions?.anthropic ?? part.providerMetadata?.anthropic;
+        const anthropicReasoningMetadata =
+          part.providerOptions?.anthropic ?? part.providerMetadata?.anthropic;
 
         parts.push({
           type: 'reasoning' as const,
@@ -204,22 +211,23 @@ function toConversationMessage(input: {
     role: input.message.role,
     authorId: input.message.role === 'assistant' ? input.assistantAuthorId : undefined,
     parts,
-    metadata: toolInvocations.length > 0
-      ? {
-          toolInvocations,
-        }
-      : undefined,
+    metadata:
+      toolInvocations.length > 0
+        ? {
+            toolInvocations,
+          }
+        : undefined,
     createdAt,
   };
 }
 
 function unwrapToolOutput(output: unknown) {
   if (
-    typeof output === 'object'
-    && output !== null
-    && 'type' in output
-    && 'value' in output
-    && output.type === 'json'
+    typeof output === 'object' &&
+    output !== null &&
+    'type' in output &&
+    'value' in output &&
+    output.type === 'json'
   ) {
     return (output as { value: unknown }).value;
   }

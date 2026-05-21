@@ -23,12 +23,22 @@ async function main() {
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
 async function resetAgentIndexes(workspaceBasePath: string, agentId: string) {
-  forgeDebug({ scope: 'reset-embedder', level: 'info', message: 'Processing agent', context: { agentId } });
+  forgeDebug({
+    scope: 'reset-embedder',
+    level: 'info',
+    message: 'Processing agent',
+    context: { agentId },
+  });
   await resetAgentEmbedderIndexes(workspaceBasePath, agentId);
   // Indexes reset logged above
 }
 
 main().catch((error) => {
-  forgeDebug({ scope: 'reset-embedder', level: 'error', message: 'Failed to reset embedder indexes', context: { error: String(serializeError(error)) } });
+  forgeDebug({
+    scope: 'reset-embedder',
+    level: 'error',
+    message: 'Failed to reset embedder indexes',
+    context: { error: String(serializeError(error)) },
+  });
   process.exit(1);
 });

@@ -180,4 +180,3 @@ export function createScheduleLifecycle(deps: ScheduleLifecycleDeps): ScheduleLi
 
   return { loadAll, cancel: cancelJob, stop, register };
 }
-

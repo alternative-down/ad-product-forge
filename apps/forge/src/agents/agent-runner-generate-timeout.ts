@@ -7,7 +7,6 @@
 
 import { FIFTEEN_MINUTES_MS } from './time-constants';
 
-
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 
 export interface GenerateTimeoutHandle {

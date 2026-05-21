@@ -1,5 +1,8 @@
 import type { RetrievedDocument } from '../retrieval/contracts.js';
-import { RetrievalRefreshController, type RetrievalRefreshSnapshot } from '../retrieval/refresh-controller.js';
+import {
+  RetrievalRefreshController,
+  type RetrievalRefreshSnapshot,
+} from '../retrieval/refresh-controller.js';
 
 import type {
   LongTermMemoryDocument,
@@ -53,10 +56,7 @@ export class SourceBackedLongTermMemory implements LongTermMemoryStore, LongTerm
   private readonly store: LongTermMemoryStore;
   private readonly recallEngine: RefreshableLongTermMemoryRecall;
 
-  constructor(options: {
-    store: LongTermMemoryStore;
-    recall: RefreshableLongTermMemoryRecall;
-  }) {
+  constructor(options: { store: LongTermMemoryStore; recall: RefreshableLongTermMemoryRecall }) {
     this.store = options.store;
     this.recallEngine = options.recall;
   }

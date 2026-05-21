@@ -132,8 +132,24 @@ describe('createInternalChatProvider', () => {
   describe('listContacts', () => {
     it('excludes the current agent from results', async () => {
       const accounts = [
-        { id: 'acc-1', agentId: 'agent-1', slug: 'self', displayName: 'Self', description: null, createdAt: 0, updatedAt: 0 },
-        { id: 'acc-2', agentId: 'agent-2', slug: 'other', displayName: 'Other', description: null, createdAt: 0, updatedAt: 0 },
+        {
+          id: 'acc-1',
+          agentId: 'agent-1',
+          slug: 'self',
+          displayName: 'Self',
+          description: null,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+        {
+          id: 'acc-2',
+          agentId: 'agent-2',
+          slug: 'other',
+          displayName: 'Other',
+          description: null,
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ];
       const svc = makeService({
         listAccounts: vi.fn().mockResolvedValue(accounts),
@@ -147,20 +163,30 @@ describe('createInternalChatProvider', () => {
 
     it('maps returned accounts to contact views', async () => {
       const accounts = [
-        { id: 'acc-1', agentId: 'agent-2', slug: 'kael', displayName: 'Kaelen', description: 'Test', createdAt: 0, updatedAt: 0 },
+        {
+          id: 'acc-1',
+          agentId: 'agent-2',
+          slug: 'kael',
+          displayName: 'Kaelen',
+          description: 'Test',
+          createdAt: 0,
+          updatedAt: 0,
+        },
       ];
       const svc = makeService({ listAccounts: vi.fn().mockResolvedValue(accounts) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
       const result = await provider.listContacts!();
 
-      expect(result).toEqual([{
-        targetKey: 'agent-2',
-        slug: 'kael',
-        displayName: 'Kaelen',
-        description: 'Test',
-        metadata: { slug: 'kael' },
-      }]);
+      expect(result).toEqual([
+        {
+          targetKey: 'agent-2',
+          slug: 'kael',
+          displayName: 'Kaelen',
+          description: 'Test',
+          metadata: { slug: 'kael' },
+        },
+      ]);
     });
 
     it('returns empty array when no other accounts exist', async () => {
@@ -207,7 +233,14 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getMessages: vi.fn().mockResolvedValue(messages) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      await provider.getMessages!({ targetKey: 'conv-1', limit: 10, offset: 5, query: 'hello', dateFrom: '1000', dateTo: '2000' });
+      await provider.getMessages!({
+        targetKey: 'conv-1',
+        limit: 10,
+        offset: 5,
+        query: 'hello',
+        dateFrom: '1000',
+        dateTo: '2000',
+      });
 
       expect(svc.getMessages).toHaveBeenCalledWith({
         agentId: 'agent-1',
@@ -236,12 +269,21 @@ describe('createInternalChatProvider', () => {
       const svc = makeService({ getAccountByAgentId: vi.fn().mockResolvedValue(null) });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      await expect(provider.sendMessage!({ targetKey: 'conv-1', content: 'hello', attachments: [] }))
-        .rejects.toThrow('Internal chat account not found for agent: agent-1');
+      await expect(
+        provider.sendMessage!({ targetKey: 'conv-1', content: 'hello', attachments: [] }),
+      ).rejects.toThrow('Internal chat account not found for agent: agent-1');
     });
 
     it('calls sendMessage with account id and message fields', async () => {
-      const account = { id: 'acc-1', agentId: 'agent-1', slug: 'aldric', displayName: 'Aldric', description: null, createdAt: 0, updatedAt: 0 };
+      const account = {
+        id: 'acc-1',
+        agentId: 'agent-1',
+        slug: 'aldric',
+        displayName: 'Aldric',
+        description: null,
+        createdAt: 0,
+        updatedAt: 0,
+      };
       const sent = { messageId: 'msg-new', conversationKey: 'conv-1' };
       const svc = makeService({
         getAccountByAgentId: vi.fn().mockResolvedValue(account),
@@ -265,7 +307,15 @@ describe('createInternalChatProvider', () => {
     });
 
     it('maps returned conversationKey to targetKey in response', async () => {
-      const account = { id: 'acc-1', agentId: 'agent-1', slug: 'aldric', displayName: 'Aldric', description: null, createdAt: 0, updatedAt: 0 };
+      const account = {
+        id: 'acc-1',
+        agentId: 'agent-1',
+        slug: 'aldric',
+        displayName: 'Aldric',
+        description: null,
+        createdAt: 0,
+        updatedAt: 0,
+      };
       const sent = { messageId: 'msg-x', conversationKey: 'different-conv' };
       const svc = makeService({
         getAccountByAgentId: vi.fn().mockResolvedValue(account),
@@ -273,7 +323,11 @@ describe('createInternalChatProvider', () => {
       });
       const provider = createInternalChatProvider({ agentId: 'agent-1', internalChat: svc });
 
-      const result = await provider.sendMessage!({ targetKey: 'any', content: 'hi', attachments: [] });
+      const result = await provider.sendMessage!({
+        targetKey: 'any',
+        content: 'hi',
+        attachments: [],
+      });
 
       expect(result.targetKey).toBe('different-conv');
       expect(result.messageId).toBe('msg-x');

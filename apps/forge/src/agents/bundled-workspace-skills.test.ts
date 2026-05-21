@@ -18,9 +18,10 @@ const mockReplies: {
 
 const fsMocks = vi.hoisted(() => ({
   access: vi.fn<() => Promise<void>>(() => {
-    if (mockReplies.access.length === 0) return Promise.reject(new Error('access not mocked')) as never;
+    if (mockReplies.access.length === 0)
+      return Promise.reject(new Error('access not mocked')) as never;
     const err = mockReplies.access.shift()!;
-    return err ? Promise.reject(err) : Promise.resolve() as never;
+    return err ? Promise.reject(err) : (Promise.resolve() as never);
   }),
   readdir: vi.fn<() => Promise<ReaddirEntry[]>>(() => {
     if (mockReplies.readdir.length === 0) return Promise.resolve([]) as never;
@@ -32,9 +33,10 @@ const fsMocks = vi.hoisted(() => ({
   }),
   mkdir: vi.fn<() => Promise<void>>(),
   copyFile: vi.fn<() => Promise<void>>(() => {
-    if (mockReplies.copyFile.length === 0) return Promise.reject(new Error('copyFile not mocked')) as never;
+    if (mockReplies.copyFile.length === 0)
+      return Promise.reject(new Error('copyFile not mocked')) as never;
     const err = mockReplies.copyFile.shift()!;
-    return err ? Promise.reject(err) : Promise.resolve() as never;
+    return err ? Promise.reject(err) : (Promise.resolve() as never);
   }),
 }));
 
@@ -138,9 +140,9 @@ describe('resolveBundledSkillRoot', () => {
     pushReplies({
       access: [new Error('ENOENT'), new Error('ENOENT'), new Error('ENOENT')],
     });
-    await expect(
-      bundledWorkspaceSkills.resolveBundledSkillRoot('github-api'),
-    ).rejects.toThrow('Bundled skill source not found');
+    await expect(bundledWorkspaceSkills.resolveBundledSkillRoot('github-api')).rejects.toThrow(
+      'Bundled skill source not found',
+    );
     expect(fsMocks.access).toHaveBeenCalledTimes(3);
   });
 
@@ -149,9 +151,7 @@ describe('resolveBundledSkillRoot', () => {
     pushReplies({
       access: [new Error('ENOENT'), new Error('ENOENT'), new Error('ENOENT')],
     });
-    await expect(
-      bundledWorkspaceSkills.resolveBundledSkillRoot('github-api'),
-    ).rejects.toThrow();
+    await expect(bundledWorkspaceSkills.resolveBundledSkillRoot('github-api')).rejects.toThrow();
     expect(forgeDebug).toHaveBeenCalled();
   });
 });
@@ -167,9 +167,7 @@ describe('copyDirectoryContents', () => {
   it('copies files to target', async () => {
     pushReplies({
       readdir: [
-        [
-          { name: 'file.txt', isDirectory: () => false, isFile: () => true } as ReaddirEntry,
-        ],
+        [{ name: 'file.txt', isDirectory: () => false, isFile: () => true } as ReaddirEntry],
       ],
       copyFile: [null as any],
     });
@@ -200,9 +198,7 @@ describe('copyDirectoryContents', () => {
   it('propagates copyFile error', async () => {
     pushReplies({
       readdir: [
-        [
-          { name: 'file.txt', isDirectory: () => false, isFile: () => true } as ReaddirEntry,
-        ],
+        [{ name: 'file.txt', isDirectory: () => false, isFile: () => true } as ReaddirEntry],
       ],
       copyFile: [new Error('EACCES')],
     });
@@ -216,8 +212,16 @@ describe('ensureBundledWorkspaceSkills', () => {
     // Each skill: access (resolveBundledSkillRoot) + readdir+readFile (installBundledSkill)
     pushReplies({
       access: [null as any, null as any, null as any],
-      readdir: [[{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as ReaddirEntry], [], []],
-      readFile: [`---\nname: github-api\n---\n# Skill`, `---\nname: coolify-api\n---\n# Skill`, `---\nname: skills-creator\n---\n# Skill`],
+      readdir: [
+        [{ name: 'SKILL.md', isDirectory: () => false, isFile: () => true } as ReaddirEntry],
+        [],
+        [],
+      ],
+      readFile: [
+        `---\nname: github-api\n---\n# Skill`,
+        `---\nname: coolify-api\n---\n# Skill`,
+        `---\nname: skills-creator\n---\n# Skill`,
+      ],
       copyFile: [null as any],
     });
     await bundledWorkspaceSkills.ensureBundledWorkspaceSkills('/agent/workspace');

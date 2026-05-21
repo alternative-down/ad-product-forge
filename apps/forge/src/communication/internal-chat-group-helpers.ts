@@ -1,10 +1,10 @@
-import { and, eq, sql } from "drizzle-orm";
-import type { Database } from "../database/client";
+import { and, eq, sql } from 'drizzle-orm';
+import type { Database } from '../database/client';
 import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
-} from "../database/schema";
+} from '../database/schema';
 
 /**
  * internal-chat-group-helpers.ts
@@ -13,7 +13,7 @@ import {
  * Each function corresponds to one discrete sub-concern within the
  * group create/update flow.
  */
-import { createId } from "../utils/id";
+import { createId } from '../utils/id';
 
 export type ResolvedGroupMember = {
   accountId: string;
@@ -37,7 +37,7 @@ export async function resolveChatGroupMembers(
   for (const member of members) {
     const participant = (await db.query.internalChatAccounts.findFirst({
       where: eq(
-        (sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})` as any),
+        sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})` as any,
         member.participantKey,
       ),
     })) as any;
@@ -51,7 +51,7 @@ export async function resolveChatGroupMembers(
       participantKey: participant.agentId ?? participant.slug,
       participantSlug: participant.slug,
       participantName: participant.displayName,
-      role: member.role ?? "normal",
+      role: member.role ?? 'normal',
     });
   }
 
@@ -61,7 +61,7 @@ export async function resolveChatGroupMembers(
     participantKey: actorAccount.agentId ?? actorAccount.slug,
     participantSlug: actorAccount.slug,
     participantName: actorAccount.displayName,
-    role: "admin",
+    role: 'admin',
   });
 
   return desiredMembers;
@@ -80,20 +80,20 @@ export async function createChatGroupIfNeeded(
 ): Promise<void> {
   await tx.insert(internalChatConversations).values({
     id: groupId,
-    type: "group",
+    type: 'group',
     name,
     createdByAccountId: actorAccount.id,
     createdAt: now,
     updatedAt: now,
   });
 
-  await tx.insert(internalChatConversationMembers).values(({
+  await tx.insert(internalChatConversationMembers).values({
     conversationId: groupId,
     accountId: actorAccount.id,
-    role: "admin",
+    role: 'admin',
     createdAt: now,
     updatedAt: now,
-  } as any));
+  } as any);
 }
 
 /**
@@ -147,25 +147,23 @@ export async function syncChatGroupMembers(
     const existingMember = existingByAccountId.get(desiredMember.accountId);
 
     if (existingMember === null || existingMember === undefined) {
-      await tx
-        .insert(internalChatConversationMembers)
-        .values(({
-          conversationId: groupId,
-          accountId: desiredMember.accountId,
-          role: desiredMember.role,
-          createdAt: now,
-          updatedAt: now,
-        } as any));
-  if ((existingMember as any).role !== desiredMember.role)
-      await tx
-        .update(internalChatConversationMembers)
-        .set({ role: desiredMember.role })
-        .where(
-          and(
-            eq(internalChatConversationMembers.conversationId, groupId),
-            eq(internalChatConversationMembers.accountId, desiredMember.accountId),
-          ),
-        );
+      await tx.insert(internalChatConversationMembers).values({
+        conversationId: groupId,
+        accountId: desiredMember.accountId,
+        role: desiredMember.role,
+        createdAt: now,
+        updatedAt: now,
+      } as any);
+      if ((existingMember as any).role !== desiredMember.role)
+        await tx
+          .update(internalChatConversationMembers)
+          .set({ role: desiredMember.role })
+          .where(
+            and(
+              eq(internalChatConversationMembers.conversationId, groupId),
+              eq(internalChatConversationMembers.accountId, desiredMember.accountId),
+            ),
+          );
     }
   }
 

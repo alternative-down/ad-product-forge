@@ -1,4 +1,3 @@
-
 export type NormalizedScheduleUpdate = {
   scheduleType: string;
   cronExpression: string | null | undefined;
@@ -56,28 +55,31 @@ export function normalizeScheduleUpdate(
   parseScheduleDate: (input: string) => number,
 ): NormalizedScheduleUpdate {
   const scheduleType = parsed.scheduleType ?? existing.scheduleType;
-  const cronExpression = parsed.cronExpression === undefined
-    ? existing.cronExpression
-    : parsed.cronExpression ?? undefined;
-  const scheduledDateRaw = parsed.scheduledDate === undefined
-    ? existing.scheduledDate
-    : parsed.scheduledDate === null
-      ? undefined
-      : parseScheduleDate(parsed.scheduledDate);
+  const cronExpression =
+    parsed.cronExpression === undefined
+      ? existing.cronExpression
+      : (parsed.cronExpression ?? undefined);
+  const scheduledDateRaw =
+    parsed.scheduledDate === undefined
+      ? existing.scheduledDate
+      : parsed.scheduledDate === null
+        ? undefined
+        : parseScheduleDate(parsed.scheduledDate);
 
   const shouldRequireFutureDate =
     scheduleType === 'date' &&
-    (
-      parsed.scheduledDate !== undefined ||
+    (parsed.scheduledDate !== undefined ||
       parsed.scheduleType !== undefined ||
-      parsed.isActive === true
-    );
+      parsed.isActive === true);
 
   return {
     scheduleType,
     cronExpression: scheduleType === 'cron' ? (cronExpression ?? null) : null,
-    scheduledDate: scheduleType === 'date' ? (scheduledDateRaw as number ?? null) : null,
-    wakeWhenRunning: scheduleType === 'cron' ? ((parsed as any).wakeWhenRunning ?? (existing as any).wakeWhenRunning) : true,
+    scheduledDate: scheduleType === 'date' ? ((scheduledDateRaw as number) ?? null) : null,
+    wakeWhenRunning:
+      scheduleType === 'cron'
+        ? ((parsed as any).wakeWhenRunning ?? (existing as any).wakeWhenRunning)
+        : true,
     shouldRequireFutureDate,
     parsedScheduledDate: scheduledDateRaw as number,
   };
@@ -124,9 +126,7 @@ export function buildScheduleUpdateInput(
  * Builds the rollback payload from the existing schedule state.
  * Used by error-recovery paths in updateSchedule and updateOwnedSchedule.
  */
-export function buildScheduleRollbackInput(
-  existing: ExistingScheduleFields,
-): {
+export function buildScheduleRollbackInput(existing: ExistingScheduleFields): {
   name: string;
   description: string | null;
   scheduleType: string;

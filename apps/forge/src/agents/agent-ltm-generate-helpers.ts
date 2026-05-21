@@ -33,13 +33,25 @@ export function createMemoryAgentInstructions(input: {
       '<owner_agent_profile>',
       `- Agent id: ${input.agentId}`,
       `- Agent name: ${input.agentName}`,
-      input.agentDescription !== null && input.agentDescription !== undefined && input.agentDescription.trim() ? `- Agent description: ${input.agentDescription.trim()}` : null,
-      input.roleName !== null && input.roleName !== undefined && input.roleName.trim() ? `- Role name: ${input.roleName.trim()}` : null,
-      input.roleDescription !== null && input.roleDescription !== undefined && input.roleDescription.trim() ? `- Role description: ${input.roleDescription.trim()}` : null,
+      input.agentDescription !== null &&
+      input.agentDescription !== undefined &&
+      input.agentDescription.trim()
+        ? `- Agent description: ${input.agentDescription.trim()}`
+        : null,
+      input.roleName !== null && input.roleName !== undefined && input.roleName.trim()
+        ? `- Role name: ${input.roleName.trim()}`
+        : null,
+      input.roleDescription !== null &&
+      input.roleDescription !== undefined &&
+      input.roleDescription.trim()
+        ? `- Role description: ${input.roleDescription.trim()}`
+        : null,
       '- Assigned instructions:',
       input.instructions.trim(),
       '</owner_agent_profile>',
-    ].filter(Boolean).join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
     'You are free to explore the workspace broadly and decide for yourself what deserves consolidation, restructuring, rewriting, splitting, merging, or expansion.',
     'Do not be lazy. Take as much time as needed for the activity, inspect things carefully, revisit relationships between documents, compare evidence from different places, and try better structures when the current one looks weak.',
     'You should not become passive or merely preserve what already exists. If the current memory base is weak, shallow, repetitive, badly named, badly structured, or missing useful connections, improve it.',
@@ -54,11 +66,14 @@ export function createMemoryAgentInstructions(input: {
     'Do not create files outside `memory` and `workspace/skills`.',
     'When repeated procedures justify a reusable skill, use the `skill-creator` skill to create or update it.',
     'A skill is only valid if the skill folder name matches the skill name declared inside its `SKILL.md` file.',
-  ].filter(Boolean).join('\n\n');
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 export function getUsageFromGenerateResult(result: { usage?: unknown }): LtmUsage {
-  if (result.usage === null || result.usage === undefined) return { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 };
+  if (result.usage === null || result.usage === undefined)
+    return { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 };
   if (typeof result.usage === 'object' && result.usage !== null) {
     const u = result.usage as Record<string, unknown>;
     return {

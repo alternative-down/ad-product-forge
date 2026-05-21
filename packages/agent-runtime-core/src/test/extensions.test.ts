@@ -62,14 +62,18 @@ describe('extensions', () => {
       }),
     });
 
-    runtime.use(createStaticContextPlugin({
-      entries: [{
-        id: 'static',
-        kind: 'static',
-        title: 'Global Instructions',
-        text: 'Always stay concise.',
-      }],
-    }));
+    runtime.use(
+      createStaticContextPlugin({
+        entries: [
+          {
+            id: 'static',
+            kind: 'static',
+            title: 'Global Instructions',
+            text: 'Always stay concise.',
+          },
+        ],
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',
@@ -98,19 +102,21 @@ describe('extensions', () => {
       }),
     });
 
-    runtime.use(createInMemoryRecallPlugin({
-      maxItems: 2,
-      dedupeWindow: 5,
-      buildQuery() {
-        return 'smith';
-      },
-      retrieve() {
-        return [
-          { id: 'doc-1', text: 'Blacksmith pricing rules', score: 0.95 },
-          { id: 'doc-2', text: 'Iron supplier notes', score: 0.88 },
-        ];
-      },
-    }));
+    runtime.use(
+      createInMemoryRecallPlugin({
+        maxItems: 2,
+        dedupeWindow: 5,
+        buildQuery() {
+          return 'smith';
+        },
+        retrieve() {
+          return [
+            { id: 'doc-1', text: 'Blacksmith pricing rules', score: 0.95 },
+            { id: 'doc-2', text: 'Iron supplier notes', score: 0.88 },
+          ];
+        },
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',
@@ -126,10 +132,7 @@ describe('extensions', () => {
       },
     });
 
-    expect(recallTitles).toEqual([
-      'Recall 1 - score 0.95',
-      'Recall 2 - score 0.88',
-    ]);
+    expect(recallTitles).toEqual(['Recall 1 - score 0.95', 'Recall 2 - score 0.88']);
   });
 
   it('injects recent input history without requiring a journal', async () => {
@@ -151,9 +154,11 @@ describe('extensions', () => {
       }),
     });
 
-    runtime.use(createRecentInputsPlugin({
-      maxInputs: 3,
-    }));
+    runtime.use(
+      createRecentInputsPlugin({
+        maxInputs: 3,
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',

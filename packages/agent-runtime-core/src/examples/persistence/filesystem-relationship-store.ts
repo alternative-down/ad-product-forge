@@ -1,7 +1,10 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { RelationshipRecord, RelationshipStore } from '../domain/relationships/relationship-store.js';
+import type {
+  RelationshipRecord,
+  RelationshipStore,
+} from '../domain/relationships/relationship-store.js';
 
 export type FilesystemRelationshipStoreOptions = {
   basePath: string;
@@ -16,11 +19,7 @@ export class FilesystemRelationshipStore implements RelationshipStore {
 
   async upsert(record: RelationshipRecord): Promise<void> {
     await mkdir(this.basePath, { recursive: true });
-    await writeFile(
-      this.getFilePath(record),
-      JSON.stringify(record, null, 2),
-      'utf8',
-    );
+    await writeFile(this.getFilePath(record), JSON.stringify(record, null, 2), 'utf8');
   }
 
   async readBetween(input: {
@@ -46,9 +45,7 @@ export class FilesystemRelationshipStore implements RelationshipStore {
   async readForActor(actorId: string): Promise<RelationshipRecord[]> {
     const records = await this.list();
 
-    return records.filter((record) => (
-      record.sourceId === actorId || record.targetId === actorId
-    ));
+    return records.filter((record) => record.sourceId === actorId || record.targetId === actorId);
   }
 
   async list(): Promise<RelationshipRecord[]> {
@@ -72,9 +69,6 @@ export class FilesystemRelationshipStore implements RelationshipStore {
   }
 
   private getFilePath(record: Pick<RelationshipRecord, 'sourceId' | 'targetId' | 'kind'>) {
-    return join(
-      this.basePath,
-      `${record.sourceId}--${record.targetId}--${record.kind}.json`,
-    );
+    return join(this.basePath, `${record.sourceId}--${record.targetId}--${record.kind}.json`);
   }
 }

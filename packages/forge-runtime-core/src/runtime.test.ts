@@ -2,10 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  FakeStepModelAdapter,
-  InMemoryConversationStore,
-} from 'agent-runtime-core/integrations';
+import { FakeStepModelAdapter, InMemoryConversationStore } from 'agent-runtime-core/integrations';
 import { z } from 'zod';
 
 import { createForgeAgentRuntime } from './runtime.js';
@@ -30,8 +27,7 @@ describe('createForgeAgentRuntime', () => {
         continuation: 'stop',
       })),
       conversationStore,
-      memory: {
-      },
+      memory: {},
     });
 
     try {
@@ -76,10 +72,7 @@ describe('createForgeAgentRuntime', () => {
 
       const checkpointedState = await runtime.memory.getState();
 
-      expect(checkpointedState?.recentMessageIds).toEqual([
-        messages[0]?.id,
-        messages[1]?.id,
-      ]);
+      expect(checkpointedState?.recentMessageIds).toEqual([messages[0]?.id, messages[1]?.id]);
       expect(checkpointedState?.metrics.recentMessageCount).toBe(2);
     } finally {
       await runtime.dispose();
@@ -98,40 +91,45 @@ describe('createForgeAgentRuntime', () => {
         if (request.stepNumber === 1) {
           return {
             segments: [],
-            actionRequests: [{
-              name: 'sum',
-              input: {
-                left: 2,
-                right: 3,
+            actionRequests: [
+              {
+                name: 'sum',
+                input: {
+                  left: 2,
+                  right: 3,
+                },
               },
-            }],
+            ],
             continuation: 'continue',
           };
         }
 
         return {
-          segments: [{
-            kind: 'message',
-            text: 'Done.',
-          }],
+          segments: [
+            {
+              kind: 'message',
+              text: 'Done.',
+            },
+          ],
           actionRequests: [],
           continuation: 'stop',
         };
       }),
       conversationStore,
-      memory: {
-      },
-      runtimeActions: [{
-        name: 'sum',
-        description: 'Add two integers',
-        inputSchema: z.object({
-          left: z.number(),
-          right: z.number(),
-        }),
-        execute(input: { left: number; right: number }) {
-          return input.left + input.right;
+      memory: {},
+      runtimeActions: [
+        {
+          name: 'sum',
+          description: 'Add two integers',
+          inputSchema: z.object({
+            left: z.number(),
+            right: z.number(),
+          }),
+          execute(input: { left: number; right: number }) {
+            return input.left + input.right;
+          },
         },
-      }],
+      ],
     });
 
     try {
@@ -163,17 +161,21 @@ describe('createForgeAgentRuntime', () => {
       expect(messages[1]?.role).toBe('assistant');
       expect(messages[1]?.parts).toEqual([]);
       expect(messages[1]?.metadata).toMatchObject({
-        toolInvocations: [{
-          toolName: 'sum',
-          args: {
-            left: 2,
-            right: 3,
+        toolInvocations: [
+          {
+            toolName: 'sum',
+            args: {
+              left: 2,
+              right: 3,
+            },
           },
-        }],
-        toolResults: [{
-          toolName: 'sum',
-          result: 5,
-        }],
+        ],
+        toolResults: [
+          {
+            toolName: 'sum',
+            result: 5,
+          },
+        ],
       });
     } finally {
       await runtime.dispose();

@@ -51,7 +51,6 @@ function setupFetch(response: MockResponse) {
 // ─── Test suite ─────────────────────────────────────────────────────────────
 
 describe('MiniMaxClient', () => {
-
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -62,10 +61,12 @@ describe('MiniMaxClient', () => {
   describe('textToSpeech', () => {
     it('returns audio hex on successful response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { audio: 'DEADBEEF' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'DEADBEEF' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({ text: 'Hello world' });
@@ -76,10 +77,12 @@ describe('MiniMaxClient', () => {
 
     it('returns success when data.data.audio is present (nested path)', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { audio: "NESTED123" }
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'NESTED123' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({ text: 'Hello' });
@@ -90,9 +93,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error when base_resp status_code is non-zero', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 40001, status_msg: 'invalid request' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 40001, status_msg: 'invalid request' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({ text: 'Hello' });
@@ -104,10 +109,12 @@ describe('MiniMaxClient', () => {
 
     it('returns error when baseRespStatusCode (camelCase) is non-zero', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        baseRespStatusCode: 50000,
-        baseRespStatusMsg: 'server error',
-      }));
+      setupFetch(
+        makeJsonResponse({
+          baseRespStatusCode: 50000,
+          baseRespStatusMsg: 'server error',
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({ text: 'Hello' });
@@ -119,10 +126,12 @@ describe('MiniMaxClient', () => {
 
     it('returns error when no audio data is present', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {},
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {},
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({ text: 'Hello' });
@@ -133,9 +142,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error when data is null', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({ text: 'Hello' });
@@ -180,10 +191,12 @@ describe('MiniMaxClient', () => {
 
     it('uses custom voice settings when provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { audio: 'VOICE123' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'VOICE123' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.textToSpeech({
@@ -215,10 +228,12 @@ describe('MiniMaxClient', () => {
 
     it('uses default voice id when voiceSetting is not provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { audio: 'AUDIO' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'AUDIO' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.textToSpeech({ text: 'Hello' });
@@ -231,10 +246,12 @@ describe('MiniMaxClient', () => {
 
     it('handles voice settings with only voiceId provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { audio: 'AUDIO' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'AUDIO' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.textToSpeech({
@@ -254,44 +271,52 @@ describe('MiniMaxClient', () => {
   describe('listVoices', () => {
     it('parses system voices correctly', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          system_voice: [{
-            voice_id: 'voice-1',
-            voice_name: 'Voice One',
-            description: ['Desc A', 'Desc B'],
-            created_time: '2024-01-01',
-          }],
-          voice_cloning: [],
-          voice_generation: [],
-        },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            system_voice: [
+              {
+                voice_id: 'voice-1',
+                voice_name: 'Voice One',
+                description: ['Desc A', 'Desc B'],
+                created_time: '2024-01-01',
+              },
+            ],
+            voice_cloning: [],
+            voice_generation: [],
+          },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.listVoices('system');
 
       expect(result.success).toBe(true);
-      expect(result.data?.systemVoices).toEqual([{
-        voiceId: 'voice-1',
-        voiceName: 'Voice One',
-        description: ['Desc A', 'Desc B'],
-        createdTime: '2024-01-01',
-      }]);
+      expect(result.data?.systemVoices).toEqual([
+        {
+          voiceId: 'voice-1',
+          voiceName: 'Voice One',
+          description: ['Desc A', 'Desc B'],
+          createdTime: '2024-01-01',
+        },
+      ]);
       expect(result.data?.voiceCloning).toEqual([]);
       expect(result.data?.voiceGeneration).toEqual([]);
     });
 
     it('parses voice_cloning and voice_generation categories', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          system_voice: [],
-          voice_cloning: [{ voice_id: 'clone-1', description: ['clone voice'] }],
-          voice_generation: [{ voice_id: 'gen-1', description: ['gen voice'] }],
-        },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            system_voice: [],
+            voice_cloning: [{ voice_id: 'clone-1', description: ['clone voice'] }],
+            voice_generation: [{ voice_id: 'gen-1', description: ['gen voice'] }],
+          },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.listVoices('all');
@@ -303,9 +328,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error on non-zero base_resp status_code', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 40002, status_msg: 'invalid voice type' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 40002, status_msg: 'invalid voice type' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.listVoices('system');
@@ -316,17 +343,19 @@ describe('MiniMaxClient', () => {
 
     it('skips voice records without voice_id', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          system_voice: [
-            { name: 'no-id-voice' },
-            { voice_id: 'valid-voice', description: ['valid'] },
-          ],
-          voice_cloning: [],
-          voice_generation: [],
-        },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            system_voice: [
+              { name: 'no-id-voice' },
+              { voice_id: 'valid-voice', description: ['valid'] },
+            ],
+            voice_cloning: [],
+            voice_generation: [],
+          },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.listVoices('system');
@@ -338,14 +367,16 @@ describe('MiniMaxClient', () => {
 
     it('handles non-array description field gracefully', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          system_voice: [{ voice_id: 'voice-1', description: 'not an array' }],
-          voice_cloning: [],
-          voice_generation: [],
-        },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            system_voice: [{ voice_id: 'voice-1', description: 'not an array' }],
+            voice_cloning: [],
+            voice_generation: [],
+          },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.listVoices('system');
@@ -360,10 +391,12 @@ describe('MiniMaxClient', () => {
   describe('generateImage', () => {
     it('returns images on successful response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { image_base64: ['abc123', 'xyz789'] },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { image_base64: ['abc123', 'xyz789'] },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.generateImage({ prompt: 'A cat' });
@@ -374,10 +407,12 @@ describe('MiniMaxClient', () => {
 
     it('returns error when no images returned', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { image_base64: [] },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { image_base64: [] },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.generateImage({ prompt: 'A cat' });
@@ -388,9 +423,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error on non-zero base_resp status_code', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 50003, status_msg: 'rate limit exceeded' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 50003, status_msg: 'rate limit exceeded' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.generateImage({ prompt: 'A cat' });
@@ -401,10 +438,12 @@ describe('MiniMaxClient', () => {
 
     it('includes subject reference when provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { image_base64: ['base64image'] },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { image_base64: ['base64image'] },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.generateImage({
@@ -420,10 +459,12 @@ describe('MiniMaxClient', () => {
 
     it('uses default model when not provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { image_base64: ['img'] },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { image_base64: ['img'] },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.generateImage({ prompt: 'A cat' });
@@ -437,10 +478,12 @@ describe('MiniMaxClient', () => {
 
     it('applies width and height when provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { image_base64: ['img'] },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { image_base64: ['img'] },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.generateImage({ prompt: 'A cat', width: 1024, height: 768 });
@@ -458,10 +501,12 @@ describe('MiniMaxClient', () => {
   describe('createVideoGenerationTask', () => {
     it('returns taskId on successful response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { task_id: 'task-12345' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { task_id: 'task-12345' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.createVideoGenerationTask({ prompt: 'A bird' });
@@ -472,9 +517,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error on non-zero base_resp status_code', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 40003, status_msg: 'invalid prompt' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 40003, status_msg: 'invalid prompt' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.createVideoGenerationTask({ prompt: 'A bird' });
@@ -485,10 +532,12 @@ describe('MiniMaxClient', () => {
 
     it('returns error when no task_id in response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {},
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {},
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.createVideoGenerationTask({ prompt: 'A bird' });
@@ -499,10 +548,12 @@ describe('MiniMaxClient', () => {
 
     it('uses default model, duration, and resolution when not provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { task_id: 'task-abc' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { task_id: 'task-abc' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.createVideoGenerationTask({ prompt: 'A bird' });
@@ -517,10 +568,12 @@ describe('MiniMaxClient', () => {
 
     it('includes first_frame_image and last_frame_image when provided', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { task_id: 'task-xyz' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { task_id: 'task-xyz' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       await client.createVideoGenerationTask({
@@ -542,15 +595,17 @@ describe('MiniMaxClient', () => {
   describe('queryVideoGeneration', () => {
     it('returns status on successful response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          task_id: 'task-999',
-          status: 'Processing',
-          file_id: 'file-abc',
-          failure_reason: null,
-        },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            task_id: 'task-999',
+            status: 'Processing',
+            file_id: 'file-abc',
+            failure_reason: null,
+          },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.queryVideoGeneration('task-999');
@@ -566,9 +621,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error on non-zero base_resp status_code', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 40004, status_msg: 'task not found' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 40004, status_msg: 'task not found' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.queryVideoGeneration('task-999');
@@ -579,9 +636,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error when no data in response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.queryVideoGeneration('task-999');
@@ -592,14 +651,16 @@ describe('MiniMaxClient', () => {
 
     it('falls back to error_message for failure reason when failure_reason is absent', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          task_id: 'task-999',
-          status: 'Failed',
-          error_message: 'Render failed: out of memory',
-        },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            task_id: 'task-999',
+            status: 'Failed',
+            error_message: 'Render failed: out of memory',
+          },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.queryVideoGeneration('task-999');
@@ -614,15 +675,17 @@ describe('MiniMaxClient', () => {
   describe('retrieveFile', () => {
     it('returns file metadata on successful response', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          file: {
-            filename: 'video-output.mp4',
-            download_url: 'https://cdn.minimax.io/files/abc123',
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            file: {
+              filename: 'video-output.mp4',
+              download_url: 'https://cdn.minimax.io/files/abc123',
+            },
           },
-        },
-      }));
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.retrieveFile('file-abc');
@@ -637,9 +700,11 @@ describe('MiniMaxClient', () => {
 
     it('returns error on non-zero base_resp status_code', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 50004, status_msg: 'file not found' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 50004, status_msg: 'file not found' },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.retrieveFile('file-abc');
@@ -650,10 +715,12 @@ describe('MiniMaxClient', () => {
 
     it('returns error when file object is missing download_url', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { file: {} },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { file: {} },
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.retrieveFile('file-abc');
@@ -664,10 +731,12 @@ describe('MiniMaxClient', () => {
 
     it('returns error when file object is absent from data', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {},
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {},
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.retrieveFile('file-abc');
@@ -678,14 +747,16 @@ describe('MiniMaxClient', () => {
 
     it('returns fileId as provided even when filename is absent', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: {
-          file: {
-            download_url: 'https://cdn.minimax.io/files/xyz789',
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: {
+            file: {
+              download_url: 'https://cdn.minimax.io/files/xyz789',
+            },
           },
-        },
-      }));
+        }),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.retrieveFile('my-file-id');
@@ -724,9 +795,14 @@ describe('MiniMaxClient', () => {
 
     it('extracts error message from status_msg field', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        status_msg: 'custom error message from status_msg',
-      }, 500));
+      setupFetch(
+        makeJsonResponse(
+          {
+            status_msg: 'custom error message from status_msg',
+          },
+          500,
+        ),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.generateImage({ prompt: 'test' });
@@ -737,9 +813,14 @@ describe('MiniMaxClient', () => {
 
     it('extracts error message from body.message field', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        message: 'custom error from message field',
-      }, 400));
+      setupFetch(
+        makeJsonResponse(
+          {
+            message: 'custom error from message field',
+          },
+          400,
+        ),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.generateImage({ prompt: 'test' });
@@ -750,9 +831,14 @@ describe('MiniMaxClient', () => {
 
     it('extracts error message from body.error field', async () => {
       const { MiniMaxClient } = await import('./manager.js');
-      setupFetch(makeJsonResponse({
-        error: 'error field message',
-      }, 403));
+      setupFetch(
+        makeJsonResponse(
+          {
+            error: 'error field message',
+          },
+          403,
+        ),
+      );
 
       const client = new MiniMaxClient({ apiKey: 'test-key' });
       const result = await client.generateImage({ prompt: 'test' });
@@ -810,10 +896,12 @@ describe('MiniMaxClient', () => {
         getMinimaxConfig: mockGetMinimaxConfig,
       };
 
-      setupFetch(makeJsonResponse({
-        base_resp: { status_code: 0, status_msg: 'success' },
-        data: { audio: 'MANAGER_AUDIO' },
-      }));
+      setupFetch(
+        makeJsonResponse({
+          base_resp: { status_code: 0, status_msg: 'success' },
+          data: { audio: 'MANAGER_AUDIO' },
+        }),
+      );
 
       const { createMiniMaxManager } = await import('./manager.js');
       const manager = createMiniMaxManager({ integrations: mockStore as any });
@@ -833,7 +921,9 @@ describe('MiniMaxClient', () => {
       const { createMiniMaxManager } = await import('./manager.js');
       const manager = createMiniMaxManager({ integrations: mockStore as any });
 
-      await expect(manager.textToSpeech({ text: 'test' })).rejects.toThrow('MiniMax integration is not configured');
+      await expect(manager.textToSpeech({ text: 'test' })).rejects.toThrow(
+        'MiniMax integration is not configured',
+      );
     });
   });
 
@@ -853,12 +943,13 @@ describe('MiniMaxClient', () => {
 
       const { createMiniMaxClient } = await import('./manager.js');
 
-      expect(() => createMiniMaxClient()).toThrow('MINIMAX_API_KEY environment variable is not set');
+      expect(() => createMiniMaxClient()).toThrow(
+        'MINIMAX_API_KEY environment variable is not set',
+      );
 
       if (originalEnv !== undefined) {
         process.env.MINIMAX_API_KEY = originalEnv;
       }
     });
   });
-
 });

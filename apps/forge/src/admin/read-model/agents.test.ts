@@ -7,7 +7,9 @@ import { createMockDb, resetAgentReadModelMocks } from './shared-test-helpers';
 // before vi.mock factories run.
 // ---------------------------------------------------------------------
 const mockForgeDebug = vi.hoisted(() => vi.fn());
-const mockGetInternalAgentRegistry = vi.hoisted(() => vi.fn(() => ({ size: 0, list: vi.fn(() => []), get: vi.fn() })));
+const mockGetInternalAgentRegistry = vi.hoisted(() =>
+  vi.fn(() => ({ size: 0, list: vi.fn(() => []), get: vi.fn() })),
+);
 const mockReadLongTermMemoryState = vi.hoisted(() => vi.fn());
 const mockReadLongTermMemoryRecallSnapshot = vi.hoisted(() => vi.fn());
 const mockMigrateLegacyCheckpointedOmState = vi.hoisted(() => vi.fn());
@@ -31,9 +33,6 @@ vi.mock('@forge-runtime/core', () => ({
   readOperationalMemoryState: mockReadOperationalMemoryState,
 }));
 
-
-
-
 vi.mock('./agents-runtime-memory', () => ({
   getAgentRuntimeMemory: vi.fn(),
   createAgentsRuntimeMemoryReadModel: vi.fn(({ db, workspaceBasePath }) => ({
@@ -41,13 +40,14 @@ vi.mock('./agents-runtime-memory', () => ({
   })),
 }));
 
-
 vi.mock('./agents-debug', () => ({
-  createAgentDebugReadModel: vi.fn(({ db, getAgent, listRecentAgentHomeMetricSnapshots, workspaceBasePath }) => ({
-    getAgentOmDebugExport: vi.fn(),
-    debugAgentLongTermMemoryRecallSearch: vi.fn(),
-    getAgentRuntimeMemory: vi.fn(),
-  })),
+  createAgentDebugReadModel: vi.fn(
+    ({ db, getAgent, listRecentAgentHomeMetricSnapshots, workspaceBasePath }) => ({
+      getAgentOmDebugExport: vi.fn(),
+      debugAgentLongTermMemoryRecallSearch: vi.fn(),
+      getAgentRuntimeMemory: vi.fn(),
+    }),
+  ),
 }));
 
 vi.mock('./conversation-helpers', () => ({
@@ -85,8 +85,6 @@ vi.mock('../../agents/workspace-skills', () => ({
   listAgentWorkspaceSkills: mockListAgentWorkspaceSkills,
 }));
 
-
-
 vi.mock('@libsql/client', () => ({
   createClient: mockLibsqlClientCreateClient,
 }));
@@ -106,18 +104,39 @@ function makeMockDb(overrides = {}) {
 function makeMockFinance() {
   return {
     getCompanyCashBalance: vi.fn().mockResolvedValue({ balanceUsd: 1234.56 }),
-    listCompanyCashMovements: vi.fn().mockResolvedValue({ items: [], total: 0, summary: null, hasMore: false }),
-    getCompanyCashSummary: vi.fn().mockResolvedValue({ balanceUsd: 1234.56, pendingPaymentsUsd: 0, pendingReceivablesUsd: 0 }),
+    listCompanyCashMovements: vi
+      .fn()
+      .mockResolvedValue({ items: [], total: 0, summary: null, hasMore: false }),
+    getCompanyCashSummary: vi
+      .fn()
+      .mockResolvedValue({ balanceUsd: 1234.56, pendingPaymentsUsd: 0, pendingReceivablesUsd: 0 }),
     listActiveInternalAgentContracts: vi.fn().mockResolvedValue([]),
     getActiveInternalAgentContract: vi.fn().mockResolvedValue(null),
-    getActiveContractMetrics: vi.fn().mockResolvedValue({ runningAgents: 0, totalBudgetUsd: 0, usedBudgetUsd: 0 }),
+    getActiveContractMetrics: vi
+      .fn()
+      .mockResolvedValue({ runningAgents: 0, totalBudgetUsd: 0, usedBudgetUsd: 0 }),
   };
 }
 
 function makeMockInternalChat() {
   return {
-    registerAgentAccount: vi.fn().mockResolvedValue({ id: 'a1', agentId: 'a1', displayName: 'Test Agent', providerType: 'internal-chat', createdAt: Date.now() }),
-    registerExternalAccount: vi.fn().mockResolvedValue({ id: 'e1', displayName: 'Ext', providerType: 'email', createdAt: Date.now() }),
+    registerAgentAccount: vi
+      .fn()
+      .mockResolvedValue({
+        id: 'a1',
+        agentId: 'a1',
+        displayName: 'Test Agent',
+        providerType: 'internal-chat',
+        createdAt: Date.now(),
+      }),
+    registerExternalAccount: vi
+      .fn()
+      .mockResolvedValue({
+        id: 'e1',
+        displayName: 'Ext',
+        providerType: 'email',
+        createdAt: Date.now(),
+      }),
     updateExternalAccount: vi.fn().mockResolvedValue({ id: 'e1' }),
     deleteExternalAccount: vi.fn().mockResolvedValue(undefined),
     deleteAgentAccount: vi.fn().mockResolvedValue(undefined),
@@ -141,8 +160,12 @@ function makeMockInternalChat() {
     sendMessage: vi.fn().mockResolvedValue({ id: 'm1', createdAt: Date.now() }),
     getMessageAttachmentByAccount: vi.fn().mockResolvedValue(null),
     createExternalChatGroup: vi.fn().mockResolvedValue({ id: 'g1', createdAt: Date.now() }),
-    createExternalChatGroupWithMembers: vi.fn().mockResolvedValue({ id: 'g1', createdAt: Date.now() }),
-    ensureDirectConversationByAccount: vi.fn().mockResolvedValue({ id: 'c1', createdAt: Date.now() }),
+    createExternalChatGroupWithMembers: vi
+      .fn()
+      .mockResolvedValue({ id: 'g1', createdAt: Date.now() }),
+    ensureDirectConversationByAccount: vi
+      .fn()
+      .mockResolvedValue({ id: 'c1', createdAt: Date.now() }),
     addMemberToGroupByAccount: vi.fn().mockResolvedValue(undefined),
     updateMemberRoleByAccount: vi.fn().mockResolvedValue(undefined),
     removeMemberFromGroupByAccount: vi.fn().mockResolvedValue(undefined),
@@ -238,7 +261,14 @@ describe('createAgentReadModel', () => {
         updatedAt: '2024-01-01T00:00:00.000Z',
         workspaceFilesystem: null,
       };
-      const roleRow = { id: 'role-1', name: 'Developer', description: null, capabilities: null, createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' };
+      const roleRow = {
+        id: 'role-1',
+        name: 'Developer',
+        description: null,
+        capabilities: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
       const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findMany.mockResolvedValue([agentRow]);
       db.query.agentRoles.findMany.mockResolvedValue([roleRow]);
@@ -356,7 +386,17 @@ describe('createAgentReadModel', () => {
     });
 
     it('returns conversations from conversation helper', async () => {
-      const agentRow = { id: 'agent-1', name: 'A', role: null, executionState: 'absent' as const, lastExecutionError: null, lastExecutionErrorAt: null, createdAt: '', updatedAt: '', workspaceFilesystem: null };
+      const agentRow = {
+        id: 'agent-1',
+        name: 'A',
+        role: null,
+        executionState: 'absent' as const,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
+        createdAt: '',
+        updatedAt: '',
+        workspaceFilesystem: null,
+      };
       const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       mockListRecentConversations.mockResolvedValue([{ id: 'conv-1' }]);
@@ -369,8 +409,28 @@ describe('createAgentReadModel', () => {
   describe('listAgentExecutionSteps', () => {
     it('returns steps in descending order', async () => {
       const stepRows = [
-        { id: 's2', agentId: 'a1', kind: 'step', status: 'ok' as const, input: null, output: null, error: null, createdAt: '2024-01-02', updatedAt: '2024-01-02' },
-        { id: 's1', agentId: 'a1', kind: 'step', status: 'ok' as const, input: null, output: null, error: null, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+        {
+          id: 's2',
+          agentId: 'a1',
+          kind: 'step',
+          status: 'ok' as const,
+          input: null,
+          output: null,
+          error: null,
+          createdAt: '2024-01-02',
+          updatedAt: '2024-01-02',
+        },
+        {
+          id: 's1',
+          agentId: 'a1',
+          kind: 'step',
+          status: 'ok' as const,
+          input: null,
+          output: null,
+          error: null,
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-01',
+        },
       ];
       const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agentExecutionSteps.findMany.mockResolvedValue(stepRows);
@@ -404,7 +464,11 @@ describe('createAgentReadModel', () => {
     it('passes long_term_memory threadId to listThreadMessages', async () => {
       mockListThreadMessages.mockResolvedValue({ items: [], hasMore: false });
       const model = makeReadModel();
-      await model.listAgentLongTermMemoryThreadMessages({ agentId: 'my-agent', page: 0, perPage: 20 });
+      await model.listAgentLongTermMemoryThreadMessages({
+        agentId: 'my-agent',
+        page: 0,
+        perPage: 20,
+      });
       const call = mockListThreadMessages.mock.calls[0];
       expect(call[2].threadId).toBe('my_agent_long_term_memory');
     });
@@ -413,12 +477,22 @@ describe('createAgentReadModel', () => {
   describe('listRecentAgentHomeMetricSnapshots', () => {
     it('returns mapped snapshot rows', async () => {
       const snapshotRows = [
-        { id: 'snap-1', agentId: 'a1', stepId: 'step-1', stepCreatedAt: '2024-01-01', createdAt: '2024-01-01', snapshot: { foo: 'bar' } },
+        {
+          id: 'snap-1',
+          agentId: 'a1',
+          stepId: 'step-1',
+          stepCreatedAt: '2024-01-01',
+          createdAt: '2024-01-01',
+          snapshot: { foo: 'bar' },
+        },
       ];
       const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agentHomeMetricSnapshots.findMany.mockResolvedValue(snapshotRows);
       const model = makeReadModel({ db });
-      const result = (await model.listRecentAgentHomeMetricSnapshots({ agentId: 'a1', limit: 10 })) as Array<{ id: string; snapshot: unknown }>;
+      const result = (await model.listRecentAgentHomeMetricSnapshots({
+        agentId: 'a1',
+        limit: 10,
+      })) as Array<{ id: string; snapshot: unknown }>;
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('snap-1');
       expect(result[0].snapshot).toEqual({ foo: 'bar' });
@@ -433,76 +507,75 @@ describe('createAgentReadModel', () => {
     });
   });
 
-
-    it('maps MCP servers with correct configId and serverId from shared config', async () => {
-      const agentRow = {
-        id: 'agent-mcp',
-        name: 'MCP Agent',
-        role: null,
-        roleId: null,
-        modelProfileId: null,
-        omModelProfileId: null,
-        instructions: 'Test instructions',
-        executionState: 'idle' as const,
-        lastExecutionError: null,
-        lastExecutionErrorAt: null,
-        description: null,
-        workspaceAutoSync: 1,
-        workspaceBm25: 1,
-        workspaceEmbedder: 'default',
-        workspaceFilesystem: null,
-        workspaceSandbox: null,
-        workspaceSkills: null,
+  it('maps MCP servers with correct configId and serverId from shared config', async () => {
+    const agentRow = {
+      id: 'agent-mcp',
+      name: 'MCP Agent',
+      role: null,
+      roleId: null,
+      modelProfileId: null,
+      omModelProfileId: null,
+      instructions: 'Test instructions',
+      executionState: 'idle' as const,
+      lastExecutionError: null,
+      lastExecutionErrorAt: null,
+      description: null,
+      workspaceAutoSync: 1,
+      workspaceBm25: 1,
+      workspaceEmbedder: 'default',
+      workspaceFilesystem: null,
+      workspaceSandbox: null,
+      workspaceSkills: null,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    };
+    // agentMcpRows: link record (has id and serverId pointing to shared mcpServerConfigs)
+    const agentMcpRows = [
+      {
+        id: 'link-id-1',
+        agentId: 'agent-mcp',
+        serverId: 'server-id-1',
+        isActive: 1,
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-      };
-      // agentMcpRows: link record (has id and serverId pointing to shared mcpServerConfigs)
-      const agentMcpRows = [
-        {
-          id: 'link-id-1',
-          agentId: 'agent-mcp',
-          serverId: 'server-id-1',
-          isActive: 1,
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-      ];
-      // mcpServerConfigs rows: shared server (has id = 'server-id-1')
-      const mcpServerRows = [
-        {
-          id: 'server-id-1',
-          name: 'Filesystem MCP',
-          description: 'File system access',
-          transport: 'stdio',
-          command: 'npx',
-          args: '["-y","@modelcontextprotocol/server-filesystem"]',
-          envVars: null,
-          url: null,
-          headers: null,
-          version: 1,
-          isActive: 1,
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-      ];
-      const db = makeMockDb() as ReturnType<typeof createMockDb>;
-      db.query.agents.findFirst.mockResolvedValue(agentRow);
-      db.query.agentRoles.findMany.mockResolvedValue([]);
-      db.query.llmProfiles.findMany.mockResolvedValue([]);
-      db.query.agentExecutionSteps.findMany.mockResolvedValue([]);
-      db.query.agentMcpConfigs.findMany.mockResolvedValue(agentMcpRows);
-      db.query.agentSchedules.findMany.mockResolvedValue([]);
-      db.query.mcpServerConfigs.findMany.mockResolvedValue(mcpServerRows);
-      mockListAgentWorkspaceSkills.mockResolvedValue([]);
-      const model = makeReadModel({ db });
-      const result = (await model.getAgent('agent-mcp')) as Record<string, unknown>;
-      expect(result.mcpServers).toHaveLength(1);
-      expect((result.mcpServers as Record<string, unknown>[])[0].configId).toBe('link-id-1');
-      expect((result.mcpServers as Record<string, unknown>[])[0].serverId).toBe('server-id-1');
-      expect((result.mcpServers as Record<string, unknown>[])[0].isActive).toBe(true);
-      expect((result.mcpServers as Record<string, unknown>[])[0].name).toBe('Filesystem MCP');
-      expect(result.mcpConfigIds).toEqual(['link-id-1']);
-    });
+      },
+    ];
+    // mcpServerConfigs rows: shared server (has id = 'server-id-1')
+    const mcpServerRows = [
+      {
+        id: 'server-id-1',
+        name: 'Filesystem MCP',
+        description: 'File system access',
+        transport: 'stdio',
+        command: 'npx',
+        args: '["-y","@modelcontextprotocol/server-filesystem"]',
+        envVars: null,
+        url: null,
+        headers: null,
+        version: 1,
+        isActive: 1,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+    ];
+    const db = makeMockDb() as ReturnType<typeof createMockDb>;
+    db.query.agents.findFirst.mockResolvedValue(agentRow);
+    db.query.agentRoles.findMany.mockResolvedValue([]);
+    db.query.llmProfiles.findMany.mockResolvedValue([]);
+    db.query.agentExecutionSteps.findMany.mockResolvedValue([]);
+    db.query.agentMcpConfigs.findMany.mockResolvedValue(agentMcpRows);
+    db.query.agentSchedules.findMany.mockResolvedValue([]);
+    db.query.mcpServerConfigs.findMany.mockResolvedValue(mcpServerRows);
+    mockListAgentWorkspaceSkills.mockResolvedValue([]);
+    const model = makeReadModel({ db });
+    const result = (await model.getAgent('agent-mcp')) as Record<string, unknown>;
+    expect(result.mcpServers).toHaveLength(1);
+    expect((result.mcpServers as Record<string, unknown>[])[0].configId).toBe('link-id-1');
+    expect((result.mcpServers as Record<string, unknown>[])[0].serverId).toBe('server-id-1');
+    expect((result.mcpServers as Record<string, unknown>[])[0].isActive).toBe(true);
+    expect((result.mcpServers as Record<string, unknown>[])[0].name).toBe('Filesystem MCP');
+    expect(result.mcpConfigIds).toEqual(['link-id-1']);
+  });
 
   describe('getAgentOmDebugExport', () => {
     it('returns null when agent not found', async () => {
@@ -517,9 +590,21 @@ describe('createAgentReadModel', () => {
       mockLibsqlClientCreateClient.mockReturnValue({ close: vi.fn() });
       const { LibsqlConversationStore } = await import('@forge-runtime/core');
       const realCtor = (LibsqlConversationStore as any).getMockImplementation();
-      (LibsqlConversationStore as any).mockImplementation(function() { return { read: vi.fn().mockResolvedValue({ workingMemory: null }) }; });
+      (LibsqlConversationStore as any).mockImplementation(function () {
+        return { read: vi.fn().mockResolvedValue({ workingMemory: null }) };
+      });
 
-      const agentRow = { id: 'agent-1', name: 'A', role: null, executionState: 'absent' as const, lastExecutionError: null, lastExecutionErrorAt: null, createdAt: '', updatedAt: '', workspaceFilesystem: null };
+      const agentRow = {
+        id: 'agent-1',
+        name: 'A',
+        role: null,
+        executionState: 'absent' as const,
+        lastExecutionError: null,
+        lastExecutionErrorAt: null,
+        createdAt: '',
+        updatedAt: '',
+        workspaceFilesystem: null,
+      };
       const db = makeMockDb() as ReturnType<typeof createMockDb>;
       db.query.agents.findFirst.mockResolvedValue(agentRow);
       db.query.agentRoles.findMany.mockResolvedValue([]);
@@ -550,7 +635,7 @@ describe('createAgentReadModel', () => {
       });
       mockReadLongTermMemoryRecallSnapshot.mockResolvedValue(null);
       const model = makeReadModel({ db });
-      const result = await model.getAgentOmDebugExport('agent-1') as { agent: unknown } | null;
+      const result = (await model.getAgentOmDebugExport('agent-1')) as { agent: unknown } | null;
       expect(result).not.toBeNull();
       expect(result!.agent).toBeDefined();
     });
@@ -559,32 +644,42 @@ describe('createAgentReadModel', () => {
   describe('listAgentConversationMessages — internal-chat provider', () => {
     it.skip('maps authorAgentId from account registry [skip: agents-conversations uses listMessages not in InternalChatService type]', async () => {
       const account = { id: 'acc-1', agentId: 'agent-1', provider: 'internal-chat' as const };
-      const msg = { id: 'msg-1', authorId: 'acc-1', content: 'hello', role: 'user' as const, createdAt: '2024-01-01' };
+      const msg = {
+        id: 'msg-1',
+        authorId: 'acc-1',
+        content: 'hello',
+        role: 'user' as const,
+        createdAt: '2024-01-01',
+      };
       const ic = {
         listAccounts: vi.fn().mockResolvedValue([account]),
         getMessages: vi.fn().mockResolvedValue([msg]),
       };
       const model = makeReadModel({ internalChat: ic });
-      const result = await model.listAgentConversationMessages({
+      const result = (await model.listAgentConversationMessages({
         agentId: 'agent-1',
         provider: 'internal-chat',
         targetKey: 'conv-key',
         limit: 50,
         offset: 0,
-      }) as { items: Array<{ authorAgentId: string }>; hasMore: boolean };
+      })) as { items: Array<{ authorAgentId: string }>; hasMore: boolean };
       expect(result.items[0].authorAgentId).toBe('agent-1');
     });
 
     it.skip('returns empty when provider is unknown [skip: agents-conversations uses listMessages not in InternalChatService type]', async () => {
-      mockGetInternalAgentRegistry.mockReturnValue({ size: 0, list: vi.fn(() => []), get: vi.fn().mockReturnValue(null) });
+      mockGetInternalAgentRegistry.mockReturnValue({
+        size: 0,
+        list: vi.fn(() => []),
+        get: vi.fn().mockReturnValue(null),
+      });
       const model = makeReadModel();
-      const result = await model.listAgentConversationMessages({
+      const result = (await model.listAgentConversationMessages({
         agentId: 'agent-1',
         provider: 'unknown',
         targetKey: 'key',
         limit: 10,
         offset: 0,
-      }) as { items: unknown[]; hasMore: boolean };
+      })) as { items: unknown[]; hasMore: boolean };
       expect(result.items).toEqual([]);
       expect(result.hasMore).toBe(false);
     });

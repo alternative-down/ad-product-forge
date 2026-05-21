@@ -5,8 +5,7 @@ import { WORKING_MEMORY_SCHEMA } from './working-memory.js';
 
 type WorkingMemoryData = NonNullable<z.infer<typeof WORKING_MEMORY_SCHEMA>>;
 
-const make = (data: Partial<WorkingMemoryData>): WorkingMemoryData =>
-  data as WorkingMemoryData;
+const make = (data: Partial<WorkingMemoryData>): WorkingMemoryData => data as WorkingMemoryData;
 
 describe('isWorkingMemoryEqual', () => {
   it('returns true for identical objects', () => {

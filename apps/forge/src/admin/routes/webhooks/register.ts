@@ -33,7 +33,12 @@ export function registerWebhookAdminRoutes(
         const route = await store.createRoute({ agentId: body.agentId, name: body.name, secret });
         return jsonResponse({ routeId: route.routeId, secret }, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/route/create', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/webhooks/route/create',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -44,14 +49,29 @@ export function registerWebhookAdminRoutes(
     path: '/admin/webhooks/routes',
     handler: async (request: HttpRequest) => {
       try {
-        const agentId = new URL(`http://localhost${request.path}${request.query.toString() ? '?' + request.query.toString() : ''}`, 'http://localhost').searchParams.get('agentId');
+        const agentId = new URL(
+          `http://localhost${request.path}${request.query.toString() ? '?' + request.query.toString() : ''}`,
+          'http://localhost',
+        ).searchParams.get('agentId');
         if (agentId === null || agentId === undefined) {
           return jsonResponse({ error: 'agentId required' }, 400);
         }
         const routes = await store.listRoutesByAgent(agentId);
-        return jsonResponse({ routes: routes.map((r) => ({ routeId: r.routeId, name: r.name, isActive: r.isActive, createdAt: r.createdAt })) });
+        return jsonResponse({
+          routes: routes.map((r) => ({
+            routeId: r.routeId,
+            name: r.name,
+            isActive: r.isActive,
+            createdAt: r.createdAt,
+          })),
+        });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/routes', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/webhooks/routes',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -66,7 +86,12 @@ export function registerWebhookAdminRoutes(
         await store.deactivateRoute(body.routeId);
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/route/deactivate', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/webhooks/route/deactivate',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -77,14 +102,29 @@ export function registerWebhookAdminRoutes(
     path: '/admin/webhooks/events',
     handler: async (request: HttpRequest) => {
       try {
-        const agentId = new URL(`http://localhost${request.path}${request.query.toString() ? '?' + request.query.toString() : ''}`, 'http://localhost').searchParams.get('agentId');
+        const agentId = new URL(
+          `http://localhost${request.path}${request.query.toString() ? '?' + request.query.toString() : ''}`,
+          'http://localhost',
+        ).searchParams.get('agentId');
         if (agentId === null || agentId === undefined) {
           return jsonResponse({ error: 'agentId required' }, 400);
         }
         const events = await store.listEventsByAgent(agentId);
-        return jsonResponse({ events: events.map((e) => ({ eventId: e.eventId, routeId: e.routeId, status: e.status, receivedAt: e.receivedAt })) });
+        return jsonResponse({
+          events: events.map((e) => ({
+            eventId: e.eventId,
+            routeId: e.routeId,
+            status: e.status,
+            receivedAt: e.receivedAt,
+          })),
+        });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/events', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/webhooks/events',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -99,7 +139,12 @@ export function registerWebhookAdminRoutes(
         await store.markProcessed(body.eventId);
         return jsonResponse({ success: true });
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/webhooks/event/mark-processed', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/webhooks/event/mark-processed',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

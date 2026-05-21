@@ -1,8 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import {
-  readLongTermMemoryRecallSnapshot,
-  readLongTermMemoryState,
-} from './helpers-ltm';
+import { readLongTermMemoryRecallSnapshot, readLongTermMemoryState } from './helpers-ltm';
 
 // These functions are thin wrappers around the LTM store.
 // They test that the wrapper correctly delegates to the store methods.
@@ -18,7 +15,7 @@ vi.mock('../../agents/ltm/store', () => ({
   createAgentLongTermMemoryStore: vi.fn(() => mockLTMStore),
 }));
 
-import type {Database} from '../../database/client'
+import type { Database } from '../../database/client';
 
 const mockDb = {} as Database;
 

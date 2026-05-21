@@ -27,26 +27,26 @@ export type SystemOauthState = {
  * ms timestamps, matching the number | null declared in the client type).
  */
 export async function buildOauthState(): Promise<SystemOauthState> {
-    const store = oauthStore;
-    const storePath = store.getDefaultPath();
-    const raw = await store.read();
+  const store = oauthStore;
+  const storePath = store.getDefaultPath();
+  const raw = await store.read();
 
-    const providers: SystemOauthProvider[] = [];
+  const providers: SystemOauthProvider[] = [];
 
-    for (const [providerId, credential] of Object.entries(raw) as [
-      ProviderId,
-      OAuthCredential | undefined,
-    ][]) {
-      providers.push({
-        providerId,
-        sourcePath: storePath,
-        sourcePresent: await fsPathExists(storePath),
-        synced: Boolean(credential?.accountId),
-        hasRefresh: Boolean(credential?.refresh),
-        expiresAt: credential?.expires ?? null,
-        accountId: credential?.accountId ?? null,
-      });
-    }
+  for (const [providerId, credential] of Object.entries(raw) as [
+    ProviderId,
+    OAuthCredential | undefined,
+  ][]) {
+    providers.push({
+      providerId,
+      sourcePath: storePath,
+      sourcePresent: await fsPathExists(storePath),
+      synced: Boolean(credential?.accountId),
+      hasRefresh: Boolean(credential?.refresh),
+      expiresAt: credential?.expires ?? null,
+      accountId: credential?.accountId ?? null,
+    });
+  }
 
-    return { storePath, providers };
+  return { storePath, providers };
 }

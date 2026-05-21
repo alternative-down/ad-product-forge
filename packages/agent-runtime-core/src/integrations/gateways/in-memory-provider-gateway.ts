@@ -33,4 +33,3 @@ function extractProviderId(modelId: string) {
 
   return providerId;
 }
-

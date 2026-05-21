@@ -63,9 +63,7 @@ describe('createAssistantConversationPersistencePlugin', () => {
         stepNumber: 1,
         modelResponse: {
           segments: [{ kind: 'message', text: 'Tool result' }],
-          actionRequests: [
-            { name: 'send_message', input: { target: 'user-1', text: 'hello' } },
-          ],
+          actionRequests: [{ name: 'send_message', input: { target: 'user-1', text: 'hello' } }],
         },
         actionResults: [],
         finishedAt: '2026-01-01T00:00:00.000Z',

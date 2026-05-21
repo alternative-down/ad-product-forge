@@ -15,42 +15,49 @@ describe('registerGroupMemberRoutes', () => {
     vi.resetModules();
     httpServer = { registerRoute: vi.fn() };
     mockInternalChat = {
-      listGroupMembersByAccount: vi.fn().mockResolvedValue([{ memberId: 'm1', accountId: 'acc-002', role: 'normal' }]),
+      listGroupMembersByAccount: vi
+        .fn()
+        .mockResolvedValue([{ memberId: 'm1', accountId: 'acc-002', role: 'normal' }]),
       addMemberToGroupByAccount: vi.fn().mockResolvedValue({ memberId: 'm-new' }),
       updateMemberRoleByAccount: vi.fn().mockResolvedValue({ memberId: 'm-001' }),
       removeMemberFromGroupByAccount: vi.fn().mockResolvedValue({ removed: true }),
     };
   });
 
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   // ─── Registration tests ──────────────────────────────────────────────────
 
   it('registers GET /admin/internal-chat/group-members', () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     expect(httpServer.registerRoute).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'GET', path: '/admin/internal-chat/group-members' })
+      expect.objectContaining({ method: 'GET', path: '/admin/internal-chat/group-members' }),
     );
   });
 
   it('registers POST /admin/internal-chat/group-member/add', () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     expect(httpServer.registerRoute).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'POST', path: '/admin/internal-chat/group-member/add' })
+      expect.objectContaining({ method: 'POST', path: '/admin/internal-chat/group-member/add' }),
     );
   });
 
   it('registers POST /admin/internal-chat/group-member/update-role', () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     expect(httpServer.registerRoute).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'POST', path: '/admin/internal-chat/group-member/update-role' })
+      expect.objectContaining({
+        method: 'POST',
+        path: '/admin/internal-chat/group-member/update-role',
+      }),
     );
   });
 
   it('registers POST /admin/internal-chat/group-member/remove', () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     expect(httpServer.registerRoute).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'POST', path: '/admin/internal-chat/group-member/remove' })
+      expect.objectContaining({ method: 'POST', path: '/admin/internal-chat/group-member/remove' }),
     );
   });
 
@@ -59,28 +66,35 @@ describe('registerGroupMemberRoutes', () => {
   it('GET /admin/internal-chat/group-members delegates to listGroupMembersByAccount', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-members'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-members',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
-      query: new Map([['accountId', 'acc-001'], ['conversationId', 'conv-001']]),
+    const result = (await route.handler({
+      query: new Map([
+        ['accountId', 'acc-001'],
+        ['conversationId', 'conv-001'],
+      ]),
       bodyText: '',
-    }) as { body: string };
+    })) as { body: string };
     expect(mockInternalChat.listGroupMembersByAccount).toHaveBeenCalledWith({
       accountId: 'acc-001',
       groupId: 'conv-001',
     });
-    expect(JSON.parse(result.body)).toEqual([{ memberId: 'm1', accountId: 'acc-002', role: 'normal' }]);
+    expect(JSON.parse(result.body)).toEqual([
+      { memberId: 'm1', accountId: 'acc-002', role: 'normal' },
+    ]);
   });
 
   it('GET /admin/internal-chat/group-members returns 400 when accountId missing', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-members'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-members',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map([['conversationId', 'conv-001']]),
       bodyText: '',
-    }) as { body: string; status: number };
+    })) as { body: string; status: number };
     expect(result.status).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ error: 'accountId and conversationId required' });
   });
@@ -88,12 +102,13 @@ describe('registerGroupMemberRoutes', () => {
   it('GET /admin/internal-chat/group-members returns 400 when conversationId missing', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-members'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-members',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map([['accountId', 'acc-001']]),
       bodyText: '',
-    }) as { body: string; status: number };
+    })) as { body: string; status: number };
     expect(result.status).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ error: 'accountId and conversationId required' });
   });
@@ -103,12 +118,17 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/add delegates to addMemberToGroupByAccount', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/add'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/add',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map([['accountId', 'acc-001']]),
-      bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002', role: 'admin' }),
-    }) as { body: string };
+      bodyText: JSON.stringify({
+        conversationId: 'conv-001',
+        participantKey: 'acc-002',
+        role: 'admin',
+      }),
+    })) as { body: string };
     expect(mockInternalChat.addMemberToGroupByAccount).toHaveBeenCalledWith({
       accountId: 'acc-001',
       groupId: 'conv-001',
@@ -121,12 +141,13 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/add uses role=normal when not provided', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/add'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/add',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map([['accountId', 'acc-001']]),
       bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002' }),
-    }) as { body: string };
+    })) as { body: string };
     expect(mockInternalChat.addMemberToGroupByAccount).toHaveBeenCalledWith({
       accountId: 'acc-001',
       groupId: 'conv-001',
@@ -139,12 +160,13 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/add returns 400 when accountId missing', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/add'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/add',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map(),
       bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002' }),
-    }) as { body: string; status: number };
+    })) as { body: string; status: number };
     expect(result.status).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ error: 'accountId required' });
   });
@@ -154,12 +176,17 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/update-role delegates to updateMemberRoleByAccount', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/update-role'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/update-role',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map([['accountId', 'acc-001']]),
-      bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002', role: 'admin' }),
-    }) as { body: string };
+      bodyText: JSON.stringify({
+        conversationId: 'conv-001',
+        participantKey: 'acc-002',
+        role: 'admin',
+      }),
+    })) as { body: string };
     expect(mockInternalChat.updateMemberRoleByAccount).toHaveBeenCalledWith({
       accountId: 'acc-001',
       groupId: 'conv-001',
@@ -172,12 +199,17 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/update-role returns 400 when accountId missing', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/update-role'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/update-role',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map(),
-      bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002', role: 'admin' }),
-    }) as { body: string; status: number };
+      bodyText: JSON.stringify({
+        conversationId: 'conv-001',
+        participantKey: 'acc-002',
+        role: 'admin',
+      }),
+    })) as { body: string; status: number };
     expect(result.status).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ error: 'accountId required' });
   });
@@ -187,12 +219,13 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/remove delegates to removeMemberFromGroupByAccount', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/remove'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/remove',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map([['accountId', 'acc-001']]),
       bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002' }),
-    }) as { body: string };
+    })) as { body: string };
     expect(mockInternalChat.removeMemberFromGroupByAccount).toHaveBeenCalledWith({
       accountId: 'acc-001',
       groupId: 'conv-001',
@@ -204,12 +237,13 @@ describe('registerGroupMemberRoutes', () => {
   it('POST /admin/internal-chat/group-member/remove returns 400 when accountId missing', async () => {
     registerGroupMemberRoutes(httpServer as never, mockInternalChat as never);
     const route = httpServer.registerRoute.mock.calls.find(
-      (call: unknown[]) => (call[0] as {path: string}).path === '/admin/internal-chat/group-member/remove'
+      (call: unknown[]) =>
+        (call[0] as { path: string }).path === '/admin/internal-chat/group-member/remove',
     )![0] as { handler: (req: unknown) => unknown };
-    const result = await route.handler({
+    const result = (await route.handler({
       query: new Map(),
       bodyText: JSON.stringify({ conversationId: 'conv-001', participantKey: 'acc-002' }),
-    }) as { body: string; status: number };
+    })) as { body: string; status: number };
     expect(result.status).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ error: 'accountId required' });
   });

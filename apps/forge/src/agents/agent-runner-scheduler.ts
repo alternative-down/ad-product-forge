@@ -8,9 +8,7 @@ import {
   setInstant as backoffSetInstant,
   calculateDelayMs as calcDelayMs,
 } from './agent-runner-scheduler-backoff';
-import {
-  advanceStepEpoch as epochAdvanceStepEpoch,
-} from './agent-runner-scheduler-epoch';
+import { advanceStepEpoch as epochAdvanceStepEpoch } from './agent-runner-scheduler-epoch';
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 import { createSchedulerSteps } from './agent-runner-scheduler-steps';
 const _RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
@@ -27,7 +25,11 @@ export type Scheduler = {
   nextBackoff(): number;
   resetBackoff(): void;
   setInstant(value: boolean): void;
-  calculateDelayMs(endsAt: number, remainingBudgetUsd: number, estimatedStepUsd: number | null): number;
+  calculateDelayMs(
+    endsAt: number,
+    remainingBudgetUsd: number,
+    estimatedStepUsd: number | null,
+  ): number;
   planNextStepDelay(): Promise<void>;
   startNewRunEpoch(): void;
   isStaleRun(runEpoch: number): boolean;
@@ -106,10 +108,7 @@ export type SchedulerDependencies = {
   onAgentIdle?(): Promise<void>;
 };
 
-export function createScheduler(
-  state: SchedulerState,
-  deps: SchedulerDependencies,
-) {
+export function createScheduler(state: SchedulerState, deps: SchedulerDependencies) {
   // Healthcheck callbacks — set when the runner starts and when beginRun is configured
   // timer managed by timerManager
   let stopped = false;
@@ -122,7 +121,11 @@ export function createScheduler(
     getSystemSettings: deps.getSystemSettings,
   });
   const timerManager = createTimerManager(state);
-  const runLifecycle = createRunLifecycle(state, { get stopped() { return stopped; } });
+  const runLifecycle = createRunLifecycle(state, {
+    get stopped() {
+      return stopped;
+    },
+  });
   const healthcheck = createSchedulerHealthcheck({ runtimeId: deps.runtimeId });
   const steps = createSchedulerSteps({
     runtimeId: deps.runtimeId,
@@ -136,12 +139,15 @@ export function createScheduler(
     advanceStepEpoch,
     getActiveRunEpoch: () => state.activeRunEpoch,
     setInstant,
-    flushManager: (flushManager as any),
+    flushManager: flushManager as any,
     getExecuting: () => executing,
     isTimerActive: () => timerManager.isTimerActive(),
     isStopped: () => stopped,
     getStartingRun: () => ({ running: startingRun, startedAt: startingRunStartedAt }),
-    setStartingRun: (r: boolean, s: number | null) => { startingRun = r; startingRunStartedAt = s; },
+    setStartingRun: (r: boolean, s: number | null) => {
+      startingRun = r;
+      startingRunStartedAt = s;
+    },
   });
 
   // Step callback — set by the runner orchestrator
@@ -198,19 +204,25 @@ export function createScheduler(
       resetBackoff();
       const settings = await deps.getSystemSettings();
 
-      return state.instant
-        || !settings.stepDelayEnabled
+      return state.instant || !settings.stepDelayEnabled
         ? 0
         : calculateDelayMs(contract.endsAt, remainingBudgetUsd, estimatedStepUsd);
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'planNextStepDelay failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'planNextStepDelay failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
       return -1;
     }
   }
 
   function scheduleNextStep(delayMs: number, stepFn?: () => void) {
     timerManager.scheduleNextStep(delayMs);
-    if (stepFn) { timerManager.setStepFn(stepFn); }
+    if (stepFn) {
+      timerManager.setStepFn(stepFn);
+    }
   }
 
   /**
@@ -256,14 +268,18 @@ export function createScheduler(
 
   async function start(
     getExecutionState: (runtimeId: string) => Promise<'idle' | 'running' | 'absent'>,
-    beginRunFn: (opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }) => Promise<void>,
+    beginRunFn: (opts: {
+      reloadRuntime: boolean;
+      wakeStartedAt: number;
+      markRunning: boolean;
+    }) => Promise<void>,
   ) {
     if (stopped) {
       return;
     }
 
     try {
-          healthcheck.startHealthcheck();
+      healthcheck.startHealthcheck();
       await flushManager.refreshRunFlushSettings();
 
       const executionState = await withTimeout(
@@ -292,7 +308,12 @@ export function createScheduler(
         markRunning: false,
       });
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'start failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'start failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
     }
   }
 
@@ -331,7 +352,12 @@ export function createScheduler(
         `Agent execution state update timed out for ${deps.runtimeId}`,
       );
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'forceIdle setExecutionState failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'forceIdle setExecutionState failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
     }
     try {
       await withTimeout(
@@ -340,7 +366,12 @@ export function createScheduler(
         `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
       );
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'forceIdle onAgentIdle failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'forceIdle onAgentIdle failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
     }
 
     if (isStaleRun(runEpoch)) {
@@ -372,7 +403,12 @@ export function createScheduler(
         `Agent execution state update timed out for ${deps.runtimeId}`,
       );
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'transitionToIdle setExecutionState failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'transitionToIdle setExecutionState failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
     }
     try {
       await withTimeout(
@@ -381,7 +417,12 @@ export function createScheduler(
         `Agent long-term memory idle transition timed out for ${deps.runtimeId}`,
       );
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'transitionToIdle onAgentIdle failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'transitionToIdle onAgentIdle failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
     }
 
     if (isStaleRun(runEpoch)) {
@@ -395,10 +436,14 @@ export function createScheduler(
     try {
       await onRunnerIdle();
     } catch (error) {
-      forgeDebug({ scope: 'scheduler', level: 'error', message: 'transitionToIdle onRunnerIdle failed', context: { runtimeId: deps.runtimeId, error } });
+      forgeDebug({
+        scope: 'scheduler',
+        level: 'error',
+        message: 'transitionToIdle onRunnerIdle failed',
+        context: { runtimeId: deps.runtimeId, error },
+      });
     }
   }
-
 
   // Step orchestration — delegated to steps module
   // ─── Flush settings — delegated to flush manager ──────────────────────────
@@ -438,10 +483,18 @@ export function createScheduler(
     return (flushManager as any).getFlushSettings().runLastMessages;
   }
 
-  function getInstant(): boolean { return state.instant; }
-  function getBackoffMs(): number { return state.backoffMs; }
-  function getNextStepAt(): number | null { return state.nextStepAt; }
-  function getActiveRunEpoch(): number { return state.activeRunEpoch; }
+  function getInstant(): boolean {
+    return state.instant;
+  }
+  function getBackoffMs(): number {
+    return state.backoffMs;
+  }
+  function getNextStepAt(): number | null {
+    return state.nextStepAt;
+  }
+  function getActiveRunEpoch(): number {
+    return state.activeRunEpoch;
+  }
 
   function getActiveStepEpoch(): number {
     return state.activeStepEpoch;
@@ -458,9 +511,6 @@ export function createScheduler(
   function getAbortController(): AbortController | null {
     return runLifecycle.getAbortController();
   }
-
-
-
 
   return {
     // Timer / scheduling

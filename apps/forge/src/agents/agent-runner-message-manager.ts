@@ -6,8 +6,6 @@
 import type { AgentWakeEvent } from '@forge-runtime/core';
 import { createMessageManager } from './agent-runner-messages';
 
-
-
 export interface RunnerMessageManagerState {
   flushedRunEventKeys: Set<string>;
   flushedRunEventKeyOrder: string[];
@@ -31,10 +29,7 @@ export function createRunnerMessageManagerState(): RunnerMessageManagerState {
 }
 
 export interface RunnerMessageManager {
-  appendPendingRunMessages(
-    events: AgentWakeEvent[],
-    options?: { allowIdleOnly?: boolean },
-  ): void;
+  appendPendingRunMessages(events: AgentWakeEvent[], options?: { allowIdleOnly?: boolean }): void;
   flushPendingRunMessages(options?: { allowOriginIdleOnly?: boolean }): string | null;
   reset(): void;
   getPendingCount(): number;
@@ -69,10 +64,12 @@ export function createRunnerMessageManager(
     communicationGroupFlushingEnabled?: boolean;
   }): void {
     if (settings.communicationDmFlushingEnabled !== undefined) {
-      state.currentFlushSettings.communicationDmFlushingEnabled = settings.communicationDmFlushingEnabled;
+      state.currentFlushSettings.communicationDmFlushingEnabled =
+        settings.communicationDmFlushingEnabled;
     }
     if (settings.communicationGroupFlushingEnabled !== undefined) {
-      state.currentFlushSettings.communicationGroupFlushingEnabled = settings.communicationGroupFlushingEnabled;
+      state.currentFlushSettings.communicationGroupFlushingEnabled =
+        settings.communicationGroupFlushingEnabled;
     }
   }
 
@@ -95,7 +92,8 @@ export function createRunnerMessageManager(
     updateFlushSettings,
     getCurrentFlushSettings,
     getState,
-    shouldIncludePendingRunEventInFlush: (event: AgentWakeEvent) => manager.shouldIncludePendingRunEventInFlush(event),
+    shouldIncludePendingRunEventInFlush: (event: AgentWakeEvent) =>
+      manager.shouldIncludePendingRunEventInFlush(event),
     resetFlushedRunEventKeys: manager.resetFlushedRunEventKeys.bind(manager),
     rememberFlushedRunEventKey: manager.rememberFlushedRunEventKey.bind(manager),
   };

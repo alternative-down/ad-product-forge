@@ -20,7 +20,9 @@ describe('@forge-runtime/core', () => {
   });
 
   it('exports runtime-facing helpers', () => {
-    expect(resolveWorkspaceEmbedderId('transformers-multilingual-e5-small')).toBe('transformers-multilingual-e5-small');
+    expect(resolveWorkspaceEmbedderId('transformers-multilingual-e5-small')).toBe(
+      'transformers-multilingual-e5-small',
+    );
     expect(resolveWorkspaceEmbedderId('invalid')).toBe('fastembed');
     expect(new InMemoryForgeUsageSink().list()).toEqual([]);
     expect(typeof ForgeMcpToolset).toBe('function');
@@ -46,13 +48,20 @@ describe('@forge-runtime/core', () => {
 
     expect(actions).toHaveLength(1);
     expect(actions.map((action) => action.name)).toEqual(['ping']);
-    await expect(Promise.resolve(actions[0]!.execute({
-      text: 'hello',
-    }, {
-      runtimeId: 'runtime',
-      stepId: 'step',
-      stepNumber: 1,
-    }))).resolves.toEqual({
+    await expect(
+      Promise.resolve(
+        actions[0]!.execute(
+          {
+            text: 'hello',
+          },
+          {
+            runtimeId: 'runtime',
+            stepId: 'step',
+            stepNumber: 1,
+          },
+        ),
+      ),
+    ).resolves.toEqual({
       echoed: 'hello',
     });
   });

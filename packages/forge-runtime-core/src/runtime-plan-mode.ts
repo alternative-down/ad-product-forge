@@ -14,46 +14,80 @@ export type PlanEntry = {
 };
 
 const enterPlanModeSchema = z.object({
-  intent: z.string().min(1).refine(s => s.trim().length >= 1, {
-    message: 'Intent cannot be empty or whitespace only',
-  }),
+  intent: z
+    .string()
+    .min(1)
+    .refine((s) => s.trim().length >= 1, {
+      message: 'Intent cannot be empty or whitespace only',
+    }),
 });
 
 const exitPlanModeSchema = z.object({
-// exitAction uses same pattern
-  plan: z.string().min(1).refine(s => s.trim().length >= 1, {
-    message: 'Plan cannot be empty or whitespace only',
-  }),
+  // exitAction uses same pattern
+  plan: z
+    .string()
+    .min(1)
+    .refine((s) => s.trim().length >= 1, {
+      message: 'Plan cannot be empty or whitespace only',
+    }),
 });
 
 const PLANS_SUBDIR = 'plans';
 
-function isReadOnlyAction(action: RuntimeActionDefinition<Record<string, unknown>, unknown>): boolean {
+function isReadOnlyAction(
+  action: RuntimeActionDefinition<Record<string, unknown>, unknown>,
+): boolean {
   const name = action.name.toLowerCase();
   const desc = action.description.toLowerCase();
 
   // Actions that are always write/mutation
   const writeMarkers = [
-    'write', 'delete', 'remove', 'kill', 'stop', 'terminate',
-    'create', 'add', 'send', 'post', 'put', 'update',
-    'run', 'execute', 'bash', 'shell', 'command',
-    'patch', 'merge', 'push', 'deploy',
+    'write',
+    'delete',
+    'remove',
+    'kill',
+    'stop',
+    'terminate',
+    'create',
+    'add',
+    'send',
+    'post',
+    'put',
+    'update',
+    'run',
+    'execute',
+    'bash',
+    'shell',
+    'command',
+    'patch',
+    'merge',
+    'push',
+    'deploy',
   ];
 
-  const hasWriteMarker = writeMarkers.some((m) =>
-    name.includes(m) || desc.includes(m),
-  );
+  const hasWriteMarker = writeMarkers.some((m) => name.includes(m) || desc.includes(m));
 
   // Actions that are read-only
   const readMarkers = [
-    'read', 'list', 'get', 'search', 'grep', 'find',
-    'query', 'fetch', 'load', 'check', 'inspect',
-    'stat', 'diff', 'log', 'show', 'view',
+    'read',
+    'list',
+    'get',
+    'search',
+    'grep',
+    'find',
+    'query',
+    'fetch',
+    'load',
+    'check',
+    'inspect',
+    'stat',
+    'diff',
+    'log',
+    'show',
+    'view',
   ];
 
-  const hasReadMarker = readMarkers.some((m) =>
-    name.includes(m) || desc.includes(m),
-  );
+  const hasReadMarker = readMarkers.some((m) => name.includes(m) || desc.includes(m));
 
   // If has write marker and no read marker, it's a write action
   if (hasWriteMarker && !hasReadMarker) return false;
@@ -70,9 +104,7 @@ export class RuntimePlanMode {
   private inPlanMode = false;
   private readonly plansDir: string;
 
-  constructor(options: {
-    agentMemoryPath: string;
-  }) {
+  constructor(options: { agentMemoryPath: string }) {
     this.plansDir = join(options.agentMemoryPath, 'memory', PLANS_SUBDIR);
   }
 
@@ -249,7 +281,8 @@ export function createPlanModeActions(input: {
 }) {
   const enterAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'enterPlanMode',
-    description: 'Enter Plan Mode. After this, the agent operates in analysis/planning mode with a reduced tool set (read-only actions only — no write, execute, or mutation tools). Use this to analyze a situation, form an intent, and prepare a plan before taking irreversible actions.',
+    description:
+      'Enter Plan Mode. After this, the agent operates in analysis/planning mode with a reduced tool set (read-only actions only — no write, execute, or mutation tools). Use this to analyze a situation, form an intent, and prepare a plan before taking irreversible actions.',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     inputSchema: enterPlanModeSchema as any,
     execute: async (parsedInput) => {
@@ -266,7 +299,8 @@ export function createPlanModeActions(input: {
 
   const exitAction: RuntimeActionDefinition<Record<string, unknown>, unknown> = {
     name: 'exitPlanMode',
-    description: 'Exit Plan Mode and return to normal execution (exit plan mode). Provide the final plan text summarizing what was decided during the planning phase. After this, full tool access is restored.',
+    description:
+      'Exit Plan Mode and return to normal execution (exit plan mode). Provide the final plan text summarizing what was decided during the planning phase. After this, full tool access is restored.',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     inputSchema: exitPlanModeSchema as any,
     execute: async (parsedInput) => {

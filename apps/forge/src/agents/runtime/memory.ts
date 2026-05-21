@@ -1,8 +1,5 @@
 import { serializeError } from '../agent-runner-error-formatting';
-import {
-  type ConversationStore,
-  type WorkspaceEmbedderId,
-} from '@forge-runtime/core';
+import { type ConversationStore, type WorkspaceEmbedderId } from '@forge-runtime/core';
 
 import type { createAgentLongTermMemoryStore } from '../ltm/store';
 import { createAgentLongTermMemoryRecall } from '../ltm/recall';
@@ -42,21 +39,22 @@ export async function createAgentRuntimeMemory(input: {
   }>;
 }) {
   try {
-    const longTermMemoryRecall = input.longTermMemory !== null && input.longTermMemory !== undefined
-      ? createAgentLongTermMemoryRecall({
-          agentId: input.agentId,
-          agentWorkspacePath: input.agentWorkspacePath,
-          agentMemoryPath: input.agentMemoryPath,
-          workspaceEmbedder: input.workspaceEmbedder,
-          mastraId: input.mastraId,
-          scoreThreshold: input.ltmRecallScoreThreshold,
-          documentCount: input.ltmRecallDocumentCount,
-          conversationStore: input.conversationStore,
-          recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
-          persistenceStore: input.persistenceStore,
-          readRuntimeMemorySettings: input.readRuntimeMemorySettings,
-        })
-      : null;
+    const longTermMemoryRecall =
+      input.longTermMemory !== null && input.longTermMemory !== undefined
+        ? createAgentLongTermMemoryRecall({
+            agentId: input.agentId,
+            agentWorkspacePath: input.agentWorkspacePath,
+            agentMemoryPath: input.agentMemoryPath,
+            workspaceEmbedder: input.workspaceEmbedder,
+            mastraId: input.mastraId,
+            scoreThreshold: input.ltmRecallScoreThreshold,
+            documentCount: input.ltmRecallDocumentCount,
+            conversationStore: input.conversationStore,
+            recentRawTokens: input.checkpointedOmLimits.recentRawTokens,
+            persistenceStore: input.persistenceStore,
+            readRuntimeMemorySettings: input.readRuntimeMemorySettings,
+          })
+        : null;
 
     await longTermMemoryRecall?.initialize();
 
@@ -64,7 +62,12 @@ export async function createAgentRuntimeMemory(input: {
       longTermMemoryRecall,
     };
   } catch (err) {
-    forgeDebug({ scope: 'runtime-memory', level: 'error', message: 'createAgentRuntimeMemory failed', context: { error: serializeError(err) }});
+    forgeDebug({
+      scope: 'runtime-memory',
+      level: 'error',
+      message: 'createAgentRuntimeMemory failed',
+      context: { error: serializeError(err) },
+    });
     throw err;
   }
 }

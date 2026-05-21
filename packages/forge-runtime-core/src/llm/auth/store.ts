@@ -76,7 +76,11 @@ export function createOAuthStore() {
     }
   }
 
-  async function write(provider: ProviderId, credential: OAuthCredential, storePath = getDefaultPath()) {
+  async function write(
+    provider: ProviderId,
+    credential: OAuthCredential,
+    storePath = getDefaultPath(),
+  ) {
     await fs.mkdir(path.dirname(storePath), { recursive: true });
     const client = createClient({ url: `file:${storePath}` });
 

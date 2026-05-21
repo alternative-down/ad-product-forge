@@ -49,11 +49,13 @@ vi.mock('../create-forge-agent.ts', () => ({}));
 vi.mock('../../admin/routes/schemas/agents', () => {
   const z = require('zod');
   return {
-    hireAgentSchema: z.object({
-      hiringRequest: z.string({ required_error: 'hiringRequest required' }),
-      weeklyBudgetUsd: z.number({ required_error: 'weeklyBudgetUsd required' }).positive(),
-      additionalContext: z.string().optional(),
-    }).strict(),
+    hireAgentSchema: z
+      .object({
+        hiringRequest: z.string({ required_error: 'hiringRequest required' }),
+        weeklyBudgetUsd: z.number({ required_error: 'weeklyBudgetUsd required' }).positive(),
+        additionalContext: z.string().optional(),
+      })
+      .strict(),
     terminateAgentSchema: z.object({ agentId: z.string() }).strict(),
     agentActionSchema: z.object({ agentId: z.string() }).strict(),
     topUpAgentContractSchema: z.object({ agentId: z.string() }).strict(),
@@ -132,11 +134,15 @@ const {
       instructions: 'Test instructions',
       costUsd: 50,
     }),
-    mockHireInternalAgent: vi.fn().mockResolvedValue({ agentId: 'agent-new', emailAddress: 'test@example.com' }),
+    mockHireInternalAgent: vi
+      .fn()
+      .mockResolvedValue({ agentId: 'agent-new', emailAddress: 'test@example.com' }),
     mockTerminateInternalAgent: vi.fn().mockResolvedValue(undefined),
     mockRecordCashOut,
     mockCreateCompanyCashOperations: vi.fn().mockReturnValue({ recordCashOut: mockRecordCashOut }),
-    mockCreateAgentApp: vi.fn().mockResolvedValue({ registrationUrl: 'https://github.com/apps/test' }),
+    mockCreateAgentApp: vi
+      .fn()
+      .mockResolvedValue({ registrationUrl: 'https://github.com/apps/test' }),
     mockIsConfigured: vi.fn().mockResolvedValue(true),
   };
 });
@@ -187,7 +193,9 @@ vi.mock('../../capabilities/runtime.js', () => ({
 }));
 
 vi.mock('../global-skills.js', () => ({
-  publishAgentWorkspaceSkillToGlobalCatalog: vi.fn().mockResolvedValue({ destPath: '/global/skills/my-skill' }),
+  publishAgentWorkspaceSkillToGlobalCatalog: vi
+    .fn()
+    .mockResolvedValue({ destPath: '/global/skills/my-skill' }),
   installGlobalSkillToAgentWorkspace: vi.fn().mockResolvedValue({ installed: true }),
   installGlobalSkillsFromZip: vi.fn().mockResolvedValue({ installedSkillNames: [] }),
   deleteGlobalSkill: vi.fn().mockResolvedValue(undefined),
@@ -215,7 +223,9 @@ vi.mock('../internal-agent-registry', () => {
     add = vi.fn();
     get = vi.fn().mockReturnValue(undefined);
     delete = vi.fn();
-    get size() { return this._map.size; }
+    get size() {
+      return this._map.size;
+    }
   }
   return { getInternalAgentRegistry: () => new MockRegistry() };
 });
@@ -240,12 +250,16 @@ function makeMockInternalChat() {
     deleteAgentAccount: vi.fn().mockResolvedValue(undefined),
     getOrCreateConversation: vi.fn(),
     sendMessage: vi.fn(),
-    listConversations: vi.fn().mockResolvedValue({ conversations: [], returnedConversationCount: 0 }),
+    listConversations: vi
+      .fn()
+      .mockResolvedValue({ conversations: [], returnedConversationCount: 0 }),
     markMessagesRead: vi.fn().mockResolvedValue(undefined),
   };
 }
 
-function getBody(response: { body: string }) { return JSON.parse(response.body); }
+function getBody(response: { body: string }) {
+  return JSON.parse(response.body);
+}
 
 function makeRequest(body: unknown): { bodyText: string } {
   return { bodyText: JSON.stringify(body) };
@@ -259,7 +273,7 @@ function getHandler(
   const calls = (httpServer.registerRoute as any).mock.calls as Array<
     [{ method: string; path: string; handler: Function }]
   >;
-  const match = calls.find(c => c[0].method === method && c[0].path === path);
+  const match = calls.find((c) => c[0].method === method && c[0].path === path);
   if (!match) throw new Error(`Route ${method} ${path} not found in registered routes`);
   return match[0].handler;
 }
@@ -270,7 +284,9 @@ function makeMockRegistry() {
     add = vi.fn();
     get = vi.fn().mockReturnValue(undefined);
     delete = vi.fn();
-    get size() { return this._map.size; }
+    get size() {
+      return this._map.size;
+    }
   }
   return new MockRegistry();
 }
@@ -299,10 +315,13 @@ function makeMockDb(): any {
   } as unknown as any;
 }
 
-function makeWriteOpsInput(db: any, overrides?: {
-  schedules?: ReturnType<typeof makeMockSchedules>;
-  internalChat?: ReturnType<typeof makeMockInternalChat>;
-}) {
+function makeWriteOpsInput(
+  db: any,
+  overrides?: {
+    schedules?: ReturnType<typeof makeMockSchedules>;
+    internalChat?: ReturnType<typeof makeMockInternalChat>;
+  },
+) {
   return {
     db,
     workspaceBasePath: '/tmp/test-ws',
@@ -379,10 +398,12 @@ describe('POST /admin/agent/hire — route handler', () => {
   });
 
   it('returns 201 with agentId when hire succeeds', async () => {
-    const response = await handler(makeRequest({
-      hiringRequest: 'Hire a test agent',
-      weeklyBudgetUsd: 100,
-    }));
+    const response = await handler(
+      makeRequest({
+        hiringRequest: 'Hire a test agent',
+        weeklyBudgetUsd: 100,
+      }),
+    );
 
     expect(response.status).toBe(201);
     expect(getBody(response).agentId).toBe('agent-new');
@@ -460,7 +481,9 @@ describe('POST /admin/agent/hire — route handler', () => {
     );
 
     const h2 = getHandler(httpServer2, 'POST', '/admin/agent/hire');
-    const response = await h2(makeRequest({ hiringRequest: 'Hire an agent', weeklyBudgetUsd: 100 }));
+    const response = await h2(
+      makeRequest({ hiringRequest: 'Hire an agent', weeklyBudgetUsd: 100 }),
+    );
 
     expect(response.status).toBe(500);
     expect(getBody(response).error).toBe('Intentional failure');
@@ -557,7 +580,9 @@ describe('POST /admin/agent/force-idle — route handler', () => {
       add = vi.fn();
       get = vi.fn().mockReturnValue({ runner: mockRunner });
       delete = vi.fn();
-      get size() { return this._map.size; }
+      get size() {
+        return this._map.size;
+      }
     }
     const mockRegistry = new MockRegistry();
     const httpServer2 = { registerRoute: vi.fn() };

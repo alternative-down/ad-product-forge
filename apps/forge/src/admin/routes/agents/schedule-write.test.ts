@@ -46,7 +46,10 @@ function createMockSchedules() {
 function createMockHttpServer() {
   const routes: any[] = [];
   return {
-    registerRoute: vi.fn((route: any) => { routes.push(route); return () => {}; }),
+    registerRoute: vi.fn((route: any) => {
+      routes.push(route);
+      return () => {};
+    }),
     _routes: routes,
   };
 }
@@ -55,7 +58,11 @@ function makeRequest(body: unknown): { bodyText: string } {
   return { bodyText: JSON.stringify(body) };
 }
 
-function getHandler(httpServer: ReturnType<typeof createMockHttpServer>, method: string, path: string) {
+function getHandler(
+  httpServer: ReturnType<typeof createMockHttpServer>,
+  method: string,
+  path: string,
+) {
   const match = httpServer._routes.find((r: any) => r.method === method && r.path === path);
   if (!match) throw new Error(`Route ${method} ${path} not found`);
   return match.handler;
@@ -107,16 +114,18 @@ describe('registerAgentSchedulesWriteRoutes', () => {
         cronExpression: '0 9 * * *',
       });
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        name: 'Morning Check',
-        description: 'Daily morning check',
-        scheduleType: 'cron',
-        cronExpression: '0 9 * * *',
-        timezone: 'UTC',
-        content: 'Run morning check',
-        wakeWhenRunning: true,
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          name: 'Morning Check',
+          description: 'Daily morning check',
+          scheduleType: 'cron',
+          cronExpression: '0 9 * * *',
+          timezone: 'UTC',
+          content: 'Run morning check',
+          wakeWhenRunning: true,
+        }),
+      );
 
       expect(response.status).toBe(201);
       expect(parseBody(response)).toMatchObject({
@@ -124,12 +133,15 @@ describe('registerAgentSchedulesWriteRoutes', () => {
         scheduleType: 'cron',
         cronExpression: '0 9 * * *',
       });
-      expect(schedules.createSchedule).toHaveBeenCalledWith('agent-1', expect.objectContaining({
-        name: 'Morning Check',
-        scheduleType: 'cron',
-        cronExpression: '0 9 * * *',
-        wakeWhenRunning: true,
-      }));
+      expect(schedules.createSchedule).toHaveBeenCalledWith(
+        'agent-1',
+        expect.objectContaining({
+          name: 'Morning Check',
+          scheduleType: 'cron',
+          cronExpression: '0 9 * * *',
+          wakeWhenRunning: true,
+        }),
+      );
     });
 
     it('creates a date schedule with scheduledDate', async () => {
@@ -144,22 +156,27 @@ describe('registerAgentSchedulesWriteRoutes', () => {
         scheduledDate: 1735689600000,
       });
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        name: 'One-time Task',
-        description: 'A single run',
-        scheduleType: 'date',
-        scheduledDate: '2025-01-01T00:00:00.000Z',
-        timezone: 'America/Sao_Paulo',
-        content: 'Run the thing',
-        wakeWhenRunning: true,
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          name: 'One-time Task',
+          description: 'A single run',
+          scheduleType: 'date',
+          scheduledDate: '2025-01-01T00:00:00.000Z',
+          timezone: 'America/Sao_Paulo',
+          content: 'Run the thing',
+          wakeWhenRunning: true,
+        }),
+      );
 
       expect(response.status).toBe(201);
       expect(parseBody(response).scheduleType).toBe('date');
-      expect(schedules.createSchedule).toHaveBeenCalledWith('agent-1', expect.not.objectContaining({
-        cronExpression: expect.anything(),
-      }));
+      expect(schedules.createSchedule).toHaveBeenCalledWith(
+        'agent-1',
+        expect.not.objectContaining({
+          cronExpression: expect.anything(),
+        }),
+      );
     });
 
     it('returns 500 on createSchedule error', async () => {
@@ -168,12 +185,14 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
       schedules.createSchedule.mockRejectedValueOnce(new Error('Database error'));
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        name: 'Bad Schedule',
-        scheduleType: 'cron',
-        cronExpression: '0 9 * * *',
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          name: 'Bad Schedule',
+          scheduleType: 'cron',
+          cronExpression: '0 9 * * *',
+        }),
+      );
 
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('Database error');
@@ -192,25 +211,31 @@ describe('registerAgentSchedulesWriteRoutes', () => {
         isActive: false,
       });
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        scheduleId: 'sched-1',
-        name: 'Updated Name',
-        description: 'Updated description',
-        scheduleType: 'cron',
-        cronExpression: '0 10 * * *',
-        timezone: 'Europe/Lisbon',
-        content: 'Updated content',
-        wakeWhenRunning: false,
-        isActive: false,
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          scheduleId: 'sched-1',
+          name: 'Updated Name',
+          description: 'Updated description',
+          scheduleType: 'cron',
+          cronExpression: '0 10 * * *',
+          timezone: 'Europe/Lisbon',
+          content: 'Updated content',
+          wakeWhenRunning: false,
+          isActive: false,
+        }),
+      );
 
       expect(response.status).toBe(200);
-      expect(schedules.updateOwnedSchedule).toHaveBeenCalledWith('agent-1', 'sched-1', expect.objectContaining({
-        name: 'Updated Name',
-        cronExpression: '0 10 * * *',
-        isActive: false,
-      }));
+      expect(schedules.updateOwnedSchedule).toHaveBeenCalledWith(
+        'agent-1',
+        'sched-1',
+        expect.objectContaining({
+          name: 'Updated Name',
+          cronExpression: '0 10 * * *',
+          isActive: false,
+        }),
+      );
     });
 
     it('updates schedule to date type', async () => {
@@ -223,20 +248,26 @@ describe('registerAgentSchedulesWriteRoutes', () => {
         scheduledDate: 1735689600000,
       });
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        scheduleId: 'sched-1',
-        scheduleType: 'date',
-        scheduledDate: '2025-01-01T00:00:00.000Z',
-        isActive: true,
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          scheduleId: 'sched-1',
+          scheduleType: 'date',
+          scheduledDate: '2025-01-01T00:00:00.000Z',
+          isActive: true,
+        }),
+      );
 
       expect(response.status).toBe(200);
-      expect(schedules.updateOwnedSchedule).toHaveBeenCalledWith('agent-1', 'sched-1', expect.objectContaining({
-        scheduleType: 'date',
-        scheduledDate: '2025-01-01T00:00:00.000Z',
-        isActive: true,
-      }));
+      expect(schedules.updateOwnedSchedule).toHaveBeenCalledWith(
+        'agent-1',
+        'sched-1',
+        expect.objectContaining({
+          scheduleType: 'date',
+          scheduledDate: '2025-01-01T00:00:00.000Z',
+          isActive: true,
+        }),
+      );
     });
 
     it('returns 500 on updateOwnedSchedule error', async () => {
@@ -245,11 +276,13 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
       schedules.updateOwnedSchedule.mockRejectedValueOnce(new Error('Not authorized'));
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        scheduleId: 'sched-999',
-        name: 'Hack',
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          scheduleId: 'sched-999',
+          name: 'Hack',
+        }),
+      );
 
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('Not authorized');
@@ -263,10 +296,12 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
       schedules.deleteSchedule.mockResolvedValueOnce({ deleted: true });
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        scheduleId: 'sched-1',
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          scheduleId: 'sched-1',
+        }),
+      );
 
       expect(response.status).toBe(200);
       expect(schedules.deleteSchedule).toHaveBeenCalledWith('agent-1', 'sched-1');
@@ -278,10 +313,12 @@ describe('registerAgentSchedulesWriteRoutes', () => {
 
       schedules.deleteSchedule.mockRejectedValueOnce(new Error('Schedule not found'));
 
-      const response = await handler(makeRequest({
-        agentId: 'agent-1',
-        scheduleId: 'sched-999',
-      }));
+      const response = await handler(
+        makeRequest({
+          agentId: 'agent-1',
+          scheduleId: 'sched-999',
+        }),
+      );
 
       expect(response.status).toBe(500);
       expect(parseBody(response).error).toBe('Schedule not found');

@@ -45,15 +45,27 @@ describe('crypto', () => {
     });
 
     it('encryptSecret throws same message as decryptSecret for invalid key', async () => {
-      process.env.ENCRYPTION_KEY = Buffer.from('too-long-key-that-exceeds-32-bytes').toString('base64');
+      process.env.ENCRYPTION_KEY = Buffer.from('too-long-key-that-exceeds-32-bytes').toString(
+        'base64',
+      );
       const { encryptSecret: enc, decryptSecret: dec } = await import('./crypto');
       let encMsg = '';
       let decMsg = '';
-      try { enc('test'); } catch (e: unknown) { encMsg = (e as Error).message; }
+      try {
+        enc('test');
+      } catch (e: unknown) {
+        encMsg = (e as Error).message;
+      }
       vi.resetModules();
-      process.env.ENCRYPTION_KEY = Buffer.from('too-long-key-that-exceeds-32-bytes').toString('base64');
+      process.env.ENCRYPTION_KEY = Buffer.from('too-long-key-that-exceeds-32-bytes').toString(
+        'base64',
+      );
       const { decryptSecret: dec2 } = await import('./crypto');
-      try { dec2('test'); } catch (e: unknown) { decMsg = (e as Error).message; }
+      try {
+        dec2('test');
+      } catch (e: unknown) {
+        decMsg = (e as Error).message;
+      }
       expect(encMsg).toBe(decMsg);
     });
   });

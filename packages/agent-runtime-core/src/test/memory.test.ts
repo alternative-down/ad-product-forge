@@ -73,14 +73,16 @@ describe('memory modules', () => {
       id: 'doc-1',
       text: 'The forge reopened after the caravan arrived in the village.',
     });
-    runtime.use(createLongTermRecallPlugin({
-      memory,
-      threshold: 0,
-      buildQuery({ pendingInputs }) {
-        const text = pendingInputs[0]?.payload as { text?: string } | undefined;
-        return text?.text ?? null;
-      },
-    }));
+    runtime.use(
+      createLongTermRecallPlugin({
+        memory,
+        threshold: 0,
+        buildQuery({ pendingInputs }) {
+          const text = pendingInputs[0]?.payload as { text?: string } | undefined;
+          return text?.text ?? null;
+        },
+      }),
+    );
 
     await runtime.dispatch({
       id: 'input-1',

@@ -28,15 +28,7 @@ function buildMiniMaxHint(errorCode: string | undefined, fallback: string) {
 }
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
-const imageAspectRatioSchema = z.enum([
-  '1:1',
-  '16:9',
-  '9:16',
-  '4:3',
-  '3:4',
-  '3:2',
-  '2:3',
-]);
+const imageAspectRatioSchema = z.enum(['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3']);
 
 const imageReferenceTypeSchema = z.enum(['character']);
 
@@ -109,14 +101,17 @@ function createMiniMaxOutputPath(
 ) {
   const timestamp = Date.now();
   const suffix = Math.random().toString(36).slice(2, 8);
-  const fileName = index === undefined
-    ? `${kind}-${timestamp}-${suffix}.${extension}`
-    : `${kind}-${timestamp}-${suffix}-${index}.${extension}`;
+  const fileName =
+    index === undefined
+      ? `${kind}-${timestamp}-${suffix}.${extension}`
+      : `${kind}-${timestamp}-${suffix}-${index}.${extension}`;
   return path.posix.join(MINIMAX_OUTPUT_DIRECTORY, kind, fileName);
 }
 
 async function writeBufferToWorkspace(
-  workspace: { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown> } } | undefined,
+  workspace:
+    | { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown> } }
+    | undefined,
   kind: 'tts' | 'images' | 'videos',
   extension: string,
   buffer: Buffer,
@@ -125,7 +120,11 @@ async function writeBufferToWorkspace(
   const filesystem = workspace?.filesystem;
 
   if (!filesystem) {
-    forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+    forgeDebug({
+      scope: 'minimax',
+      level: 'error',
+      message: 'minimax-tools: validation/requirement failed',
+    });
     throw new Error('MiniMax tools require a workspace filesystem');
   }
 
@@ -138,7 +137,12 @@ async function downloadFileBuffer(downloadUrl: string) {
   const response = await fetch(downloadUrl);
 
   if (!response.ok) {
-    forgeDebug({ scope: 'minimax', level: 'error', message: 'downloadFileBuffer HTTP failure', context: { status: response.status, downloadUrl } });
+    forgeDebug({
+      scope: 'minimax',
+      level: 'error',
+      message: 'downloadFileBuffer HTTP failure',
+      context: { status: response.status, downloadUrl },
+    });
     throw new Error(`MiniMax file download failed with status ${response.status}`);
   }
 
@@ -153,7 +157,11 @@ async function readWorkspaceImageAsDataUrl(
   const filesystem = workspace?.filesystem;
 
   if (!filesystem) {
-    forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+    forgeDebug({
+      scope: 'minimax',
+      level: 'error',
+      message: 'minimax-tools: validation/requirement failed',
+    });
     throw new Error('MiniMax tools require a workspace filesystem');
   }
 
@@ -162,7 +170,11 @@ async function readWorkspaceImageAsDataUrl(
   const mimeType = resolveImageContentType(filePath);
 
   if (!mimeType || !mimeType.startsWith('image/')) {
-    forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+    forgeDebug({
+      scope: 'minimax',
+      level: 'error',
+      message: 'minimax-tools: validation/requirement failed',
+    });
     throw new Error(`Reference image must be an image file: ${filePath}`);
   }
 
@@ -175,15 +187,16 @@ function inferExtensionFromUrl(downloadUrl: string, fallback: string) {
   return extension || fallback;
 }
 
-async function waitForVideoFile(
-  minimax: MiniMaxManager,
-  taskId: string,
-) {
+async function waitForVideoFile(minimax: MiniMaxManager, taskId: string) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const status = await minimax.queryVideoGeneration(taskId);
 
     if (!status.success) {
-      forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+      forgeDebug({
+        scope: 'minimax',
+        level: 'error',
+        message: 'minimax-tools: validation/requirement failed',
+      });
       throw new Error(status.error?.message ?? 'Failed to query MiniMax video generation status');
     }
 
@@ -195,21 +208,26 @@ async function waitForVideoFile(
     }
 
     if (videoStatus === 'failed') {
-      forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+      forgeDebug({
+        scope: 'minimax',
+        level: 'error',
+        message: 'minimax-tools: validation/requirement failed',
+      });
       throw new Error(status.data?.failureReason ?? 'MiniMax video generation failed');
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 
-  forgeDebug({ scope: 'minimax', level: 'error', message: 'minimax-tools: validation/requirement failed' });
+  forgeDebug({
+    scope: 'minimax',
+    level: 'error',
+    message: 'minimax-tools: validation/requirement failed',
+  });
   throw new Error('MiniMax video generation did not finish within the expected time window');
 }
 
-export function createMiniMaxTools(
-  minimax: MiniMaxManager,
-  allowedToolIds?: Set<string> | null,
-) {
+export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set<string> | null) {
   const tools: Record<string, ReturnType<typeof createTool>> = {};
   const videoToolEnabled = false;
 
@@ -237,8 +255,13 @@ export function createMiniMaxTools(
             ...result.data,
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: String(serializeError(error)) } });
-           return {
+          forgeDebug({
+            scope: 'minimax',
+            level: 'error',
+            message: 'MiniMax tool failed',
+            context: { error: String(serializeError(error)) },
+          });
+          return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to list voices',
             hint: 'Verify the MiniMax integration is configured and the voice list API is available.',
@@ -254,14 +277,36 @@ export function createMiniMaxTools(
       description:
         'Turn text into a speech audio file with MiniMax. You can use plain text, newline breaks between paragraphs, pause markers like <#1.5#>, and interjection tags such as (laughs) or (sighs) when using the 2.8 speech models. The generated file is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
-        text: z.string().min(1).describe('The text to speak. Keep it under 10,000 characters. Use newline breaks for paragraphs, pause markers like <#1.5#> for pauses in seconds, and interjection tags like (laughs), (sighs), or (coughs) when you want those effects.'),
-        voice_id: z.string().optional().describe('Optional voiceId. If omitted, the default voice is Portuguese_CaptivatingStoryteller. Use list_minimax_voices if you want to choose another voice.'),
+        text: z
+          .string()
+          .min(1)
+          .describe(
+            'The text to speak. Keep it under 10,000 characters. Use newline breaks for paragraphs, pause markers like <#1.5#> for pauses in seconds, and interjection tags like (laughs), (sighs), or (coughs) when you want those effects.',
+          ),
+        voice_id: z
+          .string()
+          .optional()
+          .describe(
+            'Optional voiceId. If omitted, the default voice is Portuguese_CaptivatingStoryteller. Use list_minimax_voices if you want to choose another voice.',
+          ),
         speed: z.number().optional().describe('Optional speaking speed. Default is 1.'),
         volume: z.number().optional().describe('Optional voice volume. Default is 1.'),
         pitch: z.number().optional().describe('Optional voice pitch. Default is 0.'),
-        language_boost: languageBoostSchema.optional().describe('Optional language hint. Use this when the text is in a specific language or dialect, or use auto when the language is mixed or uncertain.'),
-        pronunciation_tone_replacements: z.array(z.string().min(1)).optional().describe('Optional pronunciation replacements in the form "original/replacement", for example "Omg/Oh my god".'),
-        output_format: z.enum(['mp3', 'wav', 'flac']).optional().describe('Audio format for the saved file. Default is mp3.'),
+        language_boost: languageBoostSchema
+          .optional()
+          .describe(
+            'Optional language hint. Use this when the text is in a specific language or dialect, or use auto when the language is mixed or uncertain.',
+          ),
+        pronunciation_tone_replacements: z
+          .array(z.string().min(1))
+          .optional()
+          .describe(
+            'Optional pronunciation replacements in the form "original/replacement", for example "Omg/Oh my god".',
+          ),
+        output_format: z
+          .enum(['mp3', 'wav', 'flac'])
+          .optional()
+          .describe('Audio format for the saved file. Default is mp3.'),
       }),
       execute: async (input, context) => {
         try {
@@ -302,8 +347,13 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: String(serializeError(error)) } });
-           return {
+          forgeDebug({
+            scope: 'minimax',
+            level: 'error',
+            message: 'MiniMax tool failed',
+            context: { error: String(serializeError(error)) },
+          });
+          return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate speech',
             hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax speech API.',
@@ -320,12 +370,26 @@ export function createMiniMaxTools(
         'Generate one image with MiniMax. You can use prompt-only generation or pass one or more reference images. Reference images can be public URLs or image paths from your workspace. The generated image is saved in your workspace and the tool returns the saved path.',
       inputSchema: z.object({
         prompt: z.string().min(1).describe('Describe the image you want MiniMax to generate.'),
-        model: z.string().optional().describe('Optional MiniMax image model to use. Omit this unless you need a specific model.'),
-        aspect_ratio: imageAspectRatioSchema.optional().describe('Optional aspect ratio for the image.'),
+        model: z
+          .string()
+          .optional()
+          .describe(
+            'Optional MiniMax image model to use. Omit this unless you need a specific model.',
+          ),
+        aspect_ratio: imageAspectRatioSchema
+          .optional()
+          .describe('Optional aspect ratio for the image.'),
         width: z.number().int().positive().optional().describe('Optional image width in pixels.'),
         height: z.number().int().positive().optional().describe('Optional image height in pixels.'),
-        reference_type: imageReferenceTypeSchema.optional().describe('Optional reference type for subject reference. Default is character.'),
-        reference_images: z.array(z.string().min(1)).optional().describe('Optional reference images. Each item can be a public URL or a path to an image inside your workspace.'),
+        reference_type: imageReferenceTypeSchema
+          .optional()
+          .describe('Optional reference type for subject reference. Default is character.'),
+        reference_images: z
+          .array(z.string().min(1))
+          .optional()
+          .describe(
+            'Optional reference images. Each item can be a public URL or a path to an image inside your workspace.',
+          ),
       }),
       execute: async (input, context) => {
         try {
@@ -378,8 +442,13 @@ export function createMiniMaxTools(
             path: paths[0],
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: String(serializeError(error)) } });
-           return {
+          forgeDebug({
+            scope: 'minimax',
+            level: 'error',
+            message: 'MiniMax tool failed',
+            context: { error: String(serializeError(error)) },
+          });
+          return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate image',
             hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax image API.',
@@ -396,11 +465,30 @@ export function createMiniMaxTools(
         'Generate a video with MiniMax. The tool waits for the generation to finish, saves the video in your workspace, and returns the saved path.',
       inputSchema: z.object({
         prompt: z.string().min(1).describe('Describe the video you want MiniMax to generate.'),
-        model: z.string().optional().describe('Optional MiniMax video model to use. Omit this unless you need a specific model.'),
-        duration: z.number().int().min(3).max(15).optional().describe('Optional duration in seconds.'),
+        model: z
+          .string()
+          .optional()
+          .describe(
+            'Optional MiniMax video model to use. Omit this unless you need a specific model.',
+          ),
+        duration: z
+          .number()
+          .int()
+          .min(3)
+          .max(15)
+          .optional()
+          .describe('Optional duration in seconds.'),
         resolution: z.enum(['768P', '1080P']).optional().describe('Optional output resolution.'),
-        first_frame_image: z.string().url().optional().describe('Optional image URL to use as the first frame.'),
-        last_frame_image: z.string().url().optional().describe('Optional image URL to use as the last frame.'),
+        first_frame_image: z
+          .string()
+          .url()
+          .optional()
+          .describe('Optional image URL to use as the first frame.'),
+        last_frame_image: z
+          .string()
+          .url()
+          .optional()
+          .describe('Optional image URL to use as the last frame.'),
       }),
       execute: async (input, context) => {
         try {
@@ -448,8 +536,13 @@ export function createMiniMaxTools(
             path: savedPath,
           };
         } catch (error) {
-           forgeDebug({ scope: 'minimax', level: 'error', message: 'MiniMax tool failed', context: { error: String(serializeError(error)) } });
-           return {
+          forgeDebug({
+            scope: 'minimax',
+            level: 'error',
+            message: 'MiniMax tool failed',
+            context: { error: String(serializeError(error)) },
+          });
+          return {
             valid: false,
             error: error instanceof Error ? error.message : 'Failed to generate video',
             hint: 'Verify the MiniMax integration is configured and the tool arguments match the current MiniMax video API.',

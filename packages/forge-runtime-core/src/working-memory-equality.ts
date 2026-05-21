@@ -18,10 +18,7 @@ type WorkingMemoryData = NonNullable<z.infer<typeof WORKING_MEMORY_SCHEMA>>;
  * `WORKING_MEMORY_SCHEMA` is used for type inference only (import type).
  * At runtime the function operates on plain objects.
  */
-export function isWorkingMemoryEqual(
-  a: WorkingMemoryData,
-  b: WorkingMemoryData,
-): boolean {
+export function isWorkingMemoryEqual(a: WorkingMemoryData, b: WorkingMemoryData): boolean {
   return compareObjects(a, b);
 }
 

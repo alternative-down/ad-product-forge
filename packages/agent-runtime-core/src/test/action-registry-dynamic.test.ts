@@ -30,13 +30,17 @@ describe('RuntimeActionRegistry', () => {
         name: 'action-a',
         description: 'First action',
         inputSchema: z.object({}),
-        async execute() { return {}; },
+        async execute() {
+          return {};
+        },
       });
       registry.register({
         name: 'action-b',
         description: 'Second action',
         inputSchema: z.object({}),
-        async execute() { return {}; },
+        async execute() {
+          return {};
+        },
       });
 
       const actions = registry.describe();
@@ -79,7 +83,9 @@ describe('RuntimeActionRegistry', () => {
         name: 'init-action',
         description: 'Initial action',
         inputSchema: z.object({}),
-        async execute() { return { ok: true }; },
+        async execute() {
+          return { ok: true };
+        },
       });
 
       // Simulate execution step 1
@@ -136,7 +142,9 @@ describe('RuntimeActionRegistry', () => {
         name: 'persisted',
         description: 'Stays registered',
         inputSchema: z.object({}),
-        async execute() { return { ok: true }; },
+        async execute() {
+          return { ok: true };
+        },
       });
 
       // No public unregister exists, so verify the action remains callable
@@ -165,7 +173,9 @@ describe('RuntimeActionRegistry', () => {
           term: z.string(),
           limit: z.number().optional(),
         }),
-        async execute() { return { results: [] }; },
+        async execute() {
+          return { results: [] };
+        },
       });
 
       const actions = registry.describe();
@@ -184,7 +194,9 @@ describe('RuntimeActionRegistry', () => {
         name: 'step-action',
         description: 'Added during execution',
         inputSchema: z.object({}),
-        async execute() { return {}; },
+        async execute() {
+          return {};
+        },
       });
 
       const after = registry.describe();

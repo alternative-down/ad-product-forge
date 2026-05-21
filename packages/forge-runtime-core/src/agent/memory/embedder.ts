@@ -87,7 +87,7 @@ export async function embedTextWithWorkspaceEmbedder(
 }
 
 export async function embedTextWithFastembed(_text: string): Promise<number[]> {
-return await embedTextWithWorkspaceEmbedder('fastembed', _text);
+  return await embedTextWithWorkspaceEmbedder('fastembed', _text);
 }
 
 async function getTransformersPipeline(

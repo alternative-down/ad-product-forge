@@ -14,19 +14,31 @@ export interface AppProvisioningOps {
   getGlobalConfig: OpsContext['getGlobalConfig'];
   isConfigured: () => Promise<boolean>;
   getDefaultOwner: OpsContext['getDefaultOwner'];
-  createAgentApp: (input: { agentId: string; agentName: string }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
+  createAgentApp: (input: {
+    agentId: string;
+    agentName: string;
+  }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
   getAgentProvisioning: (agentId: string) => Promise<GitHubAppProvisioning | null>;
-  updateAgentManifestConfig: (input: { agentId: string; manifestConfig: GitHubAppCredentials['manifestConfig'] }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
+  updateAgentManifestConfig: (input: {
+    agentId: string;
+    manifestConfig: GitHubAppCredentials['manifestConfig'];
+  }) => Promise<ReturnType<OpsContext['opsRouting']['buildProvisioning']>>;
   loadAllAgents: () => Promise<Array<{ agentId: string; credentials: GitHubAppCredentials }>>;
   unloadAgent: (agentId: string) => void;
   deleteAgentApp: (agentId: string) => Promise<void>;
   buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => GitHubAppProvisioning;
   getCredentials: (agentId: string) => Promise<GitHubAppCredentials | null>;
-  getActiveCredentials: (agentId: string) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
+  getActiveCredentials: (
+    agentId: string,
+  ) => Promise<Extract<GitHubAppCredentials, { status: 'active' }>>;
   saveCredentials: (agentId: string, credentials: GitHubAppCredentials) => Promise<void>;
   parseCredentials: (encryptedCredentials: string) => GitHubAppCredentials | null;
-  createInstallationOctokit: (credentials: Extract<GitHubAppCredentials, { status: 'active' }>) => Promise<Octokit>;
-  createGitHubApp: (credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) => App;
+  createInstallationOctokit: (
+    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+  ) => Promise<Octokit>;
+  createGitHubApp: (
+    credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>,
+  ) => App;
 }
 
 export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
@@ -38,13 +50,21 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     try {
       const existing = await ctx.getCredentials(input.agentId);
       if (existing) {
-        forgeDebug({ scope: 'github-apps', level: 'warn', message: 'GitHub App already exists for agent', context: { agentId: input?.agentId } });
+        forgeDebug({
+          scope: 'github-apps',
+          level: 'warn',
+          message: 'GitHub App already exists for agent',
+          context: { agentId: input?.agentId },
+        });
         throw new Error(`Agent ${input.agentId} already has GitHub credentials`);
       }
       const pendingCredentials: GitHubAppCredentials = {
         status: 'pending',
         state: ctx.nanoid(16),
-        appName: (ctx.createAppName as unknown as (a: string, b: string) => string)(input.agentId, input.agentName),
+        appName: (ctx.createAppName as unknown as (a: string, b: string) => string)(
+          input.agentId,
+          input.agentName,
+        ),
         manifestConfig: ctx.normalizeManifestConfig(ctx.DEFAULT_GITHUB_APP_MANIFEST_CONFIG),
         createdAt: Date.now(),
       };
@@ -52,7 +72,12 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       ctx.opsRouting.registerAgentRoutes(input.agentId);
       return ctx.opsRouting.buildProvisioning(input.agentId, pendingCredentials);
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createAgentApp failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'github-apps',
+        level: 'error',
+        message: '[github-apps] createAgentApp failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -81,7 +106,12 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     try {
       const existing = await ctx.getCredentials(input.agentId);
       if (!existing) {
-        forgeDebug({ scope: 'github-apps', level: 'warn', message: 'GitHub App has no credentials to update', context: { agentId: input?.agentId } });
+        forgeDebug({
+          scope: 'github-apps',
+          level: 'warn',
+          message: 'GitHub App has no credentials to update',
+          context: { agentId: input?.agentId },
+        });
         throw new Error(`Agent ${input.agentId} has no GitHub credentials to update`);
       }
       const updated: GitHubAppCredentials = {
@@ -91,7 +121,12 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       await ctx.saveCredentials(input.agentId, updated);
       return ctx.opsRouting.buildProvisioning(input.agentId, updated);
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] updateAgentManifestConfig failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'github-apps',
+        level: 'error',
+        message: '[github-apps] updateAgentManifestConfig failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -108,14 +143,22 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       }
       return result;
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] loadAllAgents failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'github-apps',
+        level: 'error',
+        message: '[github-apps] loadAllAgents failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
 
   function unloadAgent(agentId: string) {
     const cleanups = ctx.routeCleanups.get(agentId);
-    if (cleanups) { cleanups.forEach((fn) => fn()); ctx.routeCleanups.delete(agentId); }
+    if (cleanups) {
+      cleanups.forEach((fn) => fn());
+      ctx.routeCleanups.delete(agentId);
+    }
   }
 
   async function deleteAgentApp(agentId: string) {
@@ -123,18 +166,34 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
       const credentials = await ctx.getCredentials(agentId);
       if (!credentials || credentials.status !== 'active') return;
       unloadAgent(agentId);
-      await ctx.config.db.delete(ctx.agentProviders).where(
-        ctx.and(ctx.eq(ctx.agentProviders.agentId, agentId), ctx.eq(ctx.agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE)),
-      );
+      await ctx.config.db
+        .delete(ctx.agentProviders)
+        .where(
+          ctx.and(
+            ctx.eq(ctx.agentProviders.agentId, agentId),
+            ctx.eq(ctx.agentProviders.providerType, ctx.GITHUB_PROVIDER_TYPE),
+          ),
+        );
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] deleteAgentApp failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'github-apps',
+        level: 'error',
+        message: '[github-apps] deleteAgentApp failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
 
-  function createGitHubApp(credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>): App {
+  function createGitHubApp(
+    credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>,
+  ): App {
     // static import used
-    return new App({ appId: credentials.appId, privateKey: credentials.privateKey, webhooks: { secret: credentials.webhookSecret } });
+    return new App({
+      appId: credentials.appId,
+      privateKey: credentials.privateKey,
+      webhooks: { secret: credentials.webhookSecret },
+    });
   }
 
   async function createInstallationOctokit(
@@ -143,7 +202,12 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     try {
       return await createGitHubApp(credentials).getInstallationOctokit(credentials.installationId);
     } catch (err) {
-      forgeDebug({ scope: 'github-apps', level: 'error', message: '[github-apps] createInstallationOctokit failed', context: { error: String(serializeError(err)) }});
+      forgeDebug({
+        scope: 'github-apps',
+        level: 'error',
+        message: '[github-apps] createInstallationOctokit failed',
+        context: { error: String(serializeError(err)) },
+      });
       throw err;
     }
   }
@@ -158,7 +222,8 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
     loadAllAgents,
     unloadAgent,
     deleteAgentApp,
-    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) => ctx.opsRouting.buildProvisioning(agentId, credentials),
+    buildProvisioning: (agentId: string, credentials: GitHubAppCredentials) =>
+      ctx.opsRouting.buildProvisioning(agentId, credentials),
     getCredentials: ctx.getCredentials,
     getActiveCredentials: ctx.getActiveCredentials,
     saveCredentials: ctx.saveCredentials,

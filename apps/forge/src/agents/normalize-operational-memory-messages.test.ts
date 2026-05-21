@@ -30,10 +30,12 @@ function makeMessage(overrides: Partial<TestMessage> = {}): TestMessage {
   };
 }
 
-function makeStore(overrides: {
-  messages?: TestMessage[];
-  updateError?: Error;
-} = {}): ConversationStore {
+function makeStore(
+  overrides: {
+    messages?: TestMessage[];
+    updateError?: Error;
+  } = {},
+): ConversationStore {
   const messages = overrides.messages ?? [];
   const updateError = overrides.updateError;
   return {
@@ -77,9 +79,7 @@ describe('normalizeOperationalMemoryMessages', () => {
 
   it('skips messages without operationalMemoryType', async () => {
     const store = makeStore({
-      messages: [
-        makeMessage({ id: 'msg-a', parts: [{ type: 'text', text: 'plain' }] }),
-      ],
+      messages: [makeMessage({ id: 'msg-a', parts: [{ type: 'text', text: 'plain' }] })],
     });
 
     await normalizeOperationalMemoryMessages({
@@ -262,9 +262,11 @@ describe('normalizeOperationalMemoryMessages', () => {
     const store = makeStore();
     (store.listMessages as ReturnType<typeof vi.fn>).mockRejectedValue(error);
 
-    await expect(normalizeOperationalMemoryMessages({
-      threadId: 'thread-1',
-      conversationStore: store,
-    })).rejects.toThrow('list failed');
+    await expect(
+      normalizeOperationalMemoryMessages({
+        threadId: 'thread-1',
+        conversationStore: store,
+      }),
+    ).rejects.toThrow('list failed');
   });
 });

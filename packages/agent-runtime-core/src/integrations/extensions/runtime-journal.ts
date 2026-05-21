@@ -6,9 +6,7 @@ export type RuntimeJournalPluginOptions = {
   journal: RuntimeJournal;
 };
 
-export function createRuntimeJournalPlugin(
-  options: RuntimeJournalPluginOptions,
-): RuntimePlugin {
+export function createRuntimeJournalPlugin(options: RuntimeJournalPluginOptions): RuntimePlugin {
   return {
     name: options.name ?? 'runtime-journal',
     async onDispatch(context) {

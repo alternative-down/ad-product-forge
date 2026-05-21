@@ -70,7 +70,7 @@ describe('InMemoryForgeUsageSink', () => {
       const r2 = makeRecord({ runtimeId: 'runtime-B' });
       await sink.recordStepUsage(r1);
       await sink.recordStepUsage(r2);
-      expect(sink.list().map(r => r.runtimeId)).toEqual(['runtime-A', 'runtime-B']);
+      expect(sink.list().map((r) => r.runtimeId)).toEqual(['runtime-A', 'runtime-B']);
     });
   });
 

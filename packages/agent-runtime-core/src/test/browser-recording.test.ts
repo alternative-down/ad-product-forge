@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { InMemoryBrowserSessionRecorder, RecordingBrowserGateway } from '../integrations/gateways/browser-recording.js';
+import {
+  InMemoryBrowserSessionRecorder,
+  RecordingBrowserGateway,
+} from '../integrations/gateways/browser-recording.js';
 
 describe('browser recording gateway', () => {
   it('records browser session activity', async () => {

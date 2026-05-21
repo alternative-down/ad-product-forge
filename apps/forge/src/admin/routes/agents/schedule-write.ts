@@ -7,7 +7,11 @@ import type { ForgeHttpServerAdapter } from '../../../http/server';
 import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';
-import { createScheduleSchema, updateScheduleSchema, deleteScheduleSchema } from '../schemas/schedules';
+import {
+  createScheduleSchema,
+  updateScheduleSchema,
+  deleteScheduleSchema,
+} from '../schemas/schedules';
 
 export function registerAgentSchedulesWriteRoutes(
   httpServer: ForgeHttpServerAdapter,
@@ -22,29 +26,35 @@ export function registerAgentSchedulesWriteRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, createScheduleSchema);
-        const scheduleInput = body.scheduleType === 'cron'
-          ? {
-              name: body.name,
-              description: body.description,
-              scheduleType: body.scheduleType,
-              cronExpression: body.cronExpression!,
-              timezone: body.timezone,
-              content: body.content,
-              wakeWhenRunning: body.wakeWhenRunning,
-            }
-          : {
-              name: body.name,
-              description: body.description,
-              scheduleType: body.scheduleType,
-              scheduledDate: body.scheduledDate!,
-              timezone: body.timezone,
-              content: body.content,
-              wakeWhenRunning: body.wakeWhenRunning,
-            };
+        const scheduleInput =
+          body.scheduleType === 'cron'
+            ? {
+                name: body.name,
+                description: body.description,
+                scheduleType: body.scheduleType,
+                cronExpression: body.cronExpression!,
+                timezone: body.timezone,
+                content: body.content,
+                wakeWhenRunning: body.wakeWhenRunning,
+              }
+            : {
+                name: body.name,
+                description: body.description,
+                scheduleType: body.scheduleType,
+                scheduledDate: body.scheduledDate!,
+                timezone: body.timezone,
+                content: body.content,
+                wakeWhenRunning: body.wakeWhenRunning,
+              };
         const schedule = await input.schedules.createSchedule(body.agentId, scheduleInput);
         return jsonResponse(schedule, 201);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/create', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/agent-schedule/create',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -70,7 +80,12 @@ export function registerAgentSchedulesWriteRoutes(
         });
         return jsonResponse(schedule);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/update', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/agent-schedule/update',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },
@@ -86,7 +101,12 @@ export function registerAgentSchedulesWriteRoutes(
         const result = await input.schedules.deleteSchedule(body.agentId, body.scheduleId);
         return jsonResponse(result);
       } catch (err) {
-        forgeDebug({ scope: 'admin', level: 'error', message: 'Admin route failed: /admin/agent-schedule/delete', context: { error: String(serializeError(err)) } });
+        forgeDebug({
+          scope: 'admin',
+          level: 'error',
+          message: 'Admin route failed: /admin/agent-schedule/delete',
+          context: { error: String(serializeError(err)) },
+        });
         return jsonResponse({ error: String(serializeError(err)) }, 500);
       }
     },

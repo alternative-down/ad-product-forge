@@ -26,7 +26,7 @@ async function makeStore(tablePrefix = 'forge_runtime') {
 
 describe('LibsqlTodoStore', () => {
   describe('upsertTodos', () => {
-    it('creates a new todo when no id provided', async function() {
+    it('creates a new todo when no id provided', async function () {
       const { store } = await makeStore();
       const result = await store.upsertTodos('thread-1', 'resource-1', [{ title: 'Test todo' }]);
       expect(result).toHaveLength(1);
@@ -37,37 +37,47 @@ describe('LibsqlTodoStore', () => {
       expect(result[0].id).toBeTruthy();
     });
 
-    it('creates with in_progress status', async function() {
+    it('creates with in_progress status', async function () {
       const { store } = await makeStore();
-      const result = await store.upsertTodos('thread-1', 'resource-1', [{ title: 'Working', status: 'in_progress' }]);
+      const result = await store.upsertTodos('thread-1', 'resource-1', [
+        { title: 'Working', status: 'in_progress' },
+      ]);
       expect(result[0].status).toBe('in_progress');
     });
 
-    it('creates with completed status', async function() {
+    it('creates with completed status', async function () {
       const { store } = await makeStore();
-      const result = await store.upsertTodos('thread-1', 'resource-1', [{ title: 'Done', status: 'completed' }]);
+      const result = await store.upsertTodos('thread-1', 'resource-1', [
+        { title: 'Done', status: 'completed' },
+      ]);
       expect(result[0].status).toBe('completed');
     });
 
-    it('updates existing todo by id', async function() {
+    it('updates existing todo by id', async function () {
       const { store } = await makeStore();
       const created = await store.upsertTodos('thread-1', 'resource-1', [{ title: 'Original' }]);
       const id = created[0].id;
-      const updated = await store.upsertTodos('thread-1', 'resource-1', [{ id, title: 'Updated', status: 'completed' }]);
+      const updated = await store.upsertTodos('thread-1', 'resource-1', [
+        { id, title: 'Updated', status: 'completed' },
+      ]);
       expect(updated[0].title).toBe('Updated');
       expect(updated[0].status).toBe('completed');
     });
 
-    it('updates title only, preserving status', async function() {
+    it('updates title only, preserving status', async function () {
       const { store } = await makeStore();
-      const created = await store.upsertTodos('thread-1', 'resource-1', [{ title: 'Original', status: 'in_progress' }]);
+      const created = await store.upsertTodos('thread-1', 'resource-1', [
+        { title: 'Original', status: 'in_progress' },
+      ]);
       const id = created[0].id;
-      const updated = await store.upsertTodos('thread-1', 'resource-1', [{ id, title: 'New Title' }]);
+      const updated = await store.upsertTodos('thread-1', 'resource-1', [
+        { id, title: 'New Title' },
+      ]);
       expect(updated[0].title).toBe('New Title');
       expect(updated[0].status).toBe('in_progress');
     });
 
-    it('upserts multiple items', async function() {
+    it('upserts multiple items', async function () {
       const { store } = await makeStore();
       const results = await store.upsertTodos('thread-1', 'resource-1', [
         { title: 'First' },
@@ -80,12 +90,12 @@ describe('LibsqlTodoStore', () => {
   });
 
   describe('getTodos', () => {
-    it('returns empty when no todos', async function() {
+    it('returns empty when no todos', async function () {
       const { store } = await makeStore();
       expect(await store.getTodos('thread-1', 'resource-1')).toEqual([]);
     });
 
-    it('returns all todos for thread/resource in insertion order', async function() {
+    it('returns all todos for thread/resource in insertion order', async function () {
       const { store } = await makeStore();
       await store.upsertTodos('thread-1', 'resource-1', [{ title: 'A' }, { title: 'B' }]);
       const result = await store.getTodos('thread-1', 'resource-1');
@@ -94,7 +104,7 @@ describe('LibsqlTodoStore', () => {
       expect(result[1].title).toBe('B');
     });
 
-    it('isolates per thread/resource', async function() {
+    it('isolates per thread/resource', async function () {
       const { store } = await makeStore();
       await store.upsertTodos('t1', 'r1', [{ title: 'T1R1' }]);
       await store.upsertTodos('t2', 'r1', [{ title: 'T2R1' }]);
@@ -104,7 +114,7 @@ describe('LibsqlTodoStore', () => {
   });
 
   describe('clearTodos', () => {
-    it('removes all todos for thread/resource', async function() {
+    it('removes all todos for thread/resource', async function () {
       const { store } = await makeStore();
       await store.upsertTodos('thread-1', 'resource-1', [{ title: 'A' }, { title: 'B' }]);
       await store.clearTodos('thread-1', 'resource-1');
@@ -114,14 +124,14 @@ describe('LibsqlTodoStore', () => {
 });
 
 describe('createUpdateTodosAction', () => {
-  it('has correct name and description', async function() {
+  it('has correct name and description', async function () {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     expect(action.name).toBe('updateTodos');
     expect(action.description).toContain('Create, update, complete, or clear');
   });
 
-  it('creates single todo from object input', async function() {
+  it('creates single todo from object input', async function () {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     const result = await action.execute({ items: { title: 'New task' } });
@@ -130,7 +140,7 @@ describe('createUpdateTodosAction', () => {
     expect((result as unknown).todos[0].status).toBe('pending');
   });
 
-  it('creates multiple todos from array input', async function() {
+  it('creates multiple todos from array input', async function () {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     const result = await action.execute({
@@ -139,7 +149,7 @@ describe('createUpdateTodosAction', () => {
     expect((result as unknown).todos).toHaveLength(2);
   });
 
-  it('clears todos with empty array', async function() {
+  it('clears todos with empty array', async function () {
     const { store } = await makeStore();
     await store.upsertTodos('thread-1', 'resource-1', [{ title: 'To clear' }]);
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
@@ -149,7 +159,7 @@ describe('createUpdateTodosAction', () => {
     expect(await store.getTodos('thread-1', 'resource-1')).toEqual([]);
   });
 
-  it('updates existing todo by id', async function() {
+  it('updates existing todo by id', async function () {
     const { store } = await makeStore();
     const created = await store.upsertTodos('thread-1', 'resource-1', [{ title: 'Original' }]);
     const id = created[0].id;
@@ -159,13 +169,13 @@ describe('createUpdateTodosAction', () => {
     expect((result as unknown).todos[0].status).toBe('completed');
   });
 
-  it('rejects empty title', async function() {
+  it('rejects empty title', async function () {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     await expect(action.execute({ items: { title: '' } })).rejects.toThrow();
   });
 
-  it('rejects invalid status', async function() {
+  it('rejects invalid status', async function () {
     const { store } = await makeStore();
     const action = createUpdateTodosAction(store, 'thread-1', 'resource-1');
     await expect(

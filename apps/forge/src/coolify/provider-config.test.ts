@@ -105,7 +105,11 @@ describe('getApplicationsBaseDomain — happy path', () => {
     });
     const getDefaultServer = vi.fn();
 
-    const result = await getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv-1');
+    const result = await getApplicationsBaseDomain(
+      requestJson as any,
+      getDefaultServer as any,
+      'srv-1',
+    );
 
     expect(requestJson).toHaveBeenCalledWith('GET', '/servers/srv-1');
     expect(result).toBe('*.deploy.example.com');
@@ -130,7 +134,11 @@ describe('getApplicationsBaseDomain — happy path', () => {
     });
     const getDefaultServer = vi.fn();
 
-    const result = await getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv');
+    const result = await getApplicationsBaseDomain(
+      requestJson as any,
+      getDefaultServer as any,
+      'srv',
+    );
 
     expect(result).toBe('app.example.com');
   });
@@ -141,7 +149,11 @@ describe('getApplicationsBaseDomain — happy path', () => {
     });
     const getDefaultServer = vi.fn();
 
-    const result = await getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv');
+    const result = await getApplicationsBaseDomain(
+      requestJson as any,
+      getDefaultServer as any,
+      'srv',
+    );
 
     expect(result).toBe('wildcard.example.com');
   });
@@ -154,16 +166,18 @@ describe('getApplicationsBaseDomain — error handling', () => {
     });
     const getDefaultServer = vi.fn();
 
-    await expect(getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'))
-      .rejects.toThrow('Failed to resolve Coolify applications base domain:');
+    await expect(
+      getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'),
+    ).rejects.toThrow('Failed to resolve Coolify applications base domain:');
   });
 
   it('wraps requestJson errors into descriptive message', async () => {
     const requestJson = vi.fn().mockRejectedValue(new Error('network timeout'));
     const getDefaultServer = vi.fn();
 
-    await expect(getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'))
-      .rejects.toThrow('network timeout');
+    await expect(
+      getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'),
+    ).rejects.toThrow('network timeout');
   });
 
   it('throws when server data has no wildcard_domain key', async () => {
@@ -172,16 +186,17 @@ describe('getApplicationsBaseDomain — error handling', () => {
     });
     const getDefaultServer = vi.fn();
 
-
-    await expect(getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'))
-      .rejects.toThrow('Failed to resolve Coolify applications base domain:');
+    await expect(
+      getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'),
+    ).rejects.toThrow('Failed to resolve Coolify applications base domain:');
   });
 
   it('throws when extractServer gets bare object with null wildcard_domain', async () => {
     const requestJson = vi.fn().mockResolvedValue({ wildcard_domain: null });
     const getDefaultServer = vi.fn();
 
-    await expect(getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'))
-      .rejects.toThrow('Failed to resolve Coolify applications base domain:');
+    await expect(
+      getApplicationsBaseDomain(requestJson as any, getDefaultServer as any, 'srv'),
+    ).rejects.toThrow('Failed to resolve Coolify applications base domain:');
   });
 });

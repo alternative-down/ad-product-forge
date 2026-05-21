@@ -1,4 +1,3 @@
- 
 import { describe, expect, it, test, vi, beforeEach } from 'vitest';
 import {
   createMcpServerConfig,
@@ -49,9 +48,11 @@ function makeMockDb(rows: unknown[] = []) {
     select: vi.fn(() => ({
       from: vi.fn(() =>
         Object.assign(Promise.resolve(rows), {
-          where: vi.fn(() => Object.assign(Promise.resolve(rows), {
-            limit: vi.fn(() => Promise.resolve(rows)),
-          })),
+          where: vi.fn(() =>
+            Object.assign(Promise.resolve(rows), {
+              limit: vi.fn(() => Promise.resolve(rows)),
+            }),
+          ),
         }),
       ),
     })),
@@ -322,9 +323,7 @@ describe('getAgentMcpServers', () => {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
-            where: vi.fn(() =>
-              Object.assign(Promise.resolve([]), { where: vi.fn() }),
-            ),
+            where: vi.fn(() => Object.assign(Promise.resolve([]), { where: vi.fn() })),
           })),
         })),
       })),

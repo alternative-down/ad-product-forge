@@ -11,7 +11,7 @@ export function getEncoder() {
 
 export function countTokens(text: string): number {
   if (!text) return 0;
-  
+
   const enc = getEncoder();
   const tokens = enc.encode(text);
   return tokens.length;

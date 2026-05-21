@@ -1,9 +1,13 @@
 import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
-
-import type {Database} from '../database/schema';
-import { agents, agentExecutionContracts, agentExecutionSteps, companyCashLedger } from '../database/schema';
+import type { Database } from '../database/schema';
+import {
+  agents,
+  agentExecutionContracts,
+  agentExecutionSteps,
+  companyCashLedger,
+} from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 
 const IN = 'in';
@@ -29,7 +33,7 @@ export function createMicroErpReadModel(db: Database) {
 
   async function getCompanyCashBalance() {
     let balanceUsd: number;
-      balanceUsd = await companyCash.getCurrentBalanceUsd();
+    balanceUsd = await companyCash.getCurrentBalanceUsd();
     return { balanceUsd };
   }
 
@@ -59,19 +63,19 @@ export function createMicroErpReadModel(db: Database) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     let rows;
-      rows = await db.query.companyCashLedger.findMany({
-        where,
-        orderBy: [desc(companyCashLedger.createdAt)],
-        limit,
-        offset,
-      });
+    rows = await db.query.companyCashLedger.findMany({
+      where,
+      orderBy: [desc(companyCashLedger.createdAt)],
+      limit,
+      offset,
+    });
     let countRows;
-      countRows = await db
-        .select({
-          total: sql<number>`count(*)`,
-        })
-        .from(companyCashLedger)
-        .where(where);
+    countRows = await db
+      .select({
+        total: sql<number>`count(*)`,
+      })
+      .from(companyCashLedger)
+      .where(where);
 
     let summary;
     try {
@@ -102,49 +106,53 @@ export function createMicroErpReadModel(db: Database) {
     };
   }
 
-  async function getCompanyCashSummary(input: {
-    periodStart?: number;
-    periodEnd?: number;
-  } = {}) {
+  async function getCompanyCashSummary(
+    input: {
+      periodStart?: number;
+      periodEnd?: number;
+    } = {},
+  ) {
     const now = Date.now();
     const periodStart = input.periodStart ?? startOfCurrentMonth(now);
     const periodEnd = input.periodEnd ?? now;
     let postedTotals;
-      postedTotals = await db
-        .select({
-          totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-          totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-        })
-        .from(companyCashLedger)
-        .where(
-          and(
-            eq(companyCashLedger.status, POSTED),
-            gte(companyCashLedger.effectiveAt, periodStart),
-            lte(companyCashLedger.effectiveAt, periodEnd),
-          ),
-        );
+    postedTotals = await db
+      .select({
+        totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+      })
+      .from(companyCashLedger)
+      .where(
+        and(
+          eq(companyCashLedger.status, POSTED),
+          gte(companyCashLedger.effectiveAt, periodStart),
+          lte(companyCashLedger.effectiveAt, periodEnd),
+        ),
+      );
     let scheduledTotals;
-      scheduledTotals = await db
-        .select({
-          scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-          scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
-        })
-        .from(companyCashLedger)
-        .where(
-          and(
-            ne(companyCashLedger.status, CANCELED),
-            eq(companyCashLedger.status, PLANNED),
-            gte(companyCashLedger.dueAt, Math.max(periodStart, now)),
-            lte(companyCashLedger.dueAt, periodEnd),
-          ),
-        );
+    scheduledTotals = await db
+      .select({
+        scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+        scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
+      })
+      .from(companyCashLedger)
+      .where(
+        and(
+          ne(companyCashLedger.status, CANCELED),
+          eq(companyCashLedger.status, PLANNED),
+          gte(companyCashLedger.dueAt, Math.max(periodStart, now)),
+          lte(companyCashLedger.dueAt, periodEnd),
+        ),
+      );
     const totalInUsd = (postedTotals as unknown as { totalInUsd: number }[])[0]?.totalInUsd ?? 0;
     const totalOutUsd = (postedTotals as unknown as { totalOutUsd: number }[])[0]?.totalOutUsd ?? 0;
-    const scheduledInUsd = (scheduledTotals as unknown as { scheduledInUsd: number }[])[0]?.scheduledInUsd ?? 0;
-    const scheduledOutUsd = (scheduledTotals as unknown as { scheduledOutUsd: number }[])[0]?.scheduledOutUsd ?? 0;
+    const scheduledInUsd =
+      (scheduledTotals as unknown as { scheduledInUsd: number }[])[0]?.scheduledInUsd ?? 0;
+    const scheduledOutUsd =
+      (scheduledTotals as unknown as { scheduledOutUsd: number }[])[0]?.scheduledOutUsd ?? 0;
 
     let balanceUsd;
-      balanceUsd = await companyCash.getCurrentBalanceUsd();
+    balanceUsd = await companyCash.getCurrentBalanceUsd();
 
     return {
       periodStart,
@@ -161,27 +169,25 @@ export function createMicroErpReadModel(db: Database) {
   async function listActiveInternalAgentContracts() {
     const now = Date.now();
     let rows;
-      rows = await db
-        .select({
-          contractId: agentExecutionContracts.id,
-          agentId: agentExecutionContracts.agentId,
-          agentName: agents.name,
-          startsAt: agentExecutionContracts.startsAt,
-          endsAt: agentExecutionContracts.endsAt,
-          weeklyValueUsd: agentExecutionContracts.budgetUsd,
-          autoRenew: agentExecutionContracts.autoRenew,
-        })
-        .from(agentExecutionContracts)
-        .innerJoin(agents, eq(agents.id, agentExecutionContracts.agentId))
-        .where(
-          and(
-            lte(agentExecutionContracts.startsAt, now),
-            gte(agentExecutionContracts.endsAt, now),
-          ),
-        )
-        .orderBy(desc(agentExecutionContracts.endsAt)).all();
+    rows = await db
+      .select({
+        contractId: agentExecutionContracts.id,
+        agentId: agentExecutionContracts.agentId,
+        agentName: agents.name,
+        startsAt: agentExecutionContracts.startsAt,
+        endsAt: agentExecutionContracts.endsAt,
+        weeklyValueUsd: agentExecutionContracts.budgetUsd,
+        autoRenew: agentExecutionContracts.autoRenew,
+      })
+      .from(agentExecutionContracts)
+      .innerJoin(agents, eq(agents.id, agentExecutionContracts.agentId))
+      .where(
+        and(lte(agentExecutionContracts.startsAt, now), gte(agentExecutionContracts.endsAt, now)),
+      )
+      .orderBy(desc(agentExecutionContracts.endsAt))
+      .all();
     let metricsByContractId;
-      metricsByContractId = await getActiveContractMetrics(rows, now);
+    metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
       items: rows.map((row: any) => ({
@@ -195,34 +201,46 @@ export function createMicroErpReadModel(db: Database) {
   async function getActiveInternalAgentContract(agentId: string) {
     const now = Date.now();
     let row;
-      row = await db
-        .select({
-          contractId: agentExecutionContracts.id,
-          agentId: agentExecutionContracts.agentId,
-          agentName: agents.name,
-          startsAt: agentExecutionContracts.startsAt,
-          endsAt: agentExecutionContracts.endsAt,
-          weeklyValueUsd: agentExecutionContracts.budgetUsd,
-          autoRenew: agentExecutionContracts.autoRenew,
-        })
-        .from(agentExecutionContracts)
-        .innerJoin(agents, eq(agents.id, agentExecutionContracts.agentId))
-        .where(
-          and(
-            eq(agentExecutionContracts.agentId, agentId),
-            lte(agentExecutionContracts.startsAt, now),
-            gte(agentExecutionContracts.endsAt, now),
-          ),
-        )
-        .orderBy(desc(agentExecutionContracts.endsAt))
-        .limit(1);
+    row = await db
+      .select({
+        contractId: agentExecutionContracts.id,
+        agentId: agentExecutionContracts.agentId,
+        agentName: agents.name,
+        startsAt: agentExecutionContracts.startsAt,
+        endsAt: agentExecutionContracts.endsAt,
+        weeklyValueUsd: agentExecutionContracts.budgetUsd,
+        autoRenew: agentExecutionContracts.autoRenew,
+      })
+      .from(agentExecutionContracts)
+      .innerJoin(agents, eq(agents.id, agentExecutionContracts.agentId))
+      .where(
+        and(
+          eq(agentExecutionContracts.agentId, agentId),
+          lte(agentExecutionContracts.startsAt, now),
+          gte(agentExecutionContracts.endsAt, now),
+        ),
+      )
+      .orderBy(desc(agentExecutionContracts.endsAt))
+      .limit(1);
 
-    const contract = (row as unknown as { 0: { contractId: string; agentId: string; agentName: string; startsAt: number; endsAt: number; weeklyValueUsd: number; autoRenew: number } })[0];
+    const contract = (
+      row as unknown as {
+        0: {
+          contractId: string;
+          agentId: string;
+          agentName: string;
+          startsAt: number;
+          endsAt: number;
+          weeklyValueUsd: number;
+          autoRenew: number;
+        };
+      }
+    )[0];
     if (contract === null || contract === undefined) {
       return null;
     }
     let metricsByContractId;
-      metricsByContractId = await getActiveContractMetrics([contract], now);
+    metricsByContractId = await getActiveContractMetrics([contract], now);
 
     return {
       ...contract,
@@ -252,24 +270,23 @@ export function createMicroErpReadModel(db: Database) {
 
     let spendRows: Array<{ contractId: string; total: number }>;
     let stepRows;
-      [spendRows, stepRows] = await Promise.all([
-        db
-          .select({
-            contractId: agentExecutionSteps.contractId,
-            total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
-          })
-          .from(agentExecutionSteps)
-          .where(inArray(agentExecutionSteps.contractId, contractIds))
-          .groupBy(agentExecutionSteps.contractId).all(),
-        db.query.agentExecutionSteps.findMany({
-          where: inArray(agentExecutionSteps.contractId, contractIds),
-          orderBy: [desc(agentExecutionSteps.createdAt)],
-        }),
-      ]);
+    [spendRows, stepRows] = await Promise.all([
+      db
+        .select({
+          contractId: agentExecutionSteps.contractId,
+          total: sql<number>`coalesce(sum(${agentExecutionSteps.costUsd}), 0)`,
+        })
+        .from(agentExecutionSteps)
+        .where(inArray(agentExecutionSteps.contractId, contractIds))
+        .groupBy(agentExecutionSteps.contractId)
+        .all(),
+      db.query.agentExecutionSteps.findMany({
+        where: inArray(agentExecutionSteps.contractId, contractIds),
+        orderBy: [desc(agentExecutionSteps.createdAt)],
+      }),
+    ]);
 
-    const spentUsdByContractId = new Map(
-      spendRows.map((row) => [row.contractId, row.total]),
-    );
+    const spentUsdByContractId = new Map(spendRows.map((row) => [row.contractId, row.total]));
     const recentStepsByContractId = new Map<string, typeof stepRows>();
 
     for (const step of stepRows) {

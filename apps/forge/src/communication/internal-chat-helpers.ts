@@ -49,7 +49,12 @@ export function parseFilterDate(value: string | undefined, fieldName: string): n
   const parsed = Date.parse(value);
 
   if (Number.isNaN(parsed)) {
-    forgeDebug({ scope: 'internal-chat-helpers', level: 'warn', message: 'validateChatAddress: invalid field', context: { fieldName, value } });
+    forgeDebug({
+      scope: 'internal-chat-helpers',
+      level: 'warn',
+      message: 'validateChatAddress: invalid field',
+      context: { fieldName, value },
+    });
     throw new Error(`Invalid ${fieldName}: ${value}`);
   }
 
@@ -62,15 +67,15 @@ export function parseFilterDate(value: string | undefined, fieldName: string): n
  * then appends a random 6-character suffix for uniqueness.
  */
 export function createInternalChatSlug(displayName: string): string {
-  const baseSlug = displayName
-    .trim()
-    .split(/\s+/)[0]
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    || 'agent';
+  const baseSlug =
+    displayName
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'agent';
 
   return `${baseSlug}-${createSlugSuffix()}`;
 }
@@ -79,9 +84,7 @@ export function createInternalChatSlug(displayName: string): string {
  * Strips filesystem-reserved characters from a filename to make it safe for storage.
  */
 export function sanitizeAttachmentName(fileName: string): string {
-  const value = fileName
-    .replace(/[/\\?%*:|"<>]/g, '-')
-    .trim();
+  const value = fileName.replace(/[/\\?%*:|"<>]/g, '-').trim();
 
   return value || 'attachment';
 }
@@ -122,10 +125,22 @@ export function buildAgentAccountDescription(input: {
   return [
     `Agent id: ${input.agentId}`,
     `Agent name: ${input.agentName}`,
-    input.agentDescription !== null && input.agentDescription !== undefined && input.agentDescription.trim() ? `Agent description: ${input.agentDescription.trim()}` : null,
-    input.roleName !== null && input.roleName !== undefined && input.roleName.trim() ? `Role name: ${input.roleName.trim()}` : null,
-    input.roleDescription !== null && input.roleDescription !== undefined && input.roleDescription.trim() ? `Role description: ${input.roleDescription.trim()}` : null,
-  ].filter(Boolean).join('\n');
+    input.agentDescription !== null &&
+    input.agentDescription !== undefined &&
+    input.agentDescription.trim()
+      ? `Agent description: ${input.agentDescription.trim()}`
+      : null,
+    input.roleName !== null && input.roleName !== undefined && input.roleName.trim()
+      ? `Role name: ${input.roleName.trim()}`
+      : null,
+    input.roleDescription !== null &&
+    input.roleDescription !== undefined &&
+    input.roleDescription.trim()
+      ? `Role description: ${input.roleDescription.trim()}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -203,16 +218,18 @@ export function resolveConversationDisplayName(
   selfAccountId: string,
 ): string | undefined {
   return (
-    conversation.name
-    ?? participants.find((p) => p.accountId !== selfAccountId)?.displayName
-    ?? participants[0]?.displayName
+    conversation.name ??
+    participants.find((p) => p.accountId !== selfAccountId)?.displayName ??
+    participants[0]?.displayName
   );
 }
 
 /**
  * Extracts an ordered list of participant display names from a participant array.
  */
-export function buildConversationParticipantNames(participants: InternalChatGroupParticipant[]): string[] {
+export function buildConversationParticipantNames(
+  participants: InternalChatGroupParticipant[],
+): string[] {
   return participants.map((p) => p.displayName);
 }
 

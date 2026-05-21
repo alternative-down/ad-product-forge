@@ -5,8 +5,7 @@ vi.mock('@forge-runtime/core', () => ({
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createSystemIntegrationStore } from './store';
 
-import type {Database} from '../database/client';
-
+import type { Database } from '../database/client';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -33,10 +32,7 @@ function createMockDb(overrides?: Partial<Database>): Database {
   } as unknown as Database;
 }
 
-function createMockRow(
-  providerType: string,
-  overrides?: any,
-): any {
+function createMockRow(providerType: string, overrides?: any): any {
   return {
     id: 'int-1',
     providerType: providerType as any,
@@ -115,7 +111,8 @@ describe('system-integrations/store', () => {
 
     it('returns isEnabled as false when DB value is 0', async () => {
       const row = createMockRow('coolify', {
-        encryptedConfig: 'encrypted:{"baseUrl":"https://coolify.example.com","adminToken":"tok","serverId":"s1","destinationId":"d1"}',
+        encryptedConfig:
+          'encrypted:{"baseUrl":"https://coolify.example.com","adminToken":"tok","serverId":"s1","destinationId":"d1"}',
         isEnabled: 0,
       });
       (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
@@ -137,11 +134,7 @@ describe('system-integrations/store', () => {
     });
 
     it('sorts results by providerType ascending', async () => {
-      const rows = [
-        createMockRow('coolify'),
-        createMockRow('github'),
-        createMockRow('minimax'),
-      ];
+      const rows = [createMockRow('coolify'), createMockRow('github'), createMockRow('minimax')];
       (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(rows);
 
       const store = createSystemIntegrationStore(db);
@@ -176,7 +169,9 @@ describe('system-integrations/store', () => {
 
     it('updates an existing integration when one exists', async () => {
       const existingRow = createMockRow('migadu');
-      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+        existingRow,
+      );
 
       const store = createSystemIntegrationStore(db);
       const result = await store.upsertIntegration({
@@ -195,7 +190,12 @@ describe('system-integrations/store', () => {
       const store = createSystemIntegrationStore(db);
       const result = await store.upsertIntegration({
         providerType: 'coolify',
-        config: { baseUrl: 'https://c.example.com', adminToken: 'tok', serverId: 's1', destinationId: 'd1' },
+        config: {
+          baseUrl: 'https://c.example.com',
+          adminToken: 'tok',
+          serverId: 's1',
+          destinationId: 'd1',
+        },
         isEnabled: false,
       });
 
@@ -289,7 +289,8 @@ describe('system-integrations/store', () => {
   describe('parseIntegrationConfig', () => {
     it('correctly parses coolify config via listIntegrations', async () => {
       const row = createMockRow('coolify', {
-        encryptedConfig: 'encrypted:{"baseUrl":"https://coolify.io","adminToken":"tok","serverId":"s1","destinationId":"d1"}',
+        encryptedConfig:
+          'encrypted:{"baseUrl":"https://coolify.io","adminToken":"tok","serverId":"s1","destinationId":"d1"}',
         isEnabled: 1,
       });
       (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
@@ -307,7 +308,8 @@ describe('system-integrations/store', () => {
 
     it('correctly parses github config via listIntegrations', async () => {
       const row = createMockRow('github', {
-        encryptedConfig: 'encrypted:{"organization":"my-org","appHomeUrl":"https://github.com/apps/my-app"}',
+        encryptedConfig:
+          'encrypted:{"organization":"my-org","appHomeUrl":"https://github.com/apps/my-app"}',
         isEnabled: 1,
       });
       (db.query.systemIntegrations.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([row]);
@@ -337,13 +339,14 @@ describe('system-integrations/store', () => {
     });
   });
 
-
   // ── getEnabledIntegration edge case ─────────────────────────────────────────
 
   describe('getEnabledIntegration (via getGitHubConfig)', () => {
     it('returns null when integration exists but isEnabled is 0', async () => {
       const existingRow = createMockRow('github', { isEnabled: 0 });
-      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+        existingRow,
+      );
 
       const store = createSystemIntegrationStore(db);
       const result = await store.getGitHubConfig();
@@ -354,9 +357,12 @@ describe('system-integrations/store', () => {
     it('returns null when integration exists and isEnabled is 1', async () => {
       const existingRow = createMockRow('github', {
         isEnabled: 1,
-        encryptedConfig: 'encrypted:{"organization":"my-org","appHomeUrl":"https://github.com/apps/my-app"}',
+        encryptedConfig:
+          'encrypted:{"organization":"my-org","appHomeUrl":"https://github.com/apps/my-app"}',
       });
-      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+        existingRow,
+      );
 
       const store = createSystemIntegrationStore(db);
       const result = await store.getGitHubConfig();
@@ -373,7 +379,9 @@ describe('system-integrations/store', () => {
   describe('upsertIntegration — update path', () => {
     it('returns isEnabled: true when updating and isEnabled not specified', async () => {
       const existingRow = createMockRow('migadu');
-      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+        existingRow,
+      );
 
       const store = createSystemIntegrationStore(db);
       const result = await store.upsertIntegration({
@@ -386,7 +394,9 @@ describe('system-integrations/store', () => {
 
     it('returns isEnabled: false when updating an existing integration with isEnabled: false', async () => {
       const existingRow = createMockRow('minimax');
-      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(existingRow);
+      (db.query.systemIntegrations.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+        existingRow,
+      );
 
       const store = createSystemIntegrationStore(db);
       const result = await store.upsertIntegration({

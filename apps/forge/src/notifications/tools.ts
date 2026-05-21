@@ -1,22 +1,35 @@
 import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
 import { z } from 'zod';
 
-
-import type {Database} from '../database/schema';
+import type { Database } from '../database/schema';
 import { hasToolPermission } from '../capabilities/catalog';
 import { createAgentNotificationStore } from './store';
 
-export function createAgentNotificationTools(db: Database, agentId: string, allowedToolIds?: Set<string> | null) {
+export function createAgentNotificationTools(
+  db: Database,
+  agentId: string,
+  allowedToolIds?: Set<string> | null,
+) {
   const notifications = createAgentNotificationStore(db);
   const tools: Record<string, unknown> = {};
 
   if (hasToolPermission(allowedToolIds, 'list_agent_notifications')) {
     tools.list_agent_notifications = createTool({
       id: 'list_agent_notifications',
-      description: 'List your notifications. Listing them marks the returned notifications as read.',
+      description:
+        'List your notifications. Listing them marks the returned notifications as read.',
       inputSchema: z.object({
-        unreadOnly: z.boolean().default(false).describe('Set this to true if you only want unread notifications.'),
-        limit: z.number().int().positive().max(100).default(20).describe('Maximum number of notifications to return.'),
+        unreadOnly: z
+          .boolean()
+          .default(false)
+          .describe('Set this to true if you only want unread notifications.'),
+        limit: z
+          .number()
+          .int()
+          .positive()
+          .max(100)
+          .default(20)
+          .describe('Maximum number of notifications to return.'),
       }),
       execute: async (input) => {
         try {
@@ -26,7 +39,12 @@ export function createAgentNotificationTools(db: Database, agentId: string, allo
             limit: input.limit ?? 20,
           });
         } catch (error) {
-          forgeDebug({ scope: 'notifications', level: 'error', message: '[notifications] list_agent_notifications failed', context: { error: String(serializeError(error)) }});
+          forgeDebug({
+            scope: 'notifications',
+            level: 'error',
+            message: '[notifications] list_agent_notifications failed',
+            context: { error: String(serializeError(error)) },
+          });
           return {
             valid: false,
             error: String(serializeError(error)),

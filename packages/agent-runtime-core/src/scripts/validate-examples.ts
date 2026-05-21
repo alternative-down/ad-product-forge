@@ -11,7 +11,10 @@ import { InMemoryWorldGateway } from '../examples/gateways/in-memory-world.js';
 import { LocalBashWorkspaceGateway } from '../integrations/gateways/local-bash-workspace.js';
 import { MultiAgentScene } from '../examples/orchestration/multi-agent-scene.js';
 import { InMemorySkillRegistry } from '../integrations/skills/in-memory-skill-registry.js';
-import { MiniMaxTextModelOptions, createMiniMaxTextModelAdapter } from '../integrations/providers/minimax-text.js';
+import {
+  MiniMaxTextModelOptions,
+  createMiniMaxTextModelAdapter,
+} from '../integrations/providers/minimax-text.js';
 import { MiniMaxTextToSpeechGateway } from '../integrations/providers/minimax-speech.js';
 
 const apiKey = process.env.MINIMAX_API_KEY;
@@ -186,27 +189,37 @@ await scene.broadcastEvent({
 });
 const sceneResults = await scene.tick({ perAgentMaxSteps: 1 });
 
-console.log(JSON.stringify({
-  autonomous: summarizeStepResult(autonomousResult.steps[0]?.modelResponse.segments),
-  narrator: summarizeStepResult(narratorResult.steps[0]?.modelResponse.segments),
-  vtuber: {
-    text: vtuberPerformance?.text ?? null,
-    audioFile: vtuberPerformance?.audio ? vtuberAudioPath : null,
-  },
-  workspace: {
-    commandStdout: workspaceCommand.stdout.trim(),
-    modelText: summarizeStepResult(workspaceResult.steps[0]?.modelResponse.segments),
-  },
-  browser: summarizeStepResult(browserResult.steps[0]?.modelResponse.segments),
-  npcScene: sceneResults.map((result) => summarizeStepResult(result.steps[0]?.modelResponse.segments)),
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      autonomous: summarizeStepResult(autonomousResult.steps[0]?.modelResponse.segments),
+      narrator: summarizeStepResult(narratorResult.steps[0]?.modelResponse.segments),
+      vtuber: {
+        text: vtuberPerformance?.text ?? null,
+        audioFile: vtuberPerformance?.audio ? vtuberAudioPath : null,
+      },
+      workspace: {
+        commandStdout: workspaceCommand.stdout.trim(),
+        modelText: summarizeStepResult(workspaceResult.steps[0]?.modelResponse.segments),
+      },
+      browser: summarizeStepResult(browserResult.steps[0]?.modelResponse.segments),
+      npcScene: sceneResults.map((result) =>
+        summarizeStepResult(result.steps[0]?.modelResponse.segments),
+      ),
+    },
+    null,
+    2,
+  ),
+);
 
 function summarizeStepResult(segments: Array<{ kind: string; text: string }> | undefined) {
-  return segments
-    ?.filter((segment) => segment.text.trim().length > 0)
-    .map((segment) => segment.text)
-    .join('\n')
-    .trim() ?? null;
+  return (
+    segments
+      ?.filter((segment) => segment.text.trim().length > 0)
+      .map((segment) => segment.text)
+      .join('\n')
+      .trim() ?? null
+  );
 }
 
 async function createValidationSkillRegistry() {

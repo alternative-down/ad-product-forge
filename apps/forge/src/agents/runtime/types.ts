@@ -83,10 +83,7 @@ export type CreateAgentOptions = {
 };
 
 export type RuntimeWorkingMemory = {
-  getWorkingMemory(input: {
-    threadId: string;
-    resourceId: string;
-  }): Promise<string | null>;
+  getWorkingMemory(input: { threadId: string; resourceId: string }): Promise<string | null>;
 };
 
 export type RuntimeStepUsage = {
@@ -173,7 +170,10 @@ export type RuntimeAgentGenerateOptions = {
   onStepFinish?: (stepResult: RuntimeGenerateStepResult) => Promise<void> | void;
   onIterationComplete?: (
     iteration: RuntimeIteration,
-  ) => Promise<{ continue?: boolean; feedback?: string } | void> | { continue?: boolean; feedback?: string } | void;
+  ) =>
+    | Promise<{ continue?: boolean; feedback?: string } | void>
+    | { continue?: boolean; feedback?: string }
+    | void;
 };
 
 export type RuntimeAgent = {

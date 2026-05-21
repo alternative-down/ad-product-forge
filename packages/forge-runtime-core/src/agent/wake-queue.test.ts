@@ -38,14 +38,18 @@ describe('createAgentWakeQueue', () => {
   it('stores event by idempotencyKey', () => {
     const ev = makeEvent({ idempotencyKey: 'idempotent-1' });
     queue.notifyExternalEvent(ev);
-    expect(queue.getSnapshot().events).toContainEqual(expect.objectContaining({ idempotencyKey: 'idempotent-1' }));
+    expect(queue.getSnapshot().events).toContainEqual(
+      expect.objectContaining({ idempotencyKey: 'idempotent-1' }),
+    );
   });
 
   it('does not duplicate events with same idempotencyKey', () => {
     const ev = makeEvent({ idempotencyKey: 'same-key', text: 'first' });
     queue.notifyExternalEvent(ev);
     queue.notifyExternalEvent({ ...ev, text: 'second' });
-    expect(queue.getSnapshot().events.filter(e => e.idempotencyKey === 'same-key')).toHaveLength(1);
+    expect(queue.getSnapshot().events.filter((e) => e.idempotencyKey === 'same-key')).toHaveLength(
+      1,
+    );
   });
 
   // ── debouncing ──────────────────────────────────────────────────────────
@@ -131,8 +135,8 @@ describe('createAgentWakeQueue', () => {
     queue.notifyExternalEvent(normal);
     queue.notifyExternalEvent(idle);
     const snapshot = queue.getSnapshot();
-    expect(snapshot.events.some(e => e.idleOnly)).toBe(true);
-    expect(snapshot.events.some(e => !e.idleOnly)).toBe(true);
+    expect(snapshot.events.some((e) => e.idleOnly)).toBe(true);
+    expect(snapshot.events.some((e) => !e.idleOnly)).toBe(true);
   });
 
   it('still accumulates idleOnly events in snapshot', () => {
@@ -182,7 +186,7 @@ describe('createAgentWakeQueue', () => {
     await vi.advanceTimersByTimeAsync(3000);
     // After failure, events should be re-queued
     expect(queue.getSnapshot().pending).toBe(true);
-    expect(queue.getSnapshot().events.some(e => e.idempotencyKey === 'retry-test')).toBe(true);
+    expect(queue.getSnapshot().events.some((e) => e.idempotencyKey === 'retry-test')).toBe(true);
   });
 
   it('events are cleared from snapshot during execution even if pending', async () => {

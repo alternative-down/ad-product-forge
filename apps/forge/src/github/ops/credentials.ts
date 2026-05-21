@@ -22,14 +22,17 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       provider = await db.query.agentProviders.findFirst({
         where: ctx.and(
-           
           ctx.eq((ctx.agentProviders as any).agentId, agentId),
-          ctx.eq((ctx.agentProviders as any).providerType, ctx.GITHUB_PROVIDER_TYPE)  
-         
-        ) as any,  
+          ctx.eq((ctx.agentProviders as any).providerType, ctx.GITHUB_PROVIDER_TYPE),
+        ) as any,
       });
     } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getCredentials DB read failed', context: { agentId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'github-ops-credentials',
+        level: 'error',
+        message: 'getCredentials DB read failed',
+        context: { agentId, error: String(serializeError(err)) },
+      });
       throw err;
     }
     if (!provider) return null;
@@ -41,11 +44,21 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       credentials = await getCredentials(agentId);
     } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getActiveCredentials failed', context: { agentId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'github-ops-credentials',
+        level: 'error',
+        message: 'getActiveCredentials failed',
+        context: { agentId, error: String(serializeError(err)) },
+      });
       throw err;
     }
     if (!credentials || credentials.status !== 'active') {
-      forgeDebug({ scope: "github-ops-credentials", level: "warn", message: "getInstallationOctokit: GitHub App not active", context: { agentId } });
+      forgeDebug({
+        scope: 'github-ops-credentials',
+        level: 'warn',
+        message: 'getInstallationOctokit: GitHub App not active',
+        context: { agentId },
+      });
       throw new Error(`GitHub App not active for agent ${agentId}`);
     }
     return credentials;
@@ -64,17 +77,24 @@ export function createCredentialsOps(ctx: OpsContext) {
     try {
       credentials = await getActiveCredentials(agentId);
     } catch (err) {
-      forgeDebug({ scope: 'github-ops-credentials', level: 'error', message: 'getInstallationOctokit failed', context: { agentId, error: String(serializeError(err)) } });
+      forgeDebug({
+        scope: 'github-ops-credentials',
+        level: 'error',
+        message: 'getInstallationOctokit failed',
+        context: { agentId, error: String(serializeError(err)) },
+      });
       throw err;
     }
-    return await ctx.createInstallationOctokit(credentials as any);  
+    return await ctx.createInstallationOctokit(credentials as any);
   }
 
   async function createInstallationOctokit(installationId: number) {
-    return await ctx.createInstallationOctokit({ status: "active", installationId } as any);  
+    return await ctx.createInstallationOctokit({ status: 'active', installationId } as any);
   }
 
-  async function getInstallationToken(credentials: Extract<GitHubAppCredentials, { status: 'active' }>) {
+  async function getInstallationToken(
+    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+  ) {
     return await ctx.getInstallationToken(credentials);
   }
 

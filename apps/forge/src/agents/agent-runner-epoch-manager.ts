@@ -44,13 +44,11 @@ export function advanceStepEpoch(state: RunEpochState): number {
 }
 
 /** Advances the generate token counter. */
-export function advanceGenerateToken(
-  state: {
-    activeGenerateToken: number;
-    activeRunEpoch?: number;
-    activeStepEpoch?: number;
-  },
-): number {
+export function advanceGenerateToken(state: {
+  activeGenerateToken: number;
+  activeRunEpoch?: number;
+  activeStepEpoch?: number;
+}): number {
   state.activeGenerateToken += 1;
   return state.activeGenerateToken;
 }

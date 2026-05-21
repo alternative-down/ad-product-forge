@@ -1,12 +1,20 @@
 import { serializeError } from './agent-runner-error-formatting';
-import { forgeDebug, LibsqlConversationStore, readOperationalMemoryState, toMastraSafeIdentifier } from '@forge-runtime/core';
+import {
+  forgeDebug,
+  LibsqlConversationStore,
+  readOperationalMemoryState,
+  toMastraSafeIdentifier,
+} from '@forge-runtime/core';
 import path from 'node:path';
 import { createClient } from '@libsql/client';
 import { eq } from 'drizzle-orm';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { migrateLegacyCheckpointedOmState } from './migrate-legacy-checkpointed-om';
 import { mergeToolLogMessages } from './agent-home-metrics-tool-helpers';
-import { extractLatestMessagePreview, extractLatestMessageToolBadge } from './agent-home-metrics-preview-helpers';
+import {
+  extractLatestMessagePreview,
+  extractLatestMessageToolBadge,
+} from './agent-home-metrics-preview-helpers';
 import { buildThreadToolInvocationParts } from './agent-home-metrics-tool-helpers';
 import type { Database } from '../database/schema';
 import { agents } from '../database/schema';
@@ -15,7 +23,6 @@ import type { InternalAgentRuntime } from './runtime/types';
 
 const _OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
- 
 type ClosableLibsqlClient = Awaited<ReturnType<typeof createClient>> & {
   close?: () => void | Promise<void>;
 };
@@ -83,7 +90,8 @@ export async function readLatestThreadDetails(
                     type: part.type,
                     text: part.text,
                   }
-                : part),
+                : part,
+            ),
             ...buildThreadToolInvocationParts(message.metadata),
           ],
         };
@@ -221,10 +229,10 @@ export async function readAgentRuntimeMemory(
         reflectionTokenCount: operationalMemoryState.metrics.reflectionTokenCount,
         reflectionBudget: Math.max(
           0,
-          settings.checkpointedOmTotalContextTokens
-            - settings.checkpointedOmRecentRawTokens
-            - settings.checkpointedOmRawObservationBatchTokens
-            - settings.checkpointedOmObservationReflectionBatchTokens,
+          settings.checkpointedOmTotalContextTokens -
+            settings.checkpointedOmRecentRawTokens -
+            settings.checkpointedOmRawObservationBatchTokens -
+            settings.checkpointedOmObservationReflectionBatchTokens,
         ),
         checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
       },

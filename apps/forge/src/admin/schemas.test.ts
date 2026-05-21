@@ -36,7 +36,11 @@ describe('agentExecutionStepsQuerySchema', () => {
   });
 
   it('accepts explicit limit and offset', () => {
-    const result = agentExecutionStepsQuerySchema.parse({ agentId: 'test', limit: '50', offset: '10' });
+    const result = agentExecutionStepsQuerySchema.parse({
+      agentId: 'test',
+      limit: '50',
+      offset: '10',
+    });
     expect(result.limit).toBe(50);
     expect(result.offset).toBe(10);
   });
@@ -62,7 +66,11 @@ describe('agentThreadMessagesQuerySchema', () => {
   });
 
   it('accepts custom page and perPage', () => {
-    const result = agentThreadMessagesQuerySchema.parse({ agentId: 'test', page: '5', perPage: '50' });
+    const result = agentThreadMessagesQuerySchema.parse({
+      agentId: 'test',
+      page: '5',
+      perPage: '50',
+    });
     expect(result.page).toBe(5);
     expect(result.perPage).toBe(50);
   });
@@ -72,7 +80,9 @@ describe('agentThreadMessagesQuerySchema', () => {
   });
 
   it('rejects perPage above 100', () => {
-    expect(() => agentThreadMessagesQuerySchema.parse({ agentId: 'test', perPage: '101' })).toThrow();
+    expect(() =>
+      agentThreadMessagesQuerySchema.parse({ agentId: 'test', perPage: '101' }),
+    ).toThrow();
   });
 
   it('rejects negative page', () => {
@@ -257,5 +267,3 @@ describe('changeAgentRoleSchema', () => {
     expect(() => changeAgentRoleSchema.parse({ agentId: 'agent-1' })).toThrow();
   });
 });
-
-

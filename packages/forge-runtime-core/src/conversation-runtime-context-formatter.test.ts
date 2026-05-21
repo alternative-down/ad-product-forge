@@ -82,12 +82,14 @@ describe('conversation-runtime-context-formatter', () => {
           threadId: 'thread-4',
           role: 'user',
           messageId: 'msg-img',
-          parts: [{
-            type: 'image',
-            mimeType: 'image/png',
-            imageAspectRatio: undefined,
-            bytes: new Uint8Array([0, 1, 2]),
-          }],
+          parts: [
+            {
+              type: 'image',
+              mimeType: 'image/png',
+              imageAspectRatio: undefined,
+              bytes: new Uint8Array([0, 1, 2]),
+            },
+          ],
         },
       });
       expect(result!.content).toBeDefined();

@@ -12,17 +12,22 @@ export function normalizeAgentName(value: string): string {
 
 // ─── validateGeneratedAgentProfile ───────────────────────────────────────────
 
-export function validateGeneratedAgentProfile(profile: z.infer<typeof generatedAgentProfileSchema>): {
-  valid: true;
-} | {
-  valid: false;
-  error: string;
-  hint: string;
-} {
-  const mentionedToolIds = forgeCustomToolIds.filter((toolId) =>
-    profile.primaryGoal.includes(toolId)
-    || profile.secondaryGoals.some((goal) => goal.includes(toolId))
-    || profile.backstory.includes(toolId),
+export function validateGeneratedAgentProfile(
+  profile: z.infer<typeof generatedAgentProfileSchema>,
+):
+  | {
+      valid: true;
+    }
+  | {
+      valid: false;
+      error: string;
+      hint: string;
+    } {
+  const mentionedToolIds = forgeCustomToolIds.filter(
+    (toolId) =>
+      profile.primaryGoal.includes(toolId) ||
+      profile.secondaryGoals.some((goal) => goal.includes(toolId)) ||
+      profile.backstory.includes(toolId),
   );
 
   if (mentionedToolIds.length > 0) {
@@ -51,35 +56,39 @@ export async function validateHireAgentInput(
   | { valid: true; roleId: string; roleName: string; roleDescription: string | undefined }
   | { valid: false; error: string; hint?: string }
 > {
-    const role = await capabilities.getRole(roleId);
+  const role = await capabilities.getRole(roleId);
 
-    if (!role) {
-      return { valid: false, error: `Role "${roleId}" does not exist.`, hint: 'Choose an existing role id from the capability store.' };
-    }
-
-    const MINIMUM_BASE_TOOL_IDS = new Set([
-      'list_conversations',
-      'get_messages',
-      'send_message',
-      'list_self_crons',
-      'manage_self_crons',
-    ] as const);
-
-    const roleToolIds = new Set((role as { toolIds?: string[] }).toolIds ?? []);
-    const missingTools = [...MINIMUM_BASE_TOOL_IDS].filter((id) => !roleToolIds.has(id));
-
-    if (missingTools.length > 0) {
-      return {
-        valid: false,
-        error: `Role "${role.name}" is missing required base tools: ${missingTools.join(', ')}.`,
-        hint: `Call manage_role_capabilities to add the missing tools, then try hireAgent again.`,
-      };
-    }
-
+  if (!role) {
     return {
-      valid: true,
-      roleId: (role as unknown as { id: string }).id,
-      roleName: role.name,
-      roleDescription: role.description ?? undefined,
+      valid: false,
+      error: `Role "${roleId}" does not exist.`,
+      hint: 'Choose an existing role id from the capability store.',
     };
+  }
+
+  const MINIMUM_BASE_TOOL_IDS = new Set([
+    'list_conversations',
+    'get_messages',
+    'send_message',
+    'list_self_crons',
+    'manage_self_crons',
+  ] as const);
+
+  const roleToolIds = new Set((role as { toolIds?: string[] }).toolIds ?? []);
+  const missingTools = [...MINIMUM_BASE_TOOL_IDS].filter((id) => !roleToolIds.has(id));
+
+  if (missingTools.length > 0) {
+    return {
+      valid: false,
+      error: `Role "${role.name}" is missing required base tools: ${missingTools.join(', ')}.`,
+      hint: `Call manage_role_capabilities to add the missing tools, then try hireAgent again.`,
+    };
+  }
+
+  return {
+    valid: true,
+    roleId: (role as unknown as { id: string }).id,
+    roleName: role.name,
+    roleDescription: role.description ?? undefined,
+  };
 }

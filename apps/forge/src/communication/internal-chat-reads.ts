@@ -12,13 +12,20 @@ import { createInternalChatParticipants } from './internal-chat-participants';
 export interface InternalChatReadsDeps {
   unread: ReturnType<typeof createInternalChatUnread>;
   participants: ReturnType<typeof createInternalChatParticipants>;
-  listConversations: (input: { agentId: string; unread?: boolean; limit: number }) => Promise<unknown[]>;
+  listConversations: (input: {
+    agentId: string;
+    unread?: boolean;
+    limit: number;
+  }) => Promise<unknown[]>;
 }
 
 export interface InternalChatReadsStore {
   getUnreadSummary: (agentId: string) => Promise<unknown>;
   listRecentConversations: (agentId: string, limit: number) => Promise<unknown[]>;
-  listGroupMembersOrDmPeersByAccount: (accountId: string, conversationId: string) => Promise<unknown[]>;
+  listGroupMembersOrDmPeersByAccount: (
+    accountId: string,
+    conversationId: string,
+  ) => Promise<unknown[]>;
   listGroupMembersOrDmPeers: (agentId: string, conversationId: string) => Promise<unknown[]>;
 }
 
@@ -26,9 +33,7 @@ export interface InternalChatReadsStore {
  * Creates a reads object with all deps injected at construction time.
  * No mutable state — deps are immutable after construction.
  */
-export function createInternalChatReads(
-  deps: InternalChatReadsDeps,
-): InternalChatReadsStore {
+export function createInternalChatReads(deps: InternalChatReadsDeps): InternalChatReadsStore {
   async function getUnreadSummary(agentId: string) {
     return await deps.unread.getUnreadSummary(agentId);
   }

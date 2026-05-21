@@ -61,13 +61,21 @@ describe('normalizeDomainHost', () => {
 
 describe('extractCollection', () => {
   it('returns data as-is when it is already an array', () => {
-    const data = [{ uuid: 'app-1', name: 'App One' }, { uuid: 'app-2', name: 'App Two' }];
+    const data = [
+      { uuid: 'app-1', name: 'App One' },
+      { uuid: 'app-2', name: 'App Two' },
+    ];
     const result = extractCollection(data, ApplicationSchema);
     expect(result).toHaveLength(2);
   });
 
   it('extracts from "data" key when data is an object', () => {
-    const data = { data: [{ uuid: 'u1', name: 'App 1' }, { uuid: 'u2', name: 'App 2' }] };
+    const data = {
+      data: [
+        { uuid: 'u1', name: 'App 1' },
+        { uuid: 'u2', name: 'App 2' },
+      ],
+    };
     const result = extractCollection(data, ApplicationSchema);
     expect(result).toHaveLength(2);
     expect(result[0].uuid).toBe('u1');
@@ -144,7 +152,9 @@ describe('extractLogs', () => {
   });
 
   it('extracts from "logs" key', () => {
-    expect(extractLogs({ logs: 'Step 1 complete\nStep 2 starting' })).toBe('Step 1 complete\nStep 2 starting');
+    expect(extractLogs({ logs: 'Step 1 complete\nStep 2 starting' })).toBe(
+      'Step 1 complete\nStep 2 starting',
+    );
   });
 
   it('extracts from "data" key when logs is not present', () => {

@@ -49,7 +49,10 @@ const updateAgentMcpServerSchema = z.object({
   headersText: z.string().optional(),
   isActive: z.boolean().optional(),
 });
-const deleteAgentMcpServerSchema = z.object({ agentId: z.string().min(1), serverId: z.string().min(1) });
+const deleteAgentMcpServerSchema = z.object({
+  agentId: z.string().min(1),
+  serverId: z.string().min(1),
+});
 const assignAgentMcpServerSchema = z.object({
   agentId: z.string().min(1),
   serverId: z.string().min(1),
@@ -101,11 +104,18 @@ export function registerAgentProviderMcpRoutes({
 
             await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
 
-            return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+            return jsonResponse({
+              success: true,
+              agentId: body.agentId,
+              providerType: body.providerType,
+            });
           }
         }
 
-        const credentials = parseProviderCredentials(body.providerType as 'internal-chat' | 'discord' | 'email', body.credentials);
+        const credentials = parseProviderCredentials(
+          body.providerType as 'internal-chat' | 'discord' | 'email',
+          body.credentials,
+        );
         const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
         const existing = await db.query.agentProviders.findFirst({
           where: and(
@@ -122,7 +132,9 @@ export function registerAgentProviderMcpRoutes({
             })
             .where(eq(agentProviders.id, existing.id));
         } else {
-          await (db.insert(agentProviders) as unknown as { values: (v: unknown) => Promise<unknown> }).values({
+          await (
+            db.insert(agentProviders) as unknown as { values: (v: unknown) => Promise<unknown> }
+          ).values({
             id: createId(),
             agentId: body.agentId,
             providerType: body.providerType,
@@ -133,7 +145,11 @@ export function registerAgentProviderMcpRoutes({
 
         await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
 
-        return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          providerType: body.providerType,
+        });
       } catch (err) {
         return adminRouteError(err);
       }
@@ -158,7 +174,11 @@ export function registerAgentProviderMcpRoutes({
 
         await reloadAgentIfLoaded(db, loaderConfig, body.agentId);
 
-        return jsonResponse({ success: true, agentId: body.agentId, providerType: body.providerType });
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          providerType: body.providerType,
+        });
       } catch (err) {
         return adminRouteError(err);
       }
@@ -180,10 +200,19 @@ export function registerAgentProviderMcpRoutes({
           description: normalizeOptionalText(body.description),
           transport: body.transport,
           command: body.transport === 'stdio' ? body.command : null,
-          args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-          envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+          args:
+            body.transport === 'stdio'
+              ? normalizeJsonText(body.argsText, 'argsText', 'array')
+              : null,
+          envVars:
+            body.transport === 'stdio'
+              ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
+              : null,
           url: body.transport === 'http_streamable' ? body.url : null,
-          headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+          headers:
+            body.transport === 'http_streamable'
+              ? normalizeJsonText(body.headersText, 'headersText', 'object')
+              : null,
           version: 1,
           isActive: body.isActive === true ? 1 : 0,
           createdAt: Date.now(),
@@ -221,10 +250,19 @@ export function registerAgentProviderMcpRoutes({
             description: normalizeOptionalText(body.description),
             transport: body.transport,
             command: body.transport === 'stdio' ? body.command : null,
-            args: body.transport === 'stdio' ? normalizeJsonText(body.argsText, 'argsText', 'array') : null,
-            envVars: body.transport === 'stdio' ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object') : null,
+            args:
+              body.transport === 'stdio'
+                ? normalizeJsonText(body.argsText, 'argsText', 'array')
+                : null,
+            envVars:
+              body.transport === 'stdio'
+                ? normalizeJsonText(body.envVarsText, 'envVarsText', 'object')
+                : null,
             url: body.transport === 'http_streamable' ? body.url : null,
-            headers: body.transport === 'http_streamable' ? normalizeJsonText(body.headersText, 'headersText', 'object') : null,
+            headers:
+              body.transport === 'http_streamable'
+                ? normalizeJsonText(body.headersText, 'headersText', 'object')
+                : null,
             isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
@@ -236,11 +274,25 @@ export function registerAgentProviderMcpRoutes({
             isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
-          .where(and(eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId), eq(agentMcpConfigs.agentId, (body as unknown as { agentId: string }).agentId)));
+          .where(
+            and(
+              eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId),
+              eq(agentMcpConfigs.agentId, (body as unknown as { agentId: string }).agentId),
+            ),
+          );
 
-        await reloadAgentMcp(db, loaderConfig, (body as unknown as { agentId?: string }).agentId ?? '');
+        await reloadAgentMcp(
+          db,
+          loaderConfig,
+          (body as unknown as { agentId?: string }).agentId ?? '',
+        );
 
-        return jsonResponse({ success: true, agentId: body.agentId ?? '', configId: body.configId, serverId: body.serverId });
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId ?? '',
+          configId: body.configId,
+          serverId: body.serverId,
+        });
       } catch (err) {
         return adminRouteError(err);
       }
@@ -256,7 +308,12 @@ export function registerAgentProviderMcpRoutes({
 
         await db
           .delete(agentMcpConfigs)
-          .where(and(eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId), eq(agentMcpConfigs.agentId, body.agentId)));
+          .where(
+            and(
+              eq(agentMcpConfigs.id, (body as unknown as { configId: string }).configId),
+              eq(agentMcpConfigs.agentId, body.agentId),
+            ),
+          );
 
         const remainingLinks = await db.query.agentMcpConfigs.findMany({
           where: eq(agentMcpConfigs.serverId, body.serverId),
@@ -271,7 +328,12 @@ export function registerAgentProviderMcpRoutes({
 
         await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
 
-        return jsonResponse({ success: true, agentId: body.agentId, configId: (body as unknown as { configId: string }).configId, serverId: body.serverId });
+        return jsonResponse({
+          success: true,
+          agentId: body.agentId,
+          configId: (body as unknown as { configId: string }).configId,
+          serverId: body.serverId,
+        });
       } catch (err) {
         return adminRouteError(err);
       }
@@ -323,7 +385,10 @@ export function registerAgentProviderMcpRoutes({
 
         await reloadAgentMcp(db, loaderConfig, body.agentId);
 
-        return jsonResponse({ success: true, agentId: body.agentId, configId, serverId: body.serverId }, 201);
+        return jsonResponse(
+          { success: true, agentId: body.agentId, configId, serverId: body.serverId },
+          201,
+        );
       } catch (err) {
         return adminRouteError(err);
       }
@@ -343,7 +408,12 @@ export function registerAgentProviderMcpRoutes({
             isActive: body.isActive === true ? 1 : 0,
             updatedAt: Date.now(),
           })
-          .where(and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId ?? '')));
+          .where(
+            and(
+              eq(agentMcpConfigs.id, body.configId),
+              eq(agentMcpConfigs.agentId, body.agentId ?? ''),
+            ),
+          );
 
         await reloadAgentMcp(db, loaderConfig, body.agentId ?? '');
 
@@ -366,7 +436,10 @@ export function registerAgentProviderMcpRoutes({
       try {
         const body = parseJsonBody(request.bodyText, detachAgentMcpServerSchema);
         const config = await db.query.agentMcpConfigs.findFirst({
-          where: and(eq(agentMcpConfigs.id, body.configId), eq(agentMcpConfigs.agentId, body.agentId)),
+          where: and(
+            eq(agentMcpConfigs.id, body.configId),
+            eq(agentMcpConfigs.agentId, body.agentId),
+          ),
         });
 
         if (!config) {

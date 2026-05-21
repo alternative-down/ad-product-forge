@@ -37,7 +37,9 @@ describe('isMemoryRecallText', () => {
 
   test('returns true for multi-line memory-recall block', () => {
     expect(
-      isMemoryRecallText('<memory-recall>\n<items>\n<item>content</item>\n</items>\n</memory-recall>'),
+      isMemoryRecallText(
+        '<memory-recall>\n<items>\n<item>content</item>\n</items>\n</memory-recall>',
+      ),
     ).toBe(true);
   });
 
@@ -478,21 +480,47 @@ describe('mergeToolLogMessages', () => {
   });
 
   test('passes through messages without inputPartIndex', () => {
-    const messages = [{ role: 'user' as const, content: 'hello', parts: [] }] as unknown as { id: string; role: string; threadId: string; createdAt: string; parts: unknown[]; metadata?: unknown }[];
-    expect(mergeToolLogMessages(messages as Parameters<typeof mergeToolLogMessages>[0])).toEqual(messages);
+    const messages = [{ role: 'user' as const, content: 'hello', parts: [] }] as unknown as {
+      id: string;
+      role: string;
+      threadId: string;
+      createdAt: string;
+      parts: unknown[];
+      metadata?: unknown;
+    }[];
+    expect(mergeToolLogMessages(messages as Parameters<typeof mergeToolLogMessages>[0])).toEqual(
+      messages,
+    );
   });
 
   test('does not merge when inputPartIndex differs', () => {
     const messages = [
       {
         role: 'assistant' as const,
-        parts: [{ type: 'tool-call' as const, toolCall: { toolCallId: '1', toolName: 'a', input: { inputPartIndex: 0 } } }],
+        parts: [
+          {
+            type: 'tool-call' as const,
+            toolCall: { toolCallId: '1', toolName: 'a', input: { inputPartIndex: 0 } },
+          },
+        ],
       },
       {
         role: 'assistant' as const,
-        parts: [{ type: 'tool-call' as const, toolCall: { toolCallId: '2', toolName: 'b', input: { inputPartIndex: 1 } } }],
+        parts: [
+          {
+            type: 'tool-call' as const,
+            toolCall: { toolCallId: '2', toolName: 'b', input: { inputPartIndex: 1 } },
+          },
+        ],
       },
-    ] as unknown as { id: string; role: string; threadId: string; createdAt: string; parts: unknown[]; metadata?: unknown }[];
+    ] as unknown as {
+      id: string;
+      role: string;
+      threadId: string;
+      createdAt: string;
+      parts: unknown[];
+      metadata?: unknown;
+    }[];
     const result = mergeToolLogMessages(messages as Parameters<typeof mergeToolLogMessages>[0]);
     expect(result).toHaveLength(2);
   });
@@ -537,10 +565,7 @@ describe('collectConversationParticipants', () => {
     const result = collectConversationParticipants({
       name: 'room',
       participants: [],
-      messages: [
-        { authorDisplayName: 'Alice' },
-        { authorDisplayName: 'Bob' },
-      ],
+      messages: [{ authorDisplayName: 'Alice' }, { authorDisplayName: 'Bob' }],
     });
     expect(result).toContain('Alice');
     expect(result).toContain('Bob');

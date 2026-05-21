@@ -59,10 +59,12 @@ export async function runNativeToolLoop(input: {
   maxStepsPerRound?: number;
   runtimeId: string;
 }): Promise<NativeToolLoopResult> {
-  const messages: NativeToolLoopMessage[] = [{
-    role: 'user',
-    content: input.prompt,
-  }];
+  const messages: NativeToolLoopMessage[] = [
+    {
+      role: 'user',
+      content: input.prompt,
+    },
+  ];
   const deferredToolNames = new Set(input.deferredToolNames ?? []);
   const aiSdkTools = Object.fromEntries(
     Object.values(input.tools).map((tool) => {
@@ -112,9 +114,12 @@ export async function runNativeToolLoop(input: {
     lastFinishReason = result.finishReason;
     inputTokens += result.totalUsage.inputTokens ?? 0;
     outputTokens += result.totalUsage.outputTokens ?? 0;
-    messages.push(...result.response.messages as NativeToolLoopMessage[]);
+    messages.push(...(result.response.messages as NativeToolLoopMessage[]));
 
-    deferredToolCall = findDeferredToolCall(result.response.messages as NativeToolLoopMessage[], deferredToolNames);
+    deferredToolCall = findDeferredToolCall(
+      result.response.messages as NativeToolLoopMessage[],
+      deferredToolNames,
+    );
 
     if (deferredToolCall) {
       break;
@@ -148,8 +153,9 @@ function findDeferredToolCall(
       continue;
     }
 
-    const toolCall = message.content.find((part) =>
-      part.type === 'tool-call' && deferredToolNames.has(part.toolName));
+    const toolCall = message.content.find(
+      (part) => part.type === 'tool-call' && deferredToolNames.has(part.toolName),
+    );
 
     if (!toolCall || toolCall.type !== 'tool-call') {
       continue;

@@ -6,7 +6,13 @@ function isSQL(x: unknown): x is { queryChunks: unknown[] } {
   return typeof x === 'object' && x !== null && !Array.isArray(x) && 'queryChunks' in x;
 }
 function isStringChunk(x: unknown): boolean {
-  return typeof x === 'object' && x !== null && !Array.isArray(x) && 'value' in x && Array.isArray((x as { value: unknown }).value);
+  return (
+    typeof x === 'object' &&
+    x !== null &&
+    !Array.isArray(x) &&
+    'value' in x &&
+    Array.isArray((x as { value: unknown }).value)
+  );
 }
 function extractConditions(sql: unknown): Array<{ colName: string; value: unknown }> {
   if (!isSQL(sql)) return [];
@@ -34,7 +40,13 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
       value = valChunk;
     } else if (typeof valChunk === 'number') {
       value = valChunk;
-    } else if (typeof valChunk === 'object' && valChunk !== null && !isSQL(valChunk) && !isStringChunk(valChunk) && 'value' in valChunk) {
+    } else if (
+      typeof valChunk === 'object' &&
+      valChunk !== null &&
+      !isSQL(valChunk) &&
+      !isStringChunk(valChunk) &&
+      'value' in valChunk
+    ) {
       // Object with { value: string } or { value: number } (e.g. Drizzle String/Number wrappers)
       value = (valChunk as { value: unknown }).value;
       // Fallback: if value is undefined, try toString()
@@ -48,18 +60,70 @@ function extractConditions(sql: unknown): Array<{ colName: string; value: unknow
   }
   return result;
 }
-function snakeToCamel(s: string): string { return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase()); }
+function snakeToCamel(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
 function extractWhere(where: unknown): Record<string, unknown> {
   if (!where) return {};
-  return Object.fromEntries(extractConditions(where).map(({ colName, value }) => [snakeToCamel(colName), value]));
+  return Object.fromEntries(
+    extractConditions(where).map(({ colName, value }) => [snakeToCamel(colName), value]),
+  );
 }
 
-interface AgentRow { id: string; executionState: 'idle' | 'running' | 'absent'; lastExecutionError: string | null; lastExecutionErrorAt: number | null; updatedAt: number; }
-interface ContractRow { id: string; agentId: string; budgetUsd: number; autoRenew: number; fundedAt: number | null; startsAt: number; endsAt: number; createdAt: number; updatedAt: number; }
-interface StepRow { id: string; contractId: string; agentId: string; llmProfileId: string; modelKey: string; kind: string; inputTokens: number; cachedInputTokens: number; outputTokens: number; inputPerMillionUsd: number; inputCachePerMillionUsd: number; outputPerMillionUsd: number; contractCostMultiplier: number; costUsd: number; createdAt: number; }
-interface ModelPriceRow { modelKey: string; inputPerMillionUsd: number; inputCachePerMillionUsd: number; outputPerMillionUsd: number; }
-interface ProfileRow { id: string; name: string; contractCostMultiplier: number; isEnabled: number; }
-interface MockCollections { agents: Map<string, AgentRow>; contracts: Map<string, ContractRow>; steps: Map<string, StepRow>; modelPrices: Map<string, ModelPriceRow>; profiles: Map<string, ProfileRow>; }
+interface AgentRow {
+  id: string;
+  executionState: 'idle' | 'running' | 'absent';
+  lastExecutionError: string | null;
+  lastExecutionErrorAt: number | null;
+  updatedAt: number;
+}
+interface ContractRow {
+  id: string;
+  agentId: string;
+  budgetUsd: number;
+  autoRenew: number;
+  fundedAt: number | null;
+  startsAt: number;
+  endsAt: number;
+  createdAt: number;
+  updatedAt: number;
+}
+interface StepRow {
+  id: string;
+  contractId: string;
+  agentId: string;
+  llmProfileId: string;
+  modelKey: string;
+  kind: string;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
+  contractCostMultiplier: number;
+  costUsd: number;
+  createdAt: number;
+}
+interface ModelPriceRow {
+  modelKey: string;
+  inputPerMillionUsd: number;
+  inputCachePerMillionUsd: number;
+  outputPerMillionUsd: number;
+}
+interface ProfileRow {
+  id: string;
+  name: string;
+  contractCostMultiplier: number;
+  isEnabled: number;
+}
+interface MockCollections {
+  agents: Map<string, AgentRow>;
+  contracts: Map<string, ContractRow>;
+  steps: Map<string, StepRow>;
+  modelPrices: Map<string, ModelPriceRow>;
+  profiles: Map<string, ProfileRow>;
+}
 
 function createMockDb(collections: MockCollections) {
   let _setVals: unknown = null;
@@ -77,8 +141,8 @@ function createMockDb(collections: MockCollections) {
       },
       agentExecutionContracts: {
         findFirst: vi.fn(async (opts?: { where?: unknown }) => {
-const wh = extractWhere(opts?.where);
-          const rows = [...collections.contracts.values()].filter(c => {
+          const wh = extractWhere(opts?.where);
+          const rows = [...collections.contracts.values()].filter((c) => {
             if (wh.agentId && c.agentId !== wh.agentId) return false;
             if (wh.startsAt && c.startsAt > (wh.startsAt as number)) return false;
             if (wh.endsAt && c.endsAt < (wh.endsAt as number)) return false;
@@ -111,7 +175,7 @@ const wh = extractWhere(opts?.where);
         findMany: vi.fn(async (opts?: { where?: unknown; limit?: number }) => {
           const wh = extractWhere(opts?.where);
           return [...collections.steps.values()]
-            .filter(s => !wh.agentId || s.agentId === wh.agentId)
+            .filter((s) => !wh.agentId || s.agentId === wh.agentId)
             .slice(0, opts?.limit ?? 100);
         }),
       },
@@ -121,7 +185,9 @@ const wh = extractWhere(opts?.where);
         where: vi.fn(async (where: unknown) => {
           const wh = extractWhere(where);
           if (wh.contractId) {
-            const steps = [...collections.steps.values()].filter(s => s.contractId === wh.contractId);
+            const steps = [...collections.steps.values()].filter(
+              (s) => s.contractId === wh.contractId,
+            );
             const total = steps.reduce((sum, s) => sum + s.costUsd, 0);
             return [{ total }];
           }
@@ -133,7 +199,8 @@ const wh = extractWhere(opts?.where);
       values: vi.fn(async (vals: unknown) => {
         const v = vals as Record<string, unknown>;
         if (!v.id || !v.agentId) return;
-        if (v.budgetUsd !== undefined) collections.contracts.set(v.id as string, v as unknown as ContractRow);
+        if (v.budgetUsd !== undefined)
+          collections.contracts.set(v.id as string, v as unknown as ContractRow);
         if (v.costUsd !== undefined) collections.steps.set(v.id as string, v as unknown as StepRow);
       }),
     })),
@@ -147,13 +214,17 @@ const wh = extractWhere(opts?.where);
             if (wh.id && collections.agents.has(wh.id as string)) {
               const existing = collections.agents.get(wh.id as string)!;
               const updated = { ...existing };
-              for (const [k, v] of Object.entries(setVals)) { (updated as Record<string, unknown>)[k] = v; }
+              for (const [k, v] of Object.entries(setVals)) {
+                (updated as Record<string, unknown>)[k] = v;
+              }
               collections.agents.set(wh.id as string, updated);
             }
             if (wh.id && collections.contracts.has(wh.id as string)) {
               const existing = collections.contracts.get(wh.id as string)!;
               const updated = { ...existing };
-              for (const [k, v] of Object.entries(setVals)) { (updated as Record<string, unknown>)[k] = v; }
+              for (const [k, v] of Object.entries(setVals)) {
+                (updated as Record<string, unknown>)[k] = v;
+              }
               collections.contracts.set(wh.id as string, updated);
             }
           }),
@@ -176,33 +247,86 @@ let collections: MockCollections;
 
 beforeEach(async () => {
   vi.resetModules();
-  collections = { agents: new Map(), contracts: new Map(), steps: new Map(), modelPrices: new Map(), profiles: new Map() };
+  collections = {
+    agents: new Map(),
+    contracts: new Map(),
+    steps: new Map(),
+    modelPrices: new Map(),
+    profiles: new Map(),
+  };
   createAgentContractStore = (await import('./agent-contract-store')).createAgentContractStore;
 });
 
 function makeAgent(overrides: Partial<AgentRow> = {}) {
-  const a: AgentRow = { id: 'agent-1', executionState: 'idle', lastExecutionError: null, lastExecutionErrorAt: null, updatedAt: Date.now(), ...overrides };
+  const a: AgentRow = {
+    id: 'agent-1',
+    executionState: 'idle',
+    lastExecutionError: null,
+    lastExecutionErrorAt: null,
+    updatedAt: Date.now(),
+    ...overrides,
+  };
   collections.agents.set(a.id, a);
   return a;
 }
 function makeContract(overrides: Partial<ContractRow> = {}) {
   const now = Date.now();
-  const c: ContractRow = { id: 'contract-1', agentId: 'agent-1', budgetUsd: 5, autoRenew: 1, fundedAt: null, startsAt: now - 1000, endsAt: now + WEEK_MS - 1000, createdAt: now - 1000, updatedAt: now - 1000, ...overrides };
+  const c: ContractRow = {
+    id: 'contract-1',
+    agentId: 'agent-1',
+    budgetUsd: 5,
+    autoRenew: 1,
+    fundedAt: null,
+    startsAt: now - 1000,
+    endsAt: now + WEEK_MS - 1000,
+    createdAt: now - 1000,
+    updatedAt: now - 1000,
+    ...overrides,
+  };
   collections.contracts.set(c.id, c);
   return c;
 }
 function makeStep(overrides: Partial<StepRow> = {}) {
-  const s: StepRow = { id: 'step-1', contractId: 'contract-1', agentId: 'agent-1', llmProfileId: 'profile-1', modelKey: 'gpt-4o', kind: 'agent-step', inputTokens: 1000, cachedInputTokens: 0, outputTokens: 500, inputPerMillionUsd: 2.5, inputCachePerMillionUsd: 0, outputPerMillionUsd: 10, contractCostMultiplier: 1, costUsd: 0.0075, createdAt: Date.now(), ...overrides };
+  const s: StepRow = {
+    id: 'step-1',
+    contractId: 'contract-1',
+    agentId: 'agent-1',
+    llmProfileId: 'profile-1',
+    modelKey: 'gpt-4o',
+    kind: 'agent-step',
+    inputTokens: 1000,
+    cachedInputTokens: 0,
+    outputTokens: 500,
+    inputPerMillionUsd: 2.5,
+    inputCachePerMillionUsd: 0,
+    outputPerMillionUsd: 10,
+    contractCostMultiplier: 1,
+    costUsd: 0.0075,
+    createdAt: Date.now(),
+    ...overrides,
+  };
   collections.steps.set(s.id, s);
   return s;
 }
 function makeProfile(overrides: Partial<ProfileRow> = {}) {
-  const p: ProfileRow = { id: 'profile-1', name: 'Standard', contractCostMultiplier: 1, isEnabled: 1, ...overrides };
+  const p: ProfileRow = {
+    id: 'profile-1',
+    name: 'Standard',
+    contractCostMultiplier: 1,
+    isEnabled: 1,
+    ...overrides,
+  };
   collections.profiles.set(p.id, p);
   return p;
 }
 function makeModelPrice(overrides: Partial<ModelPriceRow> = {}) {
-  const p: ModelPriceRow = { modelKey: 'gpt-4o', inputPerMillionUsd: 2.5, inputCachePerMillionUsd: 0, outputPerMillionUsd: 10, ...overrides };
+  const p: ModelPriceRow = {
+    modelKey: 'gpt-4o',
+    inputPerMillionUsd: 2.5,
+    inputCachePerMillionUsd: 0,
+    outputPerMillionUsd: 10,
+    ...overrides,
+  };
   collections.modelPrices.set(p.modelKey, p);
   return p;
 }
@@ -300,14 +424,24 @@ describe('agent-contract-store', () => {
       makeModelPrice({ modelKey: 'gpt-4o' });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
-      await expect(store.getUsagePricing({ pricingModelKey: 'gpt-4o', profileId: 'missing' })).rejects.toThrow('LLM profile not found');
+      await expect(
+        store.getUsagePricing({ pricingModelKey: 'gpt-4o', profileId: 'missing' }),
+      ).rejects.toThrow('LLM profile not found');
     });
     test('returns model price and profile multiplier', async () => {
-      makeModelPrice({ modelKey: 'gpt-4o', inputPerMillionUsd: 2.5, outputPerMillionUsd: 10, inputCachePerMillionUsd: 1.25 });
+      makeModelPrice({
+        modelKey: 'gpt-4o',
+        inputPerMillionUsd: 2.5,
+        outputPerMillionUsd: 10,
+        inputCachePerMillionUsd: 1.25,
+      });
       makeProfile({ id: 'p-premium', contractCostMultiplier: 1.8 });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
-      const result = await store.getUsagePricing({ pricingModelKey: 'gpt-4o', profileId: 'p-premium' });
+      const result = await store.getUsagePricing({
+        pricingModelKey: 'gpt-4o',
+        profileId: 'p-premium',
+      });
       expect(result.modelPrice?.modelKey).toBe('gpt-4o');
       expect(result.modelPrice?.inputPerMillionUsd).toBe(2.5);
       expect(result.contractCostMultiplier).toBe(1.8);
@@ -319,10 +453,19 @@ describe('agent-contract-store', () => {
       const { db, collections: c2 } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.recordAgentStep({
-        agentId: 'sa', contractId: 'sc', llmProfileId: 'sp', modelKey: 'gpt-4o-mini',
-        kind: 'agent-step', inputTokens: 500, cachedInputTokens: 100, outputTokens: 250,
-        inputPerMillionUsd: 0.15, inputCachePerMillionUsd: 0.075, outputPerMillionUsd: 0.6,
-        contractCostMultiplier: 1, costUsd: 0.000225,
+        agentId: 'sa',
+        contractId: 'sc',
+        llmProfileId: 'sp',
+        modelKey: 'gpt-4o-mini',
+        kind: 'agent-step',
+        inputTokens: 500,
+        cachedInputTokens: 100,
+        outputTokens: 250,
+        inputPerMillionUsd: 0.15,
+        inputCachePerMillionUsd: 0.075,
+        outputPerMillionUsd: 0.6,
+        contractCostMultiplier: 1,
+        costUsd: 0.000225,
       });
       expect(result.stepId).toBeTruthy();
       expect(typeof result.createdAt).toBe('number');
@@ -337,10 +480,19 @@ describe('agent-contract-store', () => {
       const store = createAgentContractStore(db);
       for (const kind of ['agent-step', 'om', 'ltm'] as const) {
         const result = await store.recordAgentStep({
-          agentId: 'sa', contractId: 'sc', llmProfileId: 'sp', modelKey: 'gpt-4o',
-          kind, inputTokens: 100, cachedInputTokens: 0, outputTokens: 50,
-          inputPerMillionUsd: 2.5, inputCachePerMillionUsd: 0, outputPerMillionUsd: 10,
-          contractCostMultiplier: 1, costUsd: 0.001,
+          agentId: 'sa',
+          contractId: 'sc',
+          llmProfileId: 'sp',
+          modelKey: 'gpt-4o',
+          kind,
+          inputTokens: 100,
+          cachedInputTokens: 0,
+          outputTokens: 50,
+          inputPerMillionUsd: 2.5,
+          inputCachePerMillionUsd: 0,
+          outputPerMillionUsd: 10,
+          contractCostMultiplier: 1,
+          costUsd: 0.001,
         });
         expect(c2.steps.get(result.stepId)?.kind).toBe(kind);
       }
@@ -374,7 +526,14 @@ describe('agent-contract-store', () => {
     });
     test('returns null for unfunded contract (no cash to refund)', async () => {
       const now = Date.now();
-      makeContract({ id: 'c-unfunded', agentId: 'a-un', fundedAt: null, budgetUsd: 10, startsAt: now - 100, endsAt: now + WEEK_MS });
+      makeContract({
+        id: 'c-unfunded',
+        agentId: 'a-un',
+        fundedAt: null,
+        budgetUsd: 10,
+        startsAt: now - 100,
+        endsAt: now + WEEK_MS,
+      });
       makeAgent({ id: 'a-un' });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
@@ -382,7 +541,14 @@ describe('agent-contract-store', () => {
     });
     test('returns refund of 0 when budget equals spend (nothing to refund)', async () => {
       const now = Date.now();
-      makeContract({ id: 'c-full', agentId: 'a-full', fundedAt: now - 1000, budgetUsd: 10, startsAt: now - 100, endsAt: now + WEEK_MS });
+      makeContract({
+        id: 'c-full',
+        agentId: 'a-full',
+        fundedAt: now - 1000,
+        budgetUsd: 10,
+        startsAt: now - 100,
+        endsAt: now + WEEK_MS,
+      });
       makeAgent({ id: 'a-full' });
       makeStep({ id: 'step-full', agentId: 'a-full', contractId: 'c-full', costUsd: 10 });
       const { db } = createMockDb(collections);
@@ -394,7 +560,6 @@ describe('agent-contract-store', () => {
     });
   });
 
-
   describe('getActiveContract', () => {
     test('returns null when no contracts exist', async () => {
       makeAgent({ id: 'a-none' });
@@ -405,7 +570,12 @@ describe('agent-contract-store', () => {
     test('returns null when contract is expired (endsAt < now)', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-expired' });
-      makeContract({ id: 'c-expired', agentId: 'a-expired', startsAt: now - 200_000, endsAt: now - 100_000 });
+      makeContract({
+        id: 'c-expired',
+        agentId: 'a-expired',
+        startsAt: now - 200_000,
+        endsAt: now - 100_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       expect(await store.getActiveContract('a-expired')).toBeUndefined();
@@ -413,7 +583,12 @@ describe('agent-contract-store', () => {
     test('returns null when contract has not started yet (startsAt > now)', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-future-start' });
-      makeContract({ id: 'c-future-start', agentId: 'a-future-start', startsAt: now + 100_000, endsAt: now + 200_000 });
+      makeContract({
+        id: 'c-future-start',
+        agentId: 'a-future-start',
+        startsAt: now + 100_000,
+        endsAt: now + 200_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       expect(await store.getActiveContract('a-future-start')).toBeUndefined();
@@ -421,7 +596,12 @@ describe('agent-contract-store', () => {
     test('returns contract when startsAt <= now <= endsAt', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-active' });
-      makeContract({ id: 'c-active', agentId: 'a-active', startsAt: now - 100_000, endsAt: now + 100_000 });
+      makeContract({
+        id: 'c-active',
+        agentId: 'a-active',
+        startsAt: now - 100_000,
+        endsAt: now + 100_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.getActiveContract('a-active');
@@ -431,8 +611,18 @@ describe('agent-contract-store', () => {
     test('returns most recent contract when multiple contracts span the current time', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-multi' });
-      makeContract({ id: 'c-old', agentId: 'a-multi', startsAt: now - 400_000, endsAt: now - 200_000 });
-      makeContract({ id: 'c-recent', agentId: 'a-multi', startsAt: now - 200_000, endsAt: now + 200_000 });
+      makeContract({
+        id: 'c-old',
+        agentId: 'a-multi',
+        startsAt: now - 400_000,
+        endsAt: now - 200_000,
+      });
+      makeContract({
+        id: 'c-recent',
+        agentId: 'a-multi',
+        startsAt: now - 200_000,
+        endsAt: now + 200_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.getActiveContract('a-multi');
@@ -451,7 +641,13 @@ describe('agent-contract-store', () => {
     test('returns funded active contract when one exists', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-runnable' });
-      makeContract({ id: 'c-runnable', agentId: 'a-runnable', fundedAt: now, startsAt: now - 100, endsAt: now + 1_000_000 });
+      makeContract({
+        id: 'c-runnable',
+        agentId: 'a-runnable',
+        fundedAt: now,
+        startsAt: now - 100,
+        endsAt: now + 1_000_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.getRunnableContract('a-runnable');
@@ -461,7 +657,13 @@ describe('agent-contract-store', () => {
     test('returns null when active contract is unfunded (insufficient cash)', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-unfunded' });
-      makeContract({ id: 'c-unfunded', agentId: 'a-unfunded', fundedAt: null, startsAt: now - 100, endsAt: now + 1_000_000 });
+      makeContract({
+        id: 'c-unfunded',
+        agentId: 'a-unfunded',
+        fundedAt: null,
+        startsAt: now - 100,
+        endsAt: now + 1_000_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.getRunnableContract('a-unfunded');
@@ -470,7 +672,13 @@ describe('agent-contract-store', () => {
     test('returns null when latest contract autoRenew is false', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-no-renew' });
-      makeContract({ id: 'c-no-renew', agentId: 'a-no-renew', autoRenew: 0, startsAt: now - 200_000, endsAt: now - 100_000 });
+      makeContract({
+        id: 'c-no-renew',
+        agentId: 'a-no-renew',
+        autoRenew: 0,
+        startsAt: now - 200_000,
+        endsAt: now - 100_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       expect(await store.getRunnableContract('a-no-renew')).toBeNull();
@@ -478,7 +686,12 @@ describe('agent-contract-store', () => {
     test('returns null when latest contract not yet ended', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-not-ended' });
-      makeContract({ id: 'c-not-ended', agentId: 'a-not-ended', startsAt: now - 100, endsAt: now + 1_000_000 });
+      makeContract({
+        id: 'c-not-ended',
+        agentId: 'a-not-ended',
+        startsAt: now - 100,
+        endsAt: now + 1_000_000,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       expect(await store.getRunnableContract('a-not-ended')).toBeNull();
@@ -512,7 +725,13 @@ describe('agent-contract-store', () => {
       const now = Date.now();
       const previousEnd = now - 1000;
       makeAgent({ id: 'a-renew' });
-      makeContract({ id: 'c-previous', agentId: 'a-renew', autoRenew: 1, budgetUsd: 5, endsAt: previousEnd });
+      makeContract({
+        id: 'c-previous',
+        agentId: 'a-renew',
+        autoRenew: 1,
+        budgetUsd: 5,
+        endsAt: previousEnd,
+      });
       const { db, collections: c2 } = createMockDb(collections);
       const origInsert = db.insert;
       db.insert = vi.fn((table) => ({
@@ -543,7 +762,12 @@ describe('agent-contract-store', () => {
     test('returns contract unchanged when already funded', async () => {
       const now = Date.now();
       makeAgent({ id: 'a-funded' });
-      const contract = makeContract({ id: 'c-funded', agentId: 'a-funded', fundedAt: now, budgetUsd: 10 });
+      const contract = makeContract({
+        id: 'c-funded',
+        agentId: 'a-funded',
+        fundedAt: now,
+        budgetUsd: 10,
+      });
       const { db } = createMockDb(collections);
       const store = createAgentContractStore(db);
       const result = await store.fundContractIfNeeded(contract as any);
@@ -551,5 +775,4 @@ describe('agent-contract-store', () => {
       expect(result!.fundedAt).toBe(now);
     });
   });
-
-  });
+});

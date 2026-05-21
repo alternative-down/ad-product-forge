@@ -16,10 +16,7 @@ import { advanceGenerateToken } from './agent-runner-state';
  * Starts a new generate attempt, advances the token, and registers
  * the abort controller so it can be cleared on completion or timeout.
  */
-export function startGenerateAttempt(
-  deps: GenerateDeps,
-  controller: AbortController,
-): number {
+export function startGenerateAttempt(deps: GenerateDeps, controller: AbortController): number {
   advanceGenerateToken(deps.epochState);
   deps.setCurrentGenerateAbortController(controller);
   return deps.epochState.activeGenerateToken;
@@ -48,8 +45,6 @@ export function finishGenerateAttempt(
  */
 export function invalidateInFlightGenerate(deps: GenerateDeps) {
   advanceGenerateToken(deps.epochState);
-  deps.currentGenerateAbortController?.abort(
-    new Error('Agent generate invalidated'),
-  );
+  deps.currentGenerateAbortController?.abort(new Error('Agent generate invalidated'));
   deps.setCurrentGenerateAbortController(null);
 }

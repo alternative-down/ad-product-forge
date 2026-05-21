@@ -66,7 +66,10 @@ export function createFlushManager(deps: FlushManagerDependencies): FlushManager
         return;
       }
 
-      runLastMessages = settings.memoryLastMessagesCount !== null && settings.memoryLastMessagesCount !== undefined ? settings.memoryLastMessagesCount : DEFAULT_RUN_LAST_MESSAGES;
+      runLastMessages =
+        settings.memoryLastMessagesCount !== null && settings.memoryLastMessagesCount !== undefined
+          ? settings.memoryLastMessagesCount
+          : DEFAULT_RUN_LAST_MESSAGES;
     } catch {
       // non-fatal — swallow errors so flush manager never breaks the scheduler
     }

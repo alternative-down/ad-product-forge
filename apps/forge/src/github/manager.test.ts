@@ -196,7 +196,10 @@ describe('createGitHubAppManager', () => {
       config.db = db;
 
       const manager = createGitHubAppManager(config as any);
-      const result = await manager.createAgentApp({ agentId: 'agent-fresh', agentName: 'Fresh Agent' });
+      const result = await manager.createAgentApp({
+        agentId: 'agent-fresh',
+        agentName: 'Fresh Agent',
+      });
 
       expect(result).toMatchObject({ agentId: 'agent-fresh', status: 'pending' });
       expect((result as any).registrationUrl).toContain('agent-fresh');

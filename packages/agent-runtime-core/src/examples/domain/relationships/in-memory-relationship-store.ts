@@ -26,15 +26,15 @@ export class InMemoryRelationshipStore implements RelationshipStore {
   }
 
   async readForActor(actorId: string): Promise<RelationshipRecord[]> {
-    return Array.from(this.records.values()).filter((record) => (
-      record.sourceId === actorId || record.targetId === actorId
-    ));
+    return Array.from(this.records.values()).filter(
+      (record) => record.sourceId === actorId || record.targetId === actorId,
+    );
   }
 
   async list(): Promise<RelationshipRecord[]> {
-    return Array.from(this.records.values()).sort((left, right) => (
-      left.updatedAt.localeCompare(right.updatedAt)
-    ));
+    return Array.from(this.records.values()).sort((left, right) =>
+      left.updatedAt.localeCompare(right.updatedAt),
+    );
   }
 
   private createKey(record: Pick<RelationshipRecord, 'sourceId' | 'targetId' | 'kind'>) {

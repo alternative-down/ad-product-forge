@@ -12,15 +12,24 @@ import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { AgentWakeEvent } from '@forge-runtime/core';
 
-
 export type HealthcheckDeps = {
   runtimeId: string;
   getExecutionState(id: string): Promise<'idle' | 'running' | 'absent'>;
   isLocallyIdle(): boolean;
   getPendingCount(): number;
-  getWakeSnapshot(): { pending: number; waitingForIdle: boolean; firstPendingAt?: number | null; nextTriggerAt?: number | null; events?: unknown[]; };
+  getWakeSnapshot(): {
+    pending: number;
+    waitingForIdle: boolean;
+    firstPendingAt?: number | null;
+    nextTriggerAt?: number | null;
+    events?: unknown[];
+  };
   onRunnerIdle(): Promise<void>;
-  beginRun(opts: { reloadRuntime: boolean; wakeStartedAt: number; markRunning: boolean }): Promise<void>;
+  beginRun(opts: {
+    reloadRuntime: boolean;
+    wakeStartedAt: number;
+    markRunning: boolean;
+  }): Promise<void>;
   queueNextStep(runEpoch?: number): Promise<void>;
   onStartingRunTimeout(runEpoch?: number): void;
   syncStarterState(running: boolean, startedAt: number | null): void;
@@ -48,13 +57,13 @@ export async function runHealthcheck(deps: HealthcheckDeps): Promise<void> {
     onRunnerIdle,
     beginRun,
     queueNextStep,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onStartingRunTimeout,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     syncStarterState,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     syncExecuting,
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     syncTimer,
     notifyError,
   } = deps;

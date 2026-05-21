@@ -104,11 +104,11 @@ describe('Schema type inference', () => {
     type WorkspaceFilesystemConfig = z.infer<typeof _WorkspaceFilesystemConfigSchema>;
     type WorkspaceSandboxConfig = z.infer<typeof _WorkspaceSandboxConfigSchema>;
     type WorkspaceSkillsConfig = z.infer<typeof _WorkspaceSkillsConfigSchema>;
-    
+
     const fsConfig: WorkspaceFilesystemConfig = { basePath: '/test', allowedPaths: ['/shared'] };
     const sandboxConfig: WorkspaceSandboxConfig = { workingDirectory: '/test' };
     const skillsConfig: WorkspaceSkillsConfig = ['skill1'];
-    
+
     expect(fsConfig.basePath).toBe('/test');
     expect(fsConfig.allowedPaths).toEqual(['/shared']);
     expect(sandboxConfig.workingDirectory).toBe('/test');

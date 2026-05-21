@@ -53,7 +53,9 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
     });
   }
 
-  async startBackground(request: WorkspaceBackgroundCommandRequest): Promise<WorkspaceBackgroundCommandResult> {
+  async startBackground(
+    request: WorkspaceBackgroundCommandRequest,
+  ): Promise<WorkspaceBackgroundCommandResult> {
     if (!this.base.startBackground) {
       throw new Error('Workspace gateway does not support background processes');
     }
@@ -66,7 +68,9 @@ export class ConfiguredWorkspaceGateway implements WorkspaceGateway {
     });
   }
 
-  async getProcessOutput(request: WorkspaceProcessOutputRequest): Promise<WorkspaceProcessOutputResult> {
+  async getProcessOutput(
+    request: WorkspaceProcessOutputRequest,
+  ): Promise<WorkspaceProcessOutputResult> {
     if (!this.base.getProcessOutput) {
       throw new Error('Workspace gateway does not support process output inspection');
     }

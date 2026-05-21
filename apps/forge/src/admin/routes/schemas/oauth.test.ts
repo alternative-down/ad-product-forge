@@ -7,18 +7,19 @@ import { syncOauthSchema } from './oauth';
 
 describe('syncOauthSchema', () => {
   it('parses openai-codex provider', () => {
-    expect(syncOauthSchema.parse({ provider: 'openai-codex' }))
-      .toMatchObject({ provider: 'openai-codex' });
+    expect(syncOauthSchema.parse({ provider: 'openai-codex' })).toMatchObject({
+      provider: 'openai-codex',
+    });
   });
 
   it('parses anthropic provider', () => {
-    expect(syncOauthSchema.parse({ provider: 'anthropic' }))
-      .toMatchObject({ provider: 'anthropic' });
+    expect(syncOauthSchema.parse({ provider: 'anthropic' })).toMatchObject({
+      provider: 'anthropic',
+    });
   });
 
   it('parses all provider', () => {
-    expect(syncOauthSchema.parse({ provider: 'all' }))
-      .toMatchObject({ provider: 'all' });
+    expect(syncOauthSchema.parse({ provider: 'all' })).toMatchObject({ provider: 'all' });
   });
 
   it('rejects unknown provider', () => {

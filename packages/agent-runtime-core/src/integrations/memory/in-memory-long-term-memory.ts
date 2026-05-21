@@ -44,12 +44,14 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
 
     this.documents.set(document.id, document);
     await this.keywordIndex.index([document]);
-    await this.vectorIndex.index([{
-      id: document.id,
-      text: document.text,
-      metadata: document.metadata,
-      vector,
-    }]);
+    await this.vectorIndex.index([
+      {
+        id: document.id,
+        text: document.text,
+        metadata: document.metadata,
+        vector,
+      },
+    ]);
   }
 
   async remove(documentId: string): Promise<void> {
@@ -102,12 +104,14 @@ export class InMemoryLongTermMemory implements LongTermMemoryStore, LongTermMemo
         return [];
       }
 
-      return [{
-        id: document.id,
-        text: document.text,
-        metadata: document.metadata,
-        vector,
-      }];
+      return [
+        {
+          id: document.id,
+          text: document.text,
+          metadata: document.metadata,
+          vector,
+        },
+      ];
     });
   }
 

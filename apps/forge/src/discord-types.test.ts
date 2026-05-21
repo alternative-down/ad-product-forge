@@ -17,7 +17,8 @@ describe('DiscordSendableChannel', () => {
         return {} as ReturnType<typeof mockChannel.send> extends Promise<infer R> ? R : never;
       },
       messages: {
-        fetch: async (x: string | { limit: number; before?: string }) => ({ id: typeof x === 'string' ? x : 'msg-123' } as unknown as any),
+        fetch: async (x: string | { limit: number; before?: string }) =>
+          ({ id: typeof x === 'string' ? x : 'msg-123' }) as unknown as any,
       },
     };
     expect(mockChannel.id).toBe('123');
@@ -61,9 +62,7 @@ describe('DiscordProviderConfig', () => {
   it('is a valid type-level interface', () => {
     const config: DiscordProviderConfig = {
       token: 'discord_bot_token_here',
-      channels: [
-        { channelId: '100', channelName: 'general', respondToMentionsOnly: false },
-      ],
+      channels: [{ channelId: '100', channelName: 'general', respondToMentionsOnly: false }],
     };
     expect(config.token).toBe('discord_bot_token_here');
     expect(config.channels).toHaveLength(1);

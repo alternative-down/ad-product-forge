@@ -116,11 +116,11 @@ export async function migrateLegacyCheckpointedOmState(input: {
       continue;
     }
 
-     
-     
     if (
-      checkpointSummary !== undefined && checkpointSummary !== null &&
-      checkpointSummaryId !== undefined && checkpointSummaryId !== null &&
+      checkpointSummary !== undefined &&
+      checkpointSummary !== null &&
+      checkpointSummaryId !== undefined &&
+      checkpointSummaryId !== null &&
       observation.reflectedGeneration <= checkpointSummary.upToGeneration
     ) {
       await input.conversationStore.updateMessageReplacement({

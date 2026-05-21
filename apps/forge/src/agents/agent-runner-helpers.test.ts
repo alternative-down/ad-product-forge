@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { withTimeout } from '../utils/async';
-import {
-  isNoActionNeeded,
-  isStopAndIdle,
-  extractControlDirective,
-} from './agent-runner-helpers';
+import { isNoActionNeeded, isStopAndIdle, extractControlDirective } from './agent-runner-helpers';
 import {
   serializeError,
   serializeUnknown,
@@ -23,18 +19,18 @@ import {
   didIterationProduceVisibleAssistantText,
   didIterationUpdateWorkingMemory,
 } from './agent-runner-iteration-helpers';
-import {
-  collectStepTextParts,
-} from './agent-runner-control-directives';
-import {
-  extractRunnerControlDirectiveFromIteration,
-} from './agent-runner-control-directives';
+import { collectStepTextParts } from './agent-runner-control-directives';
+import { extractRunnerControlDirectiveFromIteration } from './agent-runner-control-directives';
 
 describe('agent-runner-helpers', () => {
   // ── withTimeout ────────────────────────────────────────────────────────────
   describe('withTimeout', () => {
-    beforeEach(() => { vi.useFakeTimers(); });
-    afterEach(() => { vi.useRealTimers(); });
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
     it('resolves when promise resolves before timeout', async () => {
       const promise = Promise.resolve('ok');
@@ -59,7 +55,9 @@ describe('agent-runner-helpers', () => {
 
     it('does not reject when promise resolves after timeout fires', async () => {
       let resolve: (v: string) => void = () => {};
-      const promise = new Promise<string>((r) => { resolve = r; });
+      const promise = new Promise<string>((r) => {
+        resolve = r;
+      });
       const result = withTimeout(promise, 100, 'timed out');
       vi.advanceTimersByTime(100);
       await expect(result).rejects.toThrow('timed out');
@@ -102,15 +100,19 @@ describe('agent-runner-helpers', () => {
   // ── didIterationUpdateWorkingMemory ──────────────────────────────────────────
   describe('didIterationUpdateWorkingMemory', () => {
     it('returns true when toolCalls includes updateWorkingMemory', () => {
-      expect(didIterationUpdateWorkingMemory({
-        toolCalls: [{ name: 'readFile' }, { name: 'updateWorkingMemory' }],
-      })).toBe(true);
+      expect(
+        didIterationUpdateWorkingMemory({
+          toolCalls: [{ name: 'readFile' }, { name: 'updateWorkingMemory' }],
+        }),
+      ).toBe(true);
     });
 
     it('returns false when no updateWorkingMemory tool', () => {
-      expect(didIterationUpdateWorkingMemory({
-        toolCalls: [{ name: 'readFile' }, { name: 'writeFile' }],
-      })).toBe(false);
+      expect(
+        didIterationUpdateWorkingMemory({
+          toolCalls: [{ name: 'readFile' }, { name: 'writeFile' }],
+        }),
+      ).toBe(false);
     });
 
     it('returns false for empty toolCalls', () => {
@@ -118,9 +120,11 @@ describe('agent-runner-helpers', () => {
     });
 
     it('is case-sensitive', () => {
-      expect(didIterationUpdateWorkingMemory({
-        toolCalls: [{ name: 'UpdateWorkingMemory' }],
-      })).toBe(false);
+      expect(
+        didIterationUpdateWorkingMemory({
+          toolCalls: [{ name: 'UpdateWorkingMemory' }],
+        }),
+      ).toBe(false);
     });
   });
 
@@ -329,68 +333,76 @@ describe('agent-runner-helpers', () => {
     });
 
     it('returns trimmed instruction when provided', () => {
-      expect(buildStepSystemPrompt({ agentContextInstructions: '  hello world  ' }))
-        .toBe('hello world');
+      expect(buildStepSystemPrompt({ agentContextInstructions: '  hello world  ' })).toBe(
+        'hello world',
+      );
     });
 
     it('joins multiple instructions with double newline', () => {
-      expect(buildStepSystemPrompt({
-        agentContextInstructions: 'section one\n\nsection two',
-      })).toBe('section one\n\nsection two');
+      expect(
+        buildStepSystemPrompt({
+          agentContextInstructions: 'section one\n\nsection two',
+        }),
+      ).toBe('section one\n\nsection two');
     });
   });
 
   // ── extractRunnerControlDirective ────────────────────────────────────────────
   describe('extractRunnerControlDirective', () => {
     it('returns stop when STOP_AND_IDLE appears in text', () => {
-      expect(extractRunnerControlDirective({ text: 'hello STOP_AND_IDLE world' }))
-        .toBe('stop');
+      expect(extractRunnerControlDirective({ text: 'hello STOP_AND_IDLE world' })).toBe('stop');
     });
 
     it('returns ignore when NO_ACTION_NEEDED appears in text', () => {
-      expect(extractRunnerControlDirective({ text: 'NO_ACTION_NEEDED' }))
-        .toBe('ignore');
+      expect(extractRunnerControlDirective({ text: 'NO_ACTION_NEEDED' })).toBe('ignore');
     });
 
     it('returns null when no directive present', () => {
-      expect(extractRunnerControlDirective({ text: 'normal response' }))
-        .toBe(null);
+      expect(extractRunnerControlDirective({ text: 'normal response' })).toBe(null);
     });
 
     it('checks steps.uiMessages[].parts[].text', () => {
-      expect(extractRunnerControlDirective({
-        text: '',
-        steps: [{ response: { uiMessages: [{ parts: [{ type: 'text', text: 'STOP_AND_IDLE' }] }] } }],
-      })).toBe('stop');
+      expect(
+        extractRunnerControlDirective({
+          text: '',
+          steps: [
+            { response: { uiMessages: [{ parts: [{ type: 'text', text: 'STOP_AND_IDLE' }] }] } },
+          ],
+        }),
+      ).toBe('stop');
     });
 
     it('prefers stop over ignore', () => {
-      expect(extractRunnerControlDirective({
-        text: 'STOP_AND_IDLE and NO_ACTION_NEEDED',
-      })).toBe('stop');
+      expect(
+        extractRunnerControlDirective({
+          text: 'STOP_AND_IDLE and NO_ACTION_NEEDED',
+        }),
+      ).toBe('stop');
     });
   });
 
   // ── extractRunnerControlDirectiveFromIteration ───────────────────────────────
   describe('extractRunnerControlDirectiveFromIteration', () => {
     it('returns stop on STOP_AND_IDLE', () => {
-      expect(extractRunnerControlDirectiveFromIteration({ text: 'ready to STOP_AND_IDLE' }))
-        .toBe('stop');
+      expect(extractRunnerControlDirectiveFromIteration({ text: 'ready to STOP_AND_IDLE' })).toBe(
+        'stop',
+      );
     });
 
     it('returns ignore on NO_ACTION_NEEDED', () => {
-      expect(extractRunnerControlDirectiveFromIteration({ text: 'NO_ACTION_NEEDED' }))
-        .toBe('ignore');
+      expect(extractRunnerControlDirectiveFromIteration({ text: 'NO_ACTION_NEEDED' })).toBe(
+        'ignore',
+      );
     });
 
     it('returns null for plain text', () => {
-      expect(extractRunnerControlDirectiveFromIteration({ text: 'hello' }))
-        .toBe(null);
+      expect(extractRunnerControlDirectiveFromIteration({ text: 'hello' })).toBe(null);
     });
 
     it('trims before checking', () => {
-      expect(extractRunnerControlDirectiveFromIteration({ text: '  NO_ACTION_NEEDED  ' }))
-        .toBe('ignore');
+      expect(extractRunnerControlDirectiveFromIteration({ text: '  NO_ACTION_NEEDED  ' })).toBe(
+        'ignore',
+      );
     });
   });
 
@@ -418,78 +430,94 @@ describe('agent-runner-helpers', () => {
   // ── didIterationProduceVisibleAssistantText ───────────────────────────────────
   describe('didIterationProduceVisibleAssistantText', () => {
     it('returns true when iteration.text is non-empty', () => {
-      expect(didIterationProduceVisibleAssistantText({ text: 'hello', messages: [] }))
-        .toBe(true);
+      expect(didIterationProduceVisibleAssistantText({ text: 'hello', messages: [] })).toBe(true);
     });
 
     it('returns false for empty text and empty messages', () => {
-      expect(didIterationProduceVisibleAssistantText({ text: '', messages: [] }))
-        .toBe(false);
+      expect(didIterationProduceVisibleAssistantText({ text: '', messages: [] })).toBe(false);
     });
 
     it('returns true for assistant message with string content', () => {
-      expect(didIterationProduceVisibleAssistantText({
-        text: '',
-        messages: [{ role: 'assistant', content: 'hello' }],
-      })).toBe(true);
+      expect(
+        didIterationProduceVisibleAssistantText({
+          text: '',
+          messages: [{ role: 'assistant', content: 'hello' }],
+        }),
+      ).toBe(true);
     });
 
     it('returns false for non-assistant messages', () => {
-      expect(didIterationProduceVisibleAssistantText({
-        text: '',
-        messages: [{ role: 'user', content: 'hello' }],
-      })).toBe(false);
+      expect(
+        didIterationProduceVisibleAssistantText({
+          text: '',
+          messages: [{ role: 'user', content: 'hello' }],
+        }),
+      ).toBe(false);
     });
 
     it('returns true for assistant message with parts containing text', () => {
-      expect(didIterationProduceVisibleAssistantText({
-        text: '',
-        messages: [{ role: 'assistant', content: [{ type: 'text', text: 'visible' }] }],
-      })).toBe(true);
+      expect(
+        didIterationProduceVisibleAssistantText({
+          text: '',
+          messages: [{ role: 'assistant', content: [{ type: 'text', text: 'visible' }] }],
+        }),
+      ).toBe(true);
     });
 
     it('skips parts without type=text', () => {
-      expect(didIterationProduceVisibleAssistantText({
-        text: '',
-        messages: [{ role: 'assistant', content: [{ type: 'image' }] }],
-      })).toBe(false);
+      expect(
+        didIterationProduceVisibleAssistantText({
+          text: '',
+          messages: [{ role: 'assistant', content: [{ type: 'image' }] }],
+        }),
+      ).toBe(false);
     });
 
     it('skips non-object messages', () => {
-      expect(didIterationProduceVisibleAssistantText({
-        text: '',
-        messages: [null, 'string', 42],
-      })).toBe(false);
+      expect(
+        didIterationProduceVisibleAssistantText({
+          text: '',
+          messages: [null, 'string', 42],
+        }),
+      ).toBe(false);
     });
   });
 
   // ── collectStepTextParts ────────────────────────────────────────────────────
   describe('collectStepTextParts', () => {
     it('collects text from uiMessages parts', () => {
-      const steps = [{
-        response: {
-          uiMessages: [{
-            parts: [
-              { type: 'text', text: 'part one' },
-              { type: 'text', text: 'part two' },
+      const steps = [
+        {
+          response: {
+            uiMessages: [
+              {
+                parts: [
+                  { type: 'text', text: 'part one' },
+                  { type: 'text', text: 'part two' },
+                ],
+              },
             ],
-          }],
+          },
         },
-      }];
+      ];
       expect(collectStepTextParts(steps)).toEqual(['part one', 'part two']);
     });
 
     it('skips non-text part types', () => {
-      const steps = [{
-        response: {
-          uiMessages: [{
-            parts: [
-              { type: 'image', text: 'ignored' },
-              { type: 'text', text: 'kept' },
+      const steps = [
+        {
+          response: {
+            uiMessages: [
+              {
+                parts: [
+                  { type: 'image', text: 'ignored' },
+                  { type: 'text', text: 'kept' },
+                ],
+              },
             ],
-          }],
+          },
         },
-      }];
+      ];
       expect(collectStepTextParts(steps)).toEqual(['kept']);
     });
 
@@ -504,13 +532,17 @@ describe('agent-runner-helpers', () => {
     });
 
     it('skips non-object parts', () => {
-      const steps = [{
-        response: {
-          uiMessages: [{
-            parts: [null, 'string', 42, { type: 'text', text: 'valid' }],
-          }],
+      const steps = [
+        {
+          response: {
+            uiMessages: [
+              {
+                parts: [null, 'string', 42, { type: 'text', text: 'valid' }],
+              },
+            ],
+          },
         },
-      }];
+      ];
       expect(collectStepTextParts(steps)).toEqual(['valid']);
     });
   });
@@ -518,13 +550,11 @@ describe('agent-runner-helpers', () => {
   // ── hasExactControlDirective ────────────────────────────────────────────────
   describe('hasExactControlDirective', () => {
     it('returns true when directive appears on its own line', () => {
-      expect(hasExactControlDirective('hello\nSTOP_AND_IDLE\nworld', 'STOP_AND_IDLE'))
-        .toBe(true);
+      expect(hasExactControlDirective('hello\nSTOP_AND_IDLE\nworld', 'STOP_AND_IDLE')).toBe(true);
     });
 
     it('returns true when directive is embedded in line', () => {
-      expect(hasExactControlDirective('result: NO_ACTION_NEEDED', 'NO_ACTION_NEEDED'))
-        .toBe(true);
+      expect(hasExactControlDirective('result: NO_ACTION_NEEDED', 'NO_ACTION_NEEDED')).toBe(true);
     });
 
     it('is case-sensitive', () => {
@@ -532,8 +562,7 @@ describe('agent-runner-helpers', () => {
     });
 
     it('trims lines before checking', () => {
-      expect(hasExactControlDirective('  NO_ACTION_NEEDED  ', 'NO_ACTION_NEEDED'))
-        .toBe(true);
+      expect(hasExactControlDirective('  NO_ACTION_NEEDED  ', 'NO_ACTION_NEEDED')).toBe(true);
     });
 
     it('returns false when directive not present', () => {
@@ -659,5 +688,4 @@ describe('agent-runner-helpers', () => {
       expect(extractControlDirective('STOP_AND_IDLE')).toBe('stop');
     });
   });
-
 });

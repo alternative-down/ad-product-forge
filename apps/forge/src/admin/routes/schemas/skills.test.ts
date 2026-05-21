@@ -4,10 +4,7 @@
  * Zero prior coverage.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  uploadSystemSkillsSchema,
-  deleteSystemSkillSchema,
-} from './skills';
+import { uploadSystemSkillsSchema, deleteSystemSkillSchema } from './skills';
 import { z } from 'zod';
 
 // Non-exported schemas — redefined inline (mirrors skills.ts)
@@ -35,8 +32,9 @@ const publishAgentSkillToGlobalSchema = z.object({
 
 describe('uploadAgentSkillsSchema', () => {
   it('parses valid input', () => {
-    expect(uploadAgentSkillsSchema.parse({ agentId: 'agent-1', archiveBase64: 'SGVsbG8gV29ybGQ=' }))
-      .toMatchObject({ agentId: 'agent-1' });
+    expect(
+      uploadAgentSkillsSchema.parse({ agentId: 'agent-1', archiveBase64: 'SGVsbG8gV29ybGQ=' }),
+    ).toMatchObject({ agentId: 'agent-1' });
   });
 
   it('rejects missing agentId', () => {
@@ -60,8 +58,9 @@ describe('uploadAgentSkillsSchema', () => {
 
 describe('deleteAgentSkillSchema', () => {
   it('parses valid input', () => {
-    expect(deleteAgentSkillSchema.parse({ agentId: 'agent-1', skillName: 'email-helper' }))
-      .toMatchObject({ agentId: 'agent-1', skillName: 'email-helper' });
+    expect(
+      deleteAgentSkillSchema.parse({ agentId: 'agent-1', skillName: 'email-helper' }),
+    ).toMatchObject({ agentId: 'agent-1', skillName: 'email-helper' });
   });
 
   it('rejects missing agentId', () => {
@@ -81,8 +80,7 @@ describe('deleteAgentSkillSchema', () => {
 
 describe('uploadSystemSkillsSchema', () => {
   it('parses valid input', () => {
-    expect(uploadSystemSkillsSchema.parse({ archiveBase64: 'SGVsbG8gV29ybGQ=' }))
-      .toMatchObject({});
+    expect(uploadSystemSkillsSchema.parse({ archiveBase64: 'SGVsbG8gV29ybGQ=' })).toMatchObject({});
   });
 
   it('rejects missing archiveBase64', () => {
@@ -98,8 +96,9 @@ describe('uploadSystemSkillsSchema', () => {
 
 describe('deleteSystemSkillSchema', () => {
   it('parses valid input', () => {
-    expect(deleteSystemSkillSchema.parse({ skillName: 'github-repos-helper' }))
-      .toMatchObject({ skillName: 'github-repos-helper' });
+    expect(deleteSystemSkillSchema.parse({ skillName: 'github-repos-helper' })).toMatchObject({
+      skillName: 'github-repos-helper',
+    });
   });
 
   it('rejects missing skillName', () => {
@@ -115,8 +114,12 @@ describe('deleteSystemSkillSchema', () => {
 
 describe('installGlobalSkillForAgentSchema', () => {
   it('parses valid input', () => {
-    expect(installGlobalSkillForAgentSchema.parse({ agentId: 'agent-1', skillName: 'github-milestones' }))
-      .toMatchObject({ agentId: 'agent-1', skillName: 'github-milestones' });
+    expect(
+      installGlobalSkillForAgentSchema.parse({
+        agentId: 'agent-1',
+        skillName: 'github-milestones',
+      }),
+    ).toMatchObject({ agentId: 'agent-1', skillName: 'github-milestones' });
   });
 
   it('rejects missing agentId', () => {
@@ -136,8 +139,9 @@ describe('installGlobalSkillForAgentSchema', () => {
 
 describe('publishAgentSkillToGlobalSchema', () => {
   it('parses valid input', () => {
-    expect(publishAgentSkillToGlobalSchema.parse({ agentId: 'agent-1', skillName: 'github-repos' }))
-      .toMatchObject({ agentId: 'agent-1', skillName: 'github-repos' });
+    expect(
+      publishAgentSkillToGlobalSchema.parse({ agentId: 'agent-1', skillName: 'github-repos' }),
+    ).toMatchObject({ agentId: 'agent-1', skillName: 'github-repos' });
   });
 
   it('rejects missing agentId', () => {

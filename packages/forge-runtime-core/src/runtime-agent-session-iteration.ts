@@ -1,4 +1,7 @@
-import type { RuntimeAgentSessionGenerateOptions, RuntimeAgentSessionIteration } from './runtime-agent-session.js';
+import type {
+  RuntimeAgentSessionGenerateOptions,
+  RuntimeAgentSessionIteration,
+} from './runtime-agent-session.js';
 import type { RuntimeSessionModelMessage } from './runtime-agent-session-messages.js';
 
 export function createRuntimeAgentSessionIteration(input: {
@@ -18,7 +21,9 @@ export function createRuntimeAgentSessionIteration(input: {
     }
 
     return message.content
-      .filter((part): part is Extract<typeof part, { type: 'tool-call' }> => part.type === 'tool-call')
+      .filter(
+        (part): part is Extract<typeof part, { type: 'tool-call' }> => part.type === 'tool-call',
+      )
       .map((part, partIndex) => ({
         id: part.toolCallId || `${input.iterationNumber}:${messageIndex}:${partIndex}`,
         name: part.toolName,
@@ -31,7 +36,10 @@ export function createRuntimeAgentSessionIteration(input: {
     }
 
     return message.content
-      .filter((part): part is Extract<typeof part, { type: 'tool-result' }> => part.type === 'tool-result')
+      .filter(
+        (part): part is Extract<typeof part, { type: 'tool-result' }> =>
+          part.type === 'tool-result',
+      )
       .map((part, partIndex) => ({
         id: part.toolCallId || `${input.iterationNumber}:${messageIndex}:${partIndex}`,
         name: part.toolName,
@@ -85,11 +93,11 @@ export async function resolveRuntimeAgentSessionContinuation(input: {
 
 function unwrapToolOutput(output: unknown) {
   if (
-    typeof output === 'object'
-    && output !== null
-    && 'type' in output
-    && 'value' in output
-    && output.type === 'json'
+    typeof output === 'object' &&
+    output !== null &&
+    'type' in output &&
+    'value' in output &&
+    output.type === 'json'
   ) {
     return (output as { value: unknown }).value;
   }

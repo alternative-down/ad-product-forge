@@ -12,7 +12,10 @@ vi.mock('../database/schema', () => ({
   agents: {},
 }));
 
-import { DEFAULT_WORKSPACE_EMBEDDER, prepareAgentEmbeddersForStartup } from './agent-embedder-maintenance';
+import {
+  DEFAULT_WORKSPACE_EMBEDDER,
+  prepareAgentEmbeddersForStartup,
+} from './agent-embedder-maintenance';
 
 describe('DEFAULT_WORKSPACE_EMBEDDER', () => {
   it('is transformers-multilingual-e5-small-cpu', () => {
@@ -54,9 +57,9 @@ describe('prepareAgentEmbeddersForStartup', () => {
     const mockDb = {
       query: {
         agents: {
-          findMany: vi.fn().mockResolvedValueOnce([
-            { id: 'fast-agent-1', workspaceEmbedder: 'fastembed' },
-          ]),
+          findMany: vi
+            .fn()
+            .mockResolvedValueOnce([{ id: 'fast-agent-1', workspaceEmbedder: 'fastembed' }]),
         },
       },
       update: updateMock,

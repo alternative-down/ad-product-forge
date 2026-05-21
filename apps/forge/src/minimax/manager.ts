@@ -6,9 +6,6 @@ export interface MiniMaxConfig {
 }
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
-
-
-
 export interface MiniMaxError {
   code: string;
   message: string;
@@ -19,13 +16,6 @@ export interface MiniMaxResponse<T> {
   data?: T;
   error?: MiniMaxError;
 }
-
-
-
-
-
-
-
 
 type MiniMaxJsonResponse = Record<string, unknown>;
 
@@ -62,7 +52,12 @@ export class MiniMaxClient {
             try {
               return JSON.parse(rawBody) as MiniMaxJsonResponse;
             } catch (error) {
-              forgeDebug({ scope: 'minimax', level: 'warn', message: 'Failed to parse MiniMax response', context: { error: String(serializeError(error)) } });
+              forgeDebug({
+                scope: 'minimax',
+                level: 'warn',
+                message: 'Failed to parse MiniMax response',
+                context: { error: String(serializeError(error)) },
+              });
               return null;
             }
           })()
@@ -71,7 +66,11 @@ export class MiniMaxClient {
       if (!response.ok) {
         return this.buildError(
           String(response.status),
-          this.extractErrorMessage(body, rawBody, `MiniMax request failed with status ${response.status}`),
+          this.extractErrorMessage(
+            body,
+            rawBody,
+            `MiniMax request failed with status ${response.status}`,
+          ),
         );
       }
 
@@ -113,11 +112,7 @@ export class MiniMaxClient {
     }
   }
 
-  private extractErrorMessage(
-    body: MiniMaxJsonResponse | null,
-    rawBody: string,
-    fallback: string,
-  ) {
+  private extractErrorMessage(body: MiniMaxJsonResponse | null, rawBody: string, fallback: string) {
     if (body == null) {
       return rawBody.trim() || fallback;
     }
@@ -215,29 +210,57 @@ export class MiniMaxClient {
     };
   }
 
-  async listVoices(type: string): Promise<MiniMaxResponse<{
-    systemVoices: Array<{ voiceId: string; voiceName?: string; description: string[]; createdTime?: string }>;
-    voiceCloning: Array<{ voiceId: string; voiceName?: string; description: string[]; createdTime?: string }>;
-    voiceGeneration: Array<{ voiceId: string; voiceName?: string; description: string[]; createdTime?: string }>;
-  }>> {
+  async listVoices(type: string): Promise<
+    MiniMaxResponse<{
+      systemVoices: Array<{
+        voiceId: string;
+        voiceName?: string;
+        description: string[];
+        createdTime?: string;
+      }>;
+      voiceCloning: Array<{
+        voiceId: string;
+        voiceName?: string;
+        description: string[];
+        createdTime?: string;
+      }>;
+      voiceGeneration: Array<{
+        voiceId: string;
+        voiceName?: string;
+        description: string[];
+        createdTime?: string;
+      }>;
+    }>
+  > {
     const response = await this.requestJson(`/v1/t2a/list_voices?type=${type}`, { method: 'GET' });
 
     if (!response.success || !response.data) {
       return response as MiniMaxResponse<never>;
     }
 
-    const apiData = (response.data as MiniMaxJsonResponse | undefined)?.data as Record<string, unknown> | undefined;
+    const apiData = (response.data as MiniMaxJsonResponse | undefined)?.data as
+      | Record<string, unknown>
+      | undefined;
 
     if (apiData == null) {
       return this.buildError('INVALID_RESPONSE', 'MiniMax list_voices response missing data');
     }
 
-    const parseVoice = (v: unknown): { voiceId: string; voiceName?: string; description: string[]; createdTime?: string } | null => {
+    const parseVoice = (
+      v: unknown,
+    ): {
+      voiceId: string;
+      voiceName?: string;
+      description: string[];
+      createdTime?: string;
+    } | null => {
       const obj = this.getObject(v);
       if (obj == null) return null;
       const voiceId = this.getString(obj.voice_id);
       if (voiceId === undefined || voiceId === '') return null;
-      const description = Array.isArray(obj.description) ? obj.description.filter((x) => typeof x === 'string') as string[] : [];
+      const description = Array.isArray(obj.description)
+        ? (obj.description.filter((x) => typeof x === 'string') as string[])
+        : [];
       return {
         voiceId,
         voiceName: this.getString(obj.voice_name),
@@ -247,7 +270,9 @@ export class MiniMaxClient {
     };
 
     const parseList = (key: string) =>
-      (Array.isArray(apiData[key]) ? apiData[key] : []).map(parseVoice).filter((v): v is NonNullable<typeof v> => v !== null);
+      (Array.isArray(apiData[key]) ? apiData[key] : [])
+        .map(parseVoice)
+        .filter((v): v is NonNullable<typeof v> => v !== null);
 
     return {
       success: true,
@@ -284,7 +309,10 @@ export class MiniMaxClient {
       }));
     }
 
-    const response = await this.requestJson('/v1/image_generation', { method: 'POST', body: JSON.stringify(body) });
+    const response = await this.requestJson('/v1/image_generation', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
 
     if (!response.success || !response.data) {
       return response as MiniMaxResponse<never>;
@@ -292,7 +320,10 @@ export class MiniMaxClient {
 
     const images = this.getObject(response.data.data)?.image_base64;
     if (!Array.isArray(images) || images.length === 0) {
-      return this.buildError('INVALID_RESPONSE', 'MiniMax image generation response missing images');
+      return this.buildError(
+        'INVALID_RESPONSE',
+        'MiniMax image generation response missing images',
+      );
     }
 
     return { success: true, data: { images } };
@@ -315,7 +346,10 @@ export class MiniMaxClient {
     if ((input.firstFrameImage ?? '') !== '') body.first_frame_image = input.firstFrameImage;
     if ((input.lastFrameImage ?? '') !== '') body.last_frame_image = input.lastFrameImage;
 
-    const response = await this.requestJson('/v1/video_generation', { method: 'POST', body: JSON.stringify(body) });
+    const response = await this.requestJson('/v1/video_generation', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
 
     if (!response.success || !response.data) {
       return response as MiniMaxResponse<never>;
@@ -323,18 +357,23 @@ export class MiniMaxClient {
 
     const taskId = this.getString(this.getObject(response.data.data)?.task_id);
     if (taskId === undefined || taskId === '') {
-      return this.buildError('INVALID_RESPONSE', 'MiniMax video generation response missing task_id');
+      return this.buildError(
+        'INVALID_RESPONSE',
+        'MiniMax video generation response missing task_id',
+      );
     }
 
     return { success: true, data: { taskId } };
   }
 
-  async queryVideoGeneration(taskId: string): Promise<MiniMaxResponse<{
-    taskId: string;
-    status: string;
-    fileId?: string;
-    failureReason?: string;
-  }>> {
+  async queryVideoGeneration(taskId: string): Promise<
+    MiniMaxResponse<{
+      taskId: string;
+      status: string;
+      fileId?: string;
+      failureReason?: string;
+    }>
+  > {
     const response = await this.requestJson('/v1/query/video_generation', {
       method: 'POST',
       body: JSON.stringify({ task_id: taskId }),
@@ -352,7 +391,10 @@ export class MiniMaxClient {
     const outTaskId = this.getString(d.task_id);
     const status = this.getString(d.status);
     if (!outTaskId || !status) {
-      return this.buildError('INVALID_RESPONSE', 'MiniMax video query response missing task_id or status');
+      return this.buildError(
+        'INVALID_RESPONSE',
+        'MiniMax video query response missing task_id or status',
+      );
     }
 
     return {
@@ -366,11 +408,13 @@ export class MiniMaxClient {
     };
   }
 
-  async retrieveFile(fileId: string): Promise<MiniMaxResponse<{
-    fileId: string;
-    fileName?: string;
-    downloadUrl?: string;
-  }>> {
+  async retrieveFile(fileId: string): Promise<
+    MiniMaxResponse<{
+      fileId: string;
+      fileName?: string;
+      downloadUrl?: string;
+    }>
+  > {
     const response = await this.requestJson('/v1/files/retrieve', {
       method: 'POST',
       body: JSON.stringify({ file_id: fileId }),
@@ -383,12 +427,18 @@ export class MiniMaxClient {
     const fileObj = this.getObject(response.data.data)?.file;
     const f = this.getObject(fileObj);
     if (f == null) {
-      return this.buildError('INVALID_RESPONSE', 'MiniMax file retrieve response missing file object');
+      return this.buildError(
+        'INVALID_RESPONSE',
+        'MiniMax file retrieve response missing file object',
+      );
     }
 
     const downloadUrl = this.getString(f.download_url);
     if (downloadUrl === undefined || downloadUrl === '') {
-      return this.buildError('INVALID_RESPONSE', 'MiniMax file retrieve response missing download_url');
+      return this.buildError(
+        'INVALID_RESPONSE',
+        'MiniMax file retrieve response missing download_url',
+      );
     }
 
     return {
@@ -400,14 +450,17 @@ export class MiniMaxClient {
       },
     };
   }
-
 }
 
 export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
   const key = (apiKey ?? '') !== '' ? apiKey : process.env.MINIMAX_API_KEY;
 
   if (key === undefined || key === '') {
-    forgeDebug({ scope: 'minimax', level: 'error', message: 'createMinimaxManager: MINIMAX_API_KEY not set' });
+    forgeDebug({
+      scope: 'minimax',
+      level: 'error',
+      message: 'createMinimaxManager: MINIMAX_API_KEY not set',
+    });
     throw new Error('MINIMAX_API_KEY environment variable is not set');
   }
 
@@ -415,13 +468,19 @@ export function createMiniMaxClient(apiKey?: string): MiniMaxClient {
 }
 
 export function createMiniMaxManager(config: {
-  integrations: ReturnType<typeof import('../system-integrations/store').createSystemIntegrationStore>;
+  integrations: ReturnType<
+    typeof import('../system-integrations/store').createSystemIntegrationStore
+  >;
 }) {
   async function getClient() {
     const cfg = await config.integrations.getMinimaxConfig();
 
     if (cfg == null) {
-      forgeDebug({ scope: 'minimax', level: 'warn', message: 'getClient MiniMax integration not configured' });
+      forgeDebug({
+        scope: 'minimax',
+        level: 'warn',
+        message: 'getClient MiniMax integration not configured',
+      });
       throw new Error('MiniMax integration is not configured');
     }
 
@@ -438,7 +497,9 @@ export function createMiniMaxManager(config: {
     async generateImage(input: Parameters<MiniMaxClient['generateImage']>[0]) {
       return await getClient().then((c) => c.generateImage(input));
     },
-    async createVideoGenerationTask(input: Parameters<MiniMaxClient['createVideoGenerationTask']>[0]) {
+    async createVideoGenerationTask(
+      input: Parameters<MiniMaxClient['createVideoGenerationTask']>[0],
+    ) {
       return await getClient().then((c) => c.createVideoGenerationTask(input));
     },
     async queryVideoGeneration(taskId: string) {

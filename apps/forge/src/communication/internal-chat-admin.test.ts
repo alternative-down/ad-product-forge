@@ -109,8 +109,20 @@ describe('createInternalChatAdmin', () => {
     it('returns only external accounts (agentId is null) as admin views', async () => {
       const db = makeFakeDb();
       db.query.internalChatAccounts.findMany.mockResolvedValueOnce([
-        { id: 'a1', agentId: null, slug: 'partner', displayName: 'Partner', description: 'external' },
-        { id: 'a2', agentId: 'agent-1', slug: 'agent-account', displayName: 'Agent Account', description: null },
+        {
+          id: 'a1',
+          agentId: null,
+          slug: 'partner',
+          displayName: 'Partner',
+          description: 'external',
+        },
+        {
+          id: 'a2',
+          agentId: 'agent-1',
+          slug: 'agent-account',
+          displayName: 'Agent Account',
+          description: null,
+        },
       ]);
 
       const admin = createInternalChatAdmin(db as any);

@@ -109,14 +109,14 @@ describe('loadAgentToolset', () => {
     });
 
     expect(result.tools.listContracts).toBeDefined(); // microErp
-    expect(result.tools.notify).toBeDefined();         // notifications
-    expect(result.tools.getIssue).toBeDefined();       // github
-    expect(result.tools.listServers).toBeDefined();    // coolify
+    expect(result.tools.notify).toBeDefined(); // notifications
+    expect(result.tools.getIssue).toBeDefined(); // github
+    expect(result.tools.listServers).toBeDefined(); // coolify
     expect(result.tools.listSchedules).toBeDefined(); // schedules
     expect(result.tools.listCapabilities).toBeDefined(); // capabilities
-    expect(result.tools.sendMessage).toBeDefined();    // internalChat
+    expect(result.tools.sendMessage).toBeDefined(); // internalChat
     expect(result.tools.listAgentSkills).toBeDefined(); // skills
-    expect(result.tools.hireAgent).toBeDefined();      // internalAgents
+    expect(result.tools.hireAgent).toBeDefined(); // internalAgents
     // minimax disabled
     expect(result.tools.generateSpeech).toBeUndefined();
   });
@@ -194,7 +194,9 @@ describe('loadAgentToolset', () => {
 
   it('passes agentId, githubApps, and allowedToolIds to createGitHubTools', async () => {
     mockCreateGitHubTools.mockClear();
-    const config: any = makeConfig({ githubApps: [{ appId: 1, privateKey: 'pk', webhookSecret: 'ws' }] });
+    const config: any = makeConfig({
+      githubApps: [{ appId: 1, privateKey: 'pk', webhookSecret: 'ws' }],
+    });
     await loadAgentToolset({
       db: MOCK_DB,
       loaderConfig: config,
@@ -203,7 +205,11 @@ describe('loadAgentToolset', () => {
       allowedToolIds: MOCK_ALLOWED_TOOL_IDS,
     });
 
-    expect(mockCreateGitHubTools).toHaveBeenCalledWith(MOCK_AGENT_ID, config.githubApps, MOCK_ALLOWED_TOOL_IDS);
+    expect(mockCreateGitHubTools).toHaveBeenCalledWith(
+      MOCK_AGENT_ID,
+      config.githubApps,
+      MOCK_ALLOWED_TOOL_IDS,
+    );
   });
 
   it('passes coolify config and allowedToolIds to createCoolifyTools when set', async () => {

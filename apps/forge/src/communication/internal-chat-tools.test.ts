@@ -20,26 +20,49 @@ describe('createInternalChatTools', () => {
     });
 
     it('registers change_chat_group tool when in allowedToolIds', () => {
-      const tools = createInternalChatTools('agent-1', 'Agent One', makeMockService() as any, new Set(['change_chat_group']));
+      const tools = createInternalChatTools(
+        'agent-1',
+        'Agent One',
+        makeMockService() as any,
+        new Set(['change_chat_group']),
+      );
       expect(tools).toHaveProperty('change_chat_group');
     });
 
     it('omits change_chat_group when not in allowedToolIds', () => {
-      const tools = createInternalChatTools('agent-1', 'Agent One', makeMockService() as any, new Set(['other_tool']));
+      const tools = createInternalChatTools(
+        'agent-1',
+        'Agent One',
+        makeMockService() as any,
+        new Set(['other_tool']),
+      );
       expect(tools).not.toHaveProperty('change_chat_group');
     });
 
     describe('execute: action=create', () => {
       it('returns error when create missing', async () => {
-        const tools = createInternalChatTools('agent-1', 'Agent One', makeMockService() as any, null);
+        const tools = createInternalChatTools(
+          'agent-1',
+          'Agent One',
+          makeMockService() as any,
+          null,
+        );
         const result = await (tools.change_chat_group as any).execute({ action: 'create' });
         expect(result.valid).toBe(false);
         expect(result.error).toContain('create is required');
       });
 
       it('returns error when create.name missing', async () => {
-        const tools = createInternalChatTools('agent-1', 'Agent One', makeMockService() as any, null);
-        const result = await (tools.change_chat_group as any).execute({ action: 'create', create: {} });
+        const tools = createInternalChatTools(
+          'agent-1',
+          'Agent One',
+          makeMockService() as any,
+          null,
+        );
+        const result = await (tools.change_chat_group as any).execute({
+          action: 'create',
+          create: {},
+        });
         expect(result.valid).toBe(false);
         expect(result.error).toContain('create.name is required');
       });
@@ -82,15 +105,28 @@ describe('createInternalChatTools', () => {
 
     describe('execute: action=update', () => {
       it('returns error when update missing', async () => {
-        const tools = createInternalChatTools('agent-1', 'Agent One', makeMockService() as any, null);
+        const tools = createInternalChatTools(
+          'agent-1',
+          'Agent One',
+          makeMockService() as any,
+          null,
+        );
         const result = await (tools.change_chat_group as any).execute({ action: 'update' });
         expect(result.valid).toBe(false);
         expect(result.error).toContain('update is required');
       });
 
       it('returns error when update.groupId missing', async () => {
-        const tools = createInternalChatTools('agent-1', 'Agent One', makeMockService() as any, null);
-        const result = await (tools.change_chat_group as any).execute({ action: 'update', update: {} });
+        const tools = createInternalChatTools(
+          'agent-1',
+          'Agent One',
+          makeMockService() as any,
+          null,
+        );
+        const result = await (tools.change_chat_group as any).execute({
+          action: 'update',
+          update: {},
+        });
         expect(result.valid).toBe(false);
         expect(result.error).toContain('update.groupId is required');
       });

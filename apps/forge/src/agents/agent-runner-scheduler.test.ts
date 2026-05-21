@@ -8,7 +8,11 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS } from './time-constants';
-import { createScheduler, type SchedulerState, type SchedulerDependencies } from './agent-runner-scheduler';
+import {
+  createScheduler,
+  type SchedulerState,
+  type SchedulerDependencies,
+} from './agent-runner-scheduler';
 
 // ─── Constants (duplicated for test use) ────────────────────────────────────
 const RUNNER_AWAIT_TIMEOUT_MS = 30_000;
@@ -32,8 +36,14 @@ function makeDefaultState(): SchedulerState {
 function makeMinimalDeps(overrides: Partial<SchedulerDependencies> = {}): SchedulerDependencies {
   return {
     runtimeId: 'agent-1',
-    getSystemSettings: async () => ({ stepDelayEnabled: true, memoryLastMessagesFullEnabled: false, communicationDmFlushingEnabled: false, communicationGroupFlushingEnabled: false }),
-    getRunnableContract: vi.fn<() => Promise<{ id: string; budgetUsd: number; endsAt: number } | null>>(),
+    getSystemSettings: async () => ({
+      stepDelayEnabled: true,
+      memoryLastMessagesFullEnabled: false,
+      communicationDmFlushingEnabled: false,
+      communicationGroupFlushingEnabled: false,
+    }),
+    getRunnableContract:
+      vi.fn<() => Promise<{ id: string; budgetUsd: number; endsAt: number } | null>>(),
     getContractSpend: vi.fn<() => Promise<number>>(),
     estimateStepCostUsd: vi.fn<() => Promise<number | null>>(),
     setExecutionState: vi.fn<() => Promise<void>>(),
@@ -291,8 +301,12 @@ describe('stop and idle state', () => {
 // ─── Tests: Scheduling / step delay ──────────────────────────────────────────
 
 describe('planNextStepDelay', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('returns -1 when no contract exists', async () => {
     const deps = makeMinimalDeps({ getRunnableContract: async () => null });
@@ -304,7 +318,11 @@ describe('planNextStepDelay', () => {
 
   it('returns -1 when remaining budget is below estimated step cost', async () => {
     const deps = makeMinimalDeps({
-      getRunnableContract: async () => ({ id: 'c1', budgetUsd: 0.001, endsAt: Date.now() + 3600_000 }),
+      getRunnableContract: async () => ({
+        id: 'c1',
+        budgetUsd: 0.001,
+        endsAt: Date.now() + 3600_000,
+      }),
       getContractSpend: async () => 0.001,
       estimateStepCostUsd: async () => 0.01,
     });

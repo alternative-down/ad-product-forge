@@ -92,34 +92,67 @@ const baseUpdate = {
 /** Input schema for the self-schedule tool (manageSelfCrons). */
 const _manageSelfCronsInputSchema = z.object({
   action: z.enum(['create', 'update', 'delete']).describe('The cron operation to perform.'),
-  create: z.object({
-    ...baseCreate,
-    scheduleType: z.enum(['cron', 'date']).describe('Use "cron" for recurring or "date" for one-time.'),
-    cronExpression: z.string().optional().describe('Required when scheduleType is cron. Example: 0 * * * *.'),
-    scheduledDate: z.string().optional().describe('Required when scheduleType is date. ISO string.'),
-    timezone: z.string().optional().describe('Timezone. Defaults to UTC.'),
-    content: z.string().describe('The message or task delivered when the cron fires.'),
-    wakeWhenRunning: z.boolean().optional().describe('For recurring crons only. If false, only wakes when idle.'),
-  }).optional().describe('Provide only when action is create.'),
+  create: z
+    .object({
+      ...baseCreate,
+      scheduleType: z
+        .enum(['cron', 'date'])
+        .describe('Use "cron" for recurring or "date" for one-time.'),
+      cronExpression: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is cron. Example: 0 * * * *.'),
+      scheduledDate: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is date. ISO string.'),
+      timezone: z.string().optional().describe('Timezone. Defaults to UTC.'),
+      content: z.string().describe('The message or task delivered when the cron fires.'),
+      wakeWhenRunning: z
+        .boolean()
+        .optional()
+        .describe('For recurring crons only. If false, only wakes when idle.'),
+    })
+    .optional()
+    .describe('Provide only when action is create.'),
   update: z.object(baseUpdate).optional().describe('Provide only when action is update.'),
-  delete: z.object({ scheduleId: z.string().describe('Required schedule id to delete.') }).optional().describe('Provide only when action is delete.'),
+  delete: z
+    .object({ scheduleId: z.string().describe('Required schedule id to delete.') })
+    .optional()
+    .describe('Provide only when action is delete.'),
 });
 
 /** Input schema for the delegated-schedule tool (manageCrons). */
 const _manageCronsInputSchema = z.object({
-  action: z.enum(['create', 'update', 'delete']).describe('The delegated cron operation to perform.'),
-  create: z.object({
-    targetAgentId: z.string().describe('Required target agent id for delegated cron creation.'),
-    ...baseCreate,
-    scheduleType: z.enum(['cron', 'date']).describe('Use "cron" for recurring or "date" for one-time.'),
-    cronExpression: z.string().optional().describe('Required when scheduleType is cron. Example: 0 * * * *.'),
-    scheduledDate: z.string().optional().describe('Required when scheduleType is date. ISO string.'),
-    timezone: z.string().optional().describe('Timezone. Defaults to UTC.'),
-    content: z.string().describe('The message or task delivered when the cron fires.'),
-    wakeWhenRunning: z.boolean().optional().describe('For recurring crons only.'),
-  }).optional().describe('Provide only when action is create.'),
+  action: z
+    .enum(['create', 'update', 'delete'])
+    .describe('The delegated cron operation to perform.'),
+  create: z
+    .object({
+      targetAgentId: z.string().describe('Required target agent id for delegated cron creation.'),
+      ...baseCreate,
+      scheduleType: z
+        .enum(['cron', 'date'])
+        .describe('Use "cron" for recurring or "date" for one-time.'),
+      cronExpression: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is cron. Example: 0 * * * *.'),
+      scheduledDate: z
+        .string()
+        .optional()
+        .describe('Required when scheduleType is date. ISO string.'),
+      timezone: z.string().optional().describe('Timezone. Defaults to UTC.'),
+      content: z.string().describe('The message or task delivered when the cron fires.'),
+      wakeWhenRunning: z.boolean().optional().describe('For recurring crons only.'),
+    })
+    .optional()
+    .describe('Provide only when action is create.'),
   update: z.object(baseUpdate).optional().describe('Provide only when action is update.'),
-  delete: z.object({ scheduleId: z.string().describe('Required schedule id to delete.') }).optional().describe('Provide only when action is delete.'),
+  delete: z
+    .object({ scheduleId: z.string().describe('Required schedule id to delete.') })
+    .optional()
+    .describe('Provide only when action is delete.'),
 });
 
 // ─── Type exports ─────────────────────────────────────────────────────────────

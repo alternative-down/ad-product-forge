@@ -99,9 +99,11 @@ function createMockHttpServer() {
 // The route handler does NOT await db operations — it calls them and returns.
 function makeChain() {
   const chain: Record<string, unknown> = {};
-  ['delete', 'insert', 'update', 'select', 'from', 'where', 'set', 'values', 'orderBy'].forEach((m) => {
-    chain[m] = vi.fn().mockReturnThis();
-  });
+  ['delete', 'insert', 'update', 'select', 'from', 'where', 'set', 'values', 'orderBy'].forEach(
+    (m) => {
+      chain[m] = vi.fn().mockReturnThis();
+    },
+  );
   return chain as Record<string, ReturnType<typeof vi.fn>>;
 }
 
@@ -149,11 +151,13 @@ describe('registerAgentProviderMcpRoutes', () => {
     loaderConfig = createMockLoaderConfig();
     vi.clearAllMocks();
 
-    const module = await vi.importActual<{ registerAgentProviderMcpRoutes: (opts: {
-      httpServer: ReturnType<typeof createMockHttpServer>;
-      db: ReturnType<typeof createMockDb>;
-      loaderConfig: ReturnType<typeof createMockLoaderConfig>;
-    }) => void }>('./provider-mcp');
+    const module = await vi.importActual<{
+      registerAgentProviderMcpRoutes: (opts: {
+        httpServer: ReturnType<typeof createMockHttpServer>;
+        db: ReturnType<typeof createMockDb>;
+        loaderConfig: ReturnType<typeof createMockLoaderConfig>;
+      }) => void;
+    }>('./provider-mcp');
     registerAgentProviderMcpRoutes = module.registerAgentProviderMcpRoutes;
   });
 
@@ -223,21 +227,35 @@ describe('registerAgentProviderMcpRoutes', () => {
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/upsert');
 
       const response = (await route!.handler({
-        bodyText: JSON.stringify({ agentId: 'agent-42', providerType: 'discord', credentials: { token: 'tok' } }),
+        bodyText: JSON.stringify({
+          agentId: 'agent-42',
+          providerType: 'discord',
+          credentials: { token: 'tok' },
+        }),
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
-      expect(parseBody(response)).toMatchObject({ success: true, agentId: 'agent-42', providerType: 'discord' });
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        agentId: 'agent-42',
+        providerType: 'discord',
+      });
       expect(db.insert).toHaveBeenCalled();
     });
 
     it('updates existing provider', async () => {
-      db.query.agentProviders.findFirst = vi.fn().mockResolvedValue({ id: 'prov-1', agentId: 'agent-42' });
+      db.query.agentProviders.findFirst = vi
+        .fn()
+        .mockResolvedValue({ id: 'prov-1', agentId: 'agent-42' });
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/upsert');
 
       const response = (await route!.handler({
-        bodyText: JSON.stringify({ agentId: 'agent-42', providerType: 'discord', credentials: { token: 'tok' } }),
+        bodyText: JSON.stringify({
+          agentId: 'agent-42',
+          providerType: 'discord',
+          credentials: { token: 'tok' },
+        }),
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
@@ -250,7 +268,11 @@ describe('registerAgentProviderMcpRoutes', () => {
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/upsert');
 
       const response = (await route!.handler({
-        bodyText: JSON.stringify({ agentId: 'agent-42', providerType: 'discord', credentials: { token: '   ' } }),
+        bodyText: JSON.stringify({
+          agentId: 'agent-42',
+          providerType: 'discord',
+          credentials: { token: '   ' },
+        }),
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
@@ -262,7 +284,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/upsert');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
       expect(parseBody(response)).toHaveProperty('error');
@@ -281,7 +306,11 @@ describe('registerAgentProviderMcpRoutes', () => {
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
-      expect(parseBody(response)).toMatchObject({ success: true, agentId: 'agent-42', providerType: 'discord' });
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        agentId: 'agent-42',
+        providerType: 'discord',
+      });
       expect(db.delete).toHaveBeenCalled();
     });
 
@@ -289,7 +318,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/delete');
 
-      const response = (await route!.handler({ bodyText: 'invalid' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'invalid' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -324,7 +356,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/create');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -355,7 +390,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/update');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -374,7 +412,11 @@ describe('registerAgentProviderMcpRoutes', () => {
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
-      expect(parseBody(response)).toMatchObject({ success: true, configId: 'cfg-1', serverId: 'srv-1' });
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        configId: 'cfg-1',
+        serverId: 'srv-1',
+      });
       expect(db.delete).toHaveBeenCalledTimes(2);
     });
 
@@ -395,7 +437,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/delete');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -420,7 +465,9 @@ describe('registerAgentProviderMcpRoutes', () => {
     });
 
     it('updates existing assignment', async () => {
-      db.query.agentMcpConfigs.findFirst = vi.fn().mockResolvedValue({ id: 'cfg-1', agentId: 'agent-42' });
+      db.query.agentMcpConfigs.findFirst = vi
+        .fn()
+        .mockResolvedValue({ id: 'cfg-1', agentId: 'agent-42' });
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/assign');
 
@@ -437,7 +484,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/assign');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -465,7 +515,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/set-active');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -475,7 +528,9 @@ describe('registerAgentProviderMcpRoutes', () => {
 
   describe('POST /admin/agent-mcp/detach', () => {
     it('deletes agent-server assignment', async () => {
-      db.query.agentMcpConfigs.findFirst = vi.fn().mockResolvedValue({ id: 'cfg-1', agentId: 'agent-42' });
+      db.query.agentMcpConfigs.findFirst = vi
+        .fn()
+        .mockResolvedValue({ id: 'cfg-1', agentId: 'agent-42' });
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/detach');
 
@@ -484,7 +539,11 @@ describe('registerAgentProviderMcpRoutes', () => {
       })) as { status: number; body: string };
 
       expect(response.status).toBe(200);
-      expect(parseBody(response)).toMatchObject({ success: true, configId: 'cfg-1', agentId: 'agent-42' });
+      expect(parseBody(response)).toMatchObject({
+        success: true,
+        configId: 'cfg-1',
+        agentId: 'agent-42',
+      });
       expect(db.delete).toHaveBeenCalled();
     });
 
@@ -492,7 +551,10 @@ describe('registerAgentProviderMcpRoutes', () => {
       registerAgentProviderMcpRoutes({ httpServer, db, loaderConfig });
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-mcp/detach');
 
-      const response = (await route!.handler({ bodyText: 'not-json' })) as { status: number; body: string };
+      const response = (await route!.handler({ bodyText: 'not-json' })) as {
+        status: number;
+        body: string;
+      };
 
       expect(response.status).toBe(500);
     });
@@ -507,7 +569,11 @@ describe('registerAgentProviderMcpRoutes', () => {
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/upsert');
 
       const response = (await route!.handler({
-        bodyText: JSON.stringify({ agentId: 'agent-42', providerType: 'discord', credentials: { token: 'tok' } }),
+        bodyText: JSON.stringify({
+          agentId: 'agent-42',
+          providerType: 'discord',
+          credentials: { token: 'tok' },
+        }),
       })) as { status: number; body: string };
 
       expect(response.status).toBe(500);
@@ -521,7 +587,11 @@ describe('registerAgentProviderMcpRoutes', () => {
       const route = httpServer._routes.find((r) => r.path === '/admin/agent-provider/upsert');
 
       await route!.handler({
-        bodyText: JSON.stringify({ agentId: 'agent-42', providerType: 'discord', credentials: { token: 'tok' } }),
+        bodyText: JSON.stringify({
+          agentId: 'agent-42',
+          providerType: 'discord',
+          credentials: { token: 'tok' },
+        }),
       });
 
       expect(forgeDebug).toHaveBeenCalled();

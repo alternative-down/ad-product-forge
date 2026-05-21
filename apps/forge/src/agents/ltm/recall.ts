@@ -98,8 +98,7 @@ async function countFiles(rootPath: string, relativePath: string): Promise<numbe
       level: 'error',
       message: '[safe-catch] readdir',
       context: {
-        error:
-          serializeError(err),
+        error: serializeError(err),
       },
     });
     return null;
@@ -185,7 +184,8 @@ export class AgentLongTermMemoryRecall {
     this.recentRawTokens = input.recentRawTokens ?? 0;
     this.persistenceStore = input.persistenceStore;
     if ('retrievalWorkspace' in input && input.retrievalWorkspace !== undefined) {
-      this.retrievalWorkspace = input.retrievalWorkspace as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
+      this.retrievalWorkspace =
+        input.retrievalWorkspace as import('@forge-runtime/core').SqliteWorkspaceRetrieval;
     } else {
       this.retrievalWorkspace = new SqliteWorkspaceRetrieval({
         databasePath: path.resolve(input.agentWorkspacePath, `${input.agentId}-memory-recall.db`),
@@ -340,8 +340,7 @@ export class AgentLongTermMemoryRecall {
         level: 'error',
         message: 'recall failed',
         context: {
-          error:
-            serializeError(error),
+          error: serializeError(error),
         },
       });
       forgeDebug({
