@@ -1,15 +1,14 @@
 import { createId } from '../utils/id';
 import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
-import { App, Octokit } from 'octokit';
+import { App } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
-import { z } from 'zod';
 import type { Database } from '../database/schema';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 import { agentProviders, agents, type NewAgentProvider } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
-import type { createForgeHttpServer, HttpResponse } from '../http/server';
+import type { createForgeHttpServer } from '../http/server';
 import { createAgentNotificationStore } from '../notifications/store';
 import {
   githubAppCredentialsSchema,
@@ -51,14 +50,7 @@ import { createCredentialsOps } from './ops/credentials';
 import type { OpsContext } from './ops/context';
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
-const _INSTALLATION_READY_ATTEMPTS = 10;
-const _INSTALLATION_READY_DELAY_MS = 1500;
 
-const _manifestConversionSchema = z.object({
-  id: z.number().int(),
-  pem: z.string(),
-  webhook_secret: z.string(),
-});
 export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
 
 /**
@@ -171,6 +163,14 @@ export function createGitHubAppManager(config: {
   const _opsApps = createAppProvisioningOps(opsCtx);
 
   // ── App Lifecycle ────────────────────────────────────────────────────────
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // CONFIG
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
   async function getGlobalConfig() {
     const githubConfig = await config.integrations.getGitHubConfig();
 
@@ -343,6 +343,14 @@ export function createGitHubAppManager(config: {
   }
 
   // === Repo Ops ===
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // API DELEGATION
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
   async function listRepositories(agentId: string) {
     return await opsRepos.listRepositories(agentId);
   }
@@ -393,6 +401,10 @@ export function createGitHubAppManager(config: {
   ) {
     return await opsRepos.getRepository(agentId, input);
   }
+
+
+
+  // ── Repos ──────────────────────────────────────────────────────────────────
 
   async function listPullRequests(
     agentId: string,
@@ -471,6 +483,10 @@ export function createGitHubAppManager(config: {
   ) {
     return await opsPullRequests.mergePullRequest(agentId, input);
   }
+
+
+
+  // ── Pull Requests ─────────────────────────────────────────────────────────
 
   async function listIssues(
     agentId: string,
@@ -613,6 +629,10 @@ export function createGitHubAppManager(config: {
     return await opsIssues.deleteIssueComment(agentId, input);
   }
 
+
+
+  // ── Issues ────────────────────────────────────────────────────────────────
+
   async function listLabels(
     agentId: string,
     input: {
@@ -662,6 +682,10 @@ export function createGitHubAppManager(config: {
     return await opsLabels.deleteLabel(agentId, input);
   }
 
+
+
+  // ── Labels ─────────────────────────────────────────────────────────────────
+
   async function addIssueLabels(
     agentId: string,
     input: {
@@ -685,6 +709,10 @@ export function createGitHubAppManager(config: {
   ) {
     return await opsLabels.removeIssueLabels(agentId, input);
   }
+
+
+
+  // ── Milestones ────────────────────────────────────────────────────────────
 
   async function listMilestones(
     agentId: string,
@@ -786,6 +814,14 @@ export function createGitHubAppManager(config: {
   };
 
   // === Credentials ===
+
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // CREDENTIALS
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
   async function getCredentials(agentId: string) {
     const provider = await config.db.query.agentProviders.findFirst({
       where: and(
@@ -860,10 +896,6 @@ export function createGitHubAppManager(config: {
     }
   }
 
-  async function _getInstallationOctokit(agentId: string) {
-    const credentials = await getActiveCredentials(agentId);
-    return await createInstallationOctokit(credentials);
-  }
 
   async function getInstallationToken(
     credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
