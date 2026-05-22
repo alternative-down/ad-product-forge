@@ -76,7 +76,7 @@ export function createLlmSettingsStore(db: Database) {
     };
   }
 
-  async function getResolvedDefaults() {
+  async function getResolvedDefaults(): Promise<{ primaryProfile: LlmProfileRecord; omProfile: LlmProfileRecord; hiringRhProfile: LlmProfileRecord; }> {
     const [profiles, defaults] = await Promise.all([listProfiles(), getDefaults()]);
 
     if (defaults === null || defaults === undefined) {
@@ -88,7 +88,7 @@ export function createLlmSettingsStore(db: Database) {
       throw new Error('System LLM defaults are not configured');
     }
 
-    const profileMap = new Map(profiles.map((profile: any) => [profile.profileId, profile]));
+    const profileMap = new Map(profiles.map((profile: LlmProfileRecord) => [profile.profileId, profile]));
     const primaryProfile = profileMap.get(defaults.primaryProfileId);
     const omProfile = profileMap.get(defaults.omProfileId);
     const hiringRhProfile = profileMap.get(defaults.hiringRhProfileId);
@@ -252,7 +252,7 @@ export function createLlmSettingsStore(db: Database) {
   }) {
     const parsed = llmDefaultsSchema.parse(input);
     const profiles = await listProfiles();
-    const profileMap = new Map(profiles.map((profile: any) => [profile.profileId, profile]));
+    const profileMap = new Map(profiles.map((profile: LlmProfileRecord) => [profile.profileId, profile]));
 
     for (const profileId of [
       parsed.primaryProfileId,
