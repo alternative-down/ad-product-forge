@@ -9,7 +9,7 @@ import { createAgentContractStore } from './agent-contract-store';
 import type { Database } from '../database/schema';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createAgentNotificationStore } from '../notifications/store';
-import { createAgentRunnerUsage } from './agent-runner-usage';
+import { createAgentRunnerUsage, type AgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
 import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
@@ -172,10 +172,6 @@ export function createAgentRunner(
 
   function clearTimer() {
     scheduler.clearTimer();
-  }
-
-  function _startHealthcheck() {
-    scheduler.startHealthcheck();
   }
 
   function clearHealthcheck() {
@@ -561,7 +557,7 @@ export function createAgentRunner(
           runtime,
           currentRuntime,
           store,
-          usage: usage as unknown as import('./agent-runner-usage').AgentRunnerUsage,
+          usage: usage as unknown as AgentRunnerUsage,
           notifications,
           homeMetricSnapshots,
           messageManager,
