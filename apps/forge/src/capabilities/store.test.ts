@@ -8,6 +8,7 @@ import {
   roleWorkflowPermissions,
 } from '../database/schema';
 import { createCapabilityStore } from './store';
+import { resolveLoadedToolIds, ROLE_INSPECTION_TOOL_IDS } from './permissions';
 
 // ── Mock helpers ─────────────────────────────────────────────────────────────
 function createMockAgent(overrides = {}) {
@@ -96,39 +97,6 @@ function createMockDb() {
     query,
   } as any;
   return { db, query };
-}
-
-// ── resolveLoadedToolIds (mirrors store.ts private helper) ───────────────────
-const ROLE_INSPECTION_TOOL_IDS = [
-  'manage_agent_role',
-  'change_agent_role',
-  'list_role_capabilities',
-  'manage_role_capabilities',
-];
-function resolveLoadedToolIds(toolIds: string[]) {
-  const resolvedToolIds = new Set(toolIds);
-  const hasCrossAgentCronTools =
-    resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
-  const hasRoleInspection = ROLE_INSPECTION_TOOL_IDS.some((toolId) => resolvedToolIds.has(toolId));
-
-  if (hasRoleInspection) {
-    resolvedToolIds.add('list_agent_roles');
-  }
-  if (resolvedToolIds.has('manage_role_capabilities')) {
-    resolvedToolIds.add('list_role_capabilities');
-  }
-  // Add base self-cron tools if no cross-agent cron tools are granted.
-  // Cross-agent cron tools replace self-cron tools (handled below).
-  if (!hasCrossAgentCronTools) {
-    resolvedToolIds.add('manage_self_crons');
-    resolvedToolIds.add('list_self_crons');
-  }
-  // Cross-agent cron tools replace self-cron tools
-  if (hasCrossAgentCronTools) {
-    resolvedToolIds.delete('manage_self_crons');
-    resolvedToolIds.delete('list_self_crons');
-  }
-  return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
