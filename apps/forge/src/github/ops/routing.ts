@@ -4,7 +4,6 @@
  */
 import { forgeDebug } from '@forge-runtime/core';
 
-import type { Octokit } from 'octokit';
 import type { HttpRequest } from '../../http/server';
 import { App } from 'octokit';
 import type { OpsContext } from './context';

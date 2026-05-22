@@ -16,7 +16,6 @@
 import type { Octokit } from 'octokit';
 
 import type { Database } from '../../database/schema';
-// @ts-ignore
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
 import type { createAgentNotificationStore } from '../../notifications/store';
 import type {
