@@ -28,15 +28,15 @@ import {
   buildNextRecallHistory,
 } from '../agent-ltm-snapshot';
 import type { RecallConfig } from './recall/types';
-import { runGraphSearch, type GraphSearchDeps } from './recall/graph-search';
-import { runWorkspaceSearch, type WorkspaceSearchDeps } from './recall/workspace-search';
+import {
+  RecallOrchestrator,
+  createRecallOrchestrator,
+  type RecallOrchestratorDeps,
+} from './recall/orchestrator';
 import { runVectorQuery, type VectorSearchDeps } from './recall/vector-search';
 
 export type { RecallConfig };
-
-export type { GraphSearchDeps } from './recall/graph-search';
-export type { WorkspaceSearchDeps } from './recall/workspace-search';
-export type { VectorSearchDeps } from './recall/vector-search';
+export type { RecallOrchestratorDeps };
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
   query: string;
@@ -154,6 +154,7 @@ export class AgentLongTermMemoryRecall {
   private lastInitAt: string | null = null;
   private pendingRecallOperationCount = 0;
   private lingeringRecallOperationSince: number | null = null;
+  private readonly orchestrator: RecallOrchestrator;
 
   constructor(input: {
     agentId: string;
@@ -206,6 +207,18 @@ export class AgentLongTermMemoryRecall {
         } as unknown as import('@forge-runtime/core').SqliteWorkspaceRetrieval['embedder'],
       });
     }
+
+    const orchestratorDeps: RecallOrchestratorDeps = {
+      retrievalWorkspace: this.retrievalWorkspace,
+      agentId: this.agentId,
+      agentWorkspacePath: this.agentWorkspacePath,
+      agentMemoryPath: this.agentMemoryPath,
+      workspaceEmbedder: this.workspaceEmbedder,
+      readRuntimeMemorySettings: this.readRuntimeMemorySettings,
+      recallTimeoutMs: this.recallTimeoutMs,
+      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+    };
+    this.orchestrator = createRecallOrchestrator(orchestratorDeps);
   }
 
   async recallFromStep(input: {
@@ -600,82 +613,31 @@ export class AgentLongTermMemoryRecall {
     } satisfies AgentLongTermMemoryRecallDebugSearchResult;
   }
 
-  private async runRecallSearch(queryText: string, config: RecallConfig) {
-    const workspaceSearch = await this.searchWorkspace(queryText, {
-      topK: config.documentCount,
-      scoreThreshold: config.scoreThreshold,
-      resultCount: config.documentCount,
-      mode: config.searchMode,
-    });
-    const graphSearch = await this.searchGraph(queryText, workspaceSearch.results, {
-      topK: config.documentCount,
-      threshold: config.scoreThreshold,
-      randomWalkSteps: config.graphRandomWalkSteps,
-      includeSources: config.graphIncludeSources,
-      contextResults: workspaceSearch.results,
-    });
-    const workspaceFormattedContext = workspaceSearch.results
-      .map((result) => `${result.id}\n${result.content}`)
-      .join('\n\n');
-
-    return {
-      formatted: graphSearch.hit ? '' : workspaceFormattedContext,
-      results: workspaceSearch.results,
-      rawWorkspaceResults: workspaceSearch.results,
-      graph: graphSearch,
-      effectiveGraphTopK: config.documentCount,
-      effectiveGraphThreshold: config.scoreThreshold,
-    };
-  }
-
-  private async resolveRecallConfig() {
-    const runtimeSettings = await this.readRuntimeMemorySettings?.();
-
-    if (!runtimeSettings) {
-      forgeDebug({
-        scope: 'ltm-recall',
-        level: 'warn',
-        message: 'recallFromLongTermMemory: runtime memory settings required',
-      });
-      throw new Error('LTM recall requires runtime memory settings');
-    }
-
-    return {
-      searchMode: runtimeSettings.ltmRecallSearchMode,
-      scoreThreshold: runtimeSettings.ltmRecallScoreThreshold,
-      documentCount: runtimeSettings.ltmRecallDocumentCount,
-      graphRandomWalkSteps: runtimeSettings.ltmRecallGraphRandomWalkSteps,
-      graphIncludeSources: runtimeSettings.ltmRecallGraphIncludeSources,
-    } satisfies RecallConfig;
-  }
-
   private async readCurrentIndexStamp() {
     return await this.persistenceStore.readRecallIndexStamp();
   }
 
-  private async searchWorkspace(
+  async resolveRecallConfig() {
+    return this.orchestrator.resolveRecallConfig();
+  }
+
+  async runRecallSearch(queryText: string, config: RecallConfig) {
+    return this.orchestrator.runRecallSearch(queryText, config);
+  }
+
+  async searchWorkspace(
     queryText: string,
     options: {
       topK: number;
       resultCount: number;
       scoreThreshold: number;
       mode: 'hybrid' | 'vector' | 'bm25';
-    } = {
-      topK: 1,
-      resultCount: 1,
-      scoreThreshold: 0,
-      mode: 'hybrid',
     },
-  ): Promise<{ formatted: string; results: LtmSearchResult[] }> {
-    return runWorkspaceSearch(queryText, options, {
-      retrievalWorkspace: this.retrievalWorkspace,
-      agentId: this.agentId,
-      recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
-    });
+  ) {
+    return this.orchestrator.searchWorkspace(queryText, options);
   }
 
-  private async searchGraph(
+  async searchGraph(
     queryText: string,
     workspaceResults: LtmSearchResult[],
     options: {
@@ -684,82 +646,21 @@ export class AgentLongTermMemoryRecall {
       randomWalkSteps: number;
       includeSources: boolean;
       contextResults: LtmSearchResult[];
-    } = {
-      topK: 1,
-      threshold: 0,
-      randomWalkSteps: 0,
-      includeSources: false,
-      contextResults: [],
     },
-  ): Promise<{
-    queryText: string;
-    dimension: number;
-    includeSources: boolean;
-    hit: boolean;
-    score: number | null;
-    context: string;
-    relevantContextRaw: string | null;
-    sourcesCount: number;
-    sourcesJson: string | null;
-    rawJson: string | null;
-    error: string | null;
-  }> {
-    return runGraphSearch(queryText, workspaceResults, options, {
-      retrievalWorkspace: this.retrievalWorkspace,
-      agentId: this.agentId,
-      recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
-      getGraphDimension: this.getGraphDimension.bind(this),
-    });
+  ) {
+    return this.orchestrator.searchGraph(queryText, workspaceResults, options);
   }
 
-  private async getGraphDimension() {
-    const indexState = await this.retrievalWorkspace.getStats();
-    return indexState.activeIndexStats?.dimension ?? 0;
+  async runTrackedRecallOperation<T>(
+    label: string,
+    operation: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ) {
+    return this._runTrackedRecallOperation(label, operation, timeoutMs, timeoutMessage);
   }
 
-  private async getWorkspaceIndexState() {
-    return {
-      workspaceCanBm25: true,
-      workspaceCanVector: true,
-      workspaceCanHybrid: true,
-      ...(await this.retrievalWorkspace.getStats()),
-    };
-  }
-
-  private async getIndexStats() {
-    const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
-      countFiles(this.agentMemoryPath, 'memory'),
-      countFiles(this.agentMemoryPath, 'memory'),
-      countFiles(this.agentMemoryPath, 'checkpoints'),
-    ]);
-
-    return {
-      workspaceFileCount,
-      memoryFileCount,
-      checkpointFileCount,
-    };
-  }
-
-  private async queryVectorIndex(
-    queryVector: number[],
-    topK: number,
-  ): Promise<
-    Array<{
-      id: string;
-      text: string;
-      score: number;
-      metadata?: Record<string, unknown>;
-    }>
-  > {
-    return runVectorQuery(queryVector, topK, {
-      retrievalWorkspace: this.retrievalWorkspace,
-      recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
-    });
-  }
-
-  private async runTrackedRecallOperation<T>(
+  private async _runTrackedRecallOperation<T>(
     label: string,
     operation: Promise<T>,
     timeoutMs: number,
@@ -802,6 +703,47 @@ export class AgentLongTermMemoryRecall {
       });
       throw error;
     }
+  }
+
+  private async getWorkspaceIndexState() {
+    return {
+      workspaceCanBm25: true,
+      workspaceCanVector: true,
+      workspaceCanHybrid: true,
+      ...(await this.retrievalWorkspace.getStats()),
+    };
+  }
+
+  private async getIndexStats() {
+    const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
+      countFiles(this.agentMemoryPath, 'memory'),
+      countFiles(this.agentMemoryPath, 'memory'),
+      countFiles(this.agentMemoryPath, 'checkpoints'),
+    ]);
+
+    return {
+      workspaceFileCount,
+      memoryFileCount,
+      checkpointFileCount,
+    };
+  }
+
+  private async queryVectorIndex(
+    queryVector: number[],
+    topK: number,
+  ): Promise<
+    Array<{
+      id: string;
+      text: string;
+      score: number;
+      metadata?: Record<string, unknown>;
+    }>
+  > {
+    return runVectorQuery(queryVector, topK, {
+      retrievalWorkspace: this.retrievalWorkspace,
+      recallTimeoutMs: this.recallTimeoutMs,
+      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+    });
   }
 
   private formatStructuredValue(value: unknown, indentLevel = 0): string {
@@ -961,12 +903,6 @@ export class AgentLongTermMemoryRecall {
     });
   }
 
-  /**
-   * Persist an LTM recall snapshot with consistent threadContext from input.
-   * Replaces 5 call sites in recallFromStep that all share:
-   * - same threadId/resourceId extraction from input
-   * - same buildLtmRecallSnapshot base (this.lastInitAt, input.steps)
-   */
   private async persistRecallSnapshotWithInput(
     input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
     deps: {
@@ -1000,74 +936,29 @@ export class AgentLongTermMemoryRecall {
     await this.persistRecallSnapshot(threadContext, snapshot, deps.history);
   }
 
-  private partitionRecallResults(input: {
+  private shouldSkipRecallInjection(input: {
     graph: {
       hit: boolean;
-      score: number | null;
-      context: string;
-      queryText: string;
-      dimension: number;
-      includeSources: boolean;
-      relevantContextRaw: string | null;
       sourcesCount: number;
-      sourcesJson: string | null;
-      rawJson: string | null;
-      error: string | null;
     };
     results: LtmSearchResult[];
-    recentFingerprints: string[];
+    rawWindowMessageCount: number;
   }) {
-    const seenFingerprints = new Set(input.recentFingerprints);
-    const workspaceFingerprints = input.results.map((result) => ({
-      result,
-      fingerprint: this.buildWorkspaceFingerprint(result),
-    }));
-    const workspaceResults = workspaceFingerprints
-      .filter((entry) => !seenFingerprints.has(entry.fingerprint))
-      .map((entry) => entry.result);
-    const graphFingerprint =
-      input.graph.hit && input.graph.context.trim()
-        ? this.buildGraphFingerprint(input.graph.context)
-        : null;
-    const graphAllowed = graphFingerprint !== null && !seenFingerprints.has(graphFingerprint);
-    const historyFingerprints = [
-      ...((graphFingerprint ?? '') !== '' ? [graphFingerprint] : []),
-      ...workspaceFingerprints.map((entry) => entry.fingerprint),
-    ];
+    if (input.rawWindowMessageCount <= 0) {
+      return false;
+    }
 
-    return {
-      graph: graphAllowed
-        ? input.graph
-        : {
-            ...input.graph,
-            hit: false,
-            context: '',
-          },
-      results: graphAllowed ? input.results : workspaceResults,
-      historyFingerprints,
-    };
-  }
+    const recallItemCount = input.graph.hit ? input.graph.sourcesCount : input.results.length;
 
-  private buildWorkspaceFingerprint(result: LtmSearchResult) {
-    return `workspace:${result.id}`;
-  }
+    if (recallItemCount <= 0) {
+      return false;
+    }
 
-  private buildGraphFingerprint(context: string) {
-    return `graph:${createHash('sha1').update(context).digest('hex')}`;
-  }
-
-  private buildNextRecallHistory(input: {
-    recentFingerprints: string[];
-    candidateFingerprints: string[];
-    windowSize: number;
-  }) {
-    const merged = [...input.candidateFingerprints, ...input.recentFingerprints];
-    const deduped = Array.from(new Set(merged));
-
-    return {
-      recentFingerprints: deduped.slice(0, Math.max(input.windowSize, 1)),
-      updatedAt: String(Date.now()),
-    } satisfies LongTermMemoryRecallHistory;
+    const limit = Math.max(
+      1,
+      Math.floor(input.rawWindowMessageCount * RECALL_INJECTION_RAW_WINDOW_RATIO),
+    );
+    return recallItemCount >= limit;
   }
 
   private async readRecallThreadState(threadId: string | null) {
@@ -1096,31 +987,6 @@ export class AgentLongTermMemoryRecall {
         rawWindowMessageCount > 0 ? Math.max(1, Math.floor(rawWindowMessageCount * 0.25)) : 20,
       rawWindowMessageCount,
     };
-  }
-
-  private shouldSkipRecallInjection(input: {
-    graph: {
-      hit: boolean;
-      sourcesCount: number;
-    };
-    results: LtmSearchResult[];
-    rawWindowMessageCount: number;
-  }) {
-    if (input.rawWindowMessageCount <= 0) {
-      return false;
-    }
-
-    const recallItemCount = input.graph.hit ? input.graph.sourcesCount : input.results.length;
-
-    if (recallItemCount <= 0) {
-      return false;
-    }
-
-    const limit = Math.max(
-      1,
-      Math.floor(input.rawWindowMessageCount * RECALL_INJECTION_RAW_WINDOW_RATIO),
-    );
-    return recallItemCount >= limit;
   }
 }
 
