@@ -32,6 +32,7 @@ import type { AgentRunnerUsage } from './agent-runner-usage';
 import type { AgentWakeQueue } from '@forge-runtime/core';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
+import type { RuntimeGenerateResult } from './runtime/types';
 
 import { delay, withTimeout } from '../utils/async';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -215,12 +216,10 @@ export async function generateWithTimeoutRetries(
     hasNewEvents: false,
   });
   let suppressNoToolCallReminderForRun = false;
-
   for (let attempt = 1; attempt <= GENERATE_TIMEOUT_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController();
     const generateToken = startGenerateAttempt(deps, controller);
     const timeout = createGenerateTimeoutGuard(controller);
-
     deps.markGenerateProgress(timeout, controller, {
       stage: 'generate-started',
       detail: {
@@ -257,15 +256,15 @@ export async function generateWithTimeoutRetries(
         message: `generate start (attempt ${attempt}/${GENERATE_TIMEOUT_MAX_ATTEMPTS})`,
       });
 
-      const result = await (Promise.race([
-        (deps.currentRuntime as any).generate(effectivePromptText, {
+      const result = await Promise.race<RuntimeGenerateResult | null>([
+        deps.currentRuntime.agent.generate(effectivePromptText, {
           system: systemPrompt,
           abortSignal: controller.signal,
           maxSteps: GENERATE_MAX_STEPS_PER_RUN,
           runId: deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`,
         }),
-        timeout.promise,
-      ]) as any);
+        timeout.promise as Promise<never>,
+      ]);
 
       clearGenerateTimeout(timeout);
       finishGenerateAttempt(generateToken, controller, deps);

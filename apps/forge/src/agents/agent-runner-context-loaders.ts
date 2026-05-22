@@ -70,12 +70,18 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
       'Active schedule summary lookup timed out',
     );
 
-    if ((rows as any[]).length === 0) {
+    type ScheduleRow = {
+      name: string | null;
+      cronExpression: string | null;
+      timezone: string | null;
+    };
+
+    if ((rows as ScheduleRow[]).length === 0) {
       return null;
     }
 
-    const lines = (rows as any[]).map(
-      (s: { id: string; name?: string; cronExpression?: string; timezone?: string }) => {
+    const lines = (rows as ScheduleRow[]).map(
+      (s: ScheduleRow) => {
         const cron = s.cronExpression ?? '';
         const tz = s.timezone ?? 'UTC';
         const name = s.name ?? '(unnamed)';
@@ -126,7 +132,7 @@ export async function loadAgentContextContent(
     return null;
   }
 
-  const data = await withTimeout(
+  const content = await withTimeout(
     filesystem.readFile(AGENT_CONTEXT_FILE_PATH),
     CONTEXT_DECORATION_TIMEOUT_MS,
     `Agent context read timed out for filesystem`,
@@ -140,27 +146,16 @@ export async function loadAgentContextContent(
     return null;
   });
 
-  if (data === null || data === undefined) {
+  if (!content) {
     return null;
   }
 
-  const content = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
-  const trimmedContent = content.trim();
-  if (!trimmedContent) {
-    return null;
+  const text = typeof content === 'string' ? content : content.toString('utf-8');
+  if (text.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
+    return (
+      text.slice(0, AGENT_CONTEXT_WARNING_CHAR_LIMIT) +
+      `\n\n[... truncated ${text.length - AGENT_CONTEXT_WARNING_CHAR_LIMIT} chars, full context in workspace file]`
+    );
   }
-
-  if (trimmedContent.length > AGENT_CONTEXT_WARNING_CHAR_LIMIT) {
-    return [
-      'Context pressure warning:',
-      `- \`${AGENT_CONTEXT_FILE_PATH}\` is getting large (${trimmedContent.length} chars).`,
-      '- Keep only high-signal summary context there.',
-      '- Move detailed notes, logs, and long task detail into separate workspace files.',
-      '- Leave short retrieval hints and file references in `AGENT_CONTEXT.md`.',
-      '',
-      trimmedContent,
-    ].join('\n');
-  }
-
-  return trimmedContent;
+  return text;
 }
