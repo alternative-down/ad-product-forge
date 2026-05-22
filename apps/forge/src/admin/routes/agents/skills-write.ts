@@ -21,6 +21,7 @@ import {
   installGlobalSkillForAgentSchema,
   publishAgentSkillToGlobalSchema,
 } from '../schemas/skills';
+import { agents } from '../../../database/schema';
 
 export function registerAgentSkillsWriteRoutes(
   httpServer: ForgeHttpServerAdapter,
@@ -38,7 +39,7 @@ export function registerAgentSkillsWriteRoutes(
       try {
         const body = parseJsonBody(request.bodyText, uploadAgentSkillsSchema);
         const agent = await input.db.query.agents.findFirst({
-          where: eq((input.db.query.agents as any).id, body.agentId),
+          where: eq(agents.id, body.agentId),
         });
 
         if (!agent) {
@@ -81,7 +82,7 @@ export function registerAgentSkillsWriteRoutes(
       try {
         const body = parseJsonBody(request.bodyText, deleteAgentSkillSchema);
         const agent = await input.db.query.agents.findFirst({
-          where: eq((input.db.query.agents as any).id, body.agentId),
+          where: eq(agents.id, body.agentId),
         });
 
         if (!agent) {
@@ -121,7 +122,7 @@ export function registerAgentSkillsWriteRoutes(
       try {
         const body = parseJsonBody(request.bodyText, installGlobalSkillForAgentSchema);
         const agent = await input.db.query.agents.findFirst({
-          where: eq((input.db.query.agents as any).id, body.agentId),
+          where: eq(agents.id, body.agentId),
         });
 
         if (!agent) {
@@ -161,7 +162,7 @@ export function registerAgentSkillsWriteRoutes(
       try {
         const body = parseJsonBody(request.bodyText, publishAgentSkillToGlobalSchema);
         const agent = await input.db.query.agents.findFirst({
-          where: eq((input.db.query.agents as any).id, body.agentId),
+          where: eq(agents.id, body.agentId),
         });
 
         if (!agent) {
