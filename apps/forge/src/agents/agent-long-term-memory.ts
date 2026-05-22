@@ -26,7 +26,7 @@ import {
   renderCheckpointPackageReadme,
   renderReflectionFile,
   renderObservationFile,
-} from './agent-ltm-checkpoint-render';
+} from './ltm/renderers';
 import {
   readLtmState,
   writeLtmState,
@@ -44,7 +44,7 @@ import {
   cleanupTempPackage,
   getTempPackagePath,
   prepareTempPackageDirectory,
-} from './agent-ltm-checkpoint-io-helpers';
+} from './ltm/checkpoint-io';
 
 import { withTimeout } from '../utils/async';
 const CHECKPOINTS_DIR = 'checkpoints';
