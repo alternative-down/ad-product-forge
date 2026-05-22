@@ -27,6 +27,16 @@ import {
   partitionRecallResults,
   buildNextRecallHistory,
 } from '../agent-ltm-snapshot';
+import type { RecallConfig } from './recall/types';
+import { runGraphSearch, type GraphSearchDeps } from './recall/graph-search';
+import { runWorkspaceSearch, type WorkspaceSearchDeps } from './recall/workspace-search';
+import { runVectorQuery, type VectorSearchDeps } from './recall/vector-search';
+
+export type { RecallConfig };
+
+export type { GraphSearchDeps } from './recall/graph-search';
+export type { WorkspaceSearchDeps } from './recall/workspace-search';
+export type { VectorSearchDeps } from './recall/vector-search';
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
   query: string;
@@ -81,14 +91,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
 
 const _RECALL_AUTO_INDEX_PATHS = ['.'] as const;
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
-
-type RecallConfig = {
-  searchMode: 'hybrid' | 'vector' | 'bm25';
-  scoreThreshold: number;
-  documentCount: number;
-  graphRandomWalkSteps: number;
-  graphIncludeSources: boolean;
-};
 
 async function countFiles(rootPath: string, relativePath: string): Promise<number> {
   const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
@@ -665,77 +667,12 @@ export class AgentLongTermMemoryRecall {
       mode: 'hybrid',
     },
   ): Promise<{ formatted: string; results: LtmSearchResult[] }> {
-    const stageStartedAt = Date.now();
-
-    try {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall workspace search start',
-        context: {
-          agentId: this.agentId,
-          queryLength: queryText.length,
-          topK: options.topK,
-          mode: options.mode,
-        },
-      });
-      const results = await this.runTrackedRecallOperation<
-        Array<{
-          id: string;
-          text: string;
-          score: number;
-          metadata?: Record<string, unknown>;
-        }>
-      >(
-        'retrieval.search',
-        this.retrievalWorkspace.search(queryText, {
-          topK: options.topK,
-          resultLimit: options.resultCount,
-          scoreThreshold: options.scoreThreshold,
-          mode: options.mode,
-        }),
-        this.recallTimeoutMs,
-        'ltm recall retrieval search timed out',
-      );
-
-      if (results.length === 0) {
-        return { formatted: '', results: [] };
-      }
-
-      const searchResults: LtmSearchResult[] = results.map((result) => ({
-        id: result.id,
-        content: result.text.trim(),
-        score: result.score,
-      }));
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall workspace search complete',
-        context: {
-          agentId: this.agentId,
-          durationMs: Date.now() - stageStartedAt,
-          resultCount: searchResults.length,
-        },
-      });
-      return { formatted: '', results: searchResults };
-    } catch (error) {
-      const errMsg = String(serializeError(error));
-      if (errMsg.includes('SQLITE_ERROR: no such table') || errMsg.includes('no such table:')) {
-        return { formatted: '', results: [] };
-      }
-
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall workspace search failed',
-        context: {
-          agentId: this.agentId,
-          durationMs: Date.now() - stageStartedAt,
-          error: String(serializeError(error)),
-        },
-      });
-      throw error;
-    }
+    return runWorkspaceSearch(queryText, options, {
+      retrievalWorkspace: this.retrievalWorkspace,
+      agentId: this.agentId,
+      recallTimeoutMs: this.recallTimeoutMs,
+      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+    });
   }
 
   private async searchGraph(
@@ -767,83 +704,13 @@ export class AgentLongTermMemoryRecall {
     rawJson: string | null;
     error: string | null;
   }> {
-    const stageStartedAt = Date.now();
-    const workspaceContextBase =
-      options.contextResults.length > 0 ? options.contextResults : workspaceResults;
-    const workspaceContext = workspaceContextBase
-      .map((result) => result.content)
-      .filter(Boolean)
-      .join('\n');
-    const graphQueryText = workspaceContext
-      ? `${queryText}\nContext: ${workspaceContext}`
-      : queryText;
-    const graphDimension = await this.getGraphDimension();
-
-    try {
-      const result = await this.runTrackedRecallOperation(
-        'retrieval.graph',
-        this.retrievalWorkspace.searchGraph({
-          query: graphQueryText,
-          topK: options.topK,
-          threshold: options.threshold,
-          randomWalkSteps: options.randomWalkSteps,
-          includeSources: options.includeSources,
-        }),
-        this.recallTimeoutMs,
-        'ltm recall graph search timed out',
-      );
-
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall graph search complete',
-        context: {
-          agentId: this.agentId,
-          durationMs: Date.now() - stageStartedAt,
-          hit: result.hit,
-          sourcesCount: result.sourcesCount,
-        },
-      });
-
-      return {
-        queryText: graphQueryText,
-        dimension: graphDimension,
-        includeSources: options.includeSources,
-        hit: result.hit,
-        score: result.score,
-        context: result.context,
-        relevantContextRaw: result.relevantContextRaw,
-        sourcesCount: result.sourcesCount,
-        sourcesJson: result.sourcesJson,
-        rawJson: result.rawJson,
-        error: null,
-      };
-    } catch (error) {
-      forgeDebug({
-        scope: 'ltm',
-        level: 'info',
-        message: 'ltm recall graph search failed',
-        context: {
-          agentId: this.agentId,
-          durationMs: Date.now() - stageStartedAt,
-          error: String(serializeError(error)),
-        },
-      });
-
-      return {
-        queryText: graphQueryText,
-        dimension: graphDimension,
-        includeSources: options.includeSources,
-        hit: false,
-        score: null,
-        context: '',
-        relevantContextRaw: null,
-        sourcesCount: 0,
-        sourcesJson: null,
-        rawJson: null,
-        error: String(serializeError(error)),
-      };
-    }
+    return runGraphSearch(queryText, workspaceResults, options, {
+      retrievalWorkspace: this.retrievalWorkspace,
+      agentId: this.agentId,
+      recallTimeoutMs: this.recallTimeoutMs,
+      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+      getGraphDimension: this.getGraphDimension.bind(this),
+    });
   }
 
   private async getGraphDimension() {
@@ -885,19 +752,11 @@ export class AgentLongTermMemoryRecall {
       metadata?: Record<string, unknown>;
     }>
   > {
-    return await this.runTrackedRecallOperation<
-      Array<{
-        id: string;
-        text: string;
-        score: number;
-        metadata?: Record<string, unknown>;
-      }>
-    >(
-      'vector.query',
-      this.retrievalWorkspace.queryVector(queryVector, topK),
-      this.recallTimeoutMs,
-      'ltm vector query timed out',
-    );
+    return runVectorQuery(queryVector, topK, {
+      retrievalWorkspace: this.retrievalWorkspace,
+      recallTimeoutMs: this.recallTimeoutMs,
+      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+    });
   }
 
   private async runTrackedRecallOperation<T>(
