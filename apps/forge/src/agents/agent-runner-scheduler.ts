@@ -12,7 +12,7 @@ import { advanceStepEpoch as epochAdvanceStepEpoch } from './agent-runner-schedu
 import { createSchedulerHealthcheck } from './agent-runner-scheduler-healthcheck';
 import { createSchedulerSteps } from './agent-runner-scheduler-steps';
 const _RUNNER_HEALTHCHECK_INTERVAL_MS = 30_000;
-import { createFlushManager } from './agent-runner-flush-manager';
+import { createFlushManager, type FlushManager } from './agent-runner-flush-manager';
 import { createTimerManager } from './agent-runner-timer-manager';
 import { createRunLifecycle } from './agent-runner-run-lifecycle';
 
@@ -139,7 +139,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
     advanceStepEpoch,
     getActiveRunEpoch: () => state.activeRunEpoch,
     setInstant,
-    flushManager: flushManager as any,
+    flushManager: flushManager as FlushManager,
     getExecuting: () => executing,
     isTimerActive: () => timerManager.isTimerActive(),
     isStopped: () => stopped,
@@ -480,7 +480,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
   }
 
   function _getRunLastMessages(): number {
-    return (flushManager as any).getFlushSettings().runLastMessages;
+    return flushManager.getRunLastMessages();
   }
 
   function getInstant(): boolean {
