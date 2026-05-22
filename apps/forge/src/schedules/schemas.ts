@@ -160,6 +160,3 @@ const _manageCronsInputSchema = z.object({
 export type CreateScheduleInput = z.infer<typeof createScheduleSchema>;
 export type CreateScheduleForAgentInput = z.infer<typeof createScheduleForAgentSchema>;
 export type UpdateScheduleInput = z.infer<typeof updateScheduleSchema>;
-export type DeleteScheduleInput = z.infer<typeof _deleteScheduleSchema>;
-export type ManageSelfCronsInput = z.infer<typeof _manageSelfCronsInputSchema>;
-export type ManageCronsInput = z.infer<typeof _manageCronsInputSchema>;
