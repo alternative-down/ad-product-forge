@@ -3,7 +3,7 @@
  * Extracted error handling and request parsing utilities.
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler, HttpRequest } from '../../../http/server';
 import { z } from 'zod';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';
@@ -22,6 +22,25 @@ import { serializeError } from '../../../agents/agent-runner-error-formatting';
  * Wraps an HTTP handler with consistent error handling.
  * Logs via forgeDebug and returns a 500 JSON response on failure.
  */
+
+/**
+ * Overload for zero-argument handlers (backward compatibility).
+ */
+export function withRouteErrorHandler(
+  scope: string,
+  path: string,
+  handler: () => ReturnType<HttpHandler>,
+): () => ReturnType<HttpHandler>;
+
+/**
+ * Overload for single-argument handlers (admin routes pattern).
+ * Allows passing a plain async function without type cast.
+ */
+export function withRouteErrorHandler(
+  scope: string,
+  path: string,
+  handler: (request: HttpRequest) => ReturnType<HttpHandler>,
+): (request: HttpRequest) => ReturnType<HttpHandler>;
 export function withRouteErrorHandler<Args extends unknown[]>(
   scope: string,
   path: string,

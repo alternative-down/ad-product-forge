@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (account management routes).
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler, HttpRequest } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
 import {
@@ -53,7 +53,7 @@ function buildListContactsHandler(
 }
 
 function buildCreateAccountHandler(internalChat: InternalChatService): HttpHandler {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/account/create', async (request) => {
+  return withRouteErrorHandler('admin', '/admin/internal-chat/account/create', async (request: HttpRequest) => {
     const body = parseJsonBody(request.bodyText, createExternalInternalChatAccountSchema);
     return jsonResponse(
       await internalChat.registerExternalAccount({
@@ -65,7 +65,7 @@ function buildCreateAccountHandler(internalChat: InternalChatService): HttpHandl
 }
 
 function buildUpdateAccountHandler(internalChat: InternalChatService): HttpHandler {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/account/update', async (request) => {
+  return withRouteErrorHandler('admin', '/admin/internal-chat/account/update', async (request: HttpRequest) => {
     const body = parseJsonBody(request.bodyText, updateExternalInternalChatAccountSchema);
     return jsonResponse(
       await internalChat.updateExternalAccount({
@@ -77,7 +77,7 @@ function buildUpdateAccountHandler(internalChat: InternalChatService): HttpHandl
 }
 
 function buildDeleteAccountHandler(internalChat: InternalChatService): HttpHandler {
-  return withRouteErrorHandler('admin', '/admin/internal-chat/account/delete', async (request) => {
+  return withRouteErrorHandler('admin', '/admin/internal-chat/account/delete', async (request: HttpRequest) => {
     const body = parseJsonBody(request.bodyText, deleteExternalInternalChatAccountSchema);
     return jsonResponse(await internalChat.deleteExternalAccount(body));
   });

@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (group-member routes).
  */
 
-import type { HttpHandler } from '../../../http/server';
+import type { HttpHandler, HttpRequest } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
 import {
@@ -17,7 +17,7 @@ import { withRouteErrorHandler } from './internal-chat-route-helpers';
 // ─── Route handlers ──────────────────────────────────────────────────────────
 
 function buildListGroupMembersHandler(internalChat: InternalChatService): HttpHandler {
-  return (withRouteErrorHandler as any)(
+  return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-members',
     async (request: any) => {
@@ -44,7 +44,7 @@ function buildListGroupMembersHandler(internalChat: InternalChatService): HttpHa
 }
 
 function buildAddMemberHandler(internalChat: InternalChatService): HttpHandler {
-  return (withRouteErrorHandler as any)(
+  return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-member/add',
     async (request: any) => {
@@ -66,7 +66,7 @@ function buildAddMemberHandler(internalChat: InternalChatService): HttpHandler {
 }
 
 function buildUpdateRoleHandler(internalChat: InternalChatService): HttpHandler {
-  return (withRouteErrorHandler as any)(
+  return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-member/update-role',
     async (request: any) => {
@@ -88,7 +88,7 @@ function buildUpdateRoleHandler(internalChat: InternalChatService): HttpHandler 
 }
 
 function buildRemoveMemberHandler(internalChat: InternalChatService): HttpHandler {
-  return (withRouteErrorHandler as any)(
+  return withRouteErrorHandler(
     'admin',
     '/admin/internal-chat/group-member/remove',
     async (request: any) => {
