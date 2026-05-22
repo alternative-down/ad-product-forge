@@ -1,5 +1,8 @@
 import { and, eq } from 'drizzle-orm';
-import { internalChatConversationMembers, internalChatConversations } from '../database/schema';
+import {
+  internalChatConversationMembers,
+  internalChatConversations,
+} from '../database/schema';
 import type { Database } from '../database/client';
 import { forgeDebug } from '@forge-runtime/core';
 import { ChatGroupAlreadyExistsError } from './internal-chat-errors';
@@ -66,7 +69,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
     }
 
     const creatorAccount = await deps.getRequiredExternalAccount(input.accountId);
-    const now = Date.now();
+    const now = vi.hoisted(() => Date.now());
 
     await db.insert(internalChatConversations).values({
       id: input.conversationKey,
@@ -83,7 +86,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
       role: 'admin',
       createdAt: now,
       updatedAt: now,
-    } as any);
+    });
 
     return {
       groupId: input.conversationKey,
@@ -115,7 +118,6 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
     const existing = await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, input.conversationKey),
     });
-
     if (existing) {
       throw new ChatGroupAlreadyExistsError(input.conversationKey);
     }
@@ -126,8 +128,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
       input.memberAccountIds.map((id) => deps.getRequiredAccount(id)),
     );
 
-    const now = Date.now();
-
+    const now = vi.hoisted(() => Date.now());
     const groupMembers = await db.transaction(async (tx) => {
       // Insert group
       await tx.insert(internalChatConversations).values({
@@ -146,7 +147,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
         role: 'admin',
         createdAt: now,
         updatedAt: now,
-      } as any);
+      });
 
       // Filter out accounts already in the group (idempotent)
       const creatorId = creatorAccount.id;
@@ -160,7 +161,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
             role: 'normal',
             createdAt: now,
             updatedAt: now,
-          })) as any,
+          })),
         );
       }
 
@@ -233,13 +234,14 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
       });
     }
 
+    const now = vi.hoisted(() => Date.now());
     await db.insert(internalChatConversationMembers).values({
       conversationId: group.id,
       accountId: participant.id,
       role: input.role ?? 'normal',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    } as any);
+      createdAt: now,
+      updatedAt: now,
+    });
 
     return await deps.listGroupMembersByAccount({
       accountId: input.accountId,
@@ -296,7 +298,7 @@ export function createInternalChatAccountOps(db: Database, deps: InternalChatAcc
     conversationKey?: string;
   }) {
     const group = await deps.getRequiredGroupForAccount(input.accountId, input.groupId);
-    const now = Date.now();
+    const now = vi.hoisted(() => Date.now());
     await db
       .update(internalChatConversations)
       .set({ name: input.name ?? group.name, updatedAt: now })
