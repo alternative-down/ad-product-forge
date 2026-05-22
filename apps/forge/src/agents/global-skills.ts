@@ -8,13 +8,7 @@ import {
   ensureParentDirectories,
   normalizeArchiveEntryPath,
 } from './workspace-skill-helpers';
-
 import type { Agent } from '../database/schema';
-export {
-  installAgentWorkspaceSkillsFromZip,
-  deleteAgentWorkspaceSkill,
-  listAgentWorkspaceSkills,
-} from './workspace-skills';
 import {
   BUNDLED_SKILL_DIRECTORY_NAMES,
   copyDirectoryContents,
@@ -22,11 +16,9 @@ import {
 } from './bundled-workspace-skills';
 import { resolveAgentSkillRoot, resolveAgentSkillsRoot } from './workspace-skill-paths';
 import {
-  parseSkillMetadata as _parseSkillMetadata,
-  countSkillFiles as _countSkillFiles,
+  parseSkillMetadata,
+  countSkillFiles,
 } from './skills-shared/index';
-const parseSkillMetadata = _parseSkillMetadata;
-const countSkillFiles = _countSkillFiles;
 
 type GlobalSkillSummary = {
   skillName: string;
