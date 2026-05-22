@@ -3,16 +3,12 @@ import { serializeError } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/schema';
-import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentScheduleStore, type UpdateAgentScheduleInput } from './store';
 import { createScheduleLifecycle, type ScheduleLifecycleRecord } from './schedule-lifecycle';
 import {
   parseScheduleDate,
   validateScheduleShape,
   assertFutureScheduledDate,
-  createNotificationContent,
-  createWakeContent,
-  createHeartbeatWakeInstruction,
   toToolOutput,
 } from './schedule-helpers';
 import {
@@ -22,15 +18,12 @@ import {
   type ExistingScheduleFields,
 } from './schedule-normalize-helpers';
 import { requireScheduleEditor, requireScheduleDeleter } from './schedule-impl-helpers';
-import {
-  createScheduleSchema,
+import { createScheduleSchema,
   createScheduleForAgentSchema,
   updateScheduleSchema,
 } from './schemas';
-
-const HEARTBEAT_NAME = 'System heartbeat';
-const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
-const HEARTBEAT_TIMEZONE = 'UTC';
+import { createHeartbeatSchedule as makeHeartbeatSchedule } from './heartbeat';
+import { createScheduleNotifications } from './notifications';
 
 export type AgentScheduleManager = ReturnType<typeof createAgentScheduleManager>;
 
@@ -55,8 +48,13 @@ export function createAgentScheduleManager(input: {
   }): void;
 }) {
   const store = createAgentScheduleStore(input.db);
-  const notifications = createAgentNotificationStore(input.db);
   let lifecycle: ReturnType<typeof createScheduleLifecycle> | null = null;
+
+  const { triggerNotification } = createScheduleNotifications({
+    db: input.db,
+    notifyAgent: input.notifyAgent,
+  });
+
   const getLifecycle = (): ReturnType<typeof createScheduleLifecycle> => {
     if (input.lifecycle) {
       if (!lifecycle) lifecycle = input.lifecycle;
@@ -98,17 +96,9 @@ export function createAgentScheduleManager(input: {
   }
 
   async function createHeartbeatSchedule(agentId: string) {
-    const record = await store.createSchedule({
+    const record = await makeHeartbeatSchedule({
       agentId,
-      kind: 'heartbeat',
-      name: HEARTBEAT_NAME,
-      description: null,
-      scheduleType: 'cron',
-      cronExpression: HEARTBEAT_CRON_EXPRESSION,
-      scheduledDate: undefined,
-      timezone: HEARTBEAT_TIMEZONE,
-      content: '',
-      wakeWhenRunning: false,
+      store,
     });
     try {
       await getLifecycle().register(record as unknown as ScheduleLifecycleRecord);
@@ -568,7 +558,6 @@ export function createAgentScheduleManager(input: {
     nextTriggerAt: number | null = null,
   ) {
     try {
-      // Cancellation handled by schedule-lifecycle
       if (scheduleRecord.kind === 'heartbeat') {
         const executionState = await (input.getAgentExecutionState?.(scheduleRecord.agentId) ??
           Promise.resolve<'idle' | 'running' | 'absent'>('idle'));
@@ -584,55 +573,29 @@ export function createAgentScheduleManager(input: {
         }
       }
 
-      if (scheduleRecord.kind === 'agent') {
-        await notifications.createNotification({
+      await triggerNotification(
+        {
+          scheduleId: scheduleRecord.scheduleId,
+          name: scheduleRecord.name,
+          description: scheduleRecord.description,
+          kind: scheduleRecord.kind,
+          scheduleType: scheduleRecord.scheduleType,
+          cronExpression: scheduleRecord.cronExpression,
+          scheduledDate: scheduleRecord.scheduledDate,
+          timezone: scheduleRecord.timezone,
+          content: scheduleRecord.content,
+          wakeWhenRunning: scheduleRecord.wakeWhenRunning,
           agentId: scheduleRecord.agentId,
-          content: createNotificationContent({
-            agentId: scheduleRecord.agentId,
-            scheduleId: scheduleRecord.scheduleId,
-            kind: scheduleRecord.kind,
-            description: scheduleRecord.description ?? undefined,
-            scheduleType: scheduleRecord.scheduleType,
-            cronExpression: scheduleRecord.cronExpression,
-            scheduledDate: scheduleRecord.scheduledDate,
-            timezone: scheduleRecord.timezone,
-            content: scheduleRecord.content,
-            fireDate,
-          }),
-        });
-      }
+        },
+        fireDate,
+        nextTriggerAt,
+      );
 
       await store.markTriggered({
         scheduleId: scheduleRecord.scheduleId,
         lastTriggeredAt: fireDate.getTime(),
         nextTriggerAt,
         isActive: remainsActive,
-      });
-
-      input.notifyAgent({
-        agentId: scheduleRecord.agentId,
-        scheduleId: scheduleRecord.scheduleId,
-        scheduleKind: scheduleRecord.kind,
-        scheduleName: scheduleRecord.name,
-        idleOnly:
-          scheduleRecord.kind === 'heartbeat' ||
-          (scheduleRecord.scheduleType === 'cron' && scheduleRecord.wakeWhenRunning === false),
-        content: createWakeContent({
-          name: scheduleRecord.name,
-          description: scheduleRecord.description,
-          scheduleKind: scheduleRecord.kind,
-          scheduleType: scheduleRecord.scheduleType,
-          cronExpression: scheduleRecord.cronExpression,
-          scheduledDate: scheduleRecord.scheduledDate,
-          timezone: scheduleRecord.timezone,
-          nextTriggerAt,
-          wakeWhenRunning: scheduleRecord.wakeWhenRunning,
-          content:
-            scheduleRecord.kind === 'agent'
-              ? scheduleRecord.content
-              : createHeartbeatWakeInstruction(scheduleRecord.content),
-        }),
-        timestamp: fireDate.getTime(),
       });
     } catch (error) {
       forgeDebug({
