@@ -223,6 +223,7 @@ async function initAgentRegistry() {
           providerType: providerConfig.providerType,
           encryptedCredentials: encryptedCreds,
           createdAt: now,
+          updatedAt: now,
         });
 
         forgeDebug({
