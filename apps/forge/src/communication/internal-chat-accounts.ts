@@ -474,7 +474,7 @@ export function createInternalChatAccounts(db: Database) {
         )
         .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-      return sortParticipantsBySelfFirst(rows as InternalChatGroupParticipant[], accountId);
+      return sortParticipantsBySelfFirst((rows as unknown as InternalChatGroupParticipant[]), accountId);
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
