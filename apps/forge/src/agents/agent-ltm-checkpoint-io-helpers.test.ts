@@ -29,14 +29,14 @@ vi.mock('node:fs/promises', () => ({
   ),
 }));
 
-vi.mock('./agent-ltm-checkpoint-render', () => ({
+vi.mock('./ltm/renderers', () => ({
   renderCheckpointPackageReadme: vi.fn().mockReturnValue('# README'),
   renderReflectionFile: vi.fn().mockReturnValue('## Reflection'),
   renderObservationFile: vi.fn().mockReturnValue('## Observation'),
 }));
 
 // Import writeCheckpointFiles separately so we can test with the mocked fs
-import { writeCheckpointFiles } from './agent-ltm-checkpoint-io-helpers';
+import { writeCheckpointFiles } from './ltm/checkpoint-io';
 
 // Re-import fs to access mocked writeFile
 import * as _fsModule from 'node:fs/promises';
