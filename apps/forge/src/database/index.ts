@@ -1,3 +1,9 @@
-// Re-export everything from schema for backwards compatibility
-export * from './schema.js';
-export type { Database } from './client.js';
+/**
+ * Exports do módulo de database - APP
+ */
+
+export { getDatabase } from './client';
+export { getAppDatabasePath } from './config';
+export { runMigrations } from './migrate';
+export * from './schema';
+export type { Database } from './client';

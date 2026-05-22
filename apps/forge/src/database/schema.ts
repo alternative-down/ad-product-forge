@@ -13,20 +13,10 @@
 
 import { relations } from 'drizzle-orm';
 
-export * from './schema-agents.js';
-export * from './schema-roles.js';
-export * from './schema-llm.js';
-export * from './schema-finance.js';
-export * from './schema-config.js';
-export * from './schema-integrations.js';
-export * from './schema-chat.js';
-export * from './schema-mcp.js';
-export * from './schema-webhooks.js';
-export * from './schema-knowledge.js';
-export * from './schema-tickets.js';
 
 import {
   agents,
+
   agentProviders,
   agentExecutionContracts,
   agentExecutionSteps,
@@ -80,18 +70,6 @@ import {
   tickets,
   ticketMessages,
 } from './schema-tickets.js';
-
-export const systemSettingsRelations = relations(systemSettings, () => ({}));
-
-export const llmModelPricesRelations = relations(llmModelPrices, () => ({}));
-
-export const companyRecurringPayablesRelations = relations(companyRecurringPayables, () => ({}));
-
-export const systemIntegrationsRelations = relations(systemIntegrations, () => ({}));
-
-export const companyCashLedgerRelations = relations(companyCashLedger, () => ({}));
-
-export const systemLlmDefaultsRelations = relations(systemLlmDefaults, () => ({}));
 
 export const agentsRelations = relations(agents, ({ one, many }) => ({
   role: one(agentRoles, {
