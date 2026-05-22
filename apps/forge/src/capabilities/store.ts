@@ -1,5 +1,5 @@
 import { createId } from '../utils/id';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '../database/schema';
 import {
@@ -12,66 +12,26 @@ import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 import { forgeDebug } from '@forge-runtime/core';
 import { serializeError } from '../agents/agent-runner-error-formatting';
+import { resolveLoadedToolIds } from './permissions';
+import {
+  queryRoles,
+  queryRole,
+  queryToolPermissions,
+  queryWorkflowPermissions,
+  queryAgent,
+  queryAgents,
+  queryToolPermissionsBatch,
+  queryWorkflowPermissionsBatch,
+} from './queries';
 
 type CapabilitySet = {
   toolIds: string[];
 };
 
-const roleInspectionToolIds = [
-  'manage_agent_role',
-  'change_agent_role',
-  'list_role_capabilities',
-  'manage_role_capabilities',
-] as const;
-
-function resolveLoadedToolIds(toolIds: string[]) {
-  const resolvedToolIds = new Set(toolIds);
-  const hasCrossAgentCronTools =
-    resolvedToolIds.has('manage_crons') || resolvedToolIds.has('list_crons');
-  const _hasCrossAgentRoleTool = resolvedToolIds.has('change_agent_role');
-  const hasRoleInspectionTool = roleInspectionToolIds.some((toolId) => resolvedToolIds.has(toolId));
-
-  if (hasRoleInspectionTool) {
-    resolvedToolIds.add('list_agent_roles');
-  }
-
-  if (resolvedToolIds.has('manage_role_capabilities')) {
-    resolvedToolIds.add('list_role_capabilities');
-  }
-
-  // Add base self-cron tools if no cross-agent cron tools are granted.
-  // Cross-agent cron tools replace self-cron tools (handled below).
-  if (!hasCrossAgentCronTools) {
-    resolvedToolIds.add('manage_self_crons');
-    resolvedToolIds.add('list_self_crons');
-  }
-
-  // Cross-agent cron tools replace self-cron tools
-  if (hasCrossAgentCronTools) {
-    resolvedToolIds.delete('manage_self_crons');
-    resolvedToolIds.delete('list_self_crons');
-  }
-
-  return [...resolvedToolIds].sort((left, right) => left.localeCompare(right));
-}
-
 export type CapabilityStore = Awaited<ReturnType<typeof createCapabilityStore>>;
 export function createCapabilityStore(db: Database) {
   async function listRoles() {
-    let rows;
-    try {
-      rows = await db.query.agentRoles.findMany({
-        orderBy: [asc(agentRoles.name)],
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'listRoles DB read failed: ' + String(serializeError(err)),
-      });
-      return [];
-    }
-
+    const rows = await queryRoles(db);
     return rows.map((row: any) => ({
       roleId: row.id,
       name: row.name,
@@ -82,24 +42,10 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function getRole(roleId: string) {
-    let row;
-    try {
-      row = await db.query.agentRoles.findFirst({
-        where: eq(agentRoles.id, roleId),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'getRole DB read failed: ' + String(serializeError(err)),
-      });
-      return null;
-    }
-
+    const row = await queryRole(db, roleId);
     if (row === null || row === undefined) {
       return null;
     }
-
     return {
       roleId: row.id,
       name: row.name,
@@ -121,7 +67,6 @@ export function createCapabilityStore(db: Database) {
 
     try {
       await db.insert(agentRoles).values(record);
-
       await Promise.all(
         AGENT_BASE_TOOL_IDS.map((toolId) =>
           addRoleToolPermission({
@@ -148,21 +93,7 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function updateRole(input: { roleId: string; name?: string; description?: string | null }) {
-    let existing;
-    try {
-      existing = await db.query.agentRoles.findFirst({
-        where: eq(agentRoles.id, input.roleId),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'updateRole DB read failed',
-        context: { roleId: input.roleId, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-
+    const existing = await queryRole(db, input.roleId);
     if (existing === null || existing === undefined) {
       forgeDebug({
         scope: 'capabilities-store',
@@ -225,21 +156,7 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function listRoleToolPermissions(roleId: string) {
-    let rows;
-    try {
-      rows = await db.query.roleToolPermissions.findMany({
-        where: eq(roleToolPermissions.roleId, roleId),
-        orderBy: [asc(roleToolPermissions.toolId)],
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'listRoleToolPermissions DB read failed: ' + String(serializeError(err)),
-      });
-      return [];
-    }
-
+    const rows = await queryToolPermissions(db, roleId);
     return resolveLoadedToolIds(normalizeToolPermissionIds(rows.map((row: any) => row.toolId)));
   }
 
@@ -298,21 +215,7 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function listRoleWorkflowPermissions(roleId: string) {
-    let rows;
-    try {
-      rows = await db.query.roleWorkflowPermissions.findMany({
-        where: eq(roleWorkflowPermissions.roleId, roleId),
-        orderBy: [asc(roleWorkflowPermissions.workflowId)],
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'listRoleWorkflowPermissions DB read failed: ' + String(serializeError(err)),
-      });
-      return [];
-    }
-
+    const rows = await queryWorkflowPermissions(db, roleId);
     return rows.map((row: any) => row.workflowId);
   }
 
@@ -389,11 +292,6 @@ export function createCapabilityStore(db: Database) {
     );
   }
 
-  /**
-   * Batch version of listGrantedRoleCapabilities — fetches capabilities for
-   * multiple roles in a single DB roundtrip (N+1 fix).
-   * Returns a Map from roleId to sorted capabilityIds array.
-   */
   async function listGrantedRoleCapabilitiesBatch(
     roleIds: string[],
   ): Promise<Map<string, string[]>> {
@@ -403,14 +301,8 @@ export function createCapabilityStore(db: Database) {
     let workflowRows: { roleId: string; workflowId: string }[] = [];
     try {
       [toolRows, workflowRows] = await Promise.all([
-        db.query.roleToolPermissions.findMany({
-          where: inArray(roleToolPermissions.roleId, roleIds),
-          orderBy: [asc(roleToolPermissions.roleId), asc(roleToolPermissions.toolId)],
-        }),
-        db.query.roleWorkflowPermissions.findMany({
-          where: inArray(roleWorkflowPermissions.roleId, roleIds),
-          orderBy: [asc(roleWorkflowPermissions.roleId), asc(roleWorkflowPermissions.workflowId)],
-        }),
+        queryToolPermissionsBatch(db, roleIds),
+        queryWorkflowPermissionsBatch(db, roleIds),
       ]);
     } catch (err) {
       forgeDebug({
@@ -438,7 +330,6 @@ export function createCapabilityStore(db: Database) {
       result.set(row.roleId, existing);
     }
 
-    // Sort each role's capability list and deduplicate
     for (const [roleId, ids] of result) {
       result.set(
         roleId,
@@ -558,20 +449,7 @@ export function createCapabilityStore(db: Database) {
   }
 
   async function getAgentCapabilities(agentId: string): Promise<CapabilitySet> {
-    let agent;
-    try {
-      agent = await db.query.agents.findFirst({
-        where: eq(agents.id, agentId),
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'getAgentCapabilities DB read failed',
-        context: { agentId, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const agent = await queryAgent(db, agentId);
 
     if (agent === null || agent === undefined) {
       forgeDebug({
@@ -605,44 +483,10 @@ export function createCapabilityStore(db: Database) {
     agentId?: string;
     executionState?: 'idle' | 'running' | 'absent';
   }) {
-    let rows;
-    try {
-      rows = await db.query.agents.findMany({
-        where: (agent, { and, eq }) => {
-          const filters = [];
-
-          if (input.agentId !== null && input.agentId !== undefined) {
-            filters.push(eq(agent.id, input.agentId));
-          }
-
-          if (input.executionState) {
-            filters.push(eq(agent.executionState, input.executionState));
-          }
-
-          if (filters.length === 0) {
-            return undefined;
-          }
-
-          return and(...filters);
-        },
-        orderBy: [asc(agents.name)],
-        with: {
-          role: {
-            columns: {
-              name: true,
-              description: true,
-            },
-          },
-        },
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'capabilities-store',
-        level: 'error',
-        message: 'listAgentStatuses DB read failed: ' + String(serializeError(err)),
-      });
-      return [];
-    }
+    const rows = await queryAgents(db, {
+      agentId: input.agentId ?? null,
+      executionState: input.executionState,
+    });
 
     return rows.map((row: any) => ({
       agentId: row.id,
