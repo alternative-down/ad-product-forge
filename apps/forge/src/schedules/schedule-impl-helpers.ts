@@ -6,14 +6,6 @@ import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
 
-// import type { StoredSchedule } from './store'; // TODO: fix missing
-export type StoredSchedule = {
-  scheduleId: string;
-  creatorId: string | null;
-  agentId: string;
-  name: string;
-};
-
 const scheduleBaseSchema = {
   name: z.string().min(1),
   description: z.string().optional(),
