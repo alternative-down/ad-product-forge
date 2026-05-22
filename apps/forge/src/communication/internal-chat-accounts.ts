@@ -17,11 +17,13 @@ import {
   internalChatConversationMembers,
   internalChatConversations,
 } from '../database/schema';
+import type { InternalChatConversation, NewInternalChatConversation, NewInternalChatConversationMember } from '../database/schema';
 import { createId } from '../utils/id';
 import {
   buildAgentAccountDescription,
   createInternalChatSlug,
   sortParticipantsBySelfFirst,
+  type InternalChatGroupParticipant,
 } from './internal-chat-helpers';
 import { InternalChatAccountNotFoundError, InternalChatError } from './internal-chat-errors';
 
@@ -366,7 +368,7 @@ export function createInternalChatAccounts(db: Database) {
           eq(internalChatConversations.id, conversationId),
           eq(internalChatConversationMembers.accountId, account.id),
         ),
-      })) as any;
+      })) as InternalChatConversation;
       if (conversation === null || conversation === undefined) {
         throw new InternalChatError(
           'conversation-not-found',
@@ -410,7 +412,7 @@ export function createInternalChatAccounts(db: Database) {
             eq(internalChatConversations.type, 'dm'),
             inArray(internalChatConversations.id, candidateConversationIds),
           ),
-        })) as any;
+        })) as InternalChatConversation;
         if (existing !== null && existing !== undefined) return existing;
       }
 
@@ -439,11 +441,11 @@ export function createInternalChatAccounts(db: Database) {
           createdAt: now,
           updatedAt: now,
         },
-      ] as any);
+      ] as NewInternalChatConversationMember[]);
 
       const conversation = (await db.query.internalChatConversations.findFirst({
         where: eq(internalChatConversations.id, conversationId),
-      })) as any;
+      })) as InternalChatConversation;
       return conversation!;
     } catch (err) {
       forgeDebug({
@@ -472,7 +474,7 @@ export function createInternalChatAccounts(db: Database) {
         )
         .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-      return sortParticipantsBySelfFirst(rows as any, accountId);
+      return sortParticipantsBySelfFirst(rows as InternalChatGroupParticipant[], accountId);
     } catch (err) {
       forgeDebug({
         scope: 'internal-chat-accounts',
