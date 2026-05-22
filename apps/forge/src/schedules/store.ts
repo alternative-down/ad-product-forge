@@ -417,8 +417,8 @@ export function createAgentScheduleStore(db: Database) {
   // StoredSchedule type removed to break circular reference
 
   // --- helpers ---
-  function toScheduleRecord(row: AgentSchedule) {
-    return {
+  function toScheduleBase(row: AgentSchedule, extra?: { lastTriggeredAt?: number | null; nextTriggerAt?: number | null; nextTriggerAt$set?: number | null }) {
+    const base = {
       scheduleId: row.id,
       agentId: row.agentId,
       kind: row.kind as ScheduleKind,
@@ -431,33 +431,29 @@ export function createAgentScheduleStore(db: Database) {
       content: row.content,
       wakeWhenRunning: row.wakeWhenRunning !== 0,
       isActive: row.isActive === 1,
-      lastTriggeredAt: row.lastTriggeredAt ?? undefined,
-      nextTriggerAt: row.nextTriggerAt ?? undefined,
-      nextTriggerAt$set: row.nextTriggerAt,
       creatorId: row.creatorId ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+    };
+    if (!extra) return base;
+    return {
+      ...base,
+      ...(extra.lastTriggeredAt !== undefined ? { lastTriggeredAt: extra.lastTriggeredAt ?? undefined } : {}),
+      ...(extra.nextTriggerAt !== undefined ? { nextTriggerAt: extra.nextTriggerAt ?? undefined } : {}),
+      ...(extra.nextTriggerAt$set !== undefined ? { nextTriggerAt$set: extra.nextTriggerAt$set } : {}),
     };
   }
 
+  function toScheduleRecord(row: AgentSchedule) {
+    return toScheduleBase(row, {
+      lastTriggeredAt: row.lastTriggeredAt,
+      nextTriggerAt: row.nextTriggerAt,
+      nextTriggerAt$set: row.nextTriggerAt,
+    });
+  }
+
   function toScheduleSummary(row: AgentSchedule) {
-    return {
-      scheduleId: row.id,
-      agentId: row.agentId,
-      kind: row.kind as ScheduleKind,
-      name: row.name,
-      description: row.description,
-      scheduleType: row.scheduleType as ScheduleType,
-      cronExpression: row.cronExpression ?? undefined,
-      scheduledDate: row.scheduledDate ?? undefined,
-      timezone: row.timezone,
-      content: row.content,
-      wakeWhenRunning: row.wakeWhenRunning !== 0,
-      isActive: row.isActive === 1,
-      creatorId: row.creatorId ?? undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return toScheduleBase(row);
   }
 
   return {
