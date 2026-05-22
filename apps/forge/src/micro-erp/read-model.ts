@@ -16,7 +16,7 @@ const POSTED = 'posted';
 const PLANNED = 'planned';
 const CANCELED = 'canceled';
 
-export type ListCompanyCashMovementsInput = {
+type ListCompanyCashMovementsInput = {
   direction?: 'in' | 'out';
   status?: 'planned' | 'posted' | 'canceled';
   type?: string;

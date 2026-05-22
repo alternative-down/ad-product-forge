@@ -11,7 +11,7 @@ const __MINIMAX_TOOL_IDS = [
   'minimax_video',
 ] as const;
 
-export type MiniMaxToolId = (typeof __MINIMAX_TOOL_IDS)[number];
+type MiniMaxToolId = (typeof __MINIMAX_TOOL_IDS)[number];
 
 const MINIMAX_OUTPUT_DIRECTORY = 'generated/minimax';
 
