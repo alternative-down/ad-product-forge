@@ -133,11 +133,11 @@ export function createWakeContent(input: {
   }
 
   if (input.scheduleType === 'date' && input.scheduledDate !== undefined) {
-    lines.push(`Scheduled date: ${new Date((input as any).scheduledDate).toISOString()}`);
+    lines.push(`Scheduled date: ${new Date(input.scheduledDate as number).toISOString()}`);
   }
 
   if (input.nextTriggerAt !== undefined) {
-    lines.push(`Next trigger at: ${new Date((input as any).nextTriggerAt).toISOString()}`);
+    lines.push(`Next trigger at: ${new Date(input.nextTriggerAt as number).toISOString()}`);
   }
 
   lines.push('', 'Content:', input.content.trim());
@@ -159,31 +159,75 @@ export function createHeartbeatWakeInstruction(content?: string) {
     '  Why: they are the clearest signs of change, obligation, blockers, and follow-up. If you ignore them, you work from a stale picture.',
     '  What to do: separate real work from noise, inspect the source behind important notifications, and build a short priority picture of what now matters most.',
     '',
-    'Phase 2. Widen your view without leaving your role.',
-    '- Review the relevant workspace records, starting with `AGENT_CONTEXT.md`.',
-    '  Why: recent messages create tunnel vision. The workspace is where longer threads, prior decisions, unfinished ideas, and durable context live.',
-    '  What to do: recover what is still alive but no longer visible in the recent foreground, then ask what your role should be moving that is currently neglected, drifting, weakly owned, or missing.',
-    '- Widen the search, but stay inside your function.',
-    '  Why: the goal is more useful autonomy, not role drift.',
-    '  What to do: explore adjacent implications, delayed follow-ups, reviews, validations, and improvements that belong to your area, but do not absorb work that belongs to another role.',
+    'Phase 2. Identify what deserves your attention.',
+    '- Inspect pending crons, your task queue, and any state changes that have accumulated since your last run.',
+    '  Why: work can pile up invisibly between heartbeats.',
+    '  What to do: list crons, re-read your context files, check for new issues assigned to you.',
     '',
-    'Phase 3. Refine your operating record.',
-    '- Clean up the workspace so it remains reusable.',
-    '  Why: weak notes create weak continuity. If the record gets stale, duplicated, or vague, future runs become passive and shortsighted.',
-    '  What to do: keep `AGENT_CONTEXT.md` compact and high-signal, keep detail in deeper files, rewrite vague notes into useful guidance, remove stale material, and preserve signal over volume.',
+    'Phase 3. Prioritize ruthlessly.',
+    '- Pick the 1–3 most important actions.',
+    '  Why: you cannot do everything. Doing a few things well is better than many things poorly.',
+    '  What to do: apply the following order: (1) unblocked work, (2) dependency unblocking, (3) critical information gathering, (4) risk reduction, (5) everything else.',
     '',
-    'Phase 4. Convert insight into movement.',
-    '- Act on the most useful work you uncovered.',
-    '  Why: heartbeat is valuable only if it turns recovered context into execution.',
-    '  What to do: choose the next concrete step by priority: impact first, then dependency unblocking, critical information gathering, risk reduction, and then useful optimization.',
-    '- Push past the first small win.',
-    '  Why: agents often stop too early after a quick reply, a tiny fix, or a note update.',
-    '  What to do: if one small action is done, ask what the next useful move is in the same front or the next best front in your area. If nothing explicit is pending, deliberately start a grounded line of work that your role should already be advancing.',
+    'Phase 4. Act.',
+    '- Execute the prioritized actions.',
+    '  Why: execution creates value; analysis without action is overhead.',
+    '  What to do: use your tools to advance each chosen action, push code, send messages, update your context files.',
+    '',
+    'Phase 5. End cleanly.',
+    '- Write or update a short status note in your workspace.',
+    '  Why: your next run will thank you. Stale context is a trap.',
+    '  What to do: record open threads, pending decisions, and what comes next. Remove or archive anything that is resolved.',
   ];
 
   return lines.join('\n');
 }
 
+export function createAgentScheduleInstruction(schedule: {
+  name: string;
+  description?: string | null;
+  scheduleKind: 'agent' | 'heartbeat';
+  scheduleType: 'cron' | 'date';
+  cronExpression?: string | null;
+  scheduledDate?: number | null;
+  timezone: string;
+  nextTriggerAt?: number | null;
+  content: string;
+  wakeWhenRunning: boolean;
+}) {
+  const kind = schedule.scheduleKind;
+  const type = schedule.scheduleType;
+
+  const parts = [
+    `A scheduled task is waiting for you.`,
+    '',
+    `Task name: ${schedule.name}`,
+    `Task kind: ${kind}`,
+    `Task type: ${type}`,
+    `Timezone: ${schedule.timezone}`,
+    `Wake while running: ${schedule.wakeWhenRunning ? 'enabled' : 'only when idle'}`,
+  ];
+
+  if (schedule.description != null && schedule.description.trim() !== '') {
+    parts.push(`Description: ${schedule.description.trim()}`);
+  }
+
+  if (type === 'cron' && schedule.cronExpression !== undefined) {
+    parts.push(`Cron: ${schedule.cronExpression}`);
+  }
+
+  if (type === 'date' && schedule.scheduledDate !== undefined) {
+    parts.push(`Scheduled date: ${new Date(schedule.scheduledDate as number).toISOString()}`);
+  }
+
+  if (schedule.nextTriggerAt !== undefined) {
+    parts.push(`Next trigger at: ${new Date(schedule.nextTriggerAt as number).toISOString()}`);
+  }
+
+  parts.push('', 'Instructions:', schedule.content.trim());
+
+  return parts.join('\n');
+}
 export function toToolOutput(scheduleRecord: {
   scheduleId: string;
   name: string;
