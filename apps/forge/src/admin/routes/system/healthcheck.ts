@@ -1,5 +1,3 @@
-// import type { InternalAgentRegistry } from '../../agents/internal-agent-registry'; // TODO: fix missing module
-// import type { AdminReadModel } from '../read-model'; // TODO: fix missing module
 
 interface HealthcheckEntry {
   agentId: string;

@@ -19,7 +19,7 @@ export async function listAgentWorkspaceSkills(
   workspaceBasePath: string,
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>,
 ): Promise<AgentSkillSummary[]> {
-  // @ts-expect-error TODO: type
+  // @ts-expect-error workspaceFilesystem type may not match WorkspaceFilesystemConfig
   const skillsRoot = resolveAgentSkillsRoot(workspaceBasePath, agent.workspaceFilesystem ?? undefined, agent.id);
 
   try {

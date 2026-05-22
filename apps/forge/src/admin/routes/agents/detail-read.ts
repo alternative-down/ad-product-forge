@@ -323,5 +323,5 @@ export function registerAgentProviderMcpRoutes(_input: {
   loaderConfig: unknown;
 }): void {
   // Stub — registerAgentProviderMcpRoutes called from admin/routes.ts but not yet wired.
-  // TODO(kaelen #2822): wire MCP provider routes once implementation is complete
+  // Awaiting MCP provider implementation.
 }
