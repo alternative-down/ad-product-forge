@@ -16,6 +16,7 @@ import {
 } from '../database/schema';
 import type { Database } from '../database/client';
 import { sortParticipantsBySelfFirst } from './internal-chat-helpers';
+import type { InternalChatGroupParticipant } from './internal-chat-helpers';
 
 // =============================================================================
 // Participant listing
@@ -40,7 +41,7 @@ export function createInternalChatParticipants(db: Database) {
       )
       .where(eq(internalChatConversationMembers.conversationId, conversationId));
 
-    return sortParticipantsBySelfFirst(rows as any, accountId);
+    return sortParticipantsBySelfFirst(rows as unknown as InternalChatGroupParticipant[], accountId);
   }
 
   /**
@@ -49,7 +50,7 @@ export function createInternalChatParticipants(db: Database) {
   async function listGroupMembersOrDmPeers(agentId: string, conversationId: string) {
     const account = (await db.query.internalChatAccounts.findFirst({
       where: eq(internalChatAccounts.agentId, agentId),
-    })) as any;
+    })) as { id: string; agentId: string; slug: string | null; displayName: string; };
     if (account === null || account === undefined) return [];
     return await listGroupMembersOrDmPeersByAccount(account.id, conversationId);
   }
