@@ -9,6 +9,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createSchedulerSteps, BeginRunInput } from './agent-runner-scheduler-steps';
+import type { FlushManager } from './agent-runner-flush-manager';
 
 function makeDeps() {
   let _runEpoch = 1;
@@ -40,8 +41,12 @@ function makeDeps() {
     flushManager: {
       resetFlushedRunEventKeys: vi.fn(),
       refreshRunFlushSettings: vi.fn().mockResolvedValue(undefined),
-      getFlushSettings: () => ({ runLastMessages: 20, flushIntervalMs: 30_000 }),
-    },
+      rememberFlushedRunEventKey: vi.fn(),
+      isFlushed: vi.fn(() => false),
+      clearFlushHistory: vi.fn(),
+      getFlushSettings: () => ({ communicationDmFlushingEnabled: true, communicationGroupFlushingEnabled: true }),
+      getRunLastMessages: () => 20,
+    } as FlushManager,
     getExecuting: () => false,
     isTimerActive: () => false,
     isStopped: () => false,
