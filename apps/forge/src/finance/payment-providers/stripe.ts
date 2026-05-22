@@ -2,10 +2,7 @@
  * Stripe payment provider adapter.
  * Handles signature verification and event parsing for Stripe webhooks.
  */
-import { forgeDebug } from '@forge-runtime/core';
-
 import type { PaymentProviderType } from '../payment-schema';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export type StripeWebhookPayload = {
   id: string;
@@ -13,32 +10,6 @@ export type StripeWebhookPayload = {
   created: number;
   data: { object: Record<string, unknown> };
 };
-
-/**
- * Verify a Stripe webhook signature using the webhook secret.
- * Throws if the signature is invalid.
- */
-function verifyStripeWebhookSignature(
-  payload: string,
-  signatureHeader: string,
-  webhookSecret: string,
-): StripeWebhookPayload {
-  // Import stripe dynamically to avoid issues when stripe package is not installed
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const stripe = require('stripe') as typeof import('stripe');
-    const event = stripe.webhooks.constructEvent(payload, signatureHeader, webhookSecret);
-    return event as unknown as StripeWebhookPayload;
-  } catch (err) {
-    forgeDebug({
-      scope: 'stripe',
-      level: 'error',
-      message: 'Stripe webhook verification failed',
-      context: { error: String(serializeError(err)) },
-    });
-    throw new Error(`Stripe webhook signature verification failed: ${String(serializeError(err))}`);
-  }
-}
 
 /** Parse a completed payment_intent.succeeded Stripe event. */
 export function parseStripePaymentSucceeded(event: StripeWebhookPayload): {
