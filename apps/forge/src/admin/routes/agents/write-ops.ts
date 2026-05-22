@@ -69,8 +69,8 @@ export function registerAgentWriteOpsRoutes(
       handler: HttpHandler;
     }) => void;
   },
-  input: AgentRoutesInput,
-  registry: Registry,
+  input: AgentRoutesInput | any,
+  registry: Registry | any,
   ops: any,
 ) {
   // Lifecycle ops — extracted to split/lifecycle-ops.ts

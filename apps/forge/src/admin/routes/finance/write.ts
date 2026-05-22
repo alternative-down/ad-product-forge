@@ -95,7 +95,7 @@ type CompanyPayables = {
 type FinanceWriteInput = {
   companyCash: CompanyCash;
   companyPayables: CompanyPayables;
-};
+} | any;
 
 /**
  * Register POST routes for finance write operations

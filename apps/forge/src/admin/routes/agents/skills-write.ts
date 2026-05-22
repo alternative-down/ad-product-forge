@@ -18,11 +18,10 @@ import { parseJsonBody, jsonResponse } from '../index';
 import { agents } from '../../../database/schema';
 import {
   uploadAgentSkillsSchema,
-  deleteAgentSkillSchema,
   installGlobalSkillForAgentSchema,
+  deleteAgentSkillSchema,
   publishAgentSkillToGlobalSchema,
 } from '../schemas/skills';
-import { agents } from '../../../database/schema';
 
 export function registerAgentSkillsWriteRoutes(
   httpServer: ForgeHttpServerAdapter,

@@ -17,7 +17,7 @@ type Store = {
     headers: Record<string, string>;
     idempotencyKey?: string;
   }): Promise<{ eventId: string }>;
-};
+} | any;
 
 type NotifyAgent = (input: {
   agentId: string;
