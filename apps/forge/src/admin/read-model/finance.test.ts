@@ -29,7 +29,7 @@ vi.mock('../../micro-erp/read-model', () => ({
 
 vi.mock('../../finance/company-payables', () => ({
   createCompanyPayables: vi.fn(() => ({
-    listRecurringPayables: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+    listRecurringPayables: vi.fn().mockResolvedValue([]),
   })),
 }));
 
@@ -119,8 +119,7 @@ describe('createFinanceReadModel getFinance', () => {
     const result = await store.getFinance();
 
     expect(result.recurringPayables).toBeDefined();
-    expect(Array.isArray(result.recurringPayables.items)).toBe(true);
-    expect(result.recurringPayables).toHaveProperty('hasMore');
+    expect(Array.isArray(result.recurringPayables)).toBe(true);
   });
 });
 
@@ -305,29 +304,26 @@ describe('getFinanceOverview (standalone)', () => {
 describe('getRecurringPayables (standalone)', () => {
   test('returns recurring payables from payables store', async () => {
     const mockPayablesStore = {
-      listRecurringPayables: vi.fn().mockResolvedValue({
-        items: [{ id: 'r1', description: 'Rent', amountUsd: 1000 }],
-        hasMore: true,
-      }),
+      listRecurringPayables: vi.fn().mockResolvedValue([
+        { payableId: 'r1', description: 'Rent', amountUsd: 1000, recurrencePeriod: 'monthly', isActive: true },
+      ]),
     };
 
     const { getRecurringPayables } = await import('./payables-overview');
     const result = await getRecurringPayables(mockPayablesStore as any);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].id).toBe('r1');
-    expect(result.hasMore).toBe(true);
+    expect(result).toHaveLength(1);
+    expect(result[0].payableId).toBe('r1');
   });
 
   test('returns empty when no recurring payables', async () => {
     const mockPayablesStore = {
-      listRecurringPayables: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+      listRecurringPayables: vi.fn().mockResolvedValue([]),
     };
 
     const { getRecurringPayables } = await import('./payables-overview');
     const result = await getRecurringPayables(mockPayablesStore as any);
 
-    expect(result.items).toEqual([]);
-    expect(result.hasMore).toBe(false);
+    expect(result).toEqual([]);
   });
 });
