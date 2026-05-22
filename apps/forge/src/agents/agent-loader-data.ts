@@ -8,7 +8,6 @@ import type { SingleAgentLoaderConfig } from './agent-loader-types';
 import { createLlmSettingsStore } from '../llm/settings-store';
 import { resolveProfileRuntimeModel } from '../llm/runtime-model';
 import type { RuntimeProfile } from '../llm/runtime-model';
-import type { LlmProfileRecord } from '../llm/settings-store';
 import { createSystemSettingsStore } from '../system-settings/store';
 import { createCapabilityStore } from '../capabilities/store';
 import { decryptSecret } from '../encryption/crypto';
