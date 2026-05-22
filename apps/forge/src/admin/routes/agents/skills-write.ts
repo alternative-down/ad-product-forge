@@ -15,6 +15,7 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../../../agents/global-skills';
 import { parseJsonBody, jsonResponse } from '../index';
+import { agents } from '../../../database/schema';
 import {
   uploadAgentSkillsSchema,
   deleteAgentSkillSchema,
