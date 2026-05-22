@@ -13,6 +13,8 @@ import {
   llmModelPrices,
   llmProfiles,
   type AgentExecutionContract,
+  type NewAgentExecutionContract,
+  type NewAgentExecutionStep,
 } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
@@ -130,8 +132,8 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
     }
 
     // Wrap insert + funding in same transaction — if funding fails, contract insert rolls back
-    await db.transaction(async (tx: any) => {
-      await (tx.insert(agentExecutionContracts) as any).values(newContract);
+    await db.transaction(async (tx) => {
+      await tx.insert(agentExecutionContracts).values(newContract as NewAgentExecutionContract);
 
       await companyCashOperations.recordCashOut(
         {
@@ -252,7 +254,8 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       .from(agentExecutionSteps)
       .where(eq(agentExecutionSteps.contractId, contractId));
 
-    return (rows as unknown as any[])[0]?.total ?? 0;
+    const row = (rows as unknown as { total: number }[])[0];
+    return row?.total ?? 0;
   }
 
   async function recordAgentStep(input: {
@@ -275,7 +278,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
 
     try {
       await db.transaction(async (tx) => {
-        await (tx.insert(agentExecutionSteps) as any).values({
+        await tx.insert(agentExecutionSteps).values({
           id,
           agentId: input.agentId,
           contractId: input.contractId,
@@ -341,8 +344,8 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
     } as const;
 
     try {
-      await db.transaction(async (tx: any) => {
-        await (tx.insert(agentExecutionContracts) as any).values(nextContract);
+      await db.transaction(async (tx) => {
+        await tx.insert(agentExecutionContracts).values(nextContract as NewAgentExecutionContract);
       });
     } catch (err) {
       logContractError('renewContract', agentId, err);
