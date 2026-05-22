@@ -224,7 +224,7 @@ export async function generateWithTimeoutRetries(
       stage: 'generate-started',
       detail: {
         attempt,
-        runId: deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`,
+        runId: String(deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`),
         maxSteps: GENERATE_MAX_STEPS_PER_RUN,
       },
     });
@@ -258,10 +258,10 @@ export async function generateWithTimeoutRetries(
 
       const result = await Promise.race<RuntimeGenerateResult | null>([
         deps.currentRuntime.agent.generate(effectivePromptText, {
-          system: systemPrompt,
+          system: systemPrompt ?? undefined,
           abortSignal: controller.signal,
           maxSteps: GENERATE_MAX_STEPS_PER_RUN,
-          runId: deps.activeRunId ?? `${deps.runtime.id}:${runEpoch}`,
+          runId: deps.activeRunId !== null ? deps.activeRunId : `${deps.runtime.id}:${runEpoch}`,
         }),
         timeout.promise as Promise<never>,
       ]);
@@ -269,7 +269,7 @@ export async function generateWithTimeoutRetries(
       clearGenerateTimeout(timeout);
       finishGenerateAttempt(generateToken, controller, deps);
 
-      const { inputTokens = 0, outputTokens = 0, steps = [] } = result ?? {};
+      const { usage: { inputTokens = 0, outputTokens = 0 } = {}, steps = [] } = result ?? {};
 
       // Record usage
       void withTimeout(

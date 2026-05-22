@@ -136,6 +136,7 @@ export type RuntimeIteration = {
 export type RuntimeGenerateResult = {
   text: string;
   usage?: RuntimeStepUsage;
+  finishReason?: string;
   steps?: Array<{
     response?: {
       uiMessages?: Array<{
