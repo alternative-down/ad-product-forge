@@ -3,7 +3,7 @@ import {
   renderCheckpointPackageReadme,
   renderReflectionFile,
   renderObservationFile,
-} from './agent-ltm-checkpoint-render';
+} from './ltm/renderers';
 
 describe('agent-ltm-checkpoint-render', () => {
   describe('renderCheckpointPackageReadme', () => {
