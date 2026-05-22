@@ -20,7 +20,6 @@ type InternalAgentEntry = {
  * loadAgents only reads workspaceBasePath, minimax, schedules, internalChat,
  * and passes everything to loadAgent which reconstructs the full config.
  */
-type LoadAgentsConfig = Omit<AgentLoaderConfig, 'emailMailboxes' | 'coolify' | 'githubApps'>;
 
 /**
  * Extended config that includes GitHub-specific fields needed for per-agent manager creation.
@@ -98,7 +97,7 @@ function createInternalAgentRegistry() {
     return list();
   }
 
-  async function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
+  function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
     const existingAgent = agents.get(runtime.id);
     const pendingWakeEvents = existingAgent
       ? [
