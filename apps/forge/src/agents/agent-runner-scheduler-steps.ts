@@ -9,6 +9,7 @@
  */
 
 import { withTimeout } from '../utils/async';
+import type { FlushManager } from './agent-runner-flush-manager';
 
 export interface BeginRunInput {
   reloadRuntime: boolean;
@@ -33,11 +34,7 @@ export interface StepsDeps {
   advanceStepEpoch: () => void;
   getActiveRunEpoch: () => number;
   setInstant: (value: boolean) => void;
-  flushManager: {
-    resetFlushedRunEventKeys: () => void;
-    refreshRunFlushSettings: () => Promise<void>;
-    getFlushSettings: () => { runLastMessages: number; flushIntervalMs: number };
-  };
+  flushManager: FlushManager;
   getExecuting: () => boolean;
   isTimerActive: () => boolean;
   isStopped: () => boolean;
