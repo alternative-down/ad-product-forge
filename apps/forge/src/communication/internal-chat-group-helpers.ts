@@ -38,7 +38,7 @@ export async function resolveChatGroupMembers(
   for (const member of members) {
     const participant = (await db.query.internalChatAccounts.findFirst({
       where: eq(
-        sql<string>`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})`,
+        sql`coalesce(${internalChatAccounts.agentId}, ${internalChatAccounts.slug})` as any,
         member.participantKey,
       ),
     })) as InternalChatAccount;
