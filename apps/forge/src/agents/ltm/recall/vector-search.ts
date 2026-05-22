@@ -23,7 +23,7 @@ export async function runVectorQuery(
   topK: number,
   deps: VectorSearchDeps,
 ): Promise<VectorSearchResult[]> {
-  return deps.runTrackedRecallOperation<VectorSearchResult[]>(
+  return await deps.runTrackedRecallOperation<VectorSearchResult[]>(
     'vector.query',
     deps.retrievalWorkspace.queryVector(queryVector, topK),
     deps.recallTimeoutMs,
