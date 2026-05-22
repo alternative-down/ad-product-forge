@@ -128,7 +128,7 @@ export function createInternalChatMessages(db: Database, deps: InternalChatMessa
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
       })),
-    )) as any as CommunicationProviderMessage[];
+    )) as CommunicationProviderMessage[];
   }
 
   // ── ByAccount variant ─────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ export function createInternalChatMessages(db: Database, deps: InternalChatMessa
         createdAt: new Date(row.createdAt).toISOString(),
         authorDisplayName: row.authorDisplayName,
       })),
-    )) as any;
+    )) as CommunicationProviderMessage[];
   }
 
   // ── Account-scoped Message Retrieval ─────────────────────────────────────

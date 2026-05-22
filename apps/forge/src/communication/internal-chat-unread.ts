@@ -29,11 +29,12 @@ export function createInternalChatUnread(db: Database) {
             eq(internalChatMessageReads.agentId, agentId),
             isNull(internalChatMessageReads.readAt),
           ),
-        );
+        )
+        .all();
 
       return {
-        unreadMessageCount: (rows as any)[0]?.unreadMessageCount ?? 0,
-        unreadConversationCount: (rows as any)[0]?.unreadConversationCount ?? 0,
+        unreadMessageCount: rows[0]?.unreadMessageCount ?? 0,
+        unreadConversationCount: rows[0]?.unreadConversationCount ?? 0,
       };
     } catch (err) {
       forgeDebug({
