@@ -91,12 +91,12 @@ export function createSystemIntegrationStore(db: Database) {
 
       return typedRows.map((row) => {
         const { encryptedConfig, ...rest } = row;
-        const rawConfig = parseIntegrationConfigForList(row.providerType as any, encryptedConfig);
+        const rawConfig = parseIntegrationConfigForList(row.providerType as SystemIntegrationProviderType, encryptedConfig);
 
         return {
           ...rest,
           isEnabled: row.isEnabled === 1,
-          config: sanitizeForList(row.providerType as any, rawConfig),
+          config: sanitizeForList(row.providerType as SystemIntegrationProviderType, rawConfig),
         };
       }) as any;
     } catch (err) {

@@ -181,17 +181,17 @@ function createConnectionImpl(
         attachments: await deps.readMessageAttachments(row.messageId),
         createdAt: new Date(row.createdAt).toISOString(),
         metadata: {
-          conversationType: row.conversationType as any,
+          conversationType: row.conversationType as "dm" | "group",
           groupMembers:
             (row.conversationType as string) === 'group'
               ? participants.map((participant) => ({
                   participantId: participant.accountId,
-                  agentId: (participant.agentId ?? null) as string,
+                  agentId: participant.agentId ?? '',
                   slug: participant.slug,
                   displayName: participant.displayName,
                 }))
               : undefined,
-        } as any,
+        } as unknown as InternalChatDeliveryMessage['metadata'],
       });
     }
   }
@@ -246,7 +246,7 @@ function createConnectionImpl(
             params.conversation.type === 'group'
               ? buildGroupMetadata(params.participants)
               : undefined,
-        } as any,
+        } as unknown as InternalChatDeliveryMessage['metadata'],
       });
 
       liveAgentIds.push(participant.agentId as string);
