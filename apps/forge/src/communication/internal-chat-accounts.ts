@@ -17,7 +17,7 @@ import {
   internalChatConversationMembers,
   internalChatConversations,
 } from '../database/schema';
-import type { InternalChatConversation, NewInternalChatConversation, NewInternalChatConversationMember } from '../database/schema';
+import type { InternalChatConversation, NewInternalChatConversationMember } from '../database/schema';
 import { createId } from '../utils/id';
 import {
   buildAgentAccountDescription,
