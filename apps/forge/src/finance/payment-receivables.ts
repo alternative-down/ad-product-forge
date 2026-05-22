@@ -280,7 +280,7 @@ export function createPaymentReceivablesStore(db: Database) {
 
   async function getTransactionsBySubscription(subscriptionId: string) {
     try {
-      return await db
+      return db
         .select()
         .from(paymentTransactions)
         .where(eq(paymentTransactions.subscriptionId, subscriptionId));
