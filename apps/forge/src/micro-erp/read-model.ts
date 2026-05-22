@@ -32,8 +32,7 @@ export function createMicroErpReadModel(db: Database) {
   const companyCash = createCompanyCashLedger(db);
 
   async function getCompanyCashBalance() {
-    let balanceUsd: number;
-    balanceUsd = await companyCash.getCurrentBalanceUsd();
+    const balanceUsd: number = await companyCash.getCurrentBalanceUsd();
     return { balanceUsd };
   }
 
@@ -62,15 +61,13 @@ export function createMicroErpReadModel(db: Database) {
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
-    let rows;
-    rows = await db.query.companyCashLedger.findMany({
+    const rows = await db.query.companyCashLedger.findMany({
       where,
       orderBy: [desc(companyCashLedger.createdAt)],
       limit,
       offset,
     });
-    let countRows;
-    countRows = await db
+    const countRows = await db
       .select({
         total: sql<number>`count(*)`,
       })
@@ -115,8 +112,7 @@ export function createMicroErpReadModel(db: Database) {
     const now = Date.now();
     const periodStart = input.periodStart ?? startOfCurrentMonth(now);
     const periodEnd = input.periodEnd ?? now;
-    let postedTotals;
-    postedTotals = await db
+    const postedTotals = await db
       .select({
         totalInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
         totalOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
@@ -151,8 +147,7 @@ export function createMicroErpReadModel(db: Database) {
     const scheduledOutUsd =
       (scheduledTotals as unknown as { scheduledOutUsd: number }[])[0]?.scheduledOutUsd ?? 0;
 
-    let balanceUsd;
-    balanceUsd = await companyCash.getCurrentBalanceUsd();
+    const balanceUsd = await companyCash.getCurrentBalanceUsd();
 
     return {
       periodStart,
@@ -168,8 +163,7 @@ export function createMicroErpReadModel(db: Database) {
 
   async function listActiveInternalAgentContracts() {
     const now = Date.now();
-    let rows;
-    rows = await db
+    const rows = await db
       .select({
         contractId: agentExecutionContracts.id,
         agentId: agentExecutionContracts.agentId,
@@ -186,8 +180,7 @@ export function createMicroErpReadModel(db: Database) {
       )
       .orderBy(desc(agentExecutionContracts.endsAt))
       .all();
-    let metricsByContractId;
-    metricsByContractId = await getActiveContractMetrics(rows, now);
+    const metricsByContractId = await getActiveContractMetrics(rows, now);
 
     return {
       items: rows.map((row: any) => ({
@@ -200,8 +193,7 @@ export function createMicroErpReadModel(db: Database) {
 
   async function getActiveInternalAgentContract(agentId: string) {
     const now = Date.now();
-    let row;
-    row = await db
+    const row = await db
       .select({
         contractId: agentExecutionContracts.id,
         agentId: agentExecutionContracts.agentId,
@@ -239,8 +231,7 @@ export function createMicroErpReadModel(db: Database) {
     if (contract === null || contract === undefined) {
       return null;
     }
-    let metricsByContractId;
-    metricsByContractId = await getActiveContractMetrics([contract], now);
+    const metricsByContractId = await getActiveContractMetrics([contract], now);
 
     return {
       ...contract,
@@ -268,9 +259,7 @@ export function createMicroErpReadModel(db: Database) {
       contracts.map((contract) => [contract.contractId, contract.endsAt]),
     );
 
-    let spendRows: Array<{ contractId: string; total: number }>;
-    let stepRows;
-    [spendRows, stepRows] = await Promise.all([
+    const [spendRows, stepRows] = await Promise.all([
       db
         .select({
           contractId: agentExecutionSteps.contractId,
