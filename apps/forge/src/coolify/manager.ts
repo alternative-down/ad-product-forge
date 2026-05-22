@@ -2,12 +2,8 @@
  * Coolify API client — manages applications, GitHub apps, deployments, and envs.
  */
 
-import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
-
 import { z } from 'zod';
 
-import { removeUndefined, safeJsonParse, buildRequestError } from './helpers';
 import { extractCollection, extractItem, extractLogs, toTimestamp } from './helpers';
 import {
   GitHubAppSchema,
@@ -21,6 +17,7 @@ import {
   ServerSchema,
 } from './schemas';
 import { getProviderConfig, getApplicationsBaseDomain } from './provider-config';
+import { createHttpTransport } from './http';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 
 export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
@@ -28,84 +25,12 @@ export type CoolifyManager = ReturnType<typeof createCoolifyManager>;
 export function createCoolifyManager(config: {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }) {
-  // ── HTTP layer ──────────────────────────────────────────────────────────────
-
-  async function requestJson(method: string, path: string, body?: Record<string, unknown>) {
-    let providerConfig;
-    try {
-      providerConfig = await getProviderConfig(config.integrations);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: getProviderConfig failed',
-        context: { method, path, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-    let response;
-    try {
-      response = await fetch(`${providerConfig.baseUrl}${path}`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${providerConfig.adminToken}`,
-          Accept: 'application/json',
-          ...(body ? { 'Content-Type': 'application/json' } : {}),
-        },
-        body: body ? JSON.stringify(removeUndefined(body)) : undefined,
-      });
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: fetch failed',
-        context: { method, path, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-
-    let text;
-    try {
-      text = await response.text();
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: response.text() failed',
-        context: { method, path, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-    const data = text.length > 0 ? safeJsonParse(text) : null;
-
-    if (!response.ok) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'requestJson: HTTP error',
-        context: { method, path, status: response.status },
-      });
-      throw new Error(buildRequestError(method, path, response.status, data ?? text));
-    }
-
-    return data;
-  }
+  const { requestJson } = createHttpTransport(config);
 
   // ── Credentials ────────────────────────────────────────────────────────────
 
   async function getCredentials() {
-    let providerConfig;
-    try {
-      providerConfig = await getProviderConfig(config.integrations);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getCredentials: getProviderConfig failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const providerConfig = await getProviderConfig(config.integrations);
 
     return {
       baseUrl: providerConfig.baseUrl,
@@ -442,54 +367,10 @@ export function createCoolifyManager(config: {
   // ── Default context ────────────────────────────────────────────────────────
 
   async function loadDefaultDeploymentContext() {
-    let providerConfig;
-    try {
-      providerConfig = await getProviderConfig(config.integrations);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'loadDefaultDeploymentContext: getProviderConfig failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-    let project;
-    try {
-      project = await getOrCreateDefaultProject();
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'loadDefaultDeploymentContext: getOrCreateDefaultProject failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-    let environment;
-    try {
-      environment = await getOrCreateDefaultEnvironment(project.projectUuid);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'loadDefaultDeploymentContext: getOrCreateDefaultEnvironment failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-    let server;
-    try {
-      server = await getDefaultServer();
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'loadDefaultDeploymentContext: getDefaultServer failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const providerConfig = await getProviderConfig(config.integrations);
+    const project = await getOrCreateDefaultProject();
+    const environment = await getOrCreateDefaultEnvironment(project.projectUuid);
+    const server = await getDefaultServer();
 
     return {
       projectUuid: project.projectUuid,
@@ -500,18 +381,7 @@ export function createCoolifyManager(config: {
   }
 
   async function getOrCreateDefaultProject() {
-    let projects;
-    try {
-      projects = extractCollection(await requestJson('GET', '/projects'), ProjectSchema);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getOrCreateDefaultProject: list projects failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const projects = extractCollection(await requestJson('GET', '/projects'), ProjectSchema);
 
     const existing = projects.find((p) => p.name === 'forge-default');
 
@@ -519,41 +389,19 @@ export function createCoolifyManager(config: {
       return { projectUuid: existing.uuid };
     }
 
-    let created;
-    try {
-      created = extractItem(
-        await requestJson('POST', '/projects', { name: 'forge-default' }),
-        ProjectSchema,
-      );
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getOrCreateDefaultProject: create project failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const created = extractItem(
+      await requestJson('POST', '/projects', { name: 'forge-default' }),
+      ProjectSchema,
+    );
 
     return { projectUuid: created.uuid };
   }
 
   async function getOrCreateDefaultEnvironment(projectUuid: string) {
-    let environments;
-    try {
-      environments = extractCollection(
-        await requestJson('GET', `/projects/${encodeURIComponent(projectUuid)}/environments`),
-        EnvironmentSchema,
-      );
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getOrCreateDefaultEnvironment: list environments failed',
-        context: { projectUuid, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const environments = extractCollection(
+      await requestJson('GET', `/projects/${encodeURIComponent(projectUuid)}/environments`),
+      EnvironmentSchema,
+    );
 
     const existing = environments.find((e) => e.name === 'production');
 
@@ -561,55 +409,22 @@ export function createCoolifyManager(config: {
       return { environmentUuid: existing.uuid };
     }
 
-    let created;
-    try {
-      created = extractItem(
-        await requestJson('POST', `/projects/${encodeURIComponent(projectUuid)}/environments`, {
-          name: 'production',
-        }),
-        EnvironmentSchema,
-      );
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getOrCreateDefaultEnvironment: create environment failed',
-        context: { projectUuid, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const created = extractItem(
+      await requestJson('POST', `/projects/${encodeURIComponent(projectUuid)}/environments`, {
+        name: 'production',
+      }),
+      EnvironmentSchema,
+    );
 
     return { environmentUuid: created.uuid };
   }
 
   async function getDefaultServer() {
-    let providerConfig;
-    try {
-      providerConfig = await getProviderConfig(config.integrations);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getDefaultServer: getProviderConfig failed',
-        context: { error: String(serializeError(err)) },
-      });
-      throw err;
-    }
-    let server;
-    try {
-      server = extractItem(
-        await requestJson('GET', `/servers/${encodeURIComponent(providerConfig.serverId)}`),
-        ServerSchema,
-      );
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'getDefaultServer: fetch server failed',
-        context: { serverId: providerConfig.serverId, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const providerConfig = await getProviderConfig(config.integrations);
+    const server = extractItem(
+      await requestJson('GET', `/servers/${encodeURIComponent(providerConfig.serverId)}`),
+      ServerSchema,
+    );
 
     return server;
   }
@@ -632,18 +447,7 @@ export function createCoolifyManager(config: {
   }
 
   async function buildApplicationDomain(slug: string, serverUuid?: string) {
-    let providerConfig;
-    try {
-      providerConfig = await getProviderConfig(config.integrations);
-    } catch (err) {
-      forgeDebug({
-        scope: 'coolify',
-        level: 'error',
-        message: 'buildApplicationDomain: getProviderConfig failed',
-        context: { slug, error: String(serializeError(err)) },
-      });
-      throw err;
-    }
+    const providerConfig = await getProviderConfig(config.integrations);
     const baseDomain =
       providerConfig.applicationsBaseDomain ??
       (await getApplicationsBaseDomain(requestJson, getDefaultServer, serverUuid));
