@@ -10,7 +10,6 @@ import type { HttpHandler } from '../../../http/server';
 import type { Database } from '../../../database/schema';
 import type { AgentLoaderConfig } from '../../../agents/agent-loader';
 import { jsonResponse, parseJsonBody } from '../index';
-// import { clearAgentHistory } from '../helpers'; // TODO: fix missing export in helpers.ts
 import { clearAgentHistorySchema, agentLongTermMemoryRecallSearchSchema } from '../schemas/agents';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 
@@ -49,8 +48,6 @@ export function registerAgentWriteRoutes(
     handler: async (request) => {
       try {
         const body = parseJsonBody(request.bodyText, clearAgentHistorySchema);
-        // clearAgentHistory stub — TODO: fix missing export
-        await Promise.resolve();
         await reloadAgentIfLoaded(input.db, input.loaderConfig, body.agentId);
         return jsonResponse({
           success: true,
