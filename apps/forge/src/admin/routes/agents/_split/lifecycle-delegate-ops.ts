@@ -59,9 +59,9 @@ export function registerLifecycleDelegateOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/hire route handler failed',
-          context: { path: '/admin/agent/hire', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/hire', error: err instanceof Error ? err.message : String(serializeError(err)) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
       }
     },
   });
@@ -89,9 +89,9 @@ export function registerLifecycleDelegateOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/terminate route handler failed',
-          context: { path: '/admin/agent/terminate', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/terminate', error: err instanceof Error ? err.message : String(serializeError(err)) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
       }
     },
   });
@@ -116,9 +116,9 @@ export function registerLifecycleDelegateOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/change-role route handler failed',
-          context: { path: '/admin/agent/change-role', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/change-role', error: err instanceof Error ? err.message : String(serializeError(err)) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
       }
     },
   });

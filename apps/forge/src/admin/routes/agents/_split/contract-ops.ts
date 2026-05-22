@@ -37,9 +37,9 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/contract/top-up',
-          context: { error: String(serializeError(err)) },
+          context: { error: err instanceof Error ? err.message : String(serializeError(err)) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
       }
     },
   });
@@ -57,9 +57,9 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/contract/adjust-budget',
-          context: { error: String(serializeError(err)) },
+          context: { error: err instanceof Error ? err.message : String(serializeError(err)) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
       }
     },
   });
@@ -77,9 +77,9 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/contract/renew',
-          context: { error: String(serializeError(err)) },
+          context: { error: err instanceof Error ? err.message : String(serializeError(err)) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
       }
     },
   });
