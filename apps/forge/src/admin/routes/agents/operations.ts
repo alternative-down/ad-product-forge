@@ -101,7 +101,7 @@ export function registerAgentOperationRoutes(
           return jsonResponse({ error: `Loaded agent not found: ${agentId}` }, 404);
         }
 
-        (entry as any).runner.notifyExternalEvent({
+        (entry as { runner: { notifyExternalEvent: (event: unknown) => void; forceIdle: () => Promise<void> } }).runner.notifyExternalEvent({
           type: 'manual-wake',
           groupKey: `manual-wake:${agentId}`,
           groupMetadata: {
