@@ -179,7 +179,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   registerAgentOperationRoutes(
     input.httpServer,
     { internalChat: input.internalChat },
-    registry as any,
+    registry,
   );
 
   registerAgentSkillsWriteRoutes(input.httpServer, {
@@ -190,7 +190,7 @@ export function registerAdminRoutes(input: AdminRouteContext) {
   registerAgentSchedulesWriteRoutes(input.httpServer, {
     schedules: input.schedules,
   });
-  registerAgentWriteOpsRoutes(input.httpServer, input as any, registry as any, ops);
+  registerAgentWriteOpsRoutes(input.httpServer, input, registry, ops);
 
   registerDashboardRoutes({
     httpServer: input.httpServer,
@@ -260,10 +260,10 @@ export function registerAdminRoutes(input: AdminRouteContext) {
 
   registerFinanceWriteRoutes(input.httpServer, {
     companyCash,
-    companyPayables: companyPayables as any,
+    companyPayables,
   });
 
-  const webhookStore = createWebhookStore(input.db) as any;
+  const webhookStore = createWebhookStore(input.db);
   const webhookHandler = createWebhookHandler({
     store: webhookStore,
     notifyAgent(input) {

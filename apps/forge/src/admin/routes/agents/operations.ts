@@ -82,10 +82,8 @@ export function registerAgentOperationRoutes(
       handler: HttpHandler;
     }) => void;
   },
-  input: {
-    internalChat: InternalChat;
-  },
-  registry: Registry,
+  input: { internalChat: InternalChat } | any,
+  registry: Registry | any,
 ) {
   // POST /admin/agent/wake
   httpServer.registerRoute({
