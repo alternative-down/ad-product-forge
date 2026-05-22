@@ -4,6 +4,11 @@ import { z } from 'zod';
 
 import type { MiniMaxManager } from './manager';
 
+/** Context shape expected by MiniMax tools (injected by forge runtime). */
+interface MiniMaxToolContext {
+  workspace: { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown>; readFile(path: string): Promise<Uint8Array | string> } };
+}
+
 const __MINIMAX_TOOL_IDS = [
   'list_minimax_voices',
   'minimax_tts',
@@ -336,7 +341,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
 
           const audioBuffer = Buffer.from(result.data.audioHex, 'hex');
           const savedPath = await writeBufferToWorkspace(
-            (context as any).workspace,
+            (context as unknown as MiniMaxToolContext).workspace,
             'tts',
             result.data.audioFormat,
             audioBuffer,
@@ -399,7 +404,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
                   type: input.reference_type ?? 'character',
                   imageFile: /^https?:\/\//i.test(referenceImage)
                     ? referenceImage
-                    : await readWorkspaceImageAsDataUrl((context as any).workspace, referenceImage),
+                    : await readWorkspaceImageAsDataUrl((context as unknown as MiniMaxToolContext).workspace, referenceImage),
                 })),
               )
             : undefined;
@@ -428,7 +433,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
           const paths = await Promise.all(
             result.data.images.map((base64Image, index) =>
               writeBufferToWorkspace(
-                (context as any).workspace,
+                (context as unknown as MiniMaxToolContext).workspace,
                 'images',
                 'png',
                 Buffer.from(base64Image, 'base64'),
@@ -525,7 +530,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
 
           const fileBuffer = await downloadFileBuffer(file.data.downloadUrl ?? '');
           const savedPath = await writeBufferToWorkspace(
-            (context as any).workspace,
+            (context as unknown as MiniMaxToolContext).workspace,
             'videos',
             inferExtensionFromUrl(file.data.downloadUrl ?? '', 'mp4'),
             fileBuffer,
