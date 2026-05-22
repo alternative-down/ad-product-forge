@@ -8,6 +8,7 @@ import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { eq } from 'drizzle-orm';
+import { agents } from '../../../database/schema';
 import {
   installAgentWorkspaceSkillsFromZip,
   deleteAgentWorkspaceSkill,
@@ -21,7 +22,7 @@ import {
   installGlobalSkillForAgentSchema,
   publishAgentSkillToGlobalSchema,
 } from '../schemas/skills';
-import { agents } from '../../../database/schema';
+import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 export function registerAgentSkillsWriteRoutes(
   httpServer: ForgeHttpServerAdapter,
@@ -180,7 +181,7 @@ export function registerAgentSkillsWriteRoutes(
         return jsonResponse({
           success: true,
           agentId: body.agentId,
-          publishedSkillName,
+          skillName: publishedSkillName,
         });
       } catch (err) {
         forgeDebug({
@@ -194,4 +195,3 @@ export function registerAgentSkillsWriteRoutes(
     },
   });
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
