@@ -29,7 +29,7 @@ vi.mock('../../micro-erp/read-model', () => ({
 
 vi.mock('../../finance/company-payables', () => ({
   createCompanyPayables: vi.fn(() => ({
-    listRecurringPayables: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+    listRecurringPayables: vi.fn().mockResolvedValue({ items: [], hasMore: false }) as any,
   })),
 }));
 
@@ -321,7 +321,7 @@ describe('getRecurringPayables (standalone)', () => {
 
   test('returns empty when no recurring payables', async () => {
     const mockPayablesStore = {
-      listRecurringPayables: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+      listRecurringPayables: vi.fn().mockResolvedValue({ items: [], hasMore: false }) as any,
     };
 
     const { getRecurringPayables } = await import('./payables-overview');
