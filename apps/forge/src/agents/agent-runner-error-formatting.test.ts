@@ -15,6 +15,7 @@ import {
   formatAbsentErrorDetailValue,
   extractAbsentErrorDetails,
   formatAbsentExecutionError,
+  errorMsg,
 } from './agent-runner-error-formatting';
 
 // ─── serializeUnknown ─────────────────────────────────────────────────────────
@@ -300,5 +301,91 @@ describe('formatAbsentExecutionError', () => {
     const result = formatAbsentExecutionError({ stage: 'agent-generate', error }, customExtract);
     expect(customExtract).toHaveBeenCalledWith(error);
     expect(result).toContain('Custom detail: custom info');
+  });
+});
+
+// ─── errorMsg ─────────────────────────────────────────────────────────────────
+
+describe('errorMsg', () => {
+  it('returns err.message for Error instance', () => {
+    const err = new Error('something went wrong');
+    expect(errorMsg(err)).toBe('something went wrong');
+  });
+
+  it('returns err.message for custom Error subclass', () => {
+    class CustomError extends Error {
+      constructor(msg: string) { super(msg); }
+    }
+    const err = new CustomError('custom error message');
+    expect(errorMsg(err)).toBe('custom error message');
+  });
+
+  it('returns string as-is for plain string input', () => {
+    expect(errorMsg('plain string error')).toBe('plain string error');
+  });
+
+  it('returns "null" for null input', () => {
+    expect(errorMsg(null)).toBe('null');
+  });
+
+  it('returns "undefined" for undefined input', () => {
+    expect(errorMsg(undefined)).toBe(undefined);
+  });
+
+  it('returns "0" for number 0', () => {
+    expect(errorMsg(0)).toBe('0');
+  });
+
+  it('returns "null" for NaN', () => {
+    expect(errorMsg(NaN)).toBe('null');
+  });
+
+  it('returns "null" for Infinity', () => {
+    expect(errorMsg(Infinity)).toBe('null');
+  });
+
+  it('returns "true" for boolean true', () => {
+    expect(errorMsg(true)).toBe('true');
+  });
+
+  it('returns "false" for boolean false', () => {
+    expect(errorMsg(false)).toBe('false');
+  });
+
+  it('returns JSON.stringify for plain object', () => {
+    expect(errorMsg({ code: 500, reason: 'oops' })).toBe('{"code":500,"reason":"oops"}');
+  });
+
+  it('returns JSON.stringify for nested object', () => {
+    expect(errorMsg({ a: { b: 1 }, c: 'text' })).toBe('{"a":{"b":1},"c":"text"}');
+  });
+
+  it('returns JSON.stringify for array', () => {
+    expect(errorMsg([1, 2, 3])).toBe('[1,2,3]');
+  });
+
+  it('uses toJSON when object has it', () => {
+    const obj = { toJSON: () => ({ custom: 'serialized' }) };
+    expect(errorMsg(obj)).toBe('{"custom":"serialized"}');
+  });
+
+  it('returns "null" for symbol', () => {
+    const sym = Symbol('test');
+    expect(errorMsg(sym)).toBe(undefined);
+  });
+
+  it('returns "null" for function', () => {
+    const fn = () => {};
+    expect(errorMsg(fn)).toBe(undefined);
+  });
+
+  it('returns error message even when message is empty', () => {
+    const err = new Error('');
+    expect(errorMsg(err)).toBe('');
+  });
+
+  it('handles Error with non-standard message property', () => {
+    const err = { message: 'nonsense', stack: '' } as Error;
+    expect(errorMsg(err)).toBe('{"message":"nonsense","stack":""}');
   });
 });
