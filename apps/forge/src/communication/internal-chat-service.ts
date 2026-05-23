@@ -103,13 +103,9 @@ import {
   ConversationNotFoundError as _ConversationNotFoundError,
   ChatGroupNotFoundError as _ChatGroupNotFoundError,
   ChatGroupAlreadyExistsError as _ChatGroupAlreadyExistsError,
-  OnlyAdminsCanUpdateGroupError as _OnlyAdminsCanUpdateGroupError,
-  NameRequiredForNewGroupError as _NameRequiredForNewGroupError,
   InternalChatAccountNotFoundError as _InternalChatAccountNotFoundError,
   MessageNotFoundError as _MessageNotFoundError,
   ExternalAccountNotFoundError as _ExternalAccountNotFoundError,
-  InternalChatAccountSlugAlreadyExistsError as _InternalChatAccountSlugAlreadyExistsError,
-  DirectConversationFailedError as _DirectConversationFailedError,
   AttachmentNotFoundError as _AttachmentNotFoundError,
 } from './internal-chat-errors';
 import { createInternalChatAccounts } from './internal-chat-accounts';
