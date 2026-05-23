@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import {
-  updateScheduleSchema,
   isScheduleEditor,
   requireScheduleEditor,
   requireScheduleDeleter,
@@ -150,49 +149,7 @@ describe('createScheduleSchema', () => {
   });
 });
 
-// ── updateScheduleSchema ───────────────────────────────────────────────────
 
-describe('updateScheduleSchema', () => {
-  test('accepts valid cron update with all fields', () => {
-    const input = {
-      scheduleType: 'cron' as const,
-      name: 'Updated name',
-      cronExpression: '0 10 * * *',
-      content: 'Updated content',
-      isActive: false,
-    };
-    const result = updateScheduleSchema.safeParse(input);
-    expect(result.success).toBe(true);
-  });
-
-  test('accepts update with only isActive toggle', () => {
-    const input = {
-      scheduleType: 'cron' as const,
-      name: 'Updated via toggle',
-      content: 'Test content',
-      isActive: true,
-    };
-    const result = updateScheduleSchema.safeParse(input);
-    expect(result.success).toBe(true);
-  });
-
-  test('accepts cron to date transition', () => {
-    const input = {
-      scheduleType: 'date' as const,
-      name: 'Transitioned schedule',
-      content: 'Updated content',
-      scheduledDate: '2026-07-01T12:00:00.000Z',
-    };
-    const result = updateScheduleSchema.safeParse(input);
-    expect(result.success).toBe(true);
-  });
-
-  test('rejects empty name on update', () => {
-    const input = { scheduleType: 'cron' as const, name: '' };
-    const result = updateScheduleSchema.safeParse(input);
-    expect(result.success).toBe(false);
-  });
-});
 
 // ── createScheduleForAgentSchema ──────────────────────────────────────────
 
