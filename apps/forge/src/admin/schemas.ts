@@ -33,10 +33,7 @@ export const roleWorkflowPermissionSchema = z.object({
   workflowId: z.string().min(1),
 });
 
-export const createRoleSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
+export { createRoleSchema } from './routes/schemas/roles';
 
 export const topUpAgentContractSchema = z.object({
   agentId: z.string().min(1),
@@ -94,6 +91,4 @@ export const updateRoleSchema = z.object({
   description: z.string().optional(),
 });
 
-export const deleteRoleSchema = z.object({
-  roleId: z.string().min(1),
-});
+export { deleteRoleSchema } from './routes/schemas/roles';
