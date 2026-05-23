@@ -7,6 +7,7 @@
  */
 
 import { eq, desc, inArray } from 'drizzle-orm';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 import { forgeDebug } from '../debug';
 import type { ForgeHttpServerAdapter } from '../../../http/server';
 
@@ -47,9 +48,9 @@ export function registerAgentBaseRoutes(httpServer: ForgeHttpServerAdapter, getA
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -79,9 +80,9 @@ export function registerAgentStepsRoutes(httpServer: ForgeHttpServerAdapter, db:
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/steps',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -106,9 +107,9 @@ export function registerAgentConversationsRoutes(
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/conversations',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -133,9 +134,9 @@ export function registerAgentMemoryRoutes(
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/memory',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -163,9 +164,9 @@ export function registerAgentMetricsRoutes(httpServer: ForgeHttpServerAdapter, d
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/metrics',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -190,9 +191,9 @@ export function registerAgentContractRoutes(httpServer: ForgeHttpServerAdapter, 
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/contracts',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -243,9 +244,9 @@ export function registerAgentMcpRoutes(httpServer: ForgeHttpServerAdapter, db: D
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/mcp-servers',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -270,9 +271,9 @@ export function registerAgentSchedulesRoutes(httpServer: ForgeHttpServerAdapter,
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/schedules',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -307,9 +308,9 @@ export function registerAgentNotificationsRoutes(httpServer: ForgeHttpServerAdap
           scope: 'admin',
           level: 'error',
           message: '/admin/agents/:agentId/notifications',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
