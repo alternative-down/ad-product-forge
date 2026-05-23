@@ -1,4 +1,5 @@
 import { asc, eq, inArray } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import type { Database } from '../database/schema';
 import {
@@ -8,7 +9,6 @@ import {
   roleWorkflowPermissions,
 } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 function debug(scope: string, level: 'error' | 'warn' | 'info', message: string, context?: Record<string, unknown>) {
   forgeDebug({ scope, level, message, context });
@@ -20,7 +20,7 @@ export async function queryRoles(db: Database) {
       orderBy: [asc(agentRoles.name)],
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryRoles failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryRoles failed: ' + errorMsg(err));
     return [];
   }
 }
@@ -31,7 +31,7 @@ export async function queryRole(db: Database, roleId: string) {
       where: eq(agentRoles.id, roleId),
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryRole failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryRole failed: ' + errorMsg(err));
     return null;
   }
 }
@@ -43,7 +43,7 @@ export async function queryToolPermissions(db: Database, roleId: string) {
       orderBy: [asc(roleToolPermissions.toolId)],
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryToolPermissions failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryToolPermissions failed: ' + errorMsg(err));
     return [];
   }
 }
@@ -55,7 +55,7 @@ export async function queryWorkflowPermissions(db: Database, roleId: string) {
       orderBy: [asc(roleWorkflowPermissions.workflowId)],
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryWorkflowPermissions failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryWorkflowPermissions failed: ' + errorMsg(err));
     return [];
   }
 }
@@ -67,7 +67,7 @@ export async function queryAgentsByRoleId(db: Database, roleId: string) {
       columns: { id: true },
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryAgentsByRoleId failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryAgentsByRoleId failed: ' + errorMsg(err));
     throw err;
   }
 }
@@ -78,7 +78,7 @@ export async function queryAgent(db: Database, agentId: string) {
       where: eq(agents.id, agentId),
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryAgent failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryAgent failed: ' + errorMsg(err));
     throw err;
   }
 }
@@ -113,7 +113,7 @@ export async function queryAgents(db: Database, input: {
       },
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryAgents failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryAgents failed: ' + errorMsg(err));
     return [];
   }
 }
@@ -126,7 +126,7 @@ export async function queryToolPermissionsBatch(db: Database, roleIds: string[])
       orderBy: [asc(roleToolPermissions.roleId), asc(roleToolPermissions.toolId)],
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryToolPermissionsBatch failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryToolPermissionsBatch failed: ' + errorMsg(err));
     throw err;
   }
 }
@@ -139,7 +139,7 @@ export async function queryWorkflowPermissionsBatch(db: Database, roleIds: strin
       orderBy: [asc(roleWorkflowPermissions.roleId), asc(roleWorkflowPermissions.workflowId)],
     });
   } catch (err) {
-    debug('capabilities-queries', 'error', 'queryWorkflowPermissionsBatch failed: ' + String(serializeError(err)));
+    debug('capabilities-queries', 'error', 'queryWorkflowPermissionsBatch failed: ' + errorMsg(err));
     throw err;
   }
 }

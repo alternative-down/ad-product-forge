@@ -1,4 +1,5 @@
 import { createId } from '../utils/id';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '../database/schema';
@@ -11,7 +12,6 @@ import {
 import { forgeCapabilityIds, normalizeToolPermissionIds } from './catalog';
 import { AGENT_BASE_TOOL_IDS } from '../agents/base-tool-ids';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 import { resolveLoadedToolIds } from './permissions';
 import {
   queryRoles,
@@ -80,7 +80,7 @@ export function createCapabilityStore(db: Database) {
         scope: 'capabilities-store',
         level: 'error',
         message: 'createRole DB write failed',
-        context: { name: input.name, error: String(serializeError(err)) },
+        context: { name: input.name, error: errorMsg(err) },
       });
       throw err;
     }
@@ -118,7 +118,7 @@ export function createCapabilityStore(db: Database) {
         scope: 'capabilities-store',
         level: 'error',
         message: 'updateRole DB write failed',
-        context: { roleId: input.roleId, error: String(serializeError(err)) },
+        context: { roleId: input.roleId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -176,7 +176,7 @@ export function createCapabilityStore(db: Database) {
         scope: 'capabilities-store',
         level: 'error',
         message: 'addRoleToolPermission DB write failed',
-        context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) },
+        context: { roleId: input.roleId, toolId: input.toolId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -202,7 +202,7 @@ export function createCapabilityStore(db: Database) {
         scope: 'capabilities-store',
         level: 'error',
         message: 'removeRoleToolPermission DB delete failed',
-        context: { roleId: input.roleId, toolId: input.toolId, error: String(serializeError(err)) },
+        context: { roleId: input.roleId, toolId: input.toolId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -238,7 +238,7 @@ export function createCapabilityStore(db: Database) {
         context: {
           roleId: input.roleId,
           workflowId: input.workflowId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -268,7 +268,7 @@ export function createCapabilityStore(db: Database) {
         context: {
           roleId: input.roleId,
           workflowId: input.workflowId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -309,7 +309,7 @@ export function createCapabilityStore(db: Database) {
         scope: 'capabilities-store',
         level: 'error',
         message: 'listGrantedRoleCapabilitiesBatch DB read failed',
-        context: { roleIdCount: roleIds.length, error: String(serializeError(err)) },
+        context: { roleIdCount: roleIds.length, error: errorMsg(err) },
       });
       throw err;
     }
@@ -349,7 +349,7 @@ export function createCapabilityStore(db: Database) {
         scope: 'capabilities-store',
         level: 'error',
         message: 'listRoleCapabilities: listGrantedRoleCapabilities failed',
-        context: { roleId, error: String(serializeError(err)) },
+        context: { roleId, error: errorMsg(err) },
       });
       throw err;
     }
