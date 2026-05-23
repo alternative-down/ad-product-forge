@@ -36,14 +36,9 @@ const HIRING_RH_TOOL_IDS = new Set([
   'list_role_capabilities',
   'manage_role_capabilities',
 ] as const);
-export const generatedAgentProfileSchema = z.object({
-  agentName: z.string().min(1),
-  agentDescription: z.string().min(1),
-  roleId: z.string().min(1),
-  primaryGoal: z.string().min(1),
-  secondaryGoals: z.array(z.string().min(1)).min(1),
-  backstory: z.string().min(1),
-});
+import { generatedAgentProfileSchema } from './hiring-schemas';
+export { generatedAgentProfileSchema };
+
 export const hiringRhResultSchema = generatedAgentProfileSchema.extend({
   instructions: z.string().min(1),
 });
