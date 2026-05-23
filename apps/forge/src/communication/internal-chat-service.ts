@@ -85,6 +85,7 @@ import {
 import { createInternalChatGroups } from './internal-chat-groups';
 import { createInternalChatAccountOps } from './internal-chat-account-ops';
 import { createInternalChatListing } from './internal-chat-listing';
+import type { InternalChatConversationListingDeps } from './internal-chat-conversation-listing';
 import { createInternalChatParticipants } from './internal-chat-participants';
 import { createInternalChatUnread } from './internal-chat-unread';
 import { createInternalChatGuards } from './internal-chat-guards';
@@ -213,6 +214,10 @@ export function createInternalChatService(db: Database) {
     listGroupMembersOrDmPeers,
     listGroupMembersOrDmPeersByAccount,
     readMessageAttachments,
+  } as InternalChatConversationListingDeps & {
+    listGroupMembersOrDmPeers: typeof listGroupMembersOrDmPeers;
+    listGroupMembersOrDmPeersByAccount: typeof listGroupMembersOrDmPeersByAccount;
+    readMessageAttachments: typeof readMessageAttachments;
   });
   const listConversations = listing.listConversations;
 
