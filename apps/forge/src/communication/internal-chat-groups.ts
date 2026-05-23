@@ -34,7 +34,7 @@ const logInternalChatError = (
     scope: 'internal-chat-groups',
     level: 'error',
     ...extra,
-    message: `${context} failed: ${serializeError(error)}`,
+    message: `${context} failed: ${errorMsg(error)}`,
   });
 };
 
@@ -44,7 +44,7 @@ export interface CreateChatGroupInput {
   name: string;
   creatorName: string;
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export interface AddMemberToGroupInput {
   agentId: string;
