@@ -59,7 +59,6 @@ export type CreateForgeAgentConfig<
 export type RuntimeModelField = keyof CreateForgeAgentConfig;
 
 /** Alias for tests that expect a schema-named type. */
-export type CreateForgeAgentConfigSchema = CreateForgeAgentConfig;
 
 export type CreateAgentOptions = {
   longTermMemory?: boolean;

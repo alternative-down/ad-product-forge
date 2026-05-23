@@ -38,7 +38,6 @@ export const forgeCustomToolIds = [
 
 export type ForgeCustomToolId = (typeof forgeCustomToolIds)[number];
 export const forgeCapabilityIds = [...forgeCustomToolIds] as const;
-export type ForgeCapabilityId = (typeof forgeCapabilityIds)[number];
 
 export function hasToolPermission(
   allowedToolIds: Set<string> | null | undefined,
