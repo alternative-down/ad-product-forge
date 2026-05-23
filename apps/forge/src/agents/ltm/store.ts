@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Database } from '../../database/schema';
+import type { InferModel } from 'drizzle-orm';
 import { agentLongTermMemoryRecallStates, agentLongTermMemoryStates } from '../../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -112,12 +113,12 @@ export function createAgentLongTermMemoryStore(
       updatedAt: String(now),
     } satisfies LongTermMemoryState;
 
-    let existing: any | null = null;
+    let existing: InferModel<typeof agentLongTermMemoryStates> | null = null;
 
     try {
       existing = await db.query.agentLongTermMemoryStates.findFirst({
         where: eq(agentLongTermMemoryStates.agentId, input.agentId),
-      });
+      }) ?? null;
     } catch (err) {
       forgeDebug({
         scope: 'ltm',
@@ -181,13 +182,13 @@ export function createAgentLongTermMemoryStore(
 
   async function writeRecallIndexStamp(reason: string) {
     const now = Date.now();
-    let existing: any | null = null;
+    let existing: InferModel<typeof agentLongTermMemoryStates> | null = null;
     let state: LongTermMemoryState;
 
     try {
       existing = await db.query.agentLongTermMemoryStates.findFirst({
         where: eq(agentLongTermMemoryStates.agentId, input.agentId),
-      });
+      }) ?? null;
       state = longTermMemoryStateSchema.safeParse(existing?.state).success
         ? longTermMemoryStateSchema.parse(existing?.state)
         : createEmptyLongTermMemoryState();
@@ -267,12 +268,12 @@ export function createAgentLongTermMemoryStore(
     history?: LongTermMemoryRecallHistory;
   }) {
     const now = Date.now();
-    let existing: any | null = null;
+    let existing: InferModel<typeof agentLongTermMemoryRecallStates> | null = null;
 
     try {
       existing = await db.query.agentLongTermMemoryRecallStates.findFirst({
         where: eq(agentLongTermMemoryRecallStates.agentId, input.agentId),
-      });
+      }) ?? null;
     } catch (err) {
       forgeDebug({
         scope: 'ltm',
