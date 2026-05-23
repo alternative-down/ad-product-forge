@@ -449,15 +449,18 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         executionState,
         lastExecutionError: agent.lastExecutionError ?? null,
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
-        roleName: (agent as Agent).roleId
-          ? (roleMap.get((agent as Agent).roleId as string)?.name ?? null)
-          : null,
-        modelProfile: (agent as Agent).modelProfileId
-          ? (profileMap.get((agent as Agent).modelProfileId as string)?.name ?? null)
-          : null,
-        omModelProfile: (agent as Agent).omModelProfileId
-          ? (profileMap.get((agent as Agent).omModelProfileId as string)?.name ?? null)
-          : null,
+        roleName: (() => {
+          const roleId = (agent as Agent).roleId;
+          return roleId ? (roleMap.get(roleId)?.name ?? null) : null;
+        })(),
+        modelProfile: (() => {
+          const id = (agent as Agent).modelProfileId;
+          return id ? (profileMap.get(id)?.name ?? null) : null;
+        })(),
+        omModelProfile: (() => {
+          const id = (agent as Agent).omModelProfileId;
+          return id ? (profileMap.get(id)?.name ?? null) : null;
+        })(),
         loaded: Boolean(loadedAgent),
         runner: runnerSnapshot,
         providerTypes: [],
