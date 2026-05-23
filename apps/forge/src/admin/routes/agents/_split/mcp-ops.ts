@@ -9,6 +9,7 @@ import { jsonResponse, parseJsonBody } from '../../index';
 import { reloadAgentMcp } from '../../../routes/mcp-helpers';
 import type { HttpHandler } from '../../../../http/server';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
 import type { Database } from '../../../../database/schema';
 
 export function registerMcpOps(
