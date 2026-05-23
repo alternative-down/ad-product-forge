@@ -23,7 +23,6 @@ import {
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
 import { RUN_STOP_REMINDER } from './agent-runner-wake';
-import type { LoopDetector } from './agent-runner-loop-detector';
 import type { GenerateTimeoutHandle } from './agent-runner-generate-timeout';
 
 export interface BuildIterationFeedbackDeps {
