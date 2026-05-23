@@ -4,6 +4,7 @@
  */
 
 import type { PaymentProviderType } from '../payment-schema';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 /** Asaas webhook notification payload. */
@@ -54,12 +55,11 @@ export function verifyAsaasWebhookRequest(
       scope: 'asaas',
       level: 'error',
       message: 'Asaas webhook JSON parse failed',
-      context: { error: String(serializeError(error)) },
+      context: { error: errorMsg(error) },
     });
     throw new Error('Asaas webhook: failed to parse JSON payload');
   }
 }
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 /** Normalize an Asaas PAYMENT_RECEIVED event. */
 export function normalizeAsaasPaymentReceived(payload: AsaasWebhookPayload): {

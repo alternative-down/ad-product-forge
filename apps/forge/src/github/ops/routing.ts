@@ -3,13 +3,13 @@
  * handleRegisterPage, handleManifestCallback, handleSetupCallback, handleWebhook
  */
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 import type { HttpRequest } from '../../http/server';
 import { App } from 'octokit';
 import type { OpsContext } from './context';
 import type { AppProvisioningOps } from '../apps';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 // Subset of AppProvisioningOps fields actually used by routing.
 // createAppName/nanoid/normalizeManifestConfig/DEFAULT_GITHUB_APP_MANIFEST_CONFIG
@@ -167,7 +167,7 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
         scope: 'github-ops',
         level: 'error',
         message: 'handleSetupCreate createApp failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       return html(500, `<h1>Failed</h1><pre>${ctx.escapeHtml(String(err))}</pre>`);
     }
