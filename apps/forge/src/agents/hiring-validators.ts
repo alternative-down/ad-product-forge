@@ -87,7 +87,7 @@ export async function validateHireAgentInput(
 
   return {
     valid: true,
-    roleId: (role as unknown as { id: string }).id,
+    roleId: role.roleId,
     roleName: role.name,
     roleDescription: role.description ?? undefined,
   };
