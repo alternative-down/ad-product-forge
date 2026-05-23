@@ -17,6 +17,10 @@ import type { Database } from '../../../../database/schema';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../../github/manager';
 
+function errorMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 export function registerConfigOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
@@ -49,10 +53,10 @@ export function registerConfigOps(
           message: '/admin/agent/github-manifest-config/update route handler failed',
           context: {
             path: '/admin/agent/github-manifest-config/update',
-            error: String(serializeError(err)),
+            error: errorMsg(err),
           },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -90,11 +94,10 @@ export function registerConfigOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/update-config route handler failed',
-          context: { path: '/admin/agent/update-config', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/update-config', error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';

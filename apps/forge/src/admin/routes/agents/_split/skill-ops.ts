@@ -42,6 +42,10 @@ const deleteAgentSkillSchema = z
   })
   .strict();
 
+function errorMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 export function registerSkillOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
@@ -83,10 +87,10 @@ export function registerSkillOps(
           message: '/admin/agent/skills/publish-to-global route handler failed',
           context: {
             path: '/admin/agent/skills/publish-to-global',
-            error: String(serializeError(err)),
+            error: errorMsg(err),
           },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -117,10 +121,10 @@ export function registerSkillOps(
           message: '/admin/agent/skills/install-global route handler failed',
           context: {
             path: '/admin/agent/skills/install-global',
-            error: String(serializeError(err)),
+            error: errorMsg(err),
           },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -142,9 +146,9 @@ export function registerSkillOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/skills/upload route handler failed',
-          context: { path: '/admin/agent/skills/upload', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/skills/upload', error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -163,11 +167,10 @@ export function registerSkillOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/skills/delete route handler failed',
-          context: { path: '/admin/agent/skills/delete', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/skills/delete', error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';
