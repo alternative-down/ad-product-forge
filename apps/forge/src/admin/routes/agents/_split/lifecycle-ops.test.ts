@@ -52,7 +52,7 @@ describe('registerLifecycleOps', () => {
   describe('POST /admin/agent/reload', () => {
     it('registers the route', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, ops);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, ops);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/reload' }),
       );
@@ -60,7 +60,7 @@ describe('registerLifecycleOps', () => {
 
     it('reloads agent and adds to registry', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, ops);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -79,7 +79,7 @@ describe('registerLifecycleOps', () => {
         registry: { add: vi.fn(), get: vi.fn() },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, errorOps);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, errorOps);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/reload');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -91,7 +91,7 @@ describe('registerLifecycleOps', () => {
   describe('POST /admin/agent/force-idle', () => {
     it('registers the route', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, ops);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, ops);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/force-idle' }),
       );
@@ -110,7 +110,7 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, getOps);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, getOps);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -121,7 +121,7 @@ describe('registerLifecycleOps', () => {
 
     it('succeeds even when agent not in registry', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, ops);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/force-idle');
 
       const response = await handler(makeRequest({ agentId: 'agent-456' }));
@@ -133,7 +133,7 @@ describe('registerLifecycleOps', () => {
   describe('POST /admin/agent/rewakeup', () => {
     it('registers the route', async () => {
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, ops);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, ops);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/rewakeup' }),
       );
@@ -152,7 +152,7 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, getOps);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, getOps);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       const response = await handler(makeRequest({ agentId: 'agent-789' }));
@@ -182,7 +182,7 @@ describe('registerLifecycleOps', () => {
         },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, testOps);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, testOps);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       const response = await handler(makeRequest({ agentId: 'agent-new' }));
@@ -198,7 +198,7 @@ describe('registerLifecycleOps', () => {
         registry: { add: vi.fn(), get: vi.fn() },
       };
       const { registerLifecycleOps } = await import('./lifecycle-ops');
-      registerLifecycleOps(httpServer as any, { db: {}, loaderConfig: {} }, errorOps);
+      registerLifecycleOps(httpServer as any, { db: {} as unknown as Database, loaderConfig: {} }, errorOps);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/rewakeup');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
