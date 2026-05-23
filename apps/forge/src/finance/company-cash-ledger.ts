@@ -24,7 +24,7 @@ export function createCompanyCashLedger(db: Database) {
           ),
         );
 
-      const r = rows as any;
+      const r = rows as unknown as { total: number }[];
       return r?.[0]?.total ?? 0;
     } catch (error) {
       forgeDebug({
