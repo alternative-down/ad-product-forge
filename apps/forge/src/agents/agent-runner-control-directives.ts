@@ -141,4 +141,3 @@ function extractRunnerControlDirectiveFromIteration(iteration: {
 
 export { extractRunnerControlDirectiveFromIteration };
 
-export { NO_ACTION_NEEDED_PREFIX, STOP_AND_IDLE_PREFIX };
