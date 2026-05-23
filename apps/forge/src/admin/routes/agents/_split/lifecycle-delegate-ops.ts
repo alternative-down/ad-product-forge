@@ -11,6 +11,17 @@ import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/schema';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
+import type { GitHubAppManager } from '../../../../github/manager';
+import type { AgentScheduleManager } from '../../../../schedules/manager';
+import type { InternalChatService } from '../../../../communication/internal-chat-service';
+
+
+// Extract error message for user-facing display
+function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
 
 export function registerLifecycleDelegateOps(
   httpServer: {
@@ -28,7 +39,7 @@ export function registerLifecycleDelegateOps(
   ops: {
     runInternalHiring: (db: Database, opts: Record<string, unknown>) => Promise<{ agentId: string }>;
     runInternalTermination: (db: Database, opts: Record<string, unknown>) => Promise<{ agentId: string }>;
-    changeAgentRoleFromAdmin: (db: any, opts: { agentId: string; roleId: string }) => Promise<void>;
+    changeAgentRoleFromAdmin: (opts: unknown, extra?: unknown) => Promise<void>;
   },
 ) {
   // POST /admin/agent/hire
@@ -38,7 +49,7 @@ export function registerLifecycleDelegateOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(
-          request.bodyText,
+          request.bodyText ?? '',
           z.object({
             hiringRequest: z.string(),
             additionalContext: z.string().optional(),
@@ -62,9 +73,9 @@ export function registerLifecycleDelegateOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/hire route handler failed',
-          context: { path: '/admin/agent/hire', error: err instanceof Error ? err.message : String(serializeError(err)) },
+          context: { path: '/admin/agent/hire', error: errorMsg(err) },
         });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -92,9 +103,9 @@ export function registerLifecycleDelegateOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/terminate route handler failed',
-          context: { path: '/admin/agent/terminate', error: err instanceof Error ? err.message : String(serializeError(err)) },
+          context: { path: '/admin/agent/terminate', error: errorMsg(err) },
         });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -106,7 +117,7 @@ export function registerLifecycleDelegateOps(
     handler: async (request) => {
       try {
         const body = parseJsonBody(
-          request.bodyText,
+          request.bodyText ?? '',
           z.object({ agentId: z.string(), roleId: z.string() }),
         );
         await ops.changeAgentRoleFromAdmin(input.db, {
@@ -119,11 +130,10 @@ export function registerLifecycleDelegateOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/change-role route handler failed',
-          context: { path: '/admin/agent/change-role', error: err instanceof Error ? err.message : String(serializeError(err)) },
+          context: { path: '/admin/agent/change-role', error: errorMsg(err) },
         });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';

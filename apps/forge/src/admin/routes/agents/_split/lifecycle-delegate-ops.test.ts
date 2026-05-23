@@ -1,3 +1,5 @@
+import type { Database } from '../../../../database/schema';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@forge-runtime/core', () => ({
@@ -28,7 +30,7 @@ function getRouteHandler(
   return match[0].handler;
 }
 
-function makeInput() {
+function makeInput(): any {
   return {
     db: {},
     workspaceBasePath: '/tmp/test-workspace',
