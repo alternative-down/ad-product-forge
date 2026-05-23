@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
@@ -52,11 +53,11 @@ export function createCapabilityTools(
             scope: 'tools:capabilities',
             level: 'error',
             message: 'list_agent_roles error',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Try again in a moment. If the problem persists, verify the capability store is available.',
           };
         }
@@ -211,11 +212,11 @@ export function createCapabilityTools(
             scope: 'tools:capabilities',
             level: 'error',
             message: 'manage_agent_role error',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use list_agent_roles to confirm the roleId when updating or deleting.',
           };
         }
@@ -259,11 +260,11 @@ export function createCapabilityTools(
             scope: 'tools:capabilities',
             level: 'error',
             message: 'change_agent_role error',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use list_agents and list_agent_roles to verify the agentId and roleId.',
           };
         }
@@ -311,11 +312,11 @@ export function createCapabilityTools(
             scope: 'tools:capabilities',
             level: 'error',
             message: 'list_agent_statuses error',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Verify the agentId when filtering one agent.',
           };
         }
@@ -346,11 +347,11 @@ export function createCapabilityTools(
             scope: 'tools:capabilities',
             level: 'error',
             message: 'list_role_capabilities error',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use list_agent_roles to confirm the roleId.',
           };
         }
@@ -393,11 +394,11 @@ export function createCapabilityTools(
             scope: 'tools:capabilities',
             level: 'error',
             message: 'manage_role_capabilities error',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use list_agent_roles and list_role_capabilities to verify the roleId and capabilityId.',
           };
         }
@@ -407,4 +408,3 @@ export function createCapabilityTools(
 
   return tools;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
