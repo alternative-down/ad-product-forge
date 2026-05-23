@@ -21,10 +21,14 @@ import {
 } from './payment-schema';
 import { companyCashLedger } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
-type InsertReturning<T> = { returning: <U>(cols: { [K in keyof U]: unknown }) => Promise<T[]> };
-type InsertBuilder<T> = { values: <V extends Record<string, unknown>>(v: V) => InsertReturning<T> };
+// Extract error message for user-facing display
+function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
+
 
 export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
@@ -45,7 +49,7 @@ export function createPaymentReceivablesStore(db: Database) {
         scope: 'payment-receivables',
         level: 'error',
         message: 'getProvider DB read failed',
-        context: { provider, error: String(serializeError(err)) },
+        context: { provider, error: errorMsg(err) },
       });
       throw err;
     }
@@ -69,7 +73,7 @@ export function createPaymentReceivablesStore(db: Database) {
         return rows[0].id;
       }
       const id = createId();
-      await (db.insert(paymentProviders) as unknown as InsertBuilder<{ id: string }>).values({
+      await (db.insert(paymentProviders) as any).values({
         id,
         provider: input.provider,
         apiKeyEncrypted: input.apiKeyEncrypted,
@@ -87,7 +91,7 @@ export function createPaymentReceivablesStore(db: Database) {
         message: 'upsertProvider failed',
         context: {
           provider: input.provider,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -126,7 +130,7 @@ export function createPaymentReceivablesStore(db: Database) {
         return existing[0].id;
       }
       const [inserted] = await (
-        db.insert(paymentCustomers) as unknown as InsertBuilder<{ id: string }>
+        db.insert(paymentCustomers) as any
       )
         .values({
           provider: input.provider,
@@ -146,7 +150,7 @@ export function createPaymentReceivablesStore(db: Database) {
         context: {
           provider: input.provider,
           providerCustomerId: input.providerCustomerId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -194,7 +198,7 @@ export function createPaymentReceivablesStore(db: Database) {
       }
 
       const [inserted] = await (
-        db.insert(paymentSubscriptions) as unknown as InsertBuilder<{ id: string }>
+        db.insert(paymentSubscriptions) as any
       )
         .values({
           customerId: input.customerId,
@@ -219,7 +223,7 @@ export function createPaymentReceivablesStore(db: Database) {
         message: 'upsertSubscription DB read failed',
         context: {
           providerSubscriptionId: input.providerSubscriptionId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -251,7 +255,7 @@ export function createPaymentReceivablesStore(db: Database) {
         context: {
           provider,
           providerSubscriptionId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -272,7 +276,7 @@ export function createPaymentReceivablesStore(db: Database) {
         scope: 'payment-receivables',
         level: 'error',
         message: 'listRecentTransactions DB read failed',
-        context: { provider, error: String(serializeError(err)) },
+        context: { provider, error: errorMsg(err) },
       });
       throw err;
     }
@@ -289,7 +293,7 @@ export function createPaymentReceivablesStore(db: Database) {
         scope: 'payment-receivables',
         level: 'error',
         message: 'getTransactionsBySubscription DB read failed',
-        context: { subscriptionId, error: String(serializeError(err)) },
+        context: { subscriptionId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -321,7 +325,7 @@ export function createPaymentReceivablesStore(db: Database) {
       if (existing.length > 0) {
         return { id: existing[0].id ?? txId, isNew: false };
       }
-      await (db.insert(paymentTransactions) as unknown as InsertBuilder<unknown>).values({
+      await (db.insert(paymentTransactions) as any).values({
         id: txId,
         provider: input.provider,
         providerPaymentId: input.providerPaymentId,
@@ -356,7 +360,7 @@ export function createPaymentReceivablesStore(db: Database) {
         level: 'error',
         message: 'processPaymentEvent failed',
         providerPaymentId: input.providerPaymentId,
-        error: String(serializeError(err)),
+        error: errorMsg(err),
       });
       throw err;
     }
