@@ -5,7 +5,7 @@
  * Functions for loading agent workspace context and schedule summaries
  */
 
-import { serializeError } from './agent-runner-error-formatting';
+import { serializeError, errorMsg } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
@@ -101,7 +101,7 @@ export async function loadActiveScheduleSummary(db: Database, runtimeId: string)
       scope: 'agent-runner',
       level: 'warn',
       runtimeId,
-      message: 'Failed to load active schedule summary: ' + String(serializeError(err).message),
+      message: 'Failed to load active schedule summary: ' + errorMsg(err),
     });
     return null;
   }
