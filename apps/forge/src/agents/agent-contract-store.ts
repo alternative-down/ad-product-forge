@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { serializeError, errorMsg } from './agent-runner-error-formatting';
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
@@ -41,7 +41,7 @@ export function createAgentContractStore(db: Database, timeProvider?: TimeProvid
       scope: 'agent-contract-store',
       level: 'error',
       runtimeId,
-      message: context + ' failed: ' + String(serializeError(error).message),
+      message: context + ' failed: ' + errorMsg(error),
     });
   };
 
