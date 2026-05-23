@@ -54,6 +54,7 @@ const _roleWorkflowPermissionSchema = z
   })
   .strict();
 
+import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
 export function registerRoleOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
@@ -80,9 +81,9 @@ export function registerRoleOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/roles/create',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -105,9 +106,9 @@ export function registerRoleOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/roles/update',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -122,8 +123,8 @@ export function registerRoleOps(
         await capabilities.deleteRole(body.roleId);
         return jsonResponse({ success: true, roleId: body.roleId });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(serializeError(err));
-        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${err instanceof Error ? err.message : String(serializeError(err))}` });
+        const msg = errorMsg(err);
+        forgeDebug({ scope: 'admin:roles', level: 'error', message: `deleteRole failed: ${errorMsg(err)}` });
         if (msg.startsWith('Cannot delete role')) return jsonResponse({ error: msg }, 409);
         return jsonResponse({ error: msg }, 500);
       }
@@ -149,11 +150,10 @@ export function registerRoleOps(
           scope: 'admin',
           level: 'error',
           message: '/admin/roles/tool-permissions',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';

@@ -22,6 +22,7 @@ const deleteAgentProviderSchema = z
   })
   .strict();
 
+import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
 export function registerProviderOps(httpServer: {
   registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
 }) {
@@ -38,9 +39,9 @@ export function registerProviderOps(httpServer: {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/providers/upsert route handler failed',
-          context: { path: '/admin/agent/providers/upsert', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/providers/upsert', error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -58,11 +59,10 @@ export function registerProviderOps(httpServer: {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/providers/delete route handler failed',
-          context: { path: '/admin/agent/providers/delete', error: String(serializeError(err)) },
+          context: { path: '/admin/agent/providers/delete', error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';

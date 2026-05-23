@@ -21,8 +21,8 @@ export interface ContractOpsDeps {
     renewAgentContract: (db: unknown, body: unknown) => Promise<unknown>;
   };
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';
 
+import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
 export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
   // POST /admin/agent/contract/top-up
   httpServer.registerRoute({
@@ -37,9 +37,9 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/contract/top-up',
-          context: { error: err instanceof Error ? err.message : String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -57,9 +57,9 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/contract/adjust-budget',
-          context: { error: err instanceof Error ? err.message : String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -77,9 +77,9 @@ export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
           scope: 'admin',
           level: 'error',
           message: '/admin/agent/contract/renew',
-          context: { error: err instanceof Error ? err.message : String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: err instanceof Error ? err.message : String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
