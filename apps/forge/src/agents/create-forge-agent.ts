@@ -24,7 +24,6 @@ import type {
 
 import type {
   CreateRuntimeAgentSessionOptions,
-  RuntimeAgentSessionGenerateOptions,
 } from '@forge-runtime/core';
 
 function requireCheckpointedOmLimits(config: CreateAgentConfig) {
@@ -158,9 +157,7 @@ export async function createInternalAgentRuntime<
     companyName: config.companyName,
     companyContext: config.companyContext,
   });
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  const longTermMemory =
-    options.longTermMemory && options.contractStore
+  const longTermMemory = (options.longTermMemory ?? false) && !!options.contractStore
       ? createAgentLongTermMemory({
           agentId: config.id,
           agentName: config.name,

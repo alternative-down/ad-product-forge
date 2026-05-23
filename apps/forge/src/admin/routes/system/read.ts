@@ -7,9 +7,6 @@
  * Stores are passed directly instead of via a read-model wrapper.
  */
 import { forgeDebug } from '../debug';
-import { resolve } from 'node:path';
-import { readFile } from 'node:fs/promises';
-import { sql } from 'drizzle-orm';
 
 import { mcpServerConfigs } from '../../../database/schema';
 
@@ -50,7 +47,7 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
     db,
     registry,
     workspaceBasePath,
-    capabilities,
+    capabilities: _capabilities,
     integrations,
     llmSettings,
     llmModelPrices,
