@@ -2,6 +2,8 @@ import {
   forgeDebug,
   type CommunicationInboundMessage,
   type CommunicationProvider,
+  type CommunicationProviderConversation,
+  type CommunicationProviderMessage,
 } from '@forge-runtime/core';
 
 import type { InternalChatService } from './internal-chat-service';
@@ -57,7 +59,7 @@ export function createInternalChatProvider(input: {
         agentId: input.agentId,
         limit,
         unread,
-      })) as any;
+      })) as unknown as CommunicationProviderConversation[];
     },
     async getMessages({ targetKey, limit, offset, query, dateFrom, dateTo }) {
       return (await input.internalChat.getMessages({
@@ -68,7 +70,7 @@ export function createInternalChatProvider(input: {
         query,
         dateFrom,
         dateTo,
-      })) as any;
+      })) as unknown as CommunicationProviderMessage[];
     },
     async sendMessage(message) {
       const account = await input.internalChat.getAccountByAgentId(input.agentId);
