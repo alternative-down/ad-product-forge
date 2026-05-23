@@ -220,19 +220,18 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     const mastraAgentId = toMastraSafeIdentifier(agentId);
     const agentDatabasePath = resolve(workspaceBasePath, agentId, 'database.db');
 
-    let client: { url: string } | null = null;
+    // eslint-disable-next-line no-dynamic-imports/no-dynamic-imports
+    const { createClient } = await import('@libsql/client');
+    let client: Awaited<ReturnType<typeof import("@libsql/client").createClient>> | null = null;
     try {
-      // eslint-disable-next-line no-dynamic-imports/no-dynamic-imports
-      const { createClient } = await import('@libsql/client');
-      const c = createClient({ url: `file:${agentDatabasePath}` });
-      c.execute('PRAGMA foreign_keys = ON');
-      client = { url: `file:${agentDatabasePath}` };
+      client = createClient({ url: `file:${agentDatabasePath}` });
+      client.execute('PRAGMA foreign_keys = ON');
     } catch {
       return null;
     }
 
     const conversationStore = new LibsqlConversationStore({
-      client: client as any,
+      client: client,
       tablePrefix: mastraAgentId,
     });
     const settings = await systemSettings.getSettings();
