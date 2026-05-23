@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
+import { buildRunnerSnapshot } from './agent-runner-snapshot';
 import { createId } from '../utils/id';
 import { createAgentWakeQueue, forgeDebug } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -789,26 +790,12 @@ export function createAgentRunner(
   }
 
   function getSnapshot() {
-    const s = scheduler.getState();
-    return {
-      stopped,
-      instant: s.instant,
-      startingRun,
-      startingRunStartedAt,
-      executing,
-      activeRunEpoch: s.activeRunEpoch,
-      activeStepEpoch: s.activeStepEpoch,
-      scheduled: timer !== null,
-      backoffMs: s.backoffMs,
-      nextStepAt: s.nextStepAt,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      estimatedDelayMs: s.nextStepAt ? Math.max(s.nextStepAt - Date.now(), 0) : null,
-      lastStepStartedAt,
-      lastStepStage,
-      pendingRunEvents: Array.from(messageManager.getState().pendingRunMessages.values()),
-      wake: wakeQueue.getSnapshot(),
-      lastWakeStartedAt,
-    };
+    return buildRunnerSnapshot(
+      scheduler,
+      messageManager,
+      wakeQueue,
+      { stopped, startingRun, startingRunStartedAt, executing, lastStepStartedAt, lastStepStage, lastWakeStartedAt, timer },
+    );
   }
 
   return {
