@@ -1,5 +1,5 @@
 import { createTool, type Tool } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg, serializeError } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -300,7 +300,7 @@ export function createAgentScheduleTools(
         forgeDebug({
           scope: 'tools:schedules',
           level: 'error',
-          message: 'list_self_crons failed: ' + serializeError(error),
+          message: 'list_self_crons failed: ' + errorMsg(error),
         });
         return {
           valid: false,
@@ -371,7 +371,7 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_self_crons action=create failed: ' + serializeError(error),
+              message: 'manage_self_crons action=create failed: ' + errorMsg(error),
             });
             return {
               valid: false,
@@ -423,7 +423,7 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_self_crons action=update failed: ' + serializeError(error),
+              message: 'manage_self_crons action=update failed: ' + errorMsg(error),
             });
             return {
               valid: false,
@@ -464,7 +464,7 @@ export function createAgentScheduleTools(
           forgeDebug({
             scope: 'tools:schedules',
             level: 'error',
-            message: 'manage_self_crons action=update failed: ' + serializeError(error),
+            message: 'manage_self_crons action=update failed: ' + errorMsg(error),
           });
           return {
             valid: false,
@@ -510,7 +510,7 @@ export function createAgentScheduleTools(
           forgeDebug({
             scope: 'tools:schedules',
             level: 'error',
-            message: 'list_crons failed: ' + serializeError(error),
+            message: 'list_crons failed: ' + errorMsg(error),
           });
           return {
             valid: false,
@@ -590,7 +590,7 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_crons action=create failed: ' + serializeError(error),
+              message: 'manage_crons action=create failed: ' + errorMsg(error),
             });
             return {
               valid: false,
@@ -642,7 +642,7 @@ export function createAgentScheduleTools(
             forgeDebug({
               scope: 'tools:schedules',
               level: 'error',
-              message: 'manage_crons action=update failed: ' + serializeError(error),
+              message: 'manage_crons action=update failed: ' + errorMsg(error),
             });
             return {
               valid: false,
@@ -683,7 +683,7 @@ export function createAgentScheduleTools(
           forgeDebug({
             scope: 'tools:schedules',
             level: 'error',
-            message: 'manage_crons action=update failed: ' + serializeError(error),
+            message: 'manage_crons action=update failed: ' + errorMsg(error),
           });
           return {
             valid: false,
