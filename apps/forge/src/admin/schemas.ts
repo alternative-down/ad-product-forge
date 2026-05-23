@@ -22,15 +22,7 @@ export const agentConversationMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 });
-
-export const roleToolPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  toolId: z.string().min(1),
 });
-
-export const roleWorkflowPermissionSchema = z.object({
-  roleId: z.string().min(1),
-  workflowId: z.string().min(1),
 });
 
 export { createRoleSchema } from './routes/schemas/roles';
@@ -84,11 +76,9 @@ export const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
     envVarsText: z.string().optional().default(''),
   }),
 ]);
-
-export const updateRoleSchema = z.object({
-  roleId: z.string().min(1),
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
 });
 
 export { deleteRoleSchema } from './routes/schemas/roles';
+export { roleToolPermissionSchema } from './routes/schemas/roles';
+export { roleWorkflowPermissionSchema } from './routes/schemas/roles';
+export { updateRoleSchema } from './routes/schemas/roles';
