@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import type { CommunicationFile } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
-import { internalChatMessageAttachments } from '../database/schema';
+import { internalChatMessageAttachments, type NewInternalChatMessageAttachment } from '../database/schema';
 import { createId } from '../utils/id';
 import { resolveContentType, sanitizeAttachmentName } from './internal-chat-helpers';
 
@@ -21,8 +21,8 @@ export function createChatAttachments(db: Database) {
       return;
     }
 
-    await db.insert(internalChatMessageAttachments).values(
-      attachments.map((attachment, index) => ({
+    const newAttachments: NewInternalChatMessageAttachment[] = attachments.map(
+      (attachment, index) => ({
         id: createId(),
         messageId,
         attachmentIndex: index,
@@ -31,8 +31,10 @@ export function createChatAttachments(db: Database) {
         sizeBytes: attachment.sizeBytes ?? attachment.data.byteLength,
         data: Buffer.from(attachment.data),
         createdAt: Date.now(),
-      })) as any,
+        updatedAt: Date.now(),
+      }),
     );
+    await db.insert(internalChatMessageAttachments).values(newAttachments);
   }
 
   async function readMessageAttachments(messageId: string): Promise<CommunicationFile[]> {

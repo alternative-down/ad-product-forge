@@ -17,6 +17,7 @@ import {
   internalChatAccounts,
   internalChatConversationMembers,
   internalChatConversations,
+  type NewInternalChatConversationMember,
 } from '../database/schema';
 
 export interface AdminAccountView {
@@ -328,10 +329,11 @@ export function createInternalChatAdmin(db: Database) {
       updatedAt: now,
     });
 
-    await db.insert(internalChatConversationMembers).values([
-      { conversationId: convId, accountId: leftAccountId, role: 'member', joinedAt: now },
-      { conversationId: convId, accountId: rightAccountId, role: 'member', joinedAt: now },
-    ] as any);
+    const newMembers: NewInternalChatConversationMember[] = [
+      { conversationId: convId, accountId: leftAccountId, role: 'member', createdAt: now, updatedAt: now },
+      { conversationId: convId, accountId: rightAccountId, role: 'member', createdAt: now, updatedAt: now },
+    ];
+    await db.insert(internalChatConversationMembers).values(newMembers);
 
     return await db.query.internalChatConversations.findFirst({
       where: eq(internalChatConversations.id, convId),

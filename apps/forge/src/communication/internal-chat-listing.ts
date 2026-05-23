@@ -13,6 +13,7 @@ import {
   internalChatMessageAttachments,
   internalChatMessageReads,
   internalChatMessages,
+  type InternalChatConversationMember,
 } from '../database/schema';
 import type { Database } from '../database/client';
 import { buildConversationParticipantNames as _buildConversationParticipantNames } from './internal-chat-helpers';
@@ -83,7 +84,7 @@ export function createInternalChatListing(db: Database, deps: any) {
           eq(internalChatConversationMembers.accountId, agentAccount.id),
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
-      })) as any;
+      })) as InternalChatConversationMember | null;
       if (membership === null || membership === undefined) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
@@ -220,7 +221,7 @@ export function createInternalChatListing(db: Database, deps: any) {
           eq(internalChatConversationMembers.accountId, input.accountId),
           eq(internalChatConversationMembers.conversationId, input.conversationKey),
         ),
-      })) as any;
+      })) as InternalChatConversationMember | null;
       if (membership === null || membership === undefined) {
         throw new Error('Conversation not found: ' + input.conversationKey);
       }
