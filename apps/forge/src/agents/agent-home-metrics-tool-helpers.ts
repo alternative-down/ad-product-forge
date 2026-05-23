@@ -55,18 +55,6 @@ export function mergeToolLogMessages(messages: ToolLogMessage[]): ToolLogMessage
   return merged;
 }
 
-export type ToolInvocation = {
-  toolCallId?: string;
-  toolName?: string;
-  args?: unknown;
-  [key: string]: unknown;
-};
-
-export type ToolResult = {
-  toolCallId?: string;
-  result?: unknown;
-  [key: string]: unknown;
-};
 
 /**
  * Builds a flat list of tool-call and tool-result parts from message metadata.
@@ -80,6 +68,19 @@ export type ToolResult = {
  *
  * Pure function — no I/O, no side effects.
  */
+type ToolInvocation = {
+  toolCallId?: string;
+  toolName?: string;
+  args?: unknown;
+  [key: string]: unknown;
+};
+
+type ToolResult = {
+  toolCallId?: string;
+  result?: unknown;
+  [key: string]: unknown;
+};
+
 export function buildThreadToolInvocationParts(
   metadata: Record<string, unknown> | undefined,
 ): Array<Record<string, unknown>> {
