@@ -9,7 +9,6 @@
  *
  * Security: requires X-FORGE-ADMIN-API-KEY header (enforced by http/server.ts).
  */
-import type http from 'node:http';
 import { Readable } from 'node:stream';
 
 import type { HttpHandler, HttpResponse } from '../../../http/server';
