@@ -6,6 +6,14 @@ import { z } from 'zod';
 import type { HttpRequest } from '../../../http/server';
 import type { createWebhookStore } from '../../../webhooks/store';
 
+// Extract error message for user-facing display
+function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
+
+
 const createRouteSchema = z.object({
   agentId: z.string().min(1),
   name: z.string().min(1),
@@ -37,9 +45,9 @@ export function registerWebhookAdminRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/webhooks/route/create',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -70,9 +78,9 @@ export function registerWebhookAdminRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/webhooks/routes',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -90,9 +98,9 @@ export function registerWebhookAdminRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/webhooks/route/deactivate',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -123,9 +131,9 @@ export function registerWebhookAdminRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/webhooks/events',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -143,11 +151,10 @@ export function registerWebhookAdminRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/webhooks/event/mark-processed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
