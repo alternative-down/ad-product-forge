@@ -5,21 +5,45 @@
  */
 
 import { parseJsonBody, jsonResponse } from '../../index';
+import type { Database } from '../../../../database/schema';
+import type { HttpHandler } from '../../../../http/server';
+
+// Extract error message for user-facing display
+function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
+
+// ─── Typed interfaces for lifecycle ops ────────────────────────────────────
+interface RegistryEntry {
+  runner: {
+    notifyExternalEvent: (opts: unknown) => void;
+    forceIdle: () => Promise<void>;
+  };
+}
+
+interface Registry {
+  get(agentId: string): RegistryEntry | null;
+  add(db: Database, runtime: unknown): Promise<void>;
+}
+
+interface Ops {
+  loadAgent: (db: Database, config: Record<string, unknown>) => Promise<unknown>;
+  registry: Registry;
+}
+
 import { agentActionSchema } from '../../schemas/agents';
 
 export function registerLifecycleOps(
-  httpServer: any,
+  httpServer: {
+    registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
+  },
   input: {
-    db: unknown;
-    loaderConfig: unknown;
+    db: Database;
+    loaderConfig: Record<string, unknown>;
   },
-  ops: {
-    loadAgent: (db: unknown, config: unknown) => Promise<unknown>;
-    registry: {
-      add: (db: unknown, runtime: unknown) => Promise<void>;
-      get: (agentId: string) => unknown;
-    };
-  },
+  ops: Ops,
 ) {
   // POST /admin/agent/reload
   httpServer.registerRoute({
@@ -27,13 +51,13 @@ export function registerLifecycleOps(
     path: '/admin/agent/reload',
     handler: async (request: { bodyText: string }) => {
       try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
-        const config = input.loaderConfig as Record<string, unknown>;
+        const { agentId } = parseJsonBody(request.bodyText ?? '', agentActionSchema);
+        const config = input.loaderConfig;
         const runtime = await ops.loadAgent(input.db, { ...config, agentId });
         await ops.registry.add(input.db, runtime);
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
-        return jsonResponse({ error: String(serializeError(error)) }, 500);
+        return jsonResponse({ error: errorMsg(error) }, 500);
       }
     },
   });
@@ -44,7 +68,7 @@ export function registerLifecycleOps(
     path: '/admin/agent/force-idle',
     handler: async (request: { bodyText: string }) => {
       try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+        const { agentId } = parseJsonBody(request.bodyText ?? '', agentActionSchema);
         const entry = ops.registry.get(agentId);
         if (entry !== null) {
           const runner = (entry as { runner: { forceIdle: () => Promise<void> } }).runner;
@@ -52,7 +76,7 @@ export function registerLifecycleOps(
         }
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
-        return jsonResponse({ error: String(serializeError(error)) }, 500);
+        return jsonResponse({ error: errorMsg(error) }, 500);
       }
     },
   });
@@ -63,14 +87,14 @@ export function registerLifecycleOps(
     path: '/admin/agent/rewakeup',
     handler: async (request: { bodyText: string }) => {
       try {
-        const { agentId } = parseJsonBody(request.bodyText, agentActionSchema);
+        const { agentId } = parseJsonBody(request.bodyText ?? '', agentActionSchema);
         let entry = ops.registry.get(agentId);
 
         if (entry !== null) {
           const runner = (entry as { runner: { forceIdle: () => Promise<void> } }).runner;
           await runner.forceIdle();
         } else {
-          const config = input.loaderConfig as Record<string, unknown>;
+          const config = input.loaderConfig;
           const runtime = await ops.loadAgent(input.db, { ...config, agentId });
           await ops.registry.add(input.db, runtime);
           entry = ops.registry.get(agentId);
@@ -89,9 +113,8 @@ export function registerLifecycleOps(
 
         return jsonResponse({ success: true, agentId });
       } catch (error: unknown) {
-        return jsonResponse({ error: String(serializeError(error)) }, 500);
+        return jsonResponse({ error: errorMsg(error) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';
