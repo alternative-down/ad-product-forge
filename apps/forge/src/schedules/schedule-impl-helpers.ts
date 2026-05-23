@@ -14,20 +14,6 @@ const scheduleBaseSchema = {
   wakeWhenRunning: z.boolean().optional(),
 } as const;
 
-export const createScheduleSchema = z.discriminatedUnion('scheduleType', [
-  z.object({
-    ...scheduleBaseSchema,
-    scheduleType: z.literal('cron'),
-    cronExpression: z.string().min(1),
-    scheduledDate: z.undefined().optional(),
-  }),
-  z.object({
-    ...scheduleBaseSchema,
-    scheduleType: z.literal('date'),
-    scheduledDate: z.string().min(1),
-    cronExpression: z.undefined().optional(),
-  }),
-]);
 
 export const updateScheduleSchema = z.discriminatedUnion('scheduleType', [
   z.object({
@@ -46,22 +32,6 @@ export const updateScheduleSchema = z.discriminatedUnion('scheduleType', [
   }),
 ]);
 
-export const createScheduleForAgentSchema = z.discriminatedUnion('scheduleType', [
-  z.object({
-    ...scheduleBaseSchema,
-    targetAgentId: z.string().min(1),
-    scheduleType: z.literal('cron'),
-    cronExpression: z.string().min(1),
-    scheduledDate: z.undefined().optional(),
-  }),
-  z.object({
-    ...scheduleBaseSchema,
-    targetAgentId: z.string().min(1),
-    scheduleType: z.literal('date'),
-    scheduledDate: z.string().min(1),
-    cronExpression: z.undefined().optional(),
-  }),
-]);
 
 // ── Authorization ────────────────────────────────────────────────────────────
 

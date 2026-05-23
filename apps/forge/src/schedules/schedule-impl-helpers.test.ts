@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import {
-  createScheduleSchema,
   updateScheduleSchema,
-  createScheduleForAgentSchema,
   isScheduleEditor,
   requireScheduleEditor,
   requireScheduleDeleter,
 } from './schedule-impl-helpers';
+import {
+  createScheduleSchema,
+  createScheduleForAgentSchema,
+} from './schemas';
 
 const makeSchedule = (overrides: any = {}): any =>
   ({
