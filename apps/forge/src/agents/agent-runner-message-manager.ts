@@ -16,7 +16,7 @@ export interface RunnerMessageManagerState {
   pendingRunMessages: Map<string, AgentWakeEvent>;
 }
 
-export function createRunnerMessageManagerState(): RunnerMessageManagerState {
+function createRunnerMessageManagerState(): RunnerMessageManagerState {
   return {
     flushedRunEventKeys: new Set<string>(),
     flushedRunEventKeyOrder: [],

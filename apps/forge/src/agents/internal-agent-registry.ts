@@ -56,14 +56,7 @@ function createPerAgentCoolifyManager(db: Database): CoolifyManager {
  * - Fresh routeCleanups map (no route conflicts between agents)
  * - Shared global state: db, httpServer, publicBaseUrl, integrations
  */
-export function createPerAgentGitHubManager(config: {
-  db: Database;
-  httpServer: Parameters<typeof createGitHubAppManager>[0]['httpServer'];
-  publicBaseUrl: string;
-  integrations: Parameters<typeof createGitHubAppManager>[0]['integrations'];
-}) {
-  return createGitHubAppManager(config);
-}
+
 
 function createInternalAgentRegistry() {
   const agents = new Map<string, InternalAgentEntry>();
@@ -109,16 +102,15 @@ function createInternalAgentRegistry() {
     // Each running agent gets its own fresh managers — lifetime matched to this agent.
     const _emailMailboxes = createPerAgentEmailManager(db);
     const _coolify = createPerAgentCoolifyManager(db);
-    const _githubApps = createPerAgentGitHubManager({
-      db,
-      // httpServer and integrations may not be set — guard with nullish coalescing
-      // These fields are optional on the extended config type
-      httpServer:
-        (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? (null as never),
-      integrations:
-        (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? (null as never),
-      publicBaseUrl: '',
-    });
+    const _githubApps = createGitHubAppManager({
+          db,
+          // httpServer and integrations may not be set — guard with nullish coalescing
+          // These fields are optional on the extended config type
+          httpServer:
+            (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.httpServer ?? (null as never),
+          integrations:
+            (loaderConfig as AgentLoaderConfig & GitHubManagerConfig)?.integrations ?? (null as never),
+        });
 
     const entry: InternalAgentEntry = {
       runtime,
@@ -138,12 +130,11 @@ function createInternalAgentRegistry() {
         }
         const reloadEmailMailboxes = createPerAgentEmailManager(db);
         const reloadCoolify = createPerAgentCoolifyManager(db);
-        const reloadGitHubApps = createPerAgentGitHubManager({
+        const reloadGitHubApps = createGitHubAppManager({
           db,
-          // Inside the null-check, loaderConfig is guaranteed non-null
+            // Inside the null-check, loaderConfig is guaranteed non-null
           httpServer: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).httpServer,
           integrations: (loaderConfig as AgentLoaderConfig & GitHubManagerConfig).integrations,
-          publicBaseUrl: '',
         });
 
         return await loadAgent(db, {
