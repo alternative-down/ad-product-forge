@@ -246,11 +246,11 @@ async function initAgentRegistry() {
       scope: 'init-agent-registry',
       level: 'error',
       message: 'Error initializing agent registry',
-      context: { error: String(serializeError(error)) },
+      context: { error: errorMsg(error) },
     });
     process.exit(1);
   }
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 initAgentRegistry();
