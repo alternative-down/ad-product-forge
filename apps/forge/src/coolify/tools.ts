@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
@@ -25,12 +26,12 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             level: 'error',
             message: 'list_coolify_applications error',
             context: {
-              error: String(serializeError(error)),
+              error: errorMsg(error),
             },
           });
           return {
             success: false as const,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
           };
         }
       },
@@ -54,13 +55,13 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             level: 'error',
             message: 'start_coolify_application error',
             context: {
-              error: String(serializeError(error)),
+              error: errorMsg(error),
             },
           });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
           };
         }
       },
@@ -84,13 +85,13 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             level: 'error',
             message: 'stop_coolify_application error',
             context: {
-              error: String(serializeError(error)),
+              error: errorMsg(error),
             },
           });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
           };
         }
       },
@@ -123,13 +124,13 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
             level: 'error',
             message: 'get_coolify_application_logs error',
             context: {
-              error: String(serializeError(error)),
+              error: errorMsg(error),
             },
           });
           return {
             success: false as const,
             applicationUuid: input.applicationUuid,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
           };
         }
       },
@@ -138,4 +139,3 @@ export function createCoolifyTools(coolify: CoolifyManager, allowedToolIds?: Set
 
   return tools;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';

@@ -1,4 +1,5 @@
 import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/schema';
@@ -150,11 +151,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             scope: 'micro-erp',
             level: 'error',
             message: 'MicroERP tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Try again in a moment. If the problem persists, verify the finance ledger is available.',
           };
         }
@@ -176,11 +177,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             scope: 'micro-erp',
             level: 'error',
             message: 'MicroERP tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Review the selected filters and period, then try again.',
           };
         }
@@ -202,11 +203,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             scope: 'micro-erp',
             level: 'error',
             message: 'MicroERP tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Try again in a moment. If the problem persists, verify the contract store is available.',
           };
         }
@@ -432,11 +433,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             scope: 'micro-erp',
             level: 'error',
             message: 'MicroERP tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use list_company_cash to confirm the movement exists and whether it is planned or already posted.',
           };
         }
@@ -476,11 +477,11 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
             scope: 'micro-erp',
             level: 'error',
             message: 'MicroERP tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use list_internal_agent_contracts to confirm the agent contract exists and is not currently running.',
           };
         }
@@ -490,4 +491,3 @@ export function createMicroErpTools(db: Database, allowedToolIds?: Set<string> |
 
   return tools as Record<string, Tool<unknown, unknown>>;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
