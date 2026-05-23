@@ -6,6 +6,14 @@ import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../dat
 import { createId } from '../utils/id';
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
+// Extract error message for user-facing display
+function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
+
+
 // WebhookEvent is imported from the database schema (InferModel<typeof webhookEvents>)
 
 export function createWebhookStore(db: Database) {
@@ -89,7 +97,7 @@ export function createWebhookStore(db: Database) {
         scope: 'webhooks-store',
         level: 'error',
         message: 'deactivateRoute DB write failed',
-        context: { routeId, error: String(serializeError(err)) },
+        context: { routeId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -128,7 +136,7 @@ export function createWebhookStore(db: Database) {
         context: {
           routeId: input.routeId,
           agentId: input.agentId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -165,7 +173,7 @@ export function createWebhookStore(db: Database) {
         scope: 'webhooks-store',
         level: 'error',
         message: 'markProcessed DB write failed',
-        context: { eventId, error: String(serializeError(err)) },
+        context: { eventId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -182,7 +190,7 @@ export function createWebhookStore(db: Database) {
         scope: 'webhooks-store',
         level: 'error',
         message: 'markFailed DB write failed',
-        context: { eventId, error: String(serializeError(err)) },
+        context: { eventId, error: errorMsg(err) },
       });
       throw err;
     }
