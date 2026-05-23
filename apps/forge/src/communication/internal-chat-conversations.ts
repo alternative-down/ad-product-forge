@@ -91,7 +91,7 @@ export function createInternalChatConversations(db: Database) {
     }
 
     try {
-      await db.insert(internalChatConversationMembers).values([
+      const newMembers = [
         {
           conversationId,
           accountId: leftAccountId,
@@ -106,7 +106,8 @@ export function createInternalChatConversations(db: Database) {
           createdAt: now,
           updatedAt: now,
         },
-      ] as any);
+      ];
+      await db.insert(internalChatConversationMembers).values(newMembers);
     } catch (error) {
       logInternalChatConvError('ensureDirectConversation insert members', error, {
         conversationId,
