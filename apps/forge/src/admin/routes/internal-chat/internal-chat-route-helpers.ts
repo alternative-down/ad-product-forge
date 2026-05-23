@@ -108,13 +108,3 @@ export type RouteOptions = {
   handler: HttpHandler;
 };
 
-/**
- * Registers a route with error handling applied to the handler.
- */
-export function registerRoute(
-  httpServer: { registerRoute: (route: RouteOptions) => void },
-  options: RouteOptions,
-): void {
-  const wrapped = withRouteErrorHandler('admin', options.path, options.handler);
-  httpServer.registerRoute({ ...options, handler: wrapped });
-}

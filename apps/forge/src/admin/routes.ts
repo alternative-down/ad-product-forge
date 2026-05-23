@@ -74,9 +74,7 @@ import {
 import {
   createRoleSchema as _createRoleSchema,
   roleToolPermissionSchema as _roleToolPermissionSchema,
-  roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema,
-  mcpServerFieldsSchema as _mcpServerFieldsSchema,
-} from './schemas';
+  roleWorkflowPermissionSchema as _roleWorkflowPermissionSchema} from './schemas';
 import {
   updateRoleSchema as _updateRoleSchema,
   deleteRoleSchema as _deleteRoleSchema,
