@@ -1,3 +1,4 @@
+import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@forge-runtime/core', () => ({
@@ -52,9 +53,7 @@ describe('registerMcpOps', () => {
   describe('POST /admin/agent/mcp/create', () => {
     it('registers the route', async () => {
       const { registerMcpOps } = await import('./mcp-ops');
-      registerMcpOps(httpServer as Parameters<typeof registerMcpOps>[0], db as any, {
-        loaderConfig: {},
-      });
+      registerMcpOps(httpServer as any, db as any, {} as unknown as AgentLoaderConfig);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({
           method: 'POST',
@@ -65,7 +64,7 @@ describe('registerMcpOps', () => {
 
     it('creates mcp server config and agent mcp config', async () => {
       const { registerMcpOps } = await import('./mcp-ops');
-      registerMcpOps(httpServer as any, db as any, { loaderConfig: {} });
+      registerMcpOps(httpServer as any, db as any, {} as unknown as AgentLoaderConfig);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
 
       const response = await handler(
@@ -97,7 +96,7 @@ describe('registerMcpOps', () => {
         schema: { mcpServerConfigs: {}, agentMcpConfigs: {} },
       };
       const { registerMcpOps } = await import('./mcp-ops');
-      registerMcpOps(httpServer as any, brokenDb as any, { loaderConfig: {} });
+      registerMcpOps(httpServer as any, brokenDb as any, {} as unknown as AgentLoaderConfig);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
 
       const response = await handler(
@@ -121,7 +120,7 @@ describe('registerMcpOps', () => {
         schema: { mcpServerConfigs: {}, agentMcpConfigs: {} },
       };
       const { registerMcpOps } = await import('./mcp-ops');
-      registerMcpOps(httpServer as any, httpDb as any, { loaderConfig: {} });
+      registerMcpOps(httpServer as any, httpDb as any, {} as unknown as AgentLoaderConfig);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/mcp/create');
 
       const response = await handler(
