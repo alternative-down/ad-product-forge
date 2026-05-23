@@ -4,6 +4,7 @@
  */
 
 import { ZodError } from 'zod';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 import { jsonResponse } from '../index';
@@ -67,9 +68,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent list route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -91,9 +92,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent get route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -115,9 +116,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent conversations route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -140,9 +141,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent execution-steps route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -165,9 +166,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent thread-messages route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -196,9 +197,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent ltm-thread-messages route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -220,9 +221,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent runtime-memory route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -244,9 +245,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent om-debug-export route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -279,9 +280,9 @@ export function registerAgentReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent conversation-messages route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
