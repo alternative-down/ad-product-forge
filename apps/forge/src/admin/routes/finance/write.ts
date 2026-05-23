@@ -61,7 +61,7 @@ type CompanyCash = {
   postPlannedEntry: (entryId: string, opts?: { effectiveAt?: number }) => Promise<unknown>;
   cancelPlannedEntry: (entryId: string) => Promise<unknown>;
 };
-import { serializeError, errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 
 type CompanyPayables = {
   createRecurringPayable: (input: {

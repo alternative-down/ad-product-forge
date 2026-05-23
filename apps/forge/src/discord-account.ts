@@ -435,4 +435,4 @@ export function createDiscordProvider(config: {
   };
 }
 
-import { serializeError, errorMsg } from './agents/agent-runner-error-formatting';
+import { errorMsg } from './agents/agent-runner-error-formatting';

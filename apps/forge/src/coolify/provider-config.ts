@@ -17,7 +17,7 @@ export interface ProviderConfig {
   destinationId: string;
   applicationsBaseDomain: string | null;
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export async function getProviderConfig(
   integrations: ReturnType<typeof createSystemIntegrationStore>,

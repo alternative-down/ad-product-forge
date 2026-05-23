@@ -48,7 +48,6 @@ interface ReadModel {
     offset: number;
   }) => Promise<unknown>;
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 export function registerAgentReadRoutes(
   httpServer: {

@@ -168,7 +168,7 @@ export async function loadCommunicationProviders(
 
   return providers;
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export function parseProviderCredentials(
   providerType: keyof ProviderCredentialsMap,

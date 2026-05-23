@@ -4,7 +4,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { buildRequestError } from './helpers';
 
 export interface CoolifyErrorContext {
