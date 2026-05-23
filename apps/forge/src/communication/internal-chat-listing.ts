@@ -36,7 +36,6 @@ type MessageRowBase = {
   content: string;
   createdAt: number;
 };
-type _MessageRowFull = MessageRowBase & { conversationId: string };
 
 interface MessageListItem {
   messageId: string;
@@ -50,11 +49,8 @@ interface MessageListItem {
   authorDisplayName: string;
   replyToMessageId: string | null;
 }
-interface _MessageListItemWithConversation extends MessageListItem {
-  conversationId: string;
-}
 
-export function createInternalChatListing(db: Database, deps: any) {
+export function createInternalChatListing(db: Database, deps: InternalChatConversationListingDeps) {
   async function getMessages(input: {
     agentId: string;
     conversationKey: string;
