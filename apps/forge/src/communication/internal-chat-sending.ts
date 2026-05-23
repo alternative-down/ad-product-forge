@@ -79,7 +79,7 @@ export interface SendingDeps {
     ) => Promise<{ stream: unknown; contentType: string | undefined }>;
   };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
 
 export function createChatSending(deps: SendingDeps) {
   const { db, accounts, serviceHelpers, groups, connection, reads, attachments } = deps;
@@ -240,7 +240,7 @@ export function createChatSending(deps: SendingDeps) {
         scope: 'internal-chat-sending',
         level: 'error',
         message: 'Failed to execute sendMessage',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
