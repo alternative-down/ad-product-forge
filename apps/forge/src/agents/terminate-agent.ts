@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { serializeError, errorMsg } from './agent-runner-error-formatting';
 import { rm } from 'node:fs/promises';
 import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
@@ -61,7 +61,7 @@ export async function terminateInternalAgent(
       level: 'warn',
       context: { agentId: input.agentId },
       message:
-        'refundActiveContractBalance failed (non-fatal): ' + String(serializeError(err).message),
+        'refundActiveContractBalance failed (non-fatal): ' + errorMsg(err),
     });
   }
 
@@ -84,7 +84,7 @@ export async function terminateInternalAgent(
         level: 'warn',
         context: { agentId: input.agentId },
         message:
-          'internal chat cleanup failed (non-fatal): ' + String(serializeError(chatErr).message),
+          'internal chat cleanup failed (non-fatal): ' + errorMsg(chatErr),
       });
     }
   } catch (err) {
@@ -92,7 +92,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'error',
       context: { agentId: input.agentId },
-      message: 'external cleanup failed during terminate: ' + String(serializeError(err).message),
+      message: 'external cleanup failed during terminate: ' + errorMsg(err),
     });
 
     // Compensating transaction: attempt cleanup of whatever succeeded before the failure.
@@ -106,7 +106,7 @@ export async function terminateInternalAgent(
         context: { agentId: input.agentId },
         message:
           'internal chat cleanup failed during rollback: ' +
-          String(serializeError(chatErr).message),
+          errorMsg(chatErr),
       });
     }
 
@@ -125,7 +125,7 @@ export async function terminateInternalAgent(
         context: { agentId: input.agentId },
         message:
           'db cleanup transaction failed during rollback: ' +
-          String(serializeError(deleteErr).message),
+          errorMsg(deleteErr),
       });
     }
     getInternalAgentRegistry().remove(input.agentId);
@@ -140,7 +140,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'warn',
       context: { agentId: input.agentId },
-      message: 'internal chat cleanup failed (non-fatal): ' + String(serializeError(err).message),
+      message: 'internal chat cleanup failed (non-fatal): ' + errorMsg(err),
     });
   }
 
@@ -166,7 +166,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'warn',
       context: { agentId: input.agentId },
-      message: 'workspace rm failed (non-fatal): ' + String(serializeError(rmErr).message),
+      message: 'workspace rm failed (non-fatal): ' + errorMsg(rmErr),
     });
   }
 
