@@ -1,3 +1,4 @@
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createId } from '../utils/id';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -11,7 +12,7 @@ import {
 } from '../database/schema';
 import { decryptSecret, encryptSecret } from '../encryption/crypto';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+// import removed
 
 const llmProfileSchema = z.object({
   name: z.string().min(1),
@@ -54,7 +55,7 @@ export function createLlmSettingsStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to list LLM profiles',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -285,7 +286,7 @@ export function createLlmSettingsStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to query LLM defaults',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -306,7 +307,7 @@ export function createLlmSettingsStore(db: Database) {
           scope: 'llm',
           level: 'error',
           message: 'Failed to update LLM defaults',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
         throw err;
       }
@@ -325,7 +326,7 @@ export function createLlmSettingsStore(db: Database) {
           scope: 'llm',
           level: 'error',
           message: 'Failed to insert LLM defaults',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
         throw err;
       }
@@ -344,7 +345,7 @@ export function createLlmSettingsStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to get LLM defaults row',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
