@@ -8,12 +8,14 @@ import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import { reloadAgentMcp } from '../../../routes/mcp-helpers';
 import type { HttpHandler } from '../../../../http/server';
+import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
+import type { Database } from '../../../../database/schema';
 
 export function registerMcpOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
   },
-  db: any,
+  db: Database,
   loaderConfig: any,
 ) {
   // POST /admin/agent/mcp/create
@@ -26,7 +28,7 @@ export function registerMcpOps(
         const serverId = createId();
         const configId = createId();
 
-        await db.insert(db.schema.mcpServerConfigs).values({
+        await db.insert(mcpServerConfigs).values({
           id: serverId,
           name: body.name,
           description: body.description ?? '',
@@ -42,7 +44,7 @@ export function registerMcpOps(
           updatedAt: Date.now(),
         });
 
-        await db.insert(db.schema.agentMcpConfigs).values({
+        await db.insert(agentMcpConfigs).values({
           id: configId,
           agentId: body.agentId,
           serverId,
