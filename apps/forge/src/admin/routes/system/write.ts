@@ -4,6 +4,7 @@
  */
 
 import { syncOpenAICodexCredential, syncAnthropicCredential } from '@forge-runtime/core';
+
 import { forgeDebug } from '../debug';
 import { buildOauthState } from './oauth-state';
 import { eq } from 'drizzle-orm';
@@ -42,7 +43,7 @@ interface SystemWriteRoutesInput {
   registry: ReturnType<typeof getInternalAgentRegistry>;
   loadAgent: typeof loadAgent;
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../../../agents/agent-runner-error-formatting';
 
 export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
   const {
@@ -81,9 +82,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/settings/upsert',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -165,9 +166,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/mcp/upsert',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -198,9 +199,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/mcp/delete',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -222,9 +223,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/skills/upload',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -246,9 +247,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/skills/delete',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -266,9 +267,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/llm/price/upsert',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -286,9 +287,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/integration/upsert',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -307,9 +308,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/integration/delete',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -327,9 +328,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/llm/profile/upsert',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -348,9 +349,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/llm/profile/delete',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -368,9 +369,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/llm/defaults/update',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -403,12 +404,12 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
               scope: 'admin',
               level: 'error',
               message: 'LLM provider sync failed',
-              context: { error: String(serializeError(err)) },
+              context: { error: errorMsg(err) },
             });
             results.push({
               providerId,
               synced: false,
-              error: String(serializeError(err)),
+              error: errorMsg(err),
             });
           }
         }
@@ -419,9 +420,9 @@ export function registerSystemWriteRoutes(input: SystemWriteRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/oauth/sync',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });

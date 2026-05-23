@@ -4,6 +4,7 @@
  */
 
 import { z, ZodError } from 'zod';
+
 import { forgeDebug } from '../debug';
 import type { HttpRequest, HttpHandler } from '../../../http/server';
 import { jsonResponse, parseJsonBody } from '../index';
@@ -60,7 +61,7 @@ type CompanyCash = {
   postPlannedEntry: (entryId: string, opts?: { effectiveAt?: number }) => Promise<unknown>;
   cancelPlannedEntry: (entryId: string) => Promise<unknown>;
 };
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../../../agents/agent-runner-error-formatting';
 
 type CompanyPayables = {
   createRecurringPayable: (input: {
@@ -137,9 +138,9 @@ export function registerFinanceWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance investment/create route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -199,9 +200,9 @@ export function registerFinanceWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance payable/create route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -230,9 +231,9 @@ export function registerFinanceWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance ledger/post route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -257,9 +258,9 @@ export function registerFinanceWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance ledger/cancel route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -282,9 +283,9 @@ export function registerFinanceWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance recurring-payable/set-active route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });

@@ -1,4 +1,5 @@
 import { forgeDebug } from './debug';
+
 import { access } from 'node:fs/promises';
 import { z } from 'zod';
 
@@ -6,7 +7,7 @@ export function normalizeOptionalText(value?: string): string | null {
   const normalized: string | null = value?.trim() ?? null;
   return (normalized ?? '') !== '' ? normalized : null;
 }
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../../agents/agent-runner-error-formatting';
 
 export function normalizeJsonText(
   value: string | undefined,
@@ -172,7 +173,7 @@ export async function fsPathExists(path: string): Promise<boolean> {
       scope: 'admin-routes-helpers',
       level: 'warn',
       message: '[helpers] fsPathExists failed',
-      context: { error: String(serializeError(err)) },
+      context: { error: errorMsg(err) },
     });
     // Safe: path does not exist — return false to signal absence
     return false;
