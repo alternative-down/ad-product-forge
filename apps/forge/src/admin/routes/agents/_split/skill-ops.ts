@@ -42,10 +42,7 @@ const deleteAgentSkillSchema = z
   })
   .strict();
 
-function errorMsg(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
+import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
 export function registerSkillOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;

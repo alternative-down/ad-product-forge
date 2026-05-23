@@ -17,10 +17,7 @@ import type { Database } from '../../../../database/schema';
 import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
 import type { GitHubAppManager } from '../../../../github/manager';
 
-function errorMsg(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
+import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
 export function registerConfigOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;

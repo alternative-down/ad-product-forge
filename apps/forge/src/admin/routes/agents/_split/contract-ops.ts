@@ -22,10 +22,7 @@ export interface ContractOpsDeps {
   };
 }
 
-function errorMsg(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
+import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
 export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
   // POST /admin/agent/contract/top-up
   httpServer.registerRoute({
