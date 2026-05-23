@@ -11,16 +11,20 @@ import {
   updateAgentGitHubManifestConfigSchema,
   updateAgentConfigSchema,
 } from '../../schemas/agents';
+import { agents } from '../../../../database/schema';
+import type { Database } from '../../../../database/schema';
+import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
+import type { GitHubAppManager } from '../../../../github/manager';
 import type { HttpHandler } from '../../../../http/server';
 
 export function registerConfigOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
   },
-  db: any,
+  db: Database,
   input: {
-    githubApps?: any;
-    loaderConfig: any;
+    githubApps?: GitHubAppManager | null;
+    loaderConfig: AgentLoaderConfig;
   },
 ) {
   // POST /admin/agent/github-manifest-config/update
@@ -66,8 +70,7 @@ export function registerConfigOps(
         if (agent === null || agent === undefined) {
           return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
         }
-        await db
-          .update(sql`agents`)
+        await db.update(agents)
           .set({
             name: body.name,
             description: body.description ?? null,
