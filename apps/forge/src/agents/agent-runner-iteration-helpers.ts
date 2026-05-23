@@ -11,7 +11,6 @@
  */
 import { collectStepTextParts } from './agent-runner-control-directives';
 
-export { collectStepTextParts };
 
 // ─── Loop signature ────────────────────────────────────────────────────────────
 
