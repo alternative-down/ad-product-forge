@@ -1,5 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg, serializeError } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/schema';
@@ -392,7 +392,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
-        message: `deleteSchedule failed: ${serializeError(error)}`,
+        message: `deleteSchedule failed: ${errorMsg(error)}`,
         context: { agentId, scheduleId },
       });
       throw error;
@@ -501,7 +501,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({
         scope: 'schedules-manager',
         level: 'error',
-        message: `deleteCron failed: ${serializeError(error)}`,
+        message: `deleteCron failed: ${errorMsg(error)}`,
         context: { editorAgentId, scheduleId },
       });
       throw error;
@@ -519,7 +519,7 @@ export function createAgentScheduleManager(input: {
         forgeDebug({
           scope: 'schedules',
           level: 'error',
-          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${serializeError(error)}`,
+          message: `removeAgent: failed to delete schedule ${scheduleRecord.scheduleId}: ${errorMsg(error)}`,
           context: { agentId, scheduleId: scheduleRecord.scheduleId },
         });
         throw error;
@@ -533,7 +533,7 @@ export function createAgentScheduleManager(input: {
       forgeDebug({
         scope: 'schedules',
         level: 'error',
-        message: `removeAgent: failed to delete heartbeat schedule: ${serializeError(error)}`,
+        message: `removeAgent: failed to delete heartbeat schedule: ${errorMsg(error)}`,
         context: { agentId },
       });
       throw error;

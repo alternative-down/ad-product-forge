@@ -206,6 +206,9 @@ type RuntimeMemoryOutput = {
   };
 } | null;
 
+  // Workspace skills parallel map — populated in listAgents
+  const skillsByAgentId = new Map<string, Awaited<ReturnType<typeof listAgentWorkspaceSkills>>>();
+
 export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentListReadModel {
   const { db, registry, workspaceBasePath } = deps;
   const systemSettings = createSystemSettingsStore(db);
@@ -286,6 +289,14 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       db.query.agentRoles.findMany(),
       db.query.llmProfiles.findMany(),
     ]);
+    // Parallel fetch workspace skills for all agents (N+1 fix)
+    const agentRowsSkills = agentRows
+      ? await Promise.all(agentRows.map((agent) => listAgentWorkspaceSkills(workspaceBasePath, agent)))
+      : [];
+    for (let i = 0; i < (agentRows ?? []).length; i++) {
+      skillsByAgentId.set(agentRows![i].id, agentRowsSkills[i]);
+    }
+
 
     const unreadNotificationCountByAgentId = new Map(
       unreadNotificationRows.map((row) => [row.agentId, row.count]),
@@ -632,7 +643,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       recentExecutionSteps: recentSteps_,
       recentNotifications: recentNotifications_,
       githubProvisioning,
-      skills: await listAgentWorkspaceSkills(workspaceBasePath, agent),
+      skills: skillsByAgentId.get(agent.id) ?? [],
       activeContract:
         activeContractRow !== null && activeContractRow !== undefined
           ? {
