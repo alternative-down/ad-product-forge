@@ -210,9 +210,6 @@ export function createInternalChatService(db: Database) {
   const listing = createInternalChatListing(db, {
     getRequiredAgentAccount,
     getRequiredExternalAccount,
-    listGroupMembersOrDmPeers,
-    listGroupMembersOrDmPeersByAccount,
-    readMessageAttachments,
   });
   const listConversations = listing.listConversations;
 
