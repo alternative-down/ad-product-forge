@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
-import { serializeError } from './agent-runner-error-formatting';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from './agent-runner-error-formatting';
 import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -579,7 +578,7 @@ export function createAgentLongTermMemory(input: {
       const nowIso = new Date().toISOString();
 
       state.lastRunAt = nowIso;
-      state.lastRunError = String(serializeError(error).message);
+      state.lastRunError = errorMsg(error);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
       forgeDebug({
