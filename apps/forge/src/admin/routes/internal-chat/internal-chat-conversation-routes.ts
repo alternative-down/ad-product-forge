@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (conversation & message routes).
  */
 
-import type { HttpHandler, HttpResponse } from '../../../http/server';
+import type { HttpResponse } from '../../../http/server';
 import type { InternalChatConversation } from '../../../database/schema';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
@@ -152,17 +152,6 @@ function buildCreateConversationHandler(internalChat: InternalChatService): any 
     ) => (...args: unknown[]) => Promise<HttpResponse>
   )('admin', '/admin/internal-chat/conversation/create', async (request: InternalChatRequest) => {
     const body = parseJsonBody(request.bodyText, createInternalChatConversationSchema);
-    if (false) {
-      // removed — updateInternalChatConversationSchema has no type field
-      const conversation = await internalChat.ensureDirectConversationByAccount({
-        accountId: body.accountId,
-        participantAccountId: body.memberKeys[0] as string,
-      });
-      return jsonResponse({
-        conversationId: conversation.conversationId,
-        conversationKey: conversation.conversationKey,
-      });
-    }
     const conversationKey = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const result = await internalChat.createExternalChatGroupWithMembers({
       accountId: body.accountId,
@@ -238,7 +227,7 @@ function buildArchiveConversationHandler(internalChat: InternalChatService): any
         accountId: body.accountId,
         conversationId: body.conversationId,
         getRequiredConversationForAccount: async () =>
-          ({ targetKey: body.conversationId }) as unknown as InternalChatConversation,
+          await ({ targetKey: body.conversationId }) as unknown as InternalChatConversation,
       }),
     );
   });
