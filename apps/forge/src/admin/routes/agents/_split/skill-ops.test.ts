@@ -59,7 +59,7 @@ describe('registerSkillOps', () => {
   describe('POST /admin/agent/skills/publish-to-global', () => {
     it('registers the route', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/skills/publish-to-global' }),
       );
@@ -67,7 +67,7 @@ describe('registerSkillOps', () => {
 
     it('publishes agent skill to global catalog', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/publish-to-global');
 
       const response = await handler(makeRequest({ agentId: 'agent-123', skillName: 'my-skill' }));
@@ -101,7 +101,7 @@ describe('registerSkillOps', () => {
         new Error('Publish failed'),
       );
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/publish-to-global');
 
       const response = await handler(makeRequest({ agentId: 'agent-123', skillName: 'skill' }));
@@ -113,7 +113,7 @@ describe('registerSkillOps', () => {
   describe('POST /admin/agent/skills/install-global', () => {
     it('registers the route', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/skills/install-global' }),
       );
@@ -121,7 +121,7 @@ describe('registerSkillOps', () => {
 
     it('installs global skill to agent workspace', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/install-global');
 
       const response = await handler(
@@ -150,7 +150,7 @@ describe('registerSkillOps', () => {
   describe('POST /admin/agent/skills/upload', () => {
     it('registers the route', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/skills/upload' }),
       );
@@ -158,7 +158,7 @@ describe('registerSkillOps', () => {
 
     it('installs skills from base64 zip', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/upload');
 
       const response = await handler(makeRequest({ skillsZipBase64: 'UEsDBBQACQAAAA==' }));
@@ -174,7 +174,7 @@ describe('registerSkillOps', () => {
   describe('POST /admin/agent/skills/delete', () => {
     it('registers the route', async () => {
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/skills/delete' }),
       );
@@ -184,7 +184,7 @@ describe('registerSkillOps', () => {
       const { deleteGlobalSkill } = await import('../../../../agents/global-skills');
       vi.mocked(deleteGlobalSkill).mockResolvedValue(undefined);
       const { registerSkillOps } = await import('./skill-ops');
-      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' });
+      registerSkillOps(httpServer as any, db as any, { workspaceBasePath: '/w' } as any);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/skills/delete');
 
       const response = await handler(makeRequest({ agentId: 'agent-123', skillName: 'old-skill' }));
