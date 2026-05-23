@@ -11,7 +11,7 @@ import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './hel
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import type { Database } from '../../database/index';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 
 export interface AgentDebugReadModelDeps {
@@ -70,7 +70,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
         scope: 'admin-read-model',
         level: 'warn',
         message: 'getAgentRuntimeStatus: LTM recall not available',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       return null;
     });
