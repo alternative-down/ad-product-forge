@@ -28,7 +28,6 @@ import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-ch
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { formatWorkingMemoryValue, isTextPart } from './helpers';
 import { createSystemSettingsStore } from '../../system-settings/store';
-import type { SystemSettingsStore } from '../../system-settings/store';
 import { withTimeout } from '../../utils/async';
 import { closeLibsqlClient } from './conversation-helpers';
 import { forgeDebug } from '@forge-runtime/core';

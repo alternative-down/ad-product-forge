@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../../database/client';
-import type { HttpHandler } from '../../http/server';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { forgeDebug } from '@forge-runtime/core';
 import type { createAdminReadModel } from '../read-model';
@@ -16,7 +15,6 @@ export function registerDashboardRoutes({
   db,
   registry,
   finance,
-  readModel,
   systemRM,
 }: {
   httpServer: { registerRoute(opts: object): void };
