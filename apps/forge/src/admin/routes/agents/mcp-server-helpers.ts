@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import type { Database } from '../../../database/client';
-import { mcpServerConfigs, agentMcpConfigs } from '../../../database/schema';
+import { mcpServerConfigs, agentMcpConfigs, NewMcpServerConfig } from '../../../database/schema';
 import { normalizeJsonText, normalizeOptionalText } from '../helpers';
 // schemas imported inline below
 
@@ -52,14 +52,14 @@ export async function createAgentMcpServer(
   const now = Date.now();
   const record = normalizeMcpServerRecord({ ...body, isActive: body.isActive ?? false });
 
-  await (db.insert(mcpServerConfigs) as any).values({
+  await db.insert(mcpServerConfigs).values({
     id: serverId,
     ...record,
     version: 1,
     isActive: body.isActive === true ? 1 : 0,
     createdAt: now,
     updatedAt: now,
-  });
+  } as NewMcpServerConfig);
 
   await db.insert(agentMcpConfigs).values({
     id: configId,
