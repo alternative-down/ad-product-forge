@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
@@ -33,10 +32,8 @@ import {
   createRecallOrchestrator,
   type RecallOrchestratorDeps,
 } from './recall/orchestrator';
-import { runVectorQuery, type VectorSearchDeps } from './recall/vector-search';
+import { runVectorQuery} from './recall/vector-search';
 
-export type { RecallConfig };
-export type { RecallOrchestratorDeps };
 
 export type AgentLongTermMemoryRecallDebugSearchInput = {
   query: string;
@@ -618,11 +615,11 @@ export class AgentLongTermMemoryRecall {
   }
 
   async resolveRecallConfig() {
-    return this.orchestrator.resolveRecallConfig();
+    return await this.orchestrator.resolveRecallConfig();
   }
 
   async runRecallSearch(queryText: string, config: RecallConfig) {
-    return this.orchestrator.runRecallSearch(queryText, config);
+    return await this.orchestrator.runRecallSearch(queryText, config);
   }
 
   async searchWorkspace(
@@ -634,7 +631,7 @@ export class AgentLongTermMemoryRecall {
       mode: 'hybrid' | 'vector' | 'bm25';
     },
   ) {
-    return this.orchestrator.searchWorkspace(queryText, options);
+    return await this.orchestrator.searchWorkspace(queryText, options);
   }
 
   async searchGraph(
@@ -648,7 +645,7 @@ export class AgentLongTermMemoryRecall {
       contextResults: LtmSearchResult[];
     },
   ) {
-    return this.orchestrator.searchGraph(queryText, workspaceResults, options);
+    return await this.orchestrator.searchGraph(queryText, workspaceResults, options);
   }
 
   async runTrackedRecallOperation<T>(
@@ -657,7 +654,7 @@ export class AgentLongTermMemoryRecall {
     timeoutMs: number,
     timeoutMessage: string,
   ) {
-    return this._runTrackedRecallOperation(label, operation, timeoutMs, timeoutMessage);
+    return await this._runTrackedRecallOperation(label, operation, timeoutMs, timeoutMessage);
   }
 
   private async _runTrackedRecallOperation<T>(
@@ -739,7 +736,7 @@ export class AgentLongTermMemoryRecall {
       metadata?: Record<string, unknown>;
     }>
   > {
-    return runVectorQuery(queryVector, topK, {
+    return await runVectorQuery(queryVector, topK, {
       retrievalWorkspace: this.retrievalWorkspace,
       recallTimeoutMs: this.recallTimeoutMs,
       runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
