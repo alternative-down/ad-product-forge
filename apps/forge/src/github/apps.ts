@@ -4,11 +4,11 @@
  * Part of #1371 — split createGitHubAppManager.
  */
 import type { Octokit } from 'octokit';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { App } from 'octokit';
 import type { OpsContext } from './ops/context';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from './types';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export interface AppProvisioningOps {
   getGlobalConfig: OpsContext['getGlobalConfig'];
@@ -76,7 +76,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         scope: 'github-apps',
         level: 'error',
         message: '[github-apps] createAgentApp failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -125,7 +125,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         scope: 'github-apps',
         level: 'error',
         message: '[github-apps] updateAgentManifestConfig failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -147,7 +147,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         scope: 'github-apps',
         level: 'error',
         message: '[github-apps] loadAllAgents failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -179,7 +179,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         scope: 'github-apps',
         level: 'error',
         message: '[github-apps] deleteAgentApp failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -206,7 +206,7 @@ export function createAppProvisioningOps(ctx: OpsContext): AppProvisioningOps {
         scope: 'github-apps',
         level: 'error',
         message: '[github-apps] createInstallationOctokit failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
