@@ -5,7 +5,7 @@ import { agentExecutionSteps } from '../../database/schema';
 import { getFinanceOverview } from './finance-overview';
 import { getRecurringPayables } from './payables-overview';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import type { Database } from '../../database/index';
 
 export interface FinanceReadModel {
@@ -51,7 +51,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
         scope: 'admin-read-model-finance',
         level: 'error',
         message: '[finance-readmodel] getFinance failed',
-        context: { err: String(serializeError(err)) },
+        context: { err: errorMsg(err) },
       });
       throw err;
     }
@@ -106,7 +106,7 @@ export function createFinanceReadModel(input: { db: Database }): FinanceReadMode
         scope: 'admin-read-model-finance',
         level: 'error',
         message: '[finance-readmodel] getFinanceContracts failed',
-        context: { err: String(serializeError(err)) },
+        context: { err: errorMsg(err) },
       });
       throw err;
     }

@@ -1,7 +1,7 @@
 import type { Database } from '../../database/client';
 import { createAgentLongTermMemoryStore, type LongTermMemoryState } from '../../agents/ltm/store';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 export type LongTermMemoryRecallSnapshot = Awaited<
   ReturnType<ReturnType<typeof createAgentLongTermMemoryStore>['readRecallState']>
@@ -22,7 +22,7 @@ export async function readLongTermMemoryRecallSnapshot(
       scope: 'helpers-ltm',
       level: 'error',
       message: '[helpers-ltm] readLongTermMemoryRecallSnapshot failed',
-      context: { err: String(serializeError(err)) },
+      context: { err: errorMsg(err) },
     });
     throw err;
   }
@@ -43,7 +43,7 @@ export async function readLongTermMemoryState(
       scope: 'helpers-ltm',
       level: 'error',
       message: '[helpers-ltm] readLongTermMemoryState failed',
-      context: { err: String(serializeError(err)) },
+      context: { err: errorMsg(err) },
     });
     throw err;
   }

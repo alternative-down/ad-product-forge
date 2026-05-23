@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { createClient } from '@libsql/client';
 import {
   buildThreadToolInvocationParts,
@@ -110,7 +110,7 @@ async function listRecentExternalConversations(
       scope: 'admin-read-model',
       level: 'error',
       message: 'Failed to load external conversations',
-      context: { agentId: _agentId, err: String(serializeError(err)) },
+      context: { agentId: _agentId, err: errorMsg(err) },
     });
     return [];
   }
@@ -167,7 +167,7 @@ async function listRecentInternalChatConversations(
       scope: 'admin-read-model',
       level: 'error',
       message: 'Failed to load internal chat conversations',
-      context: { agentId, err: String(serializeError(err)) },
+      context: { agentId, err: errorMsg(err) },
     });
     return [];
   }
@@ -195,7 +195,7 @@ async function listInternalChatGroupParticipants(
       scope: 'admin-read-model',
       level: 'error',
       message: 'Failed to load group participants',
-      context: { conversationKey, err: String(serializeError(err)) },
+      context: { conversationKey, err: errorMsg(err) },
     });
     return [];
   }
@@ -272,7 +272,7 @@ async function listThreadMessages(
       scope: 'admin-read-model',
       level: 'error',
       message: 'Failed to load recent thread messages',
-      context: { agentId, err: String(serializeError(err)) },
+      context: { agentId, err: errorMsg(err) },
     });
     return {
       items: [],
