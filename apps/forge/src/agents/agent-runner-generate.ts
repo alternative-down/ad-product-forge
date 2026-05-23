@@ -23,27 +23,22 @@
 import type { Database } from '../database/schema';
 import type { InternalAgentRuntime } from './runtime/types';
 import type { AgentContractStore } from './agent-contract-store';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { SystemSettingsStore } from '../system-settings/store';
 import type { AgentNotificationStore } from '../notifications/store';
 import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage } from './agent-runner-usage';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { AgentWakeQueue } from '@forge-runtime/core';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
 import type { RuntimeGenerateResult } from './runtime/types';
 
 import { delay, withTimeout } from '../utils/async';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {
   buildStepSystemPrompt,
-  extractRunnerControlDirectiveFromIteration,
+
 } from './agent-runner-control-directives';
 import {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   buildRecallStepFromIteration,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
 import { createId } from '../utils/id';
@@ -55,14 +50,10 @@ import {
 } from './agent-runner-attempt-lifecycle';
 import {
   buildIterationFeedback,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type BuildIterationFeedbackDeps,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type BuildIterationFeedbackInput,
 } from './agent-runner-feedback';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { RUN_STOP_REMINDER } from './agent-runner-wake';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -72,14 +63,12 @@ import { FIFTEEN_MINUTES_MS } from './time-constants';
 
 import {
   createGenerateTimeoutGuard,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   touchGenerateTimeout,
   clearGenerateTimeout,
   type GenerateTimeoutHandle,
   type ProgressState,
 } from './agent-runner-generate-timeout';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
@@ -209,7 +198,6 @@ export async function generateWithTimeoutRetries(
       : null,
   ].filter((value): value is { role: 'assistant' | 'user'; content: string } => Boolean(value));
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const runDelayMs = calculateDelayMs(deps.backoffState, {
     hasPendingMessages: false,
     stopRequested: false,

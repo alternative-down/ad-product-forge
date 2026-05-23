@@ -16,8 +16,6 @@ import {
   type ProviderCredentialsMap,
 } from '../communication/provider-loader';
 
-/** Decrypted credentials — JSON-parsed, type depends on provider at runtime. */
-type DecryptedCredentials = ProviderCredentialsMap[keyof ProviderCredentialsMap];
 
 const communicationProviderTypes: Record<keyof ProviderCredentialsMap, true> = {
   'internal-chat': true,
