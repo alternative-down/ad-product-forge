@@ -7,6 +7,7 @@
  * Stores are passed directly instead of via a read-model wrapper.
  */
 import { forgeDebug } from '../debug';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 
 import { mcpServerConfigs } from '../../../database/schema';
 
@@ -39,7 +40,6 @@ interface SystemReadRoutesInput {
     getApplicationMigrations: () => Promise<unknown>;
   };
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
   const {
@@ -68,9 +68,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/healthcheck',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -87,9 +87,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'System integrations route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -106,9 +106,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'System settings route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -130,9 +130,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/llm',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -166,9 +166,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/system/mcp',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -185,9 +185,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'System migrations route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -204,9 +204,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'System skills route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -223,9 +223,9 @@ export function registerSystemReadRoutes(input: SystemReadRoutesInput) {
           scope: 'admin',
           level: 'error',
           message: 'System oauth route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });

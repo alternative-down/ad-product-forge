@@ -4,6 +4,7 @@
  */
 
 import { ZodError } from 'zod';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 
@@ -19,7 +20,6 @@ interface ReadModel {
     opts: { query: string },
   ) => Promise<unknown>;
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 interface AgentRoutesInput {
   db: Database;
@@ -60,9 +60,9 @@ export function registerAgentWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent clear-history route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -85,9 +85,9 @@ export function registerAgentWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent ltm-recall-search route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
