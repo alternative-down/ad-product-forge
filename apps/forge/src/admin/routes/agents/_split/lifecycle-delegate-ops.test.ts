@@ -65,7 +65,7 @@ describe('registerLifecycleDelegateOps', () => {
     it('registers the route', async () => {
       const ops = makeOps();
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/hire' }),
       );
@@ -75,7 +75,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockHiring = vi.fn().mockResolvedValue({ agentId: 'new-agent-1', name: 'Hired Agent' });
       const ops = makeOps({ runInternalHiring: mockHiring });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/hire');
 
       const response = await handler(
@@ -104,7 +104,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockHiring = vi.fn().mockResolvedValue({ agentId: 'new-agent-2' });
       const ops = makeOps({ runInternalHiring: mockHiring });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/hire');
 
       const response = await handler(
@@ -118,7 +118,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockHiring = vi.fn().mockRejectedValue(new Error('Hiring failed'));
       const ops = makeOps({ runInternalHiring: mockHiring });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/hire');
 
       const response = await handler(
@@ -135,7 +135,7 @@ describe('registerLifecycleDelegateOps', () => {
     it('registers the route', async () => {
       const ops = makeOps();
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/terminate' }),
       );
@@ -145,7 +145,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockTerm = vi.fn().mockResolvedValue({ success: true, terminatedAt: Date.now() });
       const ops = makeOps({ runInternalTermination: mockTerm });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/terminate');
 
       const response = await handler(makeRequest({ agentId: 'agent-to-terminate' }));
@@ -166,7 +166,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockTerm = vi.fn().mockRejectedValue(new Error('Termination failed'));
       const ops = makeOps({ runInternalTermination: mockTerm });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/terminate');
 
       const response = await handler(makeRequest({ agentId: 'agent-123' }));
@@ -179,7 +179,7 @@ describe('registerLifecycleDelegateOps', () => {
     it('registers the route', async () => {
       const ops = makeOps();
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'POST', path: '/admin/agent/change-role' }),
       );
@@ -189,7 +189,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockRole = vi.fn().mockResolvedValue(undefined);
       const ops = makeOps({ changeAgentRoleFromAdmin: mockRole });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/change-role');
 
       const response = await handler(makeRequest({ agentId: 'agent-456', roleId: 'role-admin' }));
@@ -207,7 +207,7 @@ describe('registerLifecycleDelegateOps', () => {
       const mockRole = vi.fn().mockRejectedValue(new Error('Role change failed'));
       const ops = makeOps({ changeAgentRoleFromAdmin: mockRole });
       const { registerLifecycleDelegateOps } = await import('./lifecycle-delegate-ops');
-      registerLifecycleDelegateOps(httpServer as any, makeInput(), ops);
+      registerLifecycleDelegateOps(httpServer as any, makeInput() as any, ops);
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/change-role');
 
       const response = await handler(makeRequest({ agentId: 'agent-456', roleId: 'role-admin' }));
