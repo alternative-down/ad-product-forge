@@ -60,7 +60,7 @@ function buildCorsHeaders(
     'access-control-allow-headers': CORS_ALLOWED_HEADERS,
   };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
 
 export type CreateForgeHttpServerConfig = {
   port: number;
@@ -270,7 +270,7 @@ export function createForgeHttpServer(
       });
       res.end(
         JSON.stringify({
-          error: String(serializeError(error)),
+          error: errorMsg(error),
         }),
       );
     }
