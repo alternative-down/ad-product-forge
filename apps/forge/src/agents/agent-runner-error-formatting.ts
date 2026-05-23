@@ -182,19 +182,3 @@ export function formatAbsentExecutionError(
  * Wrapped version that applies withTimeout to store.setExecutionAbsent.
  * Exported separately so callers needing the timeout behavior can use it directly.
  */
-export async function setExecutionAbsentWithTimeout(params: {
-  runtimeId: string;
-  store: {
-    setExecutionAbsent: (id: string, message: string) => Promise<void>;
-  };
-  formatAbsentExecutionErrorFn: typeof formatAbsentExecutionError;
-  input: AbsentExecutionErrorInput;
-}): Promise<void> {
-  const { runtimeId, store, formatAbsentExecutionErrorFn, input } = params;
-  const message = formatAbsentExecutionErrorFn(input);
-  await withTimeout(
-    store.setExecutionAbsent(runtimeId, message),
-    RUNNER_AWAIT_TIMEOUT_MS,
-    `Agent execution state update timed out for ${runtimeId}`,
-  );
-}
