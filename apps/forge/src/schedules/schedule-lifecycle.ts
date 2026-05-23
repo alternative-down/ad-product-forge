@@ -5,6 +5,7 @@
  * Manages the node-schedule `jobs: Map<string, Job>` registry.
  * Pure lifecycle: scheduleJob / cancel / list — no business logic.
  */
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import {
   gracefulShutdown,
   scheduleJob,
@@ -12,7 +13,6 @@ import {
   type Job,
   type RecurrenceSpecDateRange,
 } from 'node-schedule';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
 import type { Database } from '../database/schema';
 import { createAgentScheduleStore } from './store';
 import { forgeDebug } from '@forge-runtime/core';

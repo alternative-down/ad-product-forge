@@ -256,7 +256,7 @@ export function createDiscordProvider(config: {
           scope: 'discord-account',
           level: 'error',
           message: 'Error handling MessageCreate event',
-          context: { error: String(serializeError(error)) },
+          context: { error: errorMsg(error) },
         });
       }
     });
@@ -299,7 +299,7 @@ export function createDiscordProvider(config: {
           scope: 'discord-account',
           level: 'warn',
           message: 'Failed to fetch members for guild',
-          context: { guildId: guild.id, error: String(serializeError(error)) },
+          context: { guildId: guild.id, error: errorMsg(error) },
         });
       }
     }
@@ -435,4 +435,4 @@ export function createDiscordProvider(config: {
   };
 }
 
-import { serializeError } from './agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from './agents/agent-runner-error-formatting';

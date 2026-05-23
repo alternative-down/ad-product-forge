@@ -4,7 +4,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
 import { buildRequestError } from './helpers';
 
 export interface CoolifyErrorContext {
@@ -22,7 +22,7 @@ export function mapCoolifyError(context: CoolifyErrorContext): Error {
     scope,
     level: 'error',
     message: `${operation} failed`,
-    context: { method, path, error: String(serializeError(error)) },
+    context: { method, path, error: errorMsg(error) },
   });
 
   if (error instanceof Error) {
@@ -46,7 +46,7 @@ export function mapProviderConfigError(operation: string, error: unknown): Error
     scope: 'coolify',
     level: 'error',
     message: `${operation}: getProviderConfig failed`,
-    context: { error: String(serializeError(error)) },
+    context: { error: errorMsg(error) },
   });
   if (error instanceof Error) {
     return error;
