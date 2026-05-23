@@ -1,9 +1,9 @@
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { eq } from 'drizzle-orm';
 
 import type { Database } from '../database/schema';
 import { llmModelPrices } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export type LlmModelPriceStore = Awaited<ReturnType<typeof createLlmModelPriceStore>>;
 export function createLlmModelPriceStore(db: Database) {
@@ -17,7 +17,7 @@ export function createLlmModelPriceStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to list LLM model prices',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
