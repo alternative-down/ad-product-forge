@@ -134,19 +134,12 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
       });
 
       const agentWorkspaceRoot = resolve(workspaceBasePath, agentId);
-      const agentWorkspaceDir =
-        ((agent.workspaceFilesystem
-          ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
-          : null
-        )?.basePath ?? '') !== ''
-          ? resolve(
-              agentWorkspaceRoot,
-              (agent.workspaceFilesystem
-                ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
-                : null
-              )?.basePath ?? '',
-            )
-          : resolve(agentWorkspaceRoot, 'workspace');
+      const parsedWs = agent.workspaceFilesystem != null
+        ? (JSON.parse(agent.workspaceFilesystem) as WorkspaceFilesystemConfig)
+        : null;
+      const agentWorkspaceDir = parsedWs?.basePath != null && parsedWs.basePath !== ''
+        ? resolve(agentWorkspaceRoot, parsedWs.basePath)
+        : resolve(agentWorkspaceRoot, 'workspace');
 
       let agentContext: string | null = null;
       try {

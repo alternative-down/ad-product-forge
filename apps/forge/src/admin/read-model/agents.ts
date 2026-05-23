@@ -13,10 +13,8 @@ import type { GitHubAppManager } from '../../github/manager';
 import type { InternalChatService } from '../../communication/internal-chat-service';
 
 const RECENT_CASH_MOVEMENT_LIMIT = 10;
-const RECENT_STEP_LIMIT = 10;
-const RECENT_NOTIFICATION_LIMIT = 10;
 
-import type { AgentListItem, AgentReadModel } from './agents-types';
+import type { AgentReadModel } from './agents-types';
 import { createAgentConversationsReadModel } from './agents-conversations';
 import { createAgentMetricsReadModel } from './agents-metrics';
 import { createAgentDetailReadModel } from './agents-detail';
@@ -41,13 +39,7 @@ export function createAgentReadModel(deps: AgentsReadModelDeps): AgentReadModel 
     db,
     finance,
     internalChat,
-    workspaceBasePath,
-    systemSettings,
-    capabilities,
-    llmSettings,
-    notifications,
-    githubApps,
-  } = deps;
+    workspaceBasePath,  } = deps;
 
   const registry = getInternalAgentRegistry();
 
