@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import type { Database } from '../../database/client';
 import type { InternalAgentRegistry } from '../../agents/internal-agent-registry';
 import { forgeDebug } from '@forge-runtime/core';
@@ -67,9 +68,9 @@ export function registerDashboardRoutes({
           scope: 'admin',
           level: 'error',
           message: 'Dashboard overview failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -86,11 +87,10 @@ export function registerDashboardRoutes({
           scope: 'admin',
           level: 'error',
           message: '/admin/roles',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../agents/agent-runner-error-formatting';

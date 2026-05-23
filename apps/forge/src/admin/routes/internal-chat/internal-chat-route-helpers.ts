@@ -4,6 +4,7 @@
  */
 
 import type { HttpHandler, HttpRequest } from '../../../http/server';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';
@@ -14,7 +15,6 @@ export interface InternalChatRequest {
   query: Map<string, string>;
   bodyText: string;
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // ─── Error handling ────────────────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ export function withRouteErrorHandler<Args extends unknown[]>(
     try {
       return handler(...args);
     } catch (err) {
-      const error = String(serializeError(err));
+      const error = errorMsg(err);
       forgeDebug({
         scope,
         level: 'error',
@@ -96,7 +96,7 @@ export function parseBody<T extends z.ZodTypeAny>(
     return parseJsonBody(request.bodyText, schema);
   } catch (err) {
     // Re-throw as plain Error so withRouteErrorHandler can catch it
-    throw new Error(String(serializeError(err)));
+    throw new Error(errorMsg(err));
   }
 }
 

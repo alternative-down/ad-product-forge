@@ -2,13 +2,13 @@
  * Schema validation utilities for admin routes
  */
 import { forgeDebug } from './debug';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import type { ZodSchema } from 'zod';
 
 export interface ValidationResult<T> {
   success: true;
   data: T;
 }
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export interface ValidationError {
   success: false;
@@ -30,11 +30,11 @@ export function parseRequest<T>(
       scope: 'validation',
       level: 'error',
       message: '[validation] parseRequest failed',
-      context: { error: String(serializeError(err)) },
+      context: { error: errorMsg(err) },
     });
     return {
       success: false,
-      error: String(serializeError(err)),
+      error: errorMsg(err),
     };
   }
 }
@@ -58,11 +58,11 @@ export function parseQueryParams<T>(
       scope: 'validation',
       level: 'error',
       message: '[validation] parseQueryParams failed',
-      context: { error: String(serializeError(err)) },
+      context: { error: errorMsg(err) },
     });
     return {
       success: false,
-      error: String(serializeError(err)),
+      error: errorMsg(err),
     };
   }
 }

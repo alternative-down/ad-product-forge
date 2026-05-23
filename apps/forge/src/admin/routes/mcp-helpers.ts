@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import type { Database } from '../../database/index';
 import type { AgentLoaderConfig } from '../../agents/agent-loader';
 import { reloadAgentIfLoaded } from '../../capabilities/runtime';
@@ -12,7 +13,6 @@ export async function reloadAgentMcp(
 ): Promise<void> {
   await reloadAgentIfLoaded(db, loaderConfig, agentId);
 }
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export async function reloadLinkedAgentsForMcpServer(
   db: Database,
@@ -30,7 +30,7 @@ export async function reloadLinkedAgentsForMcpServer(
           scope: 'mcp-helpers',
           level: 'error',
           message: 'reloadLinkedAgentsForMcpServer: reload failed',
-          context: { agentId: linkedConfig.agentId, error: String(serializeError(err)) },
+          context: { agentId: linkedConfig.agentId, error: errorMsg(err) },
         });
       }),
     ),

@@ -4,6 +4,7 @@
  */
 
 import { z as _z } from 'zod';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 import type { Database } from '../../../database/index';
@@ -13,7 +14,6 @@ type CompanyCash = {
   getOverview: () => Promise<unknown>;
   listContractSummaries: () => Promise<unknown>;
 };
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 type FinanceReadInput = {
   companyCash: CompanyCash;
@@ -45,9 +45,9 @@ export function registerFinanceReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance overview route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -64,9 +64,9 @@ export function registerFinanceReadRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Finance contracts route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
