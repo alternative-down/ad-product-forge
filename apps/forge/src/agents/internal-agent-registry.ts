@@ -1,4 +1,4 @@
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug, type AgentWakeEvent } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import type { AgentLoaderConfig } from './agent-loader';
@@ -99,10 +99,10 @@ function createInternalAgentRegistry() {
 
   function add(db: Database, runtime: InternalAgentRuntime, _config?: typeof loaderConfig) {
     const existingAgent = agents.get(runtime.id);
-    const pendingWakeEvents = existingAgent
+    const pendingWakeEvents: AgentWakeEvent[] = existingAgent
       ? [
-          ...(existingAgent.runner?.getSnapshot()?.wake.events ?? []),
-          ...(existingAgent.runner?.getSnapshot()?.pendingRunEvents ?? []),
+          ...((existingAgent.runner?.getSnapshot()?.wake.events ?? []) as AgentWakeEvent[]),
+          ...((existingAgent.runner?.getSnapshot()?.pendingRunEvents ?? []) as AgentWakeEvent[]),
         ]
       : [];
 
