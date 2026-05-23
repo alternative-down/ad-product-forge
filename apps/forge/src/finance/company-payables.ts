@@ -3,10 +3,16 @@ import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';
 
 import type { Database } from '../database/schema';
+import type { InferModel } from 'drizzle-orm';
+import type { InferModel } from 'drizzle-orm';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
+
+type PayableRow = InferModel<typeof companyRecurringPayables>;
+
+type PayableRow = InferModel<typeof companyRecurringPayables>;
 
 export type CompanyPayablesStore = ReturnType<typeof createCompanyPayables>;
 
@@ -17,7 +23,7 @@ export function createCompanyPayables(db: Database) {
         orderBy: (fields, { asc }) => [asc(fields.name)],
       });
 
-      return rows.map((row: any) => {
+      return rows.map((row: PayableRow) => {
         const { id, recurrencePeriod, isActive, ...rest } = row;
 
         return {
