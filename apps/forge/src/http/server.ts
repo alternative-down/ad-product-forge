@@ -1,4 +1,5 @@
 import http, { type IncomingHttpHeaders } from 'node:http';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { Readable } from 'node:stream';
 import { forgeDebug } from '@forge-runtime/core';
 import { ZodError } from 'zod';
@@ -60,7 +61,6 @@ function buildCorsHeaders(
     'access-control-allow-headers': CORS_ALLOWED_HEADERS,
   };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export type CreateForgeHttpServerConfig = {
   port: number;
@@ -270,7 +270,7 @@ export function createForgeHttpServer(
       });
       res.end(
         JSON.stringify({
-          error: String(serializeError(error)),
+          error: errorMsg(error),
         }),
       );
     }

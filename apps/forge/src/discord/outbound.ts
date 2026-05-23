@@ -1,7 +1,7 @@
 import type { Message } from 'discord.js';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 import type { CommunicationFile } from '@forge-runtime/core';
 import type { DiscordSendableChannel, DiscordOutboundFile } from '../discord-types';
 
@@ -88,7 +88,7 @@ export async function sendDiscordChunks(input: {
       scope: 'discord-account',
       level: 'error',
       message: 'sendDiscordChunks failed',
-      context: { channelId: input.channel.id, error: String(serializeError(error)) },
+      context: { channelId: input.channel.id, error: errorMsg(error) },
     });
     throw error;
   }

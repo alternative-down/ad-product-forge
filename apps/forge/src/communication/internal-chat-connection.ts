@@ -1,4 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import type { CommunicationFile } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
@@ -19,7 +20,6 @@ import { buildGroupMetadata } from './internal-chat-helpers';
 export interface InternalChatHandler {
   (message: InternalChatDeliveryMessage): Promise<void>;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export interface InternalChatDeliveryMessage {
   targetKey: string;
@@ -94,7 +94,7 @@ function createConnectionImpl(
         level: 'error',
         agentId,
         message: 'Failed to replay unread messages',
-        context: { error: String(serializeError(error)) },
+        context: { error: errorMsg(error) },
       });
     });
   }

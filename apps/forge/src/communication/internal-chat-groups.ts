@@ -1,4 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import {
   resolveChatGroupMembers,
@@ -213,7 +214,7 @@ export function createInternalChatGroups(
         scope: 'internal-chat-groups',
         level: 'error',
         message: 'Failed to execute requireConversationMembershipByAccount',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }

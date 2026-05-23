@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import { forgeDebug } from '@forge-runtime/core';
 import type { CommunicationProvider } from '@forge-runtime/core';
@@ -140,7 +141,7 @@ export async function loadCommunicationProviders(
         scope: 'provider-loader',
         level: 'warn',
         message: 'Skipping Discord provider because it failed to start',
-        context: { error: String(serializeError(error)) },
+        context: { error: errorMsg(error) },
       });
     }
   }
@@ -160,7 +161,7 @@ export async function loadCommunicationProviders(
         scope: 'provider-loader',
         level: 'error',
         message: 'Failed to load email provider',
-        context: { error: String(serializeError(error)) },
+        context: { error: errorMsg(error) },
       });
       throw error;
     }
@@ -168,7 +169,6 @@ export async function loadCommunicationProviders(
 
   return providers;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export function parseProviderCredentials(
   providerType: keyof ProviderCredentialsMap,

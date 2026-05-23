@@ -1,4 +1,5 @@
 import { createTool, forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { hasToolPermission } from '../capabilities/catalog';
 import { z } from 'zod';
 
@@ -168,11 +169,11 @@ export function createInternalChatTools(
             scope: 'internal-chat',
             level: 'error',
             message: 'Internal chat tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Use action create with create.name to create a group. Use action update with update.groupId to update one existing group.',
           };
         }
@@ -182,4 +183,3 @@ export function createInternalChatTools(
 
   return tools;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
