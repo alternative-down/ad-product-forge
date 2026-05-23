@@ -20,7 +20,6 @@ export type MessageRowBase = {
   content: string;
   createdAt: number;
 };
-export type MessageRowFull = MessageRowBase & { conversationId: string };
 export interface MessageListItem {
   messageId: string;
   provider: string;
@@ -66,12 +65,3 @@ export interface ConversationListingDeps {
 }
 
 // Conversation result type (listConversations return)
-export interface ConversationListItem {
-  targetKey: string;
-  provider: string;
-  latestMessageAt: string;
-  unreadCount: number;
-  name: string;
-  participants: string[];
-  messages: MessageListItem[];
-}

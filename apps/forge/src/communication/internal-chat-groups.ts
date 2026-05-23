@@ -38,7 +38,7 @@ const logInternalChatError = (
   });
 };
 
-export interface CreateChatGroupInput {
+interface CreateChatGroupInput {
   agentId: string;
   conversationKey: string;
   name: string;
@@ -46,20 +46,20 @@ export interface CreateChatGroupInput {
 }
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
-export interface AddMemberToGroupInput {
+interface AddMemberToGroupInput {
   agentId: string;
   groupId: string;
   participantSlug: string;
   role?: string;
 }
 
-export interface RemoveMemberFromGroupInput {
+interface RemoveMemberFromGroupInput {
   agentId: string;
   groupId: string;
   participantSlug: string;
 }
 
-export interface ChangeChatGroupInput {
+interface ChangeChatGroupInput {
   agentId: string;
   groupId?: string;
   name?: string;
@@ -69,17 +69,17 @@ export interface ChangeChatGroupInput {
   }>;
 }
 
-export interface ListGroupMembersByAccountInput {
+interface ListGroupMembersByAccountInput {
   accountId: string;
   groupId: string;
 }
 
-export interface ListGroupMembersInput {
+interface ListGroupMembersInput {
   agentId: string;
   groupId: string;
 }
 
-export interface ListChatGroupsInput {
+interface ListChatGroupsInput {
   agentId: string;
   limit: number;
 }
