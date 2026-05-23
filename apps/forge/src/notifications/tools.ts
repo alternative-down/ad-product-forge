@@ -1,4 +1,5 @@
 import { createTool, type Tool, forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/schema';
@@ -43,11 +44,11 @@ export function createAgentNotificationTools(
             scope: 'notifications',
             level: 'error',
             message: '[notifications] list_agent_notifications failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
             hint: 'Try again in a moment. If the problem persists, verify the notification store is available.',
           };
         }
@@ -57,4 +58,3 @@ export function createAgentNotificationTools(
 
   return tools as Record<string, Tool<unknown, unknown>>;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';

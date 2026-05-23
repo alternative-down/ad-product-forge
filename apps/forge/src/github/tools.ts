@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createTool, type Tool } from '@forge-runtime/core';
 import { z } from 'zod';
 
@@ -99,7 +100,7 @@ export function createGitHubTools(
             scope: 'tools:github',
             level: 'error',
             message: 'get_github_provisioning_status: failed to check provisioning status',
-            context: { agentId, error: String(serializeError(error)) },
+            context: { agentId, error: errorMsg(error) },
           });
           return { valid: false, error: String(error) };
         }
@@ -147,7 +148,7 @@ export function createGitHubTools(
             scope: 'tools:github',
             level: 'error',
             message: 'start_github_app_provisioning: failed to start provisioning',
-            context: { agentId, error: String(serializeError(error)) },
+            context: { agentId, error: errorMsg(error) },
           });
           return { valid: false, error: String(error) };
         }
@@ -157,4 +158,3 @@ export function createGitHubTools(
 
   return tools;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';

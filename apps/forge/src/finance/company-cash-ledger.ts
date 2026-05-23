@@ -1,4 +1,5 @@
 import { and, eq, isNotNull, lte, sql } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createId } from '../utils/id';
 
 import { forgeDebug } from '@forge-runtime/core';
@@ -31,7 +32,7 @@ export function createCompanyCashLedger(db: Database) {
         scope: 'company-cash-ledger',
         level: 'error',
         message: 'getCurrentBalanceUsd failed',
-        context: { error: String(serializeError(error)) },
+        context: { error: errorMsg(error) },
       });
       throw error;
     }
@@ -70,7 +71,7 @@ export function createCompanyCashLedger(db: Database) {
         level: 'error',
         message: 'postEntry failed',
         context: {
-          error: String(serializeError(error)),
+          error: errorMsg(error),
           input: { type: input.type, direction: input.direction, amountUsd: input.amountUsd },
         },
       });
@@ -83,4 +84,3 @@ export function createCompanyCashLedger(db: Database) {
     postEntry,
   };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';

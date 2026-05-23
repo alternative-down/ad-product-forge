@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import { systemSettings } from '../database/schema';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 const SYSTEM_SETTINGS_ID = 'global';
 
@@ -113,7 +113,7 @@ export function createSystemSettingsStore(db: Database) {
         scope: 'system-settings',
         level: 'info',
         message: 'getSettings failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       return { ...DEFAULTS, updatedAt: null };
     }
@@ -169,7 +169,7 @@ export function createSystemSettingsStore(db: Database) {
         scope: 'system-settings',
         level: 'info',
         message: 'upsertSettings failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
