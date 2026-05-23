@@ -41,7 +41,7 @@ export function createInternalChatUnread(db: Database) {
         scope: 'internal-chat-unread',
         level: 'error',
         message: '[internal-chat-unread] getUnreadSummary failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -49,4 +49,4 @@ export function createInternalChatUnread(db: Database) {
 
   return { getUnreadSummary };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';

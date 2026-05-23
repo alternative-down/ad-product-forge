@@ -44,7 +44,7 @@ export interface CreateChatGroupInput {
   name: string;
   creatorName: string;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
 
 export interface AddMemberToGroupInput {
   agentId: string;
@@ -213,7 +213,7 @@ export function createInternalChatGroups(
         scope: 'internal-chat-groups',
         level: 'error',
         message: 'Failed to execute requireConversationMembershipByAccount',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
