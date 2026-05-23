@@ -61,6 +61,17 @@ export function serializeError(error: unknown): Record<string, unknown> {
     ...extra,
   };
 }
+// ─── Log-safe error message ────────────────────────────────────────────────────
+
+/**
+ * Extracts a human-readable string from any error value.
+ * Use instead of String(serializeError(err)) in logging contexts.
+ */
+export function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
 
 // ─── Absent-execution error formatting ────────────────────────────────────────
 
