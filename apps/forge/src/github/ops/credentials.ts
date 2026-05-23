@@ -4,10 +4,10 @@
  * createGitHubApp, createInstallationOctokit
  */
 import type { Octokit as _Octokit } from 'octokit';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import type { OpsContext, GithubOpsDb } from './context';
 import type { GitHubAppCredentials } from '../types';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
 
 export function createCredentialsOps(ctx: OpsContext) {
   async function getCredentials(agentId: string) {
@@ -31,7 +31,7 @@ export function createCredentialsOps(ctx: OpsContext) {
         scope: 'github-ops-credentials',
         level: 'error',
         message: 'getCredentials DB read failed',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -48,7 +48,7 @@ export function createCredentialsOps(ctx: OpsContext) {
         scope: 'github-ops-credentials',
         level: 'error',
         message: 'getActiveCredentials failed',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -81,7 +81,7 @@ export function createCredentialsOps(ctx: OpsContext) {
         scope: 'github-ops-credentials',
         level: 'error',
         message: 'getInstallationOctokit failed',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }

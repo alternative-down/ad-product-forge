@@ -7,9 +7,9 @@ import {
   Message,
   Partials,
 } from 'discord.js';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 import type { DiscordSendableChannel } from '../discord-types';
 import { downloadDiscordAttachments, extractDiscordMessageContent } from './message-parser';
 
@@ -70,7 +70,7 @@ export async function listCandidateChannels(
         scope: 'discord-account',
         level: 'warn',
         message: 'Failed to fetch channel',
-        context: { channelId, error: String(serializeError(error)) },
+        context: { channelId, error: errorMsg(error) },
       });
     }
   }
@@ -100,7 +100,7 @@ export async function resolveDiscordTargetChannel(
         scope: 'discord-account',
         level: 'error',
         message: 'Failed to fetch Discord channel by ID',
-        context: { targetKey, error: String(serializeError(error)) },
+        context: { targetKey, error: errorMsg(error) },
       });
       throw error;
     }
@@ -121,7 +121,7 @@ export async function resolveDiscordTargetChannel(
       scope: 'discord-account',
       level: 'error',
       message: 'Failed to create DM with user',
-      context: { targetKey, error: String(serializeError(error)) },
+      context: { targetKey, error: errorMsg(error) },
     });
     throw error;
   }
@@ -173,7 +173,7 @@ export async function listChannelMessages(input: {
         scope: 'discord-account',
         level: 'error',
         message: 'listChannelMessages: failed to fetch message batch',
-        context: { channelId: input.channel.id, error: String(serializeError(error)) },
+        context: { channelId: input.channel.id, error: errorMsg(error) },
       });
       break;
     }

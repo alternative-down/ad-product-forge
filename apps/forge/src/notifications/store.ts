@@ -1,10 +1,10 @@
 import { createId } from '../utils/id';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import type { Database } from '../database/schema';
 import { agentNotifications } from '../database/schema';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;
 
@@ -38,7 +38,7 @@ export function createAgentNotificationStore(db: Database) {
         scope: 'notifications-store',
         level: 'error',
         runtimeId: input.agentId,
-        message: 'createNotification DB insert failed: ' + String(serializeError(err)),
+        message: 'createNotification DB insert failed: ' + errorMsg(err),
       });
       return null;
     }
@@ -68,7 +68,7 @@ export function createAgentNotificationStore(db: Database) {
         scope: 'notifications-store',
         level: 'error',
         runtimeId: input.agentId,
-        message: 'listNotifications DB read failed: ' + String(serializeError(err)),
+        message: 'listNotifications DB read failed: ' + errorMsg(err),
       });
       return [];
     }
@@ -93,7 +93,7 @@ export function createAgentNotificationStore(db: Database) {
           scope: 'notifications-store',
           level: 'error',
           runtimeId: input.agentId,
-          message: 'listNotifications mark-read update failed: ' + String(serializeError(err)),
+          message: 'listNotifications mark-read update failed: ' + errorMsg(err),
         });
       }
     }
@@ -120,7 +120,7 @@ export function createAgentNotificationStore(db: Database) {
         scope: 'notifications-store',
         level: 'error',
         runtimeId: agentId,
-        message: 'getNotification DB read failed: ' + String(serializeError(err)),
+        message: 'getNotification DB read failed: ' + errorMsg(err),
       });
       return null;
     }
