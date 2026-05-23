@@ -1,7 +1,7 @@
 import type { Message } from 'discord.js';
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
 import type { CommunicationFile } from '@forge-runtime/core';
 
 export async function downloadDiscordAttachments(
@@ -41,7 +41,7 @@ export async function downloadDiscordAttachments(
           context: {
             attachmentUrl: attachment.url,
             attachmentId: attachment.id,
-            error: String(serializeError(error)),
+            error: errorMsg(error),
           },
         });
         return {

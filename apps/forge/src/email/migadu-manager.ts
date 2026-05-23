@@ -9,7 +9,7 @@ import { decryptSecret } from '../encryption/crypto';
 import type { ProviderCredentialsMap } from '../communication/provider-loader';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
 
 const EMAIL_PROVIDER_TYPE = 'email';
 const MIGADU_API_BASE_URL = 'https://api.migadu.com/v1';
@@ -57,7 +57,7 @@ export function createAgentEmailManager(config: {
       forgeDebug({
         scope: 'migadu-manager',
         level: 'error',
-        message: '[migadu-manager] isConfigured failed: ' + String(serializeError(err)),
+        message: '[migadu-manager] isConfigured failed: ' + errorMsg(err),
       });
       return false;
     }
