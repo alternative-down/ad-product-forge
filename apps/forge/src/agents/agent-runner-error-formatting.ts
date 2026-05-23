@@ -65,7 +65,7 @@ export function serializeError(error: unknown): Record<string, unknown> {
 
 /**
  * Extracts a human-readable string from any error value.
- * Use instead of String(serializeError(err)) in logging contexts.
+ * Use instead of errorMsg(err) in logging contexts.
  */
 export function errorMsg(err: unknown): string {
   if (err instanceof Error) return err.message;

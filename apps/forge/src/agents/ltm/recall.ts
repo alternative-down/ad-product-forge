@@ -10,7 +10,7 @@ import {
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
-import { serializeError } from '../agent-runner-error-formatting';
+import { serializeError, errorMsg } from '../agent-runner-error-formatting';
 
 import type {
   LongTermMemoryRecallHistory,
@@ -363,13 +363,13 @@ export class AgentLongTermMemoryRecall {
           agentId: this.agentId,
           threadId: input.threadId,
           durationMs: Date.now() - recallStartedAt,
-          error: String(serializeError(error)),
+          error: errorMsg(error),
         },
       });
       const persistedState = await this.persistenceStore.readRecallState();
       let snapshotError: string | null = null;
       try {
-        snapshotError = String(serializeError(error));
+        snapshotError = errorMsg(error);
       } catch (e) {
         forgeDebug({
           scope: 'ltm-recall',
@@ -695,7 +695,7 @@ export class AgentLongTermMemoryRecall {
             this.lingeringRecallOperationSince !== undefined
               ? new Date(this.lingeringRecallOperationSince!).toISOString()
               : null,
-          error: String(serializeError(error)),
+          error: errorMsg(error),
         },
       });
       throw error;

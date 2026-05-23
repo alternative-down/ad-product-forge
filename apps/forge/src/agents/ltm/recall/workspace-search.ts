@@ -1,6 +1,6 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agent-runner-error-formatting';
+import { errorMsg } from '../../agent-runner-error-formatting';
 import type { LtmSearchResult } from '../../agent-ltm-helpers';
 
 export type WorkspaceSearchOptions = {
@@ -86,7 +86,7 @@ export async function runWorkspaceSearch(
     });
     return { formatted: '', results: searchResults };
   } catch (error) {
-    const errMsg = String(serializeError(error));
+    const errMsg = errorMsg(error);
     if (errMsg.includes('SQLITE_ERROR: no such table') || errMsg.includes('no such table:')) {
       return { formatted: '', results: [] };
     }
@@ -98,7 +98,7 @@ export async function runWorkspaceSearch(
       context: {
         agentId: deps.agentId,
         durationMs: Date.now() - stageStartedAt,
-        error: String(serializeError(error)),
+        error: errorMsg(error),
       },
     });
     throw error;

@@ -1,6 +1,6 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agent-runner-error-formatting';
+import { errorMsg } from '../../agent-runner-error-formatting';
 import type { GraphSearchOptions, GraphSearchResult } from './types';
 
 export type GraphSearchDeps = {
@@ -81,7 +81,7 @@ export async function runGraphSearch(
       context: {
         agentId: deps.agentId,
         durationMs: Date.now() - stageStartedAt,
-        error: String(serializeError(error)),
+        error: errorMsg(error),
       },
     });
 
@@ -96,7 +96,7 @@ export async function runGraphSearch(
       sourcesCount: 0,
       sourcesJson: null,
       rawJson: null,
-      error: String(serializeError(error)),
+      error: errorMsg(error),
     };
   }
 }
