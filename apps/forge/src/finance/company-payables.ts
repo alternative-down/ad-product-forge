@@ -4,13 +4,10 @@ import { createId } from '../utils/id';
 
 import type { Database } from '../database/schema';
 import type { InferModel } from 'drizzle-orm';
-import type { InferModel } from 'drizzle-orm';
 import { companyCashLedger, companyRecurringPayables } from '../database/schema';
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type RecurrencePeriod = 'weekly' | 'monthly' | 'yearly';
-
-type PayableRow = InferModel<typeof companyRecurringPayables>;
 
 type PayableRow = InferModel<typeof companyRecurringPayables>;
 
