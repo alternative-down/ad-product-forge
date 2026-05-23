@@ -36,7 +36,7 @@ export function createWebhookStore(db: Database) {
         scope: 'webhooks-store',
         level: 'error',
         message: 'createRoute DB write failed',
-        context: { agentId: input.agentId, error: String(serializeError(err).message) },
+        context: { agentId: input.agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -55,7 +55,7 @@ export function createWebhookStore(db: Database) {
       forgeDebug({
         scope: 'webhooks-store',
         level: 'error',
-        message: 'getRoute DB read failed: ' + String(serializeError(err).message),
+        message: 'getRoute DB read failed: ' + errorMsg(err),
       });
       return null;
     }
@@ -72,7 +72,7 @@ export function createWebhookStore(db: Database) {
       forgeDebug({
         scope: 'webhooks-store',
         level: 'error',
-        message: 'listRoutesByAgent DB read failed: ' + String(serializeError(err).message),
+        message: 'listRoutesByAgent DB read failed: ' + errorMsg(err),
       });
       return [];
     }
@@ -151,7 +151,7 @@ export function createWebhookStore(db: Database) {
       forgeDebug({
         scope: 'webhooks-store',
         level: 'error',
-        message: 'listEventsByAgent DB read failed: ' + String(serializeError(err).message),
+        message: 'listEventsByAgent DB read failed: ' + errorMsg(err),
       });
       return [];
     }
