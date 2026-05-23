@@ -2,7 +2,7 @@
  * Milestones Ops — listMilestones, createMilestone, updateMilestone, deleteMilestone
  */
 import type { OpsContext } from './context';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 export function createMilestonesOps(ctx: OpsContext) {
   async function listMilestones(
@@ -37,7 +37,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         scope: 'github-milestones',
         level: 'error',
         message: '[github-milestones] listMilestones failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -77,7 +77,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         scope: 'github-milestones',
         level: 'error',
         message: '[github-milestones] createMilestone failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -122,7 +122,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         scope: 'github-milestones',
         level: 'error',
         message: '[github-milestones] updateMilestone failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -150,7 +150,7 @@ export function createMilestonesOps(ctx: OpsContext) {
         scope: 'github-milestones',
         level: 'error',
         message: '[github-milestones] deleteMilestone failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }

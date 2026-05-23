@@ -2,7 +2,7 @@
  * Repos Ops — listRepositories, createRepository, updateRepository, deleteRepository, getRepository
  */
 import type { OpsContext } from './context';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 export function createReposOps(ctx: OpsContext) {
   async function listRepositories(agentId: string) {
@@ -22,7 +22,7 @@ export function createReposOps(ctx: OpsContext) {
         scope: 'github-repos',
         level: 'error',
         message: '[github-repos] listRepositories failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -63,7 +63,7 @@ export function createReposOps(ctx: OpsContext) {
         scope: 'github-repos',
         level: 'error',
         message: '[github-repos] createRepository failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -106,7 +106,7 @@ export function createReposOps(ctx: OpsContext) {
         scope: 'github-repos',
         level: 'error',
         message: '[github-repos] updateRepository failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -129,7 +129,7 @@ export function createReposOps(ctx: OpsContext) {
         scope: 'github-repos',
         level: 'error',
         message: '[github-repos] deleteRepository failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -164,7 +164,7 @@ export function createReposOps(ctx: OpsContext) {
         scope: 'github-repos',
         level: 'error',
         message: '[github-repos] getRepository failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }

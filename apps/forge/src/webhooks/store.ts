@@ -1,4 +1,5 @@
 import { eq, desc } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
@@ -6,12 +7,6 @@ import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../dat
 import { createId } from '../utils/id';
 import { serializeError } from '../agents/agent-runner-error-formatting';
 
-// Extract error message for user-facing display
-function errorMsg(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return JSON.stringify(err);
-}
 
 
 // WebhookEvent is imported from the database schema (InferModel<typeof webhookEvents>)

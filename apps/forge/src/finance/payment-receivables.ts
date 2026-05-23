@@ -9,6 +9,7 @@
  */
 
 import { eq, and, desc } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createId } from '../utils/id';
 
 import type { Database } from '../database/schema';
@@ -21,7 +22,6 @@ import {
 } from './payment-schema';
 import { companyCashLedger } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type InsertReturning<T> = { returning: <U>(cols: { [K in keyof U]: unknown }) => Promise<T[]> };
 type InsertBuilder<T> = { values: <V extends Record<string, unknown>>(v: V) => InsertReturning<T> };
@@ -45,7 +45,7 @@ export function createPaymentReceivablesStore(db: Database) {
         scope: 'payment-receivables',
         level: 'error',
         message: 'getProvider DB read failed',
-        context: { provider, error: String(serializeError(err)) },
+        context: { provider, error: errorMsg(err) },
       });
       throw err;
     }
@@ -87,7 +87,7 @@ export function createPaymentReceivablesStore(db: Database) {
         message: 'upsertProvider failed',
         context: {
           provider: input.provider,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -146,7 +146,7 @@ export function createPaymentReceivablesStore(db: Database) {
         context: {
           provider: input.provider,
           providerCustomerId: input.providerCustomerId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -219,7 +219,7 @@ export function createPaymentReceivablesStore(db: Database) {
         message: 'upsertSubscription DB read failed',
         context: {
           providerSubscriptionId: input.providerSubscriptionId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -251,7 +251,7 @@ export function createPaymentReceivablesStore(db: Database) {
         context: {
           provider,
           providerSubscriptionId,
-          error: String(serializeError(err)),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -272,7 +272,7 @@ export function createPaymentReceivablesStore(db: Database) {
         scope: 'payment-receivables',
         level: 'error',
         message: 'listRecentTransactions DB read failed',
-        context: { provider, error: String(serializeError(err)) },
+        context: { provider, error: errorMsg(err) },
       });
       throw err;
     }
@@ -289,7 +289,7 @@ export function createPaymentReceivablesStore(db: Database) {
         scope: 'payment-receivables',
         level: 'error',
         message: 'getTransactionsBySubscription DB read failed',
-        context: { subscriptionId, error: String(serializeError(err)) },
+        context: { subscriptionId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -356,7 +356,7 @@ export function createPaymentReceivablesStore(db: Database) {
         level: 'error',
         message: 'processPaymentEvent failed',
         providerPaymentId: input.providerPaymentId,
-        error: String(serializeError(err)),
+        error: errorMsg(err),
       });
       throw err;
     }

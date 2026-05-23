@@ -1,4 +1,5 @@
 import { createTool, forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import path from 'node:path';
 import { z } from 'zod';
 
@@ -31,7 +32,6 @@ function buildMiniMaxHint(errorCode: string | undefined, fallback: string) {
 
   return fallback;
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 const imageAspectRatioSchema = z.enum(['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3']);
 
@@ -264,7 +264,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             scope: 'minimax',
             level: 'error',
             message: 'MiniMax tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
@@ -356,7 +356,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             scope: 'minimax',
             level: 'error',
             message: 'MiniMax tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
@@ -451,7 +451,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             scope: 'minimax',
             level: 'error',
             message: 'MiniMax tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
@@ -545,7 +545,7 @@ export function createMiniMaxTools(minimax: MiniMaxManager, allowedToolIds?: Set
             scope: 'minimax',
             level: 'error',
             message: 'MiniMax tool failed',
-            context: { error: String(serializeError(error)) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,

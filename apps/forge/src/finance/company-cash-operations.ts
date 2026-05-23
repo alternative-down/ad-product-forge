@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
 import { companyCashLedger } from '../database/schema';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
@@ -52,7 +52,7 @@ export function createCompanyCashOperations(db: Database) {
         level: 'error',
         message: 'createEntry DB insert failed',
         context: {
-          error: String(serializeError(err)),
+          error: errorMsg(err),
           entryId,
           type: input.type,
           direction: input.direction,
@@ -148,7 +148,7 @@ export function createCompanyCashOperations(db: Database) {
         scope: 'company-cash-operations',
         level: 'error',
         message: 'cancelPlannedEntry',
-        context: { error: String(serializeError(err)), entryId },
+        context: { error: errorMsg(err), entryId },
       });
       throw err;
     }
@@ -181,7 +181,7 @@ export function createCompanyCashOperations(db: Database) {
         scope: 'company-cash-operations',
         level: 'error',
         message: 'postPlannedEntry',
-        context: { error: String(serializeError(err)), entryId, effectiveAt },
+        context: { error: errorMsg(err), entryId, effectiveAt },
       });
       throw err;
     }

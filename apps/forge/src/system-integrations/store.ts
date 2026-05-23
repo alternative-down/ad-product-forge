@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/schema';
@@ -104,7 +105,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] listIntegrations failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -121,7 +122,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] getMigaduConfig failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -138,7 +139,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] getCoolifyConfig failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -155,7 +156,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] getGitHubConfig failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -172,7 +173,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] getMinimaxConfig failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -237,7 +238,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] upsertIntegration failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -251,7 +252,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'error',
         message: '[system-integrations] deleteIntegration failed',
-        context: { error: String(serializeError(err)) },
+        context: { error: errorMsg(err) },
       });
       throw err;
     }
@@ -303,7 +304,7 @@ export function createSystemIntegrationStore(db: Database) {
         scope: 'system-integrations',
         level: 'info',
         message: 'Failed to parse integration config',
-        context: { error: String(serializeError(error)) },
+        context: { error: errorMsg(error) },
       });
       return null;
     }
@@ -359,4 +360,3 @@ export function createSystemIntegrationStore(db: Database) {
     deleteIntegration,
   };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
