@@ -13,7 +13,7 @@ import { z } from 'zod';
 // ─── Base schemas ─────────────────────────────────────────────────────────────
 
 /** Fields common to both cron and date schedules. */
-const scheduleBaseSchema = {
+export const scheduleBaseSchema = {
   name: z.string().min(1),
   description: z.string().optional(),
   timezone: z.string().min(1).default('UTC'),
@@ -69,10 +69,6 @@ export const updateScheduleSchema = z.object({
 });
 
 /** Schema for deleting a schedule. */
-const _deleteScheduleSchema = z.object({
-  scheduleId: z.string().min(1),
-});
-
 // ─── Tool schemas (with describe() for AI tool documentation) ──────────────────
 
 const baseCreate = scheduleBaseSchema;
