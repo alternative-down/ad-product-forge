@@ -79,7 +79,7 @@ export interface SendingDeps {
     ) => Promise<{ stream: unknown; contentType: string | undefined }>;
   };
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export function createChatSending(deps: SendingDeps) {
   const { db, accounts, serviceHelpers, groups, connection, reads, attachments } = deps;

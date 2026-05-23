@@ -182,4 +182,4 @@ export function createInternalChatTools(
 
   return tools;
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';

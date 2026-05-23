@@ -5,7 +5,6 @@ import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/schema';
 import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 
 

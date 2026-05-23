@@ -4,7 +4,7 @@ const MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
 export interface MiniMaxConfig {
   apiKey: string;
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export interface MiniMaxError {
   code: string;

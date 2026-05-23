@@ -19,7 +19,7 @@ import { buildGroupMetadata } from './internal-chat-helpers';
 export interface InternalChatHandler {
   (message: InternalChatDeliveryMessage): Promise<void>;
 }
-import { serializeError, errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export interface InternalChatDeliveryMessage {
   targetKey: string;

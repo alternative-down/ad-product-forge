@@ -27,7 +27,6 @@ function extractAgentId(path: string): string {
   const match = path.match(/^\/admin\/agents\/([^/]+)/);
   return match ? match[1] : '';
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // ─── Agent Base (basic agent data) ─────────────────────────────────────────
 

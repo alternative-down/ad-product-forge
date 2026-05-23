@@ -40,7 +40,7 @@ const OUTBOUND_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 function buildProviderId(config: EmailProviderConfig): string {
   return config.id ?? 'email';
 }
-import { serializeError, errorMsg } from './agents/agent-runner-error-formatting';
+import { errorMsg } from './agents/agent-runner-error-formatting';
 
 export function createEmailProvider(config: EmailProviderConfig): CommunicationProvider {
   const providerId = buildProviderId(config);
