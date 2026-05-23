@@ -5,14 +5,7 @@
 import { forgeDebug } from '@forge-runtime/core';
 
 import { z } from 'zod';
-
-const scheduleBaseSchema = {
-  name: z.string().min(1),
-  description: z.string().optional(),
-  timezone: z.string().min(1).default('UTC'),
-  content: z.string().min(1),
-  wakeWhenRunning: z.boolean().optional(),
-} as const;
+import { scheduleBaseSchema } from './schemas';
 
 
 export const updateScheduleSchema = z.discriminatedUnion('scheduleType', [
