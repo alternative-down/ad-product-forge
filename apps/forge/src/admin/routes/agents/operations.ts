@@ -1,3 +1,4 @@
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 /**
  * Agent Operations Routes - Phase 2 of #689
  * Routes for agent operations (wake, internal chat send) from routes.ts
@@ -40,7 +41,6 @@ type InternalChat = {
     attachments: CommunicationFile[];
   }) => Promise<{ success: boolean; conversationKey: string; messageId: string }>;
 };
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
 
 // Widen to accept both the minimal Registry and the full InternalAgentRegistry
 type RegistryEntry =
@@ -116,9 +116,9 @@ export function registerAgentOperationRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Agent wake route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -151,9 +151,9 @@ export function registerAgentOperationRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Internal chat send route failed',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });

@@ -1,3 +1,4 @@
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 /**
  * Agent Skills Admin Routes - extracted from routes.ts (#1519)
  * POST routes for agent skills management
@@ -67,9 +68,9 @@ export function registerAgentSkillsWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-skills/upload',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -107,9 +108,9 @@ export function registerAgentSkillsWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-skills/delete',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -147,9 +148,9 @@ export function registerAgentSkillsWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-skills/install-global',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -187,11 +188,10 @@ export function registerAgentSkillsWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-skills/publish-global',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
