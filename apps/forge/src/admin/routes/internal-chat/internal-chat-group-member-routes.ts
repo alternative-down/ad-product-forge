@@ -3,7 +3,7 @@
  * Extracted from internal-chat/index.ts (group-member routes).
  */
 
-import type { HttpHandler, HttpRequest } from '../../../http/server';
+import type { HttpHandler } from '../../../http/server';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
 import {
