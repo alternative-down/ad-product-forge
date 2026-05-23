@@ -36,14 +36,14 @@ async function fundCompanyCash() {
     context: { amountUsd: input.amountUsd },
   });
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 fundCompanyCash().catch((error) => {
   forgeDebug({
     scope: 'fund-cash',
     level: 'error',
     message: 'Failed to fund company cash',
-    context: { error: String(serializeError(error)) },
+    context: { error: errorMsg(error) },
   });
   process.exit(1);
 });
