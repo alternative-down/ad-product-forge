@@ -10,13 +10,36 @@ import { reloadAgentMcp } from '../../../routes/mcp-helpers';
 import type { HttpHandler } from '../../../../http/server';
 import { mcpServerConfigs, agentMcpConfigs } from '../../../../database/schema';
 import type { Database } from '../../../../database/schema';
+import type { AgentLoaderConfig } from '../../../../agents/agent-loader';
+
+
+// Extract error message for user-facing display
+function errorMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return JSON.stringify(err);
+}
+
+// ─── Request body schema ─────────────────────────────────────────────────────
+const mcpCreateBodySchema = z.object({
+  agentId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  transport: z.enum(['stdio', 'http_streamable']),
+  command: z.string().optional(),
+  argsText: z.string().optional(),
+  envVarsText: z.string().optional(),
+  url: z.string().optional(),
+  headersText: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
 
 export function registerMcpOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
   },
   db: Database,
-  loaderConfig: any,
+  loaderConfig: AgentLoaderConfig,
 ) {
   // POST /admin/agent/mcp/create
   httpServer.registerRoute({
@@ -24,7 +47,7 @@ export function registerMcpOps(
     path: '/admin/agent/mcp/create',
     handler: async (request) => {
       try {
-        const body = parseJsonBody(request.bodyText, z.any());
+        const body = parseJsonBody(request.bodyText ?? '', mcpCreateBodySchema);
         const serverId = createId();
         const configId = createId();
 
@@ -61,11 +84,10 @@ export function registerMcpOps(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent/mcp/create',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../../agents/agent-runner-error-formatting';
