@@ -88,7 +88,7 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
       }
 
       await queueNextStep();
-    } catch (_error) {
+    } catch {
       // beginRun errors are non-fatal — scheduler handles transitionToIdle
     } finally {
       setStartingRun(false, null);
