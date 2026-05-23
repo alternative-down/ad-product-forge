@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import 'node:process';
 import { join } from 'node:path';
 
@@ -62,7 +63,7 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
       scope: 'migrations',
       level: 'error',
       message: 'Failed to run migrations',
-      context: { error: String(serializeError(error)) },
+      context: { error: errorMsg(error) },
     });
     forgeDebug({
       scope: 'migrations',
@@ -73,7 +74,6 @@ export async function runMigrations(db: LibSQLDatabase<Record<string, unknown>>)
     throw error;
   }
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
 
 async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown>>) {
   try {
@@ -95,10 +95,10 @@ async function getAppliedMigrationRows(db: LibSQLDatabase<Record<string, unknown
       scope: 'migrations',
       level: 'error',
       message: 'getAppliedMigrationRows failed',
-      context: { error: String(serializeError(error)) },
+      context: { error: errorMsg(error) },
     });
     return {
-      error: String(serializeError(error)),
+      error: errorMsg(error),
     };
   }
 }

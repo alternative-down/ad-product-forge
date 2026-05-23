@@ -4,7 +4,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { removeUndefined, safeJsonParse, buildRequestError } from './helpers';
 import { getProviderConfig } from './provider-config';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
@@ -23,7 +23,7 @@ export function createHttpTransport(config: HttpTransportConfig) {
         scope: 'coolify',
         level: 'error',
         message: 'requestJson: getProviderConfig failed',
-        context: { method, path, error: String(serializeError(err)) },
+        context: { method, path, error: errorMsg(err) },
       });
       throw err;
     }
@@ -43,7 +43,7 @@ export function createHttpTransport(config: HttpTransportConfig) {
         scope: 'coolify',
         level: 'error',
         message: 'requestJson: fetch failed',
-        context: { method, path, error: String(serializeError(err)) },
+        context: { method, path, error: errorMsg(err) },
       });
       throw err;
     }
@@ -56,7 +56,7 @@ export function createHttpTransport(config: HttpTransportConfig) {
         scope: 'coolify',
         level: 'error',
         message: 'requestJson: response.text() failed',
-        context: { method, path, error: String(serializeError(err)) },
+        context: { method, path, error: errorMsg(err) },
       });
       throw err;
     }

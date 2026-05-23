@@ -1,4 +1,5 @@
 import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
