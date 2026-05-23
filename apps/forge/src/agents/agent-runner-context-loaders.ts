@@ -6,6 +6,7 @@
  */
 
 import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
