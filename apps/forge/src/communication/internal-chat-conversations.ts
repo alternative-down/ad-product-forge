@@ -24,7 +24,7 @@ const logInternalChatConvError = (
   forgeDebug({
     scope: 'internal-chat',
     level: 'error',
-    message: `${context} failed: ${serializeError(error)}`,
+    message: `${context} failed: ${errorMsg(error)}`,
     context: extra,
   });
 };
@@ -178,4 +178,4 @@ export function createInternalChatConversations(db: Database) {
 
   return { ensureDirectConversation, archiveConversationByAccount };
 }
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
