@@ -1,6 +1,5 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
 import { forgeDebug, embedTextWithWorkspaceEmbedder } from '@forge-runtime/core';
-import { serializeError } from '../../agent-runner-error-formatting';
 import type { LtmSearchResult } from '../../agent-ltm-helpers';
 import type { RecallConfig } from './types';
 import { runGraphSearch, type GraphSearchDeps } from './graph-search';
