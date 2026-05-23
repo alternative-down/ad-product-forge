@@ -22,7 +22,7 @@ describe('getRecurringPayables', () => {
     const result = await getRecurringPayables(payables as any);
 
     expect(result).toHaveLength(2);
-    expect(result[0].id).toBe('pay-1');
+    expect(result[0].payableId).toBe('pay-1');
   });
 
   it('calls listRecurringPayables with no arguments', async () => {
