@@ -9,7 +9,7 @@
  * No external dependencies — fully testable in isolation.
  */
 import { withTimeout } from '../utils/async';
-import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
+import { RUNNER_AWAIT_TIMEOUT_MS } from '../utils/constants';
 
 // ─── Core serialization ────────────────────────────────────────────────────────
 
