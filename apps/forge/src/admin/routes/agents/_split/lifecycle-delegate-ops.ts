@@ -8,24 +8,27 @@ import { z } from 'zod';
 import { forgeDebug } from '../../debug';
 import { jsonResponse, parseJsonBody } from '../../index';
 import type { HttpHandler } from '../../../../http/server';
+import type { Database } from '../../../../database/schema';
+import type { AgentEmailManager } from '../../../../email/migadu-manager';
+import type { CoolifyManager } from '../../../../coolify/manager';
 
 export function registerLifecycleDelegateOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
   },
   input: {
-    db: any;
+    db: Database;
     workspaceBasePath: string;
-    githubApps?: any;
-    emailMailboxes?: any;
-    coolify?: any;
-    schedules?: any;
-    internalChat?: any;
+    githubApps?: unknown;
+    emailMailboxes?: AgentEmailManager | null;
+    coolify?: CoolifyManager | null;
+    schedules?: unknown;
+    internalChat?: unknown;
   },
   ops: {
-    runInternalHiring: (db: any, opts: any) => Promise<any>;
-    runInternalTermination: (db: any, opts: any) => Promise<any>;
-    changeAgentRoleFromAdmin: (db: any, opts: { agentId: string; roleId: string }) => Promise<void>;
+    runInternalHiring: (db: Database, opts: Record<string, unknown>) => Promise<{ agentId: string }>;
+    runInternalTermination: (db: Database, opts: Record<string, unknown>) => Promise<{ agentId: string }>;
+    changeAgentRoleFromAdmin: (db: Database, opts: Record<string, unknown>) => Promise<void>;
   },
 ) {
   // POST /admin/agent/hire

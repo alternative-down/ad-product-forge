@@ -79,8 +79,16 @@ describe('registerConfigOps', () => {
     it('registers the route', async () => {
       const { registerConfigOps } = await import('./config-ops');
       registerConfigOps(httpServer as any, db, {
-        githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) },
-        loaderConfig: {},
+        githubApps: { updateAgentManifestConfig: vi.fn().mockResolvedValue({}) } as any,
+        loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any,
       });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -94,8 +102,16 @@ describe('registerConfigOps', () => {
       const updateSpy = vi.fn().mockResolvedValue({});
       const { registerConfigOps } = await import('./config-ops');
       registerConfigOps(httpServer as any, db, {
-        githubApps: { updateAgentManifestConfig: updateSpy },
-        loaderConfig: {},
+        githubApps: { updateAgentManifestConfig: updateSpy } as any,
+        loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any,
       });
       const handler = getRouteHandler(
         httpServer,
@@ -118,7 +134,15 @@ describe('registerConfigOps', () => {
 
     it('returns 503 when githubApps is null', async () => {
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, db, { githubApps: null, loaderConfig: {} });
+      registerConfigOps(httpServer as any, db, { githubApps: null, loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any });
       const handler = getRouteHandler(
         httpServer,
         'POST',
@@ -138,8 +162,16 @@ describe('registerConfigOps', () => {
       const updateSpy = vi.fn().mockRejectedValue(new Error('GitHub API failure'));
       const { registerConfigOps } = await import('./config-ops');
       registerConfigOps(httpServer as any, db, {
-        githubApps: { updateAgentManifestConfig: updateSpy },
-        loaderConfig: {},
+        githubApps: { updateAgentManifestConfig: updateSpy } as any,
+        loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any,
       });
       const handler = getRouteHandler(
         httpServer,
@@ -158,7 +190,15 @@ describe('registerConfigOps', () => {
   describe('POST /admin/agent/update-config', () => {
     it('registers the route', async () => {
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, db, { loaderConfig: {} });
+      registerConfigOps(httpServer as any, db, { loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any });
       expect(httpServer.registerRoute).toHaveBeenCalledWith(
         expect.objectContaining({
           method: 'POST',
@@ -176,7 +216,15 @@ describe('registerConfigOps', () => {
         update: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
       };
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, lookupDb as any, { loaderConfig: {} });
+      registerConfigOps(httpServer as any, lookupDb as any, { loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/update-config');
       const response = await handler(makeRequest({ agentId: 'agent-123', name: 'Test' }));
       expect(response.status).toBeLessThanOrEqual(500);
@@ -188,7 +236,15 @@ describe('registerConfigOps', () => {
         update: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
       };
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, notFoundDb as any, { loaderConfig: {} });
+      registerConfigOps(httpServer as any, notFoundDb as any, { loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/update-config');
 
       const response = await handler(
@@ -206,7 +262,15 @@ describe('registerConfigOps', () => {
         update: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
       };
       const { registerConfigOps } = await import('./config-ops');
-      registerConfigOps(httpServer as any, errorDb as any, { loaderConfig: {} });
+      registerConfigOps(httpServer as any, errorDb as any, { loaderConfig: {
+          workspaceBasePath: '',
+          githubApps: null,
+          emailMailboxes: null,
+          coolify: null,
+          schedules: null,
+          internalChat: null,
+          registry: null,
+        } as any });
       const handler = getRouteHandler(httpServer, 'POST', '/admin/agent/update-config');
 
       const response = await handler(

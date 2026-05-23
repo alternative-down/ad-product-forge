@@ -13,6 +13,7 @@ import {
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../../../../agents/global-skills';
 import type { HttpHandler } from '../../../../http/server';
+import type { Database } from '../../../../database/schema';
 
 const publishAgentSkillToGlobalSchema = z
   .object({
@@ -45,7 +46,7 @@ export function registerSkillOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;
   },
-  db: any,
+  db: Database,
   input: {
     workspaceBasePath: string;
   },
