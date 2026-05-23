@@ -19,11 +19,6 @@ import {
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
 
-export interface CreateAgentContractStoreOptions {
-  db: Database;
-  timeProvider?: TimeProvider;
-}
-
 /**
  * Creates an agent contract store.
  *
