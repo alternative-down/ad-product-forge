@@ -14,7 +14,6 @@ import type {
   RuntimeWorkspace,
   InternalAgentRuntime,
   RuntimeModelField,
-  CreateForgeAgentConfigSchema,
 } from './runtime/types';
 
 // ── RuntimeWorkingMemory ──────────────────────────────────────────────────────

@@ -20,14 +20,6 @@ import {
   type NewInternalChatConversationMember,
 } from '../database/schema';
 
-export interface AdminAccountView {
-  accountId: string;
-  agentId: string | null;
-  slug: string;
-  displayName: string;
-  description: string | null;
-  isAgent: boolean;
-}
 
 export function createInternalChatAdmin(db: Database) {
   // ── Account registration ──────────────────────────────────────────────
