@@ -4,6 +4,7 @@
  */
 
 import type { ForgeHttpServerAdapter } from '../../../http/server';
+import { errorMsg } from '../../../agents/agent-runner-error-formatting';
 import type { AdminRouteContext } from '../../routes';
 import { forgeDebug } from '../debug';
 import { jsonResponse, parseJsonBody } from '../index';
@@ -53,9 +54,9 @@ export function registerAgentSchedulesWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-schedule/create',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -84,9 +85,9 @@ export function registerAgentSchedulesWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-schedule/update',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
@@ -105,11 +106,10 @@ export function registerAgentSchedulesWriteRoutes(
           scope: 'admin',
           level: 'error',
           message: 'Admin route failed: /admin/agent-schedule/delete',
-          context: { error: String(serializeError(err)) },
+          context: { error: errorMsg(err) },
         });
-        return jsonResponse({ error: String(serializeError(err)) }, 500);
+        return jsonResponse({ error: errorMsg(err) }, 500);
       }
     },
   });
 }
-import { serializeError } from '../../../agents/agent-runner-error-formatting';
