@@ -18,7 +18,7 @@ import type { Octokit } from 'octokit';
 import type { Database } from '../../database/schema';
 // @ts-ignore
 import type { createSystemIntegrationStore } from '../../system-integrations/store';
-import type { createAgentNotificationStore } from '../../notifications/store';
+import type { AgentNotificationStore } from '../../notifications/store';
 import type {
   GitHubAppCredentials,
   GitHubAppManifestConfig,
@@ -112,8 +112,6 @@ export interface OpsConfig {
   integrations: ReturnType<typeof createSystemIntegrationStore>;
 }
 
-/** Notification store returned by createAgentNotificationStore */
-export type AgentNotificationStore = ReturnType<typeof createAgentNotificationStore>;
 
 // ── OpsContext (unchanged — flat properties) ───────────────────────────────────
 
