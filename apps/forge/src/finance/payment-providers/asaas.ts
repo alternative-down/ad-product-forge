@@ -137,8 +137,34 @@ export function normalizeAsaasPaymentFailed(payload: AsaasWebhookPayload): {
   };
 }
 
+/** Normalize an Asaas PAYMENT_REFUNDED event. */
+export function normalizeAsaasPaymentRefunded(payload: AsaasWebhookPayload): {
+  provider: PaymentProviderType;
+  providerPaymentId: string;
+  subscriptionId?: string;
+  customerId: string;
+  amountUsd: number;
+  currency: string;
+  status: 'refunded';
+  rawEventJson: string;
+} | null {
+  if (payload.event !== 'PAYMENT_REFUNDED') return null;
+  const p = payload.payment;
+  return {
+    provider: 'asaas',
+    providerPaymentId: p.id,
+    subscriptionId: p.subscription,
+    customerId: p.customer,
+    amountUsd: p.value,
+    currency: 'brl',
+    status: 'refunded',
+    rawEventJson: JSON.stringify(payload),
+  };
+}
+
 /** Map any Asaas webhook event to a normalized payment status. */
-export function normalizeAsaasEvent(payload: AsaasWebhookPayload): {
+export function normalizeAsaasEvent
+(payload: AsaasWebhookPayload): {
   provider: PaymentProviderType;
   providerPaymentId: string;
   subscriptionId?: string;
@@ -156,6 +182,9 @@ export function normalizeAsaasEvent(payload: AsaasWebhookPayload): {
 
   const failed = normalizeAsaasPaymentFailed(payload);
   if (failed) return failed;
+
+  const refunded = normalizeAsaasPaymentRefunded(payload);
+  if (refunded) return refunded;
 
   return null;
 }

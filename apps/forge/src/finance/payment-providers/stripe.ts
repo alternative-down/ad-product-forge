@@ -113,5 +113,35 @@ export function normalizeStripeEvent(event: StripeWebhookPayload): {
     return { ...checkout, currency: checkout.currency, rawEventJson: JSON.stringify(event) };
   }
 
+  const refunded = parseStripePaymentRefunded(event);
+  if (refunded) {
+    return { ...refunded, currency: refunded.currency, rawEventJson: JSON.stringify(event) };
+  }
+
   return null;
+}
+/** Parse a refund event (charge.refunded or payment_intent.refunded). */
+export function parseStripePaymentRefunded(event: StripeWebhookPayload): {
+  provider: PaymentProviderType;
+  providerPaymentId: string;
+  subscriptionId?: string;
+  customerId: string;
+  amountUsd: number;
+  currency: string;
+  status: 'refunded';
+} | null {
+  if (event.type !== 'charge.refunded' && event.type !== 'payment_intent.refunded') return null;
+  const obj = event.data.object as Record<string, unknown>;
+  const amount = typeof obj.amount === 'number' ? obj.amount
+    : typeof obj.amount_refunded === 'number' ? obj.amount_refunded : 0;
+  const currency = String(obj.currency ?? 'usd');
+  return {
+    provider: 'stripe',
+    providerPaymentId: event.id,
+    subscriptionId: typeof obj.subscription === 'string' ? obj.subscription : undefined,
+    customerId: typeof obj.customer === 'string' ? obj.customer : '',
+    amountUsd: amount / 100,
+    currency,
+    status: 'refunded',
+  };
 }
