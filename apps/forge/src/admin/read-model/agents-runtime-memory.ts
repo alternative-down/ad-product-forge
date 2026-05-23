@@ -23,7 +23,7 @@ import {
   readOperationalMemoryState,
   toMastraSafeIdentifier,
 } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { migrateLegacyCheckpointedOmState } from '../../agents/migrate-legacy-checkpointed-om';
 import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './helpers-ltm';
 import { formatWorkingMemoryValue, isTextPart } from './helpers';
@@ -150,7 +150,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
           scope: 'admin-read-model',
           level: 'error',
           message: '[safe-catch]',
-          context: { err: String(serializeError(err)) },
+          context: { err: errorMsg(err) },
         });
         agentContext = null;
       }
@@ -217,7 +217,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
               scope: 'admin-read-model',
               level: 'error',
               message: '[safe-catch]',
-              context: { err: String(serializeError(err)) },
+              context: { err: errorMsg(err) },
             });
             return null;
           })
@@ -232,7 +232,7 @@ export function createAgentsRuntimeMemoryReadModel(deps: AgentsRuntimeMemoryDeps
           scope: 'admin-read-model',
           level: 'error',
           message: '[safe-catch]',
-          context: { err: String(serializeError(err)) },
+          context: { err: errorMsg(err) },
         });
         return null;
       });

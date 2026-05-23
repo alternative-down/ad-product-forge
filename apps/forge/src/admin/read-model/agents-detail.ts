@@ -7,7 +7,7 @@
  */
 
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { desc, eq, inArray } from 'drizzle-orm';
 import {
   agentExecutionContracts,
@@ -40,7 +40,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         scope: 'admin-read-model',
         level: 'error',
         message: 'listAgentContracts failed',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -62,7 +62,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         scope: 'admin-read-model',
         level: 'error',
         message: 'listAgentSchedules failed',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -82,7 +82,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         scope: 'admin-read-model',
         level: 'error',
         message: 'listAgentNotifications failed',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -105,7 +105,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         scope: 'admin-read-model',
         level: 'error',
         message: 'listAgentMcpServers failed (query configs)',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -133,7 +133,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
           scope: 'admin-read-model',
           level: 'error',
           message: 'listAgentMcpServers failed (query servers)',
-          context: { agentId, error: String(serializeError(err)) },
+          context: { agentId, error: errorMsg(err) },
         });
         throw err;
       }
@@ -173,7 +173,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         scope: 'admin-read-model',
         level: 'error',
         message: 'listAgentLlmProfiles failed (query agent)',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -190,7 +190,7 @@ export function createAgentDetailReadModel(deps: AgentDetailReadModelDeps) {
         scope: 'admin-read-model',
         level: 'error',
         message: 'listAgentLlmProfiles failed (query profiles)',
-        context: { agentId, error: String(serializeError(err)) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
