@@ -4,6 +4,7 @@ import { createId } from '../utils/id';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
+import type { InferModel } from 'drizzle-orm';
 import { companyCashLedger } from '../database/schema';
 type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
@@ -24,7 +25,7 @@ export function createCompanyCashLedger(db: Database) {
           ),
         );
 
-      const r = rows as any;
+      const r = rows as unknown as { total: number }[];
       return r?.[0]?.total ?? 0;
     } catch (error) {
       forgeDebug({
