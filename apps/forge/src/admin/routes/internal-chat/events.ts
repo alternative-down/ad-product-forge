@@ -22,6 +22,7 @@ const SCOPE = 'admin-sse-events';
 const KEEPALIVE_INTERVAL_MS = 25_000;
 
 export function createInternalChatSseHandler(internalChat: InternalChatService): HttpHandler {
+    // eslint-disable-next-line @typescript-eslint/require-await
   return async function handleSseEvents(request): Promise<HttpResponse> {
     const accountId = request.query.get('accountId');
     if (accountId === null || accountId === undefined) {

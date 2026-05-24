@@ -278,6 +278,7 @@ export function createPaymentReceivablesStore(db: Database) {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async function getTransactionsBySubscription(subscriptionId: string) {
     try {
       return db
