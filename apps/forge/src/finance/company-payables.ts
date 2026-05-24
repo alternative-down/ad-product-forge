@@ -80,6 +80,7 @@ export function createCompanyPayables(db: Database) {
           dueAt: input.dueAt,
           effectiveAt: null,
           createdAt: now,
+          updatedAt: now,
         });
         return eid;
       });
@@ -196,6 +197,7 @@ export function createCompanyPayables(db: Database) {
           dueAt: nextDueAt,
           effectiveAt: null,
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await tx
