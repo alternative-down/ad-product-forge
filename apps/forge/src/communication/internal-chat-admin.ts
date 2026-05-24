@@ -10,7 +10,7 @@
  *
  * @module
  */
-import { and, eq, isNotNull, ne } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm';
 
 import type { Database } from '../database/schema';
 import {
@@ -220,7 +220,7 @@ export function createInternalChatAdmin(db: Database) {
    */
   async function listExternalAccounts() {
     const accounts = await db.query.internalChatAccounts.findMany({
-      where: isNotNull(internalChatAccounts.agentId),
+      where: isNull(internalChatAccounts.agentId),
     });
     return accounts
       .filter((a: any) => a.agentId === null)
