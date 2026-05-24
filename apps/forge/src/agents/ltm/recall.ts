@@ -11,6 +11,9 @@ import {
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
 import { serializeError, errorMsg } from '../agent-runner-error-formatting';
+import { RecallPersistence, createRecallPersistence } from './recall/persistence';
+
+const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
 import type {
   LongTermMemoryRecallHistory,
@@ -86,45 +89,6 @@ export type AgentLongTermMemoryRecallDebugSearchResult = {
   injectedSystemMessage: string | null;
 };
 
-const _RECALL_AUTO_INDEX_PATHS = ['.'] as const;
-const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
-
-async function countFiles(rootPath: string, relativePath: string): Promise<number> {
-  const absolutePath = path.resolve(rootPath, relativePath.replace(/^\//, ''));
-  const entries = await fs.readdir(absolutePath, { withFileTypes: true }).catch((err) => {
-    forgeDebug({
-      scope: 'ltm-recall',
-      level: 'error',
-      message: '[safe-catch] readdir',
-      context: {
-        error: serializeError(err),
-      },
-    });
-    return null;
-  });
-
-  if (!entries) {
-    return 0;
-  }
-
-  let total = 0;
-
-  for (const entry of entries) {
-    if (entry.isFile()) {
-      total += 1;
-      continue;
-    }
-
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    total += await countFiles(rootPath, path.posix.join(relativePath, entry.name));
-  }
-
-  return total;
-}
-
 export class AgentLongTermMemoryRecall {
   private readonly initTimeoutMs = 5 * 60_000;
   private readonly recallTimeoutMs = 60_000;
@@ -152,6 +116,7 @@ export class AgentLongTermMemoryRecall {
   private pendingRecallOperationCount = 0;
   private lingeringRecallOperationSince: number | null = null;
   private readonly orchestrator: RecallOrchestrator;
+  private readonly persistence: RecallPersistence;
 
   constructor(input: {
     agentId: string;
@@ -216,6 +181,12 @@ export class AgentLongTermMemoryRecall {
       runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
     };
     this.orchestrator = createRecallOrchestrator(orchestratorDeps);
+    this.persistence = createRecallPersistence({
+      persistenceStore: this.persistenceStore,
+      conversationStore: this.conversationStore,
+      agentMemoryPath: this.agentMemoryPath,
+      lastInitAt: this.lastInitAt,
+    });
   }
 
   async recallFromStep(input: {
@@ -712,17 +683,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async getIndexStats() {
-    const [workspaceFileCount, memoryFileCount, checkpointFileCount] = await Promise.all([
-      countFiles(this.agentMemoryPath, 'memory'),
-      countFiles(this.agentMemoryPath, 'memory'),
-      countFiles(this.agentMemoryPath, 'checkpoints'),
-    ]);
-
-    return {
-      workspaceFileCount,
-      memoryFileCount,
-      checkpointFileCount,
-    };
+    return await this.persistence.getIndexStats();
   }
 
   private async queryVectorIndex(
@@ -892,12 +853,7 @@ export class AgentLongTermMemoryRecall {
     snapshot: LongTermMemoryRecallSnapshot,
     history?: LongTermMemoryRecallHistory,
   ) {
-    await this.persistenceStore.writeRecallState({
-      threadId: threadContext.threadId,
-      resourceId: threadContext.resourceId,
-      snapshot,
-      history,
-    });
+    await this.persistence.persistRecallSnapshot(threadContext, snapshot, history);
   }
 
   private async persistRecallSnapshotWithInput(
@@ -959,31 +915,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async readRecallThreadState(threadId: string | null) {
-    const persistedState = await this.persistenceStore.readRecallState();
-    const recentFingerprints = Array.isArray(persistedState.history?.recentFingerprints)
-      ? persistedState.history.recentFingerprints.filter(
-          (value): value is string => typeof value === 'string' && value.length > 0,
-        )
-      : [];
-    const operationalMemoryState: any =
-      (threadId ?? '') !== ''
-        ? await readOperationalMemoryState({
-            threadId: threadId as string,
-            store: this.conversationStore,
-            recentTokenLimit: this.recentRawTokens,
-          })
-        : null;
-    const rawWindowMessageCount =
-      operationalMemoryState !== null && operationalMemoryState !== undefined
-        ? operationalMemoryState.metrics.rawMessageCount
-        : 0;
-
-    return {
-      recentFingerprints,
-      windowSize:
-        rawWindowMessageCount > 0 ? Math.max(1, Math.floor(rawWindowMessageCount * 0.25)) : 20,
-      rawWindowMessageCount,
-    };
+    return await this.persistence.readRecallThreadState(threadId, this.recentRawTokens);
   }
 }
 
