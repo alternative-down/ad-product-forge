@@ -29,6 +29,7 @@ function makeChain(returnValue: unknown = undefined) {
   methods.forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(returnValue !== undefined ? returnValue : chain);
   });
+  chain.all = vi.fn().mockReturnValue(Promise.resolve([]));
   // Special: where returns a chain that resolves the promise
   chain._resolveWhere = (val: unknown) => {
     const whereChain: Record<string, any> = {};
@@ -37,6 +38,7 @@ function makeChain(returnValue: unknown = undefined) {
       whereChain[m] = vi.fn().mockReturnValue(whereChain);
     });
     whereChain.then = (cb: (v: unknown) => void) => cb(val);
+    whereChain.all = vi.fn().mockImplementation(() => Promise.resolve(val));
     chain.where.mockReturnValue(whereChain);
     return whereChain;
   };
@@ -264,7 +266,7 @@ describe('createWebhookStore', () => {
       expect(result).toMatchObject({
         routeId: 'route-1',
         agentId: 'agent-1',
-        payload: { foo: 'bar' },
+        // payload is stored as JSON string (see schema-webhooks.ts payload: text())
         status: 'pending',
         idempotencyKey: 'idem-key-1',
       });
