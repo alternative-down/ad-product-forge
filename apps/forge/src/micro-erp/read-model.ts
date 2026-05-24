@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import type { Database } from '../database/schema';
 import {
@@ -85,7 +86,8 @@ export function createMicroErpReadModel(db: Database) {
       forgeDebug({
         scope: 'micro-erp-read-model',
         level: 'error',
-        message: `listCompanyCashMovements: getCompanyCashSummary failed: ${err instanceof Error ? err.message : String(err)}`,
+        message: 'listCompanyCashMovements: getCompanyCashSummary failed',
+        context: { error: errorMsg(err) },
       });
       summary = null;
     }
