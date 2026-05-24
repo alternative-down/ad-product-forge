@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { HttpRequest, HttpResponse } from '../http/server';
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 type Store = {
   getRoute(routeId: string): Promise<{
@@ -65,7 +66,12 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
           return { status: 401, body: 'Invalid signature' };
         }
-      } catch {
+      } catch (err) {
+      forgeDebug({
+        scope: 'webhooks-handler',
+        level: 'error',
+        message: 'verifyGitHubWebhookSignature failed: ' + errorMsg(err),
+      });
         return { status: 401, body: 'Invalid signature' };
       }
     }
@@ -73,7 +79,12 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     let payload: Record<string, unknown>;
     try {
       payload = JSON.parse(request.bodyText);
-    } catch {
+    } catch (err) {
+      forgeDebug({
+        scope: 'webhooks-handler',
+        level: 'error',
+        message: 'parseWebhookPayload failed: ' + errorMsg(err),
+      });
       return { status: 400, body: 'Invalid JSON payload' };
     }
 
