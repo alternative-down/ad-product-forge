@@ -188,6 +188,62 @@ export class AgentLongTermMemoryRecall {
       lastInitAt: this.lastInitAt,
     });
   }
+  // ─── recallFromStep sub-methods ─────────────────────────────────────────
+
+  private isRecallInFlight(): boolean {
+    return this.pendingRecallOperationCount > 0;
+  }
+
+  private logInFlightSkip(threadId: string | null): void {
+    forgeDebug({
+      scope: 'ltm',
+      level: 'info',
+      message: 'ltm recall skipped because a prior recall operation is still in flight',
+      context: {
+        agentId: this.agentId,
+        threadId,
+        pendingRecallOperationCount: this.pendingRecallOperationCount,
+        lingeringRecallOperationSince:
+          this.lingeringRecallOperationSince !== undefined
+            ? new Date(this.lingeringRecallOperationSince!).toISOString()
+            : null,
+      },
+    });
+  }
+
+  private async persistMissRecall(
+    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    recentFingerprints: string[],
+  ): Promise<void> {
+    await this.persistRecallSnapshotWithInput(input, {
+      status: 'miss',
+      history: {
+        recentFingerprints,
+        updatedAt: String(Date.now()),
+      },
+    });
+  }
+
+  private async persistHitRecall(
+    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    queryText: string,
+    recallConfig: RecallConfig,
+    indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number },
+    dedupedGraph: { hit: boolean; score?: number; context: string },
+    filteredResults: LtmSearchResult[],
+    history: LongTermMemoryRecallHistory,
+  ): Promise<void> {
+    await this.persistRecallSnapshotWithInput(input, {
+      queryText,
+      recallConfig,
+      indexStats,
+      dedupedGraph,
+      filteredResults,
+      history,
+      status: 'hit',
+    });
+  }
+
 
   async recallFromStep(input: {
     step: unknown;
@@ -198,21 +254,8 @@ export class AgentLongTermMemoryRecall {
     const recallStartedAt = Date.now();
 
     try {
-      if (this.pendingRecallOperationCount > 0) {
-        forgeDebug({
-          scope: 'ltm',
-          level: 'info',
-          message: 'ltm recall skipped because a prior recall operation is still in flight',
-          context: {
-            agentId: this.agentId,
-            threadId: input.threadId,
-            pendingRecallOperationCount: this.pendingRecallOperationCount,
-            lingeringRecallOperationSince:
-              this.lingeringRecallOperationSince !== undefined
-                ? new Date(this.lingeringRecallOperationSince!).toISOString()
-                : null,
-          },
-        });
+      if (this.isRecallInFlight()) {
+        this.logInFlightSkip(input.threadId);
         return null;
       }
 
@@ -230,13 +273,7 @@ export class AgentLongTermMemoryRecall {
       const recallThreadState = await this.readRecallThreadState(input.threadId);
 
       if (!queryText) {
-        await this.persistRecallSnapshotWithInput(input, {
-          status: 'miss',
-          history: {
-            recentFingerprints: recallThreadState.recentFingerprints,
-            updatedAt: String(Date.now()),
-          },
-        });
+        await this.persistMissRecall(input, recallThreadState.recentFingerprints);
         return null;
       }
 
@@ -253,22 +290,12 @@ export class AgentLongTermMemoryRecall {
         windowSize: recallThreadState.windowSize,
       });
       const indexStats = await this.getIndexStats();
-      if (
-        this.shouldSkipRecallInjection({
-          graph: { ...graph, sourcesCount: 0 },
-          results,
-          rawWindowMessageCount: recallThreadState.rawWindowMessageCount ?? 0,
-        })
-      ) {
-        await this.persistRecallSnapshotWithInput(input, {
-          queryText,
-          recallConfig,
-          indexStats,
-          dedupedGraph: graph,
-          filteredResults: results,
-          status: 'hit',
-          history: nextHistory,
-        });
+      if (this.shouldSkipRecallInjection({
+        graph: { ...graph, sourcesCount: 0 },
+        results,
+        rawWindowMessageCount: recallThreadState.rawWindowMessageCount ?? 0,
+      })) {
+        await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
         return null;
       }
 
@@ -280,28 +307,12 @@ export class AgentLongTermMemoryRecall {
         results,
       });
 
-      if ((recallText ?? '') === '') {
-        await this.persistRecallSnapshotWithInput(input, {
-          queryText,
-          recallConfig,
-          indexStats,
-          dedupedGraph: graph,
-          filteredResults: results,
-          status: 'hit',
-          history: nextHistory,
-        });
+      if (!recallText) {
+        await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
         return null;
       }
 
-      await this.persistRecallSnapshotWithInput(input, {
-        queryText,
-        recallConfig,
-        indexStats,
-        dedupedGraph: graph,
-        filteredResults: results,
-        status: 'hit',
-        history: nextHistory,
-      });
+      await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
 
       forgeDebug({
         scope: 'ltm',
