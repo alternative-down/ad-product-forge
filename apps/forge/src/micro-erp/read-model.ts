@@ -98,7 +98,7 @@ export function createMicroErpReadModel(db: Database) {
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
       })),
-      total: (countRows as unknown as { total: number }[])[0]?.total ?? 0,
+      total: (countRows as { total: number }[])[0]?.total ?? 0,
       summary,
     };
   }
@@ -139,12 +139,12 @@ export function createMicroErpReadModel(db: Database) {
           lte(companyCashLedger.dueAt, periodEnd),
         ),
       );
-    const totalInUsd = (postedTotals as unknown as { totalInUsd: number }[])[0]?.totalInUsd ?? 0;
-    const totalOutUsd = (postedTotals as unknown as { totalOutUsd: number }[])[0]?.totalOutUsd ?? 0;
+    const totalInUsd = (postedTotals as { totalInUsd: number }[])[0]?.totalInUsd ?? 0;
+    const totalOutUsd = (postedTotals as { totalOutUsd: number }[])[0]?.totalOutUsd ?? 0;
     const scheduledInUsd =
-      (scheduledTotals as unknown as { scheduledInUsd: number }[])[0]?.scheduledInUsd ?? 0;
+      (scheduledTotals as { scheduledInUsd: number }[])[0]?.scheduledInUsd ?? 0;
     const scheduledOutUsd =
-      (scheduledTotals as unknown as { scheduledOutUsd: number }[])[0]?.scheduledOutUsd ?? 0;
+      (scheduledTotals as { scheduledOutUsd: number }[])[0]?.scheduledOutUsd ?? 0;
 
     const balanceUsd = await companyCash.getCurrentBalanceUsd();
 
