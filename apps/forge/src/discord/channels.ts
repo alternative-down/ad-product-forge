@@ -28,7 +28,7 @@ export function createDiscordClient(_token: string) {
   });
 }
 
-function waitForReady(client: Client) {
+function __waitForReady(client: Client) {
   return new Promise<void>((resolve) => {
     if (client.isReady()) {
       resolve();
