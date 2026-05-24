@@ -291,4 +291,5 @@ export {
   // fallow-ignore-next-line unused-export
   listInternalChatGroupParticipants,
   listThreadMessages,
-};
+
+  ClosableLibsqlClient,};

@@ -23,9 +23,8 @@ import type { InternalAgentRuntime } from './runtime/types';
 
 const _OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
-type ClosableLibsqlClient = Awaited<ReturnType<typeof createClient>> & {
-  close?: () => void | Promise<void>;
-};
+
+import { closeLibsqlClient, ClosableLibsqlClient } from '../admin/read-model/conversation-helpers';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type RuntimeStoredMessagePart = {
@@ -38,10 +37,6 @@ export type ThreadDetails = {
   preview: string | null;
   toolBadge: { icon: string; label: string } | null;
 };
-
-async function closeLibsqlClient(client: ClosableLibsqlClient) {
-  await client.close?.();
-}
 
 /**
  * Reads the most recent conversation messages from the agent's libsql database
