@@ -48,7 +48,7 @@ export function createWebhookStore(db: Database) {
         .from(webhookRoutes)
         .where(eq(webhookRoutes.routeId, routeId))
         .limit(1);
-      return (rows as WebhookRoute[])[0] ?? null;
+      return (rows as unknown as WebhookRoute[])[0] ?? null;
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -139,7 +139,7 @@ export function createWebhookStore(db: Database) {
         .from(webhookEvents)
         .where(eq(webhookEvents.agentId, agentId))
         .orderBy(desc(webhookEvents.receivedAt))
-        .limit(limit)) as WebhookEvent[];
+        .limit(limit)) as unknown as WebhookEvent[];
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
