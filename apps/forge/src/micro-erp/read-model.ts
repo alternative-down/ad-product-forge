@@ -125,8 +125,7 @@ export function createMicroErpReadModel(db: Database) {
           lte(companyCashLedger.effectiveAt, periodEnd),
         ),
       );
-    let scheduledTotals;
-    scheduledTotals = await db
+    const scheduledTotals = await db
       .select({
         scheduledInUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${IN} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
         scheduledOutUsd: sql<number>`coalesce(sum(case when ${companyCashLedger.direction} = ${OUT} then ${companyCashLedger.amountUsd} else 0 end), 0)`,
