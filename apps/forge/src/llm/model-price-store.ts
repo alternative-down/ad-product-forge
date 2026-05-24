@@ -60,7 +60,7 @@ export function createLlmModelPriceStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to upsert LLM model price',
-        context: { modelKey: input.modelKey, error: err },
+        context: { modelKey: input.modelKey, error: errorMsg(err) },
       });
       throw err;
     }
