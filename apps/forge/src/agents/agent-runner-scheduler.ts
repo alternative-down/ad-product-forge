@@ -1,5 +1,6 @@
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from './agent-runner-error-formatting';
 
 import { withTimeout } from '../utils/async';
 import {
@@ -212,7 +213,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'planNextStepDelay failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
       return -1;
     }
@@ -312,7 +313,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'start failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
     }
   }
@@ -356,7 +357,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'forceIdle setExecutionState failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
     }
     try {
@@ -370,7 +371,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'forceIdle onAgentIdle failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
     }
 
@@ -407,7 +408,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'transitionToIdle setExecutionState failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
     }
     try {
@@ -421,7 +422,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'transitionToIdle onAgentIdle failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
     }
 
@@ -440,7 +441,7 @@ export function createScheduler(state: SchedulerState, deps: SchedulerDependenci
         scope: 'scheduler',
         level: 'error',
         message: 'transitionToIdle onRunnerIdle failed',
-        context: { runtimeId: deps.runtimeId, error },
+        context: { runtimeId: deps.runtimeId, error: errorMsg(error) },
       });
     }
   }
