@@ -4,7 +4,7 @@
  * createIssueComment, updateIssueComment, deleteIssueComment
  */
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from './serialize-error';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 import type { OpsContext } from './context';
 
@@ -33,7 +33,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listIssues: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -46,7 +46,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listIssues: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -69,7 +69,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listIssues: octokit.request failed',
-        context: { agentId, owner, repo: input.repositoryName, error: serializeError(err) },
+        context: { agentId, owner, repo: input.repositoryName, error: errorMsg(err) },
       });
       throw err;
     }
@@ -95,7 +95,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'getIssue: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -108,7 +108,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'getIssue: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -130,7 +130,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           issueNumber: input.issueNumber,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -159,7 +159,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'createIssue: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -172,7 +172,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'createIssue: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -198,7 +198,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           title: input.title,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -229,7 +229,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'updateIssue: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -242,7 +242,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'updateIssue: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -270,7 +270,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           issueNumber: input.issueNumber,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -317,7 +317,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listIssueComments: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -330,7 +330,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listIssueComments: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -353,7 +353,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           issueNumber: input.issueNumber,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -385,7 +385,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'getIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -398,7 +398,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'getIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -421,7 +421,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           commentId: input.commentId,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -454,7 +454,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'createIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -467,7 +467,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'createIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -493,7 +493,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           issueNumber: input.issueNumber,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -526,7 +526,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'updateIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -539,7 +539,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'updateIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -562,7 +562,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           commentId: input.commentId,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;
@@ -594,7 +594,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'deleteIssueComment: getInstallationOctokit failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -607,7 +607,7 @@ export function createIssuesOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'deleteIssueComment: getDefaultOwner failed',
-        context: { agentId, owner: input.owner, error: serializeError(err) },
+        context: { agentId, owner: input.owner, error: errorMsg(err) },
       });
       throw err;
     }
@@ -628,7 +628,7 @@ export function createIssuesOps(ctx: OpsContext) {
           owner,
           repo: input.repositoryName,
           commentId: input.commentId,
-          error: serializeError(err),
+          error: errorMsg(err),
         },
       });
       throw err;

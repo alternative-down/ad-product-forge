@@ -4,7 +4,7 @@
  */
 import type { OpsContext } from './context';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from './serialize-error';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 const SCOPE = 'github-ops-prs';
 
@@ -39,7 +39,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listPullRequests failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -80,7 +80,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'createPullRequest failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -120,7 +120,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'getPullRequest failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -161,7 +161,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listPullRequestComments failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -209,7 +209,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'updatePullRequest failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -250,7 +250,7 @@ export function createPullRequestsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'mergePullRequest failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }

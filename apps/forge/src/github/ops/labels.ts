@@ -4,7 +4,7 @@
  */
 import type { OpsContext } from './context';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from './serialize-error';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 
 const SCOPE = 'github-ops-labels';
 
@@ -36,7 +36,7 @@ export function createLabelsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'listLabels failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -73,7 +73,7 @@ export function createLabelsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'createLabel failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -112,7 +112,7 @@ export function createLabelsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'updateLabel failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -140,7 +140,7 @@ export function createLabelsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'deleteLabel failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -178,7 +178,7 @@ export function createLabelsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'addIssueLabels failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -216,7 +216,7 @@ export function createLabelsOps(ctx: OpsContext) {
         scope: SCOPE,
         level: 'error',
         message: 'removeIssueLabels failed',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       throw err;
     }
