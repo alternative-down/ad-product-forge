@@ -1,6 +1,6 @@
 import {
   integer,
-  real,
+
   sqliteTable,
   text,
   uniqueIndex,
