@@ -83,7 +83,7 @@ export function createAgentScheduleStore(db: Database) {
         orderBy: [asc(agentSchedules.createdAt)],
       });
 
-      return rows.filter((row: any) => row.kind === 'agent').map(toScheduleSummary);
+      return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
     } catch (err) {
       forgeDebug({
         scope: 'schedules-store',
@@ -124,7 +124,7 @@ export function createAgentScheduleStore(db: Database) {
         orderBy: [desc(agentSchedules.createdAt)],
       });
 
-      return rows.filter((row: any) => row.kind === 'agent').map(toScheduleSummary);
+      return rows.filter((row) => row.kind === 'agent').map(toScheduleSummary);
     } catch (err) {
       forgeDebug({
         scope: 'schedules-store',
