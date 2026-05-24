@@ -1,5 +1,4 @@
 import { buildRunnerSnapshot } from './agent-runner-snapshot';
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
 import { createId } from '../utils/id';
 import { createAgentWakeQueue, forgeDebug } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -106,24 +105,33 @@ export function createAgentRunner(
     runtimeId: runtime.id,
     setExecutionState: (id, state) => store.setExecutionState(id, state),
   });
-  let timer: NodeJS.Timeout | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let timer: NodeJS.Timeout | null = null;
   let stopped = false;
   let startingRun = false;
-  let startingRunStartedAt: number | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let startingRunStartedAt: number | null = null;
   let executing = false;
-  let lastWakeStartedAt: number | null = null;
-  let lastStepStartedAt: number | null = null;
-  let lastStepStage: string | null = null;
-  let lastGenerateProgress: {
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let lastWakeStartedAt: number | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let lastStepStartedAt: number | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let lastStepStage: string | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let lastGenerateProgress: {
     stage: string;
     at: number;
     detail: Record<string, unknown> | null;
   } | null = null;
   const loopManager = createLoopManager({ lastLoopSignature: null, repeatedLoopCount: 0 });
-  let activeRunId: string | null = null;
-  let currentGenerateAbortController: AbortController | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let activeRunId: string | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let currentGenerateAbortController: AbortController | null = null;
   let runLastMessages = DEFAULT_RUN_LAST_MESSAGES;
-  let pendingLongTermMemoryRecallSystemText: string | null = null;
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+let pendingLongTermMemoryRecallSystemText: string | null = null;
   const messageManager = createRunnerMessageManager(
     {
       flushedRunEventKeys: new Set<string>(),
@@ -139,6 +147,7 @@ export function createAgentRunner(
 
   currentRuntime.onReceiveMessage(notifyExternalEvent);
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function reloadRuntimeForNewRun(runEpoch: number) {
     if (!options.reloadRuntime) {
       return;
@@ -183,6 +192,7 @@ export function createAgentRunner(
     scheduler.scheduleNextStep(delayMs);
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function start() {
     if (stopped) {
       return;
@@ -218,6 +228,7 @@ export function createAgentRunner(
     });
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function execute(events: AgentWakeEvent[]) {
     if (stopped) {
       return;
@@ -287,6 +298,7 @@ export function createAgentRunner(
     messageManager.reset();
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function forceIdle(
     options: {
       preserveQueuedWork?: boolean;
@@ -307,6 +319,7 @@ export function createAgentRunner(
     scheduler.clearTimer();
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function runHealthcheck() {
     if (stopped) return;
     const _onStartingRunTimeout: () => void = () => {
@@ -361,6 +374,7 @@ export function createAgentRunner(
     });
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function beginRun(input: {
     reloadRuntime: boolean;
     wakeStartedAt: number;
@@ -425,6 +439,7 @@ export function createAgentRunner(
     }
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function queueNextStep(runEpoch: number) {
     if (stopped || executing || timer || isStaleRun(runEpoch)) {
       return;
@@ -475,6 +490,7 @@ export function createAgentRunner(
     }
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function executeStep(contractId: string, runEpoch: number) {
     if (stopped || executing || isStaleRun(runEpoch)) {
       return;
@@ -700,6 +716,7 @@ export function createAgentRunner(
     loopManager.reset();
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function resetRunLastMessages() {
     const settings = await withTimeout(
       systemSettings.getSettings(),
@@ -728,6 +745,7 @@ export function createAgentRunner(
     return loopManager.register(signature);
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function planNextAttempt(): Promise<
     | {
         execute: 'idle';
@@ -843,6 +861,7 @@ export function createAgentRunner(
     return !startingRun && !executing && !timer;
   }
 
+/* eslint-disable-next-line @typescript-eslint/require-await */
   async function transitionToIdle(
     runEpoch: number,
     options: {
