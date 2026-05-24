@@ -110,10 +110,3 @@ export async function runHealthcheck(deps: HealthcheckDeps): Promise<void> {
  * Wrapper that handles the "startingRun timeout" scenario.
  * Call this when you detect the runner is in a starting state for too long.
  */
-export function handleStartingRunTimeout(deps: {
-  onStartingRunTimeout(runEpoch?: number): void;
-  syncStarterState(running: boolean, startedAt: number | null): void;
-}) {
-  deps.onStartingRunTimeout();
-  deps.syncStarterState(false, null);
-}

@@ -10,13 +10,6 @@ export interface LoopManagerState {
   repeatedLoopCount: number;
 }
 
-export function createLoopManagerState(): LoopManagerState {
-  return {
-    lastLoopSignature: null,
-    repeatedLoopCount: 0,
-  };
-}
-
 export interface LoopManager {
   reset(): void;
   register(signature: string): number;

@@ -143,8 +143,3 @@ export function didIterationProduceVisibleAssistantText(iteration: {
 /**
  * Returns true if the iteration contains an updateWorkingMemory tool call.
  */
-export function didIterationUpdateWorkingMemory(iteration: {
-  toolCalls: Array<{ name: string }>;
-}): boolean {
-  return iteration.toolCalls.some((tool) => tool.name === 'updateWorkingMemory');
-}

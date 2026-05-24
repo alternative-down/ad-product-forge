@@ -212,21 +212,6 @@ export function sortParticipantsBySelfFirst<T extends InternalChatGroupParticipa
  * Prefers the explicitly set name; falls back to the first non-self participant's
  * display name (for DMs), then the first participant's name.
  */
-export function resolveConversationDisplayName(
-  conversation: { name: string | null; type: string },
-  participants: InternalChatGroupParticipant[],
-  selfAccountId: string,
-): string | undefined {
-  return (
-    conversation.name ??
-    participants.find((p) => p.accountId !== selfAccountId)?.displayName ??
-    participants[0]?.displayName
-  );
-}
-
-/**
- * Extracts an ordered list of participant display names from a participant array.
- */
 export function buildConversationParticipantNames(
   participants: InternalChatGroupParticipant[],
 ): string[] {
