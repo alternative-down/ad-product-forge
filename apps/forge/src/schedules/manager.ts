@@ -1,5 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg, serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import type { Database } from '../database/schema';

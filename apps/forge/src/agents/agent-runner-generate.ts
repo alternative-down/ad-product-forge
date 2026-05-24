@@ -15,7 +15,6 @@
  * - Scheduling: scheduler
  * - Config: loadAgentContextInstructions (from agent-runner-context-loaders.ts)
  * - Constants: GENERATE_TIMEOUT_MS, GENERATE_TIMEOUT_MAX_ATTEMPTS, GENERATE_TIMEOUT_BACKOFF_MS,
- *              GENERATE_MAX_STEPS_PER_RUN, RUNNER_AWAIT_TIMEOUT_MS, RUN_STOP_REMINDER
  * - Helpers: buildStepSystemPrompt, extractRunnerControlDirectiveFromIteration, etc.
  * - State helpers: isStaleRun, advanceGenerateToken, nextBackoff, resetBackoff, calculateDelayMs
  */
@@ -23,11 +22,9 @@
 import type { Database } from '../database/schema';
 import type { InternalAgentRuntime } from './runtime/types';
 import type { AgentContractStore } from './agent-contract-store';
-import type { SystemSettingsStore } from '../system-settings/store';
 import type { AgentNotificationStore } from '../notifications/store';
 import type { AgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import type { AgentRunnerUsage } from './agent-runner-usage';
-import type { AgentWakeQueue } from '@forge-runtime/core';
 import type { Scheduler } from './agent-runner-scheduler';
 import type { MessageManager } from './agent-runner-messages';
 import type { RuntimeGenerateResult } from './runtime/types';
@@ -37,10 +34,6 @@ import {
   buildStepSystemPrompt,
 
 } from './agent-runner-control-directives';
-import {
-  buildRecallStepFromIteration,
-  didIterationProduceVisibleAssistantText,
-} from './agent-runner-iteration-helpers';
 import { createId } from '../utils/id';
 import { isStaleRun, resetBackoff, calculateDelayMs } from './agent-runner-state';
 import {
@@ -50,11 +43,7 @@ import {
 } from './agent-runner-attempt-lifecycle';
 import {
   buildIterationFeedback,
-  type BuildIterationFeedbackDeps,
-  type BuildIterationFeedbackInput,
 } from './agent-runner-feedback';
-import { readAgentHomeMetricSnapshot } from './agent-home-metrics';
-import { RUN_STOP_REMINDER } from './agent-runner-wake';
 import { forgeDebug } from '@forge-runtime/core';
 
 import { FIFTEEN_MINUTES_MS } from './time-constants';
@@ -63,13 +52,12 @@ import { FIFTEEN_MINUTES_MS } from './time-constants';
 
 import {
   createGenerateTimeoutGuard,
-  touchGenerateTimeout,
   clearGenerateTimeout,
   type GenerateTimeoutHandle,
   type ProgressState,
 } from './agent-runner-generate-timeout';
 
-const GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
+const _GENERATE_TIMEOUT_MS = FIFTEEN_MINUTES_MS;
 const GENERATE_TIMEOUT_MAX_ATTEMPTS = 1;
 const GENERATE_TIMEOUT_BACKOFF_MS = 5_000;
 const GENERATE_MAX_STEPS_PER_RUN = 10_000;
@@ -198,7 +186,7 @@ export async function generateWithTimeoutRetries(
       : null,
   ].filter((value): value is { role: 'assistant' | 'user'; content: string } => Boolean(value));
 
-  const runDelayMs = calculateDelayMs(deps.backoffState, {
+  const _runDelayMs = calculateDelayMs(deps.backoffState, {
     hasPendingMessages: false,
     stopRequested: false,
     hasNewEvents: false,

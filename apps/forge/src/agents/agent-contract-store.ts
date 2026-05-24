@@ -14,7 +14,6 @@ import {
   llmProfiles,
   type AgentExecutionContract,
   type NewAgentExecutionContract,
-  type NewAgentExecutionStep,
 } from '../database/schema';
 import { createCompanyCashLedger } from '../finance/company-cash-ledger';
 import { createCompanyCashOperations } from '../finance/company-cash-operations';
