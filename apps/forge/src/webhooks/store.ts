@@ -3,7 +3,7 @@ import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
-import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent } from '../database/schema';
+import { webhookRoutes, webhookEvents, WebhookRoute, WebhookEvent, NewWebhookRoute, NewWebhookEvent } from '../database/schema';
 import { createId } from '../utils/id';
 
 
@@ -18,18 +18,17 @@ export function createWebhookStore(db: Database) {
   }): Promise<WebhookRoute> {
     const now = Date.now();
     const route = {
+
       routeId: createId(),
       agentId: input.agentId,
       name: input.name,
       secret: input.secret ?? null,
-      isActive: true,
+      isActive: 1,
       createdAt: now,
       updatedAt: now,
     };
     try {
-      await (
-        db.insert(webhookRoutes) as unknown as { values: (v: unknown) => Promise<unknown> }
-      ).values(route as unknown);
+      await db.insert(webhookRoutes).values(route as NewWebhookRoute);
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -39,7 +38,7 @@ export function createWebhookStore(db: Database) {
       });
       throw err;
     }
-    return route as unknown as WebhookRoute;
+    return route as WebhookRoute;
   }
 
   async function getRoute(routeId: string): Promise<WebhookRoute | null> {
@@ -49,7 +48,7 @@ export function createWebhookStore(db: Database) {
         .from(webhookRoutes)
         .where(eq(webhookRoutes.routeId, routeId))
         .limit(1);
-      return (rows as unknown as WebhookRoute[])[0] ?? null;
+      return (rows as WebhookRoute[])[0] ?? null;
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -79,12 +78,8 @@ export function createWebhookStore(db: Database) {
 
   async function deactivateRoute(routeId: string): Promise<void> {
     try {
-      await (
-        db.update(webhookRoutes) as unknown as {
-          set: (v: unknown) => { where: (cond: unknown) => Promise<unknown> };
-        }
-      )
-        .set({ isActive: false as unknown, updatedAt: Date.now() })
+      await db.update(webhookRoutes)
+        .set({ isActive: 0, updatedAt: Date.now() })
         .where(eq(webhookRoutes.routeId, routeId));
     } catch (err) {
       forgeDebug({
@@ -106,11 +101,12 @@ export function createWebhookStore(db: Database) {
   }): Promise<WebhookEvent> {
     const now = Date.now();
     const event = {
+
       eventId: createId(),
       routeId: input.routeId,
       agentId: input.agentId,
-      payload: input.payload,
-      headers: input.headers,
+      payload: JSON.stringify(input.payload),
+      headers: JSON.stringify(input.headers),
       idempotencyKey: input.idempotencyKey ?? null,
       status: 'pending' as const,
       createdAt: now,
@@ -119,9 +115,7 @@ export function createWebhookStore(db: Database) {
       processedAt: null,
     };
     try {
-      await (
-        db.insert(webhookEvents) as unknown as { values: (v: unknown) => Promise<unknown> }
-      ).values(event as unknown);
+      await db.insert(webhookEvents).values(event as NewWebhookEvent);
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -135,7 +129,7 @@ export function createWebhookStore(db: Database) {
       });
       throw err;
     }
-    return event as unknown as WebhookEvent;
+    return event as WebhookEvent;
   }
 
   async function listEventsByAgent(agentId: string, limit = 50): Promise<WebhookEvent[]> {
