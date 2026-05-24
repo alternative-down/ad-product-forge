@@ -1,3 +1,4 @@
+import { closeLibsqlClient, type ClosableLibsqlClient } from '../../utils/libsql-helpers';
 import path from 'node:path';
 import { forgeDebug } from '@forge-runtime/core';
 import { errorMsg } from '../../agents/agent-runner-error-formatting';
@@ -30,17 +31,11 @@ interface LocalMessageListItem {
   replyToMessageId: string | null;
 }
 import type { ConversationParticipant } from '../../communication/internal-chat-listing-types';
-type ClosableLibsqlClient = ReturnType<typeof createClient> & {
-  close?: () => void | Promise<void>;
-};
 
 const RECENT_CONVERSATION_LIMIT = 10;
 
 // shared utility — imported from utils/async
 
-async function closeLibsqlClient(client: ClosableLibsqlClient) {
-  await client.close?.();
-}
 
 async function listRecentConversations(
   workspaceBasePath: string,

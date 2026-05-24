@@ -1,3 +1,4 @@
+import { closeLibsqlClient, type ClosableLibsqlClient } from '../utils/libsql-helpers';
 import { serializeError } from './agent-runner-error-formatting';
 import {
   forgeDebug,
@@ -23,9 +24,6 @@ import type { InternalAgentRuntime } from './runtime/types';
 
 const _OBSERVABILITY_READ_TIMEOUT_MS = 5_000;
 
-type ClosableLibsqlClient = Awaited<ReturnType<typeof createClient>> & {
-  close?: () => void | Promise<void>;
-};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type RuntimeStoredMessagePart = {
@@ -39,9 +37,6 @@ export type ThreadDetails = {
   toolBadge: { icon: string; label: string } | null;
 };
 
-async function closeLibsqlClient(client: ClosableLibsqlClient) {
-  await client.close?.();
-}
 
 /**
  * Reads the most recent conversation messages from the agent's libsql database
