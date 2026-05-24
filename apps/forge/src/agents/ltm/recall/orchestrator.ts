@@ -1,9 +1,9 @@
 import type { SqliteWorkspaceRetrieval } from '@forge-runtime/core';
-import { forgeDebug, embedTextWithWorkspaceEmbedder } from '@forge-runtime/core';
+import { forgeDebug } from '@forge-runtime/core';
 import type { LtmSearchResult } from '../../agent-ltm-helpers';
 import type { RecallConfig } from './types';
-import { runGraphSearch, type GraphSearchDeps } from './graph-search';
-import { runWorkspaceSearch, type WorkspaceSearchDeps } from './workspace-search';
+import { runGraphSearch } from './graph-search';
+import { runWorkspaceSearch } from './workspace-search';
 
 
 
@@ -123,7 +123,7 @@ export class RecallOrchestrator {
       mode: 'hybrid',
     },
   ): Promise<{ formatted: string; results: LtmSearchResult[] }> {
-    return runWorkspaceSearch(queryText, options, {
+    return await runWorkspaceSearch(queryText, options, {
       retrievalWorkspace: this.retrievalWorkspace,
       agentId: this.agentId,
       recallTimeoutMs: this.recallTimeoutMs,
@@ -160,7 +160,7 @@ export class RecallOrchestrator {
     rawJson: string | null;
     error: string | null;
   }> {
-    return runGraphSearch(queryText, workspaceResults, options, {
+    return await runGraphSearch(queryText, workspaceResults, options, {
       retrievalWorkspace: this.retrievalWorkspace,
       agentId: this.agentId,
       recallTimeoutMs: this.recallTimeoutMs,
