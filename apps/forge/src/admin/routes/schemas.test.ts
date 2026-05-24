@@ -12,20 +12,16 @@ import {
   createExternalInternalChatAccountSchema,
   updateExternalInternalChatAccountSchema,
   deleteExternalInternalChatAccountSchema,
-  internalChatAccountIdQuerySchema,
-  internalChatMessagesQuerySchema,
-  internalChatMessageAttachmentQuerySchema,
   createInternalChatConversationSchema,
   sendInternalChatConversationMessageSchema,
   updateInternalChatConversationSchema,
   archiveInternalChatConversationSchema,
-  internalChatGroupMembersQuerySchema,
   addInternalChatGroupMemberSchema,
   updateInternalChatGroupMemberRoleSchema,
   removeInternalChatGroupMemberSchema,
 } from './schemas/internal-chat';
 import { upsertSystemIntegrationSchema } from './schemas/providers';
-import { createAgentMcpServerSchema } from './schemas/mcp';
+
 import { createPayableSchema } from './schemas/finance';
 
 describe('Admin Route Schemas', () => {
@@ -257,49 +253,6 @@ describe('Admin Route Schemas', () => {
     });
   });
 
-  describe('internalChatAccountIdQuerySchema', () => {
-    it('validates required accountId', () => {
-      const result = internalChatAccountIdQuerySchema.parse({
-        accountId: 'acct-1',
-      });
-      expect(result.accountId).toBe('acct-1');
-    });
-  });
-
-  describe('internalChatMessagesQuerySchema', () => {
-    it('applies defaults', () => {
-      const result = internalChatMessagesQuerySchema.parse({
-        accountId: 'acct-1',
-        conversationId: 'conv-1',
-      });
-      expect(result.limit).toBe(20);
-      expect(result.offset).toBe(0);
-    });
-
-    it('respects provided values', () => {
-      const result = internalChatMessagesQuerySchema.parse({
-        accountId: 'acct-1',
-        conversationId: 'conv-1',
-        limit: '50',
-        offset: '10',
-      });
-      expect(result.limit).toBe(50);
-      expect(result.offset).toBe(10);
-    });
-  });
-
-  describe('internalChatMessageAttachmentQuerySchema', () => {
-    it('validates all required fields', () => {
-      const result = internalChatMessageAttachmentQuerySchema.parse({
-        accountId: 'acct-1',
-        conversationId: 'conv-1',
-        messageId: 'msg-1',
-        attachmentName: 'file.pdf',
-      });
-      expect(result.attachmentName).toBe('file.pdf');
-    });
-  });
-
   describe('createInternalChatConversationSchema', () => {
     it('allows optional name with memberKeys required', () => {
       const result = createInternalChatConversationSchema.parse({
@@ -350,15 +303,6 @@ describe('Admin Route Schemas', () => {
   describe('archiveInternalChatConversationSchema', () => {
     it('validates required conversationId', () => {
       const result = archiveInternalChatConversationSchema.parse({
-        conversationId: 'conv-1',
-      });
-      expect(result.conversationId).toBe('conv-1');
-    });
-  });
-
-  describe('internalChatGroupMembersQuerySchema', () => {
-    it('validates required conversationId', () => {
-      const result = internalChatGroupMembersQuerySchema.parse({
         conversationId: 'conv-1',
       });
       expect(result.conversationId).toBe('conv-1');
@@ -723,108 +667,6 @@ describe('Finance Schemas', () => {
           category: 'misc',
         }),
       ).toThrow();
-    });
-  });
-});
-
-describe('MCP Server Schemas', () => {
-  describe('createAgentMcpServerSchema — stdio transport', () => {
-    it('validates stdio transport config', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-1',
-        name: 'filesystem-server',
-        transport: 'stdio',
-        command: '/usr/local/bin/mcp-server',
-        argsText: '--verbose',
-        envVarsText: 'API_KEY=secret',
-        url: '',
-        headersText: '',
-      });
-      expect(result.transport).toBe('stdio');
-      expect(result.command).toBe('/usr/local/bin/mcp-server');
-    });
-
-    it('applies default isActive', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-1',
-        name: 'test-server',
-        transport: 'stdio',
-        command: 'node',
-      });
-      expect(result.isActive).toBe(true);
-    });
-
-    it('applies default empty strings for optional fields', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-1',
-        name: 'test-server',
-        transport: 'stdio',
-        command: 'node',
-      });
-      expect(result.argsText).toBe('');
-      expect(result.envVarsText).toBe('');
-      expect(result.url).toBe('');
-      expect(result.headersText).toBe('');
-    });
-
-    it('rejects empty name', () => {
-      expect(() =>
-        createAgentMcpServerSchema.parse({
-          agentId: 'agent-1',
-          name: '   ',
-          transport: 'stdio',
-          command: 'node',
-        }),
-      ).toThrow();
-    });
-
-    it('rejects empty command', () => {
-      expect(() =>
-        createAgentMcpServerSchema.parse({
-          agentId: 'agent-1',
-          name: 'server',
-          transport: 'stdio',
-          command: '',
-        }),
-      ).toThrow();
-    });
-  });
-
-  describe('createAgentMcpServerSchema — http_streamable transport', () => {
-    it('validates http_streamable transport config', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-1',
-        name: 'remote-api',
-        transport: 'http_streamable',
-        url: 'https://mcp.example.com/stream',
-        headersText: 'Authorization: Bearer token',
-      });
-      expect(result.transport).toBe('http_streamable');
-      expect(result.url).toBe('https://mcp.example.com/stream');
-    });
-
-    it('rejects stdio fields on http_streamable variant', () => {
-      // http_streamable variant has command as optional default(''),
-      // but url must be a valid URL
-      expect(() =>
-        createAgentMcpServerSchema.parse({
-          agentId: 'agent-1',
-          name: 'remote-api',
-          transport: 'http_streamable',
-          url: 'not-a-url',
-        }),
-      ).toThrow();
-    });
-
-    it('accepts http_streamable without command', () => {
-      const result = createAgentMcpServerSchema.parse({
-        agentId: 'agent-1',
-        name: 'remote-api',
-        transport: 'http_streamable',
-        url: 'https://api.example.com/mcp',
-      });
-      expect(result.transport).toBe('http_streamable');
-      expect(result.url).toBe('https://api.example.com/mcp');
     });
   });
 });
