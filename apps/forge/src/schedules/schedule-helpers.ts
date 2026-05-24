@@ -1,5 +1,5 @@
 import { parseExpression } from 'cron-parser';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 function _validateCronExpression(expression: string): boolean {
@@ -11,7 +11,7 @@ function _validateCronExpression(expression: string): boolean {
       scope: 'schedule-helpers',
       level: 'error',
       message: 'Cron expression validation failed',
-      context: { error: serializeError(error) },
+      context: { error: errorMsg(error) },
     });
     return false;
   }

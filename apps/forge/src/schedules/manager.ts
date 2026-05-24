@@ -80,7 +80,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules-manager',
         level: 'error',
         message: 'getAgentSchedule failed',
-        context: { agentId, scheduleId, error: serializeError(error) },
+        context: { agentId, scheduleId, error: errorMsg(error) },
       });
       throw error;
     }
@@ -110,7 +110,7 @@ export function createAgentScheduleManager(input: {
         context: {
           agentId,
           scheduleId: (record as unknown as StoredSchedule).scheduleId,
-          error: serializeError(error),
+          error: errorMsg(error),
         },
       });
       throw error;
@@ -149,7 +149,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules',
         level: 'error',
         message: 'createSchedule: registerSchedule failed, cleaned up record',
-        context: { agentId, error: serializeError(error) },
+        context: { agentId, error: errorMsg(error) },
       });
       throw error;
     }
@@ -166,7 +166,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules-manager',
         level: 'error',
         message: 'listSchedules failed',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       throw error;
     }
@@ -186,7 +186,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules-manager',
         level: 'error',
         message: 'listTasks failed',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       throw error;
     }
@@ -262,7 +262,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules-manager',
         level: 'error',
         message: 'updateSchedule: update failed, rolled back',
-        context: { agentId, scheduleId, error: serializeError(error) },
+        context: { agentId, scheduleId, error: errorMsg(error) },
       });
 
       if (
@@ -349,7 +349,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules',
         level: 'error',
         message: 'updateOwnedSchedule: scheduler registration failed, DB rolled back',
-        context: { agentId, scheduleId, error: serializeError(error) },
+        context: { agentId, scheduleId, error: errorMsg(error) },
       });
 
       // Cancel any residual registered entry so the old schedule cannot fire against stale DB state
@@ -450,7 +450,7 @@ export function createAgentScheduleManager(input: {
         scope: 'schedules',
         level: 'error',
         message: 'createScheduleForAgent: registerSchedule failed, cleaned up record',
-        context: { agentId: parsed.targetAgentId, error: serializeError(error) },
+        context: { agentId: parsed.targetAgentId, error: errorMsg(error) },
       });
       throw error;
     }
@@ -606,7 +606,7 @@ export function createAgentScheduleManager(input: {
           scheduleId: scheduleRecord.scheduleId,
           kind: scheduleRecord.kind,
           fireDate: fireDate.getTime(),
-          error: serializeError(error),
+          error: errorMsg(error),
         },
       });
       throw error;

@@ -6,7 +6,7 @@
  */
 import { parseExpression } from 'cron-parser';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 export const HEARTBEAT_CRON_EXPRESSION = '0 * * * *';
 export const HEARTBEAT_TIMEZONE = 'UTC';
@@ -21,7 +21,7 @@ export function validateCronExpression(expression: string): boolean {
       scope: 'schedules-cron',
       level: 'error',
       message: 'Cron expression validation failed',
-      context: { error: serializeError(error) },
+      context: { error: errorMsg(error) },
     });
     return false;
   }
