@@ -11,23 +11,14 @@ import { forgeDebug } from '@forge-runtime/core';
 export async function ensureDirectory(targetPath: string): Promise<void> {
   try {
     const stat = await fs.stat(targetPath);
-
-    if (stat.isDirectory()) {
-      return;
-    }
-
-    await fs.rm(targetPath, { force: true });
+    if (stat.isDirectory()) return;
+    // targetPath exists but is not a directory — do not delete it
+    const err = new Error(`ensureDirectory: ${targetPath} exists but is not a directory`);
+    (err as NodeJS.ErrnoException).code = 'EEXIST';
+    throw err;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      forgeDebug({
-        scope: 'workspace-skills',
-        level: 'info',
-        message: `ensureDirectory failed: ${error}`,
-      });
-      throw error;
-    }
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
-
   try {
     await fs.mkdir(targetPath, { recursive: true });
   } catch (error) {
