@@ -23,24 +23,6 @@ export const deleteExternalInternalChatAccountSchema = z.object({
   accountId: z.string().min(1),
 });
 
-export const internalChatAccountIdQuerySchema = z.object({
-  accountId: z.string().min(1),
-});
-
-export const internalChatMessagesQuerySchema = z.object({
-  accountId: z.string().min(1),
-  conversationId: z.string().min(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
-export const internalChatMessageAttachmentQuerySchema = z.object({
-  accountId: z.string().min(1),
-  conversationId: z.string().min(1),
-  messageId: z.string().min(1),
-  attachmentName: z.string().min(1),
-});
-
 export const createInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
   name: z.string().min(1).optional(),
@@ -72,10 +54,6 @@ export const updateInternalChatConversationSchema = z.object({
 
 export const archiveInternalChatConversationSchema = z.object({
   accountId: z.string().min(1),
-  conversationId: z.string().min(1),
-});
-
-export const internalChatGroupMembersQuerySchema = z.object({
   conversationId: z.string().min(1),
 });
 

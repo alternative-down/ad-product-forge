@@ -88,20 +88,6 @@ export function requireQueryParam(request: InternalChatRequest, key: string): st
  * Parses and validates the request body against a Zod schema.
  * Re-throws Zod errors as generic Error so the route error handler catches them.
  */
-export function parseBody<T extends z.ZodTypeAny>(
-  request: InternalChatRequest,
-  schema: T,
-): z.infer<T> {
-  try {
-    return parseJsonBody(request.bodyText, schema);
-  } catch (err) {
-    // Re-throw as plain Error so withRouteErrorHandler can catch it
-    throw new Error(errorMsg(err));
-  }
-}
-
-// ─── Route builder helpers ────────────────────────────────────────────────────
-
 export type RouteOptions = {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   path: string;

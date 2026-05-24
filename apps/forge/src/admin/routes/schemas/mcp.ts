@@ -19,32 +19,6 @@ const mcpServerFieldsSchema = z.discriminatedUnion('transport', [
   }),
 ]);
 
-export const createAgentMcpServerSchema = z
-  .object({
-    agentId: z.string().min(1),
-    name: z.string().trim().min(1),
-    description: z.string().trim().optional().default(''),
-    isActive: z.boolean().default(true),
-  })
-  .and(mcpServerFieldsSchema);
-
-const _updateAgentMcpServerSchema = z
-  .object({
-    agentId: z.string().min(1),
-    configId: z.string().min(1),
-    serverId: z.string().min(1),
-    name: z.string().trim().min(1),
-    description: z.string().trim().optional().default(''),
-    isActive: z.boolean().default(true),
-  })
-  .and(mcpServerFieldsSchema);
-
-const _deleteAgentMcpServerSchema = z.object({
-  agentId: z.string().min(1),
-  configId: z.string().min(1),
-  serverId: z.string().min(1),
-});
-
 export const upsertSystemMcpServerSchema = z
   .object({
     serverId: z.string().min(1).optional(),
