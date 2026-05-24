@@ -5,7 +5,7 @@ import {
   embedTextWithWorkspaceEmbedder,
   FilesystemDocumentSource,
   forgeDebug,
-  readOperationalMemoryState,
+  
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';

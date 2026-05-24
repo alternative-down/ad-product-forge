@@ -27,7 +27,7 @@ async function withChatListingError<T>(operation: string, fn: () => Promise<T>):
 // =============================================================================
 // ======================================================================
 // Named types to avoid complex inline generics exceeding TS parser limits
-type MessageRowBase = {
+type _MessageRowBase = {
   messageId: string;
   unread: number;
   replyToMessageId: string | null;
