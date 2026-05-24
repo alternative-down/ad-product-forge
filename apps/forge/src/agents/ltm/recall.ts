@@ -404,6 +404,7 @@ export class AgentLongTermMemoryRecall {
     this.workspaceInitialized = true;
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
+    this.persistence.setLastInitAt(this.lastInitAt);
     forgeDebug({
       scope: 'ltm',
       level: 'info',
@@ -453,6 +454,7 @@ export class AgentLongTermMemoryRecall {
     );
     this.lastIndexedStamp = currentStamp;
     this.lastInitAt = new Date().toISOString();
+    this.persistence.setLastInitAt(this.lastInitAt);
     forgeDebug({
       scope: 'ltm',
       level: 'info',
