@@ -31,7 +31,10 @@ export function normalizeDomainHost(value: string | null | undefined): string | 
 
 export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[] {
   if (Array.isArray(data)) {
-    return z.array(schema).parse(data);
+    const parsed = z.array(schema).safeParse(data);
+    if (parsed.success) return parsed.data;
+    forgeDebug({ scope: "coolify-helpers", level: "warn", message: "extractCollection: array parse failed", context: {} });
+    return [];
   }
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -51,7 +54,10 @@ export function extractCollection<T>(data: unknown, schema: z.ZodSchema<T>): T[]
       'branches',
     ]) {
       if (Array.isArray(record[key])) {
-        return z.array(schema).parse(record[key]);
+        const parsed = z.array(schema).safeParse(record[key]);
+        if (parsed.success) return parsed.data;
+        forgeDebug({ scope: "coolify-helpers", level: "warn", message: "extractCollection: record parse failed", context: { key } });
+        return [];
       }
     }
   }
