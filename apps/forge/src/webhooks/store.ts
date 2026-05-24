@@ -65,7 +65,7 @@ export function createWebhookStore(db: Database) {
         .select()
         .from(webhookRoutes)
         .where(eq(webhookRoutes.agentId, agentId))
-        .orderBy(desc(webhookRoutes.createdAt)));
+        .orderBy(desc(webhookRoutes.createdAt))) as WebhookRoute[];
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
@@ -139,7 +139,7 @@ export function createWebhookStore(db: Database) {
         .from(webhookEvents)
         .where(eq(webhookEvents.agentId, agentId))
         .orderBy(desc(webhookEvents.receivedAt))
-        .limit(limit));
+        .limit(limit)) as WebhookEvent[];
     } catch (err) {
       forgeDebug({
         scope: 'webhooks-store',
