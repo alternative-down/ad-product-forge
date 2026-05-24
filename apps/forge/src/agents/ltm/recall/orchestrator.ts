@@ -5,10 +5,7 @@ import type { RecallConfig } from './types';
 import { runGraphSearch, type GraphSearchDeps } from './graph-search';
 import { runWorkspaceSearch, type WorkspaceSearchDeps } from './workspace-search';
 
-export type { RecallConfig } from './types';
 
-export type { GraphSearchDeps } from './graph-search';
-export type { WorkspaceSearchDeps } from './workspace-search';
 
 export type RecallOrchestratorDeps = {
   retrievalWorkspace: SqliteWorkspaceRetrieval;
