@@ -8,7 +8,6 @@ import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import type { HttpRequest } from '../../http/server';
 import { App } from 'octokit';
 import type { OpsContext } from './context';
-import type { AppProvisioningOps } from '../apps';
 import type { GitHubAppCredentials, GitHubAppProvisioning } from '../types';
 
 // Subset of AppProvisioningOps fields actually used by routing.

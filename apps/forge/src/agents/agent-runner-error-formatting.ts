@@ -8,7 +8,6 @@
  *
  * No external dependencies — fully testable in isolation.
  */
-import { RUNNER_AWAIT_TIMEOUT_MS } from '../utils/constants';
 
 // ─── Core serialization ────────────────────────────────────────────────────────
 
