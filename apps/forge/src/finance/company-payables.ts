@@ -54,7 +54,7 @@ export function createCompanyPayables(db: Database) {
 
     try {
       // Wrap payable insert + planned occurrence in transaction
-      const entryId = await db.transaction(async (tx: any) => {
+      const entryId = await db.transaction(async (tx) => {
         await tx.insert(companyRecurringPayables).values({
           id: payableId,
           name: input.name,
@@ -80,6 +80,7 @@ export function createCompanyPayables(db: Database) {
           dueAt: input.dueAt,
           effectiveAt: null,
           createdAt: now,
+          updatedAt: now,
         });
         return eid;
       });
@@ -182,7 +183,7 @@ export function createCompanyPayables(db: Database) {
       }
 
       // Wrap planned occurrence + payable update in transaction
-      await db.transaction(async (tx: any) => {
+      await db.transaction(async (tx) => {
         const eid = createId();
         await tx.insert(companyCashLedger).values({
           id: eid,
@@ -196,6 +197,7 @@ export function createCompanyPayables(db: Database) {
           dueAt: nextDueAt,
           effectiveAt: null,
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
         await tx
