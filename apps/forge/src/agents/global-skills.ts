@@ -10,10 +10,6 @@ import {
 } from './workspace-skill-helpers';
 
 import type { Agent } from '../database/schema';
-export {
-  installAgentWorkspaceSkillsFromZip,
-  deleteAgentWorkspaceSkill,
-} from './workspace-skills';
 import {
   BUNDLED_SKILL_DIRECTORY_NAMES,
   copyDirectoryContents,

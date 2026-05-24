@@ -10,11 +10,13 @@ import { forgeDebug } from '../debug';
 import { reloadAgentIfLoaded } from '../../../capabilities/runtime';
 import { eq } from 'drizzle-orm';
 import {
-  installAgentWorkspaceSkillsFromZip,
-  deleteAgentWorkspaceSkill,
   installGlobalSkillToAgentWorkspace,
   publishAgentWorkspaceSkillToGlobalCatalog,
 } from '../../../agents/global-skills';
+import {
+  installAgentWorkspaceSkillsFromZip,
+  deleteAgentWorkspaceSkill,
+} from '../../../agents/workspace-skills';
 import { parseJsonBody, jsonResponse } from '../index';
 import { agents } from '../../../database/schema';
 import {
