@@ -9,7 +9,6 @@
  *
  * No external dependencies — fully testable in isolation.
  */
-import { collectStepTextParts } from './agent-runner-control-directives';
 
 
 // ─── Loop signature ────────────────────────────────────────────────────────────
