@@ -36,9 +36,9 @@ export const forgeCustomToolIds = [
   'terminate-internal-agent',
 ] as const;
 
-export type ForgeCustomToolId = (typeof forgeCustomToolIds)[number];
 export const forgeCapabilityIds = [...forgeCustomToolIds] as const;
-export type ForgeCapabilityId = (typeof forgeCapabilityIds)[number];
+
+export type ForgeCustomToolId = (typeof forgeCustomToolIds)[number];
 
 export function hasToolPermission(
   allowedToolIds: Set<string> | null | undefined,

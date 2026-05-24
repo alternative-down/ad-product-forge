@@ -15,7 +15,92 @@ import {
   formatAbsentErrorDetailValue,
   extractAbsentErrorDetails,
   formatAbsentExecutionError,
+  errorMsg,
 } from './agent-runner-error-formatting';
+
+// ─── errorMsg ────────────────────────────────────────────────────────────────────
+
+describe('errorMsg', () => {
+  it('returns Error.message for Error instances', () => {
+    const err = new Error('something went wrong');
+    expect(errorMsg(err)).toBe('something went wrong');
+  });
+
+  it('returns Error.message even with empty message', () => {
+    const err = new Error('');
+    expect(errorMsg(err)).toBe('');
+  });
+
+  it('returns the string as-is for string values', () => {
+    expect(errorMsg('plain string error')).toBe('plain string error');
+  });
+
+  it('JSON.stringify for non-Error non-string values', () => {
+    expect(errorMsg({ code: 'ENOENT' })).toBe('{"code":"ENOENT"}');
+    expect(errorMsg([1, 2, 3])).toBe('[1,2,3]');
+    expect(errorMsg(null)).toBe('null');
+    expect(errorMsg(undefined)).toBe('undefined');
+    expect(errorMsg(42)).toBe('42');
+    expect(errorMsg(true)).toBe('true');
+  });
+});
+
+
+// ─── errorMsg ────────────────────────────────────────────────────────────────────
+
+describe('errorMsg', () => {
+  it('returns Error.message for Error instances', () => {
+    const err = new Error('something went wrong');
+    expect(errorMsg(err)).toBe('something went wrong');
+  });
+
+  it('returns Error.message even with empty message', () => {
+    const err = new Error('');
+    expect(errorMsg(err)).toBe('');
+  });
+
+  it('returns the string as-is for string values', () => {
+    expect(errorMsg('plain string error')).toBe('plain string error');
+  });
+
+  it('JSON.stringify for non-Error non-string values', () => {
+    expect(errorMsg({ code: 'ENOENT' })).toBe('{"code":"ENOENT"}');
+    expect(errorMsg([1, 2, 3])).toBe('[1,2,3]');
+    expect(errorMsg(null)).toBe('null');
+    expect(errorMsg(undefined)).toBe('undefined');
+    expect(errorMsg(42)).toBe('42');
+    expect(errorMsg(true)).toBe('true');
+  });
+});
+
+
+// ─── errorMsg ────────────────────────────────────────────────────────────────────
+
+describe('errorMsg', () => {
+  it('returns Error.message for Error instances', () => {
+    const err = new Error('something went wrong');
+    expect(errorMsg(err)).toBe('something went wrong');
+  });
+
+  it('returns Error.message even with empty message', () => {
+    const err = new Error('');
+    expect(errorMsg(err)).toBe('');
+  });
+
+  it('returns the string as-is for string values', () => {
+    expect(errorMsg('plain string error')).toBe('plain string error');
+  });
+
+  it('JSON.stringify for non-Error non-string values', () => {
+    expect(errorMsg({ code: 'ENOENT' })).toBe('{"code":"ENOENT"}');
+    expect(errorMsg([1, 2, 3])).toBe('[1,2,3]');
+    expect(errorMsg(null)).toBe('null');
+    expect(errorMsg(undefined)).toBe('undefined');
+    expect(errorMsg(42)).toBe('42');
+    expect(errorMsg(true)).toBe('true');
+  });
+});
+
 
 // ─── serializeUnknown ─────────────────────────────────────────────────────────
 
