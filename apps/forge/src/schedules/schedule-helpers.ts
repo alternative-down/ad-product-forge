@@ -1,21 +1,5 @@
-import { parseExpression } from 'cron-parser';
-import { serializeError } from '../agents/agent-runner-error-formatting';
-import { forgeDebug } from '@forge-runtime/core';
+import { forgeDebug } from "@forge-runtime/core";
 
-function _validateCronExpression(expression: string): boolean {
-  try {
-    parseExpression(expression, { utc: true });
-    return true;
-  } catch (error) {
-    forgeDebug({
-      scope: 'schedule-helpers',
-      level: 'error',
-      message: 'Cron expression validation failed',
-      context: { error: serializeError(error) },
-    });
-    return false;
-  }
-}
 
 export function parseScheduleDate(value: string) {
   const timestamp = Date.parse(value);
