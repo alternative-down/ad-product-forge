@@ -167,7 +167,7 @@ export function createHeartbeatWakeInstruction(content?: string) {
   return lines.join('\n');
 }
 
-function createAgentScheduleInstruction(schedule: {
+function _createAgentScheduleInstruction(schedule: {
   name: string;
   description?: string | null;
   scheduleKind: 'agent' | 'heartbeat';

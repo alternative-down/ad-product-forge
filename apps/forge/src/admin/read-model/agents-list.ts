@@ -323,7 +323,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     }
 
     // Parallel fetch workspace skills for all agents (N+1 fix)
-    const skillsPerAgent = await Promise.all(
+    const _skillsPerAgent = await Promise.all(
       agentRows.map((agent) => listAgentWorkspaceSkills(workspaceBasePath, agent)),
     );
 
