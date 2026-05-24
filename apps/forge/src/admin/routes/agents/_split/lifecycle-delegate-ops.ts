@@ -11,7 +11,6 @@ import type { HttpHandler } from '../../../../http/server';
 import type { Database } from '../../../../database/schema';
 import type { AgentEmailManager } from '../../../../email/migadu-manager';
 import type { CoolifyManager } from '../../../../coolify/manager';
-import type { GitHubAppManager } from '../../../../github/manager';
 import type { AgentScheduleManager } from '../../../../schedules/manager';
 import type { InternalChatService } from '../../../../communication/internal-chat-service';
 
