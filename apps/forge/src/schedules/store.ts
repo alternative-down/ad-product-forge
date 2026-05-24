@@ -423,7 +423,7 @@ export function createAgentScheduleStore(db: Database) {
       agentId: row.agentId,
       kind: row.kind as ScheduleKind,
       name: row.name,
-      description: row.description,
+      description: row.description ?? undefined,
       scheduleType: row.scheduleType as ScheduleType,
       cronExpression: row.cronExpression ?? undefined,
       scheduledDate: row.scheduledDate ?? undefined,
