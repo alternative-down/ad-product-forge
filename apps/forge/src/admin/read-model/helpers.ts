@@ -161,7 +161,8 @@ export function formatWorkingMemoryValue(value: string | null | undefined) {
     }
 
     return entries.join('\n');
-  } catch {
+  } catch (err) {
+    forgeDebug({ scope: 'admin-read-model', level: 'debug', message: 'entriesToMarkdown failed: ' + errorMsg(err) });
     // Safe: malformed JSON from external source — return null to signal no valid content
     return null;
   }

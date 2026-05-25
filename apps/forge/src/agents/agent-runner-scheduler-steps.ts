@@ -8,6 +8,8 @@
  * so the module always reads current values without needing explicit rebinding.
  */
 
+import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from './agent-runner-error-formatting';
 import { withTimeout } from '../utils/async';
 import type { FlushManager } from './agent-runner-flush-manager';
 
@@ -88,7 +90,8 @@ export function createSchedulerSteps(deps: StepsDeps): SchedulerSteps {
       }
 
       await queueNextStep();
-    } catch {
+    } catch (err) {
+      forgeDebug({ scope: 'agent-runner-scheduler-steps', level: 'debug', message: 'beginRun failed: ' + errorMsg(err) });
       // beginRun errors are non-fatal — scheduler handles transitionToIdle
     } finally {
       setStartingRun(false, null);

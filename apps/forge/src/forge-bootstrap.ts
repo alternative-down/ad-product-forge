@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from './agents/agent-runner-error-formatting';
 import { z } from 'zod';
 
 import { getDatabase } from './database/client';
@@ -67,7 +68,8 @@ function decodeAdminApiKey(rawValue: string | undefined): string | undefined {
         return decoded;
       }
     }
-  } catch {
+  } catch (err) {
+    forgeDebug({ scope: 'main', level: 'debug', message: 'readFile failed: ' + errorMsg(err) });
     // Fall through to raw value
   }
 

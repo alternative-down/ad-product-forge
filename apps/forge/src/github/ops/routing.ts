@@ -222,7 +222,8 @@ export function createRoutingOps(ctx: OpsContext, routingDeps?: Partial<RoutingO
     let payload: Record<string, unknown>;
     try {
       payload = JSON.parse(bodyText);
-    } catch {
+    } catch (err) {
+      ctx.forgeDebug({ scope: 'github-ops', level: 'info', message: 'Invalid JSON: ' + errorMsg(err) });
       return html(400, '<h1>Invalid JSON</h1>');
     }
     if (ctx.isGitHubSelfEvent(payload)) {
