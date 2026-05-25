@@ -58,7 +58,7 @@ export function createAgentDebugReadModel(deps: AgentDebugReadModelDeps) {
           scope: 'admin-read-model',
           level: 'warn',
           message: 'getAgentRuntimeStatus: agent not loaded',
-          context: { agentId, error: err instanceof Error ? err.message : String(err) },
+          context: { agentId, error: errorMsg(err) },
         });
         return null;
       }),
