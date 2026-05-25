@@ -103,7 +103,8 @@ async function snapshotTrackedFiles(agentWorkspacePath: string) {
     let content = '';
     try {
       content = await fs.readFile(absolutePath, 'utf8');
-    } catch {
+    } catch (err) {
+      forgeDebug({ scope: 'agent-ltm', level: 'warn', message: 'readSnapshot failed: ' + errorMsg(err) });
       /* file not readable */
     }
     snapshot.set(relativePath, content);
