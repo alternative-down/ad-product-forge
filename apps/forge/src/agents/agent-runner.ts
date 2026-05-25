@@ -21,6 +21,7 @@ import {
 import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
 
 import {
+  errorMsg,
   serializeError,
   formatAbsentExecutionError,
   extractAbsentErrorDetails,
@@ -356,7 +357,7 @@ export function createAgentRunner(
           level: 'error',
           runtimeId: runtime.id,
           message: 'healthcheck failed',
-          context: { error: serializeError(error) },
+          context: { error: errorMsg(error) },
         }),
     });
   }
@@ -414,7 +415,7 @@ export function createAgentRunner(
         level: 'error',
         runtimeId: runtime.id,
         message: 'failed to begin run',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       if (!isStaleRun(runEpoch)) {
         await transitionToIdle(runEpoch);
@@ -468,7 +469,7 @@ export function createAgentRunner(
         level: 'error',
         runtimeId: runtime.id,
         message: 'failed to schedule next step',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       scheduler.setInstant(false);
       schedule(nextExponentialBackoffMs(scheduler.getState().backoffMs).current);
