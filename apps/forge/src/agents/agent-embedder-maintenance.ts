@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -66,7 +66,7 @@ async function resetVectorDatabase(input: { databasePath: string }) {
         scope: 'agent-embedder-maintenance',
         level: 'error',
         message: '[safe-catch] access check',
-        context: { error: serializeError(err) },
+        context: { error: errorMsg(err) },
       });
       return false;
     });

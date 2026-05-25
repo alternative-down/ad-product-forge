@@ -1,6 +1,5 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../utils/libsql-helpers';
 import { errorMsg } from './agent-runner-error-formatting';
-import { serializeError } from './agent-runner-error-formatting';
 import {
   forgeDebug,
   LibsqlConversationStore,
@@ -110,7 +109,7 @@ export async function readLatestThreadDetails(
       level: 'error',
       agentId,
       message: 'Failed to load latest thread details',
-      context: { error: serializeError(error) },
+      context: { error: errorMsg(error) },
     });
     return { preview: null, toolBadge: null };
   }
@@ -161,7 +160,7 @@ export async function readAgentRuntimeMemory(
       scope: 'agent-home-metrics',
       level: 'error',
       message: 'readAgentRuntimeMemory: read agent failed',
-      context: { agentId, error: serializeError(err) },
+      context: { agentId, error: errorMsg(err) },
     });
     throw err;
   }
@@ -199,7 +198,7 @@ export async function readAgentRuntimeMemory(
         level: 'warn',
         agentId,
         message: 'Legacy checkpointed OM state migration failed',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
     }
 

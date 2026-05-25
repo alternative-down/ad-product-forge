@@ -474,7 +474,7 @@ export function createAgentLongTermMemory(input: {
             agentId: input.agentId,
             attempt,
             maxAttempts: GENERATE_MAX_ATTEMPTS,
-            error: serializeError(error),
+            error: errorMsg(error),
           },
         });
 

@@ -123,7 +123,7 @@ export async function loadAgentContextContent(
       scope: 'agent-runner',
       level: 'error',
       message: '[safe-catch] context decoration check',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     return false;
   });
@@ -141,7 +141,7 @@ export async function loadAgentContextContent(
       scope: 'agent-runner',
       level: 'error',
       message: '[safe-catch] context decoration read',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     return null;
   });
