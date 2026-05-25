@@ -114,7 +114,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
     try {
       browser = await getOrCreateBrowser(agentId);
     } catch (err) {
-      return { pageId: 'unknown', error: String(err) };
+      return { pageId: 'unknown', error: errorMsg(err) };
     }
     let context: BrowserContext;
     try {
@@ -127,7 +127,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `newContext failed: ${errorMsg(err)}`,
         context: { url },
       });
-      return { pageId: 'unknown', error: String(err) };
+      return { pageId: 'unknown', error: errorMsg(err) };
     }
     const page = await context.newPage();
     const pageId = generatePageId();
@@ -168,7 +168,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         context: { url, timeout, waitForSelector: options.waitForSelector },
       });
       await context.close();
-      return { pageId, error: String(err) };
+      return { pageId, error: errorMsg(err) };
     }
   }
 
@@ -200,7 +200,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `click failed: ${errorMsg(err)}`,
         context: { selector, pageId: session.pageId },
       });
-      return { pageId: session.pageId, error: String(err) };
+      return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
 
@@ -234,7 +234,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `fill failed: ${errorMsg(err)}`,
         context: { selector, valueLength: value.length, pageId: session.pageId },
       });
-      return { pageId: session.pageId, error: String(err) };
+      return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
 
@@ -261,7 +261,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `screenshot failed: ${errorMsg(err)}`,
         context: { pageId: session.pageId },
       });
-      return { pageId: session.pageId, error: String(err) };
+      return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
 
@@ -285,7 +285,8 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
           for (const attr of ['id', 'class', 'name', 'type', 'placeholder']) {
             try {
               attributes[attr] = (await el.getAttribute(attr)) ?? '';
-            } catch {
+            } catch (err) {
+              forgeDebug({ scope: 'browser-automation', level: 'debug', message: 'getAttribute failed: ' + errorMsg(err) });
               attributes[attr] = '';
             }
           }
@@ -309,7 +310,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `query failed: ${errorMsg(err)}`,
         context: { selector, pageId: session.pageId },
       });
-      return { pageId: session.pageId, error: String(err) };
+      return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
 
@@ -347,7 +348,7 @@ export function createBrowserAutomationService(config: BrowserAutomationConfig =
         message: `wait failed: ${errorMsg(err)}`,
         context: { selector, timeout, pageId: session.pageId },
       });
-      return { pageId: session.pageId, error: String(err) };
+      return { pageId: session.pageId, error: errorMsg(err) };
     }
   }
 
