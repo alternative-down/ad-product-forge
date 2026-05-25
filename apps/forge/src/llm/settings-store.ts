@@ -196,7 +196,7 @@ export function createLlmSettingsStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to upsert LLM profile',
-        context: { profileId, error: err },
+        context: { profileId, error: errorMsg(err) },
       });
       throw err;
     }
@@ -239,7 +239,7 @@ export function createLlmSettingsStore(db: Database) {
         scope: 'llm',
         level: 'error',
         message: 'Failed to delete LLM profile',
-        context: { profileId, error: err },
+        context: { profileId, error: errorMsg(err) },
       });
       throw err;
     }
