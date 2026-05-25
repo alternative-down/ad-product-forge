@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import path from 'node:path'; /* eslint-disable-line @typescript-eslint/no-unused-vars */
 
 import { and, desc, eq, sql } from 'drizzle-orm';
@@ -174,7 +174,7 @@ export async function readAgentHomeMetricSnapshot(input: {
         level: 'error',
         agentId: agent.id,
         message: 'Failed to load runtime memory',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       return null;
     }),
@@ -188,7 +188,7 @@ export async function readAgentHomeMetricSnapshot(input: {
         level: 'error',
         agentId: agent.id,
         message: 'Failed to load latest thread details',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       return {
         preview: null,
@@ -207,7 +207,7 @@ export async function readAgentHomeMetricSnapshot(input: {
         level: 'error',
         agentId: agent.id,
         message: 'Failed to load LTM state',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       return null;
     }),
@@ -222,7 +222,7 @@ export async function readAgentHomeMetricSnapshot(input: {
             level: 'error',
             agentId: agent.id,
             message: 'Failed to load runtime LTM snapshot',
-            context: { error: serializeError(error) },
+            context: { error: errorMsg(error) },
           });
           return null;
         })

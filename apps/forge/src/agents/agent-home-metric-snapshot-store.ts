@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import type { Database } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 import { agentHomeMetricSnapshots } from '../database/schema';
@@ -29,7 +29,7 @@ export function createAgentHomeMetricSnapshotStore(db: Database) {
         scope: 'agent-home-metric-snapshot',
         level: 'error',
         message: 'recordSnapshot DB insert failed',
-        context: { agentId: input.agentId, stepId: input.stepId, error: serializeError(err) },
+        context: { agentId: input.agentId, stepId: input.stepId, error: errorMsg(err) },
       });
       throw err;
     }
