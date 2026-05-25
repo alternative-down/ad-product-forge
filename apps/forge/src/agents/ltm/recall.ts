@@ -9,7 +9,7 @@ import {
   SqliteWorkspaceRetrieval,
   type WorkspaceEmbedderId,
 } from '@forge-runtime/core';
-import { serializeError, errorMsg } from '../agent-runner-error-formatting';
+import { errorMsg } from '../agent-runner-error-formatting';
 import { RecallPersistence, createRecallPersistence } from './recall/persistence';
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
@@ -333,7 +333,7 @@ export class AgentLongTermMemoryRecall {
         level: 'error',
         message: 'recall failed',
         context: {
-          error: serializeError(error),
+          error: errorMsg(error),
         },
       });
       forgeDebug({
@@ -357,7 +357,7 @@ export class AgentLongTermMemoryRecall {
           level: 'warn',
           message: 'snapshotError from error failed',
           context: {
-            error: serializeError(e),
+            error: errorMsg(e),
           },
         });
         snapshotError = String(error);
@@ -376,7 +376,7 @@ export class AgentLongTermMemoryRecall {
           context: {
             threadId: input.threadId,
             resourceId: input.resourceId,
-            error: serializeError(e),
+            error: errorMsg(e),
           },
         });
       }

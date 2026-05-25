@@ -1,4 +1,4 @@
-import { serializeError } from '../agent-runner-error-formatting';
+import { errorMsg } from '../agent-runner-error-formatting';
 import { type ConversationStore, type WorkspaceEmbedderId } from '@forge-runtime/core';
 
 import type { createAgentLongTermMemoryStore } from '../ltm/store';
@@ -66,7 +66,7 @@ export async function createAgentRuntimeMemory(input: {
       scope: 'runtime-memory',
       level: 'error',
       message: 'createAgentRuntimeMemory failed',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     throw err;
   }

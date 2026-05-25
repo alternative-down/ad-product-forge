@@ -3,7 +3,7 @@
  * workspace-skills.ts. Extracted to reduce duplication (108-line clone group).
  */
 
-import { serializeError } from '../agent-runner-error-formatting';
+import { errorMsg } from '../agent-runner-error-formatting';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { forgeDebug } from '@forge-runtime/core';
@@ -82,7 +82,7 @@ export async function countSkillFiles(skillRoot: string): Promise<number> {
       scope: 'skills-shared',
       level: 'error',
       message: 'countSkillFiles failed',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     throw err;
   }

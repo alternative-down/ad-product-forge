@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import type { ConversationStore } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq } from 'drizzle-orm';
@@ -155,7 +155,7 @@ export async function migrateLegacyCheckpointedOmState(input: {
       level: 'info',
       message: 'delete-error',
       context: {
-        error: serializeError(err),
+        error: errorMsg(err),
         agentId: input.agentId,
       },
     });
