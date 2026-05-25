@@ -1,5 +1,4 @@
 import { buildRunnerSnapshot } from './agent-runner-snapshot';
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
 import { createId } from '../utils/id';
 import { createAgentWakeQueue, forgeDebug } from '@forge-runtime/core';
 import type { AgentWakeEvent } from '@forge-runtime/core';
@@ -287,6 +286,7 @@ export function createAgentRunner(
     messageManager.reset();
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async function forceIdle(
     options: {
       preserveQueuedWork?: boolean;
