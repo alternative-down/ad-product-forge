@@ -196,21 +196,16 @@ export function createLabelsOps(ctx: OpsContext) {
     try {
       const octokit = await ctx.getInstallationOctokit(agentId);
       const owner = await ctx.getDefaultOwner(input.owner);
-      const response = await octokit.request(
+      await octokit.request(
         'DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels',
         {
           owner,
           repo: input.repositoryName,
           issue_number: input.issueNumber,
-          labels: input.labels,
+          labels: input.labels.join(','),
         },
       );
-      return (response.data as any[]).map((label: any) => ({
-        name: label.name,
-        description: label.description ?? null,
-        color: label.color,
-        default: label.default,
-      }));
+      return { success: true };
     } catch (err) {
       forgeDebug({
         scope: SCOPE,
