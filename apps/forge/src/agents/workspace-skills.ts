@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -51,7 +51,7 @@ export async function listAgentWorkspaceSkills(
               scope: 'workspace-skills',
               level: 'warn',
               message: 'Failed to read skill metadata',
-              context: { error: serializeError(error), skillName },
+              context: { error: errorMsg(error), skillName },
             });
             return null;
           }
@@ -77,7 +77,7 @@ export async function listAgentWorkspaceSkills(
       scope: 'workspace-skills',
       level: 'error',
       message: 'listAgentWorkspaceSkills failed',
-      context: { error: serializeError(error) },
+      context: { error: errorMsg(error) },
     });
     throw error;
   }

@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -40,7 +40,7 @@ async function readTextFileIfPossible(filePath: string) {
       scope: 'skills-tools',
       level: 'warn',
       message: 'Failed to read file',
-      context: { error: serializeError(error), filePath },
+      context: { error: errorMsg(error), filePath },
     });
     return null;
   }

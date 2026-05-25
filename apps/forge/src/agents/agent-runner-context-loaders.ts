@@ -5,7 +5,7 @@
  * Functions for loading agent workspace context and schedule summaries
  */
 
-import { serializeError, errorMsg } from './agent-runner-error-formatting';
+import {  errorMsg } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';
@@ -123,7 +123,7 @@ export async function loadAgentContextContent(
       scope: 'agent-runner',
       level: 'error',
       message: '[safe-catch] context decoration check',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     return false;
   });
@@ -141,7 +141,7 @@ export async function loadAgentContextContent(
       scope: 'agent-runner',
       level: 'error',
       message: '[safe-catch] context decoration read',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     return null;
   });

@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import { eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -148,7 +148,7 @@ export async function renewAgentContract(
       level: 'info',
       message: 'error',
       context: {
-        error: serializeError(err),
+        error: errorMsg(err),
         agentId: input.agentId,
       },
     });

@@ -1,4 +1,4 @@
-import { serializeError, errorMsg } from './agent-runner-error-formatting';
+import {  errorMsg } from './agent-runner-error-formatting';
 import { rm } from 'node:fs/promises';
 import { forgeDebug } from '@forge-runtime/core';
 import path from 'node:path';
@@ -37,7 +37,7 @@ export async function terminateInternalAgent(
       scope: 'terminate-agent',
       level: 'error',
       message: 'terminateAgent DB read failed',
-      context: { agentId: input.agentId, error: serializeError(err) },
+      context: { agentId: input.agentId, error: errorMsg(err) },
     });
     throw err;
   }

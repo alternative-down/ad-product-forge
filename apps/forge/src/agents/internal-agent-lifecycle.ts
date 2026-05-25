@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import type { Database } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -87,7 +87,7 @@ export async function runInternalHiring(db: Database, input: RunInternalHiringIn
       scope: 'internal-agent-lifecycle',
       level: 'error',
       message: 'Internal agent lifecycle failed',
-      context: { error: serializeError(error) },
+      context: { error: errorMsg(error) },
     });
     await terminateInternalAgent(db, {
       agentId: hired.agentId,

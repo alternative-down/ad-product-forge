@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import type { ConversationStore } from '@forge-runtime/core';
 import { forgeDebug } from '@forge-runtime/core';
 
@@ -55,7 +55,7 @@ export async function normalizeOperationalMemoryMessages(input: {
       scope: 'normalize-opmem',
       level: 'error',
       message: 'normalizeOperationalMemoryMessages failed',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     throw err;
   }
