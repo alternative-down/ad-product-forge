@@ -1,4 +1,5 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../utils/libsql-helpers';
+import { errorMsg } from './agent-runner-error-formatting';
 import { serializeError } from './agent-runner-error-formatting';
 import {
   forgeDebug,
@@ -232,7 +233,8 @@ export async function readAgentRuntimeMemory(
         checkpointTokenCount: operationalMemoryState.metrics.checkpointTokenCount,
       },
     };
-  } catch {
+  } catch (err) {
+    forgeDebug({ scope: 'agent-home-metrics', level: 'debug', message: 'getMetricsThreadState failed: ' + errorMsg(err) });
     return null;
   } finally {
     await closeLibsqlClient(client);

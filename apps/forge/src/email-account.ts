@@ -314,7 +314,8 @@ export function createEmailProvider(config: EmailProviderConfig): CommunicationP
       if (client) {
         try {
           await client.logout();
-        } catch {
+        } catch (err) {
+          forgeDebug({ scope: 'email-account', level: 'debug', message: 'logout failed: ' + errorMsg(err) });
           client = null;
         }
       }

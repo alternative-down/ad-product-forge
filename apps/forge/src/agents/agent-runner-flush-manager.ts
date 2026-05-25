@@ -4,6 +4,8 @@
  * Extracted from agent-runner-scheduler.ts (#2257).
  * Manages flush settings, run-event deduplication, and run-last-messages count.
  */
+import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from './agent-runner-error-formatting';
 import { withTimeout } from '../utils/async';
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 
@@ -70,7 +72,8 @@ export function createFlushManager(deps: FlushManagerDependencies): FlushManager
         settings.memoryLastMessagesCount !== null && settings.memoryLastMessagesCount !== undefined
           ? settings.memoryLastMessagesCount
           : DEFAULT_RUN_LAST_MESSAGES;
-    } catch {
+    } catch (err) {
+      forgeDebug({ scope: 'agent-runner-flush-manager', level: 'debug', message: 'loadFlushSettings failed: ' + errorMsg(err) });
       // non-fatal — swallow errors so flush manager never breaks the scheduler
     }
   }

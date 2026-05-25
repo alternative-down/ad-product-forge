@@ -38,7 +38,9 @@ import {
   toMastraSafeIdentifier,
   readOperationalMemoryState,
   LibsqlConversationStore,
+  forgeDebug,
 } from '@forge-runtime/core';
+import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
 
@@ -229,7 +231,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
     try {
       client = createClient({ url: `file:${agentDatabasePath}` });
       client.execute('PRAGMA foreign_keys = ON');
-    } catch {
+    } catch (err) {
+      forgeDebug({ scope: 'agents-list', level: 'debug', message: 'createClient failed: ' + errorMsg(err) });
       return null;
     }
 
@@ -401,7 +404,8 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
             row.agentId,
             parsed.success ? parsed.data : createEmptyLongTermMemoryState(),
           );
-        } catch {
+        } catch (err) {
+      forgeDebug({ scope: 'agents-list', level: 'debug', message: 'parseLongTermMemoryState failed: ' + errorMsg(err) });
           longTermMemoryStateByAgentId.set(row.agentId, createEmptyLongTermMemoryState());
         }
       }
