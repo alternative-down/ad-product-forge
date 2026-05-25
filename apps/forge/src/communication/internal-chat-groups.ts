@@ -147,7 +147,7 @@ export function createInternalChatGroups(
         scope: 'internal-chat-groups',
         level: 'error',
         message: 'getRequiredConversationForAccount lookup failed',
-        context: { conversationId, error: err.message },
+        context: { conversationId, error: errorMsg(err) },
       });
       throw err;
     }
