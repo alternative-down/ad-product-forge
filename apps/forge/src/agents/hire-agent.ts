@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import { createId } from '../utils/id';
 import { WEEK_MS } from '../shared/constants';
 import { eq } from 'drizzle-orm';
@@ -93,7 +93,7 @@ async function rollbackHire(
         scope: 'hire-agent',
         level: 'warn',
         message: 'Rollback: removeAgent failed',
-        context: { agentId, error: serializeError(e) },
+        context: { agentId, error: errorMsg(e) },
       });
     }
   }
@@ -105,7 +105,7 @@ async function rollbackHire(
       scope: 'hire-agent',
       level: 'warn',
       message: 'Rollback: deleteAgentAccount failed',
-      context: { agentId, error: serializeError(e) },
+      context: { agentId, error: errorMsg(e) },
     });
   }
 
@@ -141,7 +141,7 @@ async function rollbackHireDbAndEmail(
         message: 'Rollback: deleteMailboxByAddress failed',
         context: {
           address: provisionedMailbox.address,
-          error: serializeError(e),
+          error: errorMsg(e),
         },
       });
     }
@@ -246,7 +246,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         scope: 'hire-agent',
         level: 'error',
         message: 'registerAgentAccount failed during hire',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       // No external ops succeeded yet — undo DB records and email only
       await rollbackHireDbAndEmail(agentId, provisionedMailbox, validated.emailMailboxes, tx);
@@ -261,7 +261,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         scope: 'hire-agent',
         level: 'error',
         message: 'createHeartbeatSchedule failed during hire',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       await rollbackHire(
         agentId,
@@ -293,7 +293,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         scope: 'hire-agent',
         level: 'error',
         message: 'loadAgent failed during hire',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       await rollbackHire(
         agentId,
@@ -316,7 +316,7 @@ export async function hireInternalAgent(db: Database, input: unknown) {
         scope: 'hire-agent',
         level: 'error',
         message: 'registry.add failed during hire',
-        context: { agentId, error: serializeError(err) },
+        context: { agentId, error: errorMsg(err) },
       });
       await rollbackHire(
         agentId,

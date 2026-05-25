@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { forgeDebug } from '@forge-runtime/core';
-import { serializeError } from '../../agent-runner-error-formatting';
+import { errorMsg } from '../../agent-runner-error-formatting';
 
 /** Recursively counts files under rootPath/relativePath. Returns 0 on error. */
 export async function countFiles(rootPath: string, relativePath: string): Promise<number> {
@@ -11,7 +11,7 @@ export async function countFiles(rootPath: string, relativePath: string): Promis
       scope: 'ltm-recall',
       level: 'error',
       message: '[safe-catch] readdir',
-      context: { error: serializeError(err) },
+      context: { error: errorMsg(err) },
     });
     return null;
   });
