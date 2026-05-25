@@ -24,7 +24,7 @@
  */
 import { withTimeout } from '../utils/async';
 import { extractRunnerControlDirective } from './agent-runner-control-directives';
-import { serializeError, formatAbsentExecutionError } from './agent-runner-error-formatting';
+import { formatAbsentExecutionError, errorMsg } from './agent-runner-error-formatting';
 import { nextExponentialBackoffMs } from './agent-runner-delay';
 
 import type {} from /*unused*/ '../database/schema';
@@ -260,7 +260,7 @@ export async function executeStep(deps: ExecuteStepDeps): Promise<void> {
         stepStage: progressState.lastStepStage,
         lastGenerateProgress: progressState.lastGenerateProgress,
         prompt,
-        error: serializeError(error),
+        error: errorMsg(error),
       },
     });
     await withTimeout(

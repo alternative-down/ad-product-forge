@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
-import { serializeError, errorMsg } from './agent-runner-error-formatting';
+import {  errorMsg } from './agent-runner-error-formatting';
 import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -474,7 +474,7 @@ export function createAgentLongTermMemory(input: {
             agentId: input.agentId,
             attempt,
             maxAttempts: GENERATE_MAX_ATTEMPTS,
-            error: serializeError(error),
+            error: errorMsg(error),
           },
         });
 
