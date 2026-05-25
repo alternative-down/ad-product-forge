@@ -1,4 +1,4 @@
-import { serializeError } from './agent-runner-error-formatting';
+import { errorMsg } from './agent-runner-error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 import type { Database } from '../database/schema';
@@ -146,7 +146,7 @@ export async function loadAgents(db: Database, config: AgentLoaderConfig) {
         level: 'error',
         agentId: agentConfig.id,
         message: 'Failed to load agent',
-        context: { error: serializeError(error) },
+        context: { error: errorMsg(error) },
       });
       // Continue loading other agents even if one fails
     }
