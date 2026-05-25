@@ -291,7 +291,7 @@ describe('createCredentialsOps — createInstallationOctokit', () => {
       createOctoMock as unknown as OpsContext['createInstallationOctokit'];
     const ops = createCredentialsOps(ctx);
     const result = await ops.createInstallationOctokit(12345);
-    expect(createOctoMock).toHaveBeenCalledWith(12345);
+    expect(createOctoMock).toHaveBeenCalledWith({ status: 'active', installationId: 12345 });
     expect(result).toBe(fakeOctokit);
   });
 });
