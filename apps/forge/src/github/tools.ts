@@ -52,11 +52,11 @@ export function createGitHubTools(
             scope: 'tools:github',
             level: 'info',
             message: 'get_github_git_credentials error',
-            context: { error: String(error) },
+            context: { error: errorMsg(error) },
           });
           return {
             valid: false,
-            error: String(error),
+            error: errorMsg(error),
             hint: 'Verify GitHub App is installed and has repository access.',
           };
         }
@@ -102,7 +102,7 @@ export function createGitHubTools(
             message: 'get_github_provisioning_status: failed to check provisioning status',
             context: { agentId, error: errorMsg(error) },
           });
-          return { valid: false, error: String(error) };
+          return { valid: false, error: errorMsg(error) };
         }
       },
     });
@@ -150,7 +150,7 @@ export function createGitHubTools(
             message: 'start_github_app_provisioning: failed to start provisioning',
             context: { agentId, error: errorMsg(error) },
           });
-          return { valid: false, error: String(error) };
+          return { valid: false, error: errorMsg(error) };
         }
       },
     });
