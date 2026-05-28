@@ -15,6 +15,8 @@ export type ScheduleUpdateInputParts = {
   timezone?: string | null;
   content?: string | null;
   isActive?: boolean;
+  /** Only valid for cron schedules */
+  wakeWhenRunning?: boolean;
 };
 
 /** Shape of the existing schedule record used as base/defaults. */
@@ -45,6 +47,7 @@ export function normalizeScheduleUpdate(
     cronExpression?: string | null;
     scheduledDate?: string | null;
     isActive?: boolean;
+    wakeWhenRunning?: boolean;
   },
   existing: {
     scheduleType: string;
@@ -78,7 +81,7 @@ export function normalizeScheduleUpdate(
     scheduledDate: scheduleType === 'date' ? ((scheduledDateRaw as number) ?? null) : null,
     wakeWhenRunning:
       scheduleType === 'cron'
-        ? ((parsed as any).wakeWhenRunning ?? (existing as any).wakeWhenRunning)
+        ? (parsed.wakeWhenRunning ?? existing.wakeWhenRunning)
         : true,
     shouldRequireFutureDate,
     parsedScheduledDate: scheduledDateRaw as number,

@@ -5,6 +5,18 @@
 import { forgeDebug } from '@forge-runtime/core';
 
 
+
+/**
+ * Minimal shape required for authorization checks.
+ * Covers the fields used by isScheduleEditor / requireScheduleEditor / requireScheduleDeleter.
+ * creatorId is optional to match store record shape.
+ */
+export type ScheduleAuthorizable = {
+  scheduleId: string;
+  creatorId: string | null | undefined;
+  agentId: string;
+};
+
 // ── Authorization ────────────────────────────────────────────────────────────
 
 /**
@@ -14,7 +26,7 @@ import { forgeDebug } from '@forge-runtime/core';
  * - creatorId === null AND agentId === requester → authorized (self-created)
  * - otherwise → not authorized
  */
-export function isScheduleEditor(schedule: any, requesterAgentId: string): boolean {
+export function isScheduleEditor(schedule: ScheduleAuthorizable, requesterAgentId: string): boolean {
   const isCreator = schedule.creatorId === requesterAgentId;
   const isSelfCreated = schedule.creatorId === null && schedule.agentId === requesterAgentId;
   return isCreator || isSelfCreated;
@@ -23,7 +35,7 @@ export function isScheduleEditor(schedule: any, requesterAgentId: string): boole
 /**
  * Validates the caller is authorized to modify the schedule, throws if not.
  */
-export function requireScheduleEditor(schedule: any, requesterAgentId: string): void {
+export function requireScheduleEditor(schedule: ScheduleAuthorizable, requesterAgentId: string): void {
   if (!isScheduleEditor(schedule, requesterAgentId)) {
     forgeDebug({
       scope: 'schedule-impl-helpers',
@@ -38,7 +50,7 @@ export function requireScheduleEditor(schedule: any, requesterAgentId: string): 
 /**
  * Validates the caller is authorized to delete the schedule, throws if not.
  */
-export function requireScheduleDeleter(schedule: any, requesterAgentId: string): void {
+export function requireScheduleDeleter(schedule: ScheduleAuthorizable, requesterAgentId: string): void {
   if (!isScheduleEditor(schedule, requesterAgentId)) {
     forgeDebug({
       scope: 'schedule-impl-helpers',
