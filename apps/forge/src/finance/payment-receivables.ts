@@ -23,8 +23,10 @@ import {
 import { companyCashLedger } from '../database/schema';
 import { forgeDebug } from '@forge-runtime/core';
 
-type InsertReturning<T> = { returning: <U>(cols: { [K in keyof U]: unknown }) => Promise<T[]> };
-type InsertBuilder<T> = { values: <V extends Record<string, unknown>>(v: V) => InsertReturning<T> };
+interface InsertBuilder<T> {
+  values<V extends Record<string, unknown>>(v: V): InsertBuilder<T>;
+  returning<C extends Record<string, unknown>>(cols: C): Promise<{ [K in keyof C]: unknown }[]>;
+}
 
 export function createPaymentReceivablesStore(db: Database) {
   // ---------------------------------------------------------------------------
