@@ -348,20 +348,7 @@ export class AgentLongTermMemoryRecall {
         },
       });
       const persistedState = await this.persistenceStore.readRecallState();
-      let snapshotError: string | null = null;
-      try {
-        snapshotError = errorMsg(error);
-      } catch (e) {
-        forgeDebug({
-          scope: 'ltm-recall',
-          level: 'warn',
-          message: 'snapshotError from error failed',
-          context: {
-            error: errorMsg(e),
-          },
-        });
-        snapshotError = String(error);
-      }
+      const snapshotError = errorMsg(error);
       try {
         await this.persistRecallSnapshotWithInput(input, {
           status: 'error',
