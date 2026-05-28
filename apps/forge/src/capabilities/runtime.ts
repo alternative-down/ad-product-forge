@@ -1,4 +1,5 @@
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 
 import type { Database } from '../database/schema';
 import { and, eq } from 'drizzle-orm';
@@ -305,7 +306,7 @@ export async function updateInternalChatProviderProfile(
     forgeDebug({
       scope: 'capabilities-runtime',
       level: 'error',
-      message: `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${input.agentId}: ${String(err)}`,
+      message: `updateInternalChatProviderProfile: failed to decrypt/parse credentials for agent ${input.agentId}: ${errorMsg(err)}`,
     });
     return;
   }
@@ -334,7 +335,7 @@ export async function updateInternalChatProviderProfile(
     forgeDebug({
       scope: 'capabilities-runtime',
       level: 'error',
-      message: `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${String(err)}`,
+      message: `updateInternalChatProviderProfile: failed to update provider for agent ${input.agentId}: ${errorMsg(err)}`,
     });
     return;
   }
