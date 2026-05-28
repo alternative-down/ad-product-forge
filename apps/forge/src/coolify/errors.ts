@@ -29,7 +29,7 @@ export function mapCoolifyError(context: CoolifyErrorContext): Error {
     return error;
   }
 
-  return new Error(`${operation} failed: ${String(error)}`);
+  return new Error(`${operation} failed: ${errorMsg(error)}`);
 }
 
 export function mapHttpError(
@@ -51,5 +51,5 @@ export function mapProviderConfigError(operation: string, error: unknown): Error
   if (error instanceof Error) {
     return error;
   }
-  return new Error(`${operation} failed: ${String(error)}`);
+  return new Error(`${operation} failed: ${errorMsg(error)}`);
 }
