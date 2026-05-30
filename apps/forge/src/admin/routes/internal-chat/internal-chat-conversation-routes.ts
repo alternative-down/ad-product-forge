@@ -3,7 +3,6 @@
  * Extracted from internal-chat/index.ts (conversation & message routes).
  */
 
-import type { HttpResponse } from '../../../http/server';
 import type { InternalChatConversation } from '../../../database/schema';
 import type { InternalChatService } from '../../../communication/internal-chat-service';
 import type { InternalChatHttpServer } from './index';
