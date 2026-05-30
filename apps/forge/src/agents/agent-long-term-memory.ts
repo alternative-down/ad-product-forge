@@ -579,7 +579,7 @@ export function createAgentLongTermMemory(input: {
       const nowIso = new Date().toISOString();
 
       state.lastRunAt = nowIso;
-      state.lastRunError = error instanceof Error ? error.message : String(error);
+      state.lastRunError = errorMsg(error);
       state.lastRunErrorAt = nowIso;
       await writeState(state);
       forgeDebug({
