@@ -5,7 +5,7 @@
  * formatCheckpointPackageId, buildCheckpointPackageManifest, getTempPackagePath.
  * Async fs operations are tested via integration tests in ltm/store.test.ts.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   computeCheckpointTimestamp,
   formatCheckpointPackageId,
@@ -16,8 +16,25 @@ import type { CheckpointedOmCheckpointPackageInput, CheckpointPackageManifest } 
 
 // ─── Test factories ─────────────────────────────────────────────────────────
 
+function makeReflection(overrides: Partial<{ content: string; createdAt: number; generatedAt: number }> = {}) {
+  return {
+    content: 'reflection content',
+    createdAt: 1_700_000_000_000,
+    ...overrides,
+  };
+}
+
+function makeObservation(overrides: Partial<{ content: string; createdAt: number; generatedAt: number }> = {}) {
+  return {
+    content: 'observation content',
+    createdAt: 1_700_000_000_000,
+    ...overrides,
+  };
+}
+
 function makePayload(overrides: Partial<CheckpointedOmCheckpointPackageInput> = {}): CheckpointedOmCheckpointPackageInput {
   return {
+    threadId: 'thread-001',
     checkpointSummary: { text: 'summary', updatedAt: 1_700_000_000_000 },
     reflections: [],
     observations: [],
@@ -34,9 +51,9 @@ describe('computeCheckpointTimestamp', () => {
   it('should return the earliest reflection.createdAt when reflections exist', () => {
     const payload = makePayload({
       reflections: [
-        { createdAt: 1_700_000_100_000 },
-        { createdAt: 1_700_000_000_000 },
-        { createdAt: 1_700_000_200_000 },
+        makeReflection({ createdAt: 1_700_000_100_000 }),
+        makeReflection({ createdAt: 1_700_000_000_000 }),
+        makeReflection({ createdAt: 1_700_000_200_000 }),
       ],
       observations: [],
     });
@@ -48,9 +65,9 @@ describe('computeCheckpointTimestamp', () => {
     const payload = makePayload({
       reflections: [],
       observations: [
-        { createdAt: 1_700_000_500_000 },
-        { createdAt: 1_700_000_300_000 },
-        { createdAt: 1_700_000_400_000 },
+        makeObservation({ createdAt: 1_700_000_500_000 }),
+        makeObservation({ createdAt: 1_700_000_300_000 }),
+        makeObservation({ createdAt: 1_700_000_400_000 }),
       ],
     });
     const result = computeCheckpointTimestamp(payload);
@@ -59,8 +76,8 @@ describe('computeCheckpointTimestamp', () => {
 
   it('should prefer reflection.createdAt over observation.createdAt', () => {
     const payload = makePayload({
-      reflections: [{ createdAt: 1_700_000_100_000 }],
-      observations: [{ createdAt: 1_700_000_000_000 }],
+      reflections: [makeReflection({ createdAt: 1_700_000_100_000 })],
+      observations: [makeObservation({ createdAt: 1_700_000_000_000 })],
     });
     const result = computeCheckpointTimestamp(payload);
     expect(result).toBe(1_700_000_000_000);
@@ -69,7 +86,7 @@ describe('computeCheckpointTimestamp', () => {
   it('should fall back to generatedAt when createdAt is missing', () => {
     const payload = makePayload({
       reflections: [
-        { createdAt: undefined as unknown as number, generatedAt: 1_700_000_000_000 },
+        makeReflection({ createdAt: undefined as unknown as number, generatedAt: 1_700_000_000_000 }),
       ],
       observations: [],
     });
@@ -80,7 +97,7 @@ describe('computeCheckpointTimestamp', () => {
   it('should use 0 as fallback when both createdAt and generatedAt are missing', () => {
     const payload = makePayload({
       reflections: [
-        { createdAt: undefined as unknown as number, generatedAt: undefined as unknown as number },
+        makeReflection({ createdAt: undefined as unknown as number, generatedAt: undefined as unknown as number }),
       ],
       observations: [],
     });
@@ -101,9 +118,9 @@ describe('computeCheckpointTimestamp', () => {
   it('should handle reflections with mixed createdAt and generatedAt', () => {
     const payload = makePayload({
       reflections: [
-        { createdAt: 1_700_000_200_000 },
-        { createdAt: undefined as unknown as number, generatedAt: 1_700_000_000_000 },
-        { createdAt: 1_700_000_300_000 },
+        makeReflection({ createdAt: 1_700_000_200_000 }),
+        makeReflection({ createdAt: undefined as unknown as number, generatedAt: 1_700_000_000_000 }),
+        makeReflection({ createdAt: 1_700_000_300_000 }),
       ],
       observations: [],
     });
@@ -114,8 +131,8 @@ describe('computeCheckpointTimestamp', () => {
   it('should handle numeric and string timestamps in createdAt', () => {
     const payload = makePayload({
       reflections: [
-        { createdAt: 1_700_000_000_000 as unknown as string },
-        { createdAt: '1700000000000' as unknown as number },
+        makeReflection({ createdAt: 1_700_000_000_000 as unknown as string }),
+        makeReflection({ createdAt: '1700000000000' as unknown as number }),
       ],
       observations: [],
     });
@@ -175,13 +192,13 @@ describe('buildCheckpointPackageManifest', () => {
   it('should set reflectionCount and observationCount from payload', () => {
     const payload = makePayload({
       reflections: [
-        { createdAt: 1 },
-        { createdAt: 2 },
-        { createdAt: 3 },
+        makeReflection(),
+        makeReflection(),
+        makeReflection(),
       ],
       observations: [
-        { createdAt: 1 },
-        { createdAt: 2 },
+        makeObservation(),
+        makeObservation(),
       ],
     });
     const result = buildCheckpointPackageManifest('pkg-003', payload, 0);
