@@ -41,6 +41,12 @@ export function withRouteErrorHandler(
   path: string,
   handler: (request: HttpRequest) => ReturnType<HttpHandler>,
 ): (request: HttpRequest) => ReturnType<HttpHandler>;
+export function withRouteErrorHandler(
+  scope: string,
+  path: string,
+  handler: (request: InternalChatRequest) => ReturnType<HttpHandler>,
+): (request: InternalChatRequest) => ReturnType<HttpHandler>;
+
 export function withRouteErrorHandler<Args extends unknown[]>(
   scope: string,
   path: string,
