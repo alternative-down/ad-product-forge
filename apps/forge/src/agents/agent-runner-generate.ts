@@ -45,6 +45,7 @@ import {
   buildIterationFeedback,
 } from './agent-runner-feedback';
 import { forgeDebug } from '@forge-runtime/core';
+import { errorMsg } from './agent-runner-error-formatting';
 
 import { FIFTEEN_MINUTES_MS } from './time-constants';
 
@@ -361,7 +362,7 @@ export async function generateWithTimeoutRetries(
         level: 'error',
         runtimeId: deps.runtime.id,
         message: 'generate failed',
-        context: { error: error?.message ?? String(err) },
+        context: { error: errorMsg(err) },
       });
 
       // Back off on retryable error
