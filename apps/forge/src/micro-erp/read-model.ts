@@ -27,6 +27,28 @@ type ListCompanyCashMovementsInput = {
   offset?: number;
 };
 
+
+// ── Drizzle aggregate result interfaces ─────────────────────────────────────
+interface TotalRow {
+  total: number;
+}
+interface CashFlowTotalsRow {
+  totalInUsd: number;
+  totalOutUsd: number;
+}
+interface ScheduledTotalsRow {
+  scheduledInUsd: number;
+  scheduledOutUsd: number;
+}
+interface SingleContractRow {
+  contractId: string;
+  agentId: string;
+  agentName: string;
+  startsAt: number;
+  endsAt: number;
+  weeklyValueUsd: number;
+  autoRenew: number;
+}
 export type MicroErpReadModel = ReturnType<typeof createMicroErpReadModel>;
 
 export function createMicroErpReadModel(db: Database) {
@@ -100,7 +122,7 @@ export function createMicroErpReadModel(db: Database) {
         dueAt: row.dueAt ?? undefined,
         effectiveAt: row.effectiveAt ?? undefined,
       })),
-      total: (countRows as unknown as { total: number }[])[0]?.total ?? 0,
+      total: (countRows as unknown as TotalRow[])[0]?.total ?? 0,
       summary,
     };
   }
@@ -141,12 +163,10 @@ export function createMicroErpReadModel(db: Database) {
           lte(companyCashLedger.dueAt, periodEnd),
         ),
       );
-    const totalInUsd = (postedTotals as unknown as { totalInUsd: number }[])[0]?.totalInUsd ?? 0;
-    const totalOutUsd = (postedTotals as unknown as { totalOutUsd: number }[])[0]?.totalOutUsd ?? 0;
-    const scheduledInUsd =
-      (scheduledTotals as unknown as { scheduledInUsd: number }[])[0]?.scheduledInUsd ?? 0;
-    const scheduledOutUsd =
-      (scheduledTotals as unknown as { scheduledOutUsd: number }[])[0]?.scheduledOutUsd ?? 0;
+    const totalInUsd = (postedTotals as unknown as CashFlowTotalsRow[])[0]?.totalInUsd ?? 0;
+    const totalOutUsd = (postedTotals as unknown as CashFlowTotalsRow[])[0]?.totalOutUsd ?? 0;
+    const scheduledInUsd = (scheduledTotals as unknown as ScheduledTotalsRow[])[0]?.scheduledInUsd ?? 0;
+    const scheduledOutUsd = (scheduledTotals as unknown as ScheduledTotalsRow[])[0]?.scheduledOutUsd ?? 0;
 
     const balanceUsd = await companyCash.getCurrentBalanceUsd();
 
@@ -216,19 +236,7 @@ export function createMicroErpReadModel(db: Database) {
       .orderBy(desc(agentExecutionContracts.endsAt))
       .limit(1);
 
-    const contract = (
-      row as unknown as {
-        0: {
-          contractId: string;
-          agentId: string;
-          agentName: string;
-          startsAt: number;
-          endsAt: number;
-          weeklyValueUsd: number;
-          autoRenew: number;
-        };
-      }
-    )[0];
+    const contract = (row as unknown as SingleContractRow[])[0];
     if (contract === null || contract === undefined) {
       return null;
     }
