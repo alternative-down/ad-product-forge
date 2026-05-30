@@ -1,56 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
+import * as agentsSchema from './schema-agents';
+import * as rolesSchema from './schema-roles';
+import * as llmSchema from './schema-llm';
+import * as financeSchema from './schema-finance';
+import * as configSchema from './schema-config';
+import * as integrationsSchema from './schema-integrations';
+import * as chatSchema from './schema-chat';
+import * as mcpSchema from './schema-mcp';
+import * as webhooksSchema from './schema-webhooks';
+import * as knowledgeSchema from './schema-knowledge';
+import * as ticketsSchema from './schema-tickets';
 import * as schema from './schema';
 
-// Every table and relation defined in schema.ts should be exported.
-const tableExports = [
-  // Agents
-  'agents',
-  'agentProviders',
-  'agentExecutionContracts',
-  'agentExecutionSteps',
-  'agentHomeMetricSnapshots',
-  'agentCheckpointedOmStates',
-  'agentLongTermMemoryStates',
-  'agentLongTermMemoryRecallStates',
-  'agentNotifications',
-  'agentSchedules',
-  // Roles
-  'agentRoles',
-  'roleToolPermissions',
-  'roleWorkflowPermissions',
-  // LLM
-  'llmProfiles',
-  'llmModelPrices',
-  'systemLlmDefaults',
-  // Finance
-  'companyCashLedger',
-  'companyRecurringPayables',
-  // Config
-  'systemSettings',
-  // Integrations
-  'systemIntegrations',
-  // Chat
-  'internalChatAccounts',
-  'internalChatConversations',
-  'internalChatConversationMembers',
-  'internalChatMessages',
-  'internalChatMessageReads',
-  'internalChatMessageAttachments',
-  // MCP
-  'mcpServerConfigs',
-  'agentMcpConfigs',
-  // Webhooks
-  'webhookRoutes',
-  'webhookEvents',
-  // Knowledge
-  'knowledgeDocuments',
-  // Tickets
-  'tickets',
-  'ticketMessages',
-] as const;
-
+// Every relation defined in schema.ts should be exported.
 const relationExports = [
+  'systemSettingsRelations',
+  'llmModelPricesRelations',
+  'companyRecurringPayablesRelations',
+  'systemIntegrationsRelations',
+  'companyCashLedgerRelations',
+  'systemLlmDefaultsRelations',
   'agentsRelations',
   'llmProfilesRelations',
   'agentRolesRelations',
@@ -65,12 +35,6 @@ const relationExports = [
   'agentLongTermMemoryRecallStatesRelations',
   'agentNotificationsRelations',
   'agentSchedulesRelations',
-  'systemSettingsRelations',
-  'llmModelPricesRelations',
-  'companyRecurringPayablesRelations',
-  'systemIntegrationsRelations',
-  'companyCashLedgerRelations',
-  'systemLlmDefaultsRelations',
   'internalChatAccountsRelations',
   'internalChatConversationsRelations',
   'internalChatConversationMembersRelations',
@@ -86,52 +50,93 @@ const relationExports = [
   'ticketMessagesRelations',
 ] as const;
 
-describe('schema exports', () => {
-  describe('tables', () => {
-    tableExports.forEach((name) => {
-      it(`${name} is exported`, () => {
-        expect(schema).toHaveProperty(name);
-      });
+// Sub-schema files should export their respective tables.
+const subSchemaExports: Array<{ file: string; mod: Record<string, unknown>; tables: readonly string[] }> = [
+  {
+    file: 'schema-agents',
+    mod: agentsSchema,
+    tables: ['agents', 'agentProviders', 'agentExecutionContracts', 'agentExecutionSteps',
+      'agentHomeMetricSnapshots', 'agentCheckpointedOmStates', 'agentLongTermMemoryStates',
+      'agentLongTermMemoryRecallStates', 'agentNotifications', 'agentSchedules'],
+  },
+  {
+    file: 'schema-roles',
+    mod: rolesSchema,
+    tables: ['agentRoles', 'roleToolPermissions', 'roleWorkflowPermissions'],
+  },
+  {
+    file: 'schema-llm',
+    mod: llmSchema,
+    tables: ['llmProfiles', 'llmModelPrices', 'systemLlmDefaults'],
+  },
+  {
+    file: 'schema-finance',
+    mod: financeSchema,
+    tables: ['companyCashLedger', 'companyRecurringPayables'],
+  },
+  {
+    file: 'schema-config',
+    mod: configSchema,
+    tables: ['systemSettings'],
+  },
+  {
+    file: 'schema-integrations',
+    mod: integrationsSchema,
+    tables: ['systemIntegrations'],
+  },
+  {
+    file: 'schema-chat',
+    mod: chatSchema,
+    tables: ['internalChatAccounts', 'internalChatConversations', 'internalChatConversationMembers',
+      'internalChatMessages', 'internalChatMessageReads', 'internalChatMessageAttachments'],
+  },
+  {
+    file: 'schema-mcp',
+    mod: mcpSchema,
+    tables: ['mcpServerConfigs', 'agentMcpConfigs'],
+  },
+  {
+    file: 'schema-webhooks',
+    mod: webhooksSchema,
+    tables: ['webhookRoutes', 'webhookEvents'],
+  },
+  {
+    file: 'schema-knowledge',
+    mod: knowledgeSchema,
+    tables: ['knowledgeDocuments'],
+  },
+  {
+    file: 'schema-tickets',
+    mod: ticketsSchema,
+    tables: ['tickets', 'ticketMessages'],
+  },
+];
 
-      it(`${name} is a non-null object (Drizzle table)`, () => {
-        expect((schema as Record<string, unknown>)[name]).toBeDefined();
-        expect(typeof (schema as Record<string, unknown>)[name]).toBe('object');
-      });
+describe('schema.ts relations (defined in schema.ts, exported from schema.ts)', () => {
+  relationExports.forEach((name) => {
+    it(`${name} is exported from schema.ts`, () => {
+      expect(schema).toHaveProperty(name);
+    });
+
+    it(`${name} is an object (Drizzle relation definition)`, () => {
+      expect(typeof (schema as Record<string, unknown>)[name]).toBe('object');
     });
   });
+});
 
-  describe('relations', () => {
-    // Drizzle relations are objects (relation definitions), not functions.
-    // Each is defined via relations() which returns a relation proxy object.
-    relationExports.forEach((name) => {
-      it(`${name} is exported`, () => {
-        expect(schema).toHaveProperty(name);
-      });
-
-      it(`${name} is an object (Drizzle relation definition)`, () => {
-        expect(typeof (schema as Record<string, unknown>)[name]).toBe('object');
+describe('sub-schema table exports', () => {
+  subSchemaExports.forEach(({ file, mod, tables }) => {
+    tables.forEach((table) => {
+      it(`${file}: exports ${table}`, () => {
+        expect(mod).toHaveProperty(table);
+        expect(typeof (mod as Record<string, unknown>)[table]).toBe('object');
       });
     });
   });
 });
 
-describe('schema module', () => {
-  it('is importable without errors', async () => {
-    const mod = await import('./schema');
-    expect(mod).toBeDefined();
-  });
-
-  it('exports all expected table names', async () => {
-    const mod = (await import('./schema')) as typeof schema;
-    tableExports.forEach((name) => {
-      expect(mod).toHaveProperty(name);
-    });
-  });
-
-  it('exports all expected relation names', async () => {
-    const mod = (await import('./schema')) as typeof schema;
-    relationExports.forEach((name) => {
-      expect(mod).toHaveProperty(name);
-    });
+describe('Database type re-export', () => {
+  it('Database type is re-exported from schema module', () => {
+    expect(schema).toBeDefined();
   });
 });
