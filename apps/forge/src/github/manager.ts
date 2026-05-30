@@ -1,4 +1,5 @@
 import { createId } from '../utils/id';
+import { errorMsg } from '../agents/agent-runner-error-formatting';
 import { nanoid } from 'nanoid';
 import { createAppAuth } from '@octokit/auth-app';
 import { App } from 'octokit';
@@ -890,7 +891,7 @@ export function createGitHubAppManager(config: {
       forgeDebug({
         scope: 'github-manager',
         level: 'error',
-        message: 'Failed to parse GitHub credentials: ' + String(error),
+        message: 'Failed to parse GitHub credentials: ' + errorMsg(error),
       });
       return null;
     }
