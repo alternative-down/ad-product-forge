@@ -6,6 +6,7 @@ import { forgeDebug } from '@forge-runtime/core';
 import type { createAdminReadModel } from '../read-model';
 import type { createMicroErpReadModel } from '../../micro-erp/read-model';
 import { jsonResponse } from './helpers';
+import { agentExecutionContracts } from '../../database/schema-agents';
 
 /**
  * Dashboard analytics and overview routes.
@@ -38,7 +39,7 @@ export function registerDashboardRoutes({
         const rows = await db.query.agents.findMany({
           columns: { id: true, executionState: true, role: true },
         });
-        const loadedAgents = (registry as any).size;
+        const loadedAgents = registry.size;
         const idleAgents = rows.filter((r) => r.executionState === 'idle').length;
         const runningAgents = rows.filter((r) => r.executionState === 'running').length;
         return jsonResponse({
@@ -52,7 +53,7 @@ export function registerDashboardRoutes({
             roles: new Set(rows.map((r: any) => r.role).filter(Boolean)).size,
             activeContracts: (
               await db.query.agentExecutionContracts.findMany({
-                where: (fields: any) => eq(fields.isActive, true),
+                where: eq(agentExecutionContracts.isActive, 1),
                 columns: { id: true },
               })
             ).length,
