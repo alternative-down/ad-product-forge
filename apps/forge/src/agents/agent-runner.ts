@@ -12,42 +12,42 @@ import { createAgentNotificationStore } from '../notifications/store';
 import { createAgentRunnerUsage, type AgentRunnerUsage } from './agent-runner-usage';
 import { createAgentHomeMetricSnapshotStore } from './agent-home-metric-snapshot-store';
 import { formatPendingRunEvents } from './agent-runner-wake';
-import { createLoopManager, type _LoopManager } from './agent-runner-loop-manager';
+import { createLoopManager, type LoopManager } from './agent-runner-loop-manager';
 import {
   createRunnerMessageManager,
-  type _RunnerMessageManagerState,
+  type RunnerMessageManagerState,
 } from './agent-runner-message-manager';
 
-import { _AGENT_CONTEXT_WARNING_CHAR_LIMIT, _AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
+import { AGENT_CONTEXT_WARNING_CHAR_LIMIT, AGENT_CONTEXT_FILE_PATH } from '../utils/constants';
 
 import {
   errorMsg,
   formatAbsentExecutionError,
-  _extractAbsentErrorDetails,
+  extractAbsentErrorDetails,
 } from './agent-runner-error-formatting';
 import {
-  _buildStepSystemPrompt,
+  buildStepSystemPrompt,
   extractRunnerControlDirective,
-  _extractRunnerControlDirectiveFromIteration,
+  extractRunnerControlDirectiveFromIteration,
 } from './agent-runner-control-directives';
-import { _delay } from '../utils/async';
+import { delay } from '../utils/async';
 import {
-  _buildRecallStepFromIteration,
-  _buildIterationLoopSignature,
-  _didIterationProduceVisibleAssistantText,
+  buildRecallStepFromIteration,
+  buildIterationLoopSignature,
+  didIterationProduceVisibleAssistantText,
 } from './agent-runner-iteration-helpers';
-import { _collectStepTextParts } from './agent-runner-control-directives';
-import { _extractControlDirective } from './agent-runner-helpers';
+import { collectStepTextParts } from './agent-runner-control-directives';
+import { extractControlDirective } from './agent-runner-helpers';
 import { withTimeout } from '../utils/async';
-import { _createLoopDetector } from './agent-runner-loop-detector';
+import { createLoopDetector } from './agent-runner-loop-detector';
 import {
-  _isStaleRun,
-  _advanceRunEpoch,
-  _advanceStepEpoch,
+  isStaleRun,
+  advanceRunEpoch,
+  advanceStepEpoch,
   advanceGenerateToken,
-  _resetBackoff,
+  resetBackoff,
 } from './agent-runner-state';
-import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-_delay';
+import { calculateBudgetDelayMs, nextExponentialBackoffMs } from './agent-runner-delay';
 import { loadAgentContextInstructions } from './agent-runner-context-loaders';
 import {
   generateWithTimeoutRetries,
@@ -55,23 +55,23 @@ import {
   STARTING_RUN_TIMEOUT_MS,
 } from './agent-runner-generate';
 import {
-  _createGenerateTimeoutGuard,
-  _touchGenerateTimeout,
-  _clearGenerateTimeout,
-  type _GenerateTimeoutHandle,
+  createGenerateTimeoutGuard,
+  touchGenerateTimeout,
+  clearGenerateTimeout,
+  type GenerateTimeoutHandle,
 } from './agent-runner-generate-timeout';
 
-import { _startGenerateAttempt, _finishGenerateAttempt } from './agent-runner-attempt-lifecycle';
+import { startGenerateAttempt, finishGenerateAttempt } from './agent-runner-attempt-lifecycle';
 
 import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
-import { _runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
-import { ONE_MINUTE_MS, _TEN_MINUTES_MS, _FIFTEEN_MINUTES_MS } from './time-constants';
+import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
+import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
 const FULL_MEMORY_LOAD_LAST_MESSAGES = Number.MAX_SAFE_INTEGER;
 export function createAgentRunner(
   db: Database,
   runtime: InternalAgentRuntime,
-  _options: {
+  options: {
     reloadRuntime?: () => Promise<InternalAgentRuntime>;
     onRuntimeReloaded?: (runtime: InternalAgentRuntime) => void;
     workspaceBasePath?: string;
@@ -139,18 +139,18 @@ export function createAgentRunner(
   currentRuntime.onReceiveMessage(notifyExternalEvent);
 
   async function reloadRuntimeForNewRun(_runEpoch: number) {
-    if (!_options.reloadRuntime) {
+    if (!options.reloadRuntime) {
       return;
     }
 
     const previousRuntime = currentRuntime;
     const nextRuntime = await withTimeout(
-      _options.reloadRuntime(),
+      options.reloadRuntime(),
       RUNNER_AWAIT_TIMEOUT_MS,
       `Agent runtime reload timed out for ${runtime.id}`,
     );
 
-    if (_isStaleRun(_runEpoch)) {
+    if (isStaleRun(_runEpoch)) {
       await withTimeout(
         nextRuntime.dispose(),
         RUNNER_AWAIT_TIMEOUT_MS,
@@ -162,7 +162,7 @@ export function createAgentRunner(
     currentRuntime = nextRuntime;
     usage = createAgentRunnerUsage({ store, runtime: currentRuntime });
     currentRuntime.onReceiveMessage(notifyExternalEvent);
-    _options.onRuntimeReloaded?.(nextRuntime);
+    options.onRuntimeReloaded?.(nextRuntime);
     await withTimeout(
       previousRuntime.dispose(),
       RUNNER_AWAIT_TIMEOUT_MS,
@@ -258,19 +258,19 @@ export function createAgentRunner(
 
   function appendPendingRunMessages(
     events: AgentWakeEvent[],
-    _options: {
+    options: {
       allowIdleOnly?: boolean;
     } = {},
   ) {
-    void messageManager.appendPendingRunMessages(events, _options);
+    void messageManager.appendPendingRunMessages(events, options);
   }
 
   function flushPendingRunMessages(
-    _options: {
+    options: {
       allowOriginIdleOnly?: boolean;
     } = {},
   ) {
-    return messageManager.flushPendingRunMessages(_options);
+    return messageManager.flushPendingRunMessages(options);
   }
 
   function stop() {
@@ -288,7 +288,7 @@ export function createAgentRunner(
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async function forceIdle(
-    _options: {
+    options: {
       preserveQueuedWork?: boolean;
     } = {},
   ) {
@@ -297,7 +297,7 @@ export function createAgentRunner(
     startingRunStartedAt = null;
     executing = false;
     applyIdleState(_runEpoch);
-    if (_isStaleRun(_runEpoch)) {
+    if (isStaleRun(_runEpoch)) {
       return;
     }
 
@@ -307,7 +307,7 @@ export function createAgentRunner(
     scheduler.clearTimer();
   }
 
-  async function _runHealthcheck() {
+  async function runHealthcheck() {
     if (stopped) return;
     const _onStartingRunTimeout: () => void = () => {
       forgeDebug({
@@ -349,7 +349,7 @@ export function createAgentRunner(
       syncTimer: (val) => {
         timer = val;
       },
-      _isStaleRun,
+      isStaleRun,
       notifyError: (error) =>
         forgeDebug({
           scope: 'agent-runner',
@@ -377,7 +377,7 @@ export function createAgentRunner(
     try {
       activeRunId = createId();
       scheduler.setInstant(true);
-      scheduler._resetBackoff();
+      scheduler.resetBackoff();
       lastWakeStartedAt = input.wakeStartedAt;
       resetLoopDetector();
       messageManager.reset();
@@ -389,7 +389,7 @@ export function createAgentRunner(
         await reloadRuntimeForNewRun(_runEpoch);
       }
 
-      if (_isStaleRun(_runEpoch)) {
+      if (isStaleRun(_runEpoch)) {
         return;
       }
 
@@ -403,7 +403,7 @@ export function createAgentRunner(
         );
       }
 
-      if (_isStaleRun(_runEpoch)) {
+      if (isStaleRun(_runEpoch)) {
         return;
       }
 
@@ -416,7 +416,7 @@ export function createAgentRunner(
         message: 'failed to begin run',
         context: { error: errorMsg(error) },
       });
-      if (!_isStaleRun(_runEpoch)) {
+      if (!isStaleRun(_runEpoch)) {
         await transitionToIdle(_runEpoch);
       }
     } finally {
@@ -426,7 +426,7 @@ export function createAgentRunner(
   }
 
   async function queueNextStep(_runEpoch: number) {
-    if (stopped || executing || timer || _isStaleRun(_runEpoch)) {
+    if (stopped || executing || timer || isStaleRun(_runEpoch)) {
       return;
     }
 
@@ -437,13 +437,13 @@ export function createAgentRunner(
         `Agent execution state lookup timed out for ${runtime.id}`,
       );
 
-      if (executionState === 'idle' || _isStaleRun(_runEpoch)) {
+      if (executionState === 'idle' || isStaleRun(_runEpoch)) {
         return;
       }
 
       const nextAttempt = await planNextAttempt();
 
-      if (_isStaleRun(_runEpoch)) {
+      if (isStaleRun(_runEpoch)) {
         return;
       }
 
@@ -476,12 +476,12 @@ export function createAgentRunner(
   }
 
   async function executeStep(contractId: string, _runEpoch: number) {
-    if (stopped || executing || _isStaleRun(_runEpoch)) {
+    if (stopped || executing || isStaleRun(_runEpoch)) {
       return;
     }
 
     executing = true;
-    scheduler._advanceStepEpoch();
+    scheduler.advanceStepEpoch();
     let continueRunning = false;
     let drainWakeQueueAfterStep = false;
     let prompt = '';
@@ -496,7 +496,7 @@ export function createAgentRunner(
         `Agent execution state lookup timed out for ${runtime.id}`,
       );
 
-      if (executionState === 'idle' || _isStaleRun(_runEpoch)) {
+      if (executionState === 'idle' || isStaleRun(_runEpoch)) {
         return;
       }
 
@@ -515,7 +515,7 @@ export function createAgentRunner(
         `Agent runnable contract lookup timed out for ${runtime.id}`,
       );
 
-      if (_isStaleRun(_runEpoch)) {
+      if (isStaleRun(_runEpoch)) {
         return;
       }
 
@@ -598,7 +598,7 @@ export function createAgentRunner(
         },
       );
 
-      if (_isStaleRun(_runEpoch)) {
+      if (isStaleRun(_runEpoch)) {
         return;
       }
       lastStepStage = 'finalizing-run';
@@ -618,10 +618,10 @@ export function createAgentRunner(
         return;
       }
 
-      scheduler._resetBackoff();
+      scheduler.resetBackoff();
       continueRunning = messageManager.getPendingCount() > 0;
     } catch (error) {
-      if (_isStaleRun(_runEpoch)) {
+      if (isStaleRun(_runEpoch)) {
         return;
       }
 
@@ -670,11 +670,11 @@ export function createAgentRunner(
         executing = false;
       }
 
-      if (drainWakeQueueAfterStep && !_isStaleRun(_runEpoch)) {
+      if (drainWakeQueueAfterStep && !isStaleRun(_runEpoch)) {
         await wakeQueue.onRunnerIdle();
       }
 
-      if (continueRunning && !_isStaleRun(_runEpoch)) {
+      if (continueRunning && !isStaleRun(_runEpoch)) {
         await queueNextStep(_runEpoch);
       }
     }
@@ -772,7 +772,7 @@ export function createAgentRunner(
       };
     }
 
-    scheduler._resetBackoff();
+    scheduler.resetBackoff();
     const settings = await withTimeout(
       systemSettings.getSettings(),
       RUNNER_AWAIT_TIMEOUT_MS,
@@ -835,7 +835,7 @@ export function createAgentRunner(
     return scheduler.startNewRunEpoch();
   }
 
-  function _isStaleRun(_runEpoch: number) {
+  function isStaleRun(_runEpoch: number) {
     return stopped || _runEpoch !== scheduler.getActiveRunEpoch();
   }
 
@@ -845,11 +845,11 @@ export function createAgentRunner(
 
   async function transitionToIdle(
     _runEpoch: number,
-    _options: {
+    options: {
       deferWakeQueueDrain?: boolean;
     } = {},
   ) {
-    if (_isStaleRun(_runEpoch)) {
+    if (isStaleRun(_runEpoch)) {
       return;
     }
 
@@ -859,12 +859,12 @@ export function createAgentRunner(
     currentGenerateAbortController = null;
     applyIdleState(_runEpoch);
 
-    if (_isStaleRun(_runEpoch)) {
+    if (isStaleRun(_runEpoch)) {
       return;
     }
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (_options.deferWakeQueueDrain) {
+    if (options.deferWakeQueueDrain) {
       return;
     }
 

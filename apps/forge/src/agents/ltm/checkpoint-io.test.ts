@@ -20,6 +20,7 @@ function makeReflection(overrides: Partial<{ content: string; createdAt: number;
   return {
     content: 'reflection content',
     createdAt: 1_700_000_000_000,
+    generatedAt: 1_700_000_000_000,
     ...overrides,
   };
 }
@@ -28,6 +29,7 @@ function makeObservation(overrides: Partial<{ content: string; createdAt: number
   return {
     content: 'observation content',
     createdAt: 1_700_000_000_000,
+    generatedAt: 1_700_000_000_000,
     ...overrides,
   };
 }
@@ -131,8 +133,8 @@ describe('computeCheckpointTimestamp', () => {
   it('should handle numeric and string timestamps in createdAt', () => {
     const payload = makePayload({
       reflections: [
-        makeReflection({ createdAt: 1_700_000_000_000 as unknown as string }),
-        makeReflection({ createdAt: '1700000000000' as unknown as number }),
+        { content: 'test', createdAt: '1700000000000' as unknown as number, generatedAt: 1_700_000_000_000 },
+        makeReflection({ createdAt: Number('1700000000000') }),
       ],
       observations: [],
     });
