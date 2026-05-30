@@ -44,7 +44,7 @@ describe('getDatabase', () => {
   });
 
   test('has a run method for executing raw SQL', () => {
-    const db = getDatabase() as { run: (sql: unknown) => Promise<void> };
+    const db = getDatabase() as unknown as { run: (sql: unknown) => Promise<void> };
     expect(typeof db.run).toBe('function');
   });
 });
