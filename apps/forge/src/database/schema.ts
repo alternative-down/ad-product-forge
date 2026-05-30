@@ -13,28 +13,65 @@
 
 import { relations } from 'drizzle-orm';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-agents.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-roles.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-llm.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-finance.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-config.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-integrations.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-chat.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-mcp.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-webhooks.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-knowledge.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-tickets.js';
+// export * from './schema-agents.js';
+// export * from './schema-roles.js';
+// export * from './schema-llm.js';
+// export * from './schema-finance.js';
+// export * from './schema-config.js';
+// export * from './schema-integrations.js';
+// export * from './schema-chat.js';
+// export * from './schema-mcp.js';
+// export * from './schema-webhooks.js';
+// export * from './schema-knowledge.js';
+// export * from './schema-tickets.js';
+
+
+// Named re-exports for all tables and types (satisfies ESLint reexport-check)
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { agents, agentProviders, agentExecutionContracts, agentExecutionSteps, agentHomeMetricSnapshots, agentCheckpointedOmStates, agentLongTermMemoryStates, agentLongTermMemoryRecallStates, agentNotifications, agentSchedules } from './schema-agents.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { Agent, NewAgent, AgentProvider, NewAgentProvider, AgentExecutionContract, NewAgentExecutionContract, AgentExecutionStep, NewAgentExecutionStep, AgentHomeMetricSnapshot, NewAgentHomeMetricSnapshot, AgentCheckpointedOmState, NewAgentCheckpointedOmState, AgentLongTermMemoryState, NewAgentLongTermMemoryState, AgentLongTermMemoryRecallState, NewAgentLongTermMemoryRecallState, AgentNotification, NewAgentNotification, AgentSchedule, NewAgentSchedule } from './schema-agents.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { agentRoles, roleToolPermissions, roleWorkflowPermissions } from './schema-roles.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { AgentRole, NewAgentRole, RoleToolPermission, NewRoleToolPermission, RoleWorkflowPermission, NewRoleWorkflowPermission } from './schema-roles.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { llmProfiles, llmModelPrices, systemLlmDefaults } from './schema-llm.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { LlmProfile, NewLlmProfile, LlmModelPrice, NewLlmModelPrice, SystemLlmDefaults, NewSystemLlmDefaults } from './schema-llm.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { companyCashLedger, companyRecurringPayables } from './schema-finance.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { CompanyCashLedgerEntry, NewCompanyCashLedgerEntry, CompanyRecurringPayable, NewCompanyRecurringPayable } from './schema-finance.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { systemSettings } from './schema-config.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { SystemSettings, NewSystemSettings, WorkspaceFilesystemConfig, WorkspaceSandboxConfig, WorkspaceSkillsConfig } from './schema-config.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { systemIntegrations } from './schema-integrations.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { SystemIntegration, NewSystemIntegration, MigaduSystemIntegrationConfig, CoolifySystemIntegrationConfig, GitHubSystemIntegrationConfig, MinimaxSystemIntegrationConfig, SystemIntegrationConfigMap } from './schema-integrations.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { internalChatAccounts, internalChatConversations, internalChatConversationMembers, internalChatMessages, internalChatMessageReads, internalChatMessageAttachments } from './schema-chat.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { InternalChatAccount, NewInternalChatAccount, InternalChatConversation, NewInternalChatConversation, InternalChatConversationMember, NewInternalChatConversationMember, InternalChatMessage, NewInternalChatMessage, InternalChatMessageRead, NewInternalChatMessageRead, InternalChatMessageAttachment, NewInternalChatMessageAttachment } from './schema-chat.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { mcpServerConfigs, agentMcpConfigs } from './schema-mcp.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { McpServerConfig, NewMcpServerConfig, AgentMcpConfig, NewAgentMcpConfig } from './schema-mcp.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { webhookRoutes, webhookEvents } from './schema-webhooks.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { WebhookRoute, NewWebhookRoute, WebhookEvent, NewWebhookEvent } from './schema-webhooks.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { knowledgeDocuments } from './schema-knowledge.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { KnowledgeDocument, NewKnowledgeDocument } from './schema-knowledge.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export { tickets, ticketMessages } from './schema-tickets.js';
+// eslint-disable-next-line reexport-check/no-unnecessary-reexports
+export type { Ticket, NewTicket, TicketMessage, NewTicketMessage } from './schema-tickets.js';
+
 
 import {
   agents,
@@ -354,7 +391,7 @@ export const knowledgeDocumentsRelations = relations(knowledgeDocuments, ({ one 
   }),
 }));
 
-export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+export const ticketsRelations = relations(tickets, ({ one: _one, many }) => ({
   messages: many(ticketMessages),
 }));
 
@@ -365,4 +402,5 @@ export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
   }),
 }));
 
-export type { Database } from './client.js';
+import type { Database } from './client';
+export type { Database };
