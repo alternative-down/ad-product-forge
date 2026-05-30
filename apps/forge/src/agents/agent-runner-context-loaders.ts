@@ -146,7 +146,7 @@ export async function loadAgentContextContent(
     return null;
   });
 
-  if (!content) {
+  if (content == null) {
     return null;
   }
 
