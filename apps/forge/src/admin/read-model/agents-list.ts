@@ -293,7 +293,7 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       db.query.llmProfiles.findMany(),
     ]);
     // Parallel fetch workspace skills for all agents (N+1 fix)
-    const agentRowsSkills = agentRows
+    const agentRowsSkills = agentRows.length > 0
       ? await Promise.all(agentRows.map((agent) => listAgentWorkspaceSkills(workspaceBasePath, agent)))
       : [];
     for (let i = 0; i < (agentRows ?? []).length; i++) {
@@ -469,15 +469,15 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         lastExecutionErrorAt: agent.lastExecutionErrorAt ?? null,
         roleName: (() => {
           const roleId = (agent as Agent).roleId;
-          return roleId ? (roleMap.get(roleId)?.name ?? null) : null;
+          return roleId != null ? (roleMap.get(roleId)?.name ?? null) : null;
         })(),
         modelProfile: (() => {
           const id = (agent as Agent).modelProfileId;
-          return id ? (profileMap.get(id)?.name ?? null) : null;
+          return id != null ? (profileMap.get(id)?.name ?? null) : null;
         })(),
         omModelProfile: (() => {
           const id = (agent as Agent).omModelProfileId;
-          return id ? (profileMap.get(id)?.name ?? null) : null;
+          return id != null ? (profileMap.get(id)?.name ?? null) : null;
         })(),
         loaded: Boolean(loadedAgent),
         runner: runnerSnapshot,
