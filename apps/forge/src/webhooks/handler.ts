@@ -38,10 +38,10 @@ export function createWebhookHandler(input: { store: Store; notifyAgent: NotifyA
     const routeId = match[1];
 
     const route = await input.store.getRoute(routeId);
-    if (!route) {
+    if (route == null) {
       return { status: 404, body: 'Route not found' };
     }
-    if (!route.isActive) {
+    if (route.isActive !== true) {
       return { status: 404, body: 'Route inactive' };
     }
 
