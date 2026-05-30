@@ -13,28 +13,6 @@
 
 import { relations } from 'drizzle-orm';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-agents.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-roles.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-llm.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-finance.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-config.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-integrations.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-chat.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-mcp.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-webhooks.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-knowledge.js';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export * from './schema-tickets.js';
 
 import {
   agents,
@@ -354,7 +332,7 @@ export const knowledgeDocumentsRelations = relations(knowledgeDocuments, ({ one 
   }),
 }));
 
-export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+export const ticketsRelations = relations(tickets, ({ one: _one, many }) => ({
   messages: many(ticketMessages),
 }));
 
@@ -365,4 +343,5 @@ export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
   }),
 }));
 
-export type { Database } from './client.js';
+import type { Database } from './client';
+export type { Database };
