@@ -383,7 +383,7 @@ export function decryptProviderConfig(encryptedCredentials: string) {
     forgeDebug({
       scope: 'admin-read-model',
       level: 'error',
-      message: 'Failed to parse credentials JSON: ' + String(err),
+      message: 'Failed to parse credentials JSON: ' + errorMsg(err),
       context: { err: errorMsg(err) },
     });
     throw new Error('Failed to parse credentials JSON: ' + errorMsg(err));
