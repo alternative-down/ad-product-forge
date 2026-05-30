@@ -10,6 +10,8 @@ type CompanyCashDirection = 'in' | 'out';
 type CompanyCashStatus = 'planned' | 'posted' | 'canceled';
 
 export function createCompanyCashLedger(db: Database) {
+  interface BalanceTotalRow { total: number }
+
   async function getCurrentBalanceUsd(): Promise<number> {
     try {
       const rows = await db
@@ -25,7 +27,7 @@ export function createCompanyCashLedger(db: Database) {
           ),
         );
 
-      const r = rows as unknown as { total: number }[];
+      const r = rows as unknown as BalanceTotalRow[];
       return r?.[0]?.total ?? 0;
     } catch (error) {
       forgeDebug({
