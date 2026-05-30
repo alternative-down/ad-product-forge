@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { MiniMaxManager } from './manager';
 
 /** Context shape expected by MiniMax tools (injected by forge runtime). */
-interface MiniMaxToolContext {
+export interface MiniMaxToolContext {
   workspace: { filesystem?: { writeFile(path: string, content: Uint8Array): Promise<unknown>; readFile(path: string): Promise<Uint8Array | string> } };
 }
 
