@@ -325,11 +325,6 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
       recentStepsByAgentId.set(step.agentId, existing);
     }
 
-    // Parallel fetch workspace skills for all agents (N+1 fix)
-    const _skillsPerAgent = await Promise.all(
-      agentRows.map((agent) => listAgentWorkspaceSkills(workspaceBasePath, agent)),
-    );
-
     const runtimeMemoryByAgentId = new Map(
       await Promise.all(
         agentRows.map(
