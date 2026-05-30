@@ -67,7 +67,7 @@ export function registerSkillOps(
         });
         if (agent === null || agent === undefined)
           return jsonResponse({ error: 'Agent not found: ' + body.agentId }, 404);
-        const result = await publishAgentWorkspaceSkillToGlobalCatalog({
+        await publishAgentWorkspaceSkillToGlobalCatalog({
           workspaceBasePath,
           agent,
           skillName: body.skillName,
@@ -75,7 +75,6 @@ export function registerSkillOps(
         return jsonResponse({
           success: true,
           skillName: body.skillName,
-          destPath: (result as any).destPath,
         });
       } catch (err) {
         forgeDebug({
