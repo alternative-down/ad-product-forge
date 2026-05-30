@@ -85,7 +85,7 @@ export function createSystemReadModel(input: { db: Database }): SystemReadModel 
           .all(),
       ]);
       const assignedAgentCountByRoleId = new Map(
-        agentCounts.filter((row) => row.roleId).map((row) => [row.roleId as string, row.count]),
+        agentCounts.filter((row) => row.roleId != null).map((row) => [row.roleId as string, row.count]),
       );
       const capabilityMap = await capabilities.listGrantedRoleCapabilitiesBatch(
         roles.map((role) => role.roleId),
