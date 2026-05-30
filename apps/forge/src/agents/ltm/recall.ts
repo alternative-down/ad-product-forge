@@ -306,7 +306,7 @@ export class AgentLongTermMemoryRecall {
         results,
       });
 
-      if (!recallText) {
+      if (recallText == null) {
         await this.persistHitRecall(input, queryText, recallConfig, indexStats, graph, results, nextHistory);
         return null;
       }
