@@ -230,7 +230,7 @@ export function createSystemIntegrationStore(db: Database) {
 
       return {
         providerType: input.providerType,
-        isEnabled: input.isEnabled === false ? false : true,
+        isEnabled: !!input.isEnabled,
         config: parsedConfig,
       };
     } catch (err) {
