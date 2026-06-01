@@ -40,6 +40,7 @@ import {
   LibsqlConversationStore,
   forgeDebug,
 } from '@forge-runtime/core';
+import { type AgentExecutionState } from './agents-types';
 import { errorMsg } from '../../agents/agent-runner-error-formatting';
 import { withTimeout } from '../../utils/async';
 import { ADMIN_OBSERVABILITY_READ_TIMEOUT_MS } from './constants';
@@ -52,7 +53,7 @@ export interface AgentListItem {
   name: string;
   description: string | null;
   role: string | null;
-  executionState: string;
+  executionState: AgentExecutionState;
   lastExecutionError: string | null;
   lastExecutionErrorAt: number | null;
   roleName: string | null;
@@ -206,6 +207,8 @@ type RuntimeMemoryOutput = {
     reflectionBudget: number;
     checkpointTokenCount: number;
   };
+  /** LTM snapshot from loaded agent — for ltm.running/queued in #5312 */
+  ltm: { running: boolean; queued: boolean } | null;
 } | null;
 
   // Workspace skills parallel map — populated in listAgents
@@ -277,6 +280,9 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
         reflectionBudget: Math.max(0, totalTokens - recentRawLimit),
         checkpointTokenCount: rawMetrics?.checkpointTokenCount ?? 0,
       },
+      ltm: _runtimeLtmSnapshot !== null
+        ? { running: (_runtimeLtmSnapshot as { running?: boolean }).running ?? false, queued: (_runtimeLtmSnapshot as { queued?: boolean }).queued ?? false }
+        : null,
     };
   }
 
@@ -502,8 +508,12 @@ export function createAgentListReadModel(deps: AgentListReadModelDeps): AgentLis
               }
             : null,
           ltm: {
-            running: executionState === 'idle' ? false : false,
-            queued: executionState === 'idle' ? false : false,
+            running: executionState === 'idle' && runtimeMemory !== null
+              ? runtimeMemory.ltm?.running ?? false
+              : false,
+            queued: executionState === 'idle' && runtimeMemory !== null
+              ? runtimeMemory.ltm?.queued ?? false
+              : false,
             packageCount: longTermMemoryState?.packages.length ?? 0,
           },
         },

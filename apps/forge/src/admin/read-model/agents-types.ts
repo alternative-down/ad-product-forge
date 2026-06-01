@@ -1,12 +1,16 @@
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import {} from '@forge-runtime/core';
 
+/** Shared execution state for all agent read models */
+export const AGENT_EXECUTION_STATES = ['idle', 'running', 'absent'] as const;
+export type AgentExecutionState = (typeof AGENT_EXECUTION_STATES)[number];
+
 export interface AgentListItem {
   agentId: string;
   name: string;
   description: string | null;
   role: string | null;
-  executionState: string;
+  executionState: AgentExecutionState;
   lastExecutionError: string | null;
   lastExecutionErrorAt: number | null;
   roleName: string | null;
