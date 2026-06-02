@@ -8,7 +8,7 @@ import {
 } from '../database/schema';
 
 /**
- * internal-chat-group-helpers.ts
+ * internal-chat-groups-helpers.ts
  *
  * Extracted from internal-chat-groups.ts (changeChatGroup, #2581).
  * Each function corresponds to one discrete sub-concern within the
