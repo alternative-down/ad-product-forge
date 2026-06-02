@@ -111,9 +111,7 @@ import {
 
 import { registerFinanceReadRoutes } from './routes/finance/read';
 import { registerFinanceWriteRoutes } from './routes/finance/write';
-import { registerWebhookAdminRoutes } from './routes/webhooks/register';
-import { createWebhookStore } from '../webhooks/store';
-import { createWebhookHandler } from '../webhooks/handler';
+import { registerAdminWebhooks } from './routes/webhooks/register';
 
 import { registerSystemReadRoutes } from './routes/system/read';
 import { registerSystemWriteRoutes } from './routes/system/write';
@@ -261,30 +259,9 @@ export function registerAdminRoutes(input: AdminRouteContext) {
     companyPayables,
   });
 
-  const webhookStore = createWebhookStore(input.db);
-  const webhookHandler = createWebhookHandler({
-    store: webhookStore,
-    notifyAgent(input) {
-      const entry = registry.get(input.agentId);
-      if (!entry) {
-        return;
-      }
-      entry.runner?.notifyExternalEvent({
-        type: input.type,
-        groupKey: input.groupKey,
-        idempotencyKey: input.idempotencyKey,
-        text: input.content,
-        timestamp: input.timestamp,
-      });
-    },
+  registerAdminWebhooks({
+    httpServer: input.httpServer,
+    db: input.db,
+    registry,
   });
-
-  // Public webhook endpoint: POST /webhooks/:routeId
-  input.httpServer.registerRoute({
-    method: 'POST',
-    path: '/webhooks/:routeId',
-    handler: (req) => webhookHandler.handleWebhook(req),
-  });
-
-  registerWebhookAdminRoutes(input.httpServer, webhookStore);
 }

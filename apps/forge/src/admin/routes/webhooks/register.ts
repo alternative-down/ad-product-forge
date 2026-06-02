@@ -4,7 +4,8 @@ import { parseJsonBody, jsonResponse } from '../index';
 import { forgeDebug } from '../debug';
 import { z } from 'zod';
 import type { HttpRequest } from '../../../http/server';
-import type { createWebhookStore } from '../../../webhooks/store';
+import { createWebhookStore } from '../../../webhooks/store';
+import { createWebhookHandler } from '../../../webhooks/handler';
 
 // Extract error message for user-facing display
 function errorMsg(err: unknown): string {
@@ -157,4 +158,50 @@ export function registerWebhookAdminRoutes(
       }
     },
   });
+}
+
+/**
+ * Wires up the public webhook ingestion endpoint (POST /webhooks/:routeId)
+ * and the admin webhook management routes.
+ *
+ * Extracted from apps/forge/src/admin/routes.ts (issue #5316) to keep
+ * registerAdminRoutes focused on store wiring.
+ *
+ * @param input.httpServer  - HTTP server adapter
+ * @param input.db          - Database handle for the webhook store
+ * @param input.registry    - Internal agent registry; the webhook handler
+ *                            uses registry.get(agentId).runner?.notifyExternalEvent
+ *                            to push events back to running agents
+ */
+export function registerAdminWebhooks(input: {
+  httpServer: Parameters<typeof registerWebhookAdminRoutes>[0];
+  db: import('../../../database/client').Database;
+  registry: import('../../../agents/internal-agent-registry').InternalAgentRegistry;
+}) {
+  const webhookStore = createWebhookStore(input.db);
+  const webhookHandler = createWebhookHandler({
+    store: webhookStore,
+    notifyAgent(notification) {
+      const entry = input.registry.get(notification.agentId);
+      if (!entry) {
+        return;
+      }
+      entry.runner?.notifyExternalEvent({
+        type: notification.type,
+        groupKey: notification.groupKey,
+        idempotencyKey: notification.idempotencyKey,
+        text: notification.content,
+        timestamp: notification.timestamp,
+      });
+    },
+  });
+
+  // Public webhook endpoint: POST /webhooks/:routeId
+  input.httpServer.registerRoute({
+    method: 'POST',
+    path: '/webhooks/:routeId',
+    handler: (req: HttpRequest) => webhookHandler.handleWebhook(req),
+  });
+
+  registerWebhookAdminRoutes(input.httpServer, webhookStore);
 }
