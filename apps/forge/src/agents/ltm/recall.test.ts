@@ -557,9 +557,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (
-      recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }
-    ).searchWorkspace('test query', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' });
+    const result = await (recall.orchestrator as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace('test query', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' });
     expect(result).toEqual({ formatted: '', results: [] });
   });
 
@@ -589,7 +587,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
     }) as any;
 
     await expect(
-      (recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
+      (recall.orchestrator as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace(
         'test',
         {
           topK: 5,
@@ -626,9 +624,7 @@ describe('AgentLongTermMemoryRecall searchWorkspace', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (
-      recall as { searchWorkspace(q: string, o?: object): Promise<unknown> }
-    ).searchWorkspace('test', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' });
+    const result = await (recall.orchestrator as { searchWorkspace(q: string, o?: object): Promise<unknown> }).searchWorkspace('test query', { topK: 5, resultCount: 5, scoreThreshold: 0, mode: 'hybrid' });
     expect(result).toEqual({ formatted: '', results: [] });
   });
 });
@@ -663,9 +659,7 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (
-      recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }
-    ).searchGraph('test query', [], {
+    const result = await (recall.orchestrator as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph('test query', [], {
       topK: 3,
       threshold: 0.5,
       randomWalkSteps: 2,
@@ -718,9 +712,7 @@ describe('AgentLongTermMemoryRecall searchGraph', () => {
       persistenceStore: persistence,
     }) as any;
 
-    const result = await (
-      recall as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }
-    ).searchGraph('test query', [], {
+    const result = await (recall.orchestrator as { searchGraph(q: string, ws: unknown, o?: object): Promise<unknown> }).searchGraph('test query', [], {
       topK: 3,
       threshold: 0.5,
       randomWalkSteps: 2,

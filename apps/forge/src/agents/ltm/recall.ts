@@ -14,6 +14,20 @@ import { RecallPersistence, createRecallPersistence } from './recall/persistence
 
 const RECALL_INJECTION_RAW_WINDOW_RATIO = 0.25;
 
+/** Input shape for LTM recall step. Concrete type matching buildRecallStepFromIteration output. */
+export interface RecallStepInput {
+  text: string;
+  toolCalls: Array<{ toolName: string; args: Record<string, unknown> }>;
+  toolResults: Array<{ toolName: string; result: unknown }>;
+}
+
+export interface RecallFromStepInput {
+  step: RecallStepInput;
+  steps: RecallStepInput[];
+  threadId: string | null;
+  resourceId?: string;
+}
+
 import type {
   LongTermMemoryRecallHistory,
   LongTermMemoryRecallSnapshot,
@@ -116,6 +130,12 @@ export class AgentLongTermMemoryRecall {
   private lingeringRecallOperationSince: number | null = null;
   private readonly orchestrator: RecallOrchestrator;
   private readonly persistence: RecallPersistence;
+  private readonly _trackedRecallOperation: <T>(
+    label: string,
+    operation: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ) => Promise<T>;
 
   constructor(input: {
     agentId: string;
@@ -169,6 +189,8 @@ export class AgentLongTermMemoryRecall {
       });
     }
 
+    this._trackedRecallOperation = this.runTrackedRecallOperation.bind(this);
+
     const orchestratorDeps: RecallOrchestratorDeps = {
       retrievalWorkspace: this.retrievalWorkspace,
       agentId: this.agentId,
@@ -177,7 +199,7 @@ export class AgentLongTermMemoryRecall {
       workspaceEmbedder: this.workspaceEmbedder,
       readRuntimeMemorySettings: this.readRuntimeMemorySettings,
       recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+      runTrackedRecallOperation: this._trackedRecallOperation,
     };
     this.orchestrator = createRecallOrchestrator(orchestratorDeps);
     this.persistence = createRecallPersistence({
@@ -211,7 +233,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async persistMissRecall(
-    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    input: RecallFromStepInput,
     recentFingerprints: string[],
   ): Promise<void> {
     await this.persistRecallSnapshotWithInput(input, {
@@ -224,7 +246,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async persistHitRecall(
-    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    input: RecallFromStepInput,
     queryText: string,
     recallConfig: RecallConfig,
     indexStats: { workspaceFileCount: number; memoryFileCount: number; checkpointFileCount: number },
@@ -244,12 +266,7 @@ export class AgentLongTermMemoryRecall {
   }
 
 
-  async recallFromStep(input: {
-    step: unknown;
-    steps: unknown[];
-    threadId: string | null;
-    resourceId?: string;
-  }) {
+  async recallFromStep(input: RecallFromStepInput) {
     const recallStartedAt = Date.now();
 
     try {
@@ -592,32 +609,6 @@ export class AgentLongTermMemoryRecall {
     return await this.orchestrator.runRecallSearch(queryText, config);
   }
 
-  async searchWorkspace(
-    queryText: string,
-    options: {
-      topK: number;
-      resultCount: number;
-      scoreThreshold: number;
-      mode: 'hybrid' | 'vector' | 'bm25';
-    },
-  ) {
-    return await this.orchestrator.searchWorkspace(queryText, options);
-  }
-
-  async searchGraph(
-    queryText: string,
-    workspaceResults: LtmSearchResult[],
-    options: {
-      topK: number;
-      threshold: number;
-      randomWalkSteps: number;
-      includeSources: boolean;
-      contextResults: LtmSearchResult[];
-    },
-  ) {
-    return await this.orchestrator.searchGraph(queryText, workspaceResults, options);
-  }
-
   async runTrackedRecallOperation<T>(
     label: string,
     operation: Promise<T>,
@@ -699,7 +690,7 @@ export class AgentLongTermMemoryRecall {
     return await runVectorQuery(queryVector, topK, {
       retrievalWorkspace: this.retrievalWorkspace,
       recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+      runTrackedRecallOperation: this._trackedRecallOperation,
     });
   }
 
@@ -856,7 +847,7 @@ export class AgentLongTermMemoryRecall {
   }
 
   private async persistRecallSnapshotWithInput(
-    input: { step: unknown; steps: unknown[]; threadId: string | null; resourceId?: string },
+    input: RecallFromStepInput,
     deps: {
       queryText?: string;
       recallConfig?: LtmSnapshotDeps['recallConfig'];
