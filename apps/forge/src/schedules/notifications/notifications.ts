@@ -4,13 +4,13 @@
  * Notification triggering for schedules.
  * Extracted from manager.ts (#4877) — notification triggering concern only.
  */
-import type { Database } from '../database/schema';
-import { createAgentNotificationStore } from '../notifications/store';
+import type { Database } from '../../database/schema';
+import { createAgentNotificationStore } from '../../notifications/store';
 import {
   createNotificationContent,
   createWakeContent,
   createHeartbeatWakeInstruction,
-} from './schedule-helpers';
+} from './wake-content';
 
 export type NotificationDependencies = {
   db: Database;
