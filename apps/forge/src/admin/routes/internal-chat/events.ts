@@ -35,27 +35,54 @@ export function createInternalChatSseHandler(internalChat: InternalChatService):
 
     const conversationId = request.query.get('conversationId') ?? null;
 
-    const controller = new ReadableStreamDefaultController();
-    // Convert the Web ReadableStream into a Node.js Readable so http.ServerResponse.pipe()
-    // can consume it. ReadableStreamDefaultController is available in lib: ES2022 + WebStreams.
+    // The Web ReadableStream exposes its controller to the start() callback
+    // only. We hold a closure-scoped reference so external callbacks
+    // (delivery handler, keepalive timer, raw 'close' event) can enqueue
+    // and close the stream. ReadableStreamDefaultController cannot be
+    // constructed directly (it's an internal class of the runtime).
+    let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+    let keepaliveTimer: NodeJS.Timeout | null = null;
 
-    const nodeStream = Readable.fromWeb(controller as any);
+    const webStream = new ReadableStream<Uint8Array>({
+      start(c) {
+        controller = c;
+        // Send a welcome comment so the client can confirm the connection
+        // before the first event.
+        controller.enqueue(new TextEncoder().encode(': connected\n\n'));
+        // Prevent proxies / load balancers from closing the idle connection.
+        keepaliveTimer = setInterval(() => {
+          if (controller === null) {
+            return;
+          }
+          try {
+            controller.enqueue(new TextEncoder().encode(': ping\n\n'));
+          } catch {
+            // Controller already closed — ignore.
+          }
+        }, KEEPALIVE_INTERVAL_MS);
+      },
+      cancel() {
+        // The consumer stopped reading. This fires for both transient
+        // backpressure and for true client disconnects. We only stop the
+        // keepalive timer here; the request.req.on('close') handler below
+        // is the authoritative point for clearing the chat handler and
+        // closing the controller (it also handles the disconnect case
+        // when the consumer doesn't actually call cancel).
+        if (keepaliveTimer !== null) {
+          clearInterval(keepaliveTimer);
+          keepaliveTimer = null;
+        }
+      },
+    });
 
-    // Send a welcome comment so the client can confirm the connection before the first event.
-    controller.enqueue(new TextEncoder().encode(': connected\n\n'));
-
-    // Prevent proxies / load balancers from closing the idle connection.
-    const keepaliveTimer = setInterval(() => {
-      try {
-        controller.enqueue(new TextEncoder().encode(': ping\n\n'));
-      } catch {
-        // Controller already closed — ignore.
-      }
-    }, KEEPALIVE_INTERVAL_MS);
+    const nodeStream = Readable.fromWeb(webStream as never);
 
     // Register a delivery handler with the connection.
     // Admin accounts have agentId=null so we use accountId as the handler key.
     internalChat.onReceiveMessage(accountId, async (message: InternalChatDeliveryMessage) => {
+      if (controller === null) {
+        return;
+      }
       if (conversationId !== null && message.targetKey !== conversationId) {
         return;
       }
@@ -72,12 +99,16 @@ export function createInternalChatSseHandler(internalChat: InternalChatService):
 
     // Clean up on client disconnect.
     request.req.on('close', () => {
-      clearInterval(keepaliveTimer);
+      if (keepaliveTimer !== null) {
+        clearInterval(keepaliveTimer);
+        keepaliveTimer = null;
+      }
       try {
-        controller.close();
+        controller?.close();
       } catch {
         // Already closed.
       }
+      controller = null;
       internalChat.clearHandler(accountId);
       forgeDebug({
         scope: SCOPE,
