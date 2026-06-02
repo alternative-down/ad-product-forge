@@ -10,32 +10,40 @@ import { InferModel } from 'drizzle-orm';
 import { agentRoles } from './schema-roles.js';
 import { llmProfiles } from './schema-llm.js';
 
-export const agents = sqliteTable('agents', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  roleId: text('role_id').references(() => agentRoles.id, { onDelete: 'set null' }),
-  modelProfileId: text('model_profile_id')
-    .notNull()
-    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
-  omModelProfileId: text('om_model_profile_id')
-    .notNull()
-    .references(() => llmProfiles.id, { onDelete: 'restrict' }),
-  instructions: text('instructions').notNull(),
-  executionState: text('execution_state').notNull().default('idle'),
-  lastExecutionError: text('last_execution_error'),
-  lastExecutionErrorAt: integer('last_execution_error_at'),
-  workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1),
-  workspaceBm25: integer('workspace_bm25').notNull().default(1),
-  workspaceEmbedder: text('workspace_embedder')
-    .notNull()
-    .default('transformers-multilingual-e5-small-cpu'),
-  workspaceFilesystem: text('workspace_filesystem'),
-  workspaceSandbox: text('workspace_sandbox'),
-  workspaceSkills: text('workspace_skills'),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-});
+export const agents = sqliteTable(
+  'agents',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    roleId: text('role_id').references(() => agentRoles.id, { onDelete: 'set null' }),
+    modelProfileId: text('model_profile_id')
+      .notNull()
+      .references(() => llmProfiles.id, { onDelete: 'restrict' }),
+    omModelProfileId: text('om_model_profile_id')
+      .notNull()
+      .references(() => llmProfiles.id, { onDelete: 'restrict' }),
+    instructions: text('instructions').notNull(),
+    executionState: text('execution_state').notNull().default('idle'),
+    lastExecutionError: text('last_execution_error'),
+    lastExecutionErrorAt: integer('last_execution_error_at'),
+    workspaceAutoSync: integer('workspace_auto_sync').notNull().default(1),
+    workspaceBm25: integer('workspace_bm25').notNull().default(1),
+    workspaceEmbedder: text('workspace_embedder')
+      .notNull()
+      .default('transformers-multilingual-e5-small-cpu'),
+    workspaceFilesystem: text('workspace_filesystem'),
+    workspaceSandbox: text('workspace_sandbox'),
+    workspaceSkills: text('workspace_skills'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    agentsRoleIdIdx: index('agents_role_id_idx').on(table.roleId),
+    agentsModelProfileIdIdx: index('agents_model_profile_id_idx').on(table.modelProfileId),
+    agentsOmModelProfileIdIdx: index('agents_om_model_profile_id_idx').on(table.omModelProfileId),
+  }),
+);
 
 export type Agent = InferModel<typeof agents>;
 export type NewAgent = InferModel<typeof agents, 'insert'>;
