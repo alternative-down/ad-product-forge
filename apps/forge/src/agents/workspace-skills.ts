@@ -19,8 +19,20 @@ export async function listAgentWorkspaceSkills(
   workspaceBasePath: string,
   agent: Pick<Agent, 'id' | 'workspaceFilesystem'>,
 ): Promise<AgentSkillSummary[]> {
-  // @ts-expect-error workspaceFilesystem type may not match WorkspaceFilesystemConfig
-  const skillsRoot = resolveAgentSkillsRoot(workspaceBasePath, agent.workspaceFilesystem ?? undefined, agent.id);
+  // The DB column is text but the runtime contract expects a
+  // WorkspaceFilesystemConfig object. agent-loader-runtime-config.ts uses the
+  // same `as unknown as` cast pattern when loading the agent, so the runtime
+  // value here is the parsed object shape (or null when unset). Cast through
+  // unknown to match the resolver's expected type without disabling the
+  // surrounding checks.
+  const skillsRoot = resolveAgentSkillsRoot(
+    workspaceBasePath,
+    (agent.workspaceFilesystem ?? undefined) as unknown as Parameters<
+      typeof resolveAgentSkillsRoot
+    >[1],
+    agent.id,
+  );
+
 
   try {
     const entries = await fs.readdir(skillsRoot, { withFileTypes: true });

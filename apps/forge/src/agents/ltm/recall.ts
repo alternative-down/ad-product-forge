@@ -389,7 +389,7 @@ export class AgentLongTermMemoryRecall {
     }
   }
 
-  dispose() {
+  async dispose(): Promise<void> {
     this.retrievalWorkspace.dispose();
   }
 

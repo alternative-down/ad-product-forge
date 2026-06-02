@@ -241,7 +241,6 @@ export async function createInternalAgentRuntime<
     agent,
     workspace: platform.workspace,
     communication: platform.communication as CommunicationModule,
-    // @ts-expect-error: AgentLongTermMemoryRecall shape vs InternalAgentRuntime["longTermMemoryRecall"]
     longTermMemoryRecall: runtimeMemory.longTermMemoryRecall,
     longTermMemory: longTermMemory,
     onReceiveMessage: platform.communication.onReceiveMessage,

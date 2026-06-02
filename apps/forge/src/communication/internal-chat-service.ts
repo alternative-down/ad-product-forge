@@ -111,14 +111,23 @@ export function createInternalChatService(db: Database) {
   const admin = createInternalChatAdmin(db);
 
   // Deferred: reads needs listConversations from listing module (created later).
-  // Only listGroupMembersOrDmPeersByAccount is used before actualReads exists,
-  // so we only stub that one method here.
-  // @ts-expect-error -- createInternalChatReads overload mismatch on participants parameter
-  const reads = createInternalChatReads(db, {
+  // All three deps (unread, participants, listConversations) are required at
+  // construction time. We provide throwing stubs for the two that aren't used
+  // before actualReads is wired up below, plus a partial participants stub
+  // that only implements listGroupMembersOrDmPeersByAccount.
+  const reads = createInternalChatReads({
+    unread: {
+      getUnreadSummary: () => {
+        throw new Error('reads not yet initialized');
+      },
+    },
     participants: {
       listGroupMembersOrDmPeersByAccount: (_a: string, _b: string) => {
         throw new Error('reads not yet initialized');
       },
+    } as unknown as ReturnType<typeof createInternalChatParticipants>,
+    listConversations: () => {
+      throw new Error('reads not yet initialized');
     },
   });
 
@@ -269,8 +278,7 @@ export function createInternalChatService(db: Database) {
 
   // ── DI: Initialize reads with actual deps ───────────────────────────────
   const unread = createInternalChatUnread(db);
-  // @ts-expect-error -- createInternalChatReads overload mismatch on participants/listConversations
-  const actualReads = createInternalChatReads(db, {
+  const actualReads = createInternalChatReads({
     unread,
     participants,
     listConversations,
