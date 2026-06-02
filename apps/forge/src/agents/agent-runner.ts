@@ -63,7 +63,7 @@ import {
 
 import { startGenerateAttempt, finishGenerateAttempt } from './agent-runner-attempt-lifecycle';
 
-import { createScheduler, type SchedulerState } from './agent-runner-scheduler';
+import { createScheduler, type Scheduler, type SchedulerState } from './agent-runner-scheduler';
 import { runHealthcheck as healthcheckRunHealthcheck } from './agent-runner-healthcheck';
 import { ONE_MINUTE_MS, TEN_MINUTES_MS, FIFTEEN_MINUTES_MS } from './time-constants';
 const DEFAULT_RUN_LAST_MESSAGES = 20;
@@ -547,6 +547,7 @@ export function createAgentRunner(
       });
 
       lastStepStage = 'agent-generate';
+      const backoffState = { backoffMs: scheduler.getState().backoffMs, instant: scheduler.getState().instant, nextStepAt: scheduler.getState().nextStepAt };
       const result = await generateWithTimeoutRetries(
         prompt,
         _runEpoch,
@@ -564,15 +565,19 @@ export function createAgentRunner(
           messageManager,
           runLastMessages,
           flushPendingRunMessages,
-          // @ts-expect-error Scheduler type in GenerateDeps doesn't include all methods from createScheduler return
-          scheduler,
+          // The Scheduler type in GenerateDeps is a narrower interface than
+          // what createScheduler returns. Cast through the declared
+          // Scheduler type to silence the type mismatch on
+          // planNextStepDelay (returns Promise<number> in the full impl,
+          // Promise<void> in the GenerateDeps contract).
+          scheduler: scheduler as unknown as Scheduler,
           epochState: {
             activeRunEpoch: 0,
             activeStepEpoch: 0,
             activeGenerateToken: 0,
             activeRunId: null,
           },
-          backoffState: { backoffMs: scheduler.getState().backoffMs, instant: scheduler.getState().instant, nextStepAt: scheduler.getState().nextStepAt },
+          backoffState,
           progressState: {
             lastStepStartedAt: null,
             lastStepStage: null,
@@ -585,6 +590,15 @@ export function createAgentRunner(
             currentGenerateAbortController = c;
           },
           markGenerateProgress: () => {},
+          setBackoffMs: (ms: number) => {
+            backoffState.backoffMs = ms;
+          },
+          setInstant: (v: boolean) => {
+            backoffState.instant = v;
+          },
+          setNextStepAt: (v: number | null) => {
+            backoffState.nextStepAt = v;
+          },
           setLoopSignature: (sig) => {
             loopManager.getState().lastLoopSignature = sig;
           },
