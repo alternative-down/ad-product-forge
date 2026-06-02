@@ -1,23 +1,42 @@
-import { createId } from '../utils/id';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+/**
+ * GitHub App Manager — façade that composes ops subdomains.
+ *
+ * Part of #5318 — split createGitHubAppManager.
+ *
+ * Public API (the contract used by 3 test files + external consumers):
+ *   isConfigured, getAgentProvisioning, updateAgentManifestConfig,
+ *   createAgentApp, loadAllAgents, unloadAgent, deleteAgentApp,
+ *   getGitCredentials, listRepositories, createRepository, updateRepository,
+ *   deleteRepository, getRepository, listPullRequests, createPullRequest,
+ *   getPullRequest, updatePullRequest, mergePullRequest, listPullRequestComments,
+ *   listIssues, getIssue, createIssue, updateIssue, closeIssue, reopenIssue,
+ *   listIssueComments, getIssueComment, createIssueComment, updateIssueComment,
+ *   deleteIssueComment, listLabels, createLabel, updateLabel, deleteLabel,
+ *   addIssueLabels, removeIssueLabels, listMilestones, createMilestone,
+ *   updateMilestone, deleteMilestone, handleRegisterPage, handleManifestCallback,
+ *   handleSetupCallback, handleWebhook
+ *
+ * Internal structure:
+ *   ops/credentials.ts   — encrypted storage
+ *   ops/github-app.ts    — auth + Octokit
+ *   ops/app-lifecycle.ts — agent provisioning + git credentials
+ *   ops/repos.ts         — repository CRUD
+ *   ops/pull-requests.ts — PR operations
+ *   ops/issues.ts        — issue operations
+ *   ops/labels.ts        — label operations
+ *   ops/milestones.ts    — milestone operations
+ *   ops/routing.ts       — HTTP routing (internal)
+ */
 import { nanoid } from 'nanoid';
-import { createAppAuth } from '@octokit/auth-app';
-import { App } from 'octokit';
 import { and, eq } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import type { Database } from '../database/schema';
 import type { createSystemIntegrationStore } from '../system-integrations/store';
-import { agentProviders, agents, type NewAgentProvider } from '../database/schema';
-import { decryptSecret, encryptSecret } from '../encryption/crypto';
+import { agentProviders, agents } from '../database/schema';
 import type { createForgeHttpServer } from '../http/server';
 import { createAgentNotificationStore } from '../notifications/store';
-import {
-  githubAppCredentialsSchema,
-  githubAppManifestConfigSchema,
-  type GitHubAppCredentials,
-  type GitHubAppManifestConfig,
-} from './types';
-
+import { createId } from '../utils/id';
+import type { Octokit } from 'octokit';
 import {
   buildManifestEvents,
   buildManifestPermissions,
@@ -46,9 +65,11 @@ import { createIssuesOps } from './ops/issues';
 import { createLabelsOps } from './ops/labels';
 import { createMilestonesOps } from './ops/milestones';
 import { createRoutingOps } from './ops/routing';
-import { createAppProvisioningOps } from './apps';
 import { createCredentialsOps } from './ops/credentials';
+import { createGitHubAppOps } from './ops/github-app';
+import { createAppLifecycleOps } from './ops/app-lifecycle';
 import type { OpsContext } from './ops/context';
+import type { GitHubAppCredentials, GitHubAppManifestConfig, GitHubAppProvisioning } from './types';
 
 const GITHUB_PROVIDER_TYPE = 'github-app';
 
@@ -56,13 +77,7 @@ export type GitHubAppManager = ReturnType<typeof createGitHubAppManager>;
 
 /**
  * Creates a per-agent GitHubAppManager instance.
- * Each agent gets its own isolated manager with:
- * - Fresh notifications store (agent-scoped events)
- * - Fresh routeCleanups map (no route conflicts between agents)
- * - Shared global state: db, httpServer, integrations
- *
- * Like createPerAgentCoolifyManager, the factory pattern ensures agents
- * get isolated routing namespaces while sharing the same HTTP server.
+ * Each agent gets its own isolated manager.
  */
 export function createPerAgentGitHubManager(config: {
   db: Database;
@@ -79,6 +94,7 @@ export function createGitHubAppManager(config: {
 }) {
   const notifications = createAgentNotificationStore(config.db);
   const routeCleanups = new Map<string, Array<() => void>>();
+
   // ── Build shared ops context ───────────────────────────────────────────────
   const opsCtx: OpsContext = {
     config,
@@ -93,22 +109,28 @@ export function createGitHubAppManager(config: {
     nanoid,
     forgeDebug: (opts: { scope: string; level: string; message: string; context?: unknown }) =>
       forgeDebug(opts as Parameters<typeof forgeDebug>[0]),
-    getGlobalConfig,
-    getDefaultOwner,
-    getInstallationOctokit: async (agentId: string) => {
-      const credentials = await getActiveCredentials(agentId);
-      return await createInstallationOctokit(
-        credentials as Parameters<typeof createInstallationOctokit>[0],
-      );
+    getGlobalConfig: () => Promise.reject(new Error('getGlobalConfig not initialized')),
+    getDefaultOwner: () => Promise.reject(new Error('getDefaultOwner not initialized')),
+    getInstallationOctokit: (_agentId: string): Promise<Octokit> =>
+      Promise.reject(new Error('getInstallationOctokit not initialized')),
+    getInstallationToken: (
+      _credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+    ) => Promise.reject(new Error('getInstallationToken not initialized')),
+    getCredentials: (_agentId: string) =>
+      Promise.reject(new Error('getCredentials not initialized')),
+    getActiveCredentials: (_agentId: string) =>
+      Promise.reject(new Error('getActiveCredentials not initialized')),
+    saveCredentials: (_agentId: string, _credentials: GitHubAppCredentials) =>
+      Promise.reject(new Error('saveCredentials not initialized')),
+    parseCredentials: (_encryptedCredentials: string) => {
+      throw new Error('parseCredentials not initialized');
     },
-    getInstallationToken: (credentials) => getInstallationToken(credentials as never) as never,
-    getCredentials,
-    getActiveCredentials,
-    saveCredentials,
-    parseCredentials,
-    createInstallationOctokit: (credentials) =>
-      createInstallationOctokit(credentials as never) as never,
-    createGitHubApp: (credentials) => createGitHubApp(credentials as never) as never,
+    createInstallationOctokit: (
+      _credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
+    ) => Promise.reject(new Error('createInstallationOctokit not initialized')),
+    createGitHubApp: (_credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>) => {
+      throw new Error('createGitHubApp not initialized');
+    },
     getHeader,
     getRegisterPath,
     getManifestCallbackPath,
@@ -133,8 +155,6 @@ export function createGitHubAppManager(config: {
       // @ts-expect-error adapting unknown to typed input
       return createGitHubWebhookWakeContent(payload) as unknown as unknown;
     },
-    // isGitHubSelfEvent takes specific args not unknown payload.
-    // Ops modules mock this so it never runs in practice.
     isGitHubSelfEvent: (payload: unknown) => {
       // @ts-expect-error adapting unknown payload to specific function signature
       return isGitHubSelfEvent(payload) as unknown as boolean;
@@ -153,783 +173,65 @@ export function createGitHubAppManager(config: {
     opsRouting: null as unknown as ReturnType<typeof createRoutingOps>,
   };
 
-  // ── Instantiate ops modules ────────────────────────────────────────────────
+  // ── Build credentials and github-app ops (no deps) ─────────────────────────
+  const credentials = createCredentialsOps(opsCtx);
+  const githubApp = createGitHubAppOps();
+
+  // ── Wire credentials and github-app back into opsCtx ───────────────────────
+  opsCtx.getCredentials = credentials.getCredentials;
+  opsCtx.getActiveCredentials = credentials.getActiveCredentials;
+  opsCtx.saveCredentials = credentials.saveCredentials;
+  opsCtx.parseCredentials = credentials.parseCredentials;
+  opsCtx.createInstallationOctokit = async (credentialsArg) =>
+    await githubApp.createInstallationOctokit(credentialsArg);
+  opsCtx.createGitHubApp = (credentialsArg) => githubApp.createGitHubApp(credentialsArg);
+  opsCtx.getInstallationOctokit = async (agentId: string) => {
+    const creds = await credentials.getActiveCredentials(agentId);
+    return await githubApp.createInstallationOctokit(creds);
+  };
+
+  // ── Build app-lifecycle ops (depends on credentials + github-app) ──────────
+  const appLifecycle = createAppLifecycleOps(opsCtx, {
+    githubApp,
+    credentials: {
+      getCredentials: credentials.getCredentials,
+      getActiveCredentials: credentials.getActiveCredentials,
+    },
+  });
+
+  // Wire lifecycle getters back into opsCtx
+  opsCtx.getGlobalConfig = appLifecycle.getGlobalConfig;
+  opsCtx.getDefaultOwner = appLifecycle.getDefaultOwner;
+
+  // ── Build other ops (depend on opsCtx.getInstallationOctokit etc.) ─────────
   opsCtx.opsRouting = createRoutingOps(opsCtx as unknown as OpsContext);
-  const _opsCredentials = createCredentialsOps(opsCtx);
   const opsRepos = createReposOps(opsCtx);
   const opsPullRequests = createPullRequestsOps(opsCtx);
   const opsIssues = createIssuesOps(opsCtx);
   const opsLabels = createLabelsOps(opsCtx);
   const opsMilestones = createMilestonesOps(opsCtx);
-  const _opsApps = createAppProvisioningOps(opsCtx);
 
-  // ── App Lifecycle ────────────────────────────────────────────────────────
-
-
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // CONFIG
-
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  async function getGlobalConfig() {
-    const githubConfig = await config.integrations.getGitHubConfig();
-
-    if (!githubConfig) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub integration not configured',
-      });
-      throw new Error('GitHub integration is not configured');
-    }
-
-    return githubConfig;
-  }
-
-  async function isConfigured() {
-    return Boolean(await config.integrations.getGitHubConfig());
-  }
-
-  async function getDefaultOwner(owner?: string) {
-    if (owner !== null && owner !== undefined) {
-      return owner;
-    }
-
-    const githubConfig = await getGlobalConfig();
-    return githubConfig.organization;
-  }
-
-  async function createAgentApp(input: { agentId: string; agentName: string }) {
-    await getGlobalConfig();
-    const existing = await getCredentials(input.agentId);
-
-    if (existing !== null && existing !== undefined) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub App already exists for agent',
-        context: { agentId: input?.agentId },
-      });
-      throw new Error(`GitHub App already exists for agent ${input.agentId}`);
-    }
-
-    const pendingCredentials = {
-      status: 'pending' as const,
-      state: createId(),
-      appName: createAppName(input.agentName, input.agentId),
-      manifestConfig: DEFAULT_GITHUB_APP_MANIFEST_CONFIG,
-      createdAt: Date.now(),
-    };
-
-    await saveCredentials(input.agentId, pendingCredentials);
-    opsCtx.opsRouting.registerAgentRoutes(input.agentId);
-    return opsCtx.opsRouting.buildProvisioning(input.agentId, pendingCredentials);
-  }
-
-  async function getAgentProvisioning(agentId: string) {
-    const credentials = await getCredentials(agentId);
-
-    if (credentials) {
-      return opsCtx.opsRouting.buildProvisioning(agentId, credentials);
-    }
-
-    if (!(await isConfigured())) {
-      return null;
-    }
-
-    const agent = await config.db.query.agents.findFirst({
-      where: eq(agents.id, agentId),
-    });
-
-    if (agent === null || agent === undefined) {
-      return null;
-    }
-
-    return await createAgentApp({
-      agentId,
-      agentName: agent.name,
-    });
-  }
-
-  async function updateAgentManifestConfig(input: {
-    agentId: string;
-    manifestConfig: GitHubAppManifestConfig;
-  }) {
-    const credentials = await getCredentials(input.agentId);
-    const manifestConfig = githubAppManifestConfigSchema.parse(input.manifestConfig);
-
-    if (!credentials) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub App does not exist for agent',
-        context: { agentId: input?.agentId },
-      });
-      throw new Error(`GitHub App does not exist for agent ${input.agentId}`);
-    }
-
-    const nextCredentials = {
-      ...credentials,
-      manifestConfig,
-    } satisfies GitHubAppCredentials;
-
-    await saveCredentials(input.agentId, nextCredentials);
-    return opsCtx.opsRouting.buildProvisioning(input.agentId, nextCredentials);
-  }
-
-  async function loadAllAgents() {
-    const providerRows = await config.db.query.agentProviders.findMany({
-      where: eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE),
-    });
-
-    for (const providerRow of providerRows) {
-      const credentials = parseCredentials(providerRow.encryptedCredentials);
-
-      if (!credentials) {
-        forgeDebug({
-          scope: 'github-manager',
-          level: 'warn',
-          message: 'loadAllAgents: skipped agent due to unparseable credentials',
-          context: { agentId: providerRow.agentId },
-        });
-        continue;
-      }
-
-      opsCtx.opsRouting.registerAgentRoutes(providerRow.agentId);
-    }
-  }
-
-  function unloadAgent(agentId: string) {
-    const cleanups = routeCleanups.get(agentId) ?? [];
-
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
-
-    routeCleanups.delete(agentId);
-  }
-
-  async function deleteAgentApp(agentId: string) {
-    const credentials = await getCredentials(agentId);
-
-    unloadAgent(agentId);
-
-    if (!credentials || credentials.status !== 'active') {
-      return;
-    }
-
-    const app = createGitHubApp(credentials);
-    await app.octokit.request('DELETE /app/installations/{installation_id}', {
-      installation_id: credentials.installationId,
-    });
-  }
-
-  async function getGitCredentials(input: { agentId: string; repositoryName?: string }) {
-    const githubConfig = await getGlobalConfig();
-    const credentials = await getActiveCredentials(input.agentId);
-    const token = await getInstallationToken(credentials);
-
-    return {
-      username: 'x-access-token',
-      token: token.token,
-      expiresAt: token.expiresAt,
-      repositoryUrl:
-        input.repositoryName !== null && input.repositoryName !== undefined
-          ? `https://github.com/${githubConfig.organization}/${input.repositoryName}.git`
-          : undefined,
-      gitUserName: credentials.appName,
-      gitUserEmail: `${credentials.appSlug}@forge.github-app.local`,
-    };
-  }
-
-  // === Repo Ops ===
-
-
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // API DELEGATION
-
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  async function listRepositories(agentId: string) {
-    return await opsRepos.listRepositories(agentId);
-  }
-
-  async function createRepository(
-    agentId: string,
-    input: {
-      name: string;
-      description?: string;
-      private?: boolean;
-      autoInit?: boolean;
-      defaultBranch?: string;
-    },
-  ) {
-    return await opsRepos.createRepository(agentId, input);
-  }
-
-  async function updateRepository(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      name?: string;
-      description?: string;
-      private?: boolean;
-      defaultBranch?: string;
-    },
-  ) {
-    return await opsRepos.updateRepository(agentId, input);
-  }
-
-  async function deleteRepository(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-    },
-  ) {
-    return await opsRepos.deleteRepository(agentId, input);
-  }
-
-  async function getRepository(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-    },
-  ) {
-    return await opsRepos.getRepository(agentId, input);
-  }
-
-
-
-  // ── Repos ──────────────────────────────────────────────────────────────────
-
-  async function listPullRequests(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      state?: 'open' | 'closed' | 'all';
-    },
-  ) {
-    return await opsPullRequests.listPullRequests(agentId, input);
-  }
-
-  async function createPullRequest(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      title: string;
-      head: string;
-      base: string;
-      body?: string;
-    },
-  ) {
-    return await opsPullRequests.createPullRequest(agentId, input);
-  }
-
-  async function getPullRequest(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      pullRequestNumber: number;
-    },
-  ) {
-    return await opsPullRequests.getPullRequest(agentId, input);
-  }
-
-  async function listPullRequestComments(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      pullRequestNumber: number;
-      direction?: 'asc' | 'desc';
-      limit?: number;
-    },
-  ) {
-    return await opsPullRequests.listPullRequestComments(agentId, input);
-  }
-
-  async function updatePullRequest(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      pullRequestNumber: number;
-      title?: string;
-      body?: string;
-      base?: string;
-      state?: 'open' | 'closed';
-    },
-  ) {
-    return await opsPullRequests.updatePullRequest(agentId, input);
-  }
-
-  async function mergePullRequest(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      pullRequestNumber: number;
-      mergeMethod?: 'merge' | 'squash' | 'rebase';
-      commitTitle?: string;
-      commitMessage?: string;
-    },
-  ) {
-    return await opsPullRequests.mergePullRequest(agentId, input);
-  }
-
-
-
-  // ── Pull Requests ─────────────────────────────────────────────────────────
-
-  async function listIssues(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      state?: 'open' | 'closed' | 'all';
-      labels?: string[];
-      assignee?: string;
-      creator?: string;
-      sort?: 'created' | 'updated' | 'comments';
-      direction?: 'asc' | 'desc';
-      limit?: number;
-    },
-  ) {
-    return await opsIssues.listIssues(agentId, input);
-  }
-
-  async function getIssue(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-    },
-  ) {
-    return await opsIssues.getIssue(agentId, input);
-  }
-
-  async function createIssue(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      title: string;
-      body?: string;
-      labels?: string[];
-      assignees?: string[];
-      milestone?: number;
-    },
-  ) {
-    return await opsIssues.createIssue(agentId, input);
-  }
-
-  async function updateIssue(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-      title?: string;
-      body?: string;
-      state?: 'open' | 'closed';
-      labels?: string[];
-      assignees?: string[];
-      milestone?: number | null;
-    },
-  ) {
-    return await opsIssues.updateIssue(agentId, input);
-  }
-
-  async function closeIssue(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-    },
-  ) {
-    return await opsIssues.closeIssue(agentId, input);
-  }
-
-  async function reopenIssue(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-    },
-  ) {
-    return await opsIssues.reopenIssue(agentId, input);
-  }
-
-  async function listIssueComments(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-      limit?: number;
-    },
-  ) {
-    return await opsIssues.listIssueComments(agentId, input);
-  }
-
-  async function getIssueComment(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-      commentId: number;
-    },
-  ) {
-    return await opsIssues.getIssueComment(agentId, input);
-  }
-
-  async function createIssueComment(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-      body: string;
-    },
-  ) {
-    return await opsIssues.createIssueComment(agentId, input);
-  }
-
-  async function updateIssueComment(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      commentId: number;
-      body: string;
-    },
-  ) {
-    return await opsIssues.updateIssueComment(agentId, input);
-  }
-
-  async function deleteIssueComment(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      commentId: number;
-    },
-  ) {
-    return await opsIssues.deleteIssueComment(agentId, input);
-  }
-
-
-
-  // ── Issues ────────────────────────────────────────────────────────────────
-
-  async function listLabels(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      limit?: number;
-    },
-  ) {
-    return await opsLabels.listLabels(agentId, input);
-  }
-
-  async function createLabel(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      labelName: string;
-      color: string;
-      description?: string;
-    },
-  ) {
-    return await opsLabels.createLabel(agentId, input);
-  }
-
-  async function updateLabel(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      labelName: string;
-      newLabelName?: string;
-      color?: string;
-      description?: string;
-    },
-  ) {
-    return await opsLabels.updateLabel(agentId, input);
-  }
-
-  async function deleteLabel(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      labelName: string;
-    },
-  ) {
-    return await opsLabels.deleteLabel(agentId, input);
-  }
-
-
-
-  // ── Labels ─────────────────────────────────────────────────────────────────
-
-  async function addIssueLabels(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-      labels: string[];
-    },
-  ) {
-    return await opsLabels.addIssueLabels(agentId, input);
-  }
-
-  async function removeIssueLabels(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      issueNumber: number;
-      labels: string[];
-    },
-  ) {
-    return await opsLabels.removeIssueLabels(agentId, input);
-  }
-
-
-
-  // ── Milestones ────────────────────────────────────────────────────────────
-
-  async function listMilestones(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      state?: 'open' | 'closed' | 'all';
-      limit?: number;
-    },
-  ) {
-    return await opsMilestones.listMilestones(agentId, input);
-  }
-
-  async function createMilestone(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      title: string;
-      description?: string;
-      state?: 'open' | 'closed';
-      dueOn?: string;
-    },
-  ) {
-    return await opsMilestones.createMilestone(agentId, input);
-  }
-
-  async function updateMilestone(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      milestoneNumber: number;
-      title?: string;
-      description?: string;
-      state?: 'open' | 'closed';
-      dueOn?: string | null;
-    },
-  ) {
-    return await opsMilestones.updateMilestone(agentId, input);
-  }
-
-  async function deleteMilestone(
-    agentId: string,
-    input: {
-      owner?: string;
-      repositoryName: string;
-      milestoneNumber: number;
-    },
-  ) {
-    return await opsMilestones.deleteMilestone(agentId, input);
-  }
-
+  // ── Compose public API (the contract used by 3 test files) ───────────────
   return {
-    isConfigured,
-    getAgentProvisioning,
-    updateAgentManifestConfig,
-    createAgentApp,
-    loadAllAgents,
-    unloadAgent,
-    deleteAgentApp,
-    getGitCredentials,
-    listRepositories,
-    createRepository,
-    updateRepository,
-    deleteRepository,
-    getRepository,
-    listPullRequests,
-    createPullRequest,
-    getPullRequest,
-    updatePullRequest,
-    mergePullRequest,
-    listPullRequestComments,
-    listIssues,
-    getIssue,
-    createIssue,
-    updateIssue,
-    closeIssue,
-    reopenIssue,
-    listIssueComments,
-    getIssueComment,
-    createIssueComment,
-    updateIssueComment,
-    deleteIssueComment,
-    listLabels,
-    createLabel,
-    updateLabel,
-    deleteLabel,
-    addIssueLabels,
-    removeIssueLabels,
-    listMilestones,
-    createMilestone,
-    updateMilestone,
-    deleteMilestone,
+    isConfigured: appLifecycle.isConfigured,
+    getAgentProvisioning: appLifecycle.getAgentProvisioning,
+    updateAgentManifestConfig: appLifecycle.updateAgentManifestConfig,
+    createAgentApp: appLifecycle.createAgentApp,
+    loadAllAgents: appLifecycle.loadAllAgents,
+    unloadAgent: appLifecycle.unloadAgent,
+    deleteAgentApp: appLifecycle.deleteAgentApp,
+    getGitCredentials: appLifecycle.getGitCredentials,
+    ...opsRepos,
+    ...opsPullRequests,
+    ...opsIssues,
+    ...opsLabels,
+    ...opsMilestones,
     handleRegisterPage: opsCtx.opsRouting.handleRegisterPage,
     handleManifestCallback: opsCtx.opsRouting.handleManifestCallback,
     handleSetupCallback: opsCtx.opsRouting.handleSetupCallback,
     handleWebhook: opsCtx.opsRouting.handleWebhook,
   };
-
-  // === Credentials ===
-
-
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // CREDENTIALS
-
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  async function getCredentials(agentId: string) {
-    const provider = await config.db.query.agentProviders.findFirst({
-      where: and(
-        eq(agentProviders.agentId, agentId),
-        eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE),
-      ),
-    });
-
-    if (provider === null || provider === undefined) {
-      return null;
-    }
-
-    return parseCredentials(provider.encryptedCredentials);
-  }
-
-  async function getActiveCredentials(agentId: string) {
-    const credentials = await getCredentials(agentId);
-
-    if (!credentials || credentials.status !== 'active') {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'warn',
-        message: 'GitHub App not active for agent',
-        context: { agentId },
-      });
-      throw new Error(`GitHub App not active for agent ${agentId}`);
-    }
-
-    return credentials;
-  }
-
-  async function saveCredentials(agentId: string, credentials: GitHubAppCredentials) {
-    const existing = await config.db.query.agentProviders.findFirst({
-      where: and(
-        eq(agentProviders.agentId, agentId),
-        eq(agentProviders.providerType, GITHUB_PROVIDER_TYPE),
-      ),
-    });
-    const encryptedCredentials = encryptSecret(JSON.stringify(credentials));
-
-    if (existing !== null && existing !== undefined) {
-      await config.db
-        .update(agentProviders)
-        .set({ encryptedCredentials })
-        .where(eq(agentProviders.id, existing.id));
-      return;
-    }
-
-    const providerRecord: NewAgentProvider = {
-      id: createId(),
-      agentId,
-      providerType: GITHUB_PROVIDER_TYPE,
-      encryptedCredentials,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    await config.db.insert(agentProviders).values(providerRecord);
-  }
-
-  function parseCredentials(encryptedCredentials: string) {
-    try {
-      const raw = JSON.parse(decryptSecret(encryptedCredentials)) as Record<string, unknown>;
-      return githubAppCredentialsSchema.parse(normalizeGitHubAppCredentials(raw as never));
-    } catch (error) {
-      forgeDebug({
-        scope: 'github-manager',
-        level: 'error',
-        message: 'Failed to parse GitHub credentials: ' + errorMsg(error),
-      });
-      return null;
-    }
-  }
-
-
-  async function getInstallationToken(
-    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
-  ) {
-    const auth = createAppAuth({
-      appId: credentials.appId,
-      privateKey: credentials.privateKey,
-      installationId: credentials.installationId,
-    });
-    const token = await auth({ type: 'installation' });
-
-    return {
-      token: token.token,
-      expiresAt: token.expiresAt,
-    };
-  }
-
-  function createGitHubApp(
-    credentials: Extract<GitHubAppCredentials, { status: 'created' | 'active' }>,
-  ) {
-    return new App({
-      appId: credentials.appId,
-      privateKey: credentials.privateKey,
-      webhooks: {
-        secret: credentials.webhookSecret,
-      },
-    });
-  }
-
-  async function createInstallationOctokit(
-    credentials: Extract<GitHubAppCredentials, { status: 'active' }>,
-  ) {
-    const app = createGitHubApp(credentials);
-    return await app.getInstallationOctokit(credentials.installationId);
-  }
 }
+
+// Re-export types for convenience
+export type { GitHubAppProvisioning, GitHubAppCredentials, GitHubAppManifestConfig };
