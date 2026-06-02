@@ -130,6 +130,12 @@ export class AgentLongTermMemoryRecall {
   private lingeringRecallOperationSince: number | null = null;
   private readonly orchestrator: RecallOrchestrator;
   private readonly persistence: RecallPersistence;
+  private readonly _trackedRecallOperation: <T>(
+    label: string,
+    operation: Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ) => Promise<T>;
 
   constructor(input: {
     agentId: string;
@@ -183,6 +189,8 @@ export class AgentLongTermMemoryRecall {
       });
     }
 
+    this._trackedRecallOperation = this.runTrackedRecallOperation.bind(this);
+
     const orchestratorDeps: RecallOrchestratorDeps = {
       retrievalWorkspace: this.retrievalWorkspace,
       agentId: this.agentId,
@@ -191,7 +199,7 @@ export class AgentLongTermMemoryRecall {
       workspaceEmbedder: this.workspaceEmbedder,
       readRuntimeMemorySettings: this.readRuntimeMemorySettings,
       recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+      runTrackedRecallOperation: this._trackedRecallOperation,
     };
     this.orchestrator = createRecallOrchestrator(orchestratorDeps);
     this.persistence = createRecallPersistence({
@@ -708,7 +716,7 @@ export class AgentLongTermMemoryRecall {
     return await runVectorQuery(queryVector, topK, {
       retrievalWorkspace: this.retrievalWorkspace,
       recallTimeoutMs: this.recallTimeoutMs,
-      runTrackedRecallOperation: this.runTrackedRecallOperation.bind(this),
+      runTrackedRecallOperation: this._trackedRecallOperation,
     });
   }
 
