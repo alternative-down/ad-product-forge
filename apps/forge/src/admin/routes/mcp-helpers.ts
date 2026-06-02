@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import type { Database } from '../../database/index';
 import type { AgentLoaderConfig } from '../../agents/agent-loader';
 import { reloadAgentIfLoaded } from '../../capabilities/runtime';

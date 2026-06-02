@@ -44,7 +44,7 @@ export interface CreateChatGroupInput {
   name: string;
   creatorName: string;
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 export interface AddMemberToGroupInput {
   agentId: string;

@@ -1,4 +1,4 @@
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { forgeDebug } from '@forge-runtime/core';
 import { createId } from '../utils/id';

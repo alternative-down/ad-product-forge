@@ -7,7 +7,7 @@
  * Stores are passed directly instead of via a read-model wrapper.
  */
 import { forgeDebug } from '../debug';
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 
 import { mcpServerConfigs } from '../../../database/schema';
 

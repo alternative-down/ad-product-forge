@@ -7,7 +7,7 @@ export function normalizeOptionalText(value?: string): string | null {
   const normalized: string | null = value?.trim() ?? null;
   return (normalized ?? '') !== '' ? normalized : null;
 }
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 export function normalizeJsonText(
   value: string | undefined,

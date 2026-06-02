@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { HttpRequest, HttpResponse } from '../http/server';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 type Store = {
   getRoute(routeId: string): Promise<{

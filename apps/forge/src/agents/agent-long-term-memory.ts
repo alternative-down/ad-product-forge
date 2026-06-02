@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
-import {  errorMsg } from './agent-runner-error-formatting';
+import {  errorMsg } from './error-formatting';
 import { createId } from '../utils/id';
 import fs from 'node:fs/promises';
 import path from 'node:path';

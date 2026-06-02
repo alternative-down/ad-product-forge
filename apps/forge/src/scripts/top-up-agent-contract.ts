@@ -36,7 +36,7 @@ async function main() {
   // Contract info logged above via forgeDebug
   // Budget info logged above via forgeDebug
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 main().catch((error) => {
   forgeDebug({

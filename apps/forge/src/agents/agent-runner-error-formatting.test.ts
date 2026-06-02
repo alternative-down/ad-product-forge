@@ -1,5 +1,5 @@
 /**
- * Unit tests for agent-runner-error-formatting.ts.
+ * Unit tests for error-formatting.ts.
  *
  * Groups:
  *   serializeUnknown — recursive object/value serialization
@@ -15,7 +15,7 @@ import {
   formatAbsentErrorDetailValue,
   extractAbsentErrorDetails,
   formatAbsentExecutionError,
-} from './agent-runner-error-formatting';
+} from './error-formatting';
 
 // ─── serializeUnknown ─────────────────────────────────────────────────────────
 

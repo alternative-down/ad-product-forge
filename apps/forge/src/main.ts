@@ -40,7 +40,7 @@ export async function main() {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }
-import { serializeError } from './agents/agent-runner-error-formatting';
+import { serializeError } from './agents/error-formatting';
 
 main().catch((error) => {
   console.error('[forge-main] Fatal error during startup:', serializeError(error));

@@ -1,6 +1,6 @@
 import { RUNNER_AWAIT_TIMEOUT_MS } from './agent-runner-generate';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 
 import { withTimeout } from '../utils/async';
 import {

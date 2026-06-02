@@ -36,7 +36,7 @@ async function fundCompanyCash() {
     context: { amountUsd: input.amountUsd },
   });
 }
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 fundCompanyCash().catch((error) => {
   forgeDebug({

@@ -4,7 +4,7 @@
  */
 
 import type { PaymentProviderType } from '../payment-schema';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 
 /** Asaas webhook notification payload. */

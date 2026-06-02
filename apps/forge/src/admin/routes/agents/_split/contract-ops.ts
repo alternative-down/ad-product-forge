@@ -22,7 +22,7 @@ export interface ContractOpsDeps {
   };
 }
 
-import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../../agents/error-formatting';
 export function registerContractOps({ httpServer, db, ops }: ContractOpsDeps) {
   // POST /admin/agent/contract/top-up
   httpServer.registerRoute({

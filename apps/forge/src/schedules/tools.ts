@@ -1,5 +1,5 @@
 import { createTool, type Tool } from '@forge-runtime/core';
-import { errorMsg, serializeError } from '../agents/agent-runner-error-formatting';
+import { errorMsg, serializeError } from '../agents/error-formatting';
 import { z } from 'zod';
 import { forgeDebug } from '@forge-runtime/core';
 

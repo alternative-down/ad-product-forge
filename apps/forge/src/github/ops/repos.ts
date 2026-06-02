@@ -2,7 +2,7 @@
  * Repos Ops — listRepositories, createRepository, updateRepository, deleteRepository, getRepository
  */
 import type { OpsContext } from './context';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 export function createReposOps(ctx: OpsContext) {
   async function listRepositories(agentId: string) {

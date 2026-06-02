@@ -1,5 +1,5 @@
 import { closeLibsqlClient, type ClosableLibsqlClient } from '../utils/libsql-helpers';
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 import {
   forgeDebug,
   LibsqlConversationStore,

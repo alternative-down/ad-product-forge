@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agent-runner-error-formatting';
+import { errorMsg } from '../../error-formatting';
 
 /** Recursively counts files under rootPath/relativePath. Returns 0 on error. */
 export async function countFiles(rootPath: string, relativePath: string): Promise<number> {

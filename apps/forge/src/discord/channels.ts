@@ -7,7 +7,7 @@ import {
   Message,
   Partials,
 } from 'discord.js';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 
 import { forgeDebug } from '@forge-runtime/core';
 import type { DiscordSendableChannel } from '../discord-types';

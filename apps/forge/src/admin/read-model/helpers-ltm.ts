@@ -1,7 +1,7 @@
 import type { Database } from '../../database/client';
 import { createAgentLongTermMemoryStore, type LongTermMemoryState } from '../../agents/ltm/store';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 export type LongTermMemoryRecallSnapshot = Awaited<
   ReturnType<ReturnType<typeof createAgentLongTermMemoryStore>['readRecallState']>

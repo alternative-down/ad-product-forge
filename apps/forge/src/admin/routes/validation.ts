@@ -2,7 +2,7 @@
  * Schema validation utilities for admin routes
  */
 import { forgeDebug } from './debug';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import type { ZodSchema } from 'zod';
 
 export interface ValidationResult<T> {

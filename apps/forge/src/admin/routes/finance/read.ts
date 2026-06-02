@@ -4,7 +4,7 @@
  */
 
 import { z as _z } from 'zod';
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';
 import type { Database } from '../../../database/index';

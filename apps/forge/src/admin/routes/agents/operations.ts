@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { errorMsg } from '../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../agents/error-formatting';
 import type { CommunicationFile } from '@forge-runtime/core';
 import { forgeDebug } from '../debug';
 import type { HttpHandler } from '../../../http/server';

@@ -5,7 +5,7 @@
  * Functions for loading agent workspace context and schedule summaries
  */
 
-import {  errorMsg } from './agent-runner-error-formatting';
+import {  errorMsg } from './error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { eq, and } from 'drizzle-orm';
 import { withTimeout } from '../utils/async';

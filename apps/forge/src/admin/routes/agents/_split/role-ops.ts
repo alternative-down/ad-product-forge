@@ -54,7 +54,7 @@ const _roleWorkflowPermissionSchema = z
   })
   .strict();
 
-import { errorMsg } from '../../../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../../../agents/error-formatting';
 export function registerRoleOps(
   httpServer: {
     registerRoute: (route: { method: 'POST'; path: string; handler: HttpHandler }) => void;

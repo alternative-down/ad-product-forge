@@ -11,7 +11,7 @@ import { readLongTermMemoryState, readLongTermMemoryRecallSnapshot } from './hel
 import type { AgentLongTermMemoryRecallDebugSearchInput } from '../../agents/ltm/recall';
 import type { Database } from '../../database/index';
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 import { createAgentsRuntimeMemoryReadModel } from './agents-runtime-memory';
 
 export interface AgentDebugReadModelDeps {

@@ -4,7 +4,7 @@
  * Part of #1371 — split createGitHubAppManager.
  */
 import type { Octokit } from 'octokit';
-import { errorMsg } from '../agents/agent-runner-error-formatting';
+import { errorMsg } from '../agents/error-formatting';
 import { forgeDebug } from '@forge-runtime/core';
 import { App } from 'octokit';
 import type { OpsContext } from './ops/context';

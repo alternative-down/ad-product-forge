@@ -7,7 +7,7 @@ import {
   formatAbsentExecutionError,
   extractAbsentErrorDetails,
   formatAbsentErrorDetailValue,
-} from './agent-runner-error-formatting';
+} from './error-formatting';
 import {
   buildStepSystemPrompt,
   hasExactControlDirective,

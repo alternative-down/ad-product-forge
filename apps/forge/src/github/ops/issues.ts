@@ -4,7 +4,7 @@
  * createIssueComment, updateIssueComment, deleteIssueComment
  */
 import { forgeDebug } from '@forge-runtime/core';
-import { errorMsg } from '../../agents/agent-runner-error-formatting';
+import { errorMsg } from '../../agents/error-formatting';
 
 import type { OpsContext } from './context';
 

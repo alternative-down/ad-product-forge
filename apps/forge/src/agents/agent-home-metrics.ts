@@ -1,4 +1,4 @@
-import { errorMsg } from './agent-runner-error-formatting';
+import { errorMsg } from './error-formatting';
 import path from 'node:path'; /* eslint-disable-line @typescript-eslint/no-unused-vars */
 
 import { and, desc, eq, sql } from 'drizzle-orm';
